@@ -20,6 +20,7 @@ import type {
   ScanResult,
 } from "../documentScanner";
 import { verifyDebtEnforcement } from "./debtEnforcementVerifier";
+import { getAnthropicClient } from "../aiClient";
 
 /* ══════════════════════════════════════════════════════════════
    Types from the Azure SDK — imported lazily to keep cold-start
@@ -632,6 +633,120 @@ function parseNumberFromKv(
 }
 
 /* ══════════════════════════════════════════════════════════════
+   Claude enrichment — fills null fields from raw OCR text
+   ══════════════════════════════════════════════════════════════ */
+
+/** Per-doc-type tool schemas for Claude field extraction */
+const CLAUDE_EXTRACTION_TOOLS: Partial<Record<DetectedDocType, object>> = {
+  IDENTITY: {
+    name: "extractIdentityFields",
+    description: "Extract structured fields from an identity document (passport, national ID card) OCR text.",
+    input_schema: {
+      type: "object",
+      properties: {
+        firstName:      { type: "string", description: "Given name(s) / prénom(s) / Vorname(n)" },
+        lastName:       { type: "string", description: "Surname / nom de famille / Nachname" },
+        dateOfBirth:    { type: "string", description: "Date of birth — DD.MM.YYYY if possible" },
+        sex:            { type: "string", enum: ["M", "F"], description: "Sex: M or F" },
+        documentNumber: { type: "string", description: "Document or passport number" },
+        nationality:    { type: "string", description: "ISO 3-letter country code, e.g. CHE, FRA, DEU" },
+        expiryDate:     { type: "string", description: "Document expiry / validity date" },
+      },
+    },
+  },
+  SALARY_PROOF: {
+    name: "extractSalaryFields",
+    description: "Extract structured fields from a salary slip / pay slip OCR text.",
+    input_schema: {
+      type: "object",
+      properties: {
+        firstName:        { type: "string", description: "Employee first name" },
+        lastName:         { type: "string", description: "Employee last name" },
+        employer:         { type: "string", description: "Employer / company name" },
+        netMonthlyIncome: { type: "number", description: "Net monthly income (number, no currency symbol)" },
+        salaryPeriod:     { type: "string", description: "Pay period, e.g. 'January 2026'" },
+        jobTitle:         { type: "string", description: "Job title / position" },
+      },
+    },
+  },
+  PERMIT: {
+    name: "extractPermitFields",
+    description: "Extract structured fields from a Swiss residence permit OCR text.",
+    input_schema: {
+      type: "object",
+      properties: {
+        firstName:        { type: "string", description: "Holder first name" },
+        lastName:         { type: "string", description: "Holder surname" },
+        permitType:       { type: "string", description: "Permit category letter: B, C, G, L, F, N, S…" },
+        nationality:      { type: "string", description: "ISO 3-letter country code" },
+        permitValidUntil: { type: "string", description: "Permit expiry / validity date" },
+      },
+    },
+  },
+  DEBT_ENFORCEMENT_EXTRACT: {
+    name: "extractDebtFields",
+    description: "Extract structured fields from a Swiss debt enforcement extract (extrait des poursuites) OCR text.",
+    input_schema: {
+      type: "object",
+      properties: {
+        firstName:          { type: "string",  description: "Subject first name" },
+        lastName:           { type: "string",  description: "Subject surname" },
+        hasDebtEnforcement: { type: "boolean", description: "True if active enforcement proceedings found" },
+        extractStatus:      { type: "string",  description: "Status text from the extract" },
+        extractDate:        { type: "string",  description: "Date of the extract" },
+      },
+    },
+  },
+};
+
+/**
+ * Ask Claude Haiku to extract / complete document fields from raw OCR text.
+ * Non-blocking: returns {} on missing API key or any runtime error.
+ * Only called when at least one non-private field is still null.
+ */
+async function enrichFieldsWithClaude(
+  content: string,
+  docType: DetectedDocType,
+): Promise<Record<string, string | number | boolean | null>> {
+  const toolDef = CLAUDE_EXTRACTION_TOOLS[docType];
+  if (!toolDef || !content) return {};
+
+  try {
+    const client = getAnthropicClient();
+    const response = await client.messages.create({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 512,
+      tools: [toolDef as Parameters<typeof client.messages.create>[0]["tools"][number]],
+      tool_choice: { type: "any" },
+      messages: [{
+        role: "user",
+        content:
+          `Extract the structured fields from this ${docType.replace(/_/g, " ").toLowerCase()} document OCR text. ` +
+          `Omit any field not clearly present in the text — do not guess.\n\nOCR text:\n${content}`,
+      }],
+    });
+
+    const toolUse = response.content.find((b) => b.type === "tool_use");
+    if (!toolUse || toolUse.type !== "tool_use") return {};
+
+    const raw = toolUse.input as Record<string, unknown>;
+    const result: Record<string, string | number | boolean | null> = {};
+    for (const [k, v] of Object.entries(raw)) {
+      if (v !== undefined && v !== "") {
+        result[k] = v as string | number | boolean | null;
+      }
+    }
+    return result;
+  } catch (err) {
+    console.warn(
+      `[DOC-SCAN] Claude enrichment skipped:`,
+      err instanceof Error ? err.message : err,
+    );
+    return {};
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════
    Summary generators (match LocalOcrScanner output style)
    ══════════════════════════════════════════════════════════════ */
 
@@ -870,6 +985,25 @@ export class AzureDocumentIntelligenceScanner implements DocumentScanner {
       default:
         fields = {};
         break;
+    }
+
+    // 9b. Claude enrichment — fill any remaining null fields from raw OCR text
+    if (docType !== "UNKNOWN" && fullContent) {
+      const nullFields = Object.entries(fields).filter(([k, v]) => !k.startsWith("_") && v === null);
+      if (nullFields.length > 0) {
+        console.log(`[DOC-SCAN] Claude enrichment: ${nullFields.length} null field(s) — querying claude-haiku…`);
+        const claudeFields = await enrichFieldsWithClaude(fullContent, docType);
+        let filled = 0;
+        for (const [k, v] of Object.entries(claudeFields)) {
+          if (fields[k] === null || fields[k] === undefined) {
+            fields[k] = v;
+            filled++;
+          }
+        }
+        if (filled > 0) {
+          console.log(`[DOC-SCAN] Claude filled ${filled} field(s): ${Object.keys(claudeFields).join(", ")}`);
+        }
+      }
     }
 
     // 10. Add raw text preview (first 2000 chars, matching local scanner)
