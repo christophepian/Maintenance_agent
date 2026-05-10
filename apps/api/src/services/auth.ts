@@ -44,32 +44,65 @@ function getJwks() {
   return _jwks;
 }
 
+/** Map a verified JWT payload to our internal TokenPayload shape. */
+function mapJwtPayload(payload: Record<string, unknown>): TokenPayload {
+  const meta = (payload["app_metadata"] as Record<string, string> | undefined) ?? {};
+  return {
+    userId: meta["prismaUserId"] || ((payload["sub"] as string) ?? ""),
+    orgId: meta["orgId"] || "default-org",
+    email: (payload["email"] as string) || "",
+    role: meta["appRole"] || "MANAGER",
+    supabaseId: payload["sub"] as string | undefined,
+    accessLevel: meta["accessLevel"],
+    tenantId: meta["tenantId"] || undefined,
+  };
+}
+
 /**
- * Verify a Supabase-issued JWT via JWKS and return a TokenPayload.
+ * Verify a Supabase-issued JWT and return a TokenPayload.
  * Called once per request in server.ts; result is stored on req.user.
- * Returns null if the token is missing, invalid, or SUPABASE_URL is not set.
+ *
+ * Strategy:
+ *   1. ES256/RS256 — JWKS from Supabase (asymmetric key rotation).
+ *   2. HS256       — SUPABASE_JWT_SECRET env var (default Supabase config).
+ *
+ * Returns null if both paths fail or neither secret is configured.
  */
 export async function resolveSupabaseToken(token: string): Promise<TokenPayload | null> {
+  // ── Path 1: JWKS (ES256 / RS256) ──────────────────────────────────────────
   const jwks = getJwks();
-  if (!jwks) return null;
-
-  try {
-    const { payload } = await jwtVerify(token, jwks);
-    const meta = (payload.app_metadata as Record<string, string> | undefined) ?? {};
-
-    return {
-      userId: meta.prismaUserId || (payload.sub ?? ""),
-      orgId: meta.orgId || "default-org",
-      email: (payload.email as string) || "",
-      role: meta.appRole || "MANAGER",
-      supabaseId: payload.sub,
-      accessLevel: meta.accessLevel,
-      tenantId: meta.tenantId || undefined,
-    };
-  } catch (err) {
-    console.error("[auth] resolveSupabaseToken failed:", err instanceof Error ? err.message : String(err));
-    return null;
+  if (jwks) {
+    try {
+      const { payload } = await jwtVerify(token, jwks);
+      return mapJwtPayload(payload as Record<string, unknown>);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      // "alg" mismatch means the token is likely HS256 — fall through to secret path.
+      // Any other error (expired, tampered) is a real failure.
+      if (!msg.toLowerCase().includes("alg")) {
+        console.error("[auth] resolveSupabaseToken (JWKS) failed:", msg);
+        return null;
+      }
+    }
   }
+
+  // ── Path 2: HS256 via JWT secret (default Supabase signing mode) ──────────
+  const jwtSecret = process.env.SUPABASE_JWT_SECRET;
+  if (jwtSecret) {
+    try {
+      const secretKey = new TextEncoder().encode(jwtSecret);
+      const { payload } = await jwtVerify(token, secretKey, {
+        algorithms: ["HS256"],
+      });
+      return mapJwtPayload(payload as Record<string, unknown>);
+    } catch (err) {
+      console.error("[auth] resolveSupabaseToken (HS256) failed:", err instanceof Error ? err.message : String(err));
+    }
+  } else if (!jwks) {
+    console.error("[auth] resolveSupabaseToken: neither SUPABASE_URL nor SUPABASE_JWT_SECRET is set");
+  }
+
+  return null;
 }
 
 // ── Legacy custom JWT (local dev only) ───────────────────────────────────────
