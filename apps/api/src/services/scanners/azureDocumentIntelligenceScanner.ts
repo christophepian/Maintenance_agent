@@ -677,11 +677,14 @@ export class AzureDocumentIntelligenceScanner implements DocumentScanner {
       MIME_MAP[mimeType] || "application/octet-stream";
 
     // 2b. Select the best Azure model for this doc type.
+    //     prebuilt-idDocument gives structured FirstName, LastName, DateOfBirth, etc.
     //     prebuilt-invoice gives structured VendorName, InvoiceTotal, etc.
     //     prebuilt-layout is the generic fallback for other doc types.
-    const effectiveModel = docType === "INVOICE"
-      ? "prebuilt-invoice"
-      : this.modelId;
+    const effectiveModel = docType === "IDENTITY" || docType === "PERMIT"
+      ? "prebuilt-idDocument"
+      : docType === "INVOICE"
+        ? "prebuilt-invoice"
+        : this.modelId;
 
     console.log(
       `[DOC-SCAN] Azure: analyzing file="${fileName}" ` +
