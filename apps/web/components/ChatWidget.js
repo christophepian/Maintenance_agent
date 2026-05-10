@@ -83,10 +83,13 @@ export default function ChatWidget() {
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
-  // Don't render if no tenant session
+  // Don't render if no tenant session.
+  // Accept either tenantToken (dev TenantPicker) or authToken (Supabase login).
   const [hasTenantToken, setHasTenantToken] = useState(false);
   useEffect(() => {
-    setHasTenantToken(!!localStorage.getItem("tenantToken"));
+    setHasTenantToken(
+      !!localStorage.getItem("tenantToken") || !!localStorage.getItem("authToken"),
+    );
   }, []);
 
   // Scroll to bottom whenever messages change or widget opens
