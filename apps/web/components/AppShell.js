@@ -104,7 +104,7 @@ export default function AppShell({ role: roleProp, children }) {
     if (nextRole === "CONTRACTOR") {
       router.push("/contractor");
     } else if (nextRole === "TENANT") {
-      router.push("/tenant-form");
+      router.push("/tenant/leases");
     } else if (nextRole === "OWNER") {
       router.push("/owner");
     } else {

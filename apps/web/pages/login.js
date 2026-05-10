@@ -25,7 +25,7 @@ const ROLE_HOME = {
   MANAGER: "/manager",
   CONTRACTOR: "/contractor",
   OWNER: "/owner",
-  TENANT: "/tenant/inbox",
+  TENANT: "/tenant/leases",
 };
 
 /* ── Small shared components ──────────────────────────────────── */
