@@ -68,6 +68,8 @@ const DOC_PATTERNS: { type: DetectedDocType; patterns: RegExp[] }[] = [
     patterns: [
       /passport/i, /identity/i, /identit[eé]/i, /carte.*identit/i,
       /ausweis/i, /\bid[\s_-]?card/i,
+      // catch filenames like "ChristophePian-ID2025.pdf" or "scan_ID_2024.jpg"
+      /\bID\d{2,4}\b/, /[-_]ID[-_.]/i, /^ID[^a-z]/,
     ],
   },
   {
@@ -218,10 +220,11 @@ function averageConfidence(
 function normalizeIdentityFields(
   azureFields: Record<string, DocumentFieldOutput>,
   kvPairs: Array<{ key: string; value: string }>,
+  content: string,
 ): Record<string, string | number | boolean | null> {
   const fields: Record<string, string | number | boolean | null> = {};
 
-  // Try Azure structured fields first
+  // 1. Azure structured fields (populated by prebuilt-idDocument)
   fields.lastName =
     fieldToString(azureFields["LastName"]) ??
     fieldToString(azureFields["Surname"]) ??
@@ -250,6 +253,57 @@ function normalizeIdentityFields(
     fieldToString(azureFields["Sex"]) ??
     fieldToString(azureFields["Gender"]) ??
     findKvValue(kvPairs, /\bsex\b|\bgender\b|\bsexe\b|\bgeschlecht\b/i);
+
+  // 2. Content-based regex fallbacks (Swiss / European ID cards, MRZ lines)
+  //    Applied only when structured extraction yielded nothing.
+
+  if (!fields.lastName) {
+    const m = content.match(
+      /(?:^|\n)\s*(?:nom|name|nachname|familienname|surname)\s*[:\n]+\s*([A-ZÀÂÄÉÈÊËÏÎÔÖÙÛÜÇ][A-ZÀÂÄÉÈÊËÏÎÔÖÙÛÜÇ\s-]{1,30})/im,
+    );
+    if (m) fields.lastName = m[1].trim();
+  }
+
+  if (!fields.firstName) {
+    const m = content.match(
+      /(?:^|\n)\s*(?:pr[eé]nom|given\s*names?|vornamen?)\s*[:\n]+\s*([A-ZÀÂÄÉÈÊËÏÎÔÖÙÛÜÇ][A-ZÀÂÄÉÈÊËÏÎÔÖÙÛÜÇ\s-]{1,30})/im,
+    );
+    if (m) fields.firstName = m[1].trim();
+  }
+
+  if (!fields.dateOfBirth) {
+    // Swiss DD.MM.YYYY, ISO YYYY-MM-DD, or DD/MM/YYYY
+    const m = content.match(/\b(\d{2}[./]\d{2}[./]\d{4}|\d{4}-\d{2}-\d{2})\b/);
+    if (m) fields.dateOfBirth = m[1];
+  }
+
+  if (!fields.sex) {
+    // Standalone M or F — avoid matching middle of longer words
+    const m = content.match(/(?:^|[\s:/|])([MF])(?=$|[\s:/|<])/m);
+    if (m) fields.sex = m[1];
+  }
+
+  if (!fields.documentNumber) {
+    // Swiss ID: letter + 7-8 digits; passports: letter + 8 digits
+    const m = content.match(/\b([A-Z]\d{7,8})\b/);
+    if (m) fields.documentNumber = m[1];
+  }
+
+  if (!fields.nationality) {
+    // Label-based extraction
+    const labelM = content.match(
+      /(?:nationalit[eé]|nationality|staatsangeh[öo]rigkeit)\s*[:\n]\s*([A-Z]{2,3})/i,
+    );
+    if (labelM) {
+      fields.nationality = labelM[1];
+    } else if (/\bCHE\b/.test(content) || /\b(?:SUISSE|SCHWEIZER|SVIZZERO)\b/i.test(content)) {
+      fields.nationality = "CHE";
+    } else {
+      // MRZ line: 3-letter country code after < separators
+      const mrzM = content.match(/[A-Z]{2}<([A-Z]{3})</);
+      if (mrzM) fields.nationality = mrzM[1];
+    }
+  }
 
   return fields;
 }
@@ -736,23 +790,66 @@ export class AzureDocumentIntelligenceScanner implements DocumentScanner {
     );
 
     // 7. Collect Azure structured fields from analyzed documents
-    const azureFields: Record<string, DocumentFieldOutput> =
+    let azureFields: Record<string, DocumentFieldOutput> =
       analyzeResult.documents?.[0]?.fields ?? {};
 
     // 8. Collect key-value pairs for fallback matching
-    const kvPairs: KvPair[] = (analyzeResult.keyValuePairs ?? [])
+    let kvPairs: KvPair[] = (analyzeResult.keyValuePairs ?? [])
       .filter((kv) => kv.key?.content && kv.value?.content)
       .map((kv) => ({
         key: kv.key.content!,
         value: kv.value!.content!,
       }));
 
+    // 7b. Two-pass re-analysis: if content detection changed the doc type to one
+    //     that benefits from a specialized model (and we used a generic one), re-run.
+    const specializedModel =
+      docType === "IDENTITY" || docType === "PERMIT" ? "prebuilt-idDocument"
+      : docType === "INVOICE" ? "prebuilt-invoice"
+      : null;
+
+    if (specializedModel && specializedModel !== effectiveModel) {
+      console.log(
+        `[DOC-SCAN] Azure: re-analyzing with specialized model=${specializedModel} ` +
+        `(docType detected from content as ${docType})`,
+      );
+      try {
+        const retryResponse = await this.client
+          .path("/documentModels/{modelId}:analyze", specializedModel)
+          .post({ contentType, body: buffer });
+
+        if (!isUnexpected(retryResponse)) {
+          const retryPoller = getLongRunningPoller(this.client, retryResponse);
+          const retryResult = await retryPoller.pollUntilDone();
+          const retryAnalyzeResult: AnalyzeResultOutput | undefined =
+            (retryResult as any).body?.analyzeResult;
+
+          if (retryAnalyzeResult) {
+            azureFields = retryAnalyzeResult.documents?.[0]?.fields ?? {};
+            kvPairs = (retryAnalyzeResult.keyValuePairs ?? [])
+              .filter((kv) => kv.key?.content && kv.value?.content)
+              .map((kv) => ({ key: kv.key.content!, value: kv.value!.content! }));
+            console.log(
+              `[DOC-SCAN] Azure: re-analysis complete. ` +
+              `documents=${retryAnalyzeResult.documents?.length ?? 0} ` +
+              `kvPairs=${kvPairs.length}`,
+            );
+          }
+        }
+      } catch (retryErr) {
+        console.warn(
+          `[DOC-SCAN] Azure: re-analysis failed, continuing with first-pass results:`,
+          retryErr instanceof Error ? retryErr.message : retryErr,
+        );
+      }
+    }
+
     // 9. Normalize fields per doc type
     let fields: Record<string, string | number | boolean | null>;
 
     switch (docType) {
       case "IDENTITY":
-        fields = normalizeIdentityFields(azureFields, kvPairs);
+        fields = normalizeIdentityFields(azureFields, kvPairs, fullContent);
         break;
       case "SALARY_PROOF":
         fields = normalizeSalaryFields(azureFields, kvPairs);
