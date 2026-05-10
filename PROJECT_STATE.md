@@ -43,6 +43,10 @@ JWT-based. Production boot guard enforced (F1). All routes auth-gated. `AUTH_OPT
 > **Security hardening (SA-1–SA-22):** All resolved — see [EPIC_HISTORY.md](EPIC_HISTORY.md).
 > **Prisma/DTO hardening (CQ-7/12/13/14):** All resolved — see [EPIC_HISTORY.md](EPIC_HISTORY.md).
 
+### ⚠️ Known issue — Supabase JWT algorithm mismatch (flagged 2026-05-10)
+
+Render logs show repeated `[auth] resolveSupabaseToken failed: Unsupported "alg" value for a JSON Web Key Set`. The API's JWT verification does not support the algorithm now used by the Supabase project (likely ES256/RS256 after a key rotation), so some requests fail token verification silently. Fresh logins may still work via the fallback path, but stale sessions will fail on every API call until the user re-authenticates. **To investigate at next audit:** check the `alg` value in the Supabase project's JWKS endpoint against what `jose` is configured to accept in `authz.ts` / `resolveSupabaseToken`. May require upgrading the JWKS verification config or re-issuing the Supabase JWT secret.
+
 ### Testing — 67 suites
 
 * Jest + ts-jest, `maxWorkers: 1` (serial integration). Test DB: `maint_agent_test` (isolated via `.env.test`).
