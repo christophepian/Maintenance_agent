@@ -5,9 +5,9 @@
  * is synchronised with what the browser and middleware see.
  *
  * Required env vars (server-side only — never exposed to the browser):
- *   NEXT_PUBLIC_SUPABASE_URL       (shared with client)
- *   NEXT_PUBLIC_SUPABASE_ANON_KEY  (shared with client)
- *   SUPABASE_SERVICE_ROLE_KEY      (server-only — never use in browser client)
+ *   NEXT_PUBLIC_SUPABASE_URL              (shared with client)
+ *   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY  (shared with client)
+ *   SUPABASE_SECRET_KEY                   (server-only — never use in browser client)
  */
 import { createServerClient } from "@supabase/ssr";
 
@@ -21,7 +21,7 @@ import { createServerClient } from "@supabase/ssr";
 export function createApiClient(req, res) {
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
     {
       cookies: {
         getAll() {
@@ -63,7 +63,7 @@ export function createAdminClient() {
   const { createClient } = require("@supabase/supabase-js");
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY,
+    process.env.SUPABASE_SECRET_KEY,
     { auth: { autoRefreshToken: false, persistSession: false } }
   );
 }
