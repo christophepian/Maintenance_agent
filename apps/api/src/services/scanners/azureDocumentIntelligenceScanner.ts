@@ -1177,27 +1177,7 @@ function generateSummary(
 }
 
 /* ══════════════════════════════════════════════════════════════
-   PDF page splitter — creates one single-page PDF buffer per page.
-   Uses pdf-lib (pure JS, no native deps).
-   ══════════════════════════════════════════════════════════════ */
-
-async function splitPdfIntoPages(pdfBuffer: Buffer): Promise<Buffer[]> {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { PDFDocument } = require("pdf-lib") as typeof import("pdf-lib");
-  const srcDoc = await PDFDocument.load(pdfBuffer);
-  const count = srcDoc.getPageCount();
-  const pages: Buffer[] = [];
-  for (let i = 0; i < count; i++) {
-    const singlePage = await PDFDocument.create();
-    const [copied] = await singlePage.copyPages(srcDoc, [i]);
-    singlePage.addPage(copied);
-    pages.push(Buffer.from(await singlePage.save()));
-  }
-  return pages;
-}
-
-/* ══════════════════════════════════════════════════════════════
-   Merged Azure result — content + KV pairs from one or more calls
+   Azure result shape
    ══════════════════════════════════════════════════════════════ */
 
 interface AzureAnalyzeResult {
@@ -1282,65 +1262,6 @@ export class AzureDocumentIntelligenceScanner implements DocumentScanner {
     };
   }
 
-  /**
-   * Split the PDF into single-page buffers and analyze each page with Azure,
-   * running up to CONCURRENCY pages in parallel.
-   * Merges all page text and KV pairs into a single AzureAnalyzeResult.
-   */
-  private async analyzePdfPageByPage(
-    pdfBuffer: Buffer,
-    contentType: AzureContentType,
-    modelId: string,
-  ): Promise<AzureAnalyzeResult> {
-    const CONCURRENCY = 5;
-
-    const pageBuffers = await splitPdfIntoPages(pdfBuffer);
-    console.log(`[DOC-SCAN] PDF split into ${pageBuffers.length} page(s) for per-page Azure analysis`);
-
-    const pageContents: string[] = new Array(pageBuffers.length).fill("");
-    const allKvPairs: KvPair[] = [];
-    let firstFields: Record<string, DocumentFieldOutput> = {};
-
-    for (let batch = 0; batch < pageBuffers.length; batch += CONCURRENCY) {
-      const slice = pageBuffers.slice(batch, batch + CONCURRENCY);
-      const results = await Promise.all(
-        slice.map((pageBuf, idx) =>
-          this.analyzeWithAzure(pageBuf, contentType, modelId).catch((err) => {
-            console.warn(
-              `[DOC-SCAN] Page ${batch + idx + 1}/${pageBuffers.length} failed: ` +
-              (err instanceof Error ? err.message : String(err)),
-            );
-            return { content: "", kvPairs: [], fields: {}, pageCount: 0 } as AzureAnalyzeResult;
-          }),
-        ),
-      );
-
-      for (let i = 0; i < results.length; i++) {
-        pageContents[batch + i] = results[i].content;
-        allKvPairs.push(...results[i].kvPairs);
-        if (!Object.keys(firstFields).length && Object.keys(results[i].fields).length) {
-          firstFields = results[i].fields;
-        }
-      }
-
-      console.log(
-        `[DOC-SCAN] Pages ${batch + 1}–${Math.min(batch + CONCURRENCY, pageBuffers.length)} analyzed`,
-      );
-    }
-
-    const fullContent = pageContents.join("\n\n");
-    console.log(
-      `[DOC-SCAN] Per-page analysis complete: ${pageBuffers.length} pages, contentLen=${fullContent.length}`,
-    );
-
-    return {
-      content: fullContent,
-      kvPairs: allKvPairs,
-      fields: firstFields,
-      pageCount: pageBuffers.length,
-    };
-  }
-
   async scan(
     buffer: Buffer,
     fileName: string,
@@ -1364,15 +1285,9 @@ export class AzureDocumentIntelligenceScanner implements DocumentScanner {
       `mime=${mimeType} model=${effectiveModel} (base=${this.modelId}) initialDocType=${docType}`,
     );
 
-    // 3. Run Azure analysis.
-    //    PDFs are split into single-page buffers so Azure's per-request page limit
-    //    (2 pages on the free F0 tier) cannot truncate multi-page documents.
-    let azureResult: AzureAnalyzeResult;
-    if (mimeType === "application/pdf") {
-      azureResult = await this.analyzePdfPageByPage(buffer, contentType, effectiveModel);
-    } else {
-      azureResult = await this.analyzeWithAzure(buffer, contentType, effectiveModel);
-    }
+    // 3. Submit the full document to Azure in a single call.
+    //    S0 (Standard) tier supports up to 2,000 pages per request.
+    const azureResult = await this.analyzeWithAzure(buffer, contentType, effectiveModel);
 
     let { content: fullContent, kvPairs, fields: azureFields } = azureResult;
 
@@ -1386,9 +1301,10 @@ export class AzureDocumentIntelligenceScanner implements DocumentScanner {
     );
 
     // 5. Two-pass re-analysis: if content detection upgraded the doc type to one
-    //    that benefits from a specialized model, re-run with that model.
-    //    Only for single-buffer docs (images, single-page PDFs already processed above).
-    if (mimeType !== "application/pdf") {
+    //    that benefits from a specialized model (and we used a generic one), re-run.
+    //    Skipped for FINANCIAL_STATEMENT — prebuilt-layout is the right model and
+    //    Claude handles the structured extraction.
+    if (docType !== "FINANCIAL_STATEMENT") {
       const specializedModel =
         docType === "IDENTITY" || docType === "PERMIT" ? "prebuilt-idDocument"
         : docType === "INVOICE"                        ? "prebuilt-invoice"
