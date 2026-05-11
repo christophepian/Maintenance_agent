@@ -181,10 +181,15 @@ export function requireTenantSession(req: http.IncomingMessage, res: http.Server
   const authedReq = req as AuthedRequest;
   if (authedReq.user) {
     const { role, accessLevel, tenantId, userId } = authedReq.user;
-    // ADMIN users can impersonate any tenant for demos — they must have a
-    // tenantId stored in app_metadata to use tenant-scoped endpoints.
+    // Allow access if:
+    //   - user has appRole TENANT (normal path), OR
+    //   - user has accessLevel ADMIN (full access), OR
+    //   - user has an explicit tenantId in app_metadata (admin-granted demo access
+    //     for APP_USER accounts that need to walk through the tenant experience)
+    const isTenant = role === "TENANT";
     const isAdmin = accessLevel === "ADMIN";
-    if (role !== "TENANT" && !isAdmin) {
+    const hasExplicitTenantId = !!tenantId;
+    if (!isTenant && !isAdmin && !hasExplicitTenantId) {
       res.writeHead(403, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ error: "Tenant role required" }));
       return null;
