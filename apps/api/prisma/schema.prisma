@@ -2485,7 +2485,7 @@ model ImportedStatement {
   updatedAt     DateTime                @updatedAt
 
   org              Org                      @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  building         Building                 @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  building         Building?                @relation(fields: [buildingId], references: [id], onDelete: SetNull)
   accountBalances  ImportedAccountBalance[]
 
   @@index([orgId])
