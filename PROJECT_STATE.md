@@ -56,9 +56,9 @@ Supabase disabled legacy API keys on 2026-05-10 and migrated to a new publishabl
 
 **Middleware fix:** Edge middleware was gating `/api/*` routes with `supabase.auth.getSession()`, silently redirecting API calls to `/login` when the session check failed. Fixed by adding `/api/` to `PUBLIC_PATHS` — the Render backend enforces its own auth independently.
 
-### ⚠️ Known issue — Tenant chatbot proxy not reaching Render (2026-05-10)
+### Tenant chatbot — fully working (2026-05-11)
 
-ChatWidget POST to `/api/tenant/conversation` fails with "Failed to send message". Middleware fix is deployed (API routes bypass session gate). Vercel proxy function is invoked but requests are not appearing in Render logs, suggesting the proxy is failing before the fetch to Render (possible `API_BASE_URL` misconfiguration or connection error). **To investigate next session:** check Vercel Functions logs for `[proxy]` output and confirm `API_BASE_URL` in Vercel points to `https://maintenance-agent.onrender.com`.
+Root causes resolved: (1) Edge middleware was blocking `/api/*` requests by redirecting to `/login` when Supabase session check failed — fixed by adding `/api/` to `PUBLIC_PATHS`; (2) `ANTHROPIC_API_KEY` in Render was stale after key rotation — updated. JWT verification via JWKS (ES256) works correctly end to end.
 
 ### Testing — 67 suites
 
