@@ -23,7 +23,7 @@ import Badge from "../../../../components/ui/Badge";
 import { authHeaders } from "../../../../lib/api";
 import { formatDate, formatChfCents } from "../../../../lib/format";
 import { cn } from "../../../../lib/utils";
-import { withTranslations } from "../../../../lib/i18n";
+import { withServerTranslations } from "../../../../lib/i18n";
 
 // ── Status / confidence helpers ───────────────────────────────────────────────
 
@@ -465,7 +465,4 @@ export default function ImportedStatementReviewPage() {
   );
 }
 
-export const getStaticProps = withTranslations(["common", "manager"]);
-export async function getStaticPaths() {
-  return { paths: [], fallback: "blocking" };
-}
+export const getServerSideProps = withServerTranslations(["common", "manager"]);
