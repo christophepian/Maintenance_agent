@@ -857,11 +857,208 @@ async function enrichFieldsWithClaude(
 }
 
 /**
+ * Extract account balances (and optionally invoice lines) from one chunk of
+ * OCR text. Each chunk is a manageable slice of the full document.
+ */
+async function extractChunkWithClaude(
+  client: ReturnType<typeof getAnthropicClient>,
+  content: string,
+  chunkIndex: number,
+  totalChunks: number,
+): Promise<{
+  fields: Record<string, string | number | boolean | null>;
+  accountBalances: ExtractedAccountBalance[];
+  invoiceLines: ExtractedInvoiceLine[];
+}> {
+  const hasInvoiceContent =
+    /facture|rechnung|invoice|\btotal\s*(?:chf|eur)\b|montant\s*total/i.test(content);
+
+  const tools = hasInvoiceContent
+    ? [FINANCIAL_STATEMENT_BALANCE_TOOL, FINANCIAL_STATEMENT_INVOICE_TOOL]
+    : [FINANCIAL_STATEMENT_BALANCE_TOOL];
+
+  const chunkLabel =
+    totalChunks > 1 ? ` (chunk ${chunkIndex + 1} of ${totalChunks})` : "";
+
+  const response = await client.messages.create({
+    model: "claude-haiku-4-5-20251001",
+    max_tokens: 8192,
+    tools: tools as unknown as Parameters<typeof client.messages.create>[0]["tools"],
+    tool_choice: { type: "any" },
+    messages: [
+      {
+        role: "user",
+        content:
+          `Extract ALL account balance rows${hasInvoiceContent ? " and invoice lines" : ""} ` +
+          `from this section of a Swiss property management document${chunkLabel}. ` +
+          "Call extractAccountBalances with EVERY account-balance line you find — " +
+          "include every row, no matter how many there are. " +
+          (hasInvoiceContent
+            ? "Also call extractInvoiceLines for every individual invoice or charge. "
+            : "") +
+          "Omit fields not clearly present; do not guess.\n\n" +
+          `OCR text:\n${content}`,
+      },
+    ],
+  });
+
+  const stopReason = (response as any).stop_reason;
+  if (stopReason === "max_tokens") {
+    console.warn(
+      `[DOC-SCAN] Claude hit max_tokens on chunk ${chunkIndex + 1}/${totalChunks} ` +
+      `(contentLen=${content.length}) — results may be incomplete`,
+    );
+  }
+
+  const fields: Record<string, string | number | boolean | null> = {};
+  let accountBalances: ExtractedAccountBalance[] = [];
+  let invoiceLines: ExtractedInvoiceLine[] = [];
+
+  for (const block of response.content) {
+    if (block.type !== "tool_use") continue;
+
+    if (block.name === "extractAccountBalances") {
+      const input = block.input as {
+        fiscalYear?: number;
+        periodLabel?: string;
+        buildingAddress?: string;
+        balances?: Array<{
+          rawAccountCode: string;
+          rawAccountName: string;
+          balanceChf: number;
+          balanceType: "DEBIT" | "CREDIT";
+        }>;
+      };
+      if (input.fiscalYear) fields.fiscalYear = input.fiscalYear;
+      if (input.periodLabel) fields.periodLabel = input.periodLabel;
+      if (input.buildingAddress) fields.buildingAddress = input.buildingAddress;
+      accountBalances = (input.balances ?? [])
+        .filter((b) => b.rawAccountCode && b.rawAccountName && typeof b.balanceChf === "number")
+        .map((b) => ({
+          rawAccountCode: b.rawAccountCode,
+          rawAccountName: b.rawAccountName,
+          balanceChf: b.balanceChf,
+          balanceType: b.balanceType === "CREDIT" ? "CREDIT" : "DEBIT",
+        }));
+    }
+
+    if (block.name === "extractInvoiceLines") {
+      const input = block.input as {
+        invoices?: Array<{
+          vendorName?: string;
+          invoiceNumber?: string;
+          invoiceDate?: string;
+          dueDate?: string;
+          totalAmount?: number;
+          vatAmount?: number;
+          subtotal?: number;
+          currency?: string;
+          iban?: string;
+          paymentReference?: string;
+          description?: string;
+          unitHint?: string;
+          tenantHint?: string;
+        }>;
+      };
+      invoiceLines = (input.invoices ?? []).map((inv) => ({
+        vendorName:       inv.vendorName       ?? null,
+        invoiceNumber:    inv.invoiceNumber     ?? null,
+        invoiceDate:      inv.invoiceDate       ?? null,
+        dueDate:          inv.dueDate           ?? null,
+        totalAmount:      inv.totalAmount       ?? null,
+        vatAmount:        inv.vatAmount         ?? null,
+        subtotal:         inv.subtotal          ?? null,
+        currency:         inv.currency          ?? null,
+        iban:             inv.iban              ?? null,
+        paymentReference: inv.paymentReference  ?? null,
+        description:      inv.description       ?? null,
+        unitHint:         inv.unitHint          ?? null,
+        tenantHint:       inv.tenantHint        ?? null,
+      }));
+    }
+  }
+
+  return { fields, accountBalances, invoiceLines };
+}
+
+/**
+ * Split OCR content into page-sized chunks using Azure page span data when
+ * available, otherwise fall back to character-based splitting.
+ */
+function splitIntoPageChunks(
+  fullContent: string,
+  pages: Array<{ spans?: Array<{ offset: number; length: number }> }> | undefined,
+  maxCharsPerChunk: number,
+): string[] {
+  // Try Azure page spans first — gives accurate page-boundary splitting
+  if (pages && pages.length > 0) {
+    const pageTexts: string[] = pages.map((page) => {
+      if (!page.spans || page.spans.length === 0) return "";
+      const start = page.spans[0].offset;
+      const end = page.spans[page.spans.length - 1].offset + page.spans[page.spans.length - 1].length;
+      return fullContent.substring(start, end);
+    }).filter((t) => t.trim().length > 0);
+
+    if (pageTexts.length > 0) {
+      // Batch pages into chunks that stay within the char limit
+      const chunks: string[] = [];
+      let current = "";
+      for (const pageText of pageTexts) {
+        if (current.length + pageText.length > maxCharsPerChunk && current.length > 0) {
+          chunks.push(current.trim());
+          current = pageText;
+        } else {
+          current += (current ? "\n\n" : "") + pageText;
+        }
+      }
+      if (current.trim()) chunks.push(current.trim());
+      return chunks;
+    }
+  }
+
+  // Fallback: split on form-feed characters (common PDF page break encoding)
+  const ffPages = fullContent.split(/\f/).filter((p) => p.trim().length > 0);
+  if (ffPages.length > 1) {
+    const chunks: string[] = [];
+    let current = "";
+    for (const p of ffPages) {
+      if (current.length + p.length > maxCharsPerChunk && current.length > 0) {
+        chunks.push(current.trim());
+        current = p;
+      } else {
+        current += (current ? "\n\n" : "") + p;
+      }
+    }
+    if (current.trim()) chunks.push(current.trim());
+    return chunks;
+  }
+
+  // Last resort: split at sentence/line boundaries near the size limit
+  if (fullContent.length <= maxCharsPerChunk) return [fullContent];
+  const chunks: string[] = [];
+  let pos = 0;
+  while (pos < fullContent.length) {
+    let end = pos + maxCharsPerChunk;
+    if (end < fullContent.length) {
+      // Find a clean line break near the boundary
+      const breakAt = fullContent.lastIndexOf("\n", end);
+      if (breakAt > pos + maxCharsPerChunk * 0.5) end = breakAt;
+    }
+    chunks.push(fullContent.substring(pos, end).trim());
+    pos = end;
+  }
+  return chunks.filter((c) => c.length > 0);
+}
+
+/**
  * Extract account balances (and optionally invoice lines) from a financial
- * statement PDF using two parallel Claude Haiku tool-use calls.
+ * statement PDF by processing it in page-sized chunks.
  * Non-blocking: returns empty arrays on missing API key or any runtime error.
  */
-async function extractFinancialStatementWithClaude(content: string): Promise<{
+async function extractFinancialStatementWithClaude(
+  content: string,
+  pages?: Array<{ spans?: Array<{ offset: number; length: number }> }>,
+): Promise<{
   fields: Record<string, string | number | boolean | null>;
   accountBalances: ExtractedAccountBalance[];
   invoiceLines: ExtractedInvoiceLine[];
@@ -869,113 +1066,54 @@ async function extractFinancialStatementWithClaude(content: string): Promise<{
   const empty = { fields: {}, accountBalances: [], invoiceLines: [] };
   if (!content) return empty;
 
+  // ~30 k chars per chunk ≈ 7 k input tokens — leaves plenty of headroom
+  // for the 8192-token output budget even with large account lists.
+  const MAX_CHARS_PER_CHUNK = 30_000;
+
+  const chunks = splitIntoPageChunks(content, pages, MAX_CHARS_PER_CHUNK);
+  console.log(
+    `[DOC-SCAN] Financial statement: contentLen=${content.length} → ${chunks.length} chunk(s) for Claude`,
+  );
+
   try {
     const client = getAnthropicClient();
 
-    // Determine whether this document also contains invoice lines.
-    // Simple heuristic: look for invoice-pattern keywords in content.
-    const hasInvoiceContent =
-      /facture|rechnung|invoice|\btotal\s*(?:chf|eur)\b|montant\s*total/i.test(content);
+    let mergedFields: Record<string, string | number | boolean | null> = {};
+    const allBalances: ExtractedAccountBalance[] = [];
+    const allInvoiceLines: ExtractedInvoiceLine[] = [];
+    // Track seen account codes to deduplicate across chunks
+    const seenCodes = new Set<string>();
 
-    const tools = hasInvoiceContent
-      ? [FINANCIAL_STATEMENT_BALANCE_TOOL, FINANCIAL_STATEMENT_INVOICE_TOOL]
-      : [FINANCIAL_STATEMENT_BALANCE_TOOL];
+    for (let i = 0; i < chunks.length; i++) {
+      const chunkResult = await extractChunkWithClaude(client, chunks[i], i, chunks.length);
 
-    const response = await client.messages.create({
-      model: "claude-haiku-4-5-20251001",
-      max_tokens: 8192,
-      tools: tools as unknown as Parameters<typeof client.messages.create>[0]["tools"],
-      tool_choice: { type: "any" },
-      messages: [
-        {
-          role: "user",
-          content:
-            "Extract ALL account balance rows and any invoice lines from this Swiss property management document. " +
-            "You MUST call extractAccountBalances with EVERY account-balance line in the document — " +
-            "do not stop after the first page, process the entire document from start to finish. " +
-            (hasInvoiceContent
-              ? "Also call extractInvoiceLines with every individual invoice or charge you find. "
-              : "") +
-            "If a field is not clearly present in the text, omit it — do not guess.\n\n" +
-            `Document OCR text:\n${content}`,
-        },
-      ],
-    });
-
-    let fields: Record<string, string | number | boolean | null> = {};
-    let accountBalances: ExtractedAccountBalance[] = [];
-    let invoiceLines: ExtractedInvoiceLine[] = [];
-
-    for (const block of response.content) {
-      if (block.type !== "tool_use") continue;
-
-      if (block.name === "extractAccountBalances") {
-        const input = block.input as {
-          fiscalYear?: number;
-          periodLabel?: string;
-          buildingAddress?: string;
-          balances?: Array<{
-            rawAccountCode: string;
-            rawAccountName: string;
-            balanceChf: number;
-            balanceType: "DEBIT" | "CREDIT";
-          }>;
-        };
-        if (input.fiscalYear) fields.fiscalYear = input.fiscalYear;
-        if (input.periodLabel) fields.periodLabel = input.periodLabel;
-        if (input.buildingAddress) fields.buildingAddress = input.buildingAddress;
-        accountBalances = (input.balances ?? [])
-          .filter((b) => b.rawAccountCode && b.rawAccountName && typeof b.balanceChf === "number")
-          .map((b) => ({
-            rawAccountCode: b.rawAccountCode,
-            rawAccountName: b.rawAccountName,
-            balanceChf: b.balanceChf,
-            balanceType: b.balanceType === "CREDIT" ? "CREDIT" : "DEBIT",
-          }));
+      // Merge metadata fields (first non-null value wins)
+      for (const [k, v] of Object.entries(chunkResult.fields)) {
+        if (v !== null && v !== undefined && mergedFields[k] == null) {
+          mergedFields[k] = v;
+        }
       }
 
-      if (block.name === "extractInvoiceLines") {
-        const input = block.input as {
-          invoices?: Array<{
-            vendorName?: string;
-            invoiceNumber?: string;
-            invoiceDate?: string;
-            dueDate?: string;
-            totalAmount?: number;
-            vatAmount?: number;
-            subtotal?: number;
-            currency?: string;
-            iban?: string;
-            paymentReference?: string;
-            description?: string;
-            unitHint?: string;
-            tenantHint?: string;
-          }>;
-        };
-        invoiceLines = (input.invoices ?? []).map((inv) => ({
-          vendorName:       inv.vendorName       ?? null,
-          invoiceNumber:    inv.invoiceNumber     ?? null,
-          invoiceDate:      inv.invoiceDate       ?? null,
-          dueDate:          inv.dueDate           ?? null,
-          totalAmount:      inv.totalAmount       ?? null,
-          vatAmount:        inv.vatAmount         ?? null,
-          subtotal:         inv.subtotal          ?? null,
-          currency:         inv.currency          ?? null,
-          iban:             inv.iban              ?? null,
-          paymentReference: inv.paymentReference  ?? null,
-          description:      inv.description       ?? null,
-          unitHint:         inv.unitHint          ?? null,
-          tenantHint:       inv.tenantHint        ?? null,
-        }));
+      // Append balances, deduplicating by account code
+      for (const b of chunkResult.accountBalances) {
+        const key = b.rawAccountCode.trim().toLowerCase();
+        if (!seenCodes.has(key)) {
+          seenCodes.add(key);
+          allBalances.push(b);
+        }
       }
+
+      allInvoiceLines.push(...chunkResult.invoiceLines);
+
+      console.log(
+        `[DOC-SCAN] Chunk ${i + 1}/${chunks.length}: ` +
+        `${chunkResult.accountBalances.length} balance(s), ` +
+        `${chunkResult.invoiceLines.length} invoice line(s) → ` +
+        `running total ${allBalances.length} balance(s)`,
+      );
     }
 
-    console.log(
-      `[DOC-SCAN] Financial statement extraction: ` +
-      `${accountBalances.length} balance row(s), ${invoiceLines.length} invoice line(s)`,
-    );
-
-    return { fields, accountBalances, invoiceLines };
+    return { fields: mergedFields, accountBalances: allBalances, invoiceLines: allInvoiceLines };
   } catch (err) {
     console.warn(
       "[DOC-SCAN] Financial statement Claude extraction skipped:",
@@ -1230,7 +1368,11 @@ export class AzureDocumentIntelligenceScanner implements DocumentScanner {
       case "FINANCIAL_STATEMENT": {
         // Financial statements use Claude for the heavy lifting — Azure layout
         // gives us the raw text; Claude structures the account balance rows.
-        const fsResult = await extractFinancialStatementWithClaude(fullContent);
+        // Pass page spans so large documents are split accurately at page boundaries.
+        const fsResult = await extractFinancialStatementWithClaude(
+          fullContent,
+          analyzeResult.pages as Array<{ spans?: Array<{ offset: number; length: number }> }> | undefined,
+        );
         fields = fsResult.fields;
         accountBalances = fsResult.accountBalances;
         // Only include invoiceLines if Claude found at least one
