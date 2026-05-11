@@ -66,6 +66,7 @@ export interface LinkedInvoiceDTO {
   id: string;
   description: string | null;
   recipientName: string | null;
+  /** Amount in cents (same as Invoice.amount) */
   totalCents: number | null;
   currency: string | null;
   issueDate: string | null;
@@ -652,7 +653,7 @@ export async function listStatements(
     prisma.importedStatement.count({ where }),
   ]);
 
-  return { data: items.map(mapDTO), total };
+  return { data: items.map((s) => mapDTO(s)), total };
 }
 
 export async function getStatement(
@@ -675,7 +676,7 @@ export async function getStatement(
       id: true,
       description: true,
       recipientName: true,
-      totalCents: true,
+      amount: true,
       currency: true,
       issueDate: true,
       status: true,
@@ -767,7 +768,7 @@ function mapDTO(s: any, linkedInvoices: any[] = []): ImportedStatementDTO {
       id: inv.id,
       description: inv.description ?? null,
       recipientName: inv.recipientName ?? null,
-      totalCents: inv.totalCents ?? null,
+      totalCents: inv.amount ?? null,
       currency: inv.currency ?? null,
       issueDate: inv.issueDate ? new Date(inv.issueDate).toISOString() : null,
       status: inv.status,
