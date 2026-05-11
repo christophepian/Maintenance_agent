@@ -883,17 +883,18 @@ async function extractFinancialStatementWithClaude(content: string): Promise<{
 
     const response = await client.messages.create({
       model: "claude-haiku-4-5-20251001",
-      max_tokens: 2048,
+      max_tokens: 8192,
       tools: tools as unknown as Parameters<typeof client.messages.create>[0]["tools"],
       tool_choice: { type: "any" },
       messages: [
         {
           role: "user",
           content:
-            "Extract all account balance rows and any invoice lines from this Swiss property management document. " +
-            "Call extractAccountBalances with every account-balance line you find, " +
+            "Extract ALL account balance rows and any invoice lines from this Swiss property management document. " +
+            "You MUST call extractAccountBalances with EVERY account-balance line in the document — " +
+            "do not stop after the first page, process the entire document from start to finish. " +
             (hasInvoiceContent
-              ? "and call extractInvoiceLines with every individual invoice or charge you find. "
+              ? "Also call extractInvoiceLines with every individual invoice or charge you find. "
               : "") +
             "If a field is not clearly present in the text, omit it — do not guess.\n\n" +
             `Document OCR text:\n${content}`,
