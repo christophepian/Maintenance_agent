@@ -24,6 +24,7 @@ import {
   listStatements,
   getStatement,
   resolveAccountBalance,
+  assignBuilding,
   ImportedStatementError,
 } from "../services/importedStatementService";
 
@@ -179,6 +180,36 @@ export function registerImportedStatementRoutes(router: Router) {
       }
       console.error("[IMPORT] reject error:", e);
       sendError(res, 500, "INTERNAL_ERROR", "Failed to reject statement", e.message);
+    }
+  });
+
+  // ── PATCH /imported-statements/:id/building ──────────────────────────────
+  router.patch("/imported-statements/:id/building", async ({ req, res, orgId, prisma, params }) => {
+    const user = requireAnyRole(req, res, ["MANAGER"]);
+    if (!user) return;
+
+    let buildingId: string;
+    try {
+      const rawBody = await readRawBody(req, 4096);
+      const body = JSON.parse(rawBody.toString("utf8"));
+      if (!body.buildingId || typeof body.buildingId !== "string") {
+        return sendError(res, 400, "MISSING_FIELD", "buildingId is required");
+      }
+      buildingId = body.buildingId.trim();
+    } catch {
+      return sendError(res, 400, "INVALID_JSON", "Request body must be valid JSON");
+    }
+
+    try {
+      const statement = await assignBuilding(prisma, params.id, orgId, buildingId);
+      sendJson(res, 200, { data: statement });
+    } catch (e: any) {
+      if (e instanceof ImportedStatementError) {
+        const status = e.code === "NOT_FOUND" || e.code === "BUILDING_NOT_FOUND" ? 404 : 400;
+        return sendError(res, status, e.code, e.message);
+      }
+      console.error("[IMPORT] assign building error:", e);
+      sendError(res, 500, "INTERNAL_ERROR", "Failed to assign building", e.message);
     }
   });
 

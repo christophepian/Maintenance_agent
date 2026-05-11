@@ -40,8 +40,8 @@ import * as crypto from "crypto";
 export interface ImportedStatementDTO {
   id: string;
   orgId: string;
-  buildingId: string;
-  buildingName: string;
+  buildingId: string | null;
+  buildingName: string | null;
   fiscalYear: number;
   periodStart: string | null;
   periodEnd: string | null;
@@ -375,9 +375,7 @@ export async function ingestStatement(
   }
 
   if (!buildingId) {
-    throw new Error(
-      "Could not identify the building from the PDF content. Please supply buildingId explicitly.",
-    );
+    console.log("[IMPORT] Building not identified — statement will be stored without a building. Manager must assign one before approval.");
   }
 
   // 4. Fiscal year
@@ -438,8 +436,8 @@ export async function ingestStatement(
     console.log(`[IMPORT] Persisted ${balanceRows.length} account balance row(s)`);
   }
 
-  // 7. Create Invoice records for extracted invoice lines
-  if (scanResult.invoiceLines && scanResult.invoiceLines.length > 0) {
+  // 7. Create Invoice records for extracted invoice lines (only when building is known)
+  if (buildingId && scanResult.invoiceLines && scanResult.invoiceLines.length > 0) {
     for (const line of scanResult.invoiceLines) {
       try {
         const { unitId } = await resolveUnitFromLine(
@@ -514,9 +512,12 @@ export async function approveStatement(
     },
   });
 
-  if (!statement) throw new Error("STATEMENT_NOT_FOUND");
+  if (!statement) throw new ImportedStatementError("NOT_FOUND", "Statement not found");
   if (statement.status !== ImportedStatementStatus.PENDING_REVIEW) {
-    throw new Error(`INVALID_STATUS: statement is ${statement.status}`);
+    throw new ImportedStatementError("INVALID_STATUS", `Statement is ${statement.status} — only PENDING_REVIEW statements can be approved`);
+  }
+  if (!statement.buildingId) {
+    throw new ImportedStatementError("BUILDING_REQUIRED", "A building must be assigned before this statement can be approved");
   }
 
   // Post ledger entries for matched account balances
@@ -651,6 +652,34 @@ export async function getStatement(
     },
   });
   return s ? mapDTO(s) : null;
+}
+
+/** Assign (or reassign) the building for a PENDING_REVIEW statement. */
+export async function assignBuilding(
+  prisma: PrismaClient,
+  statementId: string,
+  orgId: string,
+  buildingId: string,
+): Promise<ImportedStatementDTO> {
+  const building = await prisma.building.findFirst({ where: { id: buildingId, orgId } });
+  if (!building) throw new ImportedStatementError("BUILDING_NOT_FOUND", "Building not found in this org");
+
+  const updated = await prisma.importedStatement.updateMany({
+    where: { id: statementId, orgId, status: ImportedStatementStatus.PENDING_REVIEW },
+    data: { buildingId, buildingMatchConfidence: MatchConfidence.MANUAL },
+  });
+  if (updated.count === 0) {
+    throw new ImportedStatementError("NOT_FOUND", "Statement not found or not in PENDING_REVIEW status");
+  }
+
+  const s = await prisma.importedStatement.findUniqueOrThrow({
+    where: { id: statementId },
+    include: {
+      building: { select: { name: true } },
+      accountBalances: { include: { account: { select: { name: true, code: true } } } },
+    },
+  });
+  return mapDTO(s);
 }
 
 /** Manually update the accountId for an UNMATCHED balance row. */

@@ -2468,7 +2468,7 @@ enum MatchConfidence {
 model ImportedStatement {
   id            String                  @id @default(uuid())
   orgId         String
-  buildingId    String
+  buildingId    String?                 /// Nullable — may be unset if building not yet in the system; must be set before approval
   fiscalYear    Int                     /// e.g. 2024
   periodStart   DateTime?               /// Extracted or user-supplied period start
   periodEnd     DateTime?               /// Extracted or user-supplied period end

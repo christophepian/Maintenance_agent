@@ -128,6 +128,74 @@ function ResolveAccountRow({ balance, orgId, onResolved }) {
   );
 }
 
+// ── Building assign inline form ───────────────────────────────────────────────
+
+function AssignBuildingInline({ statementId, onAssigned }) {
+  const { t } = useTranslation("manager");
+  const [buildings, setBuildings] = useState([]);
+  const [buildingId, setBuildingId] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    fetch("/api/buildings", { headers: authHeaders() })
+      .then((r) => r.json())
+      .then((j) => setBuildings(j.data ?? []))
+      .catch(() => {});
+  }, []);
+
+  async function handleSave() {
+    if (!buildingId) return;
+    setSaving(true);
+    setError("");
+    try {
+      const res = await fetch(`/api/imported-statements/${statementId}/building`, {
+        method: "PATCH",
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ buildingId }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error?.message || "Failed");
+      onAssigned(json.data);
+    } catch (e) {
+      setError(String(e?.message || e));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="text-sm text-amber-800 bg-amber-50 border border-amber-300 rounded-lg px-3 py-2">
+        {t("manager:financeImports.text.noBuildingAssigned")}
+      </p>
+      <div className="flex gap-2 items-end">
+        <div className="flex-1">
+          <label className="form-label">{t("manager:financeImports.prop.building")}</label>
+          <select
+            className="form-input w-full"
+            value={buildingId}
+            onChange={(e) => setBuildingId(e.target.value)}
+          >
+            <option value="">— select —</option>
+            {buildings.map((b) => (
+              <option key={b.id} value={b.id}>{b.name}</option>
+            ))}
+          </select>
+        </div>
+        <button
+          className="button-primary text-sm"
+          onClick={handleSave}
+          disabled={saving || !buildingId}
+        >
+          {t("manager:financeImports.action.assignBuilding")}
+        </button>
+      </div>
+      {error && <p className="text-sm text-destructive-text">{error}</p>}
+    </div>
+  );
+}
+
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function ImportedStatementReviewPage() {
@@ -202,6 +270,7 @@ export default function ImportedStatementReviewPage() {
   const s = statement;
   const isPendingReview = s?.status === "PENDING_REVIEW";
   const hasUnmatched = s?.accountBalances?.some((ab) => ab.matchConfidence === "UNMATCHED");
+  const needsBuilding = isPendingReview && !s?.buildingId;
 
   return (
     <AppShell role="MANAGER">
@@ -229,7 +298,8 @@ export default function ImportedStatementReviewPage() {
                 <button
                   className="button-primary text-sm"
                   onClick={handleApprove}
-                  disabled={actionLoading}
+                  disabled={actionLoading || needsBuilding}
+                  title={needsBuilding ? t("manager:financeImports.text.noBuildingAssigned") : undefined}
                 >
                   {t("manager:financeImports.action.approve")}
                 </button>
@@ -246,6 +316,14 @@ export default function ImportedStatementReviewPage() {
             <div className="space-y-6">
               {/* ── Metadata ── */}
               <Panel>
+                {needsBuilding && (
+                  <div className="mb-4">
+                    <AssignBuildingInline
+                      statementId={s.id}
+                      onAssigned={(updated) => setStatement(updated)}
+                    />
+                  </div>
+                )}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                   <div>
                     <p className="text-xs text-slate-500 uppercase tracking-wide mb-0.5">

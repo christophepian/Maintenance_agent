@@ -2446,7 +2446,8 @@
       "upload": "Importer PDF",
       "approve": "Approuver",
       "reject": "Rejeter",
-      "resolveAccount": "Résoudre le compte"
+      "resolveAccount": "Résoudre le compte",
+      "assignBuilding": "Attribuer un immeuble"
     },
     "status": {
       "PROCESSING": "En traitement",
@@ -2483,7 +2484,8 @@
       "rejectConfirm": "Rejeter ce relevé ?",
       "unmatchedWarning": "Certains soldes de comptes n'ont pas pu être associés. Résolvez-les manuellement avant d'approuver.",
       "loading": "Chargement…",
-      "notFound": "Relevé introuvable."
+      "notFound": "Relevé introuvable.",
+      "noBuildingAssigned": "Aucun immeuble attribué — sélectionnez-en un avant d'approuver."
     },
     "form": {
       "fiscalYear": "Exercice fiscal",

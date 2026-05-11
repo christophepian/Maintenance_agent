@@ -2447,7 +2447,8 @@
       "upload": "Upload PDF",
       "approve": "Approve",
       "reject": "Reject",
-      "resolveAccount": "Resolve Account"
+      "resolveAccount": "Resolve Account",
+      "assignBuilding": "Assign Building"
     },
     "status": {
       "PROCESSING": "Processing",
@@ -2484,7 +2485,8 @@
       "rejectConfirm": "Reject this statement?",
       "unmatchedWarning": "Some account balances could not be matched. Resolve them manually before approving.",
       "loading": "Loading…",
-      "notFound": "Statement not found."
+      "notFound": "Statement not found.",
+      "noBuildingAssigned": "No building assigned — select one below before approving."
     },
     "form": {
       "fiscalYear": "Fiscal Year",
