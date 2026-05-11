@@ -134,7 +134,7 @@ function detectDocType(
     const upper = hintDocType.toUpperCase().replace(/[\s-]/g, "_") as DetectedDocType;
     const valid: DetectedDocType[] = [
       "IDENTITY", "SALARY_PROOF", "DEBT_ENFORCEMENT_EXTRACT",
-      "PERMIT", "HOUSEHOLD_INSURANCE", "INVOICE",
+      "PERMIT", "HOUSEHOLD_INSURANCE", "INVOICE", "FINANCIAL_STATEMENT",
     ];
     if (valid.includes(upper)) return upper;
   }
