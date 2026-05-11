@@ -1177,6 +1177,37 @@ function generateSummary(
 }
 
 /* ══════════════════════════════════════════════════════════════
+   PDF page splitter — creates one single-page PDF buffer per page.
+   Uses pdf-lib (pure JS, no native deps).
+   ══════════════════════════════════════════════════════════════ */
+
+async function splitPdfIntoPages(pdfBuffer: Buffer): Promise<Buffer[]> {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { PDFDocument } = require("pdf-lib") as typeof import("pdf-lib");
+  const srcDoc = await PDFDocument.load(pdfBuffer);
+  const count = srcDoc.getPageCount();
+  const pages: Buffer[] = [];
+  for (let i = 0; i < count; i++) {
+    const singlePage = await PDFDocument.create();
+    const [copied] = await singlePage.copyPages(srcDoc, [i]);
+    singlePage.addPage(copied);
+    pages.push(Buffer.from(await singlePage.save()));
+  }
+  return pages;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   Merged Azure result — content + KV pairs from one or more calls
+   ══════════════════════════════════════════════════════════════ */
+
+interface AzureAnalyzeResult {
+  content: string;
+  kvPairs: KvPair[];
+  fields: Record<string, DocumentFieldOutput>;
+  pageCount: number;
+}
+
+/* ══════════════════════════════════════════════════════════════
    AzureDocumentIntelligenceScanner
    ══════════════════════════════════════════════════════════════ */
 
@@ -1198,8 +1229,6 @@ export class AzureDocumentIntelligenceScanner implements DocumentScanner {
     this.modelId =
       process.env.AZURE_DOCUMENT_INTELLIGENCE_MODEL || "prebuilt-layout";
 
-    // Dynamic import to avoid loading Azure SDK when provider is "local"
-    // — but constructor is sync, so we eagerly import here.
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const createClient =
       require("@azure-rest/ai-document-intelligence").default as typeof import("@azure-rest/ai-document-intelligence").default;
@@ -1214,6 +1243,104 @@ export class AzureDocumentIntelligenceScanner implements DocumentScanner {
     );
   }
 
+  /** Submit one buffer to Azure and poll to completion. */
+  private async analyzeWithAzure(
+    buf: Buffer,
+    contentType: AzureContentType,
+    modelId: string,
+  ): Promise<AzureAnalyzeResult> {
+    const { getLongRunningPoller, isUnexpected } =
+      require("@azure-rest/ai-document-intelligence") as typeof import("@azure-rest/ai-document-intelligence");
+
+    const initialResponse = await this.client
+      .path("/documentModels/{modelId}:analyze", modelId)
+      .post({ contentType, body: buf });
+
+    if (isUnexpected(initialResponse)) {
+      const errBody = (initialResponse as any).body;
+      throw new Error(
+        `Azure Document Intelligence analysis failed: ${errBody?.error?.message ?? JSON.stringify(errBody)}`,
+      );
+    }
+
+    const poller = getLongRunningPoller(this.client, initialResponse);
+    const result = await poller.pollUntilDone();
+    const analyzeResult: AnalyzeResultOutput | undefined =
+      (result as any).body?.analyzeResult;
+
+    if (!analyzeResult) {
+      throw new Error("Azure Document Intelligence returned no analyzeResult in the response.");
+    }
+
+    return {
+      content: analyzeResult.content ?? "",
+      kvPairs: (analyzeResult.keyValuePairs ?? [])
+        .filter((kv: any) => kv.key?.content && kv.value?.content)
+        .map((kv: any) => ({ key: kv.key.content as string, value: kv.value!.content as string })),
+      fields: analyzeResult.documents?.[0]?.fields ?? {},
+      pageCount: analyzeResult.pages?.length ?? 0,
+    };
+  }
+
+  /**
+   * Split the PDF into single-page buffers and analyze each page with Azure,
+   * running up to CONCURRENCY pages in parallel.
+   * Merges all page text and KV pairs into a single AzureAnalyzeResult.
+   */
+  private async analyzePdfPageByPage(
+    pdfBuffer: Buffer,
+    contentType: AzureContentType,
+    modelId: string,
+  ): Promise<AzureAnalyzeResult> {
+    const CONCURRENCY = 5;
+
+    const pageBuffers = await splitPdfIntoPages(pdfBuffer);
+    console.log(`[DOC-SCAN] PDF split into ${pageBuffers.length} page(s) for per-page Azure analysis`);
+
+    const pageContents: string[] = new Array(pageBuffers.length).fill("");
+    const allKvPairs: KvPair[] = [];
+    let firstFields: Record<string, DocumentFieldOutput> = {};
+
+    for (let batch = 0; batch < pageBuffers.length; batch += CONCURRENCY) {
+      const slice = pageBuffers.slice(batch, batch + CONCURRENCY);
+      const results = await Promise.all(
+        slice.map((pageBuf, idx) =>
+          this.analyzeWithAzure(pageBuf, contentType, modelId).catch((err) => {
+            console.warn(
+              `[DOC-SCAN] Page ${batch + idx + 1}/${pageBuffers.length} failed: ` +
+              (err instanceof Error ? err.message : String(err)),
+            );
+            return { content: "", kvPairs: [], fields: {}, pageCount: 0 } as AzureAnalyzeResult;
+          }),
+        ),
+      );
+
+      for (let i = 0; i < results.length; i++) {
+        pageContents[batch + i] = results[i].content;
+        allKvPairs.push(...results[i].kvPairs);
+        if (!Object.keys(firstFields).length && Object.keys(results[i].fields).length) {
+          firstFields = results[i].fields;
+        }
+      }
+
+      console.log(
+        `[DOC-SCAN] Pages ${batch + 1}–${Math.min(batch + CONCURRENCY, pageBuffers.length)} analyzed`,
+      );
+    }
+
+    const fullContent = pageContents.join("\n\n");
+    console.log(
+      `[DOC-SCAN] Per-page analysis complete: ${pageBuffers.length} pages, contentLen=${fullContent.length}`,
+    );
+
+    return {
+      content: fullContent,
+      kvPairs: allKvPairs,
+      fields: firstFields,
+      pageCount: pageBuffers.length,
+    };
+  }
+
   async scan(
     buffer: Buffer,
     fileName: string,
@@ -1223,125 +1350,72 @@ export class AzureDocumentIntelligenceScanner implements DocumentScanner {
     // 1. Detect doc type from filename / hint
     let docType = detectDocType(fileName, hintDocType);
 
-    // 2. Resolve content type for Azure
+    // 2. Resolve content type and best Azure model for the initial doc type
     const contentType: AzureContentType =
       MIME_MAP[mimeType] || "application/octet-stream";
 
-    // 2b. Select the best Azure model for this doc type.
-    //     prebuilt-idDocument gives structured FirstName, LastName, DateOfBirth, etc.
-    //     prebuilt-invoice gives structured VendorName, InvoiceTotal, etc.
-    //     prebuilt-layout is the generic fallback for other doc types.
-    const effectiveModel = docType === "IDENTITY" || docType === "PERMIT"
-      ? "prebuilt-idDocument"
-      : docType === "INVOICE"
-        ? "prebuilt-invoice"
-        : this.modelId;
+    const effectiveModel =
+      docType === "IDENTITY" || docType === "PERMIT" ? "prebuilt-idDocument"
+      : docType === "INVOICE"                        ? "prebuilt-invoice"
+      :                                                this.modelId;
 
     console.log(
       `[DOC-SCAN] Azure: analyzing file="${fileName}" ` +
       `mime=${mimeType} model=${effectiveModel} (base=${this.modelId}) initialDocType=${docType}`,
     );
 
-    // 3. Submit document for analysis (long-running operation)
-    const { getLongRunningPoller, isUnexpected } =
-      require("@azure-rest/ai-document-intelligence") as typeof import("@azure-rest/ai-document-intelligence");
-
-    const initialResponse = await this.client
-      .path("/documentModels/{modelId}:analyze", effectiveModel)
-      .post({
-        contentType,
-        body: buffer,
-      });
-
-    if (isUnexpected(initialResponse)) {
-      const errBody = (initialResponse as any).body;
-      const msg = errBody?.error?.message ?? JSON.stringify(errBody);
-      throw new Error(`Azure Document Intelligence analysis failed: ${msg}`);
+    // 3. Run Azure analysis.
+    //    PDFs are split into single-page buffers so Azure's per-request page limit
+    //    (2 pages on the free F0 tier) cannot truncate multi-page documents.
+    let azureResult: AzureAnalyzeResult;
+    if (mimeType === "application/pdf") {
+      azureResult = await this.analyzePdfPageByPage(buffer, contentType, effectiveModel);
+    } else {
+      azureResult = await this.analyzeWithAzure(buffer, contentType, effectiveModel);
     }
 
-    // 4. Poll until complete
-    const poller = getLongRunningPoller(this.client, initialResponse);
-    const result = await poller.pollUntilDone();
+    let { content: fullContent, kvPairs, fields: azureFields } = azureResult;
 
-    const analyzeResult: AnalyzeResultOutput | undefined =
-      (result as any).body?.analyzeResult;
-
-    if (!analyzeResult) {
-      throw new Error(
-        "Azure Document Intelligence returned no analyzeResult in the response.",
-      );
-    }
-
-    // 5. Extract full text content
-    const fullContent = analyzeResult.content || "";
-
-    // 6. Refine doc type from content if still UNKNOWN
+    // 4. Refine doc type from content if still UNKNOWN
     docType = refineDocTypeFromContent(docType, fullContent);
 
     console.log(
       `[DOC-SCAN] Azure: analysis complete. ` +
       `contentLen=${fullContent.length} docType=${docType} ` +
-      `pages=${analyzeResult.pages?.length ?? 0} ` +
-      `documents=${analyzeResult.documents?.length ?? 0} ` +
-      `kvPairs=${analyzeResult.keyValuePairs?.length ?? 0}`,
+      `pages=${azureResult.pageCount} kvPairs=${kvPairs.length}`,
     );
 
-    // 7. Collect Azure structured fields from analyzed documents
-    let azureFields: Record<string, DocumentFieldOutput> =
-      analyzeResult.documents?.[0]?.fields ?? {};
+    // 5. Two-pass re-analysis: if content detection upgraded the doc type to one
+    //    that benefits from a specialized model, re-run with that model.
+    //    Only for single-buffer docs (images, single-page PDFs already processed above).
+    if (mimeType !== "application/pdf") {
+      const specializedModel =
+        docType === "IDENTITY" || docType === "PERMIT" ? "prebuilt-idDocument"
+        : docType === "INVOICE"                        ? "prebuilt-invoice"
+        : null;
 
-    // 8. Collect key-value pairs for fallback matching
-    let kvPairs: KvPair[] = (analyzeResult.keyValuePairs ?? [])
-      .filter((kv) => kv.key?.content && kv.value?.content)
-      .map((kv) => ({
-        key: kv.key.content!,
-        value: kv.value!.content!,
-      }));
-
-    // 7b. Two-pass re-analysis: if content detection changed the doc type to one
-    //     that benefits from a specialized model (and we used a generic one), re-run.
-    const specializedModel =
-      docType === "IDENTITY" || docType === "PERMIT" ? "prebuilt-idDocument"
-      : docType === "INVOICE" ? "prebuilt-invoice"
-      : null;
-
-    if (specializedModel && specializedModel !== effectiveModel) {
-      console.log(
-        `[DOC-SCAN] Azure: re-analyzing with specialized model=${specializedModel} ` +
-        `(docType detected from content as ${docType})`,
-      );
-      try {
-        const retryResponse = await this.client
-          .path("/documentModels/{modelId}:analyze", specializedModel)
-          .post({ contentType, body: buffer });
-
-        if (!isUnexpected(retryResponse)) {
-          const retryPoller = getLongRunningPoller(this.client, retryResponse);
-          const retryResult = await retryPoller.pollUntilDone();
-          const retryAnalyzeResult: AnalyzeResultOutput | undefined =
-            (retryResult as any).body?.analyzeResult;
-
-          if (retryAnalyzeResult) {
-            azureFields = retryAnalyzeResult.documents?.[0]?.fields ?? {};
-            kvPairs = (retryAnalyzeResult.keyValuePairs ?? [])
-              .filter((kv) => kv.key?.content && kv.value?.content)
-              .map((kv) => ({ key: kv.key.content!, value: kv.value!.content! }));
-            console.log(
-              `[DOC-SCAN] Azure: re-analysis complete. ` +
-              `documents=${retryAnalyzeResult.documents?.length ?? 0} ` +
-              `kvPairs=${kvPairs.length}`,
-            );
-          }
-        }
-      } catch (retryErr) {
-        console.warn(
-          `[DOC-SCAN] Azure: re-analysis failed, continuing with first-pass results:`,
-          retryErr instanceof Error ? retryErr.message : retryErr,
+      if (specializedModel && specializedModel !== effectiveModel) {
+        console.log(
+          `[DOC-SCAN] Azure: re-analyzing with specialized model=${specializedModel} ` +
+          `(docType detected from content as ${docType})`,
         );
+        try {
+          const retryResult = await this.analyzeWithAzure(buffer, contentType, specializedModel);
+          azureFields = retryResult.fields;
+          kvPairs = retryResult.kvPairs;
+          console.log(
+            `[DOC-SCAN] Azure: re-analysis complete. kvPairs=${kvPairs.length}`,
+          );
+        } catch (retryErr) {
+          console.warn(
+            `[DOC-SCAN] Azure: re-analysis failed, continuing with first-pass results:`,
+            retryErr instanceof Error ? retryErr.message : retryErr,
+          );
+        }
       }
     }
 
-    // 9. Normalize fields per doc type
+    // 6. Normalize fields per doc type
     let fields: Record<string, string | number | boolean | null>;
     let accountBalances: import("../documentScanner").ExtractedAccountBalance[] | undefined;
     let invoiceLines: import("../documentScanner").ExtractedInvoiceLine[] | undefined;
@@ -1366,20 +1440,15 @@ export class AzureDocumentIntelligenceScanner implements DocumentScanner {
         fields = normalizeInvoiceFields(azureFields, kvPairs, fullContent);
         break;
       case "FINANCIAL_STATEMENT": {
-        // Financial statements use Claude for the heavy lifting — Azure layout
-        // gives us the raw text; Claude structures the account balance rows.
-        // Pass page spans so large documents are split accurately at page boundaries.
-        const fsResult = await extractFinancialStatementWithClaude(
-          fullContent,
-          analyzeResult.pages as Array<{ spans?: Array<{ offset: number; length: number }> }> | undefined,
-        );
+        // Azure gives us the raw text (all pages); Claude structures the account rows.
+        // Content is already page-concatenated, so pass undefined for pages
+        // (the chunking in extractFinancialStatementWithClaude handles splitting).
+        const fsResult = await extractFinancialStatementWithClaude(fullContent, undefined);
         fields = fsResult.fields;
         accountBalances = fsResult.accountBalances;
-        // Only include invoiceLines if Claude found at least one
         if (fsResult.invoiceLines.length > 0) {
           invoiceLines = fsResult.invoiceLines;
         }
-        // Store balance count in fields for summary generation
         fields._balanceCount = accountBalances.length;
         break;
       }
@@ -1389,8 +1458,8 @@ export class AzureDocumentIntelligenceScanner implements DocumentScanner {
         break;
     }
 
-    // 9b. Claude enrichment — fill any remaining null fields from raw OCR text
-    // Skipped for FINANCIAL_STATEMENT (handled entirely by extractFinancialStatementWithClaude)
+    // 7. Claude enrichment — fill remaining null fields from raw OCR text
+    //    (skipped for FINANCIAL_STATEMENT — handled by extractFinancialStatementWithClaude)
     if (docType !== "UNKNOWN" && docType !== "FINANCIAL_STATEMENT" && fullContent) {
       const nullFields = Object.entries(fields).filter(([k, v]) => !k.startsWith("_") && v === null);
       if (nullFields.length > 0) {
@@ -1409,22 +1478,20 @@ export class AzureDocumentIntelligenceScanner implements DocumentScanner {
       }
     }
 
-    // 10. Add raw text preview (first 2000 chars, matching local scanner)
+    // 8. Raw text preview (first 2000 chars)
     if (fullContent.length > 0 && fullContent.length <= 2000) {
       fields._rawTextPreview = fullContent;
     } else if (fullContent.length > 2000) {
       fields._rawTextPreview = fullContent.substring(0, 2000) + "…";
     }
 
-    // 11. Compute confidence
+    // 9. Compute confidence
     const confidence =
       Object.keys(azureFields).length > 0
         ? averageConfidence(azureFields)
-        : docType !== "UNKNOWN"
-          ? 30
-          : 10;
+        : docType !== "UNKNOWN" ? 30 : 10;
 
-    // 12. Generate summary
+    // 10. Generate summary
     const summary = generateSummary(docType, fields);
 
     return {
