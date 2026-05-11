@@ -18,7 +18,36 @@ export type DetectedDocType =
   | "PERMIT"          // residence permit
   | "HOUSEHOLD_INSURANCE"
   | "INVOICE"         // supplier / contractor invoice
+  | "FINANCIAL_STATEMENT" // property manager balance sheet / closing accounts
   | "UNKNOWN";
+
+/** One closing-balance line extracted from a financial statement. */
+export interface ExtractedAccountBalance {
+  rawAccountCode: string;
+  rawAccountName: string;
+  /** Amount in CHF (decimal, not cents — converted to cents at ingestion time) */
+  balanceChf: number;
+  balanceType: "DEBIT" | "CREDIT";
+}
+
+/** One invoice line extracted from a multi-document PDF. */
+export interface ExtractedInvoiceLine {
+  vendorName?: string | null;
+  invoiceNumber?: string | null;
+  invoiceDate?: string | null;
+  dueDate?: string | null;
+  totalAmount?: number | null;
+  vatAmount?: number | null;
+  subtotal?: number | null;
+  currency?: string | null;
+  iban?: string | null;
+  paymentReference?: string | null;
+  description?: string | null;
+  /** Unit number hint extracted from invoice (e.g. "Apt 3B") */
+  unitHint?: string | null;
+  /** Tenant name hint extracted from invoice */
+  tenantHint?: string | null;
+}
 
 export interface ScanResult {
   /** Detected document type */
@@ -29,6 +58,16 @@ export interface ScanResult {
   fields: Record<string, string | number | boolean | null>;
   /** Human-readable description of what was extracted */
   summary: string;
+  /**
+   * Populated for FINANCIAL_STATEMENT (and mixed PDFs that contain a balance sheet).
+   * Each entry is one account-balance line extracted from the document.
+   */
+  accountBalances?: ExtractedAccountBalance[];
+  /**
+   * Populated for FINANCIAL_STATEMENT (and mixed PDFs that also contain invoice lines).
+   * Each entry represents one distinct invoice found in the document.
+   */
+  invoiceLines?: ExtractedInvoiceLine[];
 }
 
 /* ──────────────────────────────────────────────────────────

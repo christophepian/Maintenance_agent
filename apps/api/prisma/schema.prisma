@@ -183,6 +183,9 @@ model Org {
   rentAdjustments       RentAdjustment[]
   // Contractor Billing
   contractorBillingSchedules ContractorBillingSchedule[]
+  // Property Manager Statement Import
+  importedStatements          ImportedStatement[]
+  importedAccountBalances     ImportedAccountBalance[]
 }
 
 model OrgConfig {
@@ -372,6 +375,7 @@ model Building {
   cashflowPlans      CashflowPlan[]
   contractorBillingSchedules ContractorBillingSchedule[]
   strategyProfile    BuildingStrategyProfile?
+  importedStatements ImportedStatement[]
 
   @@index([orgId])
 }
@@ -1831,10 +1835,11 @@ model Account {
   updatedAt   DateTime @updatedAt
 
   org      Org              @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  mappings           ExpenseMapping[]
-  invoices           Invoice[]
-  ledgerEntries      LedgerEntry[]
-  leaseExpenseItems  LeaseExpenseItem[]
+  mappings              ExpenseMapping[]
+  invoices              Invoice[]
+  ledgerEntries         LedgerEntry[]
+  leaseExpenseItems     LeaseExpenseItem[]
+  importedBalances      ImportedAccountBalance[]
 
   @@unique([orgId, name])
   @@index([orgId])
@@ -2433,4 +2438,83 @@ model ConversationMessage {
   thread ConversationThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
 
   @@index([threadId, createdAt])
+}
+
+// ==========================================
+// Property Manager Statement Import
+// ==========================================
+
+/// Processing / review lifecycle for an imported PDF statement.
+enum ImportedStatementStatus {
+  PROCESSING    /// Azure + Claude extraction in progress (async)
+  PENDING_REVIEW /// Extraction complete; awaiting manager approval
+  APPROVED      /// Manager approved; ledger entries posted; visible to owner
+  REJECTED      /// Manager rejected; no ledger entries posted
+}
+
+/// How confidently an extracted account code was matched to a COA Account.
+enum MatchConfidence {
+  AUTO      /// Exact account code match
+  FUZZY     /// Name-based substring / Levenshtein match
+  CLAUDE    /// Claude Haiku classification (≥ 0.85 confidence)
+  MANUAL    /// Manager manually resolved via the review UI
+  UNMATCHED /// No match found; accountId is null
+}
+
+/// One uploaded PDF from an external property manager.
+/// Contains the extracted invoices (as Invoice records) and
+/// the extracted closing balance sheet (as ImportedAccountBalance rows).
+/// Data only becomes visible on the owner surface when status = APPROVED.
+model ImportedStatement {
+  id            String                  @id @default(uuid())
+  orgId         String
+  buildingId    String
+  fiscalYear    Int                     /// e.g. 2024
+  periodStart   DateTime?               /// Extracted or user-supplied period start
+  periodEnd     DateTime?               /// Extracted or user-supplied period end
+  status        ImportedStatementStatus @default(PROCESSING)
+  sourceFileUrl String                  /// S3 key to original uploaded PDF
+  uploadedBy    String                  /// userId of the manager who uploaded
+  approvedBy    String?                 /// userId of the manager who approved
+  approvedAt    DateTime?
+  rawOcrText    String?                 @db.Text /// Truncated OCR dump stored for audit
+  ocrConfidence Int?                    /// 0–100 overall extraction confidence
+  buildingMatchConfidence MatchConfidence? /// How the building was identified from the PDF
+  notes         String?                 /// Manager annotation (visible in review UI)
+  createdAt     DateTime                @default(now())
+  updatedAt     DateTime                @updatedAt
+
+  org              Org                      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  building         Building                 @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  accountBalances  ImportedAccountBalance[]
+
+  @@index([orgId])
+  @@index([buildingId])
+  @@index([orgId, status])
+  @@index([orgId, fiscalYear])
+}
+
+/// One closing-balance line extracted from a financial statement PDF.
+/// Maps to a COA Account when a match can be found; otherwise preserved
+/// with rawAccountCode/rawAccountName for manual resolution.
+model ImportedAccountBalance {
+  id               String          @id @default(uuid())
+  orgId            String
+  statementId      String
+  accountId        String?         /// FK to Account — null when match confidence = UNMATCHED
+  rawAccountCode   String          /// As extracted from the PDF, e.g. "1020"
+  rawAccountName   String          /// As extracted from the PDF, e.g. "Bank account"
+  balanceCents     Int             /// Closing balance in CHF cents
+  balanceType      String          @default("DEBIT") /// "DEBIT" | "CREDIT"
+  matchConfidence  MatchConfidence @default(UNMATCHED)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  org       Org              @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  statement ImportedStatement @relation(fields: [statementId], references: [id], onDelete: Cascade)
+  account   Account?         @relation(fields: [accountId], references: [id], onDelete: SetNull)
+
+  @@index([orgId])
+  @@index([statementId])
+  @@index([accountId])
 }

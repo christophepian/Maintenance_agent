@@ -857,7 +857,8 @@
       "billing-entities": "Billing Entities",
       "accounting": "Accounting",
       "planning": "Planning",
-      "setup": "Setup"
+      "setup": "Setup",
+      "imports": "Imports"
     }
   },
   "financeInvoices": {
@@ -1336,6 +1337,7 @@
       "status": "Status"
     },
     "placeholder": {
+      "4121": "+41 21 ...",
       "jeanDupont": "Jean Dupont",
       "jeanExampleCom": "jean@example.com",
       "searchByTenantBuildingOrUnit": "Search by tenant, building or unit…",
@@ -1343,7 +1345,6 @@
       "eGRGieDuLacSa": "e.g. Régie du Lac SA",
       "eGRueDuLac15": "e.g. Rue du Lac 15",
       "eG1003Lausanne": "e.g. 1003 Lausanne",
-      "4121": "+41 21 ...",
       "regieExampleCh": "regie@example.ch",
       "cH9300762011623852957": "CH93 0076 2011 6238 5295 7",
       "eGStandard3RoomApartment": "e.g. Standard 3-room apartment"
@@ -1433,11 +1434,11 @@
   },
   "leasesTemplates": {
     "placeholder": {
+      "4121": "+41 21 ...",
       "selectABuildingToAutoFill": "Select a building to auto-fill",
       "eGRGieDuLacSa": "e.g. Régie du Lac SA",
       "eGRueDuLac15": "e.g. Rue du Lac 15",
       "eG1003Lausanne": "e.g. 1003 Lausanne",
-      "4121": "+41 21 ...",
       "regieExampleCh": "regie@example.ch",
       "cH9300762011623852957": "CH93 0076 2011 6238 5295 7",
       "eGStandard3RoomApartment": "e.g. Standard 3-room apartment"
@@ -2434,5 +2435,61 @@
       "balance": "Balance"
     }
   },
-  "loading": "Loading…"
+  "loading": "Loading…",
+  "financeImports": {
+    "title": {
+      "imports": "Imported Statements",
+      "reviewStatement": "Review Statement",
+      "accountBalances": "Account Balances",
+      "linkedInvoices": "Linked Invoices"
+    },
+    "action": {
+      "upload": "Upload PDF",
+      "approve": "Approve",
+      "reject": "Reject",
+      "resolveAccount": "Resolve Account"
+    },
+    "status": {
+      "PROCESSING": "Processing",
+      "PENDING_REVIEW": "Pending Review",
+      "APPROVED": "Approved",
+      "REJECTED": "Rejected"
+    },
+    "confidence": {
+      "AUTO": "Auto",
+      "FUZZY": "Fuzzy",
+      "CLAUDE": "AI",
+      "MANUAL": "Manual",
+      "UNMATCHED": "Unmatched"
+    },
+    "prop": {
+      "building": "Building",
+      "fiscalYear": "Fiscal Year",
+      "status": "Status",
+      "uploadedBy": "Uploaded By",
+      "approvedBy": "Approved By",
+      "period": "Period",
+      "accountCode": "Account Code",
+      "accountName": "Account Name",
+      "balance": "Balance",
+      "matchConfidence": "Match",
+      "matchedAccount": "Matched Account"
+    },
+    "text": {
+      "noStatements": "No imported statements yet. Upload a PDF from your property manager to get started.",
+      "uploading": "Uploading and scanning…",
+      "uploadSuccess": "Statement uploaded. Review the extracted data below.",
+      "uploadError": "Upload failed",
+      "approveConfirm": "Approve this statement? Ledger entries will be posted and the data will become visible in the owner surface.",
+      "rejectConfirm": "Reject this statement?",
+      "unmatchedWarning": "Some account balances could not be matched. Resolve them manually before approving.",
+      "loading": "Loading…",
+      "notFound": "Statement not found."
+    },
+    "form": {
+      "fiscalYear": "Fiscal Year",
+      "buildingId": "Building (optional — auto-detected from PDF if left blank)",
+      "selectBuilding": "Auto-detect from PDF"
+    }
+  }
 }

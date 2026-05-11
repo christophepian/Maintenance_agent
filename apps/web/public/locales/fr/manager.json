@@ -857,7 +857,8 @@
       "billing-entities": "Entités de facturation",
       "accounting": "Comptabilité",
       "planning": "Planification",
-      "setup": "Configuration"
+      "setup": "Configuration",
+      "imports": "Importations"
     }
   },
   "financeInvoices": {
@@ -1336,6 +1337,7 @@
       "status": "Statut"
     },
     "placeholder": {
+      "4121": "+41 21 …",
       "jeanDupont": "Jean Dupont",
       "jeanExampleCom": "jean@example.com",
       "searchByTenantBuildingOrUnit": "Rechercher par locataire, immeuble ou unité…",
@@ -1343,7 +1345,6 @@
       "eGRGieDuLacSa": "ex. Régie du Lac SA",
       "eGRueDuLac15": "ex. Rue du Lac 15",
       "eG1003Lausanne": "ex. 1003 Lausanne",
-      "4121": "+41 21 …",
       "regieExampleCh": "regie@example.ch",
       "cH9300762011623852957": "CH93 0076 2011 6238 5295 7",
       "eGStandard3RoomApartment": "ex. Appartement 3 pièces standard"
@@ -1433,11 +1434,11 @@
   },
   "leasesTemplates": {
     "placeholder": {
+      "4121": "+41 21 …",
       "selectABuildingToAutoFill": "Sélectionner un immeuble pour auto-remplir",
       "eGRGieDuLacSa": "ex. Régie du Lac SA",
       "eGRueDuLac15": "ex. Rue du Lac 15",
       "eG1003Lausanne": "ex. 1003 Lausanne",
-      "4121": "+41 21 …",
       "regieExampleCh": "regie@example.ch",
       "cH9300762011623852957": "CH93 0076 2011 6238 5295 7",
       "eGStandard3RoomApartment": "ex. Appartement 3 pièces standard"
@@ -2433,5 +2434,61 @@
       "balance": "Solde"
     }
   },
-  "loading": "Chargement…"
+  "loading": "Chargement…",
+  "financeImports": {
+    "title": {
+      "imports": "Relevés importés",
+      "reviewStatement": "Vérifier le relevé",
+      "accountBalances": "Soldes de comptes",
+      "linkedInvoices": "Factures liées"
+    },
+    "action": {
+      "upload": "Importer PDF",
+      "approve": "Approuver",
+      "reject": "Rejeter",
+      "resolveAccount": "Résoudre le compte"
+    },
+    "status": {
+      "PROCESSING": "En traitement",
+      "PENDING_REVIEW": "À vérifier",
+      "APPROVED": "Approuvé",
+      "REJECTED": "Rejeté"
+    },
+    "confidence": {
+      "AUTO": "Auto",
+      "FUZZY": "Approximatif",
+      "CLAUDE": "IA",
+      "MANUAL": "Manuel",
+      "UNMATCHED": "Non associé"
+    },
+    "prop": {
+      "building": "Immeuble",
+      "fiscalYear": "Exercice",
+      "status": "Statut",
+      "uploadedBy": "Importé par",
+      "approvedBy": "Approuvé par",
+      "period": "Période",
+      "accountCode": "Code compte",
+      "accountName": "Nom du compte",
+      "balance": "Solde",
+      "matchConfidence": "Correspondance",
+      "matchedAccount": "Compte associé"
+    },
+    "text": {
+      "noStatements": "Aucun relevé importé. Déposez un PDF de votre gérant pour commencer.",
+      "uploading": "Chargement et analyse en cours…",
+      "uploadSuccess": "Relevé importé. Vérifiez les données extraites ci-dessous.",
+      "uploadError": "Échec de l'importation",
+      "approveConfirm": "Approuver ce relevé ? Les écritures seront postées et les données seront visibles pour les propriétaires.",
+      "rejectConfirm": "Rejeter ce relevé ?",
+      "unmatchedWarning": "Certains soldes de comptes n'ont pas pu être associés. Résolvez-les manuellement avant d'approuver.",
+      "loading": "Chargement…",
+      "notFound": "Relevé introuvable."
+    },
+    "form": {
+      "fiscalYear": "Exercice fiscal",
+      "buildingId": "Immeuble (optionnel — détecté automatiquement)",
+      "selectBuilding": "Détection automatique"
+    }
+  }
 }

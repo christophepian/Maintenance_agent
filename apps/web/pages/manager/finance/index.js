@@ -12,6 +12,7 @@ import Section from "../../../components/layout/Section";
 import { formatChfCents, formatPercent } from "../../../lib/format";
 import { authHeaders } from "../../../lib/api";
 import { InvoicesContent } from "./invoices";
+import ImportedStatementsPanel from "../../../components/ImportedStatementsPanel";
 import BillingEntityManager from "../../../components/BillingEntityManager";
 import { CapExSummaryBridge } from "../../../components/RenovationTaxPlanning";
 import CashflowPlansList from "../../../components/CashflowPlansList";
@@ -69,6 +70,7 @@ function HealthDot({ health }) {
 const FINANCE_TABS = [
   { key: "overview" },
   { key: "invoices" },
+  { key: "imports" },
   { key: "billing-entities" },
   { key: "accounting" },
   { key: "planning" },
@@ -326,6 +328,9 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
 
           {/* ── Invoices ── */}
           {activeTabKey === "invoices" && <InvoicesContent />}
+
+          {/* ── Imports ── */}
+          {activeTabKey === "imports" && <ImportedStatementsPanel />}
 
           {/* ── Billing Entities ── */}
           {activeTabKey === "billing-entities" && <BillingEntityManager />}

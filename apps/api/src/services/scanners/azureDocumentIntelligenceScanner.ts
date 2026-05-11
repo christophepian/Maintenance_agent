@@ -18,6 +18,8 @@ import type {
   DocumentScanner,
   DetectedDocType,
   ScanResult,
+  ExtractedAccountBalance,
+  ExtractedInvoiceLine,
 } from "../documentScanner";
 import { verifyDebtEnforcement } from "./debtEnforcementVerifier";
 import { getAnthropicClient } from "../aiClient";
@@ -102,6 +104,18 @@ const DOC_PATTERNS: { type: DetectedDocType; patterns: RegExp[] }[] = [
     ],
   },
   {
+    type: "FINANCIAL_STATEMENT",
+    patterns: [
+      /bilan/i, /jahresrechnung/i, /bilanz/i,
+      /compte.*r[eé]sultat/i, /jahresabschluss/i,
+      /cl[oô]ture.*annuelle/i, /soldes.*comptes/i,
+      /closing.*balance/i, /r[eé]capitulatif.*comptes/i,
+      /decompte.*annuel/i, /d[eé]compte.*g[eé]rance/i,
+      /abrechnun/i, /gesamtabrechnung/i,
+      /relevé.*compte/i, /extrait.*compte/i,
+    ],
+  },
+  {
     type: "HOUSEHOLD_INSURANCE",
     patterns: [
       /insurance/i, /assurance/i, /versicherung/i,
@@ -157,6 +171,9 @@ function refineDocTypeFromContent(
     return "HOUSEHOLD_INSURANCE";
   if (/invoice|facture|rechnung|\bbill\b|total\s*(amount|due|chf|eur)|montant\s*(total|d[ûu])|gesamtbetrag/i.test(text))
     return "INVOICE";
+
+  if (/bilan|jahresrechnung|bilanz|soldes\s*des\s*comptes|cl[oô]ture\s*annuelle|jahresabschluss|d[eé]compte.*g[eé]rance|gesamtabrechnung/i.test(text))
+    return "FINANCIAL_STATEMENT";
 
   return "UNKNOWN";
 }
@@ -654,6 +671,81 @@ function parseNumberFromKv(
    Claude enrichment — fills null fields from raw OCR text
    ══════════════════════════════════════════════════════════════ */
 
+/** Claude tool for extracting account balance rows from a financial statement. */
+const FINANCIAL_STATEMENT_BALANCE_TOOL = {
+  name: "extractAccountBalances",
+  description:
+    "Extract the list of account closing balances from a Swiss property management financial statement or balance sheet. " +
+    "Return every account line found: its code, name, balance amount, and whether it is a debit or credit balance.",
+  input_schema: {
+    type: "object",
+    required: ["balances"],
+    properties: {
+      fiscalYear: {
+        type: "integer",
+        description: "Fiscal year of the statement, e.g. 2024",
+      },
+      periodLabel: {
+        type: "string",
+        description: "Human-readable period label as it appears in the document, e.g. '01.01.2024 – 31.12.2024'",
+      },
+      buildingAddress: {
+        type: "string",
+        description: "Property address if mentioned in the document",
+      },
+      balances: {
+        type: "array",
+        description: "All account balance rows found in the document",
+        items: {
+          type: "object",
+          required: ["rawAccountCode", "rawAccountName", "balanceChf", "balanceType"],
+          properties: {
+            rawAccountCode: { type: "string", description: "Account code as printed, e.g. '1020' or '4200'" },
+            rawAccountName: { type: "string", description: "Account name as printed, e.g. 'Bank account'" },
+            balanceChf: { type: "number", description: "Closing balance amount in CHF (positive number)" },
+            balanceType: { type: "string", enum: ["DEBIT", "CREDIT"], description: "DEBIT for asset/expense accounts, CREDIT for liability/income accounts" },
+          },
+        },
+      },
+    },
+  },
+} as const;
+
+/** Claude tool for extracting invoice lines from a financial statement that also contains invoices. */
+const FINANCIAL_STATEMENT_INVOICE_TOOL = {
+  name: "extractInvoiceLines",
+  description:
+    "Extract any individual invoice or expense line items from a Swiss property management document. " +
+    "Each entry should represent one distinct invoice or charge found in the document.",
+  input_schema: {
+    type: "object",
+    required: ["invoices"],
+    properties: {
+      invoices: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            vendorName:       { type: "string",  description: "Contractor or supplier name" },
+            invoiceNumber:    { type: "string",  description: "Invoice or reference number" },
+            invoiceDate:      { type: "string",  description: "Invoice date, DD.MM.YYYY if possible" },
+            dueDate:          { type: "string",  description: "Payment due date" },
+            totalAmount:      { type: "number",  description: "Total invoice amount in CHF (including VAT)" },
+            vatAmount:        { type: "number",  description: "VAT amount in CHF" },
+            subtotal:         { type: "number",  description: "Net amount before VAT" },
+            currency:         { type: "string",  description: "Currency code, e.g. CHF" },
+            iban:             { type: "string",  description: "Payee IBAN" },
+            paymentReference: { type: "string",  description: "Payment reference number" },
+            description:      { type: "string",  description: "What the invoice is for" },
+            unitHint:         { type: "string",  description: "Apartment or unit number mentioned, e.g. 'Apt 3B'" },
+            tenantHint:       { type: "string",  description: "Tenant name mentioned on the invoice" },
+          },
+        },
+      },
+    },
+  },
+} as const;
+
 /** Per-doc-type tool schemas for Claude field extraction */
 const CLAUDE_EXTRACTION_TOOLS: Partial<Record<DetectedDocType, object>> = {
   IDENTITY: {
@@ -764,6 +856,134 @@ async function enrichFieldsWithClaude(
   }
 }
 
+/**
+ * Extract account balances (and optionally invoice lines) from a financial
+ * statement PDF using two parallel Claude Haiku tool-use calls.
+ * Non-blocking: returns empty arrays on missing API key or any runtime error.
+ */
+async function extractFinancialStatementWithClaude(content: string): Promise<{
+  fields: Record<string, string | number | boolean | null>;
+  accountBalances: ExtractedAccountBalance[];
+  invoiceLines: ExtractedInvoiceLine[];
+}> {
+  const empty = { fields: {}, accountBalances: [], invoiceLines: [] };
+  if (!content) return empty;
+
+  try {
+    const client = getAnthropicClient();
+
+    // Determine whether this document also contains invoice lines.
+    // Simple heuristic: look for invoice-pattern keywords in content.
+    const hasInvoiceContent =
+      /facture|rechnung|invoice|\btotal\s*(?:chf|eur)\b|montant\s*total/i.test(content);
+
+    const tools = hasInvoiceContent
+      ? [FINANCIAL_STATEMENT_BALANCE_TOOL, FINANCIAL_STATEMENT_INVOICE_TOOL]
+      : [FINANCIAL_STATEMENT_BALANCE_TOOL];
+
+    const response = await client.messages.create({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 2048,
+      tools: tools as unknown as Parameters<typeof client.messages.create>[0]["tools"],
+      tool_choice: { type: "any" },
+      messages: [
+        {
+          role: "user",
+          content:
+            "Extract all account balance rows and any invoice lines from this Swiss property management document. " +
+            "Call extractAccountBalances with every account-balance line you find, " +
+            (hasInvoiceContent
+              ? "and call extractInvoiceLines with every individual invoice or charge you find. "
+              : "") +
+            "If a field is not clearly present in the text, omit it — do not guess.\n\n" +
+            `Document OCR text:\n${content}`,
+        },
+      ],
+    });
+
+    let fields: Record<string, string | number | boolean | null> = {};
+    let accountBalances: ExtractedAccountBalance[] = [];
+    let invoiceLines: ExtractedInvoiceLine[] = [];
+
+    for (const block of response.content) {
+      if (block.type !== "tool_use") continue;
+
+      if (block.name === "extractAccountBalances") {
+        const input = block.input as {
+          fiscalYear?: number;
+          periodLabel?: string;
+          buildingAddress?: string;
+          balances?: Array<{
+            rawAccountCode: string;
+            rawAccountName: string;
+            balanceChf: number;
+            balanceType: "DEBIT" | "CREDIT";
+          }>;
+        };
+        if (input.fiscalYear) fields.fiscalYear = input.fiscalYear;
+        if (input.periodLabel) fields.periodLabel = input.periodLabel;
+        if (input.buildingAddress) fields.buildingAddress = input.buildingAddress;
+        accountBalances = (input.balances ?? [])
+          .filter((b) => b.rawAccountCode && b.rawAccountName && typeof b.balanceChf === "number")
+          .map((b) => ({
+            rawAccountCode: b.rawAccountCode,
+            rawAccountName: b.rawAccountName,
+            balanceChf: b.balanceChf,
+            balanceType: b.balanceType === "CREDIT" ? "CREDIT" : "DEBIT",
+          }));
+      }
+
+      if (block.name === "extractInvoiceLines") {
+        const input = block.input as {
+          invoices?: Array<{
+            vendorName?: string;
+            invoiceNumber?: string;
+            invoiceDate?: string;
+            dueDate?: string;
+            totalAmount?: number;
+            vatAmount?: number;
+            subtotal?: number;
+            currency?: string;
+            iban?: string;
+            paymentReference?: string;
+            description?: string;
+            unitHint?: string;
+            tenantHint?: string;
+          }>;
+        };
+        invoiceLines = (input.invoices ?? []).map((inv) => ({
+          vendorName:       inv.vendorName       ?? null,
+          invoiceNumber:    inv.invoiceNumber     ?? null,
+          invoiceDate:      inv.invoiceDate       ?? null,
+          dueDate:          inv.dueDate           ?? null,
+          totalAmount:      inv.totalAmount       ?? null,
+          vatAmount:        inv.vatAmount         ?? null,
+          subtotal:         inv.subtotal          ?? null,
+          currency:         inv.currency          ?? null,
+          iban:             inv.iban              ?? null,
+          paymentReference: inv.paymentReference  ?? null,
+          description:      inv.description       ?? null,
+          unitHint:         inv.unitHint          ?? null,
+          tenantHint:       inv.tenantHint        ?? null,
+        }));
+      }
+    }
+
+    console.log(
+      `[DOC-SCAN] Financial statement extraction: ` +
+      `${accountBalances.length} balance row(s), ${invoiceLines.length} invoice line(s)`,
+    );
+
+    return { fields, accountBalances, invoiceLines };
+  } catch (err) {
+    console.warn(
+      "[DOC-SCAN] Financial statement Claude extraction skipped:",
+      err instanceof Error ? err.message : err,
+    );
+    return empty;
+  }
+}
+
 /* ══════════════════════════════════════════════════════════════
    Summary generators (match LocalOcrScanner output style)
    ══════════════════════════════════════════════════════════════ */
@@ -805,6 +1025,11 @@ function generateSummary(
       return total
         ? `Invoice from ${vendor} — total: ${total}. Extracted ${nonNull} fields via Azure Document Intelligence.`
         : `Invoice from ${vendor}. Extracted ${nonNull} fields via Azure Document Intelligence.`;
+    }
+    case "FINANCIAL_STATEMENT": {
+      const year = fields.fiscalYear ?? "unknown year";
+      const balanceCount = (fields._balanceCount as number) ?? 0;
+      return `Financial statement for fiscal year ${year}. ${balanceCount} account balance row(s) extracted via Azure + Claude.`;
     }
     case "UNKNOWN":
     default:
@@ -979,6 +1204,8 @@ export class AzureDocumentIntelligenceScanner implements DocumentScanner {
 
     // 9. Normalize fields per doc type
     let fields: Record<string, string | number | boolean | null>;
+    let accountBalances: import("../documentScanner").ExtractedAccountBalance[] | undefined;
+    let invoiceLines: import("../documentScanner").ExtractedInvoiceLine[] | undefined;
 
     switch (docType) {
       case "IDENTITY":
@@ -999,6 +1226,20 @@ export class AzureDocumentIntelligenceScanner implements DocumentScanner {
       case "INVOICE":
         fields = normalizeInvoiceFields(azureFields, kvPairs, fullContent);
         break;
+      case "FINANCIAL_STATEMENT": {
+        // Financial statements use Claude for the heavy lifting — Azure layout
+        // gives us the raw text; Claude structures the account balance rows.
+        const fsResult = await extractFinancialStatementWithClaude(fullContent);
+        fields = fsResult.fields;
+        accountBalances = fsResult.accountBalances;
+        // Only include invoiceLines if Claude found at least one
+        if (fsResult.invoiceLines.length > 0) {
+          invoiceLines = fsResult.invoiceLines;
+        }
+        // Store balance count in fields for summary generation
+        fields._balanceCount = accountBalances.length;
+        break;
+      }
       case "UNKNOWN":
       default:
         fields = {};
@@ -1006,7 +1247,8 @@ export class AzureDocumentIntelligenceScanner implements DocumentScanner {
     }
 
     // 9b. Claude enrichment — fill any remaining null fields from raw OCR text
-    if (docType !== "UNKNOWN" && fullContent) {
+    // Skipped for FINANCIAL_STATEMENT (handled entirely by extractFinancialStatementWithClaude)
+    if (docType !== "UNKNOWN" && docType !== "FINANCIAL_STATEMENT" && fullContent) {
       const nullFields = Object.entries(fields).filter(([k, v]) => !k.startsWith("_") && v === null);
       if (nullFields.length > 0) {
         console.log(`[DOC-SCAN] Claude enrichment: ${nullFields.length} null field(s) — querying claude-haiku…`);
@@ -1042,6 +1284,13 @@ export class AzureDocumentIntelligenceScanner implements DocumentScanner {
     // 12. Generate summary
     const summary = generateSummary(docType, fields);
 
-    return { docType, confidence, fields, summary };
+    return {
+      docType,
+      confidence,
+      fields,
+      summary,
+      ...(accountBalances !== undefined ? { accountBalances } : {}),
+      ...(invoiceLines !== undefined ? { invoiceLines } : {}),
+    };
   }
 }
