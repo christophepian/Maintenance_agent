@@ -180,12 +180,16 @@ export function requireTenantSession(req: http.IncomingMessage, res: http.Server
   // 1. Use pre-resolved user from Supabase JWT (set by server.ts before routing)
   const authedReq = req as AuthedRequest;
   if (authedReq.user) {
-    if (authedReq.user.role !== "TENANT") {
+    const { role, accessLevel, tenantId, userId } = authedReq.user;
+    // ADMIN users can impersonate any tenant for demos — they must have a
+    // tenantId stored in app_metadata to use tenant-scoped endpoints.
+    const isAdmin = accessLevel === "ADMIN";
+    if (role !== "TENANT" && !isAdmin) {
       res.writeHead(403, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ error: "Tenant role required" }));
       return null;
     }
-    return authedReq.user.tenantId || authedReq.user.userId || null;
+    return tenantId || userId || null;
   }
 
   // 2. Fall back to manual decode for legacy dev JWTs (AUTH_OPTIONAL mode)
