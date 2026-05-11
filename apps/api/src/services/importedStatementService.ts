@@ -53,9 +53,23 @@ export interface ImportedStatementDTO {
   ocrConfidence: number | null;
   buildingMatchConfidence: MatchConfidence | null;
   notes: string | null;
+  /** Raw OCR dump: summary + extracted fields JSON — for manager review */
+  rawOcrText: string | null;
   accountBalances: ImportedAccountBalanceDTO[];
+  /** Invoices created from this statement (matched by sourceFileUrl) */
+  linkedInvoices: LinkedInvoiceDTO[];
   createdAt: string;
   updatedAt: string;
+}
+
+export interface LinkedInvoiceDTO {
+  id: string;
+  description: string | null;
+  recipientName: string | null;
+  totalCents: number | null;
+  currency: string | null;
+  issueDate: string | null;
+  status: string;
 }
 
 export interface ImportedAccountBalanceDTO {
@@ -653,7 +667,23 @@ export async function getStatement(
       accountBalances: { include: { account: { select: { name: true, code: true } } } },
     },
   });
-  return s ? mapDTO(s) : null;
+  if (!s) return null;
+
+  const linkedInvoices = await prisma.invoice.findMany({
+    where: { orgId, sourceFileUrl: s.sourceFileUrl },
+    select: {
+      id: true,
+      description: true,
+      recipientName: true,
+      totalCents: true,
+      currency: true,
+      issueDate: true,
+      status: true,
+    },
+    orderBy: { createdAt: "asc" },
+  });
+
+  return mapDTO(s, linkedInvoices);
 }
 
 /** Assign (or reassign) the building for a PENDING_REVIEW statement. */
@@ -704,12 +734,12 @@ export async function resolveAccountBalance(
 type StatementWithIncludes = Awaited<ReturnType<PrismaClient["importedStatement"]["findUniqueOrThrow"]>>;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function mapDTO(s: any): ImportedStatementDTO {
+function mapDTO(s: any, linkedInvoices: any[] = []): ImportedStatementDTO {
   return {
     id: s.id,
     orgId: s.orgId,
     buildingId: s.buildingId,
-    buildingName: s.building?.name ?? "",
+    buildingName: s.building?.name ?? null,
     fiscalYear: s.fiscalYear,
     periodStart: s.periodStart ? s.periodStart.toISOString() : null,
     periodEnd: s.periodEnd ? s.periodEnd.toISOString() : null,
@@ -721,6 +751,7 @@ function mapDTO(s: any): ImportedStatementDTO {
     ocrConfidence: s.ocrConfidence ?? null,
     buildingMatchConfidence: s.buildingMatchConfidence ?? null,
     notes: s.notes ?? null,
+    rawOcrText: s.rawOcrText ?? null,
     accountBalances: (s.accountBalances ?? []).map((ab: any) => ({
       id: ab.id,
       rawAccountCode: ab.rawAccountCode,
@@ -731,6 +762,15 @@ function mapDTO(s: any): ImportedStatementDTO {
       accountId: ab.accountId ?? null,
       accountName: ab.account?.name ?? null,
       accountCode: ab.account?.code ?? null,
+    })),
+    linkedInvoices: linkedInvoices.map((inv: any) => ({
+      id: inv.id,
+      description: inv.description ?? null,
+      recipientName: inv.recipientName ?? null,
+      totalCents: inv.totalCents ?? null,
+      currency: inv.currency ?? null,
+      issueDate: inv.issueDate ? new Date(inv.issueDate).toISOString() : null,
+      status: inv.status,
     })),
     createdAt: s.createdAt.toISOString(),
     updatedAt: s.updatedAt.toISOString(),

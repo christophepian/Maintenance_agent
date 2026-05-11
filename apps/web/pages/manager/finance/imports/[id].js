@@ -223,6 +223,79 @@ function AssignBuildingInline({ statementId, onAssigned }) {
   );
 }
 
+// ── Extracted data collapsible ────────────────────────────────────────────────
+
+function ExtractedDataPanel({ rawOcrText }) {
+  const [open, setOpen] = useState(false);
+
+  // Split the stored string at the "---" separator inserted during ingestion
+  const parts = rawOcrText.split(/\n---\n/);
+  const summary = parts[0]?.trim() || "";
+  let fields = null;
+  if (parts[1]) {
+    try { fields = JSON.parse(parts[1]); } catch { /* show raw */ }
+  }
+
+  return (
+    <div className="rounded-lg border border-slate-200 bg-slate-50">
+      <button
+        type="button"
+        className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-100 transition-colors rounded-lg"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+      >
+        <span>Extracted data</span>
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          className={cn("h-4 w-4 transition-transform", open ? "rotate-180" : "")}
+          viewBox="0 0 20 20"
+          fill="currentColor"
+        >
+          <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+        </svg>
+      </button>
+
+      {open && (
+        <div className="px-4 pb-4 space-y-4">
+          {summary && (
+            <div>
+              <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">Summary</p>
+              <p className="text-sm text-slate-700 whitespace-pre-wrap">{summary}</p>
+            </div>
+          )}
+          {fields && (
+            <div>
+              <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">Fields</p>
+              <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+                <table className="w-full text-sm">
+                  <tbody>
+                    {Object.entries(fields).map(([key, val]) =>
+                      val != null && val !== "" ? (
+                        <tr key={key} className="border-b border-slate-100 last:border-0">
+                          <td className="px-3 py-1.5 text-xs text-slate-500 font-medium whitespace-nowrap w-40">{key}</td>
+                          <td className="px-3 py-1.5 text-slate-800 font-mono text-xs break-all">
+                            {typeof val === "object" ? JSON.stringify(val) : String(val)}
+                          </td>
+                        </tr>
+                      ) : null,
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+          {!fields && parts[1] && (
+            <div>
+              <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">Raw</p>
+              <pre className="text-xs text-slate-700 overflow-x-auto whitespace-pre-wrap bg-white rounded-lg border border-slate-200 p-3">{parts[1]}</pre>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function ImportedStatementReviewPage() {
@@ -398,11 +471,54 @@ export default function ImportedStatementReviewPage() {
                 </div>
               </Panel>
 
+              {/* ── Extracted Data ── */}
+              {s.rawOcrText && (
+                <ExtractedDataPanel rawOcrText={s.rawOcrText} />
+              )}
+
               {/* ── Unmatched warning ── */}
               {isPendingReview && hasUnmatched && (
                 <div className="notice bg-amber-50 border-amber-300 text-amber-800">
                   {t("manager:financeImports.text.unmatchedWarning")}
                 </div>
+              )}
+
+              {/* ── Linked Invoices ── */}
+              {s.linkedInvoices?.length > 0 && (
+                <Section title={t("manager:financeImports.title.linkedInvoices")}>
+                  <div className="overflow-hidden rounded-lg border border-table-border">
+                    <div className="overflow-x-auto">
+                      <table className="data-table">
+                        <thead>
+                          <tr>
+                            <th>Vendor</th>
+                            <th>Description</th>
+                            <th className="text-right">Amount</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {s.linkedInvoices.map((inv) => (
+                            <tr key={inv.id}>
+                              <td>{inv.recipientName || "—"}</td>
+                              <td className="text-slate-600 text-sm">{inv.description || "—"}</td>
+                              <td className="text-right font-mono">
+                                {inv.totalCents != null ? formatChfCents(inv.totalCents) : "—"}
+                              </td>
+                              <td className="text-slate-500 text-sm">
+                                {inv.issueDate ? formatDate(inv.issueDate) : "—"}
+                              </td>
+                              <td>
+                                <Badge variant="default">{inv.status}</Badge>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </Section>
               )}
 
               {/* ── Account Balances ── */}

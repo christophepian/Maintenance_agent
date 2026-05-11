@@ -237,7 +237,7 @@ export function registerImportedStatementRoutes(router: Router) {
       }
 
       try {
-        const balance = await resolveAccountBalance(prisma, params.balanceId, orgId, accountId);
+        const balance = await resolveAccountBalance(prisma, params.balanceId, accountId, orgId);
         sendJson(res, 200, { data: balance });
       } catch (e: any) {
         if (e instanceof ImportedStatementError) {
