@@ -1,3 +1,8 @@
 {
-  "framework": "nextjs"
+  "framework": "nextjs",
+  "functions": {
+    "apps/web/pages/api/imported-statements/upload.js": {
+      "maxDuration": 60
+    }
+  }
 }

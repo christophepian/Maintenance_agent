@@ -67,6 +67,9 @@ export function registerImportedStatementRoutes(router: Router) {
     const buildingIdPart = parts.find((p) => p.name === "buildingId");
     const hintBuildingId = buildingIdPart?.data.toString("utf8").trim() || undefined;
 
+    const hintDocTypePart = parts.find((p) => p.name === "hintDocType");
+    const hintDocType = hintDocTypePart?.data.toString("utf8").trim() || undefined;
+
     const mimeType = filePart.contentType ?? "application/octet-stream";
     const allowedTypes = ["application/pdf", "image/jpeg", "image/png", "image/tiff"];
     if (!allowedTypes.includes(mimeType)) {
@@ -82,6 +85,7 @@ export function registerImportedStatementRoutes(router: Router) {
         uploadedBy: user.userId,
         fiscalYear,
         buildingId: hintBuildingId,
+        hintDocType,
       });
       sendJson(res, 202, { data: statement });
     } catch (e: any) {

@@ -31,11 +31,18 @@ function statusVariant(status) {
 
 // ── Upload Modal ──────────────────────────────────────────────────────────────
 
+const DOC_TYPE_OPTIONS = [
+  { value: "FINANCIAL_STATEMENT", label: "Financial Statement (balance sheet)" },
+  { value: "INVOICE",             label: "Invoice(s)" },
+  { value: "",                    label: "Auto-detect" },
+];
+
 function UploadModal({ onClose, onUploaded }) {
   const { t } = useTranslation("manager");
   const [file, setFile] = useState(null);
   const [fiscalYear, setFiscalYear] = useState(String(new Date().getFullYear()));
   const [buildingId, setBuildingId] = useState("");
+  const [hintDocType, setHintDocType] = useState("FINANCIAL_STATEMENT");
   const [buildings, setBuildings] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
@@ -59,6 +66,7 @@ function UploadModal({ onClose, onUploaded }) {
       form.append("file", file);
       form.append("fiscalYear", fiscalYear);
       if (buildingId) form.append("buildingId", buildingId);
+      if (hintDocType) form.append("hintDocType", hintDocType);
 
       const res = await fetch("/api/imported-statements/upload", {
         method: "POST",
@@ -122,6 +130,20 @@ function UploadModal({ onClose, onUploaded }) {
                 Drop a PDF or image here, or click to select
               </p>
             )}
+          </div>
+
+          {/* Document type */}
+          <div>
+            <label className="form-label">Document type</label>
+            <select
+              className="form-input w-full"
+              value={hintDocType}
+              onChange={(e) => setHintDocType(e.target.value)}
+            >
+              {DOC_TYPE_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
           </div>
 
           {/* Fiscal year */}

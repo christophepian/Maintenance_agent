@@ -83,6 +83,8 @@ export interface IngestStatementInput {
   buildingId?: string;
   fiscalYear?: number;
   uploadedBy: string;
+  /** Manager-supplied document type hint — bypasses auto-detection */
+  hintDocType?: string;
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -341,15 +343,15 @@ export async function ingestStatement(
   prisma: PrismaClient,
   input: IngestStatementInput,
 ): Promise<ImportedStatementDTO> {
-  const { buffer, fileName, mimeType, orgId, uploadedBy } = input;
+  const { buffer, fileName, mimeType, orgId, uploadedBy, hintDocType } = input;
 
   // 1. Store the source file
   const fileKey = `imported-statements/${orgId}/${Date.now()}-${crypto.randomBytes(4).toString("hex")}/${fileName}`;
   await storage.put(fileKey, buffer);
 
   // 2. Scan the document
-  console.log(`[IMPORT] Scanning file="${fileName}" size=${buffer.length} mime=${mimeType}`);
-  const scanResult: ScanResult = await scanDocument(buffer, fileName, mimeType);
+  console.log(`[IMPORT] Scanning file="${fileName}" size=${buffer.length} mime=${mimeType}${hintDocType ? ` hintDocType=${hintDocType}` : ""}`);
+  const scanResult: ScanResult = await scanDocument(buffer, fileName, mimeType, hintDocType);
   console.log(
     `[IMPORT] Scan complete: docType=${scanResult.docType} confidence=${scanResult.confidence} ` +
     `balances=${scanResult.accountBalances?.length ?? 0} invoiceLines=${scanResult.invoiceLines?.length ?? 0}`,
