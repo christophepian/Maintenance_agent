@@ -241,6 +241,13 @@ export async function generateLeasePDF(
       if (lease.includesHouseRules) {
         doc.fontSize(9).font('Helvetica').text('☑ Règlement de la maison joint en annexe');
       }
+      // House rules annex — appended on a new page if text is present
+      const houseRulesText = lease.unit?.building?.houseRulesText as string | undefined;
+      if (lease.includesHouseRules && houseRulesText) {
+        doc.addPage();
+        sectionHeader(doc, 'Annexe', 'Règlement de la maison');
+        doc.fontSize(9).font('Helvetica').text(houseRulesText, { width: 515, lineGap: 2 });
+      }
       if (lease.otherAnnexesText) {
         labelValue(doc, 'Annexes', lease.otherAnnexesText, col1, pageWidth);
       }

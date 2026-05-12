@@ -4,6 +4,8 @@ import { readJson } from "../http/body";
 import { first } from "../http/query";
 import { maybeRequireManager, requireRole } from "../authz";
 import { withAuthRequired } from "../http/routeProtection";
+import * as crypto from "crypto";
+import prismaClient from "../services/prismaClient";
 import {
   listBuildings,
   createBuilding,
@@ -220,6 +222,43 @@ export function registerInventoryRoutes(router: Router) {
       sendJson(res, 200, { message: "Building deactivated" });
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to deactivate building", String(e));
+    }
+  });
+
+  // GET /buildings/:id/house-rules-pdf — stream house rules as PDF
+  router.get("/buildings/:id/house-rules-pdf", async ({ req, res, params, orgId }) => {
+    if (!maybeRequireManager(req, res)) return;
+    try {
+      const building = await prismaClient.building.findUnique({ where: { id: params.id } });
+      if (!building || building.orgId !== orgId) return sendError(res, 404, "NOT_FOUND", "Building not found");
+      if (!building.houseRulesText) return sendError(res, 404, "NOT_FOUND", "No house rules text defined for this building");
+
+      const PDFKit = await import("pdfkit");
+      const PDFDocument = (PDFKit as any).default ?? PDFKit;
+      const doc = new PDFDocument({ size: "A4", margin: 40 });
+      const chunks: Buffer[] = [];
+      doc.on("data", (c: Buffer) => chunks.push(c));
+      await new Promise<void>((resolve, reject) => {
+        doc.on("end", resolve);
+        doc.on("error", reject);
+        doc.fontSize(16).font("Helvetica-Bold").text("RÈGLEMENT DE LA MAISON", { align: "center" });
+        doc.fontSize(10).font("Helvetica").text(building.name, { align: "center" });
+        doc.moveDown(1);
+        doc.fontSize(9).font("Helvetica").text(building.houseRulesText!, { lineGap: 2 });
+        doc.end();
+      });
+      const buffer = Buffer.concat(chunks);
+      const sha256 = crypto.createHash("sha256").update(buffer).digest("hex");
+      res.writeHead(200, {
+        "content-type": "application/pdf",
+        "content-disposition": `inline; filename="house-rules-${params.id.slice(0, 8)}.pdf"`,
+        "content-length": buffer.length.toString(),
+        "x-pdf-sha256": sha256,
+      });
+      res.end(buffer);
+    } catch (e) {
+      if (res.headersSent) { res.end(); return; }
+      sendError(res, 500, "PDF_ERROR", "Failed to generate house rules PDF", String(e));
     }
   });
 

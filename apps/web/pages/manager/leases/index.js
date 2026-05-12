@@ -273,6 +273,14 @@ export default function LeasesPage() {
       .catch(() => {});
   }, []);
 
+  // Auto-open template create form when ?autoCreate=true
+  useEffect(() => {
+    if (!router.isReady) return;
+    if (router.query.autoCreate === "true" && activeTab === 3) {
+      setShowCreateTemplate(true);
+    }
+  }, [router.isReady, router.query.autoCreate, activeTab]);
+
   // Load units when building selected
   useEffect(() => {
     if (!selectedBuildingId) { setUnits([]); return; }
@@ -612,7 +620,7 @@ export default function LeasesPage() {
                   </div>
                   {tmplCreateError && <p className="text-sm text-red-600 mb-4">{tmplCreateError}</p>}
                   {tmplCreateMode === "scratch" && (
-                    <form onSubmit={handleCreateFromScratch} className="bg-white rounded-lg border p-6 space-y-4 max-w-2xl mb-6">
+                    <form onSubmit={handleCreateFromScratch} className="bg-white rounded-lg border p-6 space-y-4 mb-6">
                       <div className="grid grid-cols-2 gap-4">
                         <div className="col-span-2">
                           <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:leasesIndex.text.building2")}</label>
@@ -700,7 +708,7 @@ export default function LeasesPage() {
                     </form>
                   )}
                   {tmplCreateMode === "lease" && (
-                    <form onSubmit={handleCreateFromLease} className="bg-white rounded-lg border p-6 space-y-4 max-w-2xl mb-6">
+                    <form onSubmit={handleCreateFromLease} className="bg-white rounded-lg border p-6 space-y-4 mb-6">
                       <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:leasesIndex.text.templateName2")}</label>
                         <input type="text" value={leaseFormTmpl.templateName} onChange={(e) => setLeaseFormTmpl((f) => ({ ...f, templateName: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm" placeholder={t("manager:leasesIndex.placeholder.eGStandard3RoomApartment")} />

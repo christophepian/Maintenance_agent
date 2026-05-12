@@ -18,6 +18,9 @@ export const UpdateBuildingSchema = z.object({
 
   // Management
   managedSince: z.string().datetime().optional().nullable(),
+
+  // House rules
+  houseRulesText: z.string().optional().nullable(),
 });
 
 export type CreateBuildingInput = z.infer<typeof CreateBuildingSchema>;

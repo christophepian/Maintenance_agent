@@ -93,6 +93,12 @@ export default function BuildingDetail() {
   const [requestsLoading, setRequestsLoading] = useState(false);
   const [requestsLoaded, setRequestsLoaded] = useState(false);
 
+  // ─── House rules state ───
+  const [houseRulesText, setHouseRulesText] = useState("");
+  const [houseRulesEditing, setHouseRulesEditing] = useState(false);
+  const [houseRulesSaving, setHouseRulesSaving] = useState(false);
+  const [houseRulesPreviewUrl, setHouseRulesPreviewUrl] = useState(null);
+
   // ─── Sort state for Tenants + Requests tabs (must be here, before early returns) ───
   const { sortField: tenSF, sortDir: tenSD, handleSort: handleTenSort } = useLocalSort("name", "asc");
   const { sortField: reqSF, sortDir: reqSD, handleSort: handleReqSort } = useLocalSort("createdAt", "desc");
@@ -166,6 +172,7 @@ export default function BuildingDetail() {
       setEditElevator(!!b.hasElevator);
       setEditConcierge(!!b.hasConcierge);
       setEditManagedSince(b.managedSince ? b.managedSince.slice(0, 10) : "");
+      setHouseRulesText(b.houseRulesText || "");
       await loadUnits();
       await loadBuildingConfig();
       await loadApprovalRules();
@@ -422,6 +429,49 @@ export default function BuildingDetail() {
       setErr(`Update failed: ${e.message}`);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function onSaveHouseRules() {
+    try {
+      setHouseRulesSaving(true);
+      await fetchJSON(`/buildings/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ houseRulesText: houseRulesText || null }),
+      });
+      setBuilding((b) => ({ ...b, houseRulesText: houseRulesText || null }));
+      setHouseRulesEditing(false);
+      setOk("House rules saved.");
+    } catch (e) {
+      setErr(`Failed to save house rules: ${e.message}`);
+    } finally {
+      setHouseRulesSaving(false);
+    }
+  }
+
+  async function onPreviewHouseRulesPdf() {
+    if (houseRulesPreviewUrl) { URL.revokeObjectURL(houseRulesPreviewUrl); setHouseRulesPreviewUrl(null); return; }
+    try {
+      const res = await fetch(`/api/buildings/${id}/house-rules-pdf`, { headers: authHeaders() });
+      if (!res.ok) throw new Error("Failed to generate PDF");
+      const blob = await res.blob();
+      setHouseRulesPreviewUrl(URL.createObjectURL(blob));
+    } catch (e) {
+      setErr(`PDF preview failed: ${e.message}`);
+    }
+  }
+
+  async function onDownloadHouseRulesPdf() {
+    try {
+      const res = await fetch(`/api/buildings/${id}/house-rules-pdf`, { headers: authHeaders() });
+      if (!res.ok) throw new Error("Failed to generate PDF");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = `house-rules-${id.slice(0, 8)}.pdf`; a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+    } catch (e) {
+      setErr(`PDF download failed: ${e.message}`);
     }
   }
 
@@ -1400,6 +1450,57 @@ export default function BuildingDetail() {
                   >
                     {t("manager:buildingsId.text.goToLeaseTemplates")}
                   </Link>
+                </div>
+              )}
+            </Panel>
+
+            {/* House Rules panel */}
+            <Panel
+              title="House Rules"
+              actions={
+                <div className="flex items-center gap-2">
+                  {building?.houseRulesText && !houseRulesEditing && (
+                    <>
+                      <button type="button" onClick={onPreviewHouseRulesPdf} className="button-secondary text-sm">
+                        {houseRulesPreviewUrl ? "Close Preview" : "Preview PDF"}
+                      </button>
+                      <button type="button" onClick={onDownloadHouseRulesPdf} className="button-secondary text-sm">
+                        Download PDF
+                      </button>
+                    </>
+                  )}
+                  {houseRulesEditing ? (
+                    <>
+                      <button type="button" onClick={() => { setHouseRulesEditing(false); setHouseRulesText(building?.houseRulesText || ""); }} className="button-cancel text-sm">Cancel</button>
+                      <button type="button" onClick={onSaveHouseRules} disabled={houseRulesSaving} className="button-primary text-sm">{houseRulesSaving ? "Saving…" : "Save"}</button>
+                    </>
+                  ) : (
+                    <button type="button" onClick={() => setHouseRulesEditing(true)} className="button-secondary text-sm">{building?.houseRulesText ? "Edit" : "+ Add House Rules"}</button>
+                  )}
+                </div>
+              }
+            >
+              {houseRulesEditing ? (
+                <textarea
+                  value={houseRulesText}
+                  onChange={(e) => setHouseRulesText(e.target.value)}
+                  rows={16}
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-mono leading-relaxed focus:outline-none focus:ring-2 focus:ring-brand/40 resize-y"
+                  placeholder="Enter house rules text. This will be attached to lease PDFs when 'Include house rules' is checked, and made available to tenants via the chatbot."
+                />
+              ) : building?.houseRulesText ? (
+                <div className="space-y-2">
+                  <pre className="whitespace-pre-wrap text-sm text-slate-700 font-sans leading-relaxed bg-slate-50 rounded-lg border border-slate-200 p-4 max-h-80 overflow-y-auto">{building.houseRulesText}</pre>
+                  {houseRulesPreviewUrl && (
+                    <div className="mt-3 rounded-lg overflow-hidden border border-slate-200" style={{ height: 600 }}>
+                      <iframe src={houseRulesPreviewUrl} className="w-full h-full" title="House Rules PDF Preview" />
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
+                  <p className="text-sm text-slate-500 mb-1">No house rules defined yet.</p>
+                  <p className="text-xs text-slate-400">House rules will be attached to lease PDFs and accessible to tenants via the chatbot.</p>
                 </div>
               )}
             </Panel>

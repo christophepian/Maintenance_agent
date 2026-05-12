@@ -534,7 +534,7 @@ export function registerRentalRoutes(router: Router) {
    * Returns applicant names, doc types, and attachment metadata.
    */
   router.get("/rental-applications/:id/documents", async ({ req, res, params }) => {
-    if (!maybeRequireManager(req, res)) return;
+    if (!requireAnyRole(req, res, ["MANAGER", "OWNER"])) return;
     try {
       const application = await rentalApplicationRepo.findApplicationDocuments(prisma, params.id);
       if (!application) {

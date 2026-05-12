@@ -142,6 +142,7 @@ export async function updateBuilding(
     hasElevator?: boolean;
     hasConcierge?: boolean;
     managedSince?: Date | null;
+    houseRulesText?: string | null;
   },
 ) {
   return prisma.building.update({
@@ -153,6 +154,7 @@ export async function updateBuilding(
       hasElevator: data.hasElevator ?? undefined,
       hasConcierge: data.hasConcierge ?? undefined,
       managedSince: data.managedSince !== undefined ? data.managedSince : undefined,
+      houseRulesText: data.houseRulesText !== undefined ? data.houseRulesText : undefined,
     },
   });
 }
