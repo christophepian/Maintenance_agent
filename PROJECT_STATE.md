@@ -60,6 +60,19 @@ Supabase disabled legacy API keys on 2026-05-10 and migrated to a new publishabl
 
 Root causes resolved: (1) Edge middleware was blocking `/api/*` requests by redirecting to `/login` when Supabase session check failed — fixed by adding `/api/` to `PUBLIC_PATHS`; (2) `ANTHROPIC_API_KEY` in Render was stale after key rotation — updated. JWT verification via JWKS (ES256) works correctly end to end.
 
+### QR invoice capture — fully working end-to-end (2026-05-12)
+
+Six root causes resolved:
+
+1. **Missing POST proxy** — `apps/web/pages/api/capture-sessions/index.js` did not exist; `CaptureSessionModal` POST returned 404, session creation always failed.
+2. **LAN IP in QR URL** — `captureSessionService.ts` built the mobile URL from `process.env.FRONTEND_URL || getLocalNetworkIp()`. On Vercel, neither was set so phones received an unreachable internal IP. Fixed: route now passes `req.headers.origin` as `frontendUrl` option into `createSession()`, so the QR always contains the real public URL.
+3. **Phone-side API routes behind auth wall** — `server.ts` returned 401 `"Authentication required"` for unauthenticated requests before the router ran. The four phone-side endpoints (`resolve`, `validate`, `upload`, `complete`) carry their own signed JWT; they do not use Supabase auth. Fixed by adding `isPublicCaptureRoute` bypass (same pattern as `isPublicRentalRoute`).
+4. **PDF preview — invoice list overlay** — `InvoiceOverlay` embedded PDF via bare `<iframe src="/api/invoices/:id/pdf">`. Browser iframes don't carry `Authorization` headers, so the backend returned 401 JSON rendered visibly in the frame. Fixed: fetch with `authHeaders()` → `URL.createObjectURL(blob)` → use blob URL as `src`. Download button reuses same blob URL.
+5. **PDF preview — invoice detail page** — same bare iframe pattern in `invoices/[id].js` line 569. Fixed identically.
+6. **Source image — invoice detail page** — `<img src="/api/invoices/:id/source-file">` also lacked auth. Fixed: same fetch → blob URL pattern.
+
+Remaining known limitation: OCR extracts amount and date reliably from phone photos; vendor name, building, and category require manual assignment in the PENDING_REVIEW review step (by design).
+
 ### Testing — 67 suites
 
 * Jest + ts-jest, `maxWorkers: 1` (serial integration). Test DB: `maint_agent_test` (isolated via `.env.test`).
@@ -86,7 +99,7 @@ Root causes resolved: (1) Edge middleware was blocking `/api/*` requests by redi
 | API operations | 291 | openapi.yaml operationId count — derived |
 | URL paths | 225 | openapi.yaml unique paths — derived |
 | Tests | 67 suites · 1009 tests (pre-existing test interaction TC-11 resolved) | jest — derived |
-| Proxy conformance | 197 / 197 | apps/web/pages/api/ — derived |
+| Proxy conformance | 198 / 198 | apps/web/pages/api/ — derived |
 | Transition maps | 8 | src/workflows/transitions.ts — derived |
 | Audit findings open | 3 (SI-2/3/4: legal model orgId doc drift) | docs/AUDIT.md — manual |
 | Audit findings resolved | 91 | docs/AUDIT.md — manual |
