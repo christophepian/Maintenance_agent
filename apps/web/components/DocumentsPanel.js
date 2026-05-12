@@ -183,7 +183,7 @@ export default function DocumentsPanel({ applicationId, title, compact }) {
                         {(att.mimeType?.includes("pdf") || att.mimeType?.includes("image")) && (
                           <button
                             onClick={() => openPreview(att.id, att.mimeType, att.fileName)}
-                            className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 transition-colors"
+                            className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors"
                             title={t("action.view")}
                           >
                             <Eye size={14} className="shrink-0" />
