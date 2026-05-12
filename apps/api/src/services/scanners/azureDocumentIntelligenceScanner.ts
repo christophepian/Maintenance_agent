@@ -1063,6 +1063,115 @@ function splitIntoPageChunks(
   return chunks.filter((c) => c.length > 0);
 }
 
+/* ══════════════════════════════════════════════════════════════
+   Page classification — one cheap Claude call to label each page
+   ══════════════════════════════════════════════════════════════ */
+
+type PageClass = "COVER_LETTER" | "FINANCIAL_DATA" | "INVOICE" | "OTHER";
+
+/**
+ * Classify each page of a multi-page document with a single Claude Haiku call.
+ *
+ * Each page is represented by its first 400 characters.  Claude returns an
+ * array of labels in the same order:
+ *   COVER_LETTER  — introductory letter, skip entirely
+ *   FINANCIAL_DATA — balance sheet / P&L / compte de gestion rows → extract balances
+ *   INVOICE        — vendor invoice attachment → extract invoice lines
+ *   OTHER          — tenant list, state locatif, TOC, etc. → skip
+ *
+ * Returns null (no classification) on any error so the caller can fall back
+ * to the unfiltered path.
+ */
+async function classifyPages(
+  client: ReturnType<typeof getAnthropicClient>,
+  pageTexts: string[],
+): Promise<PageClass[] | null> {
+  if (pageTexts.length === 0) return null;
+
+  // Snippet per page: first 400 chars, with page number label
+  const snippets = pageTexts
+    .map((t, i) => `--- Page ${i + 1} ---\n${t.substring(0, 400).trim()}`)
+    .join("\n\n");
+
+  try {
+    const response = await client.messages.create({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 512,
+      tools: [
+        {
+          name: "classifyDocumentPages",
+          description:
+            "Classify each page of a Swiss property management document into one of four categories.",
+          input_schema: {
+            type: "object" as const,
+            required: ["pages"],
+            properties: {
+              pages: {
+                type: "array",
+                description:
+                  "Classification for each page, in order. Must have exactly as many elements as there are pages.",
+                items: {
+                  type: "object",
+                  required: ["pageNumber", "class"],
+                  properties: {
+                    pageNumber: { type: "number" },
+                    class: {
+                      type: "string",
+                      enum: ["COVER_LETTER", "FINANCIAL_DATA", "INVOICE", "OTHER"],
+                      description:
+                        "COVER_LETTER: introductory letter or general info text. " +
+                        "FINANCIAL_DATA: balance sheet (bilan), P&L, compte de résultat, compte de gestion, or any page with account codes and CHF amounts. " +
+                        "INVOICE: a vendor invoice or receipt with invoice number, supplier name, and total. " +
+                        "OTHER: table of contents, tenant list, état locatif, property description, or other.",
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      ],
+      tool_choice: { type: "any" },
+      messages: [
+        {
+          role: "user",
+          content:
+            `Classify each page of this Swiss property management document (${pageTexts.length} pages). ` +
+            `Return one classification per page in order.\n\n` +
+            `Page snippets:\n${snippets}`,
+        },
+      ],
+    });
+
+    const toolUse = response.content.find((b) => b.type === "tool_use");
+    if (!toolUse || toolUse.type !== "tool_use") return null;
+
+    const input = toolUse.input as { pages: Array<{ pageNumber: number; class: string }> };
+    if (!Array.isArray(input.pages) || input.pages.length === 0) return null;
+
+    // Map back to PageClass array indexed by page position
+    const result: PageClass[] = new Array(pageTexts.length).fill("OTHER");
+    for (const entry of input.pages) {
+      const idx = entry.pageNumber - 1;
+      if (idx >= 0 && idx < pageTexts.length) {
+        result[idx] = entry.class as PageClass;
+      }
+    }
+
+    console.log(
+      `[DOC-SCAN] Page classification: ` +
+      result.map((c, i) => `p${i + 1}=${c}`).join(", "),
+    );
+    return result;
+  } catch (err) {
+    console.warn(
+      "[DOC-SCAN] Page classification failed — extracting all pages:",
+      err instanceof Error ? err.message : err,
+    );
+    return null;
+  }
+}
+
 /**
  * Extract account balances (and optionally invoice lines) from a financial
  * statement PDF by processing it in page-sized chunks.
@@ -1071,6 +1180,7 @@ function splitIntoPageChunks(
 async function extractFinancialStatementWithClaude(
   content: string,
   pages?: Array<{ spans?: Array<{ offset: number; length: number }> }>,
+  pageTexts?: string[],
 ): Promise<{
   fields: Record<string, string | number | boolean | null>;
   accountBalances: ExtractedAccountBalance[];
@@ -1086,13 +1196,39 @@ async function extractFinancialStatementWithClaude(
   // hit max_tokens mid-list and truncate silently.
   const MAX_CHARS_PER_CHUNK = 10_000;
 
-  const chunks = splitIntoPageChunks(content, pages, MAX_CHARS_PER_CHUNK);
-  console.log(
-    `[DOC-SCAN] Financial statement: contentLen=${content.length} → ${chunks.length} chunk(s) for Claude`,
-  );
-
   try {
     const client = getAnthropicClient();
+
+    // ── Page classification ────────────────────────────────────────────────
+    // When per-page texts are available, classify pages first so we can:
+    //   • Skip cover letters (no account rows to confuse the extractor)
+    //   • Route invoice-only pages to a separate invoice extraction pass
+    //   • Concentrate balance extraction on pages that actually have account data
+    let financialPageTexts: string[] = pageTexts ?? [];
+    let invoiceOnlyPageTexts: string[] = [];
+
+    if (pageTexts && pageTexts.length > 1) {
+      const classes = await classifyPages(client, pageTexts);
+      if (classes) {
+        financialPageTexts = pageTexts.filter((_, i) => classes[i] === "FINANCIAL_DATA");
+        invoiceOnlyPageTexts = pageTexts.filter((_, i) => classes[i] === "INVOICE");
+        const skipped = classes.filter((c) => c === "COVER_LETTER" || c === "OTHER").length;
+        console.log(
+          `[DOC-SCAN] Page filter: ${financialPageTexts.length} financial, ` +
+          `${invoiceOnlyPageTexts.length} invoice-only, ${skipped} skipped`,
+        );
+      }
+    }
+
+    // If classification filtered everything out, fall back to the full content
+    const financialContent = financialPageTexts.length > 0
+      ? financialPageTexts.join("\n\n")
+      : content;
+
+    const chunks = splitIntoPageChunks(financialContent, undefined, MAX_CHARS_PER_CHUNK);
+    console.log(
+      `[DOC-SCAN] Financial statement: contentLen=${financialContent.length} → ${chunks.length} chunk(s) for Claude`,
+    );
 
     let mergedFields: Record<string, string | number | boolean | null> = {};
     const allBalances: ExtractedAccountBalance[] = [];
@@ -1138,6 +1274,32 @@ async function extractFinancialStatementWithClaude(
         `${chunkResult.invoiceLines.length} invoice line(s) → ` +
         `running total ${allBalances.length} balance(s)`,
       );
+    }
+
+    // ── Dedicated pass for invoice-attachment pages ────────────────────────
+    // These pages were classified as INVOICE and excluded from the financial
+    // data extraction above.  Run them through extractChunkWithClaude
+    // separately so vendor invoices embedded in the report are still captured.
+    if (invoiceOnlyPageTexts.length > 0) {
+      const invoiceChunks = splitIntoPageChunks(
+        invoiceOnlyPageTexts.join("\n\n"), undefined, MAX_CHARS_PER_CHUNK,
+      );
+      console.log(
+        `[DOC-SCAN] Invoice-only pass: ${invoiceOnlyPageTexts.length} page(s) → ${invoiceChunks.length} chunk(s)`,
+      );
+      for (let i = 0; i < invoiceChunks.length; i++) {
+        try {
+          const r = await extractChunkWithClaude(client, invoiceChunks[i], i, invoiceChunks.length);
+          allInvoiceLines.push(...r.invoiceLines);
+          // Some invoice pages also carry balance rows (e.g. a per-vendor expense summary)
+          for (const b of r.accountBalances) {
+            const key = b.rawAccountCode.trim().toLowerCase();
+            if (!seenCodes.has(key)) { seenCodes.add(key); allBalances.push(b); }
+          }
+        } catch {
+          console.warn(`[DOC-SCAN] Invoice chunk ${i + 1}/${invoiceChunks.length} failed — skipping`);
+        }
+      }
     }
 
     return { fields: mergedFields, accountBalances: allBalances, invoiceLines: allInvoiceLines };
@@ -1212,6 +1374,8 @@ interface AzureAnalyzeResult {
   kvPairs: KvPair[];
   fields: Record<string, DocumentFieldOutput>;
   pageCount: number;
+  /** Full text for each individual page, in order. Used for page classification. */
+  pageTexts: string[];
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -1299,13 +1463,23 @@ export class AzureDocumentIntelligenceScanner implements DocumentScanner {
       throw new Error("Azure Document Intelligence returned no analyzeResult in the response.");
     }
 
+    const content = analyzeResult.content ?? "";
+    // Extract per-page text from Azure's span offsets
+    const pageTexts: string[] = (analyzeResult.pages ?? []).map((page: any) => {
+      const spans: Array<{ offset: number; length: number }> = page.spans ?? [];
+      if (spans.length === 0) return "";
+      const start = spans[0].offset;
+      const end = spans[spans.length - 1].offset + spans[spans.length - 1].length;
+      return content.substring(start, end);
+    });
     return {
-      content: analyzeResult.content ?? "",
+      content,
       kvPairs: (analyzeResult.keyValuePairs ?? [])
         .filter((kv: any) => kv.key?.content && kv.value?.content)
         .map((kv: any) => ({ key: kv.key.content as string, value: kv.value!.content as string })),
       fields: analyzeResult.documents?.[0]?.fields ?? {},
       pageCount: analyzeResult.pages?.length ?? 0,
+      pageTexts,
     };
   }
 
@@ -1336,7 +1510,7 @@ export class AzureDocumentIntelligenceScanner implements DocumentScanner {
               `[DOC-SCAN] Page ${batch + idx + 1}/${pageBuffers.length} failed: ` +
               (err instanceof Error ? err.message : String(err)),
             );
-            return { content: "", kvPairs: [], fields: {}, pageCount: 0 } as AzureAnalyzeResult;
+            return { content: "", kvPairs: [], fields: {}, pageCount: 0, pageTexts: [] } as AzureAnalyzeResult;
           }),
         ),
       );
@@ -1354,7 +1528,7 @@ export class AzureDocumentIntelligenceScanner implements DocumentScanner {
 
     const fullContent = pageContents.join("\n\n");
     console.log(`[DOC-SCAN] Per-page merge complete: ${pageBuffers.length} pages, contentLen=${fullContent.length}`);
-    return { content: fullContent, kvPairs: allKvPairs, fields: firstFields, pageCount: pageBuffers.length };
+    return { content: fullContent, kvPairs: allKvPairs, fields: firstFields, pageCount: pageBuffers.length, pageTexts: pageContents };
   }
 
   async scan(
@@ -1456,10 +1630,12 @@ export class AzureDocumentIntelligenceScanner implements DocumentScanner {
         fields = normalizeInvoiceFields(azureFields, kvPairs, fullContent);
         break;
       case "FINANCIAL_STATEMENT": {
-        // Azure gives us the raw text (all pages); Claude structures the account rows.
-        // Content is already page-concatenated, so pass undefined for pages
-        // (the chunking in extractFinancialStatementWithClaude handles splitting).
-        const fsResult = await extractFinancialStatementWithClaude(fullContent, undefined);
+        // Azure gives us the raw text; Claude structures the account rows.
+        // Pass pageTexts so the classifier can skip cover letters and route
+        // invoice attachments to a separate extraction pass.
+        const fsResult = await extractFinancialStatementWithClaude(
+          fullContent, undefined, azureResult.pageTexts,
+        );
         fields = fsResult.fields;
         accountBalances = fsResult.accountBalances;
         if (fsResult.invoiceLines.length > 0) {
