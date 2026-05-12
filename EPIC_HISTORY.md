@@ -2677,4 +2677,72 @@ All 6 affected pages confirmed rendering correct FR tab labels via SSR HTML insp
 | `scripts/i18n-audit-tabs.py` | New — template-literal tab key coverage audit |
 | `docs/FRONTEND_INVENTORY.md` | Updated last-modified dates; added dashboard-v2 entry |
 | `.vercelignore` | Replaced blanket `*.json` with specific root-level exclusions — unblocks all locale JSON files from Vercel builds |
+
+---
+
+## Session 2026-05-12 — Bug fixes, House Rules feature, Notification fix, Dashboard attention card
+
+### Commits: 636234c → 77cbd73
+
+### 1. React error #310 — LeaseBadge (commit 636234c)
+- `leaseBadge` in `vacancies/index.js` was a plain function calling `useTranslation` hook. Renamed to `LeaseBadge` proper React component to satisfy Rules of Hooks.
+
+### 2. ActionDropdown overflow fix — fixed positioning (commits dc17ecb → b61aad9)
+- Vacancy cards had `overflow: hidden` clipping the dropdown. Rewrote `ActionDropdown` to use `position: fixed` positioned via `getBoundingClientRect()`. Used `coordsRef` (not state) to avoid stale-coords on first render due to React state batching.
+- Opens below the trigger button (`top: r.bottom + 4, right: window.innerWidth - r.right`).
+
+### 3. Legacy templates.js deleted + link updates (commit 0a45316)
+- `apps/web/pages/manager/leases/templates.js` deleted (612 lines).
+- All "Create Lease Template" links now point to `/manager/leases?tab=templates&autoCreate=true`.
+- `leases/[id].js` back-link updated to `/manager/leases?tab=templates`.
+- `leases/index.js`: `useEffect` auto-opens create-template form when `router.query.autoCreate === "true"`.
+
+### 4. Building House Rules feature (commit d7e61cb)
+**Schema:** Added `houseRulesText String?` to `Building` model. Migration: `20260512174238_add_building_house_rules_text` (applied locally + production via `prisma migrate deploy`).
+
+**Backend:**
+- `inventoryRepository.ts`: `updateBuilding` accepts `houseRulesText`.
+- `validation/buildings.ts`: `UpdateBuildingSchema` — `houseRulesText: z.string().optional().nullable()`.
+- `routes/inventory.ts`: `GET /buildings/:id/house-rules-pdf` — streams a PDFKit PDF inline.
+- `services/leasePDFRenderer.ts`: appends houseRulesText as annex page when `includesHouseRules=true`.
+
+**Frontend:**
+- `admin-inventory/buildings/[id].js`: Documents tab — House Rules panel with textarea editor, save/cancel, inline PDF preview, download. State: `houseRulesText`, `houseRulesEditing`, `houseRulesSaving`, `houseRulesPreviewUrl`.
+- `pages/api/buildings/[id]/house-rules-pdf.js`: new proxy.
+
+### 5. Vercel build JSX parse errors (commits 07244b9, 5c6ba2b)
+- `buildings/[id].js` Documents tab had two sibling `<Panel>` components outside a fragment wrapper → added `<>…</>`.
+- Follow-up: stray literal `empirical` and double `}}` on line 1458 removed.
+
+### 6. Notifications fix — authToken for all roles (commit 77cbd73)
+- `NotificationBell.js` `getHeaders()` was deriving key as `ownerToken` for OWNER role. Supabase stores all tokens under `authToken` (written by `AppShell` `onAuthStateChange`). Fixed to always read `"authToken"`.
+
+### 7. Manager dashboard — "Lease needed" attention card (commit 77cbd73)
+- Dashboard fetches `GET /api/manager/selections` in parallel with requests/jobs/invoices.
+- Filters `AWAITING_SIGNATURE` selections with no lease → pushes `"lease"` category items into `actionFeed` at `sortOrder: 0` (high urgency).
+- Links to `/manager/leases?tab=templates&autoCreate=true`.
+- Violet chip/card style added to `CATEGORY_CHIP` / `CARD_STYLE`.
+- "Lease needed" filter option added to feed filter panel.
+- i18n keys added: `dashboard.chip.lease`, `dashboard.feed.ownerSelectedTenant` (EN + FR).
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `apps/web/pages/manager/vacancies/index.js` | LeaseBadge component; fixed-position ActionDropdown; template links with `autoCreate=true` |
+| `apps/web/pages/manager/leases/index.js` | `autoCreate` useEffect; removed `max-w-2xl` |
+| `apps/web/pages/manager/leases/templates.js` | **Deleted** |
+| `apps/web/pages/manager/leases/[id].js` | Back-link updated |
+| `apps/web/pages/manager/index.js` | Fetch manager/selections; lease category in actionFeed; violet chip/card; filter option |
+| `apps/web/components/NotificationBell.js` | `getHeaders()` always reads `authToken` |
+| `apps/web/pages/admin-inventory/buildings/[id].js` | House Rules panel; JSX fragment fix; stray text + double brace fix |
+| `apps/web/pages/api/buildings/[id]/house-rules-pdf.js` | New proxy |
+| `apps/web/public/locales/en/manager.json` | Added `dashboard.chip.lease`, `dashboard.feed.ownerSelectedTenant` |
+| `apps/web/public/locales/fr/manager.json` | Added `dashboard.chip.lease`, `dashboard.feed.ownerSelectedTenant` FR |
+| `apps/api/prisma/schema.prisma` | `Building.houseRulesText String?` |
+| `apps/api/prisma/migrations/20260512174238_add_building_house_rules_text/` | New migration |
+| `apps/api/src/repositories/inventoryRepository.ts` | `houseRulesText` in `updateBuilding` |
+| `apps/api/src/validation/buildings.ts` | `houseRulesText` in `UpdateBuildingSchema` |
+| `apps/api/src/routes/inventory.ts` | `GET /buildings/:id/house-rules-pdf` |
+| `apps/api/src/services/leasePDFRenderer.ts` | House rules annex page |
 | `apps/web/.vercelignore` | New empty file — ensures locale files are never excluded when Vercel `rootDirectory=apps/web` |
