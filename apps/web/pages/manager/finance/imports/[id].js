@@ -327,6 +327,13 @@ export default function ImportedStatementReviewPage() {
 
   useEffect(() => { fetchStatement(); }, [fetchStatement]);
 
+  // Poll every 4 seconds while the background OCR/Claude job is running
+  useEffect(() => {
+    if (!statement || statement.status !== "PROCESSING") return;
+    const timer = setTimeout(() => fetchStatement(), 4000);
+    return () => clearTimeout(timer);
+  }, [statement, fetchStatement]);
+
   async function handleApprove() {
     if (!window.confirm(t("manager:financeImports.text.approveConfirm"))) return;
     setActionLoading(true);
@@ -414,6 +421,17 @@ export default function ImportedStatementReviewPage() {
 
           {s && (
             <div className="space-y-6">
+              {/* ── Processing banner ── */}
+              {s.status === "PROCESSING" && (
+                <div className="notice bg-blue-50 border-blue-300 text-blue-800 flex items-center gap-2">
+                  <svg className="animate-spin h-4 w-4 text-blue-600 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                  </svg>
+                  Extracting data from document — this page refreshes automatically.
+                </div>
+              )}
+
               {/* ── Metadata ── */}
               <Panel>
                 {needsBuilding && (
