@@ -100,7 +100,7 @@ export function mapSessionToDTO(s: CaptureSessionWithInclude): CaptureSessionDTO
 export async function createSession(
   orgId: string,
   userId: string,
-  options?: { targetType?: string; requestId?: string },
+  options?: { targetType?: string; requestId?: string; frontendUrl?: string },
 ): Promise<{ session: CaptureSessionDTO; token: string; mobileUrl: string }> {
   const targetType = options?.targetType || "INVOICE";
   const expiresAt = new Date(Date.now() + SESSION_TTL_MINUTES * 60 * 1000);
@@ -130,9 +130,12 @@ export async function createSession(
   // Update session with the real token
   const updated = await updateCaptureSession(session.id, { token });
 
-  // Build mobile URL using session ID (short!) — phone resolves ID → JWT on load
-  // Use LAN IP so phones on the same network can reach the dev server
-  const baseUrl = process.env.FRONTEND_URL || `http://${getLocalNetworkIp()}:3000`;
+  // Build mobile URL using session ID (short!) — phone resolves ID → JWT on load.
+  // Priority: caller-supplied frontendUrl (from request Origin header) >
+  //           FRONTEND_URL env var > LAN IP fallback for local dev.
+  const baseUrl = options?.frontendUrl
+    || process.env.FRONTEND_URL
+    || `http://${getLocalNetworkIp()}:3000`;
   const mobileUrl = `${baseUrl}/capture/${session.id}`;
 
   return {

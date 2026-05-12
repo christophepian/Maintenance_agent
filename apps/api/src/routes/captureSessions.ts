@@ -24,6 +24,23 @@ import {
 } from "../services/captureSessionService";
 import { requireTenantSession } from "../authz";
 import * as crypto from "crypto";
+import type { IncomingHttpHeaders } from "http";
+
+/**
+ * Derive the frontend base URL from the incoming request's Origin header.
+ * Falls back to FRONTEND_URL env var, then local dev default.
+ * This ensures the QR mobile URL is always the real public URL in production.
+ */
+function deriveFrontendUrl(headers: IncomingHttpHeaders): string | undefined {
+  const origin = Array.isArray(headers.origin) ? headers.origin[0] : headers.origin;
+  if (origin && origin.startsWith("http")) return origin;
+  // Referer fallback (strip path)
+  const referer = Array.isArray(headers.referer) ? headers.referer[0] : headers.referer;
+  if (referer && referer.startsWith("http")) {
+    try { return new URL(referer).origin; } catch { /* ignore */ }
+  }
+  return undefined;
+}
 
 // SA-21: In-memory rate limiter for public capture session endpoints (20 calls/IP/minute)
 const captureRateMap = new Map<string, { count: number; resetAt: number }>();
@@ -47,7 +64,8 @@ export function registerCaptureSessionRoutes(router: Router) {
     const user = requireAnyRole(req, res, ["MANAGER"]);
     if (!user) return;
     try {
-      const result = await createSession(orgId, user.userId);
+      const frontendUrl = deriveFrontendUrl(req.headers);
+      const result = await createSession(orgId, user.userId, { frontendUrl });
 
       sendJson(res, 201, {
         data: result.session,
@@ -242,9 +260,11 @@ export function registerCaptureSessionRoutes(router: Router) {
         return sendError(res, 400, "BAD_REQUEST", "requestId is required");
       }
 
+      const frontendUrl = deriveFrontendUrl(req.headers);
       const result = await createSession(orgId, tenantId, {
         targetType: "MAINTENANCE_REQUEST",
         requestId: body.requestId,
+        frontendUrl,
       });
 
       sendJson(res, 201, {
