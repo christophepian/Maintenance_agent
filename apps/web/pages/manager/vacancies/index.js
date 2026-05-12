@@ -22,29 +22,51 @@ import { useTranslation } from "next-i18next";
  */
 function ActionDropdown({ actions }) {
   const [open, setOpen] = useState(false);
-  const ref = useRef(null);
+  const [coords, setCoords] = useState({ top: 0, right: 0 });
+  const btnRef = useRef(null);
+  const menuRef = useRef(null);
 
-  // Close on outside click
+  function handleOpen() {
+    if (!open && btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect();
+      setCoords({ bottom: window.innerHeight - r.top + 4, right: window.innerWidth - r.right });
+    }
+    setOpen((o) => !o);
+  }
+
+  // Close on outside click or scroll
   useEffect(() => {
     if (!open) return;
-    function handleClick(e) {
-      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    function handleClose(e) {
+      if (
+        btnRef.current && !btnRef.current.contains(e.target) &&
+        menuRef.current && !menuRef.current.contains(e.target)
+      ) setOpen(false);
     }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
+    document.addEventListener("mousedown", handleClose);
+    document.addEventListener("scroll", () => setOpen(false), { capture: true, passive: true });
+    return () => {
+      document.removeEventListener("mousedown", handleClose);
+      document.removeEventListener("scroll", () => setOpen(false), { capture: true });
+    };
   }, [open]);
 
   return (
-    <div ref={ref} className="relative inline-block text-left">
+    <div className="inline-block text-left">
       <button
+        ref={btnRef}
         type="button"
-        onClick={() => setOpen((o) => !o)}
+        onClick={handleOpen}
         className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition"
       >
         Actions ▾
       </button>
-      {open && (
-        <div className="absolute right-0 z-20 bottom-full mb-1 w-48 origin-bottom-right rounded-lg border border-slate-200 bg-white shadow-lg ring-1 ring-black/5">
+      {open && typeof window !== "undefined" && (
+        <div
+          ref={menuRef}
+          style={{ position: "fixed", bottom: coords.bottom, right: coords.right, zIndex: 9999 }}
+          className="w-48 rounded-lg border border-slate-200 bg-white shadow-xl ring-1 ring-black/5"
+        >
           <div className="py-1">
             {actions.map((a, i) => (
               <button
