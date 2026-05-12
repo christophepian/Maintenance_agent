@@ -476,7 +476,7 @@ export default function LeaseEditorPage() {
 
       const res = await fetch(`/api/leases/${id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
       const json = await res.json();
