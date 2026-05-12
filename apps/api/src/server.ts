@@ -340,6 +340,20 @@ const server = http.createServer(async (req: AuthedRequest, res) => {
       return;
     }
 
+    /* ── Public capture session routes — token-gated internally, no Supabase session ── */
+    // These are called by the phone after scanning the QR code. Auth is enforced
+    // by the signed JWT embedded in the session token, not by our Supabase auth.
+    const isPublicCaptureRoute =
+      (req.method === "GET" && /^\/capture-sessions\/resolve\/[a-zA-Z0-9_-]+$/.test(path)) ||
+      (req.method === "GET" && /^\/capture-sessions\/validate\/[a-zA-Z0-9._-]+$/.test(path)) ||
+      (req.method === "POST" && /^\/capture-sessions\/[a-zA-Z0-9._-]+\/upload$/.test(path)) ||
+      (req.method === "POST" && /^\/capture-sessions\/[a-zA-Z0-9._-]+\/complete$/.test(path));
+    if (isPublicCaptureRoute) {
+      const handled = await router.dispatch(req, res, path, query, DEFAULT_ORG_ID, prisma);
+      if (!handled) sendError(res, 404, "NOT_FOUND", "Not found");
+      return;
+    }
+
     if (orgId === null) {
       sendError(res, 401, "UNAUTHORIZED", "Authentication required");
       return;
