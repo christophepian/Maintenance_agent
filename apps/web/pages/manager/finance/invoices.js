@@ -160,22 +160,47 @@ function ActionDropdown({ actions }) {
 function InvoiceOverlay({ invoiceId, onClose }) {
   const { t } = useTranslation("manager");
   const [pdfUrl, setPdfUrl] = useState(null);
+  const [pdfError, setPdfError] = useState(false);
   const [detail, setDetail] = useState(null);
+  const blobUrlRef = useRef(null);
 
   useEffect(() => {
     if (!invoiceId) return;
     setPdfUrl(null);
+    setPdfError(false);
     setDetail(null);
 
-    // Fetch the full invoice detail for header info
+    // Revoke previous blob URL to avoid memory leaks
+    if (blobUrlRef.current) {
+      URL.revokeObjectURL(blobUrlRef.current);
+      blobUrlRef.current = null;
+    }
+
+    // Fetch invoice detail for header
     fetch(`/api/invoices/${invoiceId}`, { headers: authHeaders() })
       .then((r) => r.json())
       .then((d) => { if (d?.data) setDetail(d.data); })
       .catch(() => {});
 
-    // Set PDF URL directly — AUTH_OPTIONAL=true in dev; in production auth is
-    // handled server-side via the existing session/JWT forwarded by the proxy.
-    setPdfUrl(`/api/invoices/${invoiceId}/pdf`);
+    // Fetch PDF with auth headers → blob URL so the iframe never needs a JWT
+    fetch(`/api/invoices/${invoiceId}/pdf`, { headers: authHeaders() })
+      .then((r) => {
+        if (!r.ok) throw new Error("PDF load failed");
+        return r.blob();
+      })
+      .then((blob) => {
+        const url = URL.createObjectURL(blob);
+        blobUrlRef.current = url;
+        setPdfUrl(url);
+      })
+      .catch(() => setPdfError(true));
+
+    return () => {
+      if (blobUrlRef.current) {
+        URL.revokeObjectURL(blobUrlRef.current);
+        blobUrlRef.current = null;
+      }
+    };
   }, [invoiceId]);
 
   // Close on Escape
@@ -209,14 +234,22 @@ function InvoiceOverlay({ invoiceId, onClose }) {
             )}
           </div>
           <div className="flex items-center gap-2">
-            <a
-              href={`/api/invoices/${invoiceId}/pdf`}
-              download
-              className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition no-underline"
-              onClick={(e) => e.stopPropagation()}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (pdfUrl) {
+                  const a = document.createElement("a");
+                  a.href = pdfUrl;
+                  a.download = `invoice-${invoiceId.slice(0, 8)}.pdf`;
+                  a.click();
+                }
+              }}
+              disabled={!pdfUrl}
+              className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition disabled:opacity-40"
             >
               ↓ Download PDF
-            </a>
+            </button>
             <button
               type="button"
               onClick={onClose}
@@ -234,6 +267,10 @@ function InvoiceOverlay({ invoiceId, onClose }) {
               title={t("manager:financeInvoices.title.invoicePdf")}
               className="w-full h-full border-0"
             />
+          ) : pdfError ? (
+            <div className="flex items-center justify-center h-full">
+              <p className="text-slate-400 text-sm">Could not load PDF.</p>
+            </div>
           ) : (
             <div className="flex items-center justify-center h-full">
               <p className="text-slate-400">{t("manager:financeInvoices.text.loadingPdf")}</p>
