@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Lease" ALTER COLUMN "unitId" DROP NOT NULL;

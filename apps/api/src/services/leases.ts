@@ -22,7 +22,7 @@ export interface LeaseDTO {
   orgId: string;
   status: LeaseStatus;
   applicationId?: string;
-  unitId: string;
+  unitId: string | null;
 
   // Template fields
   isTemplate: boolean;
@@ -1121,7 +1121,8 @@ export async function createLeaseTemplateFromLease(
 
 /**
  * Create a blank lease template from scratch (no source lease needed).
- * Requires a buildingId so we can pick a placeholder unitId.
+ * unitId is null for templates — it is only assigned when the template
+ * is used to create a real lease (createLeaseFromTemplate).
  */
 export async function createBlankLeaseTemplate(
   orgId: string,
@@ -1149,16 +1150,12 @@ export async function createBlankLeaseTemplate(
   const building = await inventoryRepo.findBuildingById(prisma, buildingId);
   if (!building || building.orgId !== orgId) throw new Error('Building not found');
 
-  // Pick the first unit from the building as a placeholder for the template
-  const unit = await inventoryRepo.findFirstUnitInBuilding(prisma, buildingId, orgId);
-  if (!unit) throw new Error('Building has no units — create at least one unit first');
-
   // Derive canonical name from building if caller did not supply one
   const templateName = data.templateName?.trim() || `${building.name} Template`;
 
   const template = await leaseRepo.createLease(prisma, {
       orgId,
-      unitId: unit.id,
+      unitId: null,
       isTemplate: true,
       templateBuildingId: buildingId,
       templateName,

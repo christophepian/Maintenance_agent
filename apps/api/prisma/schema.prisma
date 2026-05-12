@@ -1026,7 +1026,7 @@ model Lease {
   status LeaseStatus @default(DRAFT)
 
   applicationId String?
-  unitId        String
+  unitId        String?   /// Null for building-level templates; always set for real leases
 
   // Template support (building-level lease templates)
   isTemplate         Boolean @default(false)
@@ -1130,7 +1130,7 @@ model Lease {
 
   // Relations
   org               Org                @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  unit              Unit               @relation(fields: [unitId], references: [id], onDelete: Restrict)
+  unit              Unit?              @relation(fields: [unitId], references: [id], onDelete: Restrict)
   signatureRequests SignatureRequest[]
   invoices          Invoice[]
   expenseItems      LeaseExpenseItem[]
