@@ -3,6 +3,7 @@ import { useTranslation } from "next-i18next";
 import Panel from "./layout/Panel";
 import { Dialog, DialogContent } from "./ui/Dialog";
 import { authHeaders } from "../lib/api";
+import { Eye, Download } from "lucide-react";
 
 /**
  * Reusable panel for displaying corroborative documents from a rental application.
@@ -88,19 +89,42 @@ export default function DocumentsPanel({ applicationId, title, compact }) {
       .finally(() => setLoading(false));
   }, [applicationId]);
 
-  function openPreview(attachmentId, mime, fileName) {
-    const url = `/api/rental-attachments/${attachmentId}/download`;
-    if (mime?.includes("pdf") || mime?.includes("image")) {
+  async function fetchBlob(attachmentId) {
+    const res = await fetch(`/api/rental-attachments/${attachmentId}/download`, {
+      headers: authHeaders(),
+    });
+    if (!res.ok) throw new Error("Download failed");
+    return res.blob();
+  }
+
+  async function openPreview(attachmentId, mime, fileName) {
+    try {
+      const blob = await fetchBlob(attachmentId);
+      const url = URL.createObjectURL(blob);
       setPreviewUrl(url);
       setPreviewMime(mime);
       setPreviewName(fileName);
-    } else {
-      // Fallback: just download
-      window.open(url, "_blank");
+    } catch (e) {
+      setError(e.message);
+    }
+  }
+
+  async function handleDownload(attachmentId, fileName) {
+    try {
+      const blob = await fetchBlob(attachmentId);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setError(e.message);
     }
   }
 
   function closePreview() {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
     setPreviewUrl(null);
     setPreviewMime("");
     setPreviewName("");
@@ -156,21 +180,24 @@ export default function DocumentsPanel({ applicationId, title, compact }) {
                         </div>
                       </div>
                       <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+                        {(att.mimeType?.includes("pdf") || att.mimeType?.includes("image")) && (
+                          <button
+                            onClick={() => openPreview(att.id, att.mimeType, att.fileName)}
+                            className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 transition-colors"
+                            title={t("action.view")}
+                          >
+                            <Eye size={14} className="shrink-0" />
+                            {t("action.view")}
+                          </button>
+                        )}
                         <button
-                          onClick={() => openPreview(att.id, att.mimeType, att.fileName)}
-                          className="rounded px-2 py-1 text-xs font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 transition-colors"
-                          title="Preview"
+                          onClick={() => handleDownload(att.id, att.fileName)}
+                          className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors"
+                          title={t("action.download")}
+                          aria-label={`Download ${att.fileName}`}
                         >
-                          {att.mimeType?.includes("pdf") || att.mimeType?.includes("image") ? `👁 ${t("action.view")}` : `⬇ ${t("action.download")}`}
+                          <Download size={14} className="shrink-0" />
                         </button>
-                        <a
-                          href={`/api/rental-attachments/${att.id}/download`}
-                          download={att.fileName}
-                          className="rounded px-2 py-1 text-xs font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors"
-                          title="Download"
-                        >
-                          ⬇
-                        </a>
                       </div>
                     </div>
                   );
@@ -187,16 +214,22 @@ export default function DocumentsPanel({ applicationId, title, compact }) {
           <div className="flex items-center justify-between px-4 py-3 border-b bg-slate-50">
             <div className="text-sm font-medium text-slate-800 truncate">{previewName}</div>
             <div className="flex items-center gap-2">
-              <a
-                href={previewUrl}
-                download={previewName}
-                className="rounded px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-100 hover:bg-slate-200"
+              <button
+                onClick={() => {
+                  const a = document.createElement("a");
+                  a.href = previewUrl;
+                  a.download = previewName;
+                  a.click();
+                }}
+                className="inline-flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-100 hover:bg-slate-200"
               >
-                ⬇ {t("action.download")}
-              </a>
+                <Download size={14} className="shrink-0" />
+                {t("action.download")}
+              </button>
               <button
                 onClick={closePreview}
-                className="rounded px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-100 hover:bg-slate-200"
+                className="inline-flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-100 hover:bg-slate-200"
+                aria-label={t("action.close")}
               >
                 ✕ {t("action.close")}
               </button>
