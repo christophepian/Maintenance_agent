@@ -4,11 +4,13 @@
  * POST   /imported-statements/upload         — upload PDF for ingestion (MANAGER)
  * GET    /imported-statements                — list statements (MANAGER + OWNER)
  * GET    /imported-statements/:id            — get single statement (MANAGER + OWNER)
- * POST   /imported-statements/:id/approve    — approve and push to owner surface (MANAGER)
- * POST   /imported-statements/:id/reject     — reject statement (MANAGER)
+ * POST   /imported-statements/:id/approve          — approve and push to owner surface (MANAGER)
+ * POST   /imported-statements/:id/reject           — reject statement (MANAGER)
+ * GET    /imported-statements/:id/ledger-preview   — dry-run account resolution, return entries (MANAGER)
+ * POST   /imported-statements/:id/re-extract       — re-run OCR + Claude with a new doc-type hint (MANAGER)
  * PATCH  /imported-statements/:id/balances/:balanceId — manually resolve account match (MANAGER)
- * DELETE /imported-statements/:id            — permanently delete a statement (MANAGER)
- * DELETE /imported-statements               — permanently delete ALL statements for org (MANAGER)
+ * DELETE /imported-statements/:id                  — permanently delete a statement (MANAGER)
+ * DELETE /imported-statements                      — permanently delete ALL statements for org (MANAGER)
  */
 
 import { Router } from "../http/router";
@@ -29,6 +31,8 @@ import {
   assignBuilding,
   deleteStatement,
   deleteAllStatements,
+  getLedgerPreview,
+  reExtractStatement,
   ImportedStatementError,
 } from "../services/importedStatementService";
 
@@ -188,6 +192,53 @@ export function registerImportedStatementRoutes(router: Router) {
       }
       console.error("[IMPORT] reject error:", e);
       sendError(res, 500, "INTERNAL_ERROR", "Failed to reject statement", e.message);
+    }
+  });
+
+  // ── GET /imported-statements/:id/ledger-preview ─────────────────────────────
+  router.get("/imported-statements/:id/ledger-preview", async ({ req, res, orgId, prisma, params }) => {
+    const user = requireAnyRole(req, res, ["MANAGER"]);
+    if (!user) return;
+
+    try {
+      const preview = await getLedgerPreview(prisma, params.id, orgId);
+      sendJson(res, 200, { data: preview });
+    } catch (e: any) {
+      if (e instanceof ImportedStatementError) {
+        return sendError(res, e.code === "NOT_FOUND" ? 404 : 400, e.code, e.message);
+      }
+      console.error("[IMPORT] ledger-preview error:", e);
+      sendError(res, 500, "INTERNAL_ERROR", "Failed to generate ledger preview", e.message);
+    }
+  });
+
+  // ── POST /imported-statements/:id/re-extract ─────────────────────────────────
+  router.post("/imported-statements/:id/re-extract", async ({ req, res, orgId, prisma, params }) => {
+    const user = requireAnyRole(req, res, ["MANAGER"]);
+    if (!user) return;
+
+    let hintDocType: string;
+    try {
+      const rawBody = await readRawBody(req, 4096);
+      const body = JSON.parse(rawBody.toString("utf8"));
+      if (!body.hintDocType || typeof body.hintDocType !== "string") {
+        return sendError(res, 400, "MISSING_FIELD", "hintDocType is required");
+      }
+      hintDocType = body.hintDocType.trim();
+    } catch {
+      return sendError(res, 400, "INVALID_JSON", "Request body must be valid JSON");
+    }
+
+    try {
+      const statement = await reExtractStatement(prisma, params.id, orgId, hintDocType);
+      sendJson(res, 202, { data: statement });
+    } catch (e: any) {
+      if (e instanceof ImportedStatementError) {
+        const status = e.code === "NOT_FOUND" ? 404 : e.code === "INVALID_STATUS" ? 409 : 400;
+        return sendError(res, status, e.code, e.message);
+      }
+      console.error("[IMPORT] re-extract error:", e);
+      sendError(res, 500, "INTERNAL_ERROR", "Failed to re-extract statement", e.message);
     }
   });
 

@@ -298,6 +298,162 @@ function ExtractedDataPanel({ rawOcrText }) {
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 
+// ── Re-extract form ───────────────────────────────────────────────────────────
+
+const RE_EXTRACT_DOC_TYPES = [
+  { value: "FINANCIAL_STATEMENT", label: "Financial Statement (balance sheet)" },
+  { value: "INVOICE",             label: "Invoice(s)" },
+  { value: "MANAGEMENT_REPORT",   label: "Management Report" },
+];
+
+function ReExtractForm({ statementId, onStarted }) {
+  const [hintDocType, setHintDocType] = useState("FINANCIAL_STATEMENT");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch(`/api/imported-statements/${statementId}/re-extract`, {
+        method: "POST",
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ hintDocType }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error?.message || "Failed to re-extract");
+      onStarted(json.data);
+    } catch (e) {
+      setError(String(e?.message || e));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+      <p className="text-sm text-slate-700">
+        No account balances were extracted. This usually means the wrong document type was detected.
+        Choose the correct type and re-run extraction on the stored file.
+      </p>
+      <div className="flex gap-2 items-end flex-wrap">
+        <div className="flex-1 min-w-[200px]">
+          <label className="form-label">Document type</label>
+          <select
+            className="form-input w-full"
+            value={hintDocType}
+            onChange={(e) => setHintDocType(e.target.value)}
+          >
+            {RE_EXTRACT_DOC_TYPES.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+        </div>
+        <button type="submit" className="button-primary text-sm" disabled={loading}>
+          {loading ? "Re-extracting…" : "Re-extract"}
+        </button>
+      </div>
+      {error && <p className="text-sm text-destructive-text">{error}</p>}
+    </form>
+  );
+}
+
+// ── Approve confirmation modal ────────────────────────────────────────────────
+
+function ApproveModal({ preview, onConfirm, onClose, loading }) {
+  const fmtChf = (cents) => {
+    const sign = cents < 0 ? "−" : "";
+    const abs = Math.abs(cents);
+    return `${sign}CHF ${(abs / 100).toLocaleString("de-CH", { minimumFractionDigits: 2 })}`;
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl mx-4 flex flex-col max-h-[90vh]">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 shrink-0">
+          <h2 className="text-base font-semibold text-slate-900">Confirm — post ledger entries</h2>
+          <button onClick={onClose} className="icon-btn" aria-label="Close" disabled={loading}>
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="overflow-y-auto flex-1 px-6 py-4 space-y-4">
+          {/* Summary row */}
+          <div className="flex flex-wrap gap-4 text-sm">
+            <div className="bg-slate-50 rounded-lg px-4 py-2 text-center">
+              <p className="text-xs text-slate-500 uppercase tracking-wide">Entries</p>
+              <p className="font-semibold text-slate-900">{preview.entries.length}</p>
+            </div>
+            <div className="bg-slate-50 rounded-lg px-4 py-2 text-center">
+              <p className="text-xs text-slate-500 uppercase tracking-wide">Total debits</p>
+              <p className="font-semibold text-slate-900 font-mono">{fmtChf(preview.totalDebitCents)}</p>
+            </div>
+            <div className="bg-slate-50 rounded-lg px-4 py-2 text-center">
+              <p className="text-xs text-slate-500 uppercase tracking-wide">Total credits</p>
+              <p className="font-semibold text-success-text font-mono">{fmtChf(preview.totalCreditCents)}</p>
+            </div>
+            {preview.autoCreateCount > 0 && (
+              <div className="bg-amber-50 rounded-lg px-4 py-2 text-center">
+                <p className="text-xs text-amber-600 uppercase tracking-wide">New accounts</p>
+                <p className="font-semibold text-amber-700">{preview.autoCreateCount} will be created</p>
+              </div>
+            )}
+          </div>
+
+          {/* Entry table */}
+          <div className="overflow-hidden rounded-lg border border-table-border">
+            <div className="overflow-x-auto">
+              <table className="data-table text-sm">
+                <thead>
+                  <tr>
+                    <th>Code</th>
+                    <th>Account</th>
+                    <th className="text-right">Debit</th>
+                    <th className="text-right">Credit</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {preview.entries.map((e) => (
+                    <tr key={e.balanceId}>
+                      <td className="font-mono text-xs">{e.rawAccountCode}</td>
+                      <td>
+                        <span className={e.willAutoCreate ? "text-amber-700" : ""}>
+                          {e.accountName ?? e.rawAccountName}
+                        </span>
+                        {e.willAutoCreate && (
+                          <span className="ml-1 text-xs text-amber-500">(new)</span>
+                        )}
+                      </td>
+                      <td className="text-right font-mono text-xs">
+                        {e.debitCents > 0 ? fmtChf(e.debitCents) : "—"}
+                      </td>
+                      <td className="text-right font-mono text-xs text-success-text">
+                        {e.creditCents > 0 ? fmtChf(e.creditCents) : "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex gap-2 justify-end px-6 py-4 border-t border-slate-200 shrink-0">
+          <button className="button-secondary" onClick={onClose} disabled={loading}>Cancel</button>
+          <button className="button-primary" onClick={onConfirm} disabled={loading}>
+            {loading ? "Posting…" : `Post ${preview.entries.length} entries`}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Main page ─────────────────────────────────────────────────────────────────
+
 export default function ImportedStatementReviewPage() {
   const { t } = useTranslation("manager");
   const router = useRouter();
@@ -308,6 +464,12 @@ export default function ImportedStatementReviewPage() {
   const [error, setError] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
   const [actionError, setActionError] = useState("");
+
+  // Ledger preview state
+  const [preview, setPreview] = useState(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState("");
+  const [approveModalOpen, setApproveModalOpen] = useState(false);
 
   const fetchStatement = useCallback(async () => {
     if (!id) return;
@@ -325,17 +487,51 @@ export default function ImportedStatementReviewPage() {
     }
   }, [id, t]);
 
+  const fetchPreview = useCallback(async () => {
+    if (!id) return;
+    setPreviewLoading(true);
+    setPreviewError("");
+    try {
+      const res = await fetch(`/api/imported-statements/${id}/ledger-preview`, {
+        headers: authHeaders(),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error?.message || "Failed to load preview");
+      setPreview(json.data);
+    } catch (e) {
+      setPreviewError(String(e?.message || e));
+    } finally {
+      setPreviewLoading(false);
+    }
+  }, [id]);
+
   useEffect(() => { fetchStatement(); }, [fetchStatement]);
 
-  // Poll every 4 seconds while the background OCR/Claude job is running
+  // Poll every 4 s while OCR/Claude job is running
   useEffect(() => {
     if (!statement || statement.status !== "PROCESSING") return;
     const timer = setTimeout(() => fetchStatement(), 4000);
     return () => clearTimeout(timer);
   }, [statement, fetchStatement]);
 
+  // Load preview whenever we land on PENDING_REVIEW with balances
+  useEffect(() => {
+    if (
+      statement?.status === "PENDING_REVIEW" &&
+      (statement.accountBalances?.length ?? 0) > 0
+    ) {
+      fetchPreview();
+    } else {
+      setPreview(null);
+    }
+  }, [statement, fetchPreview]);
+
   async function handleApprove() {
-    if (!window.confirm(t("manager:financeImports.text.approveConfirm"))) return;
+    // Open the modal — it will call doApprove on confirm
+    setApproveModalOpen(true);
+  }
+
+  async function doApprove() {
     setActionLoading(true);
     setActionError("");
     try {
@@ -345,6 +541,7 @@ export default function ImportedStatementReviewPage() {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error?.message || "Failed to approve");
+      setApproveModalOpen(false);
       setStatement(json.data);
     } catch (e) {
       setActionError(String(e?.message || e));
@@ -378,9 +575,20 @@ export default function ImportedStatementReviewPage() {
   const isPendingReview = s?.status === "PENDING_REVIEW";
   const hasUnmatched = s?.accountBalances?.some((ab) => ab.matchConfidence === "UNMATCHED");
   const needsBuilding = isPendingReview && !s?.buildingId;
+  const hasNoBalances = isPendingReview && (s?.accountBalances?.length ?? 0) === 0;
+  // Approve is available once we have a building, at least one balance, and a loaded preview
+  const canApprove = isPendingReview && !needsBuilding && !hasNoBalances && preview !== null && !previewLoading;
 
   return (
     <AppShell role="MANAGER">
+      {approveModalOpen && preview && (
+        <ApproveModal
+          preview={preview}
+          onConfirm={doApprove}
+          onClose={() => setApproveModalOpen(false)}
+          loading={actionLoading}
+        />
+      )}
       <PageShell>
         <PageHeader
           title={t("manager:financeImports.title.reviewStatement")}
@@ -405,10 +613,19 @@ export default function ImportedStatementReviewPage() {
                 <button
                   className="button-primary text-sm"
                   onClick={handleApprove}
-                  disabled={actionLoading || needsBuilding}
-                  title={needsBuilding ? t("manager:financeImports.text.noBuildingAssigned") : undefined}
+                  disabled={actionLoading || !canApprove}
+                  title={
+                    needsBuilding ? t("manager:financeImports.text.noBuildingAssigned")
+                    : hasNoBalances ? "No account balances extracted — re-extract first"
+                    : previewLoading ? "Loading preview…"
+                    : undefined
+                  }
                 >
-                  {t("manager:financeImports.action.approve")}
+                  {previewLoading
+                    ? "Loading…"
+                    : preview
+                      ? `Post ${preview.entries.length} entries`
+                      : t("manager:financeImports.action.approve")}
                 </button>
               </div>
             ) : null
@@ -494,10 +711,112 @@ export default function ImportedStatementReviewPage() {
                 <ExtractedDataPanel rawOcrText={s.rawOcrText} />
               )}
 
+              {/* ── No balances extracted — re-extract prompt ── */}
+              {hasNoBalances && (
+                <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-4">
+                  <p className="text-sm font-medium text-amber-800 mb-3">No account balances extracted</p>
+                  <ReExtractForm
+                    statementId={s.id}
+                    onStarted={(updated) => { setStatement(updated); setPreview(null); }}
+                  />
+                </div>
+              )}
+
               {/* ── Unmatched warning ── */}
-              {isPendingReview && hasUnmatched && (
+              {isPendingReview && hasUnmatched && !hasNoBalances && (
                 <div className="notice bg-amber-50 border-amber-300 text-amber-800">
                   {t("manager:financeImports.text.unmatchedWarning")}
+                </div>
+              )}
+
+              {/* ── Ledger preview ── */}
+              {isPendingReview && !hasNoBalances && (
+                <div className="rounded-lg border border-slate-200 bg-slate-50">
+                  <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
+                    <p className="text-sm font-medium text-slate-700">Step 3 — Ledger entries that will be posted</p>
+                    <button
+                      className="text-xs text-brand-dark hover:underline"
+                      onClick={fetchPreview}
+                      disabled={previewLoading}
+                    >
+                      {previewLoading ? "Refreshing…" : "Refresh"}
+                    </button>
+                  </div>
+                  <div className="px-4 py-4">
+                    {previewLoading && (
+                      <p className="text-sm text-slate-500">Loading preview…</p>
+                    )}
+                    {previewError && (
+                      <p className="text-sm text-destructive-text">{previewError}</p>
+                    )}
+                    {preview && !previewLoading && (
+                      <>
+                        {preview.entries.length === 0 ? (
+                          <p className="text-sm text-amber-700">
+                            No entries would be posted — check the account balances above.
+                          </p>
+                        ) : (
+                          <>
+                            <div className="flex flex-wrap gap-3 mb-3 text-sm">
+                              <span className="text-slate-600">
+                                <strong>{preview.entries.length}</strong> entries
+                              </span>
+                              <span className="text-slate-600">
+                                Debits: <strong className="font-mono">CHF {(preview.totalDebitCents / 100).toLocaleString("de-CH", { minimumFractionDigits: 2 })}</strong>
+                              </span>
+                              <span className="text-success-text">
+                                Credits: <strong className="font-mono">CHF {(preview.totalCreditCents / 100).toLocaleString("de-CH", { minimumFractionDigits: 2 })}</strong>
+                              </span>
+                              {preview.autoCreateCount > 0 && (
+                                <span className="text-amber-600">
+                                  {preview.autoCreateCount} new account{preview.autoCreateCount > 1 ? "s" : ""} will be created
+                                </span>
+                              )}
+                            </div>
+                            <div className="overflow-hidden rounded-lg border border-slate-200">
+                              <div className="overflow-x-auto">
+                                <table className="data-table text-sm">
+                                  <thead>
+                                    <tr>
+                                      <th>Code</th>
+                                      <th>Account</th>
+                                      <th className="text-right">Debit</th>
+                                      <th className="text-right">Credit</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {preview.entries.map((e) => (
+                                      <tr key={e.balanceId}>
+                                        <td className="font-mono text-xs">{e.rawAccountCode}</td>
+                                        <td>
+                                          <span className={e.willAutoCreate ? "text-amber-700" : ""}>
+                                            {e.accountName ?? e.rawAccountName}
+                                          </span>
+                                          {e.willAutoCreate && (
+                                            <span className="ml-1 text-xs text-amber-500">(new)</span>
+                                          )}
+                                        </td>
+                                        <td className="text-right font-mono text-xs">
+                                          {e.debitCents > 0
+                                            ? `CHF ${(e.debitCents / 100).toLocaleString("de-CH", { minimumFractionDigits: 2 })}`
+                                            : "—"}
+                                        </td>
+                                        <td className="text-right font-mono text-xs text-success-text">
+                                          {e.creditCents > 0
+                                            ? `CHF ${(e.creditCents / 100).toLocaleString("de-CH", { minimumFractionDigits: 2 })}`
+                                            : "—"}
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+                          </>
+                        )}
+                      </>
+                    )}
+                  </div>
                 </div>
               )}
 

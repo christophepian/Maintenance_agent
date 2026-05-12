@@ -875,6 +875,168 @@ export async function deleteAllStatements(
   return ids.length;
 }
 
+/* ══════════════════════════════════════════════════════════════
+   Ledger preview (dry-run — no side effects)
+   ══════════════════════════════════════════════════════════════ */
+
+export interface LedgerPreviewEntry {
+  balanceId: string;
+  rawAccountCode: string;
+  rawAccountName: string;
+  /** Existing accountId if already resolved, null if would be auto-created */
+  accountId: string | null;
+  accountName: string | null;
+  /** True when no existing account was found — approval would auto-create one */
+  willAutoCreate: boolean;
+  debitCents: number;
+  creditCents: number;
+  description: string;
+}
+
+export interface LedgerPreviewDTO {
+  entries: LedgerPreviewEntry[];
+  totalDebitCents: number;
+  totalCreditCents: number;
+  /** Rows where an account exists (already matched or findable by code) */
+  matchedCount: number;
+  /** Rows where approval would auto-create a new COA account */
+  autoCreateCount: number;
+}
+
+/**
+ * Dry-run the approval account-resolution step.
+ * Returns what journal entries WOULD be posted without committing anything.
+ */
+export async function getLedgerPreview(
+  prisma: PrismaClient,
+  statementId: string,
+  orgId: string,
+): Promise<LedgerPreviewDTO> {
+  const statement = await prisma.importedStatement.findFirst({
+    where: { id: statementId, orgId },
+    include: {
+      accountBalances: { include: { account: { select: { name: true, code: true } } } },
+    },
+  });
+  if (!statement) throw new ImportedStatementError("NOT_FOUND", "Statement not found");
+
+  const periodDate = statement.periodEnd ?? statement.periodStart ?? new Date();
+  const entries: LedgerPreviewEntry[] = [];
+  let matchedCount = 0;
+  let autoCreateCount = 0;
+
+  for (const ab of statement.accountBalances) {
+    let accountId: string | null = ab.accountId ?? null;
+    let accountName: string | null = ab.account?.name ?? null;
+    let willAutoCreate = false;
+
+    if (!accountId) {
+      // Check if an account with this code exists — same logic as approveStatement
+      const byCode = await prisma.account.findFirst({
+        where: { orgId, code: ab.rawAccountCode.trim() },
+        select: { id: true, name: true },
+      });
+      if (byCode) {
+        accountId = byCode.id;
+        accountName = byCode.name;
+        matchedCount++;
+      } else {
+        // Would be auto-created on approval
+        willAutoCreate = true;
+        accountName = `${ab.rawAccountName} (${ab.rawAccountCode.trim()})`;
+        autoCreateCount++;
+      }
+    } else {
+      matchedCount++;
+    }
+
+    entries.push({
+      balanceId: ab.id,
+      rawAccountCode: ab.rawAccountCode,
+      rawAccountName: ab.rawAccountName,
+      accountId,
+      accountName,
+      willAutoCreate,
+      debitCents:  ab.balanceType === "DEBIT"  ? ab.balanceCents : 0,
+      creditCents: ab.balanceType === "CREDIT" ? ab.balanceCents : 0,
+      description: `[Import FY${statement.fiscalYear}] ${ab.rawAccountCode} ${ab.rawAccountName}`,
+    });
+  }
+
+  const totalDebitCents  = entries.reduce((s, e) => s + e.debitCents,  0);
+  const totalCreditCents = entries.reduce((s, e) => s + e.creditCents, 0);
+
+  return { entries, totalDebitCents, totalCreditCents, matchedCount, autoCreateCount };
+}
+
+/* ══════════════════════════════════════════════════════════════
+   Re-extraction (re-run scanner on the already-stored file)
+   ══════════════════════════════════════════════════════════════ */
+
+/**
+ * Wipe the existing scan results for a statement and re-run the OCR + Claude
+ * pipeline with a new doc-type hint.  Sets status → PROCESSING immediately
+ * and fires the background job.  Returns the updated statement DTO.
+ */
+export async function reExtractStatement(
+  prisma: PrismaClient,
+  statementId: string,
+  orgId: string,
+  hintDocType: string,
+): Promise<ImportedStatementDTO> {
+  const statement = await prisma.importedStatement.findFirst({
+    where: { id: statementId, orgId },
+    include: {
+      building: { select: { name: true } },
+      accountBalances: { include: { account: { select: { name: true, code: true } } } },
+    },
+  });
+  if (!statement) throw new ImportedStatementError("NOT_FOUND", "Statement not found");
+  if (statement.status === ImportedStatementStatus.APPROVED) {
+    throw new ImportedStatementError("INVALID_STATUS", "Approved statements cannot be re-extracted");
+  }
+
+  // Fetch the stored file from object storage
+  let buffer: Buffer;
+  try {
+    buffer = await storage.get(statement.sourceFileUrl);
+  } catch (e: any) {
+    throw new ImportedStatementError("FILE_NOT_FOUND", "Source file could not be retrieved from storage");
+  }
+
+  // Wipe existing balance rows and reset statement to PROCESSING
+  await prisma.importedAccountBalance.deleteMany({ where: { statementId } });
+  const reset = await prisma.importedStatement.update({
+    where: { id: statementId },
+    data: {
+      status: ImportedStatementStatus.PROCESSING,
+      rawOcrText: null,
+      ocrConfidence: null,
+      notes: null,
+    },
+    include: {
+      building: { select: { name: true } },
+      accountBalances: { include: { account: { select: { name: true, code: true } } } },
+    },
+  });
+
+  // Derive fileName from the stored key (last path segment)
+  const fileName = statement.sourceFileUrl.split("/").pop() ?? "document.pdf";
+  const mimeType = fileName.endsWith(".pdf") ? "application/pdf" : "application/octet-stream";
+
+  // Re-run background ingestion with the new hint
+  setImmediate(() => {
+    runIngestionBackground(
+      prisma, statementId, orgId, buffer, fileName, mimeType,
+      statement.fiscalYear, statement.buildingId, statement.sourceFileUrl, hintDocType,
+    ).catch((err) => {
+      console.error(`[IMPORT] Unhandled error in re-extraction for ${statementId}:`, err);
+    });
+  });
+
+  return mapDTO(reset);
+}
+
 /** Manually update the accountId for an UNMATCHED balance row. */
 export async function resolveAccountBalance(
   prisma: PrismaClient,
