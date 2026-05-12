@@ -1,0 +1,195 @@
+/*
+ * pitchdeck.css — Sencilo presentation document design system
+ *
+ * Tokens kept pixel-perfect identical to pitchdeck.html's original :root values.
+ * Naming convention mirrors apps/web/styles/globals.css for conceptual alignment.
+ * This file is standalone: never imported by the app.
+ *
+ * Sections:
+ *   1. Tokens
+ *   2. Absorbed existing-class styles (.chapter-anchor, .nav-dot, .nav-num, .nav-label)
+ *   3. Utility classes (d-*) — extracted from repeated inline styles
+ */
+
+/* ═══════════════════════════════════════════════════════════════════
+   1. Tokens
+   ═══════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* Brand — exact match: --color-brand in globals.css */
+  --doc-brand:       #4f46e5;   /* = app --color-brand */
+  --doc-brand-light: #ede9fe;   /* violet-100 (no app equivalent) */
+
+  /* Accent (violet) — no app equivalent */
+  --doc-rust:  #7c3aed;
+
+  /* Highlight (emerald) — differs from app --color-success (#16a34a) */
+  --doc-forest: #059669;
+
+  /* Surface */
+  --doc-paper: #f8f9fc;
+  --doc-cream: #f1f3f9;   /* close to app --color-muted-light (#f1f5f9) */
+
+  /* Text */
+  --doc-ink:   #1a1f36;
+  --doc-slate: #6b7280;   /* differs from app --color-muted (#64748b) */
+  --doc-muted: #9ca3af;   /* slate-400, no app equivalent */
+
+  /* Border */
+  --doc-rule:  #e2e6f0;   /* close to app --color-surface-border (#e2e8f0) */
+
+  /* Aliases — so the page HTML can reference either name */
+  --ink:        var(--doc-ink);
+  --paper:      var(--doc-paper);
+  --cream:      var(--doc-cream);
+  --gold:       var(--doc-brand);
+  --gold-light: var(--doc-brand-light);
+  --rust:       var(--doc-rust);
+  --forest:     var(--doc-forest);
+  --slate:      var(--doc-slate);
+  --muted:      var(--doc-muted);
+  --rule:       var(--doc-rule);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   2. Absorbed existing-class styles
+      These elements already had a semantic class; the inline style
+      is now moved here so the HTML attribute can be dropped entirely.
+   ═══════════════════════════════════════════════════════════════════ */
+
+.chapter-anchor {
+  display: block;
+  scroll-margin-top: 2rem;
+}
+
+.nav-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--rule);
+  flex-shrink: 0;
+  margin-left: -3px;
+  transition: all 0.2s;
+}
+
+.nav-num {
+  font-family: 'Inter', -apple-system, sans-serif;
+  font-size: 0.52rem;
+  color: var(--muted);
+  padding: 0.35rem 0.5rem 0.35rem 0.8rem;
+  letter-spacing: 0.08em;
+  min-width: 2.5rem;
+  text-align: right;
+}
+
+.nav-label {
+  font-family: 'Inter', -apple-system, sans-serif;
+  font-size: 0.52rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  padding: 0.3rem 0.6rem;
+  white-space: nowrap;
+  opacity: 0;
+  max-width: 0;
+  overflow: hidden;
+  transition: all 0.2s ease;
+  border-left: none;
+}
+
+.displacement-table {
+  font-size: 0.82rem;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   3. Utility classes (d-*)
+      Each class corresponds to an inline style pattern that appeared
+      5+ times in the HTML. Class name = d-{semantic-description}.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── Inter font family ── */
+.d-inter     { font-family: 'Inter', -apple-system, sans-serif; }
+.d-inter-500 { font-family: 'Inter', -apple-system, sans-serif; font-weight: 500; }
+.d-inter-600 { font-family: 'Inter', -apple-system, sans-serif; font-weight: 600; }
+.d-inter-rust     { font-family: 'Inter', -apple-system, sans-serif; color: var(--rust); }
+.d-inter-600-rust { font-family: 'Inter', -apple-system, sans-serif; font-weight: 600; color: var(--rust); }
+.d-inter-600-forest { font-family: 'Inter', -apple-system, sans-serif; font-weight: 600; color: var(--forest); }
+
+/* ── Inter + size 0.72rem ── */
+.d-inter-72     { font-family: 'Inter', -apple-system, sans-serif; font-size: 0.72rem; }
+.d-inter-72-600 { font-family: 'Inter', -apple-system, sans-serif; font-size: 0.72rem; font-weight: 600; }
+.d-nav-text     { font-family: 'Inter', -apple-system, sans-serif; font-size: 0.72rem; padding-left: 1.8rem; }
+
+/* ── Inter + size 0.65rem ── */
+.d-inter-65-muted { font-family: 'Inter', -apple-system, sans-serif; font-size: 0.65rem; color: var(--muted); }
+
+/* ── Inter + size 0.6rem ── */
+.d-inter-60-muted { font-family: 'Inter', -apple-system, sans-serif; font-size: 0.6rem; color: var(--muted); }
+.d-label-ink   { font-family: 'Inter', -apple-system, sans-serif; font-size: 0.6rem; color: var(--ink); display: block; }
+.d-label-muted { font-family: 'Inter', -apple-system, sans-serif; font-size: 0.6rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin-bottom: 1rem; }
+.d-label-rust  { font-family: 'Inter', -apple-system, sans-serif; font-size: 0.6rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--rust); margin-bottom: 0.5rem; }
+.d-cell-header    { font-family: 'Inter', -apple-system, sans-serif; font-size: 0.6rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink); padding: 0.6rem 1rem; }
+.d-cell-subheader { font-family: 'Inter', -apple-system, sans-serif; font-size: 0.6rem; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink); margin-bottom: 0.3rem; }
+
+/* ── Inter + size 0.58rem ── */
+.d-meta          { font-family: 'Inter', -apple-system, sans-serif; font-size: 0.58rem; color: var(--muted); line-height: 1.4; }
+.d-inter-58-muted { font-family: 'Inter', -apple-system, sans-serif; font-size: 0.58rem; color: var(--muted); }
+.d-meta-right    { font-family: 'Inter', -apple-system, sans-serif; font-size: 0.58rem; color: var(--muted); white-space: nowrap; text-align: right; padding-top: 0.2rem; }
+.d-label-rust-sm  { font-family: 'Inter', -apple-system, sans-serif; font-size: 0.58rem; color: var(--rust); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 0.4rem; }
+.d-label-muted-sm { font-family: 'Inter', -apple-system, sans-serif; font-size: 0.58rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.7rem; }
+.d-dark-label    { font-family: 'Inter', -apple-system, sans-serif; font-size: 0.58rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--gold-light); margin-bottom: 0.8rem; }
+.d-dark-dim      { font-family: 'Inter', -apple-system, sans-serif; font-size: 0.58rem; color: rgba(255,255,255,0.45); margin-top: 0.2rem; }
+
+/* ── Inter + size 0.5rem ── */
+.d-inter-50-muted  { font-family: 'Inter', -apple-system, sans-serif; font-size: 0.5rem; color: var(--muted); }
+.d-label-micro     { font-family: 'Inter', -apple-system, sans-serif; font-size: 0.5rem; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0.2rem; }
+
+/* ── DM Serif Display headings ── */
+.d-serif-200 { font-family: 'DM Serif Display', Georgia, serif; font-size: 2rem; font-weight: 900; }
+.d-serif-130 { font-family: 'DM Serif Display', Georgia, serif; font-size: 1.3rem; font-weight: 700; }
+.d-serif-105 { font-family: 'DM Serif Display', Georgia, serif; font-size: 1.05rem; font-weight: 700; margin-bottom: 0.4rem; }
+.d-serif-100 { font-family: 'DM Serif Display', Georgia, serif; font-size: 1rem; font-weight: 700; margin-bottom: 0.5rem; }
+.d-serif-095 { font-family: 'DM Serif Display', Georgia, serif; font-size: 0.95rem; font-weight: 700; margin-bottom: 0.4rem; }
+
+/* ── Body text ── */
+.d-body    { font-size: 0.8rem; line-height: 1.6; color: var(--slate); }
+.d-body-82 { font-size: 0.82rem; line-height: 1.6; color: var(--slate); }
+.d-body-83a { font-size: 0.83rem; line-height: 1.68; color: var(--slate); }
+.d-body-83b { font-size: 0.83rem; line-height: 1.65; color: var(--slate); }
+.d-dark-body { font-size: 0.78rem; color: rgba(255,255,255,0.7); line-height: 1.5; }
+.d-list      { list-style: none; font-size: 0.78rem; line-height: 1.7; color: var(--slate); }
+
+/* ── Standalone font-size tokens ── */
+.d-fs-82 { font-size: 0.82rem; }
+.d-fs-80 { font-size: 0.8rem; }
+
+/* ── Text colour modifiers ── */
+.d-rust-500  { color: var(--rust); font-weight: 500; }
+.d-gold-500  { color: var(--gold); font-weight: 500; }
+.d-dark-value { color: var(--gold-light); text-align: right; font-family: 'Inter', -apple-system, sans-serif; letter-spacing: 0.1em; }
+
+/* ── Layout ── */
+.d-flex-link    { display: flex; align-items: center; gap: 0; text-decoration: none; }
+.d-flex-between { display: flex; justify-content: space-between; }
+.d-grid-2col     { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; background: var(--rule); border: 1px solid var(--rule); }
+.d-grid-icon     { display: grid; grid-template-columns: 3rem 1fr; gap: 2px; background: var(--rule); }
+.d-grid-auto     { display: grid; grid-template-columns: 1fr auto; gap: 1rem; align-items: start; }
+.d-grid-baseline { display: grid; grid-template-columns: 1fr auto; align-items: baseline; font-size: 0.82rem; color: var(--slate); }
+
+/* ── Backgrounds + padding ── */
+.d-bg-paper    { background: var(--paper); padding: 1.3rem; }
+.d-bg-paper-lg { background: var(--paper); padding: 1.4rem 1.2rem; }
+.d-bg-cream    { background: var(--cream); }
+.d-bg-cream-sm { background: var(--cream); padding: 1.3rem; }
+.d-bg-cream-lg { background: var(--cream); padding: 1.4rem 1.2rem; }
+
+/* ── Borders ── */
+.d-rule-top   { border-top: 1px solid var(--rule); }
+.d-rule-heavy { border-top: 2px solid var(--ink); }
+
+/* ── Spacing ── */
+.d-mb-04 { margin-bottom: 0.4rem; }
+.d-mb-1  { margin-bottom: 1rem; }
+.d-h-bar { height: 0.5rem; }
