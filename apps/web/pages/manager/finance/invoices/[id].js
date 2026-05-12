@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import AppShell from "../../../../components/AppShell";
@@ -86,6 +86,10 @@ export default function InvoiceDetailPage() {
   const [showCreateBE, setShowCreateBE] = useState(false);
   const [beForm, setBeForm] = useState({ name: "", addressLine1: "", postalCode: "", city: "", iban: "", vatNumber: "", defaultVatRate: "7.7" });
   const [beSaving, setBeSaving] = useState(false);
+  const [pdfBlobUrl, setPdfBlobUrl] = useState(null);
+  const [sourceBlobUrl, setSourceBlobUrl] = useState(null);
+  const pdfBlobRef = useRef(null);
+  const sourceBlobRef = useRef(null);
 
   const loadData = useCallback(async () => {
     if (!id) return;
@@ -121,6 +125,35 @@ export default function InvoiceDetailPage() {
       setSelectedBillingEntityId(invoice.issuerBillingEntityId);
     }
   }, [invoice?.issuerBillingEntityId]);
+
+  // Fetch PDF + source file with auth headers → blob URLs for iframe/img
+  useEffect(() => {
+    if (!id) return;
+    // PDF
+    fetch(`/api/invoices/${id}/pdf`, { headers: authHeaders() })
+      .then((r) => r.ok ? r.blob() : Promise.reject())
+      .then((blob) => {
+        const url = URL.createObjectURL(blob);
+        if (pdfBlobRef.current) URL.revokeObjectURL(pdfBlobRef.current);
+        pdfBlobRef.current = url;
+        setPdfBlobUrl(url);
+      })
+      .catch(() => {});
+    // Source image (only matters for image captures; no-op for PDFs/manual)
+    fetch(`/api/invoices/${id}/source-file`, { headers: authHeaders() })
+      .then((r) => r.ok ? r.blob() : Promise.reject())
+      .then((blob) => {
+        const url = URL.createObjectURL(blob);
+        if (sourceBlobRef.current) URL.revokeObjectURL(sourceBlobRef.current);
+        sourceBlobRef.current = url;
+        setSourceBlobUrl(url);
+      })
+      .catch(() => {});
+    return () => {
+      if (pdfBlobRef.current) { URL.revokeObjectURL(pdfBlobRef.current); pdfBlobRef.current = null; }
+      if (sourceBlobRef.current) { URL.revokeObjectURL(sourceBlobRef.current); sourceBlobRef.current = null; }
+    };
+  }, [id]);
 
   async function invoiceAction(action, body) {
     setActionLoading(true);
@@ -288,13 +321,14 @@ export default function InvoiceDetailPage() {
                           ✗ Dispute
                         </button>
                       )}
-                      <a
-                        href={`/api/invoices/${id}/pdf`}
-                        download
-                        className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition no-underline"
+                      <button
+                        type="button"
+                        disabled={!pdfBlobUrl}
+                        onClick={() => { if (pdfBlobUrl) { const a = document.createElement("a"); a.href = pdfBlobUrl; a.download = `invoice-${id.slice(0, 8)}.pdf`; a.click(); } }}
+                        className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition disabled:opacity-40"
                       >
                         ↓ PDF
-                      </a>
+                      </button>
                     </div>
                   </div>
                 </Panel>
@@ -545,17 +579,17 @@ export default function InvoiceDetailPage() {
               {/* Right column: original capture + PDF preview */}
               <div className="space-y-6">
                 {/* Original captured image — only for image-type sources (jpg/png/webp) */}
-                {inv.sourceFileUrl && inv.sourceChannel !== "MANUAL" && inv.sourceFileUrl.match(/\.(jpg|jpeg|png|webp)$/i) && (
+                {inv.sourceFileUrl && inv.sourceChannel !== "MANUAL" && inv.sourceFileUrl.match(/\.(jpg|jpeg|png|webp)$/i) && sourceBlobUrl && (
                   <Panel title={t("manager:financeInvoicesId.title.originalCapture")}>
                     <div className="space-y-3">
                       <img
-                        src={`/api/invoices/${id}/source-file`}
+                        src={sourceBlobUrl}
                         alt="Original captured document"
                         className="w-full rounded-lg border border-slate-200"
                       />
                       <a
-                        href={`/api/invoices/${id}/source-file`}
-                        download
+                        href={sourceBlobUrl}
+                        download={`capture-${id.slice(0, 8)}.jpg`}
                         className="inline-flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-700"
                       >
                         ↓ Download original
@@ -566,11 +600,17 @@ export default function InvoiceDetailPage() {
 
                 {/* PDF preview — always shown */}
                 <Panel title={t("manager:financeInvoicesId.title.pDFPreview")}>
-                  <iframe
-                    src={`/api/invoices/${id}/pdf`}
-                    title={t("manager:financeInvoicesId.title.invoicePdf")}
-                    className="w-full rounded-lg border-0 h-[500px]"
-                  />
+                  {pdfBlobUrl ? (
+                    <iframe
+                      src={pdfBlobUrl}
+                      title={t("manager:financeInvoicesId.title.invoicePdf")}
+                      className="w-full rounded-lg border-0 h-[500px]"
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center h-32">
+                      <p className="text-sm text-slate-400">Loading preview…</p>
+                    </div>
+                  )}
                 </Panel>
 
                 {/* Timeline */}
