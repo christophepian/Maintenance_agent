@@ -67,7 +67,7 @@ export async function ownerSelectCandidates(
   unitId: string,
   input: OwnerSelectionInput,
 ): Promise<RentalOwnerSelectionDTO> {
-  // Validate unit exists and belongs to this org
+  // Validate unit exists, belongs to this org, has no active lease and no pending selection
   const unit = await inventoryRepo.findVacantUnitWithBuildingConfig(prisma, unitId, orgId);
   if (!unit) throw new Error("UNIT_NOT_FOUND_OR_NOT_VACANT");
 

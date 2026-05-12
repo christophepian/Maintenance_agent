@@ -9,7 +9,7 @@
  * G9: canonical include constants live here.
  */
 
-import { PrismaClient, UnitType, LocationSegment, InsulationQuality, EnergyLabel, HeatingType } from "@prisma/client";
+import { PrismaClient, UnitType, LocationSegment, InsulationQuality, EnergyLabel, HeatingType, LeaseStatus, RentalOwnerSelectionStatus } from "@prisma/client";
 
 // ─── Canonical Includes (G9) ───────────────────────────────────
 
@@ -665,14 +665,40 @@ export async function findBuildingConfigById(
   return prisma.buildingConfig.findUnique({ where: { buildingId } });
 }
 
-/** Find a vacant unit for owner selection, with building + config include. */
+/** Find a vacant unit for owner selection, with building + config include.
+ * A unit is eligible for selection when it has no active/signed lease and
+ * no pending RentalOwnerSelection — matching the criteria used by findVacantUnits.
+ * Note: isVacant defaults to false on new units and is only set by specific
+ * flows (lease termination, selection exhaustion), so we do NOT gate on it here.
+ */
 export async function findVacantUnitWithBuildingConfig(
   prisma: PrismaClient,
   unitId: string,
   orgId: string,
 ) {
   return prisma.unit.findFirst({
-    where: { id: unitId, building: { orgId }, isVacant: true },
+    where: {
+      id: unitId,
+      building: { orgId },
+      leases: {
+        none: {
+          status: { in: [LeaseStatus.ACTIVE, LeaseStatus.READY_TO_SIGN, LeaseStatus.SIGNED] },
+          deletedAt: null,
+        },
+      },
+      ownerSelections: {
+        none: {
+          status: {
+            in: [
+              RentalOwnerSelectionStatus.AWAITING_SIGNATURE,
+              RentalOwnerSelectionStatus.FALLBACK_1,
+              RentalOwnerSelectionStatus.FALLBACK_2,
+              RentalOwnerSelectionStatus.SIGNED,
+            ],
+          },
+        },
+      },
+    },
     include: { building: { include: { config: true } } },
   });
 }
