@@ -77,7 +77,7 @@ function selectionStatusBadge(status) {
   );
 }
 
-function leaseBadge(lease, hasLeaseTemplate) {
+function LeaseBadge({ lease, hasLeaseTemplate }) {
   const { t } = useTranslation("manager");
   if (!lease && hasLeaseTemplate) return <span className="text-xs text-amber-600 font-medium">{t("manager:vacanciesIndex.text.noLeaseTemplateReady")}</span>;
   if (!lease) return <span className="text-xs text-red-500 font-medium">{t("manager:vacanciesIndex.text.noLeaseTemplateCreateOneFirst")}</span>;
@@ -339,8 +339,8 @@ export default function ManagerVacanciesPage() {
                       )}
                       <div className="table-card-footer">
                         {sel.lease ? (
-                          <Link href={"/manager/leases/" + sel.lease.id} className="cell-link">{leaseBadge(sel.lease)}</Link>
-                        ) : leaseBadge(null, sel.hasLeaseTemplate)}
+                          <Link href={"/manager/leases/" + sel.lease.id} className="cell-link"><LeaseBadge lease={sel.lease} /></Link>
+                        ) : <LeaseBadge hasLeaseTemplate={sel.hasLeaseTemplate} />}
                         <span>Due {formatDate(sel.deadlineAt)}</span>
                       </div>
                       <div className="mt-2 flex justify-end">
@@ -398,10 +398,10 @@ export default function ManagerVacanciesPage() {
                                 href={"/manager/leases/" + sel.lease.id}
                                 className="cell-link inline-flex items-center gap-1.5"
                               >
-                                {leaseBadge(sel.lease)}
+                                <LeaseBadge lease={sel.lease} />
                               </Link>
                             ) : (
-                              leaseBadge(null, sel.hasLeaseTemplate)
+                              <LeaseBadge hasLeaseTemplate={sel.hasLeaseTemplate} />
                             )}
                           </td>
                           <td>
