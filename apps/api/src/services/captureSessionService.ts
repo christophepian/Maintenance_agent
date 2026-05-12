@@ -136,7 +136,11 @@ export async function createSession(
   const baseUrl = options?.frontendUrl
     || process.env.FRONTEND_URL
     || `http://${getLocalNetworkIp()}:3000`;
-  const mobileUrl = `${baseUrl}/capture/${session.id}`;
+  // If Vercel Deployment Protection is active (staging), embed the bypass token
+  // so the QR URL opens directly without prompting the phone user to authenticate.
+  // In production (no protection / custom domain) this env var is simply not set.
+  const bypass = process.env.VERCEL_PROTECTION_BYPASS;
+  const mobileUrl = `${baseUrl}/capture/${session.id}${bypass ? `?_vercel_protection_bypass=${bypass}` : ""}`;
 
   return {
     session: mapSessionToDTO(updated),
