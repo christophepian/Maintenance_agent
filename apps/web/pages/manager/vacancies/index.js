@@ -44,7 +44,7 @@ function ActionDropdown({ actions }) {
         Actions ▾
       </button>
       {open && (
-        <div className="absolute right-0 z-20 mt-1 w-48 origin-top-right rounded-lg border border-slate-200 bg-white shadow-lg ring-1 ring-black/5">
+        <div className="absolute right-0 z-20 bottom-full mb-1 w-48 origin-bottom-right rounded-lg border border-slate-200 bg-white shadow-lg ring-1 ring-black/5">
           <div className="py-1">
             {actions.map((a, i) => (
               <button
