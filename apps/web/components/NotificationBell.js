@@ -15,13 +15,11 @@ export default function NotificationBell({ role }) {
 
   const isTenant = role === "TENANT";
 
-  // Build auth headers from the role-specific localStorage key.
-  // Manager pages use "authToken", owner pages use "ownerToken", etc.
+  // Build auth headers: all non-tenant roles use the Supabase access_token
+  // stored under the "authToken" key (set by AppShell onAuthStateChange).
   function getHeaders() {
     if (typeof window === "undefined") return {};
-    const roleKey = role?.toLowerCase() || "manager";
-    const key = roleKey === "manager" ? "authToken" : `${roleKey}Token`;
-    const token = localStorage.getItem(key);
+    const token = localStorage.getItem("authToken");
     return token ? { Authorization: `Bearer ${token}` } : {};
   }
 

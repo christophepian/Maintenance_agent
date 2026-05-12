@@ -43,7 +43,8 @@
       "allClearSub": "Check back after new requests or invoices arrive.",
       "noMatch": "No items match the selected filter.",
       "showLess": "Show less ↑",
-      "inProgressStale": "In progress > 7 days"
+      "inProgressStale": "In progress > 7 days",
+      "ownerSelectedTenant": "Owner selected — lease needed"
     },
     "filter": {
       "all": "All",
@@ -69,7 +70,8 @@
       "approval": "Owner approval",
       "disputed": "Disputed invoice",
       "stale": "Stale job",
-      "rfp": "RFP routed"
+      "rfp": "RFP routed",
+      "lease": "Lease needed"
     },
     "hero": {
       "allClear": "Everything looks good — no items need attention right now.",

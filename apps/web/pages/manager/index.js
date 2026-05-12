@@ -62,6 +62,7 @@ const CATEGORY_CHIP = {
   disputed:  { cls: "bg-red-100 text-red-700" },
   stale:     { cls: "bg-amber-100 text-amber-700" },
   rfp:       { cls: "bg-indigo-100 text-indigo-700" },
+  lease:     { cls: "bg-violet-100 text-violet-700" },
 };
 
 const CARD_STYLE = {
@@ -70,6 +71,7 @@ const CARD_STYLE = {
   disputed: "border-red-200 bg-red-50 hover:bg-red-100",
   stale:    "border-amber-200 bg-amber-50 hover:bg-amber-100",
   rfp:      "border-indigo-200 bg-indigo-50 hover:bg-indigo-100",
+  lease:    "border-violet-200 bg-violet-50 hover:bg-violet-100",
 };
 
 /* ─── Single action item row ─── */
@@ -138,6 +140,7 @@ export default function ManagerDashboard() {
   const [portfolio, setPortfolio] = useState(null);
   const [portfolioLoading, setPortfolioLoading] = useState(true);
   const [portfolioError, setPortfolioError] = useState("");
+  const [selections, setSelections] = useState([]);
 
   /* ─── Data fetching ─── */
   const loadPortfolio = useCallback(async () => {
@@ -162,20 +165,23 @@ export default function ManagerDashboard() {
     setLoading(true);
     setError("");
     try {
-      const [reqRes, jobRes, invRes] = await Promise.all([
+      const [reqRes, jobRes, invRes, selRes] = await Promise.all([
         fetch("/api/requests?view=summary", { headers: authHeaders() }),
         fetch("/api/jobs?view=summary", { headers: authHeaders() }),
         fetch("/api/invoices?view=summary", { headers: authHeaders() }),
+        fetch("/api/manager/selections", { headers: authHeaders() }),
       ]);
       const reqData = await reqRes.json();
       const jobData = await jobRes.json();
       const invData = await invRes.json();
+      const selData = selRes.ok ? await selRes.json() : { data: [] };
       if (!reqRes.ok) throw new Error(reqData?.error?.message || "Failed to load requests");
       if (!jobRes.ok) throw new Error(jobData?.error?.message || "Failed to load jobs");
       if (!invRes.ok) throw new Error(invData?.error?.message || "Failed to load invoices");
       setRequests(reqData?.data || []);
       setJobs(jobData?.data || []);
       setInvoices(invData?.data || []);
+      setSelections(selData?.data || []);
     } catch (e) {
       setError(String(e?.message || e));
     } finally {
@@ -296,8 +302,24 @@ export default function ManagerDashboard() {
         sortOrder: 4,
       })
     );
+    // Owner-selected candidates without a lease → manager needs to create one
+    selections
+      .filter((s) => !s.lease && s.status === "AWAITING_SIGNATURE")
+      .forEach((s) =>
+        items.push({
+          category: "lease",
+          title: s.primaryCandidate?.name
+            ? `Lease needed · ${s.primaryCandidate.name}`
+            : "Lease needed for selected candidate",
+          building: [s.buildingName, s.unitNumber ? `Unit ${s.unitNumber}` : null].filter(Boolean).join(" · ") || null,
+          date: s.createdAt,
+          sub: t("manager:dashboard.feed.ownerSelectedTenant"),
+          href: "/manager/leases?tab=templates&autoCreate=true",
+          sortOrder: 0, // high urgency — same as owner approval
+        })
+      );
     return items.sort((a, b) => a.sortOrder - b.sortOrder);
-  }, [pendingOwnerApprovalRequests, disputedInvoices, staleJobs, pendingReviewRequests, rfpPendingRequests]);
+  }, [pendingOwnerApprovalRequests, disputedInvoices, staleJobs, pendingReviewRequests, rfpPendingRequests, selections, t]);
 
   const [feedExpanded, setFeedExpanded] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
@@ -444,7 +466,7 @@ export default function ManagerDashboard() {
             <FilterPanelBody>
               <FilterSection title={t("manager:dashboard.sort.category")} first>
                 <div className="flex flex-wrap gap-1.5">
-                  {[["all",t("manager:dashboard.filter.all")],["approval","Owner approval"],["disputed",t("manager:dashboard.filter.disputed")],["stale",t("manager:dashboard.filter.stale")],["review","Pending review"],["rfp",t("manager:dashboard.filter.rfps")]].map(([key, lbl]) => (
+                  {[["all",t("manager:dashboard.filter.all")],["approval","Owner approval"],["disputed",t("manager:dashboard.filter.disputed")],["stale",t("manager:dashboard.filter.stale")],["review","Pending review"],["rfp",t("manager:dashboard.filter.rfps")],["lease","Lease needed"]].map(([key, lbl]) => (
                     <button
                       key={key}
                       onClick={() => { setFilterBy(key); setFeedExpanded(false); }}

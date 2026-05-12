@@ -43,7 +43,8 @@
       "allClearSub": "Revenez apres l'arrivee de nouvelles demandes ou factures.",
       "noMatch": "Aucun element ne correspond au filtre selectionne.",
       "showLess": "Afficher moins haut",
-      "inProgressStale": "En cours depuis plus de 7 jours"
+      "inProgressStale": "En cours depuis plus de 7 jours",
+      "ownerSelectedTenant": "Locataire selectionne — bail a creer"
     },
     "filter": {
       "all": "Tous",
@@ -69,7 +70,8 @@
       "approval": "Approbation du proprietaire",
       "disputed": "Facture contestee",
       "stale": "Travail en retard",
-      "rfp": "Appel d'offres transmis"
+      "rfp": "Appel d'offres transmis",
+      "lease": "Bail requis"
     },
     "hero": {
       "allClear": "Tout va bien — aucun element ne necessite d'attention.",
