@@ -1392,6 +1392,7 @@ export default function BuildingDetail() {
 
           {/* Documents tab */}
           {activeTab === "Documents" && (
+            <>
             <Panel title={t("manager:buildingsId.title.documents")}>
               <h3 className="font-semibold text-slate-900 mb-3">{t("manager:buildingsId.heading.leaseTemplate")}</h3>
               {leaseTemplates.length > 0 ? (
@@ -1451,10 +1452,10 @@ export default function BuildingDetail() {
                     {t("manager:buildingsId.text.goToLeaseTemplates")}
                   </Link>
                 </div>
-              )}
+              )}empirical
             </Panel>
 
-            {/* House Rules panel */}
+            {/* House Rules panel */}}
             <Panel
               title="House Rules"
               actions={
@@ -1504,6 +1505,7 @@ export default function BuildingDetail() {
                 </div>
               )}
             </Panel>
+            </>
           )}
 
           {/* Policies tab */}
