@@ -671,7 +671,7 @@ export default function LeaseEditorPage() {
           title={isTemplate ? `Template — ${lease.templateName || lease.landlordName}` : `Lease — ${lease.tenantName}`}
           subtitle={
             <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-              <Link href={isTemplate ? "/manager/leases/templates" : "/manager/leases"} className="text-blue-600 hover:underline">{isTemplate ? "← Templates" : "← Leases"}</Link>
+              <Link href={isTemplate ? "/manager/leases?tab=templates" : "/manager/leases"} className="text-blue-600 hover:underline">{isTemplate ? "← Templates" : "← Leases"}</Link>
               <span>·</span>
               {isTemplate && (
                 <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700">TEMPLATE</span>

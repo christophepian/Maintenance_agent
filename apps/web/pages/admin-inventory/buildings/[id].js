@@ -1395,7 +1395,7 @@ export default function BuildingDetail() {
                     {t("manager:buildingsId.text.leaseTemplateDesc")}
                   </p>
                   <Link
-                    href="/manager/leases/templates"
+                    href="/manager/leases?tab=templates"
                     className="inline-flex items-center rounded-lg bg-amber-600 px-3 py-2 text-xs font-semibold text-white hover:bg-amber-700"
                   >
                     {t("manager:buildingsId.text.goToLeaseTemplates")}
