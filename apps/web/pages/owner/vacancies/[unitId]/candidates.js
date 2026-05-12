@@ -11,6 +11,8 @@ import DocumentsPanel from "../../../../components/DocumentsPanel";
 import { formatDisqualificationReasons } from "../../../../lib/formatDisqualificationReasons";
 import ErrorBanner from "../../../../components/ui/ErrorBanner";
 import Badge from "../../../../components/ui/Badge";
+import Button from "../../../../components/ui/Button";
+import { Modal, ModalFooter } from "../../../../components/ui/Modal";
 import { ownerAuthHeaders } from "../../../../lib/api";
 import { cn } from "../../../../lib/utils";
 import SortableHeader from "../../../../components/SortableHeader";
@@ -274,12 +276,14 @@ export default function OwnerCandidatesPage() {
                           Score: {s.candidate.score} · Income: CHF{" "}
                           {s.candidate.income != null ? formatNumber(s.candidate.income) : "—"}
                         </p>
-                        <button
+                        <Button
+                          variant="ghost"
+                          size="xs"
                           onClick={() => toggleSelection(s.key, s.candidate.applicationUnitId)}
-                          className="mt-2 text-xs text-red-600 hover:underline"
+                          className="mt-2 text-xs text-red-600 hover:text-red-700"
                         >
                           Remove
-                        </button>
+                        </Button>
                       </div>
                     ) : (
                       <p className="mt-3 text-xs text-slate-400">
@@ -291,61 +295,54 @@ export default function OwnerCandidatesPage() {
               </div>
 
               <div className="mt-4 flex justify-end gap-3">
-                <button
+                <Button
+                  variant="secondary"
+                  size="sm"
                   onClick={() => setSelection({ primary: null, backup1: null, backup2: null })}
-                  className="rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50"
                 >
                   Clear All
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="primary"
+                  size="sm"
                   disabled={!selection.primary}
                   onClick={() => setShowConfirm(true)}
-                  className="rounded-lg bg-indigo-600 px-5 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   Confirm Selection
-                </button>
+                </Button>
               </div>
             </Panel>
           )}
 
           {/* Confirmation modal */}
           {showConfirm && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-              <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-                <h3 className="text-lg font-bold text-slate-900">{t("owner:vacancies[unitid]Candidates.heading.confirmTenantSelection")}</h3>
-                <p className="mt-2 text-sm text-slate-600">
-                  This will notify the selected candidates and reject all others. This action cannot be undone.
-                </p>
-                <ul className="mt-4 space-y-2">
-                  {selectionSummary
-                    .filter((s) => s.candidate)
-                    .map((s) => (
-                      <li key={s.key} className="flex items-center gap-2 text-sm">
-                        <Badge variant={s.variant} size="sm">
-                          {s.label}
-                        </Badge>
-                        <span className="font-medium text-slate-900">{s.candidate.name}</span>
-                        <span className="text-slate-400">Score: {s.candidate.score}</span>
-                      </li>
-                    ))}
-                </ul>
-                <div className="mt-6 flex justify-end gap-3">
-                  <button
-                    onClick={() => setShowConfirm(false)}
-                    className="rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    disabled={submitting}
-                    onClick={handleSubmit}
-                    className="rounded-lg bg-red-600 px-5 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-40"
-                  >
-                    {submitting ? "Processing…" : "Confirm & Notify"}
-                  </button>
-                </div>
-              </div>
-            </div>
+            <Modal
+              title={t("owner:vacancies[unitid]Candidates.heading.confirmTenantSelection")}
+              description="This will notify the selected candidates and reject all others. This action cannot be undone."
+              onClose={() => setShowConfirm(false)}
+            >
+              <ul className="mt-2 mb-6 space-y-2">
+                {selectionSummary
+                  .filter((s) => s.candidate)
+                  .map((s) => (
+                    <li key={s.key} className="flex items-center gap-2 text-sm">
+                      <Badge variant={s.variant} size="sm">
+                        {s.label}
+                      </Badge>
+                      <span className="font-medium text-slate-900">{s.candidate.name}</span>
+                      <span className="text-slate-400">Score: {s.candidate.score}</span>
+                    </li>
+                  ))}
+              </ul>
+              <ModalFooter>
+                <Button variant="secondary" size="sm" onClick={() => setShowConfirm(false)}>
+                  Cancel
+                </Button>
+                <Button variant="primary" size="sm" disabled={submitting} onClick={handleSubmit}>
+                  {submitting ? "Processing…" : "Confirm & Notify"}
+                </Button>
+              </ModalFooter>
+            </Modal>
           )}
 
           {/* Candidates table */}
@@ -533,43 +530,41 @@ export default function OwnerCandidatesPage() {
 
           {/* Override disqualification modal */}
           {overrideTarget && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setOverrideTarget(null)}>
-              <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
-                <h3 className="text-lg font-bold text-slate-900">{t("owner:vacancies[unitid]Candidates.heading.overrideDisqualification")}</h3>
-                <p className="mt-2 text-sm text-slate-600">
-                  You are about to override the automatic disqualification for <strong>{overrideTarget.name}</strong>.
-                  This candidate will become eligible for selection.
-                </p>
-                <div className="mt-4">
-                  <label className="block text-xs font-medium uppercase tracking-wide text-slate-400 mb-1.5">
-                    Reason for override *
-                  </label>
-                  <textarea
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                    rows={3}
-                    placeholder={t("owner:vacancies[unitid]Candidates.placeholder.eGVerifiedIncomeDirectlyWithEmployerDebtEnforcementExtractIsClear")}
-                    value={overrideReason}
-                    onChange={(e) => setOverrideReason(e.target.value)}
-                  />
-                  <p className="mt-1 text-xs text-slate-400">{t("owner:vacanciesUnitidCandidates.text.minimum3CharactersThisWillBeRecordedForAudit")}</p>
-                </div>
-                <div className="mt-5 flex justify-end gap-3">
-                  <button
-                    onClick={() => setOverrideTarget(null)}
-                    className="rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    disabled={overriding || overrideReason.trim().length < 3}
-                    onClick={handleOverride}
-                    className="rounded-lg bg-amber-600 px-5 py-2 text-sm font-semibold text-white hover:bg-amber-700 disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    {overriding ? "Overriding…" : "Confirm Override"}
-                  </button>
-                </div>
+            <Modal
+              title={t("owner:vacancies[unitid]Candidates.heading.overrideDisqualification")}
+              onClose={() => setOverrideTarget(null)}
+            >
+              <p className="mb-4 text-sm text-muted-text">
+                You are about to override the automatic disqualification for <strong>{overrideTarget.name}</strong>.
+                This candidate will become eligible for selection.
+              </p>
+              <div className="mt-4">
+                <label className="block text-xs font-medium uppercase tracking-wide text-slate-400 mb-1.5">
+                  Reason for override *
+                </label>
+                <textarea
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  rows={3}
+                  placeholder={t("owner:vacancies[unitid]Candidates.placeholder.eGVerifiedIncomeDirectlyWithEmployerDebtEnforcementExtractIsClear")}
+                  value={overrideReason}
+                  onChange={(e) => setOverrideReason(e.target.value)}
+                />
+                <p className="mt-1 text-xs text-slate-400">{t("owner:vacanciesUnitidCandidates.text.minimum3CharactersThisWillBeRecordedForAudit")}</p>
               </div>
-            </div>
+              <ModalFooter className="mt-5">
+                <Button variant="secondary" size="sm" onClick={() => setOverrideTarget(null)}>
+                  Cancel
+                </Button>
+                <Button
+                  variant="warning"
+                  size="sm"
+                  disabled={overriding || overrideReason.trim().length < 3}
+                  onClick={handleOverride}
+                >
+                  {overriding ? "Overriding…" : "Confirm Override"}
+                </Button>
+              </ModalFooter>
+            </Modal>
           )}
         </PageContent>
       </PageShell>
