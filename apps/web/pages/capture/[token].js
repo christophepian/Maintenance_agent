@@ -348,4 +348,4 @@ export default function MobileCapturePage() {
   );
 }
 
-export const getServerSideProps = withServerTranslations(["common"]);
+export const getServerSideProps = withServerTranslations(["common", "tenant"]);

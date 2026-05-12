@@ -8,7 +8,6 @@ import PageHeader from "../../../components/layout/PageHeader";
 import PageContent from "../../../components/layout/PageContent";
 import Panel from "../../../components/layout/Panel";
 import ConfigurableTable from "../../../components/ConfigurableTable";
-import PaginationControls from "../../../components/PaginationControls";
 import { useLocalSort, clientSort } from "../../../lib/tableUtils";
 import { FilterToggle, FilterPanelBody, FilterSection, FilterSectionClear } from "../../../components/ui/FilterPanel";
 import { authHeaders } from "../../../lib/api";
@@ -1049,15 +1048,6 @@ export function InvoicesContent() {
                   ? "Show less"
                   : `Show all ${sortedInvoices.length} invoice${sortedInvoices.length !== 1 ? "s" : ""}`}
               </div>
-              {tableExpanded && (
-                <PaginationControls
-                  currentPage={pager.currentPage}
-                  totalPages={pager.totalPages}
-                  totalItems={sortedInvoices.length}
-                  pageSize={pager.pageSize}
-                  onPageChange={pager.setPage}
-                />
-              )}
           </div>
         </>
       )}
