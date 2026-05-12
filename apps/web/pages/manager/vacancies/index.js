@@ -22,14 +22,14 @@ import { useTranslation } from "next-i18next";
  */
 function ActionDropdown({ actions }) {
   const [open, setOpen] = useState(false);
-  const [coords, setCoords] = useState({ top: 0, right: 0 });
+  const coordsRef = useRef({ top: 0, right: 0 });
   const btnRef = useRef(null);
   const menuRef = useRef(null);
 
   function handleOpen() {
     if (!open && btnRef.current) {
       const r = btnRef.current.getBoundingClientRect();
-      setCoords({ top: r.bottom + 4, right: window.innerWidth - r.right });
+      coordsRef.current = { top: r.bottom + 4, right: window.innerWidth - r.right };
     }
     setOpen((o) => !o);
   }
@@ -64,7 +64,7 @@ function ActionDropdown({ actions }) {
       {open && typeof window !== "undefined" && (
         <div
           ref={menuRef}
-          style={{ position: "fixed", top: coords.top, right: coords.right, zIndex: 9999 }}
+          style={{ position: "fixed", top: coordsRef.current.top, right: coordsRef.current.right, zIndex: 9999 }}
           className="w-48 rounded-lg border border-slate-200 bg-white shadow-xl ring-1 ring-black/5"
         >
           <div className="py-1">
