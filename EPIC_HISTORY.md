@@ -2746,3 +2746,138 @@ All 6 affected pages confirmed rendering correct FR tab labels via SSR HTML insp
 | `apps/api/src/routes/inventory.ts` | `GET /buildings/:id/house-rules-pdf` |
 | `apps/api/src/services/leasePDFRenderer.ts` | House rules annex page |
 | `apps/web/.vercelignore` | New empty file — ensures locale files are never excluded when Vercel `rootDirectory=apps/web` |
+
+
+---
+
+## Session 2026-05-12 (continuation) — Lease detail auth sweep, vacancies focus-refresh, building pre-fill
+
+### Commits: `ea2c9a5` → `de2d33a` (all pushed to origin/main)
+
+### Root cause
+
+All `fetch` calls in `apps/web/pages/manager/leases/[id].js` were missing `{ headers: authHeaders() }`. The Next.js proxy (`pages/api/leases/[...id].js`) uses `proxyToBackend()` which forwards Authorization **only if the browser sends it**. Without the header the backend's `requireOrgViewer` guard returned 401 on every request.
+
+### Auth header sweep — `manager/leases/[id].js` (commits `ea2c9a5`, `de2d33a`)
+
+Every `fetch` call on the lease detail page was audited and fixed:
+
+| Function | Fix |
+|---|---|
+| `fetchLease` (GET) | Added `headers: authHeaders()` |
+| `fetchSignatureRequests` (GET) | Added `headers: authHeaders()` |
+| `fetchInvoices` (GET) | Added `headers: authHeaders()` |
+| `fetchBillingSchedule` (GET) | Added `headers: authHeaders()` |
+| `handleGeneratePDF` (POST) | Added `headers: authHeaders()` |
+| `handleReadyToSign` (POST) | Added `headers: authHeaders()` |
+| `handleSendSigReq` (POST) | Added `headers: authHeaders()` |
+| `handleResendForSignature` (POST) | Added `headers: authHeaders()` |
+| `handleCancel` (POST) | Added `headers: authHeaders()` |
+| `handleAction` (POST) | Added `headers: authHeaders()` |
+| `handleBillingAction` (POST) | Added `headers: authHeaders()`, removed duplicate `headers` property |
+| `handleSave` (PATCH) | Added `headers: authHeaders()` — last remaining 401, fixed in `de2d33a` |
+
+**Pattern reminder:** Every `fetch` through a `proxyToBackend()` proxy must include `{ headers: authHeaders() }`. The proxy cannot inject Authorization on behalf of the browser.
+
+### Vacancies focus-refresh (commit `ea2c9a5`)
+
+`pages/manager/vacancies/index.js` fetched selection data once on mount. After creating a lease template in another tab and returning, `hasLeaseTemplate` was stale. Fixed by adding `window.addEventListener("focus", () => loadSelections())` in the mount `useEffect`.
+
+### Dashboard template-aware attention card (commit `ea2c9a5`)
+
+The manager dashboard feed card for vacancy items always linked to template creation regardless of whether a template existed. Fixed to branch on `hasLeaseTemplate`:
+- `true` → subtitle "Template ready — generate lease from Vacancies", `href` → `/manager/vacancies`
+- `false` → subtitle "Owner selected — lease needed", `href` → `/manager/leases?tab=templates&autoCreate=true&buildingId=<uuid>`
+
+New i18n key `dashboard.feed.templateReady` added to both `en/manager.json` and `fr/manager.json`.
+
+### Building pre-fill for template creation (commit `edbbe39`)
+
+When navigating to the lease templates tab with `?buildingId=<uuid>`, the create-template form now auto-selects the building and derives the template name and landlord address from the building record.
+
+- `leases/index.js` `autoCreate` effect reads `router.query.buildingId` and calls `onScratchBuildingChange(buildingId)` once buildings are loaded (effect deps include `buildings`)
+- Vacancies mobile card and desktop table "Create Lease Template" navigation now includes `buildingId`
+- Dashboard no-template card also includes `buildingId`
+
+### Push oversight fix
+
+Commits `ea2c9a5` and `edbbe39` were created locally but not pushed. Fixed with explicit `git push origin main`.
+
+### Files Changed
+
+| File | Change |
+|---|---|
+| `apps/web/pages/manager/leases/[id].js` | `authHeaders()` on all 12 fetch calls; duplicate `headers` removed from `handleBillingAction` |
+| `apps/web/pages/manager/leases/index.js` | `autoCreate` effect reads + applies `buildingId` query param with `buildings` dep |
+| `apps/web/pages/manager/vacancies/index.js` | Focus-refresh on window focus; navigation links include `buildingId` |
+| `apps/web/pages/manager/index.js` | Dashboard feed card: template-aware subtitle + href; `buildingId` in no-template link |
+| `apps/web/public/locales/en/manager.json` | Added `dashboard.feed.templateReady` |
+| `apps/web/public/locales/fr/manager.json` | Added `dashboard.feed.templateReady` FR |
+
+
+
+---
+
+## Session 2026-05-12 (continuation) — Lease detail auth sweep, vacancies focus-refresh, building pre-fill
+
+### Commits: `ea2c9a5` → `de2d33a` (all pushed to origin/main)
+
+### Root cause
+
+All `fetch` calls in `apps/web/pages/manager/leases/[id].js` were missing `{ headers: authHeaders() }`. The Next.js proxy (`pages/api/leases/[...id].js`) uses `proxyToBackend()` which forwards Authorization **only if the browser sends it**. Without the header the backend's `requireOrgViewer` guard returned 401 on every request.
+
+### Auth header sweep — `manager/leases/[id].js` (commits `ea2c9a5`, `de2d33a`)
+
+Every `fetch` call on the lease detail page was audited and fixed:
+
+| Function | Fix |
+|---|---|
+| `fetchLease` (GET) | Added `headers: authHeaders()` |
+| `fetchSignatureRequests` (GET) | Added `headers: authHeaders()` |
+| `fetchInvoices` (GET) | Added `headers: authHeaders()` |
+| `fetchBillingSchedule` (GET) | Added `headers: authHeaders()` |
+| `handleGeneratePDF` (POST) | Added `headers: authHeaders()` |
+| `handleReadyToSign` (POST) | Added `headers: authHeaders()` |
+| `handleSendSigReq` (POST) | Added `headers: authHeaders()` |
+| `handleResendForSignature` (POST) | Added `headers: authHeaders()` |
+| `handleCancel` (POST) | Added `headers: authHeaders()` |
+| `handleAction` (POST) | Added `headers: authHeaders()` |
+| `handleBillingAction` (POST) | Added `headers: authHeaders()`, removed duplicate `headers` property |
+| `handleSave` (PATCH) | Added `headers: authHeaders()` — last remaining 401, fixed in `de2d33a` |
+
+**Pattern reminder:** Every `fetch` through a `proxyToBackend()` proxy must include `{ headers: authHeaders() }`. The proxy cannot inject Authorization on behalf of the browser.
+
+### Vacancies focus-refresh (commit `ea2c9a5`)
+
+`pages/manager/vacancies/index.js` fetched selection data once on mount. After creating a lease template in another tab and returning, `hasLeaseTemplate` was stale. Fixed by adding `window.addEventListener("focus", () => loadSelections())` in the mount `useEffect`.
+
+### Dashboard template-aware attention card (commit `ea2c9a5`)
+
+The manager dashboard feed card for vacancy items always linked to template creation regardless of whether a template existed. Fixed to branch on `hasLeaseTemplate`:
+- `true` → subtitle "Template ready — generate lease from Vacancies", `href` → `/manager/vacancies`
+- `false` → subtitle "Owner selected — lease needed", `href` → `/manager/leases?tab=templates&autoCreate=true&buildingId=<uuid>`
+
+New i18n key `dashboard.feed.templateReady` added to both `en/manager.json` and `fr/manager.json`.
+
+### Building pre-fill for template creation (commit `edbbe39`)
+
+When navigating to the lease templates tab with `?buildingId=<uuid>`, the create-template form now auto-selects the building and derives the template name and landlord address from the building record.
+
+- `leases/index.js` `autoCreate` effect reads `router.query.buildingId` and calls `onScratchBuildingChange(buildingId)` once buildings are loaded (effect deps include `buildings`)
+- Vacancies mobile card and desktop table "Create Lease Template" navigation now includes `buildingId`
+- Dashboard no-template card also includes `buildingId`
+
+### Push oversight fix
+
+Commits `ea2c9a5` and `edbbe39` were created locally but not pushed. Fixed with explicit `git push origin main`.
+
+### Files Changed
+
+| File | Change |
+|---|---|
+| `apps/web/pages/manager/leases/[id].js` | `authHeaders()` on all 12 fetch calls; duplicate `headers` removed from `handleBillingAction` |
+| `apps/web/pages/manager/leases/index.js` | `autoCreate` effect reads + applies `buildingId` query param with `buildings` dep |
+| `apps/web/pages/manager/vacancies/index.js` | Focus-refresh on window focus; navigation links include `buildingId` |
+| `apps/web/pages/manager/index.js` | Dashboard feed card: template-aware subtitle + href; `buildingId` in no-template link |
+| `apps/web/public/locales/en/manager.json` | Added `dashboard.feed.templateReady` |
+| `apps/web/public/locales/fr/manager.json` | Added `dashboard.feed.templateReady` FR |
