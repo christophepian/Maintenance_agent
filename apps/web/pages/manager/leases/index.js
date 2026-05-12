@@ -278,8 +278,13 @@ export default function LeasesPage() {
     if (!router.isReady) return;
     if (router.query.autoCreate === "true" && activeTab === 3) {
       setShowCreateTemplate(true);
+      // Pre-fill building dropdown if buildingId passed in query
+      // Re-runs when buildings load so the name/address auto-fill can resolve
+      if (router.query.buildingId && buildings.length > 0) {
+        onScratchBuildingChange(router.query.buildingId);
+      }
     }
-  }, [router.isReady, router.query.autoCreate, activeTab]);
+  }, [router.isReady, router.query.autoCreate, router.query.buildingId, activeTab, buildings]);
 
   // Load units when building selected
   useEffect(() => {

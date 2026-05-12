@@ -318,7 +318,7 @@ export default function ManagerDashboard() {
             : t("manager:dashboard.feed.ownerSelectedTenant"),
           href: s.hasLeaseTemplate
             ? "/manager/vacancies"
-            : "/manager/leases?tab=templates&autoCreate=true",
+            : "/manager/leases?tab=templates&autoCreate=true" + (s.buildingId ? "&buildingId=" + s.buildingId : ""),
           sortOrder: 0, // high urgency — same as owner approval
         })
       );

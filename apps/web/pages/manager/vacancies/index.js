@@ -376,7 +376,7 @@ export default function ManagerVacanciesPage() {
                           ] : sel.hasLeaseTemplate ? [
                             { label: "📝 Generate Lease from Template", onClick: () => generateLeaseFromTemplate(sel) },
                           ] : [
-                            { label: "📐 Create Lease Template", onClick: () => router.push("/manager/leases?tab=templates") },
+                            { label: "📐 Create Lease Template", onClick: () => router.push("/manager/leases?tab=templates&autoCreate=true" + (sel.buildingId ? "&buildingId=" + sel.buildingId : "")) },
                           ]),
                           { label: "👤 View Candidate", onClick: () => router.push("/manager/vacancies/" + sel.unitId + "/applications") },
                           ...(sel.buildingId ? [
@@ -440,7 +440,7 @@ export default function ManagerVacanciesPage() {
                               ] : sel.hasLeaseTemplate ? [
                                 { label: "📝 Generate Lease from Template", onClick: () => generateLeaseFromTemplate(sel) },
                               ] : [
-                                { label: "📐 Create Lease Template", onClick: () => router.push("/manager/leases?tab=templates&autoCreate=true") },
+                                { label: "📐 Create Lease Template", onClick: () => router.push("/manager/leases?tab=templates&autoCreate=true" + (sel.buildingId ? "&buildingId=" + sel.buildingId : "")) },
                               ]),
                               { label: "👤 View Candidate", onClick: () => router.push("/manager/vacancies/" + sel.unitId + "/applications") },
                               ...(sel.buildingId ? [
