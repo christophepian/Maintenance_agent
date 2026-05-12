@@ -29,7 +29,7 @@ function ActionDropdown({ actions }) {
   function handleOpen() {
     if (!open && btnRef.current) {
       const r = btnRef.current.getBoundingClientRect();
-      setCoords({ bottom: window.innerHeight - r.top + 4, right: window.innerWidth - r.right });
+      setCoords({ top: r.bottom + 4, right: window.innerWidth - r.right });
     }
     setOpen((o) => !o);
   }
@@ -64,7 +64,7 @@ function ActionDropdown({ actions }) {
       {open && typeof window !== "undefined" && (
         <div
           ref={menuRef}
-          style={{ position: "fixed", bottom: coords.bottom, right: coords.right, zIndex: 9999 }}
+          style={{ position: "fixed", top: coords.top, right: coords.right, zIndex: 9999 }}
           className="w-48 rounded-lg border border-slate-200 bg-white shadow-xl ring-1 ring-black/5"
         >
           <div className="py-1">
