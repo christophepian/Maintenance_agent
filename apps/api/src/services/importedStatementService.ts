@@ -437,10 +437,16 @@ async function runIngestionBackground(
     let finalBuildingId = buildingId;
     let finalBuildingMatchConf: MatchConfidence | null = buildingId ? MatchConfidence.MANUAL : null;
     if (!finalBuildingId) {
-      const addressHint =
+      // Primary: use structured fields extracted by the scanner.
+      // Fallback: scan raw OCR text for a Swiss street address (covers cases where
+      // the document was misclassified and the FINANCIAL_STATEMENT path was skipped).
+      const structuredAddress =
         (scanResult.fields.buildingAddress as string | null) ??
-        (scanResult.fields.address as string | null) ??
-        "";
+        (scanResult.fields.address as string | null);
+      const ocrAddress = structuredAddress ?? extractAddressFromText(
+        (scanResult.fields._rawTextPreview as string | null) ?? "",
+      );
+      const addressHint = ocrAddress ?? "";
       if (addressHint) {
         const detected = await detectBuildingFromContent(prisma, orgId, addressHint);
         if (detected) {
@@ -1102,6 +1108,28 @@ function mapDTO(s: any, linkedInvoices: any[] = []): ImportedStatementDTO {
 
 function truncate(text: string, max: number): string {
   return text.length <= max ? text : text.substring(0, max) + "…";
+}
+
+/**
+ * Attempt to pull a street address out of raw OCR text using Swiss/FR address
+ * patterns.  Used as a fallback when the document scanner did not populate
+ * `fields.buildingAddress` (e.g. because the doc was misclassified).
+ *
+ * Matches lines like:
+ *   "Rte Monts-de-Laval 314"
+ *   "Route de la Forêt 12A"
+ *   "Rue du Lac 5, 1234 Villette"
+ *   "Bahnhofstrasse 13"
+ */
+function extractAddressFromText(text: string): string | null {
+  if (!text) return null;
+  // Street type prefixes (FR / DE) followed by a street name and a number
+  const pattern =
+    /\b(?:rue|route|rte|avenue|av|chemin|ch|allée|boulevard|blvd|strasse|str|weg|gasse|platz|place)\b[^0-9\n]{2,40}\d{1,4}[a-z]?/gi;
+  const matches = text.match(pattern);
+  if (!matches || matches.length === 0) return null;
+  // Return the longest match (most specific address)
+  return matches.sort((a, b) => b.length - a.length)[0].trim();
 }
 
 function parseDateField(raw: string): Date | undefined {

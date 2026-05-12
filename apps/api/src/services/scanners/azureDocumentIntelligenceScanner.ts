@@ -113,6 +113,7 @@ const DOC_PATTERNS: { type: DetectedDocType; patterns: RegExp[] }[] = [
       /decompte.*annuel/i, /d[eé]compte.*g[eé]rance/i,
       /abrechnun/i, /gesamtabrechnung/i,
       /relevé.*compte/i, /extrait.*compte/i,
+      /g[eé]rance/i, /liegenschaft/i,
     ],
   },
   {
@@ -159,6 +160,21 @@ function refineDocTypeFromContent(
 
   const text = content.toLowerCase();
 
+  // ── Check strong structural indicators first so documents that mention
+  //    insurance *as a section* (e.g. Swiss "décompte de gérance" reports) are
+  //    not misclassified as HOUSEHOLD_INSURANCE. ─────────────────────────────
+
+  // Swiss property management financial statement keywords (FR/DE) — checked first
+  // because these reports frequently reference insurance as a sub-section.
+  if (
+    /bilan|jahresrechnung|bilanz|soldes\s*des\s*comptes|cl[oô]ture\s*annuelle|jahresabschluss|gesamtabrechnung/i.test(text) ||
+    /d[eé]compte.*g[eé]rance|abrechnun.*liegenschaft|liegenschaftsabrechnung/i.test(text) ||
+    /compte\s*de\s*r[eé]sultat|compte\s*de\s*gestion|r[eé]capitulatif.*comptes/i.test(text) ||
+    /d[eé]compte\s*annuel|relevé.*compte.*g[eé]rance/i.test(text)
+  ) {
+    return "FINANCIAL_STATEMENT";
+  }
+
   if (/passport|carte\s*d'identit|ausweis|identity\s*card/i.test(text))
     return "IDENTITY";
   if (/salary|salaire|lohn|gehalt|fiche\s*de\s*paie|pay\s*slip/i.test(text))
@@ -167,13 +183,10 @@ function refineDocTypeFromContent(
     return "DEBT_ENFORCEMENT_EXTRACT";
   if (/permis|permit|aufenthalt|bewilligung|s[eé]jour/i.test(text))
     return "PERMIT";
-  if (/assurance|versicherung|insurance|responsabilit[eé]|haftpflicht/i.test(text))
-    return "HOUSEHOLD_INSURANCE";
   if (/invoice|facture|rechnung|\bbill\b|total\s*(amount|due|chf|eur)|montant\s*(total|d[ûu])|gesamtbetrag/i.test(text))
     return "INVOICE";
-
-  if (/bilan|jahresrechnung|bilanz|soldes\s*des\s*comptes|cl[oô]ture\s*annuelle|jahresabschluss|d[eé]compte.*g[eé]rance|gesamtabrechnung/i.test(text))
-    return "FINANCIAL_STATEMENT";
+  if (/assurance|versicherung|insurance|responsabilit[eé]|haftpflicht/i.test(text))
+    return "HOUSEHOLD_INSURANCE";
 
   return "UNKNOWN";
 }
