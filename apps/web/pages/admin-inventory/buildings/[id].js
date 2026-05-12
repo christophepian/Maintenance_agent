@@ -1452,10 +1452,10 @@ export default function BuildingDetail() {
                     {t("manager:buildingsId.text.goToLeaseTemplates")}
                   </Link>
                 </div>
-              )}empirical
+              )}
             </Panel>
 
-            {/* House Rules panel */}}
+            {/* House Rules panel */}
             <Panel
               title="House Rules"
               actions={
