@@ -44,7 +44,8 @@
       "noMatch": "Aucun element ne correspond au filtre selectionne.",
       "showLess": "Afficher moins haut",
       "inProgressStale": "En cours depuis plus de 7 jours",
-      "ownerSelectedTenant": "Locataire selectionne — bail a creer"
+      "ownerSelectedTenant": "Locataire selectionne — bail a creer",
+      "templateReadyGenerateLease": "Modèle prêt — générer le bail depuis Vacances"
     },
     "filter": {
       "all": "Tous",

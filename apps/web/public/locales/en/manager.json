@@ -44,7 +44,8 @@
       "noMatch": "No items match the selected filter.",
       "showLess": "Show less ↑",
       "inProgressStale": "In progress > 7 days",
-      "ownerSelectedTenant": "Owner selected — lease needed"
+      "ownerSelectedTenant": "Owner selected — lease needed",
+      "templateReadyGenerateLease": "Template ready — generate lease from Vacancies"
     },
     "filter": {
       "all": "All",

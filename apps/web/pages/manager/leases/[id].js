@@ -296,7 +296,7 @@ export default function LeaseEditorPage() {
     if (!id) return;
     setLoading(true);
     try {
-      const res = await fetch(`/api/leases/${id}`);
+      const res = await fetch(`/api/leases/${id}`, { headers: authHeaders() });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error?.message || "Not found");
       setLease(json.data);
@@ -311,7 +311,7 @@ export default function LeaseEditorPage() {
   const fetchSignatureRequests = useCallback(async () => {
     if (!id) return;
     try {
-      const res = await fetch(`/api/signature-requests?entityType=LEASE&entityId=${id}`);
+      const res = await fetch(`/api/signature-requests?entityType=LEASE&entityId=${id}`, { headers: authHeaders() });
       const json = await res.json();
       setSigRequests(json.data || []);
     } catch { /* ignore */ }
@@ -324,7 +324,7 @@ export default function LeaseEditorPage() {
   const fetchInvoices = useCallback(async () => {
     if (!id) return;
     try {
-      const res = await fetch(`/api/leases/${id}/invoices`);
+      const res = await fetch(`/api/leases/${id}/invoices`, { headers: authHeaders() });
       const json = await res.json();
       setInvoices(json.data || []);
     } catch { /* ignore */ }
@@ -336,7 +336,7 @@ export default function LeaseEditorPage() {
     if (!id) return;
     setBillingScheduleLoading(true);
     try {
-      const res = await fetch(`/api/billing-schedules?leaseId=${id}`);
+      const res = await fetch(`/api/billing-schedules?leaseId=${id}`, { headers: authHeaders() });
       const json = await res.json();
       const schedules = json.data || [];
       // Show the most relevant schedule (ACTIVE > PAUSED > most recent COMPLETED)
@@ -420,7 +420,7 @@ export default function LeaseEditorPage() {
     try {
       const res = await fetch(`/api/billing-schedules/${billingSchedule.id}/${action}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
       });
       if (!res.ok) {
         const json = await res.json();
@@ -495,7 +495,7 @@ export default function LeaseEditorPage() {
     setPdfGenerating(true);
     setError(null);
     try {
-      const res = await fetch(`/api/leases/${id}/generate-pdf`, { method: "POST" });
+      const res = await fetch(`/api/leases/${id}/generate-pdf`, { method: "POST", headers: authHeaders() });
       if (!res.ok) {
         const json = await res.json();
         throw new Error(json.error?.message || "PDF generation failed");
@@ -524,7 +524,7 @@ export default function LeaseEditorPage() {
     try {
       const res = await fetch(`/api/leases/${id}/ready-to-sign`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
         body: JSON.stringify({ level: signLevel }),
       });
       const json = await res.json();
@@ -544,7 +544,7 @@ export default function LeaseEditorPage() {
     setSendingSigReqId(srId);
     setError(null);
     try {
-      const res = await fetch(`/api/signature-requests/${srId}/send`, { method: "POST" });
+      const res = await fetch(`/api/signature-requests/${srId}/send`, { method: "POST", headers: authHeaders() });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error?.message || "Failed to send");
       setSigRequests(prev => prev.map(sr => sr.id === srId ? json.data : sr));
@@ -563,7 +563,7 @@ export default function LeaseEditorPage() {
     setResendingForSignature(true);
     setError(null);
     try {
-      const res = await fetch(`/api/leases/${id}/resend-for-signature`, { method: "POST" });
+      const res = await fetch(`/api/leases/${id}/resend-for-signature`, { method: "POST", headers: authHeaders() });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error?.message || "Failed");
       setSigRequests(prev => [json.data, ...prev]);
@@ -579,7 +579,7 @@ export default function LeaseEditorPage() {
   async function handleCancel() {
     if (!confirm("Cancel this lease? This cannot be undone for signed leases.")) return;
     try {
-      const res = await fetch(`/api/leases/${id}/cancel`, { method: "POST" });
+      const res = await fetch(`/api/leases/${id}/cancel`, { method: "POST", headers: authHeaders() });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error?.message || "Failed");
       setLease(json.data);
@@ -595,7 +595,7 @@ export default function LeaseEditorPage() {
     try {
       const res = await fetch(`/api/leases/${id}/${action}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
       const json = await res.json();

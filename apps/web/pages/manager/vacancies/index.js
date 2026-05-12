@@ -193,6 +193,10 @@ export default function ManagerVacanciesPage() {
   useEffect(() => {
     loadVacantUnits();
     loadSelections();
+    // Re-fetch selections when user returns to this tab (e.g. after creating a template)
+    const onFocus = () => loadSelections();
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
   }, []);
 
   async function loadVacantUnits({ silent = false } = {}) {

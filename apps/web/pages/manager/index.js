@@ -313,8 +313,12 @@ export default function ManagerDashboard() {
             : "Lease needed for selected candidate",
           building: [s.buildingName, s.unitNumber ? `Unit ${s.unitNumber}` : null].filter(Boolean).join(" · ") || null,
           date: s.createdAt,
-          sub: t("manager:dashboard.feed.ownerSelectedTenant"),
-          href: "/manager/leases?tab=templates&autoCreate=true",
+          sub: s.hasLeaseTemplate
+            ? t("manager:dashboard.feed.templateReadyGenerateLease")
+            : t("manager:dashboard.feed.ownerSelectedTenant"),
+          href: s.hasLeaseTemplate
+            ? "/manager/vacancies"
+            : "/manager/leases?tab=templates&autoCreate=true",
           sortOrder: 0, // high urgency — same as owner approval
         })
       );
