@@ -1066,9 +1066,12 @@ async function extractFinancialStatementWithClaude(
   const empty = { fields: {}, accountBalances: [], invoiceLines: [] };
   if (!content) return empty;
 
-  // ~30 k chars per chunk ≈ 7 k input tokens — leaves plenty of headroom
-  // for the 8192-token output budget even with large account lists.
-  const MAX_CHARS_PER_CHUNK = 30_000;
+  // ~10 k chars per chunk ≈ 2.5 k input tokens.
+  // Each output balance row ≈ 60 tokens; at 10 k chars a chunk typically has
+  // 20-40 rows → ~2400 output tokens — well within the 8192-token budget.
+  // Keeping chunks small is critical: one giant 30 k chunk causes Claude to
+  // hit max_tokens mid-list and truncate silently.
+  const MAX_CHARS_PER_CHUNK = 10_000;
 
   const chunks = splitIntoPageChunks(content, pages, MAX_CHARS_PER_CHUNK);
   console.log(
@@ -1085,7 +1088,18 @@ async function extractFinancialStatementWithClaude(
     const seenCodes = new Set<string>();
 
     for (let i = 0; i < chunks.length; i++) {
-      const chunkResult = await extractChunkWithClaude(client, chunks[i], i, chunks.length);
+      let chunkResult: Awaited<ReturnType<typeof extractChunkWithClaude>>;
+      try {
+        chunkResult = await extractChunkWithClaude(client, chunks[i], i, chunks.length);
+      } catch (chunkErr) {
+        // A chunk failure (e.g. truncated JSON from hitting max_tokens) must not
+        // wipe out balances already accumulated from earlier chunks.
+        console.warn(
+          `[DOC-SCAN] Chunk ${i + 1}/${chunks.length} failed — skipping chunk, keeping prior results. ` +
+          `Error: ${chunkErr instanceof Error ? chunkErr.message : chunkErr}`,
+        );
+        continue;
+      }
 
       // Merge metadata fields (first non-null value wins)
       for (const [k, v] of Object.entries(chunkResult.fields)) {
@@ -1467,12 +1481,16 @@ export class AzureDocumentIntelligenceScanner implements DocumentScanner {
       }
     }
 
-    // 8. Raw text preview (first 2000 chars)
-    if (fullContent.length > 0 && fullContent.length <= 2000) {
+    // 8. Raw text preview + extraction metadata for the review UI
+    //    Show first 4000 chars so managers can verify page coverage.
+    const PREVIEW_CHARS = 4000;
+    if (fullContent.length > 0 && fullContent.length <= PREVIEW_CHARS) {
       fields._rawTextPreview = fullContent;
-    } else if (fullContent.length > 2000) {
-      fields._rawTextPreview = fullContent.substring(0, 2000) + "…";
+    } else if (fullContent.length > PREVIEW_CHARS) {
+      fields._rawTextPreview = fullContent.substring(0, PREVIEW_CHARS) + "…";
     }
+    fields._pagesAnalyzed = azureResult.pageCount;
+    fields._contentLength = fullContent.length;
 
     // 9. Compute confidence
     const confidence =
