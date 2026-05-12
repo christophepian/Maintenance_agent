@@ -17,10 +17,11 @@ import { useTranslation } from "next-i18next";
 /* ── Constants ─────────────────────────────────────────────── */
 
 const SOURCE_TYPE_LABELS = {
-  INVOICE_ISSUED: "Invoice issued",
-  INVOICE_PAID:   "Invoice paid",
-  RENT_RECEIPT:   "Rent receipt",
-  MANUAL:         "Manual entry",
+  INVOICE_ISSUED:      "Invoice issued",
+  INVOICE_PAID:        "Invoice paid",
+  RENT_RECEIPT:        "Rent receipt",
+  MANUAL:              "Manual entry",
+  IMPORTED_STATEMENT:  "Imported statement",
 };
 
 const ACCOUNT_TYPE_LABELS = {

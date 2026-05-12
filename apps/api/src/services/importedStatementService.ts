@@ -590,29 +590,100 @@ export async function approveStatement(
     throw new ImportedStatementError("BUILDING_REQUIRED", "A building must be assigned before this statement can be approved");
   }
 
-  // Post ledger entries for matched account balances
-  const matchedBalances = statement.accountBalances.filter(
-    (ab) => ab.accountId && ab.matchConfidence !== MatchConfidence.UNMATCHED,
-  );
+  // Resolve an accountId for every balance row.
+  // For rows already matched (AUTO / FUZZY / CLAUDE / MANUAL) use the stored accountId.
+  // For UNMATCHED rows, find an existing account by code or name, or auto-create a stub
+  // so that every balance line always produces a ledger entry on approval.
+  const periodDate = statement.periodEnd ?? statement.periodStart ?? new Date();
 
-  if (matchedBalances.length > 0) {
-    const periodDate = statement.periodEnd ?? statement.periodStart ?? new Date();
-    await postJournalEntries(
-      prisma,
-      orgId,
-      matchedBalances.map((ab) => ({
-        accountId: ab.accountId!,
-        debitCents: ab.balanceType === "DEBIT" ? ab.balanceCents : 0,
-        creditCents: ab.balanceType === "CREDIT" ? ab.balanceCents : 0,
-        description: `[Import FY${statement.fiscalYear}] ${ab.rawAccountCode} ${ab.rawAccountName}`,
-        reference: `Statement FY${statement.fiscalYear}`,
-        sourceType: "IMPORTED_STATEMENT",
-        sourceId: statement.id,
-        buildingId: statement.buildingId,
-        date: periodDate,
-      })),
+  const legs: Array<{
+    accountId: string;
+    debitCents: number;
+    creditCents: number;
+    description: string;
+    reference: string;
+    sourceType: string;
+    sourceId: string;
+    buildingId: string | null;
+    date: Date;
+  }> = [];
+
+  let autoCreated = 0;
+  let alreadyMatched = 0;
+
+  for (const ab of statement.accountBalances) {
+    let resolvedAccountId = ab.accountId ?? null;
+
+    if (!resolvedAccountId) {
+      // Try to find an existing account by code first, then by name
+      const byCode = await prisma.account.findFirst({
+        where: { orgId, code: ab.rawAccountCode.trim() },
+      });
+
+      if (byCode) {
+        resolvedAccountId = byCode.id;
+        // Update the balance row to reflect the found match
+        await prisma.importedAccountBalance.update({
+          where: { id: ab.id },
+          data: { accountId: byCode.id, matchConfidence: MatchConfidence.AUTO },
+        });
+      } else {
+        // Auto-create a stub account using Swiss code-range convention for account type
+        const code = ab.rawAccountCode.trim();
+        const firstDigit = parseInt(code[0] ?? "4", 10);
+        const accountType =
+          firstDigit === 1 ? "ASSET"
+          : firstDigit === 2 ? "LIABILITY"
+          : firstDigit === 3 ? "REVENUE"
+          : "EXPENSE";
+
+        // Account names must be unique per org — append the code to avoid collisions
+        const safeName = `${ab.rawAccountName} (${code})`;
+        let created: { id: string };
+        try {
+          created = await prisma.account.create({
+            data: { orgId, name: safeName, code, accountType },
+          });
+        } catch {
+          // Race condition: another request created it — fall back to findFirst
+          const fallback = await prisma.account.findFirst({
+            where: { orgId, code },
+          });
+          if (!fallback) throw new Error(`Could not find or create account ${code}`);
+          created = fallback;
+        }
+        resolvedAccountId = created.id;
+        await prisma.importedAccountBalance.update({
+          where: { id: ab.id },
+          data: { accountId: created.id, matchConfidence: MatchConfidence.AUTO },
+        });
+        autoCreated++;
+      }
+    } else {
+      alreadyMatched++;
+    }
+
+    legs.push({
+      accountId: resolvedAccountId,
+      debitCents:  ab.balanceType === "DEBIT"  ? ab.balanceCents : 0,
+      creditCents: ab.balanceType === "CREDIT" ? ab.balanceCents : 0,
+      description: `[Import FY${statement.fiscalYear}] ${ab.rawAccountCode} ${ab.rawAccountName}`,
+      reference:   `Statement FY${statement.fiscalYear}`,
+      sourceType:  "IMPORTED_STATEMENT",
+      sourceId:    statement.id,
+      buildingId:  statement.buildingId,
+      date:        periodDate,
+    });
+  }
+
+  if (legs.length > 0) {
+    await postJournalEntries(prisma, orgId, legs);
+    console.log(
+      `[IMPORT] Posted ${legs.length} ledger entries for statement ${statementId} ` +
+      `(${alreadyMatched} pre-matched, ${autoCreated} auto-created accounts)`,
     );
-    console.log(`[IMPORT] Posted ${matchedBalances.length} ledger entries for statement ${statementId}`);
+  } else {
+    console.warn(`[IMPORT] No account balances found for statement ${statementId} — nothing posted`);
   }
 
   // Confirm all PENDING_REVIEW invoices linked to this source file
