@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "next-i18next";
 import Panel from "./layout/Panel";
 import { Dialog, DialogContent } from "./ui/Dialog";
+import { authHeaders } from "../lib/api";
 
 /**
  * Reusable panel for displaying corroborative documents from a rental application.
@@ -77,7 +78,7 @@ export default function DocumentsPanel({ applicationId, title, compact }) {
     }
     setLoading(true);
     setError("");
-    fetch(`/api/rental-applications/${applicationId}/documents`)
+    fetch(`/api/rental-applications/${applicationId}/documents`, { headers: authHeaders() })
       .then((res) => res.json())
       .then((json) => {
         if (json.error) throw new Error(json.error?.message || "Failed to load documents");
