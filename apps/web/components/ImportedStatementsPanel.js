@@ -205,6 +205,8 @@ export default function ImportedStatementsPanel() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
+  const [deletingAll, setDeletingAll] = useState(false);
 
   const fetchStatements = useCallback(async () => {
     setLoading(true);
@@ -231,6 +233,49 @@ export default function ImportedStatementsPanel() {
     router.push(`/manager/finance/imports/${statement.id}`);
   }
 
+  async function handleDelete(id, e) {
+    e.stopPropagation();
+    if (!window.confirm("Delete this statement? This cannot be undone.")) return;
+    setDeletingId(id);
+    try {
+      const res = await fetch(`/api/imported-statements/${id}`, {
+        method: "DELETE",
+        headers: authHeaders(),
+      });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        throw new Error(json?.error?.message || "Failed to delete statement");
+      }
+      setStatements((prev) => prev.filter((s) => s.id !== id));
+      setTotal((prev) => prev - 1);
+    } catch (e) {
+      setError(String(e?.message || e));
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
+  async function handleDeleteAll() {
+    if (!window.confirm(`Delete all ${total} imported statements? This cannot be undone.`)) return;
+    setDeletingAll(true);
+    try {
+      const res = await fetch("/api/imported-statements", {
+        method: "DELETE",
+        headers: authHeaders(),
+      });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        throw new Error(json?.error?.message || "Failed to delete statements");
+      }
+      setStatements([]);
+      setTotal(0);
+    } catch (e) {
+      setError(String(e?.message || e));
+    } finally {
+      setDeletingAll(false);
+    }
+  }
+
   return (
     <>
       {modalOpen && (
@@ -243,9 +288,20 @@ export default function ImportedStatementsPanel() {
       <Panel
         title={t("manager:financeImports.title.imports")}
         actions={
-          <button className="button-primary text-sm" onClick={() => setModalOpen(true)}>
-            {t("manager:financeImports.action.upload")}
-          </button>
+          <div className="flex gap-2">
+            {statements.length > 0 && (
+              <button
+                className="button-secondary text-sm text-destructive-text hover:bg-destructive-subtle"
+                onClick={handleDeleteAll}
+                disabled={deletingAll}
+              >
+                {deletingAll ? "Deleting…" : "Delete all"}
+              </button>
+            )}
+            <button className="button-primary text-sm" onClick={() => setModalOpen(true)}>
+              {t("manager:financeImports.action.upload")}
+            </button>
+          </div>
         }
       >
         {loading && (
@@ -264,22 +320,39 @@ export default function ImportedStatementsPanel() {
             {/* Mobile card list */}
             <div className="md:hidden overflow-hidden rounded-lg border border-table-border divide-y divide-table-divider">
               {statements.map((s) => (
-                <Link
-                  key={s.id}
-                  href={`/manager/finance/imports/${s.id}`}
-                  className="table-card block hover:bg-slate-50/80 transition-colors"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="table-card-head">{s.buildingName}</span>
-                    <Badge variant={statusVariant(s.status)}>
-                      {t(`manager:financeImports.status.${s.status}`)}
-                    </Badge>
-                  </div>
-                  <div className="table-card-footer">
-                    <span>FY {s.fiscalYear}</span>
-                    <span>{formatDate(s.createdAt)}</span>
-                  </div>
-                </Link>
+                <div key={s.id} className="table-card flex items-start gap-2">
+                  <Link
+                    href={`/manager/finance/imports/${s.id}`}
+                    className="flex-1 block hover:bg-slate-50/80 transition-colors"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="table-card-head">{s.buildingName}</span>
+                      <Badge variant={statusVariant(s.status)}>
+                        {t(`manager:financeImports.status.${s.status}`)}
+                      </Badge>
+                    </div>
+                    <div className="table-card-footer">
+                      <span>FY {s.fiscalYear}</span>
+                      <span>{formatDate(s.createdAt)}</span>
+                    </div>
+                  </Link>
+                  <button
+                    aria-label="Delete"
+                    className="icon-btn text-slate-400 hover:text-destructive-text shrink-0"
+                    disabled={deletingId === s.id}
+                    onClick={(e) => handleDelete(s.id, e)}
+                  >
+                    {deletingId === s.id ? (
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                    ) : (
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
               ))}
             </div>
 
@@ -319,15 +392,33 @@ export default function ImportedStatementsPanel() {
                           {s.accountBalances?.length ?? 0}
                         </td>
                         <td className="text-right">
-                          <button
-                            aria-label="Review"
-                            className="icon-btn"
-                            onClick={(e) => { e.stopPropagation(); router.push(`/manager/finance/imports/${s.id}`); }}
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                              <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                            </svg>
-                          </button>
+                          <div className="flex items-center justify-end gap-1">
+                            <button
+                              aria-label="Delete"
+                              className="icon-btn text-slate-400 hover:text-destructive-text"
+                              disabled={deletingId === s.id}
+                              onClick={(e) => handleDelete(s.id, e)}
+                            >
+                              {deletingId === s.id ? (
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                </svg>
+                              ) : (
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                  <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                                </svg>
+                              )}
+                            </button>
+                            <button
+                              aria-label="Review"
+                              className="icon-btn"
+                              onClick={(e) => { e.stopPropagation(); router.push(`/manager/finance/imports/${s.id}`); }}
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                              </svg>
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}

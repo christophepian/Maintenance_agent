@@ -839,6 +839,42 @@ export async function assignBuilding(
   return mapDTO(s);
 }
 
+/** Permanently delete a single imported statement and its related ledger entries. */
+export async function deleteStatement(
+  prisma: PrismaClient,
+  statementId: string,
+  orgId: string,
+): Promise<void> {
+  const statement = await prisma.importedStatement.findFirst({
+    where: { id: statementId, orgId },
+  });
+  if (!statement) throw new ImportedStatementError("NOT_FOUND", "Statement not found");
+  // LedgerEntry has no FK cascade to ImportedStatement — delete orphans first.
+  await prisma.ledgerEntry.deleteMany({
+    where: { orgId, sourceType: "IMPORTED_STATEMENT", sourceId: statementId },
+  });
+  // Deletes statement + cascades to ImportedAccountBalance.
+  await prisma.importedStatement.delete({ where: { id: statementId } });
+}
+
+/** Permanently delete ALL imported statements for an org. Returns the count deleted. */
+export async function deleteAllStatements(
+  prisma: PrismaClient,
+  orgId: string,
+): Promise<number> {
+  const rows = await prisma.importedStatement.findMany({
+    where: { orgId },
+    select: { id: true },
+  });
+  if (rows.length === 0) return 0;
+  const ids = rows.map((r) => r.id);
+  await prisma.ledgerEntry.deleteMany({
+    where: { orgId, sourceType: "IMPORTED_STATEMENT", sourceId: { in: ids } },
+  });
+  await prisma.importedStatement.deleteMany({ where: { orgId } });
+  return ids.length;
+}
+
 /** Manually update the accountId for an UNMATCHED balance row. */
 export async function resolveAccountBalance(
   prisma: PrismaClient,
