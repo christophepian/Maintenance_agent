@@ -7,6 +7,8 @@
  * POST   /imported-statements/:id/approve    — approve and push to owner surface (MANAGER)
  * POST   /imported-statements/:id/reject     — reject statement (MANAGER)
  * PATCH  /imported-statements/:id/balances/:balanceId — manually resolve account match (MANAGER)
+ * DELETE /imported-statements/:id            — permanently delete a statement (MANAGER)
+ * DELETE /imported-statements               — permanently delete ALL statements for org (MANAGER)
  */
 
 import { Router } from "../http/router";
@@ -25,6 +27,8 @@ import {
   getStatement,
   resolveAccountBalance,
   assignBuilding,
+  deleteStatement,
+  deleteAllStatements,
   ImportedStatementError,
 } from "../services/importedStatementService";
 
@@ -214,6 +218,37 @@ export function registerImportedStatementRoutes(router: Router) {
       }
       console.error("[IMPORT] assign building error:", e);
       sendError(res, 500, "INTERNAL_ERROR", "Failed to assign building", e.message);
+    }
+  });
+
+  // ── DELETE /imported-statements/:id ─────────────────────────────────────
+  router.delete("/imported-statements/:id", async ({ req, res, orgId, prisma, params }) => {
+    const user = requireAnyRole(req, res, ["MANAGER"]);
+    if (!user) return;
+
+    try {
+      await deleteStatement(prisma, params.id, orgId);
+      sendJson(res, 200, { data: { deleted: true } });
+    } catch (e: any) {
+      if (e instanceof ImportedStatementError) {
+        return sendError(res, 404, e.code, e.message);
+      }
+      console.error("[IMPORT] delete error:", e);
+      sendError(res, 500, "INTERNAL_ERROR", "Failed to delete statement", e.message);
+    }
+  });
+
+  // ── DELETE /imported-statements ──────────────────────────────────────────
+  router.delete("/imported-statements", async ({ req, res, orgId, prisma }) => {
+    const user = requireAnyRole(req, res, ["MANAGER"]);
+    if (!user) return;
+
+    try {
+      const count = await deleteAllStatements(prisma, orgId);
+      sendJson(res, 200, { data: { deleted: count } });
+    } catch (e: any) {
+      console.error("[IMPORT] delete-all error:", e);
+      sendError(res, 500, "INTERNAL_ERROR", "Failed to delete statements", e.message);
     }
   });
 
