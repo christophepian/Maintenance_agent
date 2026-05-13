@@ -1,11 +1,11 @@
 # Maintenance Agent — Project Audit
 
 **Generated:** 2026-03-10
-**Last updated:** 2026-05-06 — Test DB migrations applied (supabaseId + conversation_thread); 3 sortable-table violations fixed (units/[id], leases/[id], approvals); login.js inline styles replaced with Tailwind; codebase stats updated; ARCH-1 (service layer Prisma bypass) tracked as DT-120–DT-124; ARCH-2 (repository any-types) resolved — 22 instances across 8 files (commit 91fc71a)
+**Last updated:** 2026-05-13 — Supabase RLS enabled on all 72 public tables (migration 20260513000000_enable_rls_public_tables); codebase stats updated. Previous: 2026-05-06 — Test DB migrations applied (supabaseId + conversation_thread); 3 sortable-table violations fixed (units/[id], leases/[id], approvals); login.js inline styles replaced with Tailwind; ARCH-1 (service layer Prisma bypass) tracked as DT-120–DT-124; ARCH-2 (repository any-types) resolved — 22 instances across 8 files (commit 91fc71a)
 **Scope:** Code Quality, Schema Integrity, Test Coverage, Security & Auth
 **Source commit:** ed7c841 (branch: main); findings reflect state as of 2026-03-10
 **Codebase at audit time:** 46 models · 38 enums · 36 migrations · 17 workflows · 10 repositories · 372 tests / 33 suites · ~36k backend LOC · ~27k frontend LOC · 195 pages · ~146 API routes
-**Codebase current (2026-05-06):** 70 models · 64 enums · 86 migrations · 29 workflows · 29 repositories · 611 tests / 67 suites · ~73k backend LOC · ~45k frontend LOC · 288 pages · 291 API operations (225 URL paths)
+**Codebase current (2026-05-13):** 72 models · 64 enums · 87 migrations · 29 workflows · 29 repositories · 1009 tests / 66 suites · ~73k backend LOC · ~45k frontend LOC · 288 pages · 291 API operations (225 URL paths)
 **Frontend rationalization audit:** Completed 2026-03-10 — results in [docs/FRONTEND_INVENTORY.md](FRONTEND_INVENTORY.md) (195 pages, 119/119 proxies conforming at audit time; 197/197 conforming as of 2026-05-06)
 
 ## Summary
