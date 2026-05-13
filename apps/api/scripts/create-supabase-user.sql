@@ -70,14 +70,24 @@ FROM auth.users
 WHERE email = 'USER_EMAIL';                             -- ← replace
 
 -- ── Step 3: Insert app-side User record ───────────────────────────────────
-INSERT INTO "User" (id, "orgId", role, name, email, "createdAt", "updatedAt")
-VALUES (
+-- We link User.supabaseId → auth.users.id so the server can resolve the
+-- Prisma User.id at login time (avoids app_metadata drift).
+INSERT INTO "User" (id, "orgId", role, name, email, "supabaseId", "createdAt", "updatedAt")
+SELECT
   gen_random_uuid(),
   'default-org',
   'MANAGER',                -- ← adjust: MANAGER | OWNER | CONTRACTOR | VENDOR
   'Full Name',              -- ← replace
   'USER_EMAIL',             -- ← replace
+  au.id,                    -- links User.supabaseId = auth.users.id
   now(),
   now()
-)
-ON CONFLICT ("orgId", email) DO NOTHING;
+FROM auth.users au
+WHERE au.email = 'USER_EMAIL'   -- ← replace
+ON CONFLICT ("orgId", email) DO UPDATE SET "supabaseId" = EXCLUDED."supabaseId";
+
+-- ── Step 4: Verify the link ────────────────────────────────────────────────
+SELECT u.id AS "prismaUserId", u."supabaseId", u.role, au.id AS "supabaseAuthId"
+FROM "User" u
+JOIN auth.users au ON au.email = u.email
+WHERE u.email = 'USER_EMAIL';   -- ← replace — supabaseId should match supabaseAuthId

@@ -52,6 +52,30 @@ import { processRecurringBilling } from "./services/recurringBillingService";
 import { processOverdueInvoices } from "./services/overdueInvoiceService";
 import { flushLegalVariableIngestion } from "./services/legalVariableIngestion";
 
+/* ── Supabase → Prisma user identity resolution ─────────────
+   Bridges the gap between Supabase auth UUIDs and Prisma User.id values.
+   prismaUserId is not reliably set in app_metadata, so we query once per
+   distinct Supabase user and cache the result for the process lifetime. */
+const _prismaUserIdCache = new Map<string, string>(); // supabaseId → User.id
+
+async function resolvePrismaUserId(supabaseId: string | undefined, email: string): Promise<string | null> {
+  if (!supabaseId && !email) return null;
+  const cacheKey = supabaseId || email;
+  if (_prismaUserIdCache.has(cacheKey)) return _prismaUserIdCache.get(cacheKey)!;
+
+  try {
+    const where = supabaseId ? { supabaseId } : { email };
+    const user = await prisma.user.findFirst({ where, select: { id: true } });
+    if (user) {
+      _prismaUserIdCache.set(cacheKey, user.id);
+      return user.id;
+    }
+  } catch (err) {
+    console.error("[auth] resolvePrismaUserId failed:", err);
+  }
+  return null;
+}
+
 /* ── F1: Production boot guard ─────────────────────────────── */
 const isProdEnv = process.env.NODE_ENV === "production";
 if (isProdEnv) {
@@ -301,7 +325,14 @@ const server = http.createServer(async (req: AuthedRequest, res) => {
 
     /* ── Pre-resolve Supabase JWT (async JWKS) ──────────────────────────────
        Populates req.user before the router runs so getAuthUser() in authz.ts
-       can remain synchronous. Falls back gracefully when no token is present. */
+       can remain synchronous. Falls back gracefully when no token is present.
+
+       After token verification we resolve the Prisma User.id from the
+       supabaseId (JWT sub) so that userId on req.user always equals
+       User.id, not the Supabase auth UUID.  prismaUserId in app_metadata
+       is never reliably set (the creation script omits it), so we do an
+       authoritative DB lookup instead.  Results are cached in a process-
+       lifetime Map — one DB hit per distinct user per server restart. */
     if (!req.user) {
       const token = extractToken(req.headers["authorization"] as string | undefined);
       if (token) {
@@ -309,7 +340,11 @@ const server = http.createServer(async (req: AuthedRequest, res) => {
         // If it returns null (no SUPABASE_URL or invalid token), leave req.user
         // undefined so getAuthUser() in authz.ts can fall back to decodeToken().
         const supabaseUser = await resolveSupabaseToken(token);
-        if (supabaseUser) req.user = supabaseUser;
+        if (supabaseUser) {
+          const resolvedId = await resolvePrismaUserId(supabaseUser.supabaseId, supabaseUser.email);
+          if (resolvedId) supabaseUser.userId = resolvedId;
+          req.user = supabaseUser;
+        }
       }
     }
 
