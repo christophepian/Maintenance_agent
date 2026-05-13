@@ -1179,7 +1179,7 @@ export default function TenantRequestsPage() {
       try { setSession(JSON.parse(raw)); return; } catch { /* fall through */ }
     }
     // Supabase auth path: authToken present means tenant is authenticated via email login
-    if (localStorage.getItem("authToken")) {
+    if (localStorage.getItem("authToken") || sessionStorage.getItem("authToken")) {
       setSession({ tenant: {}, unit: null, building: null });
       return;
     }

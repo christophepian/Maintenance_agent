@@ -44,7 +44,7 @@ export default function TenantLeaseDetailPage() {
     if (raw) {
       try { setSession(JSON.parse(raw)); return; } catch { /* fall through */ }
     }
-    if (localStorage.getItem("authToken")) {
+    if (localStorage.getItem("authToken") || sessionStorage.getItem("authToken")) {
       setSession({ tenant: {}, unit: null, building: null });
       return;
     }

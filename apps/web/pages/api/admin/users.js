@@ -48,6 +48,7 @@ export default async function handler(req, res) {
       lastSignIn: u.last_sign_in_at,
       accessLevel: u.app_metadata?.accessLevel ?? null,
       appRole: u.app_metadata?.appRole ?? null,
+      tenantId: u.app_metadata?.tenantId ?? null,
       banned: u.banned ?? false,
     }));
 
@@ -104,7 +105,7 @@ export default async function handler(req, res) {
 
   // ── POST update-role ───────────────────────────────────────────────────────
   if (action === "update-role") {
-    const { userId, accessLevel, appRole } = req.body ?? {};
+    const { userId, accessLevel, appRole, tenantId } = req.body ?? {};
 
     if (!userId || !ACCESS_LEVELS.includes(accessLevel)) {
       return res.status(400).json({ error: "userId and valid accessLevel are required" });
@@ -113,12 +114,21 @@ export default async function handler(req, res) {
     const { data: existing } = await admin.auth.admin.getUserById(userId);
     const currentMeta = existing?.user?.app_metadata ?? {};
 
+    // Build updated metadata — omit tenantId key entirely when null so it
+    // doesn't leave a stale null in the JWT claims.
+    const updatedMeta = {
+      ...currentMeta,
+      accessLevel,
+      appRole: appRole || null,
+    };
+    if (tenantId) {
+      updatedMeta.tenantId = tenantId;
+    } else {
+      delete updatedMeta.tenantId;
+    }
+
     const { error } = await admin.auth.admin.updateUserById(userId, {
-      app_metadata: {
-        ...currentMeta,
-        accessLevel,
-        appRole: appRole || null,
-      },
+      app_metadata: updatedMeta,
     });
 
     if (error) return res.status(500).json({ error: error.message });

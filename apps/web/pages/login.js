@@ -235,8 +235,17 @@ export default function LoginPage() {
   function redirectAfterLogin(session) {
     const meta = session.user?.app_metadata ?? {};
     const userMeta = session.user?.user_metadata ?? {};
-    setAuthToken(session.access_token);
-    if (meta.appRole) localStorage.setItem("role", meta.appRole);
+    // TENANT tokens go into sessionStorage so each browser tab is isolated —
+    // a manager in tab A won't be kicked out when a tenant logs in at tab B.
+    if (meta.appRole === "TENANT") {
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("authToken", session.access_token);
+        sessionStorage.setItem("role", "TENANT");
+      }
+    } else {
+      setAuthToken(session.access_token);
+      if (meta.appRole) localStorage.setItem("role", meta.appRole);
+    }
 
     // First-time users: no password_set flag → prompt them to create a password
     if (!userMeta.password_set) {

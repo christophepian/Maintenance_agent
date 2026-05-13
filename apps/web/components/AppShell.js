@@ -115,7 +115,9 @@ export default function AppShell({ role: roleProp, children }) {
   // ── Sign-out ───────────────────────────────────────────────────────────────
   async function signOut() {
     const supabase = createClient();
-    await supabase.auth.signOut();
+    // scope:'local' clears only this tab's Supabase session without server-side
+    // token revocation, so a tenant preview open in another tab is unaffected.
+    await supabase.auth.signOut({ scope: "local" });
     setAuthToken(null);
     router.push("/login");
   }

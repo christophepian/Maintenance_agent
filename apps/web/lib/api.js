@@ -52,13 +52,17 @@ export function ownerAuthHeaders() {
 
 /**
  * Tenant portal pages: prefers tenantToken (dev TenantPicker switch),
- * falls back to authToken (Supabase email login as TENANT role).
+ * then sessionStorage.authToken (tab-isolated TENANT login — does not bleed
+ * into a manager tab open in parallel), then falls back to localStorage.authToken.
  * The backend requireTenantSession accepts both — it checks req.user.role === "TENANT"
  * for Supabase JWTs, and decodes legacy dev JWTs with role:"TENANT" directly.
  */
 export function tenantHeaders() {
   if (typeof window === "undefined") return {};
-  const token = localStorage.getItem("tenantToken") || localStorage.getItem(TOKEN_KEY);
+  const token =
+    localStorage.getItem("tenantToken") ||
+    sessionStorage.getItem(TOKEN_KEY) ||
+    localStorage.getItem(TOKEN_KEY);
   if (token) return { Authorization: `Bearer ${token}` };
   return {};
 }

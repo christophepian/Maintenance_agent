@@ -148,6 +148,7 @@ export default function AdminUsersPage() {
           userId: editing.userId,
           accessLevel: editing.accessLevel,
           appRole: editing.accessLevel === "DOCS_INVESTOR" ? null : editing.appRole,
+          tenantId: editing.tenantId?.trim() || null,
         }),
       });
       if (res.ok) {
@@ -165,7 +166,7 @@ export default function AdminUsersPage() {
 
   async function signOut() {
     const supabase = createClient();
-    await supabase.auth.signOut();
+    await supabase.auth.signOut({ scope: "local" });
     setAuthToken(null);
     router.push("/login");
   }
@@ -275,6 +276,11 @@ export default function AdminUsersPage() {
                       {u.appRole && (
                         <span className="text-xs text-slate-500">{ROLE_LABEL[u.appRole] ?? u.appRole}</span>
                       )}
+                      {u.tenantId && (
+                        <span className="text-xs text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded font-mono" title="Tenant preview ID">
+                          tenant:{u.tenantId.slice(0, 8)}…
+                        </span>
+                      )}
                       {u.banned && (
                         <span className="text-xs text-red-600 font-medium">Revoked</span>
                       )}
@@ -296,6 +302,7 @@ export default function AdminUsersPage() {
                             email: u.email,
                             accessLevel: u.accessLevel ?? "APP_USER",
                             appRole: u.appRole ?? "MANAGER",
+                            tenantId: u.tenantId ?? "",
                           })}
                         >
                           Edit
@@ -350,6 +357,21 @@ export default function AdminUsersPage() {
                 </select>
               </label>
             )}
+
+            <label className="label">
+              Tenant preview ID
+              <input
+                className="input font-mono text-sm"
+                type="text"
+                value={editing.tenantId ?? ""}
+                onChange={(e) => setEditing((s) => ({ ...s, tenantId: e.target.value }))}
+                placeholder="UUID of the Tenant record (optional)"
+              />
+              <span className="text-xs text-slate-400 mt-0.5 block">
+                Set this to let a non-TENANT account access the tenant portal for that tenant.
+                Clear to remove access.
+              </span>
+            </label>
 
             <div className="flex gap-3">
               <button className="button-primary flex-1" type="button" onClick={saveEdit}>
