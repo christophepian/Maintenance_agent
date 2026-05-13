@@ -88,7 +88,9 @@ export default function ChatWidget() {
   const [hasTenantToken, setHasTenantToken] = useState(false);
   useEffect(() => {
     setHasTenantToken(
-      !!localStorage.getItem("tenantToken") || !!localStorage.getItem("authToken"),
+      !!localStorage.getItem("tenantToken") ||
+      !!sessionStorage.getItem("authToken") ||
+      !!localStorage.getItem("authToken"),
     );
   }, []);
 
