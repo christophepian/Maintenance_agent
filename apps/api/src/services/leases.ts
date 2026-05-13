@@ -919,6 +919,8 @@ export async function createLeaseInvoice(
   }
 
   // Resolve issuer: prefer the building owner's billing entity, fall back to org billing entity.
+  // If neither exists but the lease has landlord fields, auto-create an ORG billing entity
+  // so the invoice can be issued immediately without manual setup.
   let issuerBillingEntityId: string | undefined;
   if (lease.unitId) {
     const unit = await leaseRepo.findUnitWithOwnersBillingEntity(prisma, lease.unitId);
@@ -927,6 +929,27 @@ export async function createLeaseInvoice(
   if (!issuerBillingEntityId) {
     const orgBillingEntity = await billingEntityRepo.findOrgBillingEntity(prisma, orgId);
     issuerBillingEntityId = orgBillingEntity?.id;
+  }
+  // Last resort: auto-create from lease landlord fields so issuance never silently fails.
+  if (!issuerBillingEntityId && lease.landlordName) {
+    const landlordZipCity = (lease as any).landlordZipCity || '';
+    const zipParts = landlordZipCity.split(' ');
+    const postalCode = zipParts[0] || '0000';
+    const city = zipParts.slice(1).join(' ') || 'Unknown';
+    const created = await prisma.billingEntity.create({
+      data: {
+        orgId,
+        type: 'ORG',
+        name: lease.landlordName,
+        addressLine1: (lease as any).landlordAddress || '',
+        postalCode,
+        city,
+        country: 'CH',
+        iban: (lease as any).paymentIban || '',
+      },
+    });
+    issuerBillingEntityId = created.id;
+    console.log(`[LEASE] Auto-created BillingEntity ${created.id} from landlord fields for org ${orgId}`);
   }
 
   const invoice = await leaseRepo.createInvoice(prisma, {
@@ -1462,14 +1485,15 @@ export async function autoActivateLeaseInvoices(
   leaseId: string,
   orgId: string,
 ): Promise<void> {
-  const { issueInvoice } = await import('./invoices');
+  const { issueInvoiceWorkflow } = await import('../workflows/issueInvoiceWorkflow');
+  const workflowCtx = { orgId, prisma, actorUserId: null };
 
   // Issue existing DRAFT invoices (deposit, first rent, etc. created at owner-selection step)
   const draftInvoices = await leaseRepo.findDraftInvoicesByLease(prisma, leaseId, orgId);
 
   for (const inv of draftInvoices) {
     try {
-      await issueInvoice(inv.id);
+      await issueInvoiceWorkflow(workflowCtx, { invoiceId: inv.id });
       console.log(`[LEASE] Auto-issued invoice ${inv.id} (${inv.description}) for lease ${leaseId}`);
     } catch (e) {
       console.error(`[LEASE] Failed to auto-issue invoice ${inv.id}:`, e);
@@ -1490,7 +1514,7 @@ export async function autoActivateLeaseInvoices(
               type: 'FIRST_RENT',
               amountChf: rentAmount,
             });
-            await issueInvoice(inv.id);
+            await issueInvoiceWorkflow(workflowCtx, { invoiceId: inv.id });
             console.log(`[LEASE] Auto-created first-rent invoice and issued for lease ${leaseId}`);
           } catch (e) {
             console.error(`[LEASE] Failed to auto-create first-rent invoice for lease ${leaseId}:`, e);
