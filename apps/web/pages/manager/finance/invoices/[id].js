@@ -273,6 +273,11 @@ export default function InvoiceDetailPage() {
                     <div className="flex items-center gap-2">
                       <StatusBadge status={inv.status} />
                       <IngestionBadge ingestionStatus={inv.ingestionStatus} />
+                    {inv.status === "DRAFT" && !inv.issuerBillingEntityId && !selectedBillingEntityId && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 border border-amber-200 px-2 py-0.5 text-xs font-medium text-amber-700">
+                        ⚠ No billing entity — select one below to enable Issue
+                      </span>
+                    )}
                       {inv.direction && (
                         <span className="inline-flex items-center rounded-full bg-slate-50 border border-slate-200 px-2 py-0.5 text-xs font-medium text-slate-500">
                           {inv.direction === "INCOMING" ? "↓ Incoming" : "↑ Outgoing"}
@@ -285,15 +290,20 @@ export default function InvoiceDetailPage() {
                       )}
                     </div>
                     <div className="flex gap-2">
-                      {inv.status === "DRAFT" && (
-                        <button
-                          onClick={() => invoiceAction("issue")}
-                          disabled={actionLoading}
-                          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition disabled:opacity-50"
-                        >
-                          ▸ Issue
-                        </button>
-                      )}
+                      {inv.status === "DRAFT" && (() => {
+                        const effectiveIssuerId = inv.issuerBillingEntityId || selectedBillingEntityId;
+                        const missingIssuer = !effectiveIssuerId;
+                        return (
+                          <button
+                            onClick={() => invoiceAction("issue", effectiveIssuerId ? { issuerBillingEntityId: effectiveIssuerId } : undefined)}
+                            disabled={actionLoading || missingIssuer}
+                            title={missingIssuer ? "Select or create a billing entity below before issuing" : undefined}
+                            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            ▸ Issue
+                          </button>
+                        );
+                      })()}
                       {inv.status === "ISSUED" && (
                         <button
                           onClick={() => invoiceAction("approve")}
