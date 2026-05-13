@@ -414,11 +414,18 @@ export default function InvoiceDetailPage() {
                             className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                           >
                             <option value="">{t("manager:financeInvoicesId.text.choose")}</option>
-                            {billingEntities.map((be) => (
-                              <option key={be.id} value={be.id}>
-                                {be.name} ({be.type})
-                              </option>
-                            ))}
+                            {["ORG", "OWNER", "CONTRACTOR"].map((type) => {
+                              const group = billingEntities.filter((be) => be.type === type);
+                              if (!group.length) return null;
+                              const label = type === "ORG" ? "Organisation" : type === "OWNER" ? "Owners" : "Contractors";
+                              return (
+                                <optgroup key={type} label={label}>
+                                  {group.map((be) => (
+                                    <option key={be.id} value={be.id}>{be.name}</option>
+                                  ))}
+                                </optgroup>
+                              );
+                            })}
                           </select>
                         </div>
                         <button

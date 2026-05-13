@@ -1524,7 +1524,14 @@
       "loadingTenants": "Loading tenants…",
       "noTenantsFound": "Aucun locataire trouvé.",
       "loadingContractors": "Loading contractors…",
-      "noContractorsFound": "Aucun prestataire trouvé."
+      "noContractorsFound": "Aucun prestataire trouvé.",
+      "edit": "Modifier",
+      "cancel": "Annuler",
+      "save": "Enregistrer",
+      "saving": "Sauvegarde…",
+      "editOwner": "Modifier le propriétaire",
+      "noBillingEntity": "Pas d'entité de facturation",
+      "setupBilling": "Configurer la facturation →"
     },
     "prop": {
       "name": "Nom",

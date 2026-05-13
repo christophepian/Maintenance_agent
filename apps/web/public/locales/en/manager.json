@@ -1524,7 +1524,14 @@
       "loadingTenants": "Loading tenants…",
       "noTenantsFound": "No tenants found.",
       "loadingContractors": "Loading contractors…",
-      "noContractorsFound": "No contractors found."
+      "noContractorsFound": "No contractors found.",
+      "edit": "Edit",
+      "cancel": "Cancel",
+      "save": "Save",
+      "saving": "Saving…",
+      "editOwner": "Edit owner",
+      "noBillingEntity": "No billing entity",
+      "setupBilling": "Set up billing →"
     },
     "prop": {
       "name": "Name",

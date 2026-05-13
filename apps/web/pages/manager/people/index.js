@@ -43,6 +43,38 @@ function OwnersTab({ showAddForm, onAddFormClose }) {
   const [billingForm, setBillingForm] = useState(BILLING_FORM_DEFAULT);
   const [billingSubmitting, setBillingSubmitting] = useState(false);
 
+  // Owner inline edit
+  const [editingOwner, setEditingOwner] = useState(null); // ownerId
+  const [editForm, setEditForm] = useState({ name: "", email: "" });
+  const [editSubmitting, setEditSubmitting] = useState(false);
+
+  function openEdit(owner) {
+    setEditingOwner(owner.id);
+    setEditForm({ name: owner.name || "", email: owner.email || "" });
+    setExpandedBilling(null);
+  }
+
+  async function handleSaveOwner(ownerId) {
+    setEditSubmitting(true);
+    setError(""); setNotice("");
+    try {
+      const res = await fetch(`/api/people/owners/${ownerId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify(editForm),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error?.message || "Failed to update owner");
+      setNotice("Owner updated.");
+      setEditingOwner(null);
+      await loadOwners();
+    } catch (e) {
+      setError(String(e?.message || e));
+    } finally {
+      setEditSubmitting(false);
+    }
+  }
+
   async function loadOwners() {
     setLoading(true);
     try {
@@ -182,18 +214,45 @@ function OwnersTab({ showAddForm, onAddFormClose }) {
                     <p className="table-card-head">{owner.name}</p>
                     {owner.billingEntity
                       ? <Badge variant="success" size="md">{t("manager:peopleIndex.text.billingSet")}</Badge>
-                      : <Badge variant="muted" size="md">{t("manager:peopleIndex.text.notSet")}</Badge>}
+                      : <Badge variant="warning" size="md">⚠ {t("manager:peopleIndex.text.noBillingEntity")}</Badge>}
                   </div>
                   <p className="table-card-sub">{owner.email || "—"}</p>
-                  {!owner.billingEntity && (
+                  <div className="mt-2 flex gap-2">
                     <button
-                      onClick={(e) => { e.stopPropagation(); expandedBilling === owner.id ? setExpandedBilling(null) : openBilling(owner); }}
-                      className="mt-2.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                      onClick={(e) => { e.stopPropagation(); editingOwner === owner.id ? setEditingOwner(null) : openEdit(owner); }}
+                      className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
                     >
-                      {expandedBilling === owner.id ? "Cancel" : "Set up billing →"}
+                      {editingOwner === owner.id ? t("manager:peopleIndex.text.cancel") : t("manager:peopleIndex.text.edit")}
                     </button>
-                  )}
+                    {!owner.billingEntity && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); expandedBilling === owner.id ? setExpandedBilling(null) : openBilling(owner); }}
+                        className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-700 hover:bg-amber-100"
+                      >
+                        {expandedBilling === owner.id ? t("manager:peopleIndex.text.cancel") : t("manager:peopleIndex.text.setupBilling")}
+                      </button>
+                    )}
+                  </div>
                 </div>
+                {editingOwner === owner.id && (
+                  <div className="bg-slate-50 px-4 py-4 border-t border-slate-100">
+                    <p className="text-xs font-semibold text-slate-600 mb-3">{t("manager:peopleIndex.text.editOwner")}</p>
+                    <div className="flex flex-wrap gap-3 items-end">
+                      <div className="flex-1 min-w-[160px]">
+                        <label className="block text-xs font-medium text-slate-600 mb-1">{t("manager:peopleIndex.text.name")}</label>
+                        <input value={editForm.name} onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))} className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-full" />
+                      </div>
+                      <div className="flex-1 min-w-[180px]">
+                        <label className="block text-xs font-medium text-slate-600 mb-1">{t("manager:peopleIndex.text.email")}</label>
+                        <input type="email" value={editForm.email} onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))} className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-full" />
+                      </div>
+                      <button onClick={() => handleSaveOwner(owner.id)} disabled={editSubmitting || (!editForm.name && !editForm.email)} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">
+                        {editSubmitting ? t("manager:peopleIndex.text.saving") : t("manager:peopleIndex.text.save")}
+                      </button>
+                      <button onClick={() => setEditingOwner(null)} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">{t("manager:peopleIndex.text.cancel")}</button>
+                    </div>
+                  </div>
+                )}
                 {expandedBilling === owner.id && (
                   <div className="bg-slate-50 px-4 py-4 border-t border-slate-100">
                     <p className="text-xs font-semibold text-slate-600 mb-3">Billing entity for {owner.name}</p>
@@ -262,22 +321,51 @@ function OwnersTab({ showAddForm, onAddFormClose }) {
                             ✓ {owner.billingEntity.name}
                           </Badge>
                         ) : (
-                          <Badge variant="muted" size="md">
-                            Not set
+                          <Badge variant="warning" size="md">
+                            ⚠ {t("manager:peopleIndex.text.noBillingEntity")}
                           </Badge>
                         )}
                       </td>
                       <td className="text-right">
-                        {!owner.billingEntity && (
+                        <div className="flex justify-end gap-2">
                           <button
-                            onClick={() => expandedBilling === owner.id ? setExpandedBilling(null) : openBilling(owner)}
+                            onClick={(e) => { e.stopPropagation(); editingOwner === owner.id ? setEditingOwner(null) : openEdit(owner); }}
                             className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
                           >
-                            {expandedBilling === owner.id ? "Cancel" : "Set up billing →"}
+                            {editingOwner === owner.id ? t("manager:peopleIndex.text.cancel") : t("manager:peopleIndex.text.edit")}
                           </button>
-                        )}
+                          {!owner.billingEntity && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); expandedBilling === owner.id ? setExpandedBilling(null) : openBilling(owner); }}
+                              className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-700 hover:bg-amber-100"
+                            >
+                              {expandedBilling === owner.id ? t("manager:peopleIndex.text.cancel") : t("manager:peopleIndex.text.setupBilling")}
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
+                    {editingOwner === owner.id && (
+                      <tr key={`${owner.id}-edit`}>
+                        <td colSpan={4} className="bg-slate-50 px-4 py-4">
+                          <p className="text-xs font-semibold text-slate-600 mb-3">{t("manager:peopleIndex.text.editOwner")}</p>
+                          <div className="flex flex-wrap gap-3 items-end">
+                            <div>
+                              <label className="block text-xs font-medium text-slate-600 mb-1">{t("manager:peopleIndex.text.name")}</label>
+                              <input value={editForm.name} onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))} className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-44" />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-slate-600 mb-1">{t("manager:peopleIndex.text.email")}</label>
+                              <input type="email" value={editForm.email} onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))} className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-52" />
+                            </div>
+                            <button onClick={() => handleSaveOwner(owner.id)} disabled={editSubmitting || (!editForm.name && !editForm.email)} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">
+                              {editSubmitting ? t("manager:peopleIndex.text.saving") : t("manager:peopleIndex.text.save")}
+                            </button>
+                            <button onClick={() => setEditingOwner(null)} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">{t("manager:peopleIndex.text.cancel")}</button>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
                     {expandedBilling === owner.id && (
                       <tr key={`${owner.id}-billing`}>
                         <td colSpan={4} className="bg-slate-50 px-4 py-4">

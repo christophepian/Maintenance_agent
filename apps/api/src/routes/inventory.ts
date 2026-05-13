@@ -152,6 +152,29 @@ export function registerInventoryRoutes(router: Router) {
     }
   });
 
+  // PATCH /people/owners/:id — update owner name and/or email
+  router.patch("/people/owners/:id", async ({ req, res, params, orgId, prisma }) => {
+    if (!requireRole(req, res, "MANAGER")) return;
+    try {
+      const raw = await readJson(req) as any;
+      const name: string | undefined = raw.name?.trim() || undefined;
+      const email: string | undefined = raw.email?.trim() || undefined;
+      if (!name && !email) return sendError(res, 400, "VALIDATION_ERROR", "At least name or email is required");
+
+      const user = await prisma.user.findFirst({ where: { id: params.id, orgId, role: "OWNER" } });
+      if (!user) return sendError(res, 404, "NOT_FOUND", "Owner not found");
+
+      const updated = await prisma.user.update({
+        where: { id: params.id },
+        data: { ...(name ? { name } : {}), ...(email ? { email } : {}) },
+      });
+      sendJson(res, 200, { data: { id: updated.id, name: updated.name, email: updated.email } });
+    } catch (e: any) {
+      if (e.message === "Invalid JSON") return sendError(res, 400, "INVALID_JSON", "Invalid JSON");
+      sendError(res, 500, "DB_ERROR", "Failed to update owner", String(e));
+    }
+  });
+
   /* ── Buildings ─────────────────────────────────────────────── */
 
   router.get("/buildings", withAuthRequired(async ({ res, orgId, query, prisma }) => {
