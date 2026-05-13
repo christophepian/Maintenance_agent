@@ -2503,5 +2503,49 @@
       "buildingId": "Building (optional — auto-detected from PDF if left blank)",
       "selectBuilding": "Auto-detect from PDF"
     }
+  },
+  "peopleOwnersId": {
+    "tab": {
+      "personalInformation": "Personal information",
+      "billingEntity": "Billing entity",
+      "buildings": "Buildings"
+    },
+    "title": {
+      "owner": "Owner",
+      "personalInformation": "Personal information",
+      "billingEntity": "Billing entity",
+      "buildings": "Buildings"
+    },
+    "text": {
+      "back": "← Back",
+      "loading": "Loading owner…",
+      "notFound": "Owner not found.",
+      "goBack": "Go back",
+      "ownerUpdated": "Owner updated successfully.",
+      "billingEntityCreated": "Billing entity created.",
+      "noBillingEntity": "No billing entity",
+      "noBillingEntityDescription": "This owner has no billing entity set up. Add one to enable issuing invoices on their behalf.",
+      "noBuildings": "No buildings linked to this owner.",
+      "createBillingEntity": "Create billing entity",
+      "cancel": "Cancel",
+      "edit": "Edit",
+      "save": "Save",
+      "saving": "Saving…"
+    },
+    "subtitle": {
+      "ownerProfile": "Owner profile and billing information."
+    },
+    "prop": {
+      "name": "Name",
+      "email": "Email",
+      "id": "Owner ID",
+      "created": "Created",
+      "address": "Address",
+      "postalCode": "Postal code",
+      "city": "City",
+      "vatNumber": "VAT number",
+      "type": "Type",
+      "building": "Building"
+    }
   }
 }

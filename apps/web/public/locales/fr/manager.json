@@ -2502,5 +2502,49 @@
       "buildingId": "Immeuble (optionnel — détecté automatiquement)",
       "selectBuilding": "Détection automatique"
     }
+  },
+  "peopleOwnersId": {
+    "tab": {
+      "personalInformation": "Informations personnelles",
+      "billingEntity": "Entité de facturation",
+      "buildings": "Immeubles"
+    },
+    "title": {
+      "owner": "Propriétaire",
+      "personalInformation": "Informations personnelles",
+      "billingEntity": "Entité de facturation",
+      "buildings": "Immeubles"
+    },
+    "text": {
+      "back": "← Retour",
+      "loading": "Chargement du propriétaire…",
+      "notFound": "Propriétaire introuvable.",
+      "goBack": "Retour",
+      "ownerUpdated": "Propriétaire mis à jour.",
+      "billingEntityCreated": "Entité de facturation créée.",
+      "noBillingEntity": "Aucune entité de facturation",
+      "noBillingEntityDescription": "Ce propriétaire n'a pas d'entité de facturation. Ajoutez-en une pour émettre des factures en son nom.",
+      "noBuildings": "Aucun immeuble lié à ce propriétaire.",
+      "createBillingEntity": "Créer une entité de facturation",
+      "cancel": "Annuler",
+      "edit": "Modifier",
+      "save": "Enregistrer",
+      "saving": "Enregistrement…"
+    },
+    "subtitle": {
+      "ownerProfile": "Profil et informations de facturation du propriétaire."
+    },
+    "prop": {
+      "name": "Nom",
+      "email": "E-mail",
+      "id": "ID propriétaire",
+      "created": "Créé le",
+      "address": "Adresse",
+      "postalCode": "Code postal",
+      "city": "Ville",
+      "vatNumber": "Numéro TVA",
+      "type": "Type",
+      "building": "Immeuble"
+    }
   }
 }

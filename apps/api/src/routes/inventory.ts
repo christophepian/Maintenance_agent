@@ -114,6 +114,52 @@ export function registerInventoryRoutes(router: Router) {
     }
   }));
 
+  // GET /people/owners/:id — owner detail with billingEntity + buildings
+  router.get("/people/owners/:id", withAuthRequired(async ({ res, params, orgId, prisma }) => {
+    try {
+      const owner = await prisma.user.findFirst({
+        where: { id: params.id, orgId, role: "OWNER" },
+        include: {
+          billingEntity: true,
+          ownedBuildings: {
+            include: {
+              building: { select: { id: true, name: true, address: true } },
+            },
+          },
+        },
+      });
+      if (!owner) return sendError(res, 404, "NOT_FOUND", "Owner not found");
+      sendJson(res, 200, {
+        data: {
+          id: owner.id,
+          name: owner.name,
+          email: owner.email || null,
+          createdAt: owner.createdAt.toISOString(),
+          billingEntity: owner.billingEntity
+            ? {
+                id: owner.billingEntity.id,
+                name: owner.billingEntity.name,
+                addressLine1: owner.billingEntity.addressLine1,
+                postalCode: owner.billingEntity.postalCode,
+                city: owner.billingEntity.city,
+                country: owner.billingEntity.country,
+                iban: owner.billingEntity.iban,
+                vatNumber: owner.billingEntity.vatNumber || null,
+                type: owner.billingEntity.type,
+              }
+            : null,
+          buildings: (owner.ownedBuildings || []).map((ob: any) => ({
+            id: ob.building.id,
+            name: ob.building.name,
+            address: ob.building.address,
+          })),
+        },
+      });
+    } catch (e) {
+      sendError(res, 500, "DB_ERROR", "Failed to fetch owner", String(e));
+    }
+  }));
+
   router.post("/people/owners", async ({ req, res, orgId, prisma }) => {
     if (!requireRole(req, res, "MANAGER")) return;
     try {

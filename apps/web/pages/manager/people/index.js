@@ -208,7 +208,7 @@ function OwnersTab({ showAddForm, onAddFormClose }) {
               <div key={owner.id}>
                 <div
                   className="table-card cursor-pointer hover:bg-slate-50/80 transition-colors"
-                  onClick={() => window.location.href = `/manager/people/owners`}
+                  onClick={() => window.location.href = `/manager/people/owners/${owner.id}`}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <p className="table-card-head">{owner.name}</p>
@@ -312,7 +312,7 @@ function OwnersTab({ showAddForm, onAddFormClose }) {
               <tbody>
                 {sortedOwners.map((owner) => (
                   <>
-                    <tr key={owner.id} className="cursor-pointer hover:bg-slate-50/80" onClick={() => window.location.href = `/manager/people/owners`}>
+                    <tr key={owner.id} className="cursor-pointer hover:bg-slate-50/80" onClick={() => window.location.href = `/manager/people/owners/${owner.id}`}>
                       <td className="cell-bold">{owner.name}</td>
                       <td className="text-slate-500">{owner.email || "—"}</td>
                       <td>
@@ -520,7 +520,6 @@ export default function ManagerPeoplePage() {
             </span>
             {activeTab === 2 && (
               <div className="flex items-center gap-3">
-                <Link href="/manager/people/owners" className="full-page-link">{t("manager:peopleIndex.text.openFullPage")}</Link>
                 <button
                   onClick={() => setShowAddOwner((v) => !v)}
                   className="button-primary text-sm"
