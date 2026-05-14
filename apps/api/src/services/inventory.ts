@@ -2,6 +2,7 @@ import { UnitType, LocationSegment, InsulationQuality, EnergyLabel, HeatingType 
 import prisma from './prismaClient';
 import * as inventoryRepo from "../repositories/inventoryRepository";
 import { countAssetsByModel } from "../repositories/assetRepository";
+import { seedDefaultBuildingAssets, seedDefaultUnitAssets } from "./defaultAssets";
 
 const assetModelName = (model: { manufacturer: string; model: string }) => {
   if (!model.manufacturer || model.manufacturer.toLowerCase() === "unknown") return model.model;
@@ -19,7 +20,12 @@ export async function createBuilding(
   data: { name: string; address?: string }
 ) {
   const address = data.address?.trim() || data.name;
-  return inventoryRepo.createBuilding(prisma, orgId, { name: data.name, address });
+  const building = await inventoryRepo.createBuilding(prisma, orgId, { name: data.name, address });
+  // Seed default building-level assets (fire-and-forget; non-blocking)
+  seedDefaultBuildingAssets(prisma, orgId, building.id, { hasElevator: false }).catch((e) =>
+    console.warn("[createBuilding] Failed to seed default assets:", e),
+  );
+  return building;
 }
 export async function updateBuilding(
   orgId: string,
@@ -72,7 +78,14 @@ export async function createUnit(
   const building = await inventoryRepo.findBuildingByIdAndOrg(prisma, buildingId, orgId);
   if (!building) return null;
 
-  return inventoryRepo.createUnit(prisma, orgId, buildingId, data);
+  const unit = await inventoryRepo.createUnit(prisma, orgId, buildingId, data);
+  // Seed default unit-level assets only for residential units (fire-and-forget)
+  if (!data.type || data.type === "RESIDENTIAL") {
+    seedDefaultUnitAssets(prisma, orgId, unit.id).catch((e) =>
+      console.warn("[createUnit] Failed to seed default assets:", e),
+    );
+  }
+  return unit;
 }
 export async function updateUnit(
   orgId: string,

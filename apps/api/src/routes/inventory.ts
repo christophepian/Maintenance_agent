@@ -23,6 +23,7 @@ import {
   addAssetModelName,
 } from "../services/inventory";
 import { getAssetInventoryForUnit, getAssetInventoryForBuilding, getRepairReplaceAnalysis } from "../services/assetInventory";
+import { seedDefaultBuildingAssets, seedDefaultUnitAssets } from "../services/defaultAssets";
 import { assetRepo } from "../repositories";
 import { listUnitTenants, linkTenantToUnit, unlinkTenantFromUnit } from "../services/occupancies";
 import { listContractors } from "../services/contractorRequests";
@@ -706,8 +707,10 @@ export function registerInventoryRoutes(router: Router) {
       const parsed = UpsertAssetSchema.safeParse(raw);
       if (!parsed.success) return sendError(res, 400, "VALIDATION_ERROR", "Invalid asset data", parsed.error.flatten());
       const data = parsed.data;
+      // If no unitId provided, treat as a building-level asset
       const asset = await assetRepo.upsertAsset(prisma, orgId, {
-        unitId: data.unitId,
+        unitId: data.unitId ?? null,
+        buildingId: data.unitId ? null : params.id,
         type: data.type as any,
         topic: data.topic,
         name: data.name,
@@ -727,6 +730,32 @@ export function registerInventoryRoutes(router: Router) {
       const msg = String(e?.message || e);
       if (msg === "Invalid JSON") return sendError(res, 400, "INVALID_JSON", "Invalid JSON");
       sendError(res, 500, "DB_ERROR", "Failed to upsert asset", String(e));
+    }
+  });
+
+  // POST /buildings/:id/seed-default-assets — retroactive default seeding
+  router.post("/buildings/:id/seed-default-assets", async ({ req, res, orgId, params, prisma }) => {
+    if (!requireRole(req, res, "MANAGER")) return;
+    try {
+      const building = await prisma.building.findFirst({ where: { id: params.id, orgId } });
+      if (!building) return sendError(res, 404, "NOT_FOUND", "Building not found");
+      await seedDefaultBuildingAssets(prisma, orgId, params.id, { hasElevator: building.hasElevator });
+      sendJson(res, 200, { success: true });
+    } catch (e) {
+      sendError(res, 500, "DB_ERROR", "Failed to seed default assets", String(e));
+    }
+  });
+
+  // POST /units/:id/seed-default-assets — retroactive default seeding
+  router.post("/units/:id/seed-default-assets", async ({ req, res, orgId, params, prisma }) => {
+    if (!requireRole(req, res, "MANAGER")) return;
+    try {
+      const unit = await prisma.unit.findFirst({ where: { id: params.id, orgId } });
+      if (!unit) return sendError(res, 404, "NOT_FOUND", "Unit not found");
+      await seedDefaultUnitAssets(prisma, orgId, params.id);
+      sendJson(res, 200, { success: true });
+    } catch (e) {
+      sendError(res, 500, "DB_ERROR", "Failed to seed default assets", String(e));
     }
   });
 

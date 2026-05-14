@@ -115,9 +115,10 @@ export async function findAssetsByUnit(
 }
 
 /**
- * Fetch all assets for a building (across all its units) with interventions.
- * Building-level assets are STRUCTURAL and SYSTEM types.
- * If buildingLevelOnly is true, returns only STRUCTURAL/SYSTEM assets.
+ * Fetch all assets for a building:
+ * - Direct building-level assets (buildingId = buildingId, unitId = null)
+ * - Unit-level assets across all units in the building
+ * If buildingLevelOnly is true, returns only direct building assets.
  */
 export async function findAssetsByBuilding(
   prisma: PrismaClient,
@@ -126,8 +127,21 @@ export async function findAssetsByBuilding(
   options: { includeInactive?: boolean; buildingLevelOnly?: boolean } = {},
 ) {
   const { includeInactive = false, buildingLevelOnly = false } = options;
+  const activeFilter = includeInactive ? {} : { isActive: true };
 
-  // Get all unit IDs in the building
+  if (buildingLevelOnly) {
+    // Return only assets directly attached to the building
+    return prisma.asset.findMany({
+      where: { orgId, buildingId, ...activeFilter },
+      include: {
+        ...ASSET_FULL_INCLUDE,
+        unit: { select: { id: true, unitNumber: true } },
+      },
+      orderBy: [{ type: "asc" }, { topic: "asc" }, { name: "asc" }],
+    });
+  }
+
+  // Both building-level assets and unit-level assets
   const units = await prisma.unit.findMany({
     where: { buildingId, orgId },
     select: { id: true },
@@ -137,9 +151,11 @@ export async function findAssetsByBuilding(
   return prisma.asset.findMany({
     where: {
       orgId,
-      unitId: { in: unitIds },
-      ...(includeInactive ? {} : { isActive: true }),
-      ...(buildingLevelOnly ? { type: { in: BUILDING_LEVEL_TYPES } } : {}),
+      OR: [
+        { buildingId },
+        { unitId: { in: unitIds } },
+      ],
+      ...activeFilter,
     },
     include: {
       ...ASSET_FULL_INCLUDE,
@@ -164,13 +180,16 @@ export async function findAssetById(
 }
 
 /**
- * Create or update an asset (upsert by orgId + unitId + type + topic + name).
+ * Create or update an asset.
+ * Scoped to either a unit (unitId) or a building (buildingId) — one must be set.
+ * Upsert key: orgId + (unitId|buildingId) + type + topic + name.
  */
 export async function upsertAsset(
   prisma: PrismaClient,
   orgId: string,
   data: {
-    unitId: string;
+    unitId?: string | null;
+    buildingId?: string | null;
     type: AssetType;
     topic: string;
     name: string;
@@ -186,11 +205,15 @@ export async function upsertAsset(
     isPresent?: boolean;
   },
 ) {
-  // Try to find existing asset with same type+topic+name in unit
+  if (!data.unitId && !data.buildingId) {
+    throw new Error("upsertAsset: either unitId or buildingId must be provided");
+  }
+
+  // Try to find existing asset with same type+topic+name in same scope
   const existing = await prisma.asset.findFirst({
     where: {
       orgId,
-      unitId: data.unitId,
+      ...(data.unitId ? { unitId: data.unitId } : { buildingId: data.buildingId }),
       type: data.type,
       topic: data.topic,
       name: data.name,
@@ -230,7 +253,8 @@ export async function upsertAsset(
   return prisma.asset.create({
     data: {
       orgId,
-      unitId: data.unitId,
+      unitId: data.unitId ?? null,
+      buildingId: data.buildingId ?? null,
       ...payload,
     },
     include: ASSET_FULL_INCLUDE,

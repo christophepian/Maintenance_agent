@@ -83,6 +83,7 @@ export default function BuildingDetail() {
   const [assetInventory, setAssetInventory] = useState([]);
   const [assetInventoryLoading, setAssetInventoryLoading] = useState(false);
   const [assetAddMode, setAssetAddMode] = useState(false);
+  const [assetSeeding, setAssetSeeding] = useState(false);
 
   // ─── Building KPI state ───
   const [buildingKpis, setBuildingKpis] = useState(null);
@@ -344,6 +345,22 @@ export default function BuildingDetail() {
       // Silently fail
     } finally {
       setAssetInventoryLoading(false);
+    }
+  }
+
+  async function seedDefaultAssets() {
+    if (!id || assetSeeding) return;
+    setAssetSeeding(true);
+    try {
+      const res = await fetch(`/api/buildings/${id}/seed-default-assets`, {
+        method: "POST",
+        headers: authHeaders(),
+      });
+      if (res.ok) await loadAssetInventory();
+    } catch (e) {
+      // Silently fail
+    } finally {
+      setAssetSeeding(false);
     }
   }
 
@@ -1363,13 +1380,23 @@ export default function BuildingDetail() {
             <Panel
               title={t("manager:buildingsId.title.assetInventoryDepreciation")}
               actions={!assetInventoryLoading && (
-                <button
-                  type="button"
-                  className={assetAddMode ? "button-cancel text-sm" : "button-primary text-sm"}
-                  onClick={() => setAssetAddMode((v) => !v)}
-                >
-                  {assetAddMode ? t("manager:buildingsId.btn.cancel") : t("manager:buildingsId.btn.addAsset")}
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    className="button-secondary text-sm"
+                    onClick={seedDefaultAssets}
+                    disabled={assetSeeding}
+                  >
+                    {assetSeeding ? "Seeding…" : "Populate defaults"}
+                  </button>
+                  <button
+                    type="button"
+                    className={assetAddMode ? "button-cancel text-sm" : "button-primary text-sm"}
+                    onClick={() => setAssetAddMode((v) => !v)}
+                  >
+                    {assetAddMode ? t("manager:buildingsId.btn.cancel") : t("manager:buildingsId.btn.addAsset")}
+                  </button>
+                </div>
               )}
             >
               {assetInventoryLoading ? (

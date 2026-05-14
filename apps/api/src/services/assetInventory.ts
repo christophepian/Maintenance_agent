@@ -48,7 +48,8 @@ export interface DepreciationInfo {
 export interface AssetInventoryItem {
   id: string;
   orgId: string;
-  unitId: string;
+  unitId: string | null;
+  buildingId?: string | null;
   type: AssetType;
   category: AssetCategory;
   topic: string;
@@ -235,7 +236,8 @@ function mapAssetToDTO(
   return {
     id: asset.id,
     orgId: asset.orgId,
-    unitId: asset.unitId,
+    unitId: asset.unitId ?? null,
+    ...(asset.buildingId ? { buildingId: asset.buildingId } : {}),
     type: asset.type,
     category: asset.category ?? ASSET_TYPE_TO_CATEGORY[asset.type as AssetType] ?? "EQUIPMENT",
     topic: asset.topic,

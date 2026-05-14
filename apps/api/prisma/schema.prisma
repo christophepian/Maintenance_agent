@@ -379,6 +379,7 @@ model Building {
   contractorBillingSchedules ContractorBillingSchedule[]
   strategyProfile    BuildingStrategyProfile?
   importedStatements ImportedStatement[]
+  assets             Asset[]
 
   @@index([orgId])
 }
@@ -1610,7 +1611,8 @@ model LegalCategoryMapping {
 model Asset {
   id              String        @id @default(uuid())
   orgId           String
-  unitId          String
+  unitId          String?       /// null for building-level assets
+  buildingId      String?       /// set for building-level assets; mutually exclusive with unitId
   type            AssetType
   category        AssetCategory @default(EQUIPMENT)
   topic           String
@@ -1631,7 +1633,8 @@ model Asset {
   updatedAt       DateTime  @updatedAt
 
   org               Org                  @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  unit              Unit                 @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  unit              Unit?                @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  building          Building?            @relation(fields: [buildingId], references: [id], onDelete: Cascade)
   assetModel        AssetModel?          @relation(fields: [assetModelId], references: [id], onDelete: SetNull)
   interventions     AssetIntervention[]
   cashflowOverrides CashflowOverride[]
@@ -1639,6 +1642,7 @@ model Asset {
 
   @@index([orgId])
   @@index([unitId])
+  @@index([buildingId])
   @@index([type, topic])
   @@index([assetModelId])
 }

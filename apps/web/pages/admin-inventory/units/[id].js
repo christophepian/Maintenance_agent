@@ -68,6 +68,7 @@ export default function UnitDetail() {
   const [assetInventory, setAssetInventory] = useState([]);
   const [assetInventoryLoading, setAssetInventoryLoading] = useState(false);
   const [showAssetAddForm, setShowAssetAddForm] = useState(false);
+  const [assetSeeding, setAssetSeeding] = useState(false);
 
   // Invoice state (all invoices — used inside Financials tab)
   const [unitInvoices, setUnitInvoices] = useState([]);
@@ -261,6 +262,22 @@ export default function UnitDetail() {
       // Silently fail
     } finally {
       setAssetInventoryLoading(false);
+    }
+  }
+
+  async function seedDefaultAssets() {
+    if (!id || assetSeeding) return;
+    setAssetSeeding(true);
+    try {
+      const res = await fetch(`/api/units/${id}/seed-default-assets`, {
+        method: "POST",
+        headers: authHeaders(),
+      });
+      if (res.ok) await loadAssetInventory();
+    } catch (e) {
+      // Silently fail
+    } finally {
+      setAssetSeeding(false);
     }
   }
 
@@ -727,7 +744,12 @@ export default function UnitDetail() {
             showAssetAddForm ? (
               <button type="button" className="button-cancel text-sm" onClick={() => setShowAssetAddForm(false)}>Cancel</button>
             ) : (
-              <button type="button" className="button-primary text-sm" onClick={() => setShowAssetAddForm(true)}>Add asset</button>
+              <div className="flex gap-2">
+                <button type="button" className="button-secondary text-sm" onClick={seedDefaultAssets} disabled={assetSeeding}>
+                  {assetSeeding ? "Seeding…" : "Populate defaults"}
+                </button>
+                <button type="button" className="button-primary text-sm" onClick={() => setShowAssetAddForm(true)}>Add asset</button>
+              </div>
             )
           }>
           {assetInventoryLoading ? (

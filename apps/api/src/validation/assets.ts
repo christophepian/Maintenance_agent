@@ -12,7 +12,8 @@ const INTERVENTION_TYPES = ["REPAIR", "REPLACEMENT"] as const;
  * are not model-driven by default — they lack a specific manufacturer/model identity.
  */
 export const UpsertAssetSchema = z.object({
-  unitId: z.string().uuid("unitId must be a UUID"),
+  unitId: z.string().uuid("unitId must be a UUID").optional(),
+  buildingId: z.string().uuid("buildingId must be a UUID").optional(),
   type: z.enum(ASSET_TYPES),
   // topic is the PRIMARY depreciation key — normalize to canonical form
   // so that "Kitchen", "kitchen", and " kitchen " all resolve identically.
