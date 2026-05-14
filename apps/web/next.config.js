@@ -13,6 +13,9 @@ const nextConfig = {
       { source: '/contractors', destination: '/manager/people/vendors', permanent: true },
       // Cashflow top-level page merged into Finance Planning tab
       { source: '/manager/cashflow', destination: '/manager/finance?tab=planning', permanent: true },
+      // Tenant leases list + invoices list merged into My Home
+      { source: '/tenant/leases', destination: '/tenant/myhome', permanent: true },
+      { source: '/tenant/invoices', destination: '/tenant/myhome', permanent: true },
     ];
   },
 };
