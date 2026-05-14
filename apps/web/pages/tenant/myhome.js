@@ -43,9 +43,9 @@ export default function MyHomePage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const fetchLeases = useCallback(async () => {
+  const fetchLeases = useCallback(async (showSpinner = true) => {
     if (!session) { setLeasesLoading(false); return; }
-    setLeasesLoading(true);
+    if (showSpinner) setLeasesLoading(true);
     setLeasesError(null);
     try {
       const res = await tenantFetch("/api/tenant-portal/leases");
@@ -78,7 +78,7 @@ export default function MyHomePage() {
   useEffect(() => {
     fetchLeases();
     fetchInvoices();
-    const interval = setInterval(fetchLeases, 15_000);
+    const interval = setInterval(() => fetchLeases(false), 15_000);
     function handleVisibility() {
       if (document.visibilityState === "visible") { fetchLeases(); fetchInvoices(); }
     }
