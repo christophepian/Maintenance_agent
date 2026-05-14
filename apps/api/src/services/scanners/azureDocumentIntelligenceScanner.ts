@@ -1260,8 +1260,10 @@ async function extractFinancialStatementWithClaude(
     let mergedFields: Record<string, string | number | boolean | null> = {};
     const allBalances: ExtractedAccountBalance[] = [];
     const allInvoiceLines: ExtractedInvoiceLine[] = [];
-    // Track seen account codes to deduplicate across chunks
-    const seenCodes = new Set<string>();
+    // Deduplicate account balances across chunks by (normalizedName, amount, direction).
+    // Using name+amount+type rather than rawAccountCode because the OCR produces
+    // inconsistent codes for the same account (e.g. "1020", "10200", "100" for Bank).
+    const seenBalances = new Set<string>();
     // Track seen invoices to deduplicate across overlapping chunks.
     // Key: vendor|invoiceNumber|amount — all three must match to be considered duplicate.
     const seenInvoices = new Set<string>();
@@ -1287,11 +1289,15 @@ async function extractFinancialStatementWithClaude(
         }
       }
 
-      // Append balances, deduplicating by account code
+      // Append balances, deduplicating by name+amount+direction across chunks
       for (const b of chunkResult.accountBalances) {
-        const key = b.rawAccountCode.trim().toLowerCase();
-        if (!seenCodes.has(key)) {
-          seenCodes.add(key);
+        const key = [
+          b.rawAccountName.trim().toLowerCase().replace(/\s+/g, " "),
+          String(b.balanceChf),
+          b.balanceType,
+        ].join("|");
+        if (!seenBalances.has(key)) {
+          seenBalances.add(key);
           allBalances.push(b);
         }
       }
@@ -1349,8 +1355,12 @@ async function extractFinancialStatementWithClaude(
           }
           // Some invoice pages also carry balance rows (e.g. a per-vendor expense summary)
           for (const b of r.accountBalances) {
-            const key = b.rawAccountCode.trim().toLowerCase();
-            if (!seenCodes.has(key)) { seenCodes.add(key); allBalances.push(b); }
+            const key = [
+              b.rawAccountName.trim().toLowerCase().replace(/\s+/g, " "),
+              String(b.balanceChf),
+              b.balanceType,
+            ].join("|");
+            if (!seenBalances.has(key)) { seenBalances.add(key); allBalances.push(b); }
           }
         } catch {
           console.warn(`[DOC-SCAN] Invoice chunk ${i + 1}/${invoiceChunks.length} failed — skipping`);
