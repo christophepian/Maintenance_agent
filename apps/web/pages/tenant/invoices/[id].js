@@ -232,8 +232,8 @@ export default function TenantInvoiceDetailPage() {
                     </div>
                   </div>
 
-                  <p className="text-xs text-slate-400 text-center">
-                    Scan this QR code with your banking app to pay this invoice.
+                  <p className="text-xs text-slate-500 text-center">
+                    Scan with your e-banking app to pay this invoice or set up a standing order.
                   </p>
                 </div>
               ) : null}
