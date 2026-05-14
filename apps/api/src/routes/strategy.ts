@@ -13,7 +13,7 @@
 import { Router } from "../http/router";
 import { sendJson, sendError } from "../http/json";
 import { readJson } from "../http/body";
-import { requireRole, maybeRequireManager, getAuthUser } from "../authz";
+import { requireRole, requireOwnerSession, maybeRequireManager, getAuthUser } from "../authz";
 import {
   createOwnerProfileWorkflow,
   updateOwnerProfileWorkflow,
@@ -33,8 +33,8 @@ import {
 export function registerStrategyRoutes(router: Router) {
   // ── POST /strategy/owner-profile ─────────────────────────────
   router.post("/strategy/owner-profile", async ({ req, res, orgId, prisma }) => {
-    const user = requireRole(req, res, "OWNER");
-    if (!user) return;
+    const effectiveOwnerId = requireOwnerSession(req, res);
+    if (!effectiveOwnerId) return;
 
     const body = await readJson(req);
     if (!body || !body.answers) {
@@ -42,11 +42,12 @@ export function registerStrategyRoutes(router: Router) {
       return;
     }
 
-    const ownerId = body.ownerId || user.userId;
+    const ownerId = body.ownerId || effectiveOwnerId;
 
     try {
+      const actorUserId = getAuthUser(req)?.userId ?? effectiveOwnerId;
       const result = await createOwnerProfileWorkflow(
-        { orgId, prisma, actorUserId: user.userId },
+        { orgId, prisma, actorUserId },
         { ownerId, answers: body.answers },
       );
       sendJson(res, 200, { profile: result.profile });
@@ -57,10 +58,10 @@ export function registerStrategyRoutes(router: Router) {
 
   // ── GET /strategy/owner-profile-current (current owner) ─────
   router.get("/strategy/owner-profile-current", async ({ req, res, orgId, prisma }) => {
-    const user = requireRole(req, res, "OWNER");
-    if (!user) return;
+    const effectiveOwnerId = requireOwnerSession(req, res);
+    if (!effectiveOwnerId) return;
 
-    const profile = await getOwnerProfileByOwnerId(prisma, user.userId, orgId);
+    const profile = await getOwnerProfileByOwnerId(prisma, effectiveOwnerId, orgId);
     if (!profile) {
       sendJson(res, 200, { profile: null });
       return;
@@ -117,8 +118,8 @@ export function registerStrategyRoutes(router: Router) {
 
   // ── POST /strategy/building-profile ──────────────────────────
   router.post("/strategy/building-profile", async ({ req, res, orgId, prisma }) => {
-    const user = requireRole(req, res, "OWNER");
-    if (!user) return;
+    const effectiveOwnerId = requireOwnerSession(req, res);
+    if (!effectiveOwnerId) return;
 
     const body = await readJson(req);
     if (!body || !body.ownerProfileId) {
@@ -152,8 +153,9 @@ export function registerStrategyRoutes(router: Router) {
     }
 
     try {
+      const actorUserId = getAuthUser(req)?.userId ?? effectiveOwnerId;
       const result = await createBuildingProfileWorkflow(
-        { orgId, prisma, actorUserId: user.userId },
+        { orgId, prisma, actorUserId },
         {
           buildingId,
           ownerProfileId: body.ownerProfileId,

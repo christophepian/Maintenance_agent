@@ -14,7 +14,7 @@
 import { Router } from "../http/router";
 import { sendJson, sendError } from "../http/json";
 import { readJson } from "../http/body";
-import { requireRole, maybeRequireManager } from "../authz";
+import { requireRole, requireOwnerSession, maybeRequireManager, getAuthUser } from "../authz";
 import {
   createDecisionOptions,
   getDecisionOptionsByOpportunity,
@@ -134,8 +134,8 @@ export function registerRecommendationRoutes(router: Router) {
 
   // ── PATCH /recommendations/:resultId/decision ────────────────
   router.patch("/recommendations/:resultId/decision", async ({ req, res, orgId, prisma, params }) => {
-    const user = requireRole(req, res, "OWNER");
-    if (!user) return;
+    const effectiveOwnerId = requireOwnerSession(req, res);
+    if (!effectiveOwnerId) return;
 
     const body = await readJson(req);
     if (!body || !body.userDecision) {
@@ -150,8 +150,9 @@ export function registerRecommendationRoutes(router: Router) {
     }
 
     try {
+      const actorUserId = getAuthUser(req)?.userId ?? effectiveOwnerId;
       const result = await recordUserDecisionWorkflow(
-        { orgId, prisma, actorUserId: user.userId },
+        { orgId, prisma, actorUserId },
         {
           recommendationId: params.resultId,
           userDecision: body.userDecision,

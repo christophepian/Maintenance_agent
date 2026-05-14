@@ -51,7 +51,7 @@ export function requireOwnerAccess(req: AuthedRequest, res: http.ServerResponse)
     sendJson(res, 401, { error: "UNAUTHORIZED" });
     return false;
   }
-  if (user.role !== "OWNER") {
+  if (user.role !== "OWNER" && user.accessLevel !== "ADMIN" && !user.ownerId) {
     sendJson(res, 403, { error: "FORBIDDEN" });
     return false;
   }

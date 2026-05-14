@@ -49,6 +49,7 @@ export default async function handler(req, res) {
       accessLevel: u.app_metadata?.accessLevel ?? null,
       appRole: u.app_metadata?.appRole ?? null,
       tenantId: u.app_metadata?.tenantId ?? null,
+      ownerId: u.app_metadata?.ownerId ?? null,
       banned: u.banned ?? false,
     }));
 
@@ -105,7 +106,7 @@ export default async function handler(req, res) {
 
   // ── POST update-role ───────────────────────────────────────────────────────
   if (action === "update-role") {
-    const { userId, accessLevel, appRole, tenantId } = req.body ?? {};
+    const { userId, accessLevel, appRole, tenantId, ownerId } = req.body ?? {};
 
     if (!userId || !ACCESS_LEVELS.includes(accessLevel)) {
       return res.status(400).json({ error: "userId and valid accessLevel are required" });
@@ -125,6 +126,11 @@ export default async function handler(req, res) {
       updatedMeta.tenantId = tenantId;
     } else {
       delete updatedMeta.tenantId;
+    }
+    if (ownerId) {
+      updatedMeta.ownerId = ownerId;
+    } else {
+      delete updatedMeta.ownerId;
     }
 
     const { error } = await admin.auth.admin.updateUserById(userId, {

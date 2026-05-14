@@ -219,3 +219,45 @@ export function requireTenantSession(req: http.IncomingMessage, res: http.Server
     return null;
   }
 }
+
+export function requireOwnerSession(req: http.IncomingMessage, res: http.ServerResponse): string | null {
+  const authedReq = req as AuthedRequest;
+  if (authedReq.user) {
+    const { role, accessLevel, ownerId, userId } = authedReq.user;
+    // Allow access if:
+    //   - user has appRole OWNER (normal path), OR
+    //   - user has accessLevel ADMIN (full access), OR
+    //   - user has an explicit ownerId in app_metadata (admin-granted owner preview)
+    const isOwner = role === "OWNER";
+    const isAdmin = accessLevel === "ADMIN";
+    const hasExplicitOwnerId = !!ownerId;
+    if (!isOwner && !isAdmin && !hasExplicitOwnerId) {
+      res.writeHead(403, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "Owner role required" }));
+      return null;
+    }
+    return ownerId || userId || null;
+  }
+
+  // Fall back to manual decode for legacy dev JWTs (AUTH_OPTIONAL mode)
+  const authHeader = req.headers["authorization"];
+  if (!authHeader?.startsWith("Bearer ")) {
+    res.writeHead(401, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ error: "Owner authentication required" }));
+    return null;
+  }
+  try {
+    const token = authHeader.slice(7);
+    const decoded = decodeToken(token) as { ownerId?: string; role?: string; userId?: string } | null;
+    if (!decoded || decoded.role !== "OWNER") {
+      res.writeHead(403, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "Owner role required" }));
+      return null;
+    }
+    return decoded.ownerId || decoded.userId || null;
+  } catch {
+    res.writeHead(401, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ error: "Invalid or expired token" }));
+    return null;
+  }
+}

@@ -149,6 +149,7 @@ export default function AdminUsersPage() {
           accessLevel: editing.accessLevel,
           appRole: editing.accessLevel === "DOCS_INVESTOR" ? null : editing.appRole,
           tenantId: editing.tenantId?.trim() || null,
+          ownerId: editing.ownerId?.trim() || null,
         }),
       });
       if (res.ok) {
@@ -281,6 +282,11 @@ export default function AdminUsersPage() {
                           tenant:{u.tenantId.slice(0, 8)}…
                         </span>
                       )}
+                      {u.ownerId && (
+                        <span className="text-xs text-violet-700 bg-violet-50 px-1.5 py-0.5 rounded font-mono" title="Owner preview ID">
+                          owner:{u.ownerId.slice(0, 8)}…
+                        </span>
+                      )}
                       {u.banned && (
                         <span className="text-xs text-red-600 font-medium">Revoked</span>
                       )}
@@ -303,6 +309,7 @@ export default function AdminUsersPage() {
                             accessLevel: u.accessLevel ?? "APP_USER",
                             appRole: u.appRole ?? "MANAGER",
                             tenantId: u.tenantId ?? "",
+                            ownerId: u.ownerId ?? "",
                           })}
                         >
                           Edit
@@ -369,6 +376,21 @@ export default function AdminUsersPage() {
               />
               <span className="text-xs text-slate-400 mt-0.5 block">
                 Set this to let a non-TENANT account access the tenant portal for that tenant.
+                Clear to remove access.
+              </span>
+            </label>
+
+            <label className="label">
+              Owner preview ID
+              <input
+                className="input font-mono text-sm"
+                type="text"
+                value={editing.ownerId ?? ""}
+                onChange={(e) => setEditing((s) => ({ ...s, ownerId: e.target.value }))}
+                placeholder="User.id of an OWNER account (optional)"
+              />
+              <span className="text-xs text-slate-400 mt-0.5 block">
+                Set this to let a non-OWNER account access the owner portal for that owner.
                 Clear to remove access.
               </span>
             </label>
