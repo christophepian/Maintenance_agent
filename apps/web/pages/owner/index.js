@@ -171,16 +171,6 @@ export default function OwnerDashboard() {
       href: `/owner/rfps/${r.id}`,
       sortOrder: 1,
     }));
-    // Invoices awaiting review (draft + approved)
-    invoices.filter((i) => i.status === "DRAFT" || i.status === "APPROVED").forEach((inv) => items.push({
-      category: "invoice",
-      title: inv.reference || inv.invoiceNumber || "Invoice",
-      building: inv.unit?.building?.name || inv.buildingName || null,
-      date: inv.createdAt,
-      sub: formatChf(getInvoiceTotal(inv)),
-      href: `/owner/invoices/${inv.id}`,
-      sortOrder: 2,
-    }));
     // Vacant units
     vacantUnits.slice(0, 5).forEach((u) => items.push({
       category: "vacancy",
