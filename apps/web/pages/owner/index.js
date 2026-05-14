@@ -178,7 +178,7 @@ export default function OwnerDashboard() {
       building: u.buildingName || null,
       date: null,
       sub: "No active lease",
-      href: `/owner/units/${u.id}`,
+      href: `/owner/vacancies`,
       sortOrder: 3,
     }));
     return items.sort((a, b) => a.sortOrder - b.sortOrder);
