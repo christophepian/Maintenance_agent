@@ -118,10 +118,10 @@ export default function TenantLeaseDetailPage() {
       <div className="main-container max-w-3xl">
         {/* Back link */}
         <button
-          onClick={() => router.push("/tenant/leases")}
+          onClick={() => router.push("/tenant/myhome")}
           className="text-sm text-blue-600 hover:underline mb-4 inline-block"
         >
-          ← Back to My Leases
+          ← Back to My Home
         </button>
 
         {error && <div className="notice notice-err mb-4">{error}</div>}
@@ -131,16 +131,10 @@ export default function TenantLeaseDetailPage() {
             ✅ Lease signed and activated! Your first rent invoice has been generated.
             <div className="mt-2 flex gap-3">
               <button
-                onClick={() => router.push("/tenant/leases")}
+                onClick={() => router.push("/tenant/myhome")}
                 className="text-sm text-blue-600 hover:underline"
               >
-                View My Leases →
-              </button>
-              <button
-                onClick={() => router.push("/tenant/invoices")}
-                className="text-sm text-blue-600 hover:underline"
-              >
-                View My Invoices →
+                Back to My Home →
               </button>
             </div>
           </div>

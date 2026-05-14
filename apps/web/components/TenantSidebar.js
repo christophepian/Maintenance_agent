@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 
 const TENANT_NAV = [
-  { id: "myHome",    icon: Home,  href: "/tenant/leases" },
+  { id: "myHome",    icon: Home,  href: "/tenant/myhome", aliases: ["/tenant/leases", "/tenant/invoices"] },
   { id: "inbox",     icon: Inbox, href: "/tenant/inbox" },
   { id: "requests",  icon: Wrench, href: "/tenant/requests" },
   { id: "apply",     icon: Search, href: "/listings" },
@@ -23,8 +23,9 @@ export default function TenantSidebar() {
 
   const activeIndex = useMemo(() => {
     for (let i = TENANT_NAV.length - 1; i >= 0; i--) {
-      const h = TENANT_NAV[i].href;
-      if (pathname === h || pathname.startsWith(h + "/")) return i;
+      const item = TENANT_NAV[i];
+      if (pathname === item.href || pathname.startsWith(item.href + "/")) return i;
+      if (item.aliases?.some((a) => pathname === a || pathname.startsWith(a + "/"))) return i;
     }
     return -1;
   }, [pathname]);

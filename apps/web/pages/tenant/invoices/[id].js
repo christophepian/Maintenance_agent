@@ -102,10 +102,10 @@ export default function TenantInvoiceDetailPage() {
       <div className="main-container max-w-2xl mx-auto">
         {/* Back link */}
         <Link
-          href="/tenant/invoices"
+          href="/tenant/myhome"
           className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 mb-4"
         >
-          ← Back to invoices
+          ← Back to My Home
         </Link>
 
         {error && <div className="notice notice-err mb-4">{error}</div>}

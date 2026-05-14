@@ -156,7 +156,7 @@ describe('getNotificationLink — TENANT', () => {
   });
 
   it('INVOICE → /tenant/invoices', () => {
-    assert.equal(getNotificationLink(n('INVOICE', 'i1', 'INVOICE_CREATED'), 'TENANT'), '/tenant/invoices');
+    assert.equal(getNotificationLink(n('INVOICE', 'i1', 'INVOICE_CREATED'), 'TENANT'), '/tenant/myhome');
   });
 
   it('REQUEST → /tenant/requests', () => {
@@ -175,7 +175,7 @@ describe('getNotificationLink — TENANT', () => {
   });
 
   it('eventType fallback for INVOICE_* without entityType', () => {
-    assert.equal(getNotificationLink(n(null, 'i1', 'INVOICE_CREATED'), 'TENANT'), '/tenant/invoices');
+    assert.equal(getNotificationLink(n(null, 'i1', 'INVOICE_CREATED'), 'TENANT'), '/tenant/myhome');
   });
 
   it('unknown → null', () => {

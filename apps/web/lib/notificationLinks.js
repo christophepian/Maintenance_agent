@@ -42,7 +42,7 @@ function resolveTenant(entityType, entityId, eventType) {
     case 'LEASE':
       return entityId ? `/tenant/leases/${entityId}` : null;
     case 'INVOICE':
-      return '/tenant/invoices';
+      return '/tenant/myhome';
     case 'REQUEST':
       return '/tenant/requests';
     case 'JOB':
