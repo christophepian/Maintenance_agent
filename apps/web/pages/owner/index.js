@@ -15,7 +15,6 @@ import { FilterToggle, FilterPanelBody, FilterSection, FilterSectionClear, SortT
 import { formatChf, formatPercent, formatDate } from "../../lib/format";
 import { ownerAuthHeaders } from "../../lib/api";
 import { cn } from "../../lib/utils";
-import OwnerPicker from "../../components/OwnerPicker";
 import { withTranslations } from "../../lib/i18n";
 import { useTranslation } from "next-i18next";
 
@@ -229,8 +228,7 @@ export default function OwnerDashboard() {
   return (
     <AppShell role="OWNER">
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        <OwnerPicker onSelect={loadDashboard} />
-        {!hasStrategyProfile && <StrategyProfileBanner />}
+{!hasStrategyProfile && <StrategyProfileBanner />}
         <ErrorBanner error={error} />
 
         <div className="mb-8">

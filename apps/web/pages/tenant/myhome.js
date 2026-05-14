@@ -6,7 +6,6 @@ import Badge from "../../components/ui/Badge";
 import { leaseVariant, invoiceVariant } from "../../lib/statusVariants";
 import { formatDate, formatChf } from "../../lib/format";
 import { tenantFetch } from "../../lib/api";
-import TenantPicker from "../../components/TenantPicker";
 import { withTranslations } from "../../lib/i18n";
 import { useTranslation } from "next-i18next";
 
@@ -90,13 +89,6 @@ export default function MyHomePage() {
     };
   }, [fetchLeases, fetchInvoices]);
 
-  function handleTenantSwitch() {
-    const raw = localStorage.getItem("tenantSession");
-    if (raw) {
-      try { setSession(JSON.parse(raw)); } catch { /* ignore */ }
-    }
-  }
-
   // Invoice summary stats
   const totalDue = invoices
     .filter((i) => i.status === "ISSUED" || i.status === "APPROVED")
@@ -118,9 +110,7 @@ export default function MyHomePage() {
   return (
     <AppShell role="TENANT">
       <div className="main-container">
-        <TenantPicker onSelect={handleTenantSwitch} />
-
-        <div className="flex items-center justify-between mb-6">
+<div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold">{t("tenant:nav.myHome")}</h1>
           <span className="text-sm text-slate-500">
             {session.unit?.unitNumber ? `Unit ${session.unit.unitNumber}` : ""}
