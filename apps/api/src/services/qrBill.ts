@@ -357,6 +357,14 @@ export function validateSwissQRBillPayload(payload: SwissQRBillPayload): boolean
   if (!isValidSwissIban(payload.iban)) errors.push('Invalid IBAN — must be CH or LI');
   if (!payload.creditorName) errors.push('Missing creditor name');
 
+  // SIX spec §4.2: combined address (K) must have empty postal code and city
+  if (payload.creditorAddressType === 'K' && (payload.creditorPostalCode || payload.creditorCity)) {
+    errors.push('Combined address (K): creditorPostalCode and creditorCity must be empty');
+  }
+  if (payload.debtorAddressType === 'K' && (payload.debtorPostalCode || payload.debtorCity)) {
+    errors.push('Combined address (K): debtorPostalCode and debtorCity must be empty');
+  }
+
   // Amount validation: empty (= open amount) or decimal format
   if (payload.amount && !/^\d+\.\d{2}$/.test(payload.amount)) {
     errors.push('Invalid amount format');

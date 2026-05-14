@@ -65,26 +65,29 @@ export async function generateInvoiceQRBill(invoiceId: string, orgId: string): P
     // Creditor account
     iban: invoice.iban,
 
-    // Creditor address (combined format)
+    // Creditor address — combined type 'K' per SIX spec §4.2:
+    // addressLine2 must hold "PostalCode City"; elements 9 & 10 must be empty.
     creditorAddressType: 'K',
     creditorName: invoice.issuer.name,
     creditorAddressLine1: invoice.issuer.addressLine1,
-    creditorAddressLine2: invoice.issuer.addressLine2 || '',
-    creditorPostalCode: invoice.issuer.postalCode,
-    creditorCity: invoice.issuer.city,
+    creditorAddressLine2: invoice.issuer.addressLine2
+      || `${invoice.issuer.postalCode} ${invoice.issuer.city}`,
+    creditorPostalCode: '',  // must be empty for type K
+    creditorCity: '',        // must be empty for type K
     creditorCountry: invoice.issuer.country,
 
     // Amount
     amount: amountStr,
     currency: 'CHF',
 
-    // Debtor address (combined format)
+    // Debtor address — same combined-type rule
     debtorAddressType: 'K',
     debtorName: invoice.recipientName,
     debtorAddressLine1: invoice.recipientAddressLine1,
-    debtorAddressLine2: invoice.recipientAddressLine2 || '',
-    debtorPostalCode: invoice.recipientPostalCode,
-    debtorCity: invoice.recipientCity,
+    debtorAddressLine2: invoice.recipientAddressLine2
+      || `${invoice.recipientPostalCode} ${invoice.recipientCity}`,
+    debtorPostalCode: '',  // must be empty for type K
+    debtorCity: '',        // must be empty for type K
     debtorCountry: invoice.recipientCountry,
 
     // Reference
