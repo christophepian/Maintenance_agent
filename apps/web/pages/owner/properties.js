@@ -12,7 +12,6 @@ import ErrorBanner from "../../components/ui/ErrorBanner";
 import { useTableSort, clientSort } from "../../lib/tableUtils";
 import { ownerAuthHeaders } from "../../lib/api";
 import { cn } from "../../lib/utils";
-import OwnerPicker from "../../components/OwnerPicker";
 import { formatChf, formatChfCents, formatDate } from "../../lib/format";
 import { withTranslations } from "../../lib/i18n";
 import { useTranslation } from "next-i18next";
@@ -249,7 +248,6 @@ export default function OwnerPropertiesPage() {
   return (
     <AppShell role="OWNER">
       <PageShell>
-        <OwnerPicker onSelect={() => setRefreshKey((k) => k + 1)} />
         <PageHeader
           title={t("owner:properties.title.properties")}
           subtitle={t("owner:properties.prop.buildingsAndUnitsInYourPortfolio")}

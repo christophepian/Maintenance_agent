@@ -13,7 +13,6 @@ import { formatDate } from "../../lib/format";
 import { ownerAuthHeaders } from "../../lib/api";
 import ScrollableTabs from "../../components/mobile/ScrollableTabs";
 import DepreciationStandards from "../../components/DepreciationStandards";
-import OwnerPicker from "../../components/OwnerPicker";
 import SortableHeader from "../../components/SortableHeader";
 import { useLocalSort } from "../../lib/tableUtils";
 import { withTranslations } from "../../lib/i18n";
@@ -176,7 +175,6 @@ export default function OwnerSettingsPage() {
       <PageShell>
         <PageHeader title={t("owner:settings.title.settings")} subtitle={t("owner:settings.prop.manageYourAccountRiskProfileAndPreferences")} />
         <PageContent>
-          <OwnerPicker onSelect={() => { setUser(null); setStratProfile(undefined); setLegalSources([]); }} />
 
           {/* Tab strip */}
           <ScrollableTabs activeIndex={activeTab}>

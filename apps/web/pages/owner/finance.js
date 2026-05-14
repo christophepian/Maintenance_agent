@@ -10,7 +10,6 @@ import ConfigurableTable from "../../components/ConfigurableTable";
 import Badge from "../../components/ui/Badge";
 import KpiInlineGrid from "../../components/ui/KpiInlineGrid";
 import CashflowPlansList from "../../components/CashflowPlansList";
-import OwnerPicker from "../../components/OwnerPicker";
 import ScrollableTabs from "../../components/mobile/ScrollableTabs";
 import { FilterToggle, FilterPanelBody, FilterSection, FilterSectionClear, SelectField, DateField } from "../../components/ui/FilterPanel";
 import { invoiceVariant } from "../../lib/statusVariants";
@@ -663,7 +662,6 @@ export default function OwnerFinance() {
   return (
     <AppShell role="OWNER">
       <PageShell>
-        <OwnerPicker />
         <PageHeader
           title={t("owner:finance.title.finance")}
           subtitle={t("owner:finance.prop.portfolioSummaryInvoicesAndCashflowPlanning")}

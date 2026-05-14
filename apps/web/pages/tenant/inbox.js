@@ -8,7 +8,6 @@ import Panel from "../../components/layout/Panel.jsx";
 import { formatDateTime } from "../../lib/format";
 import { tenantFetch } from "../../lib/api";
 import { getNotificationLink } from "../../lib/notificationLinks";
-import TenantPicker from "../../components/TenantPicker";
 import Badge from "../../components/ui/Badge";
 import { withTranslations } from "../../lib/i18n";
 import { useTranslation } from "next-i18next";
@@ -210,7 +209,6 @@ export default function TenantInboxPage() {
   return (
     <AppShell role="TENANT">
       <PageShell>
-        <TenantPicker onSelect={handleTenantSwitch} />
         <PageHeader
           title={
             <span className="flex items-center gap-2">

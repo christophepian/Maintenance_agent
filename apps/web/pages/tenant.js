@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 import { useRouter } from "next/router";
 import AppShell from "../components/AppShell";
-import TenantPicker from "../components/TenantPicker";
 import { withTranslations } from "../lib/i18n";
 
 export default function TenantLogin() {
@@ -21,7 +20,6 @@ export default function TenantLogin() {
   return (
     <AppShell role="TENANT">
       <div className="main-container">
-        <TenantPicker onSelect={() => router.push("/tenant/requests")} />
       </div>
     </AppShell>
   );

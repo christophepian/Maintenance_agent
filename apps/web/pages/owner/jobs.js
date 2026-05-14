@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import AppShell from "../../components/AppShell";
-import OwnerPicker from "../../components/OwnerPicker";
 import PageShell from "../../components/layout/PageShell";
 import PageHeader from "../../components/layout/PageHeader";
 import PageContent from "../../components/layout/PageContent";
@@ -82,7 +81,6 @@ export default function OwnerJobs() {
   return (
     <AppShell role="OWNER">
       <PageShell>
-        <OwnerPicker onSelect={fetchJobs} />
         <PageHeader title={t("owner:jobs.title.jobsOverview")} />
 
         <PageContent>

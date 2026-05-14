@@ -8,7 +8,6 @@ import PageContent from "../../components/layout/PageContent";
 import Panel from "../../components/layout/Panel";
 import ErrorBanner from "../../components/ui/ErrorBanner";
 import { ownerAuthHeaders } from "../../lib/api";
-import OwnerPicker from "../../components/OwnerPicker";
 import { formatDate, formatChf } from "../../lib/format";
 import ConfigurableTable from "../../components/ConfigurableTable";
 import { useTableSort, clientSort } from "../../lib/tableUtils";
@@ -194,7 +193,6 @@ export default function OwnerWorkRequestsPage() {
   return (
     <AppShell role="OWNER">
       <PageShell>
-        <OwnerPicker onSelect={() => router.replace(router.asPath)} />
         <PageHeader
           title={t("owner:workRequests.title.workRequests")}
           subtitle={t("owner:work_Requests.prop.allMaintenanceRequestsAcrossYourProperties")}

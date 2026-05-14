@@ -7,7 +7,6 @@ import PageContent from "../../components/layout/PageContent";
 import Panel from "../../components/layout/Panel.jsx";
 import { formatDateTime } from "../../lib/format";
 import { tenantFetch } from "../../lib/api";
-import TenantPicker from "../../components/TenantPicker";
 import ErrorBanner from "../../components/ui/ErrorBanner";
 import Badge from "../../components/ui/Badge";
 import { requestVariant } from "../../lib/statusVariants";
@@ -1265,7 +1264,6 @@ export default function TenantRequestsPage() {
     <AppShell role="TENANT">
       <ChatWidget />
       <PageShell>
-        <TenantPicker onSelect={handleTenantSwitch} />
         <PageHeader
           title={t("tenant:requests.title.myMaintenanceRequests")}
           actions={

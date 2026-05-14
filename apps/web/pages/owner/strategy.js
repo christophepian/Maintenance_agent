@@ -8,7 +8,6 @@ import Panel from "../../components/layout/Panel";
 import ErrorBanner from "../../components/ui/ErrorBanner";
 import { cn } from "../../lib/utils";
 import { ownerAuthHeaders } from "../../lib/api";
-import OwnerPicker from "../../components/OwnerPicker";
 import { withTranslations } from "../../lib/i18n";
 import { useTranslation } from "next-i18next";
 
@@ -344,7 +343,6 @@ export default function StrategyPage() {
     return (
       <AppShell role="OWNER">
         <PageShell>
-          <OwnerPicker onSelect={() => router.replace(router.asPath)} />
           <PageHeader title={t("owner:strategy.title.yourStrategy")} />
           <PageContent>
             <Panel>
