@@ -692,7 +692,8 @@ export function registerInventoryRoutes(router: Router) {
   router.get("/buildings/:id/asset-inventory", withAuthRequired(async ({ res, orgId, params, prisma, query }) => {
     try {
       const canton = first(query, "canton") || null;
-      const buildingLevelOnly = first(query, "buildingLevelOnly") === "true";
+      // Default to building-scoped assets only; pass ?buildingLevelOnly=false for full inventory
+      const buildingLevelOnly = first(query, "buildingLevelOnly") !== "false";
       const items = await getAssetInventoryForBuilding(prisma, orgId, params.id, { buildingLevelOnly, canton });
       sendJson(res, 200, { data: items });
     } catch (e) {
