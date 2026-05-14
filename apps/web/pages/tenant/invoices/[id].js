@@ -196,12 +196,15 @@ export default function TenantInvoiceDetailPage() {
                 </div>
               ) : qrBill ? (
                 <div className="space-y-4">
-                  {/* QR Code */}
-                  <div className="flex justify-center">
+                  {/* QR Code + caption */}
+                  <div className="flex flex-col items-center gap-2">
                     <div
                       className="border border-slate-200 rounded-lg p-4 bg-white"
                       dangerouslySetInnerHTML={{ __html: qrBill.qrCodeSVG }}
                     />
+                    <p className="text-xs text-slate-700 text-center">
+                      Scan with your e-banking app to pay this invoice or set up a standing order.
+                    </p>
                   </div>
 
                   {/* Payment details */}
@@ -232,9 +235,6 @@ export default function TenantInvoiceDetailPage() {
                     </div>
                   </div>
 
-                  <p className="text-xs text-slate-500 text-center">
-                    Scan with your e-banking app to pay this invoice or set up a standing order.
-                  </p>
                 </div>
               ) : null}
             </div>
