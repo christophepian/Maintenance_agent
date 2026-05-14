@@ -139,7 +139,7 @@ export default function AppShell({ role: roleProp, children }) {
         </a>
 
       <aside
-        className="hidden md:flex md:flex-col border-r border-slate-200 px-4 py-5 bg-slate-100 overflow-hidden"
+        className="hidden md:flex md:flex-col border-r border-slate-200 px-4 py-5 bg-slate-100"
         aria-label="Sidebar navigation"
       >
         <div className="font-bold text-lg mb-5">Sencilo</div>
