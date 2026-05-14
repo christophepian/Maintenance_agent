@@ -687,9 +687,7 @@ export default function BuildingDetail() {
 
           {/* Tabs Navigation */}
           {(() => {
-            const TAB_KEYS = isOwner
-              ? ["Building information", "Units", "Tenants", "Assets", "Requests"]
-              : ["Building information", "Units", "Tenants", "Assets", "Documents", "Policies", "Financials", "Requests"];
+            const TAB_KEYS = ["Building information", "Units", "Tenants", "Assets", "Documents", "Policies", "Financials", "Requests"];
             const TAB_I18N = {
               "Building information": t("manager:buildingsId.tabs.buildingInformation"),
               "Units":                t("manager:buildingsId.tabs.units"),
