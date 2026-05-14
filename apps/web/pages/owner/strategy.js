@@ -617,7 +617,6 @@ export default function StrategyPage() {
   return (
     <AppShell role="OWNER">
       <PageShell>
-        <OwnerPicker onSelect={() => router.replace(router.asPath)} />
         <PageHeader
           title={t("owner:strategy.title.strategyQuestionnaire")}
           subtitle={`Question ${step + 1} of ${totalQuestions}`}
