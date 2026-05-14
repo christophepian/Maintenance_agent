@@ -713,7 +713,7 @@ export default function LeaseEditorPage() {
         <PageContent>
           <Panel title={t("manager:leasesId.title.leaseContract")} bodyClassName="space-y-3">
           {/* §1 — Parties */}
-          <AccordionSection title="§1 — Parties (Bailleur & Locataire)" open={openSections.parties} onToggle={() => toggle("parties")}>
+          <AccordionSection title={t("manager:leasesId.prop.1PartiesBailleurLocataire")} open={openSections.parties} onToggle={() => toggle("parties")}>
             <div className="space-y-4">
               <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{t("manager:leasesId.text.11BailleresseBailleur")}</h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -722,7 +722,7 @@ export default function LeaseEditorPage() {
                 <Field label={t("manager:leasesId.prop.nPALocalit")}><Input value={lease.landlordZipCity} onChange={v => updateField("landlordZipCity", v)} disabled={!editMode} /></Field>
                 <Field label={t("manager:leasesId.prop.tlphone")}><Input value={lease.landlordPhone} onChange={v => updateField("landlordPhone", v)} disabled={!editMode} /></Field>
                 <Field label={t("manager:leasesId.prop.email")}><Input value={lease.landlordEmail} onChange={v => updateField("landlordEmail", v)} disabled={!editMode} /></Field>
-                <Field label="Représenté(e) par"><Input value={lease.landlordRepresentedBy} onChange={v => updateField("landlordRepresentedBy", v)} disabled={!editMode} /></Field>
+                <Field label={t("manager:leasesId.prop.representePar")}><Input value={lease.landlordRepresentedBy} onChange={v => updateField("landlordRepresentedBy", v)} disabled={!editMode} /></Field>
               </div>
 
               <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mt-6">{t("manager:leasesId.text.12Locataire")}</h4>
@@ -757,7 +757,7 @@ export default function LeaseEditorPage() {
           </AccordionSection>
 
           {/* §3–4 — Dates & Termination */}
-          <AccordionSection title="§3–4 — Durée & Résiliation" open={openSections.dates} onToggle={() => toggle("dates")}>
+          <AccordionSection title={t("manager:leasesId.prop.34DureeResiliation")} open={openSections.dates} onToggle={() => toggle("dates")}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Field label={t("manager:leasesId.prop.dbutDuBail")}><Input type="date" value={lease.startDate?.split("T")[0]} onChange={v => updateField("startDate", v)} disabled={!editMode} /></Field>
               <Field label={t("manager:leasesId.prop.dureDtermine")}>
@@ -790,16 +790,16 @@ export default function LeaseEditorPage() {
           </AccordionSection>
 
           {/* §5 — Rent & Charges */}
-          <AccordionSection title="§5 — Loyer & Charges" open={openSections.rent} onToggle={() => toggle("rent")}>
+          <AccordionSection title={t("manager:leasesId.prop.5LoyerCharges")} open={openSections.rent} onToggle={() => toggle("rent")}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Field label="Loyer net (CHF/mois) *"><Input type="number" value={lease.netRentChf} onChange={v => updateField("netRentChf", v)} disabled={!editMode} /></Field>
-              <Field label="Loyer garage (CHF/mois)"><Input type="number" value={lease.garageRentChf} onChange={v => updateField("garageRentChf", v)} disabled={!editMode} /></Field>
-              <Field label="Autres prestations (CHF/mois)"><Input type="number" value={lease.otherServiceRentChf} onChange={v => updateField("otherServiceRentChf", v)} disabled={!editMode} /></Field>
-              <Field label="Total charges (CHF/mois)"><Input type="number" value={lease.chargesTotalChf} onChange={v => updateField("chargesTotalChf", v)} disabled={!editMode} /></Field>
+              <Field label={t("manager:leasesId.prop.loyerNet")}><Input type="number" value={lease.netRentChf} onChange={v => updateField("netRentChf", v)} disabled={!editMode} /></Field>
+              <Field label={t("manager:leasesId.prop.loyerGarage")}><Input type="number" value={lease.garageRentChf} onChange={v => updateField("garageRentChf", v)} disabled={!editMode} /></Field>
+              <Field label={t("manager:leasesId.prop.autresPrestations")}><Input type="number" value={lease.otherServiceRentChf} onChange={v => updateField("otherServiceRentChf", v)} disabled={!editMode} /></Field>
+              <Field label={t("manager:leasesId.prop.totalCharges")}><Input type="number" value={lease.chargesTotalChf} onChange={v => updateField("chargesTotalChf", v)} disabled={!editMode} /></Field>
             </div>
             <div className="mt-3 p-3 bg-slate-50 rounded-lg">
               <p className="text-sm font-medium text-slate-700">
-                Loyer total : <span className="text-lg font-bold">CHF {lease.rentTotalChf ?? "—"}.-/mois</span>
+                {t("manager:leasesId.text.loyerTotal")} <span className="text-lg font-bold">CHF {lease.rentTotalChf ?? "—"}.-/mo</span>
               </p>
             </div>
           </AccordionSection>
@@ -819,7 +819,7 @@ export default function LeaseEditorPage() {
           {/* §7 — Deposit */}
           <AccordionSection title={t("manager:leasesId.prop.7Garantie")} open={openSections.deposit} onToggle={() => toggle("deposit")}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Field label="Montant de la garantie (CHF)"><Input type="number" value={lease.depositChf} onChange={v => updateField("depositChf", v)} disabled={!editMode} /></Field>
+              <Field label={t("manager:leasesId.prop.montantGarantie")}><Input type="number" value={lease.depositChf} onChange={v => updateField("depositChf", v)} disabled={!editMode} /></Field>
               <Field label={t("manager:leasesId.prop.exigibilit")}>
                 <select value={lease.depositDueRule || "AT_SIGNATURE"} onChange={e => updateField("depositDueRule", e.target.value)} disabled={!editMode}
                   className="w-full border rounded-lg px-3 py-1.5 text-sm disabled:bg-slate-100">
@@ -835,11 +835,11 @@ export default function LeaseEditorPage() {
           </AccordionSection>
 
           {/* §15 — Stipulations */}
-          <AccordionSection title="§15 — Dispositions particulières & Annexes" open={openSections.stipulations} onToggle={() => toggle("stipulations")}>
+          <AccordionSection title={t("manager:leasesId.prop.15DispositionsAnnexes")} open={openSections.stipulations} onToggle={() => toggle("stipulations")}>
             <div className="space-y-3">
               <label className="flex items-center gap-2 text-sm">
                 <input type="checkbox" checked={lease.includesHouseRules || false} onChange={e => updateField("includesHouseRules", e.target.checked)} disabled={!editMode} />
-                Règlement de la maison joint en annexe
+                {t("manager:leasesId.text.reglementMaison")}
               </label>
               <Field label={t("manager:leasesId.prop.autresAnnexes")} span={2}>
                 <Input value={lease.otherAnnexesText} onChange={v => updateField("otherAnnexesText", v)} disabled={!editMode} />
@@ -1055,7 +1055,7 @@ export default function LeaseEditorPage() {
                           <tr>
                             <SortableHeader label={t("manager:leasesId.prop.year")} field="year" sortField={recSF} sortDir={recSD} onSort={handleRecSort} />
                             <SortableHeader label={t("manager:leasesId.prop.status")} field="status" sortField={recSF} sortDir={recSD} onSort={handleRecSort} />
-                            <SortableHeader label="ACOMPTE" field="acompte" sortField={recSF} sortDir={recSD} onSort={handleRecSort} className="text-right" />
+                            <SortableHeader label={t("manager:leasesId.col.acompte")} field="acompte" sortField={recSF} sortDir={recSD} onSort={handleRecSort} className="text-right" />
                             <th className="text-right">{t("manager:leasesId.col.actual")}</th>
                             <th className="text-right">{t("manager:leasesId.col.balance")}</th>
                             <th className="text-right">{t("manager:leasesId.col.action")}</th>

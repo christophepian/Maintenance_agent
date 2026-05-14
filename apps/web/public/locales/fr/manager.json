@@ -1189,7 +1189,8 @@
       "balance": "Solde",
       "old": "Old",
       "new": "New",
-      "change": "Change"
+      "change": "Change",
+      "acompte": "Acompte"
     },
     "heading": {
       "signatureRequests": "Signature Requests"
@@ -1219,6 +1220,8 @@
       "invoice": "💰 Facture",
       "loadingLease": "Chargement du bail…",
       "backToLeases": "← Retour to leases",
+      "loyerTotal": "Loyer total :",
+      "reglementMaison": "Règlement de la maison joint en annexe",
       "11BailleresseBailleur": "§1.1 Bailleresse / Bailleur",
       "12Locataire": "§1.2 Locataire",
       "appartement": "Appartement",
@@ -1272,6 +1275,16 @@
       "repair": "Réparation"
     },
     "prop": {
+      "1PartiesBailleurLocataire": "§1 — Parties (Bailleur & Locataire)",
+      "representePar": "Représenté(e) par",
+      "34DureeResiliation": "§3–4 — Durée & Résiliation",
+      "5LoyerCharges": "§5 — Loyer & Charges",
+      "loyerNet": "Loyer net (CHF/mois) *",
+      "loyerGarage": "Loyer garage (CHF/mois)",
+      "autresPrestations": "Autres prestations (CHF/mois)",
+      "totalCharges": "Total charges (CHF/mois)",
+      "montantGarantie": "Montant de la garantie (CHF)",
+      "15DispositionsAnnexes": "§15 — Dispositions particulières & Annexes",
       "nomRaisonSociale": "Nom / Raison sociale",
       "adresse": "Adresse",
       "nPALocalit": "NPA / Localité",
