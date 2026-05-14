@@ -302,18 +302,14 @@ export default function ManagerDashboard() {
         sortOrder: 4,
       })
     );
-    // Owner-selected candidates awaiting a signed lease → manager needs to act
-    // Shows whether lease is still needed, drafted, or sent for signature.
+    // Owner-selected candidates awaiting a signed lease → manager needs to act.
+    // READY_TO_SIGN means the lease is already out for signature — no manager action pending.
     selections
-      .filter((s) => s.status === "AWAITING_SIGNATURE")
+      .filter((s) => s.status === "AWAITING_SIGNATURE" && s.lease?.status !== "READY_TO_SIGN")
       .forEach((s) => {
         const candidateName = s.primaryCandidate?.name;
         let title, sub, href;
-        if (s.lease?.status === "READY_TO_SIGN") {
-          title = candidateName ? `Lease awaiting signature · ${candidateName}` : "Lease awaiting signature";
-          sub = t("manager:dashboard.feed.leaseAwaitingSignature");
-          href = `/manager/leases/${s.lease.id}`;
-        } else if (s.lease?.status === "DRAFT") {
+        if (s.lease?.status === "DRAFT") {
           title = candidateName ? `Lease draft ready · ${candidateName}` : "Lease draft ready";
           sub = t("manager:dashboard.feed.leaseDraftReady");
           href = `/manager/leases/${s.lease.id}`;
