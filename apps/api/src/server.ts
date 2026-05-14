@@ -64,8 +64,14 @@ async function resolvePrismaUserId(supabaseId: string | undefined, email: string
   if (_prismaUserIdCache.has(cacheKey)) return _prismaUserIdCache.get(cacheKey)!;
 
   try {
-    const where = supabaseId ? { supabaseId } : { email };
-    const user = await prisma.user.findFirst({ where, select: { id: true } });
+    // Try supabaseId first (populated after backfill-supabase-ids.sql is run),
+    // then fall back to email so the fix works even before the backfill.
+    let user = supabaseId
+      ? await prisma.user.findFirst({ where: { supabaseId }, select: { id: true } })
+      : null;
+    if (!user && email) {
+      user = await prisma.user.findFirst({ where: { email }, select: { id: true } });
+    }
     if (user) {
       _prismaUserIdCache.set(cacheKey, user.id);
       return user.id;
