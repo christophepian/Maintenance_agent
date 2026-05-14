@@ -109,10 +109,14 @@ export async function findVacantUnits(
   prisma: PrismaClient,
   orgId: string,
   unitIds?: string[],
+  ownerId?: string,
 ) {
   return prisma.unit.findMany({
     where: {
-      building: { orgId },
+      building: {
+        orgId,
+        ...(ownerId ? { owners: { some: { userId: ownerId } } } : {}),
+      },
       isActive: true,
       type: UnitType.RESIDENTIAL,
       ...(unitIds ? { id: { in: unitIds } } : {}),

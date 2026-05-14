@@ -726,8 +726,8 @@ function mapVacantUnit(u: Awaited<ReturnType<typeof rentalAppRepo.findVacantUnit
   };
 }
 
-export async function listVacantUnits(orgId: string) {
-  const units = await rentalAppRepo.findVacantUnits(prisma, orgId);
+export async function listVacantUnits(orgId: string, ownerId?: string) {
+  const units = await rentalAppRepo.findVacantUnits(prisma, orgId, undefined, ownerId);
   return units.map(mapVacantUnit);
 }
 

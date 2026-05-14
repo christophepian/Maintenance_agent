@@ -4,7 +4,7 @@ import { readJson } from "../http/body";
 import { parseBody } from "../http/body";
 import { first, getIntParam, getEnumParam } from "../http/query";
 import { withRole, withAuthRequired } from "../http/routeProtection";
-import { maybeRequireManager, requireAnyRole, requireRole } from "../authz";
+import { maybeRequireManager, requireAnyRole, requireRole, getAuthUser } from "../authz";
 import { readRawBody, parseMultipart, MAX_FILE_SIZE, storage } from "../storage/attachments";
 import { scanDocument } from "../services/documentScan";
 import prisma from "../services/prismaClient";
@@ -66,9 +66,11 @@ export function registerRentalRoutes(router: Router) {
    * List vacant units available for rental applications.
    * Public endpoint — tenants browse before applying.
    */
-  router.get("/vacant-units", async ({ res, orgId }) => {
+  router.get("/vacant-units", async ({ req, res, orgId }) => {
     try {
-      const units = await listVacantUnits(orgId);
+      const user = getAuthUser(req);
+      const ownerId = (user?.role === "OWNER" || user?.ownerId) ? (user.ownerId || user.userId) : undefined;
+      const units = await listVacantUnits(orgId, ownerId);
       sendJson(res, 200, { data: units });
     } catch (e: any) {
       console.error("[RENTAL] listVacantUnits error:", e);
