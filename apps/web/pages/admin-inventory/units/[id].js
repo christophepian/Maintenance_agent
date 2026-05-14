@@ -150,7 +150,7 @@ export default function UnitDetail() {
     const apiPath = path.startsWith("/api/") ? path : `/api${path}`;
     const res = await fetch(apiPath, {
       ...options,
-      headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+      headers: { "Content-Type": "application/json", ...authHeaders(), ...(options.headers || {}) },
     });
     const text = await res.text();
     let data = null;
