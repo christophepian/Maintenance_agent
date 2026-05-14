@@ -56,9 +56,14 @@ export async function listBuildings(
   prisma: PrismaClient,
   orgId: string,
   includeInactive?: boolean,
+  ownerId?: string,
 ) {
   return prisma.building.findMany({
-    where: { orgId, ...activeFilter(includeInactive) },
+    where: {
+      orgId,
+      ...activeFilter(includeInactive),
+      ...(ownerId ? { owners: { some: { userId: ownerId } } } : {}),
+    },
     orderBy: { createdAt: "desc" },
   });
 }

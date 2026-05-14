@@ -48,10 +48,12 @@ import * as bcrypt from "bcryptjs";
 export function registerInventoryRoutes(router: Router) {
   /* ── Properties (alias over Buildings) ─────────────────────── */
 
-  router.get("/properties", withAuthRequired(async ({ res, orgId, query }) => {
+  router.get("/properties", withAuthRequired(async ({ req, res, orgId, query }) => {
     try {
       const includeInactive = first(query, "includeInactive") === "true";
-      const buildings = await listBuildings(orgId, includeInactive);
+      const user = getAuthUser(req);
+      const ownerId = (user?.role === "OWNER" || user?.ownerId) ? (user.ownerId || user.userId) : undefined;
+      const buildings = await listBuildings(orgId, includeInactive, ownerId);
       const properties = buildings.map(propertyFromBuilding);
       sendJson(res, 200, { data: properties, total: properties.length });
     } catch (e) {
@@ -223,10 +225,12 @@ export function registerInventoryRoutes(router: Router) {
 
   /* ── Buildings ─────────────────────────────────────────────── */
 
-  router.get("/buildings", withAuthRequired(async ({ res, orgId, query, prisma }) => {
+  router.get("/buildings", withAuthRequired(async ({ req, res, orgId, query, prisma }) => {
     try {
       const includeInactive = first(query, "includeInactive") === "true";
-      const buildings = await listBuildings(orgId, includeInactive);
+      const user = getAuthUser(req);
+      const ownerId = (user?.role === "OWNER" || user?.ownerId) ? (user.ownerId || user.userId) : undefined;
+      const buildings = await listBuildings(orgId, includeInactive, ownerId);
       sendJson(res, 200, { data: buildings, total: buildings.length });
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to fetch buildings", String(e));

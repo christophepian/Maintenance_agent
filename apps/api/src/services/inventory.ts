@@ -11,8 +11,8 @@ const assetModelName = (model: { manufacturer: string; model: string }) => {
 // =========================
 // Buildings
 // =========================
-export async function listBuildings(orgId: string, includeInactive?: boolean) {
-  return inventoryRepo.listBuildings(prisma, orgId, includeInactive);
+export async function listBuildings(orgId: string, includeInactive?: boolean, ownerId?: string) {
+  return inventoryRepo.listBuildings(prisma, orgId, includeInactive, ownerId);
 }
 export async function createBuilding(
   orgId: string,
