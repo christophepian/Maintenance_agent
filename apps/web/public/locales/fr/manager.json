@@ -45,7 +45,9 @@
       "showLess": "Afficher moins haut",
       "inProgressStale": "En cours depuis plus de 7 jours",
       "ownerSelectedTenant": "Locataire selectionne — bail a creer",
-      "templateReadyGenerateLease": "Modèle prêt — générer le bail depuis Vacances"
+      "templateReadyGenerateLease": "Modèle prêt — générer le bail depuis Vacances",
+      "leaseDraftReady": "Brouillon de bail prêt — vérifier et envoyer pour signature",
+      "leaseAwaitingSignature": "Bail envoyé — en attente de signature du locataire"
     },
     "filter": {
       "all": "Tous",

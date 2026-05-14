@@ -45,7 +45,9 @@
       "showLess": "Show less ↑",
       "inProgressStale": "In progress > 7 days",
       "ownerSelectedTenant": "Owner selected — lease needed",
-      "templateReadyGenerateLease": "Template ready — generate lease from Vacancies"
+      "templateReadyGenerateLease": "Template ready — generate lease from Vacancies",
+      "leaseDraftReady": "Lease draft ready — review and send for signature",
+      "leaseAwaitingSignature": "Lease sent — awaiting tenant signature"
     },
     "filter": {
       "all": "All",

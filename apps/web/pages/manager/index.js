@@ -302,26 +302,40 @@ export default function ManagerDashboard() {
         sortOrder: 4,
       })
     );
-    // Owner-selected candidates without a lease → manager needs to create one
+    // Owner-selected candidates awaiting a signed lease → manager needs to act
+    // Shows whether lease is still needed, drafted, or sent for signature.
     selections
-      .filter((s) => !s.lease && s.status === "AWAITING_SIGNATURE")
-      .forEach((s) =>
+      .filter((s) => s.status === "AWAITING_SIGNATURE")
+      .forEach((s) => {
+        const candidateName = s.primaryCandidate?.name;
+        let title, sub, href;
+        if (s.lease?.status === "READY_TO_SIGN") {
+          title = candidateName ? `Lease awaiting signature · ${candidateName}` : "Lease awaiting signature";
+          sub = t("manager:dashboard.feed.leaseAwaitingSignature");
+          href = `/manager/leases/${s.lease.id}`;
+        } else if (s.lease?.status === "DRAFT") {
+          title = candidateName ? `Lease draft ready · ${candidateName}` : "Lease draft ready";
+          sub = t("manager:dashboard.feed.leaseDraftReady");
+          href = `/manager/leases/${s.lease.id}`;
+        } else {
+          title = candidateName ? `Lease needed · ${candidateName}` : "Lease needed for selected candidate";
+          sub = s.hasLeaseTemplate
+            ? t("manager:dashboard.feed.templateReadyGenerateLease")
+            : t("manager:dashboard.feed.ownerSelectedTenant");
+          href = s.hasLeaseTemplate
+            ? "/manager/vacancies"
+            : "/manager/leases?tab=templates&autoCreate=true" + (s.buildingId ? "&buildingId=" + s.buildingId : "");
+        }
         items.push({
           category: "lease",
-          title: s.primaryCandidate?.name
-            ? `Lease needed · ${s.primaryCandidate.name}`
-            : "Lease needed for selected candidate",
+          title,
           building: [s.buildingName, s.unitNumber ? `Unit ${s.unitNumber}` : null].filter(Boolean).join(" · ") || null,
           date: s.createdAt,
-          sub: s.hasLeaseTemplate
-            ? t("manager:dashboard.feed.templateReadyGenerateLease")
-            : t("manager:dashboard.feed.ownerSelectedTenant"),
-          href: s.hasLeaseTemplate
-            ? "/manager/vacancies"
-            : "/manager/leases?tab=templates&autoCreate=true" + (s.buildingId ? "&buildingId=" + s.buildingId : ""),
-          sortOrder: 0, // high urgency — same as owner approval
-        })
-      );
+          sub,
+          href,
+          sortOrder: 0,
+        });
+      });
     return items.sort((a, b) => a.sortOrder - b.sortOrder);
   }, [pendingOwnerApprovalRequests, disputedInvoices, staleJobs, pendingReviewRequests, rfpPendingRequests, selections, t]);
 
