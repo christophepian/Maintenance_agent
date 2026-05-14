@@ -2,7 +2,7 @@ import { Router } from "../http/router";
 import { sendError, sendJson } from "../http/json";
 import { readJson } from "../http/body";
 import { first } from "../http/query";
-import { maybeRequireManager, requireRole } from "../authz";
+import { maybeRequireManager, requireRole, getAuthUser } from "../authz";
 import { withAuthRequired } from "../http/routeProtection";
 import * as crypto from "crypto";
 import prismaClient from "../services/prismaClient";
