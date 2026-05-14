@@ -352,13 +352,10 @@ export default function BuildingDetail() {
     if (!id || assetSeeding) return;
     setAssetSeeding(true);
     try {
-      const res = await fetch(`/api/buildings/${id}/seed-default-assets`, {
-        method: "POST",
-        headers: authHeaders(),
-      });
-      if (res.ok) await loadAssetInventory();
+      await fetchJSON(`/buildings/${id}/seed-default-assets`, { method: "POST" });
+      await loadAssetInventory();
     } catch (e) {
-      // Silently fail
+      setErr(`Failed to populate default assets: ${e.message}`);
     } finally {
       setAssetSeeding(false);
     }

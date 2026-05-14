@@ -269,13 +269,10 @@ export default function UnitDetail() {
     if (!id || assetSeeding) return;
     setAssetSeeding(true);
     try {
-      const res = await fetch(`/api/units/${id}/seed-default-assets`, {
-        method: "POST",
-        headers: authHeaders(),
-      });
-      if (res.ok) await loadAssetInventory();
+      await fetchJSON(`/units/${id}/seed-default-assets`, { method: "POST" });
+      await loadAssetInventory();
     } catch (e) {
-      // Silently fail
+      setErr(`Failed to populate default assets: ${e.message}`);
     } finally {
       setAssetSeeding(false);
     }
