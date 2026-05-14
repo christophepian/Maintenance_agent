@@ -56,6 +56,12 @@ export interface ImportedStatementDTO {
   /** Raw OCR dump: summary + extracted fields JSON — for manager review */
   rawOcrText: string | null;
   accountBalances: ImportedAccountBalanceDTO[];
+  /**
+   * Accounting equation check: sum(DEBIT balances) − sum(CREDIT balances) in cents.
+   * Zero means balanced; a non-zero value means the extraction is incomplete or contains errors.
+   * Null when no account balances have been extracted yet.
+   */
+  balanceImbalanceCents: number | null;
   /** Invoices created from this statement (matched by sourceFileUrl) */
   linkedInvoices: LinkedInvoiceDTO[];
   createdAt: string;
@@ -1064,6 +1070,21 @@ type StatementWithIncludes = Awaited<ReturnType<PrismaClient["importedStatement"
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapDTO(s: any, linkedInvoices: any[] = []): ImportedStatementDTO {
+  const balances: any[] = s.accountBalances ?? [];
+
+  // Accounting equation: Assets (DEBIT) = Liabilities + Equity (CREDIT)
+  // Any non-zero imbalance means the extraction is incomplete or contains errors.
+  let balanceImbalanceCents: number | null = null;
+  if (balances.length > 0) {
+    let debitTotal = 0;
+    let creditTotal = 0;
+    for (const ab of balances) {
+      if (ab.balanceType === "DEBIT")  debitTotal  += ab.balanceCents;
+      else                             creditTotal += ab.balanceCents;
+    }
+    balanceImbalanceCents = debitTotal - creditTotal;
+  }
+
   return {
     id: s.id,
     orgId: s.orgId,
@@ -1081,7 +1102,7 @@ function mapDTO(s: any, linkedInvoices: any[] = []): ImportedStatementDTO {
     buildingMatchConfidence: s.buildingMatchConfidence ?? null,
     notes: s.notes ?? null,
     rawOcrText: s.rawOcrText ?? null,
-    accountBalances: (s.accountBalances ?? []).map((ab: any) => ({
+    accountBalances: balances.map((ab: any) => ({
       id: ab.id,
       rawAccountCode: ab.rawAccountCode,
       rawAccountName: ab.rawAccountName,
@@ -1092,6 +1113,7 @@ function mapDTO(s: any, linkedInvoices: any[] = []): ImportedStatementDTO {
       accountName: ab.account?.name ?? null,
       accountCode: ab.account?.code ?? null,
     })),
+    balanceImbalanceCents,
     linkedInvoices: linkedInvoices.map((inv: any) => ({
       id: inv.id,
       description: inv.description ?? null,

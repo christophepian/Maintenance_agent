@@ -47,6 +47,11 @@ export interface ExtractedInvoiceLine {
   unitHint?: string | null;
   /** Tenant name hint extracted from invoice */
   tenantHint?: string | null;
+  /**
+   * Model's confidence (0.0–1.0) that this entry is genuinely present in the
+   * source text.  Lines below 0.6 are dropped before invoice creation.
+   */
+  confidence?: number | null;
 }
 
 export interface ScanResult {

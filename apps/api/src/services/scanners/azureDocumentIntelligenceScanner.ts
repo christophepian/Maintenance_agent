@@ -729,7 +729,8 @@ const FINANCIAL_STATEMENT_INVOICE_TOOL = {
   name: "extractInvoiceLines",
   description:
     "Extract any individual invoice or expense line items from a Swiss property management document. " +
-    "Each entry should represent one distinct invoice or charge found in the document.",
+    "Each entry should represent one distinct invoice or charge found in the document. " +
+    "Only include entries whose vendor name OR total amount you can read directly from the OCR text.",
   input_schema: {
     type: "object",
     required: ["invoices"],
@@ -738,8 +739,17 @@ const FINANCIAL_STATEMENT_INVOICE_TOOL = {
         type: "array",
         items: {
           type: "object",
+          required: ["confidence"],
           properties: {
-            vendorName:       { type: "string",  description: "Contractor or supplier name" },
+            confidence: {
+              type: "number",
+              description:
+                "Your confidence (0.0–1.0) that this invoice line is genuinely present in the source text. " +
+                "Use 0.9+ only when vendor name AND amount are both clearly readable. " +
+                "Use 0.5–0.7 when one of the two is inferred. " +
+                "Use below 0.5 only if you are uncertain — these will be discarded.",
+            },
+            vendorName:       { type: "string",  description: "Contractor or supplier name, exactly as printed" },
             invoiceNumber:    { type: "string",  description: "Invoice or reference number" },
             invoiceDate:      { type: "string",  description: "Invoice date, DD.MM.YYYY if possible" },
             dueDate:          { type: "string",  description: "Payment due date" },
@@ -896,6 +906,11 @@ async function extractChunkWithClaude(
   const response = await client.messages.create({
     model: "claude-haiku-4-5-20251001",
     max_tokens: 8192,
+    system:
+      "You are a financial document extraction assistant for Swiss property management statements. " +
+      "Extract ONLY information that is explicitly present in the OCR text provided. " +
+      "Never infer, estimate, or generate values that are not clearly readable in the source. " +
+      "If a field cannot be read directly from the text, omit it entirely.",
     tools: tools as unknown as Parameters<typeof client.messages.create>[0]["tools"],
     tool_choice: { type: "any" },
     messages: [
@@ -907,7 +922,8 @@ async function extractChunkWithClaude(
           "Call extractAccountBalances with EVERY account-balance line you find — " +
           "include every row, no matter how many there are. " +
           (hasInvoiceContent
-            ? "Also call extractInvoiceLines for every individual invoice or charge. "
+            ? "Also call extractInvoiceLines for every individual invoice or charge that has at least a vendor name or amount clearly readable in the text. " +
+              "Set confidence to reflect how clearly each invoice line appears in the source — do not include entries you are not sure about. "
             : "") +
           "Omit fields not clearly present; do not guess.\n\n" +
           `OCR text:\n${content}`,
@@ -958,6 +974,7 @@ async function extractChunkWithClaude(
     if (block.name === "extractInvoiceLines") {
       const input = block.input as {
         invoices?: Array<{
+          confidence?: number;
           vendorName?: string;
           invoiceNumber?: string;
           invoiceDate?: string;
@@ -973,21 +990,31 @@ async function extractChunkWithClaude(
           tenantHint?: string;
         }>;
       };
-      invoiceLines = (input.invoices ?? []).map((inv) => ({
-        vendorName:       inv.vendorName       ?? null,
-        invoiceNumber:    inv.invoiceNumber     ?? null,
-        invoiceDate:      inv.invoiceDate       ?? null,
-        dueDate:          inv.dueDate           ?? null,
-        totalAmount:      inv.totalAmount       ?? null,
-        vatAmount:        inv.vatAmount         ?? null,
-        subtotal:         inv.subtotal          ?? null,
-        currency:         inv.currency          ?? null,
-        iban:             inv.iban              ?? null,
-        paymentReference: inv.paymentReference  ?? null,
-        description:      inv.description       ?? null,
-        unitHint:         inv.unitHint          ?? null,
-        tenantHint:       inv.tenantHint        ?? null,
-      }));
+      invoiceLines = (input.invoices ?? [])
+        .filter((inv) => {
+          // Drop entries the model itself is uncertain about
+          const conf = typeof inv.confidence === "number" ? inv.confidence : 1;
+          if (conf < 0.6) return false;
+          // Drop entries with neither a vendor name nor an amount — nothing actionable
+          if (!inv.vendorName && inv.totalAmount == null) return false;
+          return true;
+        })
+        .map((inv) => ({
+          confidence:       inv.confidence       ?? null,
+          vendorName:       inv.vendorName       ?? null,
+          invoiceNumber:    inv.invoiceNumber     ?? null,
+          invoiceDate:      inv.invoiceDate       ?? null,
+          dueDate:          inv.dueDate           ?? null,
+          totalAmount:      inv.totalAmount       ?? null,
+          vatAmount:        inv.vatAmount         ?? null,
+          subtotal:         inv.subtotal          ?? null,
+          currency:         inv.currency          ?? null,
+          iban:             inv.iban              ?? null,
+          paymentReference: inv.paymentReference  ?? null,
+          description:      inv.description       ?? null,
+          unitHint:         inv.unitHint          ?? null,
+          tenantHint:       inv.tenantHint        ?? null,
+        }));
     }
   }
 
@@ -1235,6 +1262,9 @@ async function extractFinancialStatementWithClaude(
     const allInvoiceLines: ExtractedInvoiceLine[] = [];
     // Track seen account codes to deduplicate across chunks
     const seenCodes = new Set<string>();
+    // Track seen invoices to deduplicate across overlapping chunks.
+    // Key: vendor|invoiceNumber|amount — all three must match to be considered duplicate.
+    const seenInvoices = new Set<string>();
 
     for (let i = 0; i < chunks.length; i++) {
       let chunkResult: Awaited<ReturnType<typeof extractChunkWithClaude>>;
@@ -1266,13 +1296,28 @@ async function extractFinancialStatementWithClaude(
         }
       }
 
-      allInvoiceLines.push(...chunkResult.invoiceLines);
+      // Deduplicate invoices by vendor + invoiceNumber + amount across chunks
+      let invoicesDedupedCount = 0;
+      for (const inv of chunkResult.invoiceLines) {
+        const key = [
+          (inv.vendorName ?? "").trim().toLowerCase(),
+          (inv.invoiceNumber ?? "").trim().toLowerCase(),
+          String(inv.totalAmount ?? ""),
+        ].join("|");
+        if (!seenInvoices.has(key)) {
+          seenInvoices.add(key);
+          allInvoiceLines.push(inv);
+        } else {
+          invoicesDedupedCount++;
+        }
+      }
 
       console.log(
         `[DOC-SCAN] Chunk ${i + 1}/${chunks.length}: ` +
         `${chunkResult.accountBalances.length} balance(s), ` +
-        `${chunkResult.invoiceLines.length} invoice line(s) → ` +
-        `running total ${allBalances.length} balance(s)`,
+        `${chunkResult.invoiceLines.length} invoice line(s)` +
+        (invoicesDedupedCount > 0 ? ` (${invoicesDedupedCount} duplicate(s) dropped)` : "") +
+        ` → running total ${allBalances.length} balance(s)`,
       );
     }
 
@@ -1290,7 +1335,18 @@ async function extractFinancialStatementWithClaude(
       for (let i = 0; i < invoiceChunks.length; i++) {
         try {
           const r = await extractChunkWithClaude(client, invoiceChunks[i], i, invoiceChunks.length);
-          allInvoiceLines.push(...r.invoiceLines);
+          // Deduplicate invoices using the shared seenInvoices Set
+          for (const inv of r.invoiceLines) {
+            const key = [
+              (inv.vendorName ?? "").trim().toLowerCase(),
+              (inv.invoiceNumber ?? "").trim().toLowerCase(),
+              String(inv.totalAmount ?? ""),
+            ].join("|");
+            if (!seenInvoices.has(key)) {
+              seenInvoices.add(key);
+              allInvoiceLines.push(inv);
+            }
+          }
           // Some invoice pages also carry balance rows (e.g. a per-vendor expense summary)
           for (const b of r.accountBalances) {
             const key = b.rawAccountCode.trim().toLowerCase();

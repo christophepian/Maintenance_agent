@@ -576,6 +576,9 @@ export default function ImportedStatementReviewPage() {
   const hasUnmatched = s?.accountBalances?.some((ab) => ab.matchConfidence === "UNMATCHED");
   const needsBuilding = isPendingReview && !s?.buildingId;
   const hasNoBalances = isPendingReview && (s?.accountBalances?.length ?? 0) === 0;
+  // Accounting equation: imbalance > CHF 1 means something was not captured
+  const imbalanceCents = s?.balanceImbalanceCents ?? null;
+  const hasBalanceWarning = imbalanceCents !== null && Math.abs(imbalanceCents) > 100;
   // Approve is available once we have a building, at least one balance, and a loaded preview
   const canApprove = isPendingReview && !needsBuilding && !hasNoBalances && preview !== null && !previewLoading;
 
@@ -726,6 +729,22 @@ export default function ImportedStatementReviewPage() {
               {isPendingReview && hasUnmatched && !hasNoBalances && (
                 <div className="notice bg-amber-50 border-amber-300 text-amber-800">
                   {t("manager:financeImports.text.unmatchedWarning")}
+                </div>
+              )}
+
+              {/* ── Balance equation warning ── */}
+              {hasBalanceWarning && !hasNoBalances && (
+                <div className="rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800">
+                  <p className="font-semibold mb-1">Accounting equation not balanced</p>
+                  <p>
+                    Total debits and total credits differ by{" "}
+                    <strong className="font-mono">
+                      CHF {(Math.abs(imbalanceCents) / 100).toLocaleString("de-CH", { minimumFractionDigits: 2 })}
+                    </strong>
+                    {imbalanceCents > 0 ? " (debits exceed credits)" : " (credits exceed debits)"}.
+                    This suggests one or more account balances were not captured correctly.
+                    Review the extracted balances below before approving.
+                  </p>
                 </div>
               )}
 
