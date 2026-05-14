@@ -3,7 +3,7 @@ import { sendError, sendJson } from "../http/json";
 import { readJson } from "../http/body";
 import { first } from "../http/query";
 import { requireOrgViewer } from "./helpers";
-import { requireRole, requireAuth } from "../authz";
+import { requireRole, requireAuth, getAuthUser } from "../authz";
 import {
   getBuildingFinancials,
   getPortfolioSummary,
@@ -186,10 +186,12 @@ export function registerFinancialRoutes(router: Router) {
       }
 
       try {
+        const user = getAuthUser(req);
+        const ownerId = (user?.role === "OWNER" || user?.ownerId) ? (user.ownerId || user.userId) : undefined;
         const dto = await getPortfolioSummary(orgId, {
           from: parsed.data.from,
           to: parsed.data.to,
-        });
+        }, ownerId);
         sendJson(res, 200, { data: dto });
       } catch (e: any) {
         console.error("[GET /financials/portfolio-summary]", e);

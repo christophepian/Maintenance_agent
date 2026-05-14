@@ -493,6 +493,7 @@ export async function listInvoices(
     direction?: string;
     ingestionStatus?: string;
     unitId?: string;
+    ownerId?: string;
   }
 ): Promise<{ data: InvoiceDTO[] | InvoiceSummaryDTO[]; total: number }> {
   const useSummary = filters?.view === "summary";
@@ -538,6 +539,22 @@ export async function listInvoices(
     where.paidAt = {};
     if (filters?.paidAfter) where.paidAt.gte = new Date(filters.paidAfter);
     if (filters?.paidBefore) where.paidAt.lte = new Date(filters.paidBefore);
+  }
+
+  // Owner scoping: restrict to buildings owned by the user
+  if (filters?.ownerId) {
+    const ownerBuildingFilter = { owners: { some: { userId: filters.ownerId } } };
+    const ownerOrClauses: any[] = [
+      { job: { request: { unit: { building: ownerBuildingFilter } } } },
+      { lease: { unit: { building: ownerBuildingFilter } } },
+    ];
+    if (where.OR) {
+      // Intersect: existing OR (job/building filter) AND owner filter
+      where.AND = [{ OR: where.OR }, { OR: ownerOrClauses }];
+      delete where.OR;
+    } else {
+      where.OR = ownerOrClauses;
+    }
   }
 
   const [invoices, total] = await Promise.all([

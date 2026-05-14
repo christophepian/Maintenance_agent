@@ -279,8 +279,10 @@ export function registerInvoiceRoutes(router: Router) {
     if (!requireAnyRole(req, res, ["MANAGER", "OWNER"])) return;
     try {
       const status = first(query, "status") || undefined;
-        const view = first(query, "view") as "summary" | "full" | undefined;
-        const result = await listInvoices(orgId, { status: status as any, view });
+      const view = first(query, "view") as "summary" | "full" | undefined;
+      const user = getAuthUser(req);
+      const ownerId = (user?.role === "OWNER" || user?.ownerId) ? (user.ownerId || user.userId) : undefined;
+      const result = await listInvoices(orgId, { status: status as any, view, ownerId });
       sendJson(res, 200, { data: result.data, total: result.total });
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to load invoices", String(e));

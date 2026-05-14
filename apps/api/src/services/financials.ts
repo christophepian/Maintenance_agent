@@ -425,8 +425,9 @@ function deriveHealth(netIncomeCents: number, collectionRate: number): "green" |
 export async function getPortfolioSummary(
   orgId: string,
   params: { from: string; to: string },
+  ownerId?: string,
 ): Promise<PortfolioSummaryDTO> {
-  const buildings = await inventoryRepo.listBuildings(prisma, orgId);
+  const buildings = await inventoryRepo.listBuildings(prisma, orgId, undefined, ownerId);
 
   const summaries: BuildingSummaryDTO[] = [];
   for (const building of buildings) {
