@@ -128,8 +128,8 @@ export default function AppShell({ role: roleProp, children }) {
     <>
       {showHubBar && <HubBar />}
       <div
-        className="min-h-screen md:grid md:grid-cols-[260px_1fr] bg-white text-slate-900 font-sans overflow-hidden"
-        style={showHubBar ? { paddingTop: 36 } : undefined}
+        className="min-h-screen bg-white text-slate-900 font-sans md:grid md:grid-cols-[260px_1fr] md:grid-rows-[1fr] md:h-screen md:overflow-hidden"
+        style={showHubBar ? { height: "calc(100vh - 36px)", marginTop: 36 } : undefined}
       >
         <a
           href="#main-content"
@@ -139,8 +139,7 @@ export default function AppShell({ role: roleProp, children }) {
         </a>
 
       <aside
-        className="hidden md:flex md:flex-col border-r border-slate-200 px-4 py-5 bg-slate-100 sticky top-0 h-screen overflow-hidden"
-        style={showHubBar ? { top: 36, height: "calc(100vh - 36px)" } : undefined}
+        className="hidden md:flex md:flex-col border-r border-slate-200 px-4 py-5 bg-slate-100 overflow-hidden"
         aria-label="Sidebar navigation"
       >
         <div className="font-bold text-lg mb-5">Sencilo</div>
@@ -195,7 +194,7 @@ export default function AppShell({ role: roleProp, children }) {
 
       <main
         id="main-content"
-        className="min-w-0 overflow-x-hidden px-3 py-6 pb-24 md:px-6 md:pb-6"
+        className="min-w-0 overflow-x-hidden md:overflow-y-auto px-3 py-6 pb-24 md:px-6 md:pb-6"
       >
         {/* Header with locale switcher + notification bell */}
         {(role === "MANAGER" ||
