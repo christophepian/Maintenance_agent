@@ -83,9 +83,18 @@ function UploadModal({ onClose, onUploaded }) {
       if (buildingId) form.append("buildingId", buildingId);
       if (hintDocType) form.append("hintDocType", hintDocType);
 
-      const res = await fetch("/api/imported-statements/upload", {
+      // Large PDFs exceed Vercel's 4.5 MB serverless-function request-body limit.
+      // When NEXT_PUBLIC_BACKEND_URL is set (production), upload directly to the
+      // backend to bypass Vercel. In dev (no env var) we go through the Next.js
+      // proxy as usual.
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const uploadUrl = backendUrl
+        ? `${backendUrl}/imported-statements/upload`
+        : "/api/imported-statements/upload";
+
+      const res = await fetch(uploadUrl, {
         method: "POST",
-        headers: authHeaders(),
+        headers: authHeaders(), // no Content-Type — let browser set multipart boundary
         body: form,
       });
       const json = await res.json();
