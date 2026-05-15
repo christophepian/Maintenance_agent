@@ -921,6 +921,7 @@ async function extractChunkWithClaude(
           `from this section of a Swiss property management document${chunkLabel}. ` +
           "Call extractAccountBalances with EVERY account-balance line you find — " +
           "include every row, no matter how many there are. " +
+          "If the same account name appears multiple times with the same balance, extract it only once. " +
           (hasInvoiceContent
             ? "Also call extractInvoiceLines for every individual invoice or charge that has at least a vendor name or amount clearly readable in the text. " +
               "Set confidence to reflect how clearly each invoice line appears in the source — do not include entries you are not sure about. "
@@ -1368,7 +1369,42 @@ async function extractFinancialStatementWithClaude(
       }
     }
 
-    return { fields: mergedFields, accountBalances: allBalances, invoiceLines: allInvoiceLines };
+    // Final dedup pass — catches within-chunk duplicates that the per-chunk
+    // seenBalances Set cannot catch (same account extracted twice on the same page).
+    const finalBalances: ExtractedAccountBalance[] = [];
+    const finalBalanceKeys = new Set<string>();
+    for (const b of allBalances) {
+      const key = [
+        b.rawAccountName.trim().toLowerCase().replace(/\s+/g, " "),
+        String(b.balanceChf),
+        b.balanceType,
+      ].join("|");
+      if (!finalBalanceKeys.has(key)) {
+        finalBalanceKeys.add(key);
+        finalBalances.push(b);
+      }
+    }
+    if (finalBalances.length !== allBalances.length) {
+      console.log(
+        `[DOC-SCAN] Final dedup: ${allBalances.length - finalBalances.length} within-chunk duplicate balance(s) removed`,
+      );
+    }
+
+    const finalInvoiceLines: ExtractedInvoiceLine[] = [];
+    const finalInvoiceKeys = new Set<string>();
+    for (const inv of allInvoiceLines) {
+      const key = [
+        (inv.vendorName ?? "").trim().toLowerCase(),
+        (inv.invoiceNumber ?? "").trim().toLowerCase(),
+        String(inv.totalAmount ?? ""),
+      ].join("|");
+      if (!finalInvoiceKeys.has(key)) {
+        finalInvoiceKeys.add(key);
+        finalInvoiceLines.push(inv);
+      }
+    }
+
+    return { fields: mergedFields, accountBalances: finalBalances, invoiceLines: finalInvoiceLines };
   } catch (err) {
     console.warn(
       "[DOC-SCAN] Financial statement Claude extraction skipped:",

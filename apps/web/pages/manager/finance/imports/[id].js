@@ -306,7 +306,8 @@ const RE_EXTRACT_DOC_TYPES = [
   { value: "MANAGEMENT_REPORT",   label: "Management Report" },
 ];
 
-function ReExtractForm({ statementId, onStarted }) {
+function ReExtractPanel({ statementId, hasBalances, onStarted }) {
+  const [open, setOpen] = useState(!hasBalances);
   const [hintDocType, setHintDocType] = useState("FINANCIAL_STATEMENT");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -331,31 +332,65 @@ function ReExtractForm({ statementId, onStarted }) {
     }
   }
 
-  return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-      <p className="text-sm text-slate-700">
-        No account balances were extracted. This usually means the wrong document type was detected.
-        Choose the correct type and re-run extraction on the stored file.
-      </p>
-      <div className="flex gap-2 items-end flex-wrap">
-        <div className="flex-1 min-w-[200px]">
-          <label className="form-label">Document type</label>
-          <select
-            className="form-input w-full"
-            value={hintDocType}
-            onChange={(e) => setHintDocType(e.target.value)}
-          >
-            {RE_EXTRACT_DOC_TYPES.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
-            ))}
-          </select>
-        </div>
-        <button type="submit" className="button-primary text-sm" disabled={loading}>
-          {loading ? "Re-extracting…" : "Re-extract"}
+  if (!open) {
+    return (
+      <div className="flex justify-end">
+        <button
+          type="button"
+          className="text-xs text-slate-500 hover:text-slate-700 hover:underline"
+          onClick={() => setOpen(true)}
+        >
+          Re-extract document
         </button>
       </div>
-      {error && <p className="text-sm text-destructive-text">{error}</p>}
-    </form>
+    );
+  }
+
+  return (
+    <div className={cn(
+      "rounded-lg border px-4 py-4",
+      hasBalances ? "border-slate-200 bg-slate-50" : "border-amber-300 bg-amber-50",
+    )}>
+      {hasBalances ? (
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-sm font-medium text-slate-700">Re-extract document</p>
+          <button
+            type="button"
+            className="text-xs text-slate-400 hover:text-slate-600"
+            onClick={() => setOpen(false)}
+          >
+            Cancel
+          </button>
+        </div>
+      ) : (
+        <p className="text-sm font-medium text-amber-800 mb-3">No account balances extracted</p>
+      )}
+      <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+        <p className="text-sm text-slate-600">
+          {hasBalances
+            ? "Re-running extraction will replace all current account balances and linked invoices with a fresh extraction from the stored file."
+            : "This usually means the wrong document type was detected. Choose the correct type and re-run extraction on the stored file."}
+        </p>
+        <div className="flex gap-2 items-end flex-wrap">
+          <div className="flex-1 min-w-[200px]">
+            <label className="form-label">Document type</label>
+            <select
+              className="form-input w-full"
+              value={hintDocType}
+              onChange={(e) => setHintDocType(e.target.value)}
+            >
+              {RE_EXTRACT_DOC_TYPES.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+          </div>
+          <button type="submit" className="button-primary text-sm" disabled={loading}>
+            {loading ? "Re-extracting…" : "Re-extract"}
+          </button>
+        </div>
+        {error && <p className="text-sm text-destructive-text">{error}</p>}
+      </form>
+    </div>
   );
 }
 
@@ -714,15 +749,13 @@ export default function ImportedStatementReviewPage() {
                 <ExtractedDataPanel rawOcrText={s.rawOcrText} />
               )}
 
-              {/* ── No balances extracted — re-extract prompt ── */}
-              {hasNoBalances && (
-                <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-4">
-                  <p className="text-sm font-medium text-amber-800 mb-3">No account balances extracted</p>
-                  <ReExtractForm
-                    statementId={s.id}
-                    onStarted={(updated) => { setStatement(updated); setPreview(null); }}
-                  />
-                </div>
+              {/* ── Re-extract panel ── always available for PENDING_REVIEW statements ── */}
+              {isPendingReview && (
+                <ReExtractPanel
+                  statementId={s.id}
+                  hasBalances={!hasNoBalances}
+                  onStarted={(updated) => { setStatement(updated); setPreview(null); }}
+                />
               )}
 
               {/* ── Unmatched warning ── */}
