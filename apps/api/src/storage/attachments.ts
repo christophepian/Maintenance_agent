@@ -19,8 +19,11 @@ const LOCAL_ROOT = path.resolve(
     path.join(__dirname, "..", "..", ".data", "uploads"),
 );
 
-/** Maximum file size: 5 MB */
+/** Maximum file size for identity / rental-application documents: 5 MB */
 export const MAX_FILE_SIZE = 5 * 1024 * 1024;
+
+/** Maximum file size for generic put() uploads (e.g. imported statement PDFs): 25 MB */
+export const MAX_PUT_FILE_SIZE = 25 * 1024 * 1024;
 
 /* ── Interfaces ────────────────────────────────────────────── */
 
@@ -107,8 +110,8 @@ class LocalDiskStorage implements AttachmentStorage {
   }
 
   async put(key: string, buffer: Buffer): Promise<void> {
-    if (buffer.length > MAX_FILE_SIZE) {
-      throw new Error(`File exceeds maximum size of ${MAX_FILE_SIZE} bytes`);
+    if (buffer.length > MAX_PUT_FILE_SIZE) {
+      throw new Error(`File exceeds maximum size of ${MAX_PUT_FILE_SIZE} bytes`);
     }
     const fullPath = path.join(this.root, key);
     const dir = path.dirname(fullPath);
@@ -211,8 +214,8 @@ class S3AttachmentStorage implements AttachmentStorage {
   }
 
   async put(key: string, buffer: Buffer, contentType?: string): Promise<void> {
-    if (buffer.length > MAX_FILE_SIZE) {
-      throw new Error(`File exceeds maximum size of ${MAX_FILE_SIZE} bytes`);
+    if (buffer.length > MAX_PUT_FILE_SIZE) {
+      throw new Error(`File exceeds maximum size of ${MAX_PUT_FILE_SIZE} bytes`);
     }
     await this.client.send(
       new PutObjectCommand({
