@@ -263,10 +263,13 @@ const server = http.createServer(async (req: AuthedRequest, res) => {
   });
 
   try {
-    /* CORS — never use wildcard; always enforce an explicit origin allowlist.
-       In production CORS_ORIGIN must be set (e.g. "https://app.example.com").
-       In development we fall back to localhost only. */
+    /* CORS — explicit origin allowlist; never wildcard.
+       Priority: CORS_ORIGIN env var (comma-separated) → built-in Vercel staging
+       origin → localhost (dev only). */
     const isProd = process.env.NODE_ENV === "production";
+    // Vercel preview/staging URL for this project — allows direct browser uploads
+    // that bypass Vercel's 4.5 MB serverless request-body limit.
+    const VERCEL_STAGING_ORIGIN = "https://maintenance-agent-api-git-main-christophepians-projects.vercel.app";
     const DEV_ALLOWED_ORIGINS = ["http://localhost:3000", "http://localhost:3001", "http://127.0.0.1:3000", "http://127.0.0.1:3001"];
     const requestOrigin = req.headers["origin"] as string | undefined;
     let corsOrigin = "";
@@ -276,7 +279,11 @@ const server = http.createServer(async (req: AuthedRequest, res) => {
       if (requestOrigin && allowed.includes(requestOrigin)) {
         corsOrigin = requestOrigin;
       }
-    } else if (!isProd && requestOrigin && DEV_ALLOWED_ORIGINS.includes(requestOrigin)) {
+    }
+    if (!corsOrigin && requestOrigin === VERCEL_STAGING_ORIGIN) {
+      corsOrigin = requestOrigin;
+    }
+    if (!corsOrigin && !isProd && requestOrigin && DEV_ALLOWED_ORIGINS.includes(requestOrigin)) {
       corsOrigin = requestOrigin;
     }
     if (corsOrigin) {
