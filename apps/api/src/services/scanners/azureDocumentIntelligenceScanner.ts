@@ -211,17 +211,44 @@ function fieldToString(field: DocumentFieldOutput | undefined): string | null {
   return null;
 }
 
+/**
+ * Parse a numeric string that may be in Swiss format (62'405.24) or European
+ * format (62.405,24) into a plain JS number.
+ *
+ * Rules:
+ *  - Apostrophes are always Swiss thousands separators → strip them first.
+ *  - If the last separator is a comma  → European: strip all periods (thousands)
+ *    then replace final comma with period (decimal).
+ *  - If the last separator is a period → Standard/Swiss: strip all commas.
+ *  - If no separator remains           → plain integer.
+ */
+function parseLocalizedNumber(s: string): number | null {
+  // Strip currency symbols, spaces, apostrophes, and non-numeric except .,−-
+  let cleaned = s.replace(/[^\d.,\-]/g, "");
+  if (!cleaned) return null;
+
+  const lastComma  = cleaned.lastIndexOf(",");
+  const lastPeriod = cleaned.lastIndexOf(".");
+
+  if (lastComma > lastPeriod) {
+    // European format: period = thousands, comma = decimal  (e.g. 62.405,24)
+    cleaned = cleaned.replace(/\./g, "").replace(",", ".");
+  } else {
+    // Swiss / standard format: comma = thousands, period = decimal (e.g. 62,405.24 or 62405.24)
+    cleaned = cleaned.replace(/,/g, "");
+  }
+
+  const n = parseFloat(cleaned);
+  return isNaN(n) ? null : n;
+}
+
 function fieldToNumber(field: DocumentFieldOutput | undefined): number | null {
   if (!field) return null;
   if (field.valueNumber !== undefined) return field.valueNumber;
   if (field.valueInteger !== undefined) return field.valueInteger;
   if (field.valueCurrency !== undefined) return field.valueCurrency.amount;
-  // Try parsing content as a number
-  if (field.content) {
-    const cleaned = field.content.replace(/[^\d.,\-]/g, "").replace(",", ".");
-    const n = parseFloat(cleaned);
-    if (!isNaN(n)) return n;
-  }
+  // Try parsing content as a localized number (handles Swiss ' and European , formats)
+  if (field.content) return parseLocalizedNumber(field.content);
   return null;
 }
 
@@ -675,9 +702,7 @@ function parseNumberFromKv(
 ): number | null {
   const raw = findKvValue(kvPairs, keyPattern);
   if (!raw) return null;
-  const cleaned = raw.replace(/[^\d.,\-]/g, "").replace(",", ".");
-  const n = parseFloat(cleaned);
-  return isNaN(n) ? null : n;
+  return parseLocalizedNumber(raw);
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -689,7 +714,13 @@ const FINANCIAL_STATEMENT_BALANCE_TOOL = {
   name: "extractAccountBalances",
   description:
     "Extract the list of account closing balances from a Swiss property management financial statement or balance sheet. " +
-    "Return every account line found: its code, name, balance amount, and whether it is a debit or credit balance.",
+    "Return every account line found: its code, name, balance amount, and whether it is a debit or credit balance. " +
+    "IMPORTANT — account codes: Swiss chart of accounts uses 3- or 4-digit codes (e.g. '1020', '4200', '630'). " +
+    "Extract the code from the leftmost column ONLY — do NOT include digits from the amount or name columns. " +
+    "If OCR has merged a code with adjacent text, use only the leading 3-4 digits that form a valid account code. " +
+    "IMPORTANT — amounts: Swiss documents use apostrophe (') as the thousands separator and period (.) as the decimal separator. " +
+    "Example: 62'405.24 = 62405.24. European format uses period as thousands and comma as decimal: 62.405,24 = 62405.24. " +
+    "Return balanceChf as a plain JSON number (e.g. 62405.24), never as a formatted string.",
   input_schema: {
     type: "object",
     required: ["balances"],
@@ -713,9 +744,9 @@ const FINANCIAL_STATEMENT_BALANCE_TOOL = {
           type: "object",
           required: ["rawAccountCode", "rawAccountName", "balanceChf", "balanceType"],
           properties: {
-            rawAccountCode: { type: "string", description: "Account code as printed, e.g. '1020' or '4200'" },
+            rawAccountCode: { type: "string", description: "Account code from the leftmost column only — 3 or 4 digits, e.g. '1020' or '4200'. Never more than 4 digits." },
             rawAccountName: { type: "string", description: "Account name as printed, e.g. 'Bank account'" },
-            balanceChf: { type: "number", description: "Closing balance amount in CHF (positive number)" },
+            balanceChf: { type: "number", description: "Closing balance amount in CHF as a plain decimal number (e.g. 62405.24). Apostrophes and periods are Swiss number formatting — 62'405.24 = 62405.24." },
             balanceType: { type: "string", enum: ["DEBIT", "CREDIT"], description: "DEBIT for asset/expense accounts, CREDIT for liability/income accounts" },
           },
         },
@@ -730,7 +761,10 @@ const FINANCIAL_STATEMENT_INVOICE_TOOL = {
   description:
     "Extract any individual invoice or expense line items from a Swiss property management document. " +
     "Each entry should represent one distinct invoice or charge found in the document. " +
-    "Only include entries whose vendor name OR total amount you can read directly from the OCR text.",
+    "Only include entries whose vendor name OR total amount you can read directly from the OCR text. " +
+    "IMPORTANT — amounts: Swiss format uses apostrophe (') as thousands separator and period (.) as decimal: 1'178.29 = 1178.29. " +
+    "European format uses period as thousands and comma as decimal: 1.178,29 = 1178.29. " +
+    "Return all amounts as plain JSON numbers (e.g. 1178.29), never as formatted strings.",
   input_schema: {
     type: "object",
     required: ["invoices"],
@@ -879,6 +913,24 @@ async function enrichFieldsWithClaude(
   }
 }
 
+/**
+ * Normalize a Swiss chart-of-accounts code extracted by Claude/OCR.
+ *
+ * Swiss standard codes are 3–4 digits (e.g. "1020", "630", "4200").
+ * OCR frequently appends extra digits from adjacent columns (e.g. "10200",
+ * "12065"). When a code is longer than 4 digits and the first 4 are all
+ * digits, we truncate to the first 4 characters — the trailing digits are
+ * almost certainly bleed-over from the next column.
+ */
+function normalizeSwissAccountCode(code: string): string {
+  const trimmed = code.trim();
+  // If it's purely numeric and longer than 4 digits, truncate to 4
+  if (/^\d{5,}$/.test(trimmed)) {
+    return trimmed.substring(0, 4);
+  }
+  return trimmed;
+}
+
 const EXTRACTION_SYSTEM_PROMPT =
   "You are a financial document extraction assistant for Swiss property management statements. " +
   "Extract ONLY information that is explicitly present in the OCR text provided. " +
@@ -943,7 +995,7 @@ async function extractBalancesFromChunk(
     accountBalances = (input.balances ?? [])
       .filter((b) => b.rawAccountCode && b.rawAccountName && typeof b.balanceChf === "number")
       .map((b) => ({
-        rawAccountCode: b.rawAccountCode,
+        rawAccountCode: normalizeSwissAccountCode(b.rawAccountCode),
         rawAccountName: b.rawAccountName,
         balanceChf: b.balanceChf,
         balanceType: b.balanceType === "CREDIT" ? "CREDIT" : "DEBIT",
