@@ -7,11 +7,6 @@ services:
     branch: main
     autoDeploy: true
 
-    # --- Node version ---
-    envVars:
-      - key: NODE_VERSION
-        value: "20.19.0"
-
     # --- Build ---
     buildCommand: npm ci && cd apps/api && npx prisma generate --schema ./prisma/schema.prisma && rm -rf dist && npm run build
 
@@ -24,26 +19,29 @@ services:
     # --- Health check ---
     healthCheckPath: /health
 
-    # --- Environment variables (values set in Render dashboard / secret files) ---
-    # All vars below must be added manually in Render → Environment tab.
-    # See apps/api/.env.staging for the staging values.
-    #
-    # Required:
-    #   DATABASE_URL          postgresql://...supabase.co:5432/postgres
-    #   DIRECT_URL            same as DATABASE_URL (used by Prisma migrate)
-    #   AUTH_SECRET           32+ char random string (openssl rand -hex 32)
-    #   PORT                  (Render sets this automatically — do NOT override)
-    #
-    # Storage (T-07):
+    # --- Environment variables ---
+    # Non-secret values declared inline; secrets set in Render dashboard
+    # (see apps/api/.env.staging for staging values).
+    envVars:
+      - key: NODE_VERSION
+        value: "20.19.0"
+      # CORS: allow the Vercel frontend to call the backend directly.
+      # Large PDF uploads bypass the Vercel proxy (4.5 MB serverless limit).
+      # Comma-separate additional origins without spaces if needed.
+      - key: CORS_ORIGIN
+        value: "https://maintenance-agent-api-git-main-christophepians-projects.vercel.app"
+
+    # Secrets — set in Render dashboard, never committed:
+    #   DATABASE_URL          postgresql://...supabase.co:6543/postgres?pgbouncer=true
+    #   DIRECT_URL            postgresql://...supabase.co:5432/postgres
+    #   AUTH_SECRET           32+ char random string
+    #   SUPABASE_URL          https://znsdygeodyglbyunitcp.supabase.co
     #   ATTACHMENTS_STORAGE   s3
     #   S3_REGION             eu-central-1
     #   S3_ENDPOINT           https://znsdygeodyglbyunitcp.storage.supabase.co/storage/v1/s3
     #   S3_FORCE_PATH_STYLE   true
     #   S3_BUCKET             maint-agent-attachments
-    #   S3_ACCESS_KEY_ID      (from Supabase Storage → Settings → S3 Access Keys)
-    #   S3_SECRET_ACCESS_KEY  (from Supabase Storage → Settings → S3 Access Keys)
-    #
-    # Optional:
+    #   S3_ACCESS_KEY_ID      (Supabase Storage → Settings → S3 Access Keys)
+    #   S3_SECRET_ACCESS_KEY  (Supabase Storage → Settings → S3 Access Keys)
     #   BG_JOBS_ENABLED       true
-    #   LOG_LEVEL             info
     #   NODE_ENV              production
