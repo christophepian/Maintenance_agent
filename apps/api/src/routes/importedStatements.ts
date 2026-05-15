@@ -103,6 +103,19 @@ export function registerImportedStatementRoutes(router: Router) {
         const status = e.code === "BUILDING_NOT_FOUND" ? 422 : 400;
         return sendError(res, status, e.code, e.message);
       }
+      // Detect S3/Supabase EntityTooLarge — bucket per-file size limit exceeded
+      if (
+        e?.name === "EntityTooLarge" ||
+        e?.message?.includes("EntityTooLarge") ||
+        e?.message?.includes("exceeded the maximum allowed size")
+      ) {
+        return sendError(
+          res,
+          413,
+          "FILE_TOO_LARGE",
+          "File exceeds the storage bucket size limit. Increase the max upload file size in the Supabase Storage bucket settings.",
+        );
+      }
       console.error("[IMPORT] upload error:", e);
       sendError(res, 500, "INTERNAL_ERROR", "Failed to ingest statement", e.message);
     }
