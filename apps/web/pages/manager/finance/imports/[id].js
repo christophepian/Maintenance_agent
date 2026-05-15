@@ -26,6 +26,14 @@ import { cn } from "../../../../lib/utils";
 import { withServerTranslations } from "../../../../lib/i18n";
 import CreateBuildingModal from "../../../../components/CreateBuildingModal";
 
+// ── Section type helpers ──────────────────────────────────────────────────────
+
+const SECTION_LABEL = {
+  BALANCE_SHEET:    "Balance Sheet",
+  INCOME_STATEMENT: "Income Statement",
+  INVOICES:         "Invoices",
+};
+
 // ── Status / confidence helpers ───────────────────────────────────────────────
 
 function statusVariant(status) {
@@ -562,7 +570,22 @@ export default function ImportedStatementReviewPage() {
   }, [statement, fetchPreview]);
 
   async function handleApprove() {
-    // Open the modal — it will call doApprove on confirm
+    // INVOICES and INCOME_STATEMENT sections bypass the ledger preview modal
+    if (isInvoicesSection) {
+      if (!window.confirm("Confirm all invoices in this section? Their status will be set to Issued.")) return;
+      await doApprove();
+      return;
+    }
+    if (isIncomeStatement) {
+      if (!window.confirm(
+        "Approve this income statement?\n\n" +
+        "If the building has no prior ledger activity for this period, the entries will be posted as starting balances. " +
+        "Otherwise they will be stored as reference only — no journal entries will be created.",
+      )) return;
+      await doApprove();
+      return;
+    }
+    // Balance sheet: open the full ledger preview modal
     setApproveModalOpen(true);
   }
 
@@ -608,14 +631,26 @@ export default function ImportedStatementReviewPage() {
 
   const s = statement;
   const isPendingReview = s?.status === "PENDING_REVIEW";
+  const sectionType = s?.sectionType ?? "BALANCE_SHEET";
+  const isBalanceSheet    = sectionType === "BALANCE_SHEET";
+  const isIncomeStatement = sectionType === "INCOME_STATEMENT";
+  const isInvoicesSection = sectionType === "INVOICES";
   const hasUnmatched = s?.accountBalances?.some((ab) => ab.matchConfidence === "UNMATCHED");
   const needsBuilding = isPendingReview && !s?.buildingId;
-  const hasNoBalances = isPendingReview && (s?.accountBalances?.length ?? 0) === 0;
+  const hasNoBalances = (s?.accountBalances?.length ?? 0) === 0;
   // Accounting equation: imbalance > CHF 1 means something was not captured
   const imbalanceCents = s?.balanceImbalanceCents ?? null;
   const hasBalanceWarning = imbalanceCents !== null && Math.abs(imbalanceCents) > 100;
-  // Approve is available once we have a building, at least one balance, and a loaded preview
-  const canApprove = isPendingReview && !needsBuilding && !hasNoBalances && preview !== null && !previewLoading;
+  // Approve availability depends on section type:
+  // - BS: need building + balances + preview
+  // - IS: need building + balances (no preview required — posting is conditional)
+  // - INVOICES: need building only (no balances required)
+  const canApprove =
+    isPendingReview && !needsBuilding && (
+      isInvoicesSection ? true
+      : isIncomeStatement ? !hasNoBalances
+      : /* BS */ !hasNoBalances && preview !== null && !previewLoading
+    );
 
   return (
     <AppShell role="MANAGER">
@@ -629,7 +664,11 @@ export default function ImportedStatementReviewPage() {
       )}
       <PageShell>
         <PageHeader
-          title={t("manager:financeImports.title.reviewStatement")}
+          title={
+            s
+              ? `${SECTION_LABEL[s.sectionType] ?? "Import"} — FY ${s.fiscalYear}`
+              : t("manager:financeImports.title.reviewStatement")
+          }
           backButton={
             <Link href="/manager/finance?tab=imports" className="text-sm text-brand-dark hover:underline flex items-center gap-1">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
@@ -654,16 +693,20 @@ export default function ImportedStatementReviewPage() {
                   disabled={actionLoading || !canApprove}
                   title={
                     needsBuilding ? t("manager:financeImports.text.noBuildingAssigned")
-                    : hasNoBalances ? "No account balances extracted — re-extract first"
-                    : previewLoading ? "Loading preview…"
+                    : !isInvoicesSection && hasNoBalances ? "No account balances extracted — re-extract first"
+                    : isBalanceSheet && previewLoading ? "Loading preview…"
                     : undefined
                   }
                 >
-                  {previewLoading
-                    ? "Loading…"
-                    : preview
-                      ? `Post ${preview.entries.length} entries`
-                      : t("manager:financeImports.action.approve")}
+                  {isInvoicesSection
+                    ? `Confirm ${s.linkedInvoices?.length ?? 0} invoice${s.linkedInvoices?.length !== 1 ? "s" : ""}`
+                    : isIncomeStatement
+                      ? t("manager:financeImports.action.approve")
+                      : previewLoading
+                        ? "Loading…"
+                        : preview
+                          ? `Post ${preview.entries.length} entries`
+                          : t("manager:financeImports.action.approve")}
                 </button>
               </div>
             ) : null
@@ -698,6 +741,10 @@ export default function ImportedStatementReviewPage() {
                   </div>
                 )}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div>
+                    <p className="text-xs text-slate-500 uppercase tracking-wide mb-0.5">Section</p>
+                    <p className="font-medium">{SECTION_LABEL[s.sectionType] ?? s.sectionType}</p>
+                  </div>
                   <div>
                     <p className="text-xs text-slate-500 uppercase tracking-wide mb-0.5">
                       {t("manager:financeImports.prop.building")}
@@ -749,8 +796,20 @@ export default function ImportedStatementReviewPage() {
                 <ExtractedDataPanel rawOcrText={s.rawOcrText} />
               )}
 
-              {/* ── Re-extract panel ── always available for PENDING_REVIEW statements ── */}
-              {isPendingReview && (
+              {/* ── Income statement info banner ── */}
+              {isPendingReview && isIncomeStatement && (
+                <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+                  <p className="font-semibold mb-1">Income Statement — conditional posting</p>
+                  <p>
+                    If this building already has ledger entries for FY {s.fiscalYear}, these account balances will be
+                    stored as <strong>reference data only</strong> — no journal entries will be created. If no prior
+                    activity exists, they will be posted as opening balances.
+                  </p>
+                </div>
+              )}
+
+              {/* ── Re-extract panel ── available for non-INVOICES PENDING_REVIEW statements ── */}
+              {isPendingReview && !isInvoicesSection && (
                 <ReExtractPanel
                   statementId={s.id}
                   hasBalances={!hasNoBalances}
@@ -759,7 +818,7 @@ export default function ImportedStatementReviewPage() {
               )}
 
               {/* ── Unmatched warning ── */}
-              {isPendingReview && hasUnmatched && !hasNoBalances && (
+              {isPendingReview && !isInvoicesSection && hasUnmatched && !hasNoBalances && (
                 <div className="notice bg-amber-50 border-amber-300 text-amber-800">
                   {t("manager:financeImports.text.unmatchedWarning")}
                 </div>
@@ -781,8 +840,8 @@ export default function ImportedStatementReviewPage() {
                 </div>
               )}
 
-              {/* ── Ledger preview ── */}
-              {isPendingReview && !hasNoBalances && (
+              {/* ── Ledger preview — balance sheet only ── */}
+              {isPendingReview && isBalanceSheet && !hasNoBalances && (
                 <div className="rounded-lg border border-slate-200 bg-slate-50">
                   <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
                     <p className="text-sm font-medium text-slate-700">Step 3 — Ledger entries that will be posted</p>

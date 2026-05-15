@@ -184,6 +184,7 @@ model Org {
   // Contractor Billing
   contractorBillingSchedules ContractorBillingSchedule[]
   // Property Manager Statement Import
+  uploadBatches               UploadBatch[]
   importedStatements          ImportedStatement[]
   importedAccountBalances     ImportedAccountBalance[]
 }
@@ -2459,6 +2460,13 @@ enum ImportedStatementStatus {
   REJECTED      /// Manager rejected; no ledger entries posted
 }
 
+/// Which accounting section a statement represents within its source PDF.
+enum StatementSectionType {
+  BALANCE_SHEET     /// Bilan — closing positions for ASSET/LIABILITY/EQUITY accounts; posted to ledger on approval
+  INCOME_STATEMENT  /// Compte de résultat — revenue/expense flows; posted only when building has no prior ledger activity for the period
+  INVOICES          /// One or more vendor invoices embedded in the PDF; creates Invoice records, no ledger posting on approval
+}
+
 /// How confidently an extracted account code was matched to a COA Account.
 enum MatchConfidence {
   AUTO      /// Exact account code match
@@ -2468,19 +2476,34 @@ enum MatchConfidence {
   UNMATCHED /// No match found; accountId is null
 }
 
-/// One uploaded PDF from an external property manager.
-/// Contains the extracted invoices (as Invoice records) and
-/// the extracted closing balance sheet (as ImportedAccountBalance rows).
+/// Groups all ImportedStatement records produced from a single PDF upload.
+model UploadBatch {
+  id            String   @id @default(uuid())
+  orgId         String
+  sourceFileUrl String   /// S3 key to original uploaded PDF
+  fileName      String   /// Original file name for display
+  uploadedBy    String   /// userId of the manager who uploaded
+  createdAt     DateTime @default(now())
+
+  org        Org                 @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  statements ImportedStatement[]
+
+  @@index([orgId])
+}
+
+/// One section extracted from a PDF upload — one record per section type per PDF.
 /// Data only becomes visible on the owner surface when status = APPROVED.
 model ImportedStatement {
   id            String                  @id @default(uuid())
   orgId         String
+  uploadBatchId String?                 /// FK to UploadBatch — groups all sections from one PDF
+  sectionType   StatementSectionType    @default(BALANCE_SHEET) /// Which section of the PDF this represents
   buildingId    String?                 /// Nullable — may be unset if building not yet in the system; must be set before approval
   fiscalYear    Int                     /// e.g. 2024
   periodStart   DateTime?               /// Extracted or user-supplied period start
   periodEnd     DateTime?               /// Extracted or user-supplied period end
   status        ImportedStatementStatus @default(PROCESSING)
-  sourceFileUrl String                  /// S3 key to original uploaded PDF
+  sourceFileUrl String                  /// S3 key to original uploaded PDF (same as UploadBatch.sourceFileUrl)
   uploadedBy    String                  /// userId of the manager who uploaded
   approvedBy    String?                 /// userId of the manager who approved
   approvedAt    DateTime?
@@ -2492,16 +2515,19 @@ model ImportedStatement {
   updatedAt     DateTime                @updatedAt
 
   org              Org                      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  uploadBatch      UploadBatch?             @relation(fields: [uploadBatchId], references: [id], onDelete: SetNull)
   building         Building?                @relation(fields: [buildingId], references: [id], onDelete: SetNull)
   accountBalances  ImportedAccountBalance[]
 
   @@index([orgId])
+  @@index([uploadBatchId])
   @@index([buildingId])
   @@index([orgId, status])
   @@index([orgId, fiscalYear])
 }
 
-/// One closing-balance line extracted from a financial statement PDF.
+/// One account-balance line extracted from a financial statement PDF section.
+/// Used for both BALANCE_SHEET and INCOME_STATEMENT sections.
 /// Maps to a COA Account when a match can be found; otherwise preserved
 /// with rawAccountCode/rawAccountName for manual resolution.
 model ImportedAccountBalance {

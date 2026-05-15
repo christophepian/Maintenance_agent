@@ -2,7 +2,8 @@
  * Imported Statement Routes
  *
  * POST   /imported-statements/upload         — upload PDF for ingestion (MANAGER)
- * GET    /imported-statements                — list statements (MANAGER + OWNER)
+ * GET    /imported-statements/batches        — list upload batches with nested statements (MANAGER + OWNER)
+ * GET    /imported-statements                — list statements flat (MANAGER + OWNER)
  * GET    /imported-statements/:id            — get single statement (MANAGER + OWNER)
  * POST   /imported-statements/:id/approve          — approve and push to owner surface (MANAGER)
  * POST   /imported-statements/:id/reject           — reject statement (MANAGER)
@@ -26,6 +27,7 @@ import {
   approveStatement,
   rejectStatement,
   listStatements,
+  listBatches,
   getStatement,
   resolveAccountBalance,
   assignBuilding,
@@ -103,6 +105,28 @@ export function registerImportedStatementRoutes(router: Router) {
       }
       console.error("[IMPORT] upload error:", e);
       sendError(res, 500, "INTERNAL_ERROR", "Failed to ingest statement", e.message);
+    }
+  });
+
+  // ── GET /imported-statements/batches ────────────────────────────────────
+  // Returns upload batches (one per PDF) with their child statements nested.
+  // Must be registered BEFORE the generic /:id route to avoid route conflicts.
+  router.get("/imported-statements/batches", async ({ req, res, orgId, prisma }) => {
+    if (!requireOrgViewer(req, res)) return;
+
+    const url = new URL(req.url ?? "/", "http://localhost");
+    const limit  = Math.min(parseInt(url.searchParams.get("limit")  ?? "50", 10), 100);
+    const offset = parseInt(url.searchParams.get("offset") ?? "0", 10);
+
+    try {
+      const result = await listBatches(prisma, orgId, { limit, offset });
+      sendJson(res, 200, {
+        data: result.data,
+        pagination: { total: result.total, limit, offset },
+      });
+    } catch (e: any) {
+      console.error("[IMPORT] list-batches error:", e);
+      sendError(res, 500, "INTERNAL_ERROR", "Failed to list batches", e.message);
     }
   });
 

@@ -18,6 +18,7 @@ import { v4 as uuidv4 } from "uuid";
 import {
   PrismaClient,
   ImportedStatementStatus,
+  StatementSectionType,
   MatchConfidence,
   InvoiceSourceChannel,
   InvoiceDirection,
@@ -37,9 +38,21 @@ import * as crypto from "crypto";
    DTOs
    ══════════════════════════════════════════════════════════════ */
 
+export interface UploadBatchDTO {
+  id: string;
+  orgId: string;
+  sourceFileUrl: string;
+  fileName: string;
+  uploadedBy: string;
+  createdAt: string;
+  statements: ImportedStatementDTO[];
+}
+
 export interface ImportedStatementDTO {
   id: string;
   orgId: string;
+  uploadBatchId: string | null;
+  sectionType: StatementSectionType;
   buildingId: string | null;
   buildingName: string | null;
   fiscalYear: number;
@@ -363,7 +376,7 @@ async function resolveContractorFromLine(
 export async function ingestStatement(
   prisma: PrismaClient,
   input: IngestStatementInput,
-): Promise<ImportedStatementDTO> {
+): Promise<UploadBatchDTO> {
   const { buffer, fileName, mimeType, orgId, uploadedBy, hintDocType } = input;
 
   // 1. Store the source file
@@ -372,19 +385,28 @@ export async function ingestStatement(
 
   // 2. Validate explicit buildingId if supplied
   let buildingId = input.buildingId ?? null;
-  const buildingMatchConfidence: MatchConfidence | null = buildingId ? MatchConfidence.MANUAL : null;
   if (buildingId) {
     const building = await prisma.building.findFirst({ where: { id: buildingId, orgId } });
     if (!building) throw new ImportedStatementError("BUILDING_NOT_FOUND", "Building not found");
   }
 
-  // 3. Create the statement shell immediately (status=PROCESSING) so we can
-  //    return a 202 response before Azure + Claude processing begins.
-  //    Heavy work runs in the background via setImmediate.
   const fiscalYear = input.fiscalYear ?? new Date().getFullYear();
-  const statement = await prisma.importedStatement.create({
+
+  // 3. Create the UploadBatch — one per PDF upload
+  const batch = await prisma.uploadBatch.create({
+    data: { orgId, sourceFileUrl: fileKey, fileName, uploadedBy },
+  });
+
+  // 4. Create one placeholder ImportedStatement per expected section type so the
+  //    UI can show "processing" immediately. The background job will either
+  //    populate these or create/delete as it discovers the actual sections.
+  //    For now we create a single BALANCE_SHEET placeholder; the background job
+  //    will create additional section statements as it classifies pages.
+  const placeholder = await prisma.importedStatement.create({
     data: {
       orgId,
+      uploadBatchId: batch.id,
+      sectionType: StatementSectionType.BALANCE_SHEET,
       buildingId,
       fiscalYear,
       periodStart: new Date(`${fiscalYear}-01-01T00:00:00Z`),
@@ -392,7 +414,7 @@ export async function ingestStatement(
       status: ImportedStatementStatus.PROCESSING,
       sourceFileUrl: fileKey,
       uploadedBy,
-      buildingMatchConfidence,
+      buildingMatchConfidence: buildingId ? MatchConfidence.MANUAL : null,
     },
     include: {
       building: { select: { name: true } },
@@ -400,27 +422,28 @@ export async function ingestStatement(
     },
   });
 
-  // 4. Kick off background processing (non-blocking — response already sent)
+  // 5. Kick off background processing (non-blocking — response already sent)
   setImmediate(() => {
     runIngestionBackground(
-      prisma, statement.id, orgId, buffer, fileName, mimeType,
+      prisma, batch.id, placeholder.id, orgId, buffer, fileName, mimeType,
       fiscalYear, buildingId, fileKey, hintDocType,
     ).catch((err) => {
-      console.error(`[IMPORT] Unhandled error in background ingestion for ${statement.id}:`, err);
+      console.error(`[IMPORT] Unhandled error in background ingestion for batch ${batch.id}:`, err);
     });
   });
 
-  return mapDTO(statement);
+  return mapBatchDTO(batch, [placeholder]);
 }
 
 /**
- * Heavy ingestion work: OCR scan → building detection → balance matching →
- * invoice creation.  Runs after the HTTP response is already sent.
- * Updates the statement record in-place when done (status → PENDING_REVIEW).
+ * Heavy ingestion work: OCR scan → section classification → per-section statement creation.
+ * Creates one ImportedStatement per detected section (BALANCE_SHEET, INCOME_STATEMENT, INVOICES).
+ * The placeholder statement created by ingestStatement() is reused for the first financial section.
  */
 async function runIngestionBackground(
   prisma: PrismaClient,
-  statementId: string,
+  batchId: string,
+  placeholderStatementId: string,
   orgId: string,
   buffer: Buffer,
   fileName: string,
@@ -430,106 +453,135 @@ async function runIngestionBackground(
   fileKey: string,
   hintDocType: string | undefined,
 ): Promise<void> {
+  const markPlaceholderFailed = async (msg: string) => {
+    try {
+      await prisma.importedStatement.update({
+        where: { id: placeholderStatementId },
+        data: { status: ImportedStatementStatus.PENDING_REVIEW, notes: `Processing error: ${msg}` },
+      });
+    } catch { /* best-effort */ }
+  };
+
   try {
-    // 1. Scan the document
-    console.log(`[IMPORT] [bg] Scanning file="${fileName}" size=${buffer.length} mime=${mimeType}${hintDocType ? ` hintDocType=${hintDocType}` : ""}`);
+    // 1. Scan document (OCR + Claude extraction)
+    console.log(`[IMPORT] [bg] batch=${batchId} Scanning "${fileName}" size=${buffer.length}${hintDocType ? ` hint=${hintDocType}` : ""}`);
     const scanResult: ScanResult = await scanDocument(buffer, fileName, mimeType, hintDocType);
     console.log(
       `[IMPORT] [bg] Scan complete: docType=${scanResult.docType} confidence=${scanResult.confidence} ` +
-      `balances=${scanResult.accountBalances?.length ?? 0} invoiceLines=${scanResult.invoiceLines?.length ?? 0}`,
+      `balances=${scanResult.accountBalances?.length ?? 0} invoices=${scanResult.invoiceLines?.length ?? 0}`,
     );
 
-    // 2. Determine building (auto-detect if not already set)
+    // 2. Detect building once — shared across all sections
     let finalBuildingId = buildingId;
     let finalBuildingMatchConf: MatchConfidence | null = buildingId ? MatchConfidence.MANUAL : null;
     if (!finalBuildingId) {
-      // Primary: use structured fields extracted by the scanner.
-      // Fallback: scan raw OCR text for a Swiss street address (covers cases where
-      // the document was misclassified and the FINANCIAL_STATEMENT path was skipped).
       const structuredAddress =
         (scanResult.fields.buildingAddress as string | null) ??
         (scanResult.fields.address as string | null);
       const ocrAddress = structuredAddress ?? extractAddressFromText(
         (scanResult.fields._rawTextPreview as string | null) ?? "",
       );
-      const addressHint = ocrAddress ?? "";
-      if (addressHint) {
-        const detected = await detectBuildingFromContent(prisma, orgId, addressHint);
+      if (ocrAddress) {
+        const detected = await detectBuildingFromContent(prisma, orgId, ocrAddress);
         if (detected) {
           finalBuildingId = detected.buildingId;
           finalBuildingMatchConf = detected.confidence;
-          console.log(`[IMPORT] [bg] Building auto-detected: id=${finalBuildingId} confidence=${finalBuildingMatchConf}`);
+          console.log(`[IMPORT] [bg] Building auto-detected: id=${finalBuildingId} conf=${finalBuildingMatchConf}`);
         }
       }
-      if (!finalBuildingId) {
-        console.log("[IMPORT] [bg] Building not identified — manager must assign before approval.");
-      }
+      if (!finalBuildingId) console.log("[IMPORT] [bg] Building not identified — manager must assign.");
     }
 
-    // 3. Parse fiscal year and period
+    // 3. Parse period
     const detectedFiscalYear =
       (typeof scanResult.fields.fiscalYear === "number" ? scanResult.fields.fiscalYear : null) ?? fiscalYear;
     const periodLabel = scanResult.fields.periodLabel as string | null ?? null;
     const { periodStart, periodEnd } = parsePeriodLabel(periodLabel, detectedFiscalYear);
+    const rawOcrText = truncate(scanResult.summary + "\n---\n" + JSON.stringify(scanResult.fields), 8000);
 
-    // 4. Build rawOcrText
-    const rawOcrText = truncate(
-      scanResult.summary + "\n---\n" + JSON.stringify(scanResult.fields),
-      8000,
-    );
+    const commonStatementData = {
+      buildingId: finalBuildingId,
+      buildingMatchConfidence: finalBuildingMatchConf,
+      fiscalYear: detectedFiscalYear,
+      periodStart,
+      periodEnd,
+      ocrConfidence: scanResult.confidence,
+      rawOcrText,
+      status: ImportedStatementStatus.PENDING_REVIEW,
+    };
 
-    // 5. Update statement with scan results and flip to PENDING_REVIEW
+    const orgAccounts = await accountRepo.findAccountsByOrg(prisma, orgId);
+
+    // 4. Classify accounts into balance-sheet vs income-statement by account code prefix.
+    //    Swiss chart of accounts: 1xxx-3xxx = balance sheet, 4xxx-9xxx = income statement.
+    const allBalances = scanResult.accountBalances ?? [];
+    const bsBalances = allBalances.filter((b) => isBalanceSheetAccount(b.rawAccountCode));
+    const isBalances = allBalances.filter((b) => !isBalanceSheetAccount(b.rawAccountCode));
+
+    // 5. Populate the placeholder statement as BALANCE_SHEET (or INCOME_STATEMENT if no BS rows)
+    const firstSectionType = bsBalances.length > 0 || isBalances.length === 0
+      ? StatementSectionType.BALANCE_SHEET
+      : StatementSectionType.INCOME_STATEMENT;
+    const firstSectionBalances = firstSectionType === StatementSectionType.BALANCE_SHEET ? bsBalances : isBalances;
+
     await prisma.importedStatement.update({
-      where: { id: statementId },
-      data: {
-        buildingId: finalBuildingId,
-        buildingMatchConfidence: finalBuildingMatchConf,
-        fiscalYear: detectedFiscalYear,
-        periodStart,
-        periodEnd,
-        ocrConfidence: scanResult.confidence,
-        rawOcrText,
-        status: ImportedStatementStatus.PENDING_REVIEW,
-      },
+      where: { id: placeholderStatementId },
+      data: { ...commonStatementData, sectionType: firstSectionType },
     });
 
-    // 6. Match and persist account balances
-    if (scanResult.accountBalances && scanResult.accountBalances.length > 0) {
-      const orgAccounts = await accountRepo.findAccountsByOrg(prisma, orgId);
-      const balanceRows = await Promise.all(
-        scanResult.accountBalances.map(async (ab) => {
-          const balanceCents = Math.round(ab.balanceChf * 100);
-          const match = await matchAccount(orgAccounts, ab.rawAccountCode, ab.rawAccountName, balanceCents);
-          return {
-            orgId,
-            statementId,
-            accountId: match.accountId,
-            rawAccountCode: ab.rawAccountCode,
-            rawAccountName: ab.rawAccountName,
-            balanceCents,
-            balanceType: ab.balanceType,
-            matchConfidence: match.confidence,
-          };
-        }),
-      );
-      await prisma.importedAccountBalance.createMany({ data: balanceRows });
-      console.log(`[IMPORT] [bg] Persisted ${balanceRows.length} account balance row(s)`);
+    if (firstSectionBalances.length > 0) {
+      await persistBalances(prisma, orgId, placeholderStatementId, firstSectionBalances, orgAccounts);
     }
 
-    // 7. Create Invoice records for extracted invoice lines (only when building is known)
-    if (finalBuildingId && scanResult.invoiceLines && scanResult.invoiceLines.length > 0) {
-      for (const line of scanResult.invoiceLines) {
+    // 6. Create a separate INCOME_STATEMENT record if we have both section types
+    if (bsBalances.length > 0 && isBalances.length > 0) {
+      const isStatement = await prisma.importedStatement.create({
+        data: {
+          orgId,
+          uploadBatchId: batchId,
+          sectionType: StatementSectionType.INCOME_STATEMENT,
+          sourceFileUrl: fileKey,
+          uploadedBy: (await prisma.uploadBatch.findFirst({ where: { id: batchId }, select: { uploadedBy: true } }))?.uploadedBy ?? "",
+          ...commonStatementData,
+        },
+      });
+      await persistBalances(prisma, orgId, isStatement.id, isBalances, orgAccounts);
+      console.log(`[IMPORT] [bg] Created INCOME_STATEMENT section: id=${isStatement.id} rows=${isBalances.length}`);
+    }
+
+    // 7. Create Invoice records from extracted invoice lines
+    const invoiceLines = scanResult.invoiceLines ?? [];
+    if (invoiceLines.length > 0) {
+      // Create a dedicated INVOICES section statement to group them
+      let invoiceStatementId: string | null = null;
+      if (finalBuildingId) {
+        const uploader = (await prisma.uploadBatch.findFirst({ where: { id: batchId }, select: { uploadedBy: true } }))?.uploadedBy ?? "";
+        const invStatement = await prisma.importedStatement.create({
+          data: {
+            orgId,
+            uploadBatchId: batchId,
+            sectionType: StatementSectionType.INVOICES,
+            sourceFileUrl: fileKey,
+            uploadedBy: uploader,
+            ...commonStatementData,
+          },
+        });
+        invoiceStatementId = invStatement.id;
+        console.log(`[IMPORT] [bg] Created INVOICES section: id=${invStatement.id}`);
+      }
+
+      for (const line of invoiceLines) {
         try {
-          await resolveUnitFromLine(prisma, orgId, finalBuildingId, line.unitHint, line.tenantHint);
+          await resolveUnitFromLine(prisma, orgId, finalBuildingId ?? "", line.unitHint, line.tenantHint);
           await resolveContractorFromLine(prisma, orgId, line.vendorName);
 
           const totalChf    = line.totalAmount ?? null;
           const vatChf      = line.vatAmount   ?? null;
           const subtotalChf = line.subtotal    ?? null;
           let netAmount: number | undefined;
-          if (subtotalChf != null)                      netAmount = subtotalChf;
-          else if (totalChf != null && vatChf != null)  netAmount = totalChf - vatChf;
-          else                                           netAmount = totalChf ?? undefined;
+          if (subtotalChf != null)                     netAmount = subtotalChf;
+          else if (totalChf != null && vatChf != null) netAmount = totalChf - vatChf;
+          else                                          netAmount = totalChf ?? undefined;
 
           await createInvoice({
             orgId,
@@ -550,30 +602,64 @@ async function runIngestionBackground(
             dueDate:   line.dueDate     ? parseDateField(line.dueDate)     : undefined,
             matchedJobId:      undefined,
             matchedLeaseId:    undefined,
-            matchedBuildingId: finalBuildingId,
+            matchedBuildingId: finalBuildingId ?? undefined,
           });
         } catch (lineErr) {
-          console.warn(`[IMPORT] [bg] Failed to create invoice for line "${line.vendorName}":`, lineErr);
+          console.warn(`[IMPORT] [bg] Failed to create invoice for "${line.vendorName}":`, lineErr);
         }
       }
-      console.log(`[IMPORT] [bg] Processed ${scanResult.invoiceLines.length} invoice line(s)`);
+
+      // Mark the INVOICES section as PENDING_REVIEW if created
+      if (invoiceStatementId) {
+        await prisma.importedStatement.update({
+          where: { id: invoiceStatementId },
+          data: { status: ImportedStatementStatus.PENDING_REVIEW },
+        });
+      }
+      console.log(`[IMPORT] [bg] Processed ${invoiceLines.length} invoice line(s)`);
     }
+
   } catch (err) {
-    // Update the statement with a processing error note so the manager can see it
     const errorMsg = err instanceof Error ? err.message : String(err);
-    console.error(`[IMPORT] [bg] Processing failed for statement ${statementId}: ${errorMsg}`);
-    try {
-      await prisma.importedStatement.update({
-        where: { id: statementId },
-        data: {
-          status: ImportedStatementStatus.PENDING_REVIEW,
-          notes: `Processing error: ${errorMsg}`,
-        },
-      });
-    } catch (updateErr) {
-      console.error(`[IMPORT] [bg] Could not update error state for ${statementId}:`, updateErr);
-    }
+    console.error(`[IMPORT] [bg] Processing failed for batch ${batchId}: ${errorMsg}`);
+    await markPlaceholderFailed(errorMsg);
   }
+}
+
+/** Returns true for balance-sheet account codes (Swiss chart: 1xxx–3xxx). */
+function isBalanceSheetAccount(code: string): boolean {
+  const trimmed = code.trim().replace(/\D/g, "");
+  if (!trimmed) return true; // default to balance sheet when unknown
+  const first = parseInt(trimmed[0], 10);
+  return first >= 1 && first <= 3;
+}
+
+/** Match and persist a set of extracted account balances for a statement. */
+async function persistBalances(
+  prisma: PrismaClient,
+  orgId: string,
+  statementId: string,
+  balances: ExtractedAccountBalance[],
+  orgAccounts: Awaited<ReturnType<typeof accountRepo.findAccountsByOrg>>,
+): Promise<void> {
+  const rows = await Promise.all(
+    balances.map(async (ab) => {
+      const balanceCents = Math.round(ab.balanceChf * 100);
+      const match = await matchAccount(orgAccounts, ab.rawAccountCode, ab.rawAccountName, balanceCents);
+      return {
+        orgId,
+        statementId,
+        accountId: match.accountId,
+        rawAccountCode: ab.rawAccountCode,
+        rawAccountName: ab.rawAccountName,
+        balanceCents,
+        balanceType: ab.balanceType,
+        matchConfidence: match.confidence,
+      };
+    }),
+  );
+  await prisma.importedAccountBalance.createMany({ data: rows });
+  console.log(`[IMPORT] [bg] Persisted ${rows.length} balance row(s) for statement ${statementId}`);
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -602,119 +688,153 @@ export async function approveStatement(
     throw new ImportedStatementError("BUILDING_REQUIRED", "A building must be assigned before this statement can be approved");
   }
 
-  // Resolve an accountId for every balance row.
-  // For rows already matched (AUTO / FUZZY / CLAUDE / MANUAL) use the stored accountId.
-  // For UNMATCHED rows, find an existing account by code or name, or auto-create a stub
-  // so that every balance line always produces a ledger entry on approval.
-  const periodDate = statement.periodEnd ?? statement.periodStart ?? new Date();
+  const isIncomeStatement = statement.sectionType === StatementSectionType.INCOME_STATEMENT;
 
-  const legs: Array<{
-    accountId: string;
-    debitCents: number;
-    creditCents: number;
-    description: string;
-    reference: string;
-    sourceType: string;
-    sourceId: string;
-    buildingId: string | null;
-    date: Date;
-  }> = [];
+  // For income statements: check whether the building already has ledger activity for this
+  // fiscal year. If yes, store as reference-only (no journal entries). The manager can see
+  // the data for comparison but the existing ledger is the authoritative source.
+  let referenceOnly = false;
+  if (isIncomeStatement) {
+    const periodStart = statement.periodStart ?? new Date(`${statement.fiscalYear}-01-01T00:00:00Z`);
+    const periodEnd   = statement.periodEnd   ?? new Date(`${statement.fiscalYear}-12-31T00:00:00Z`);
+    const existingActivity = await prisma.ledgerEntry.count({
+      where: {
+        orgId,
+        buildingId: statement.buildingId,
+        date: { gte: periodStart, lte: periodEnd },
+        sourceType: { not: "IMPORTED_STATEMENT" },
+      },
+    });
+    if (existingActivity > 0) {
+      referenceOnly = true;
+      console.log(
+        `[IMPORT] Income statement ${statementId} approved as REFERENCE ONLY — ` +
+        `${existingActivity} existing ledger entries found for FY${statement.fiscalYear}`,
+      );
+    }
+  }
 
-  let autoCreated = 0;
-  let alreadyMatched = 0;
+  if (!referenceOnly) {
+    // Resolve an accountId for every balance row.
+    // For rows already matched (AUTO / FUZZY / CLAUDE / MANUAL) use the stored accountId.
+    // For UNMATCHED rows, find an existing account by code or name, or auto-create a stub
+    // so that every balance line always produces a ledger entry on approval.
+    const periodDate = statement.periodEnd ?? statement.periodStart ?? new Date();
 
-  for (const ab of statement.accountBalances) {
-    let resolvedAccountId = ab.accountId ?? null;
+    const legs: Array<{
+      accountId: string;
+      debitCents: number;
+      creditCents: number;
+      description: string;
+      reference: string;
+      sourceType: string;
+      sourceId: string;
+      buildingId: string | null;
+      date: Date;
+    }> = [];
 
-    if (!resolvedAccountId) {
-      // Try to find an existing account by code first, then by name
-      const byCode = await prisma.account.findFirst({
-        where: { orgId, code: ab.rawAccountCode.trim() },
-      });
+    let autoCreated = 0;
+    let alreadyMatched = 0;
 
-      if (byCode) {
-        resolvedAccountId = byCode.id;
-        // Update the balance row to reflect the found match
-        await prisma.importedAccountBalance.update({
-          where: { id: ab.id },
-          data: { accountId: byCode.id, matchConfidence: MatchConfidence.AUTO },
+    for (const ab of statement.accountBalances) {
+      let resolvedAccountId = ab.accountId ?? null;
+
+      if (!resolvedAccountId) {
+        // Try to find an existing account by code first, then by name
+        const byCode = await prisma.account.findFirst({
+          where: { orgId, code: ab.rawAccountCode.trim() },
         });
-      } else {
-        // Auto-create a stub account using Swiss code-range convention for account type
-        const code = ab.rawAccountCode.trim();
-        const firstDigit = parseInt(code[0] ?? "4", 10);
-        const accountType =
-          firstDigit === 1 ? "ASSET"
-          : firstDigit === 2 ? "LIABILITY"
-          : firstDigit === 3 ? "REVENUE"
-          : "EXPENSE";
 
-        // Account names must be unique per org — append the code to avoid collisions
-        const safeName = `${ab.rawAccountName} (${code})`;
-        let created: { id: string };
-        try {
-          created = await prisma.account.create({
-            data: { orgId, name: safeName, code, accountType },
+        if (byCode) {
+          resolvedAccountId = byCode.id;
+          await prisma.importedAccountBalance.update({
+            where: { id: ab.id },
+            data: { accountId: byCode.id, matchConfidence: MatchConfidence.AUTO },
           });
-        } catch {
-          // Race condition: another request created it — fall back to findFirst
-          const fallback = await prisma.account.findFirst({
-            where: { orgId, code },
+        } else {
+          // Auto-create a stub account using Swiss code-range convention for account type
+          const code = ab.rawAccountCode.trim();
+          const firstDigit = parseInt(code[0] ?? "4", 10);
+          const accountType =
+            firstDigit === 1 ? "ASSET"
+            : firstDigit === 2 ? "LIABILITY"
+            : firstDigit === 3 ? "REVENUE"
+            : "EXPENSE";
+
+          const safeName = `${ab.rawAccountName} (${code})`;
+          let created: { id: string };
+          try {
+            created = await prisma.account.create({
+              data: { orgId, name: safeName, code, accountType },
+            });
+          } catch {
+            const fallback = await prisma.account.findFirst({ where: { orgId, code } });
+            if (!fallback) throw new Error(`Could not find or create account ${code}`);
+            created = fallback;
+          }
+          resolvedAccountId = created.id;
+          await prisma.importedAccountBalance.update({
+            where: { id: ab.id },
+            data: { accountId: created.id, matchConfidence: MatchConfidence.AUTO },
           });
-          if (!fallback) throw new Error(`Could not find or create account ${code}`);
-          created = fallback;
+          autoCreated++;
         }
-        resolvedAccountId = created.id;
-        await prisma.importedAccountBalance.update({
-          where: { id: ab.id },
-          data: { accountId: created.id, matchConfidence: MatchConfidence.AUTO },
-        });
-        autoCreated++;
+      } else {
+        alreadyMatched++;
       }
-    } else {
-      alreadyMatched++;
+
+      legs.push({
+        accountId: resolvedAccountId,
+        debitCents:  ab.balanceType === "DEBIT"  ? ab.balanceCents : 0,
+        creditCents: ab.balanceType === "CREDIT" ? ab.balanceCents : 0,
+        description: `[Import FY${statement.fiscalYear}] ${ab.rawAccountCode} ${ab.rawAccountName}`,
+        reference:   `Statement FY${statement.fiscalYear}`,
+        sourceType:  "IMPORTED_STATEMENT",
+        sourceId:    statement.id,
+        buildingId:  statement.buildingId,
+        date:        periodDate,
+      });
     }
 
-    legs.push({
-      accountId: resolvedAccountId,
-      debitCents:  ab.balanceType === "DEBIT"  ? ab.balanceCents : 0,
-      creditCents: ab.balanceType === "CREDIT" ? ab.balanceCents : 0,
-      description: `[Import FY${statement.fiscalYear}] ${ab.rawAccountCode} ${ab.rawAccountName}`,
-      reference:   `Statement FY${statement.fiscalYear}`,
-      sourceType:  "IMPORTED_STATEMENT",
-      sourceId:    statement.id,
-      buildingId:  statement.buildingId,
-      date:        periodDate,
+    if (legs.length > 0) {
+      await postJournalEntries(prisma, orgId, legs);
+      console.log(
+        `[IMPORT] Posted ${legs.length} ledger entries for statement ${statementId} ` +
+        `(${alreadyMatched} pre-matched, ${autoCreated} auto-created accounts)`,
+      );
+    } else {
+      console.warn(`[IMPORT] No account balances found for statement ${statementId} — nothing posted`);
+    }
+  }
+
+  // Confirm all PENDING_REVIEW invoices linked to this source file (INVOICES section only)
+  if (statement.sectionType === StatementSectionType.INVOICES) {
+    await prisma.invoice.updateMany({
+      where: {
+        orgId,
+        sourceFileUrl: statement.sourceFileUrl,
+        ingestionStatus: IngestionStatus.PENDING_REVIEW,
+      },
+      data: {
+        ingestionStatus: IngestionStatus.CONFIRMED,
+        status: InvoiceStatus.ISSUED,
+      },
     });
   }
 
-  if (legs.length > 0) {
-    await postJournalEntries(prisma, orgId, legs);
-    console.log(
-      `[IMPORT] Posted ${legs.length} ledger entries for statement ${statementId} ` +
-      `(${alreadyMatched} pre-matched, ${autoCreated} auto-created accounts)`,
-    );
-  } else {
-    console.warn(`[IMPORT] No account balances found for statement ${statementId} — nothing posted`);
-  }
+  // Mark statement approved; record whether this was reference-only
+  const approvalNotes = referenceOnly
+    ? `Approved as reference only — existing ledger activity found for FY${statement.fiscalYear}. No journal entries posted.`
+    : null;
 
-  // Confirm all PENDING_REVIEW invoices linked to this source file
-  await prisma.invoice.updateMany({
-    where: {
-      orgId,
-      sourceFileUrl: statement.sourceFileUrl,
-      ingestionStatus: IngestionStatus.PENDING_REVIEW,
-    },
-    data: {
-      ingestionStatus: IngestionStatus.CONFIRMED,
-      status: InvoiceStatus.ISSUED,
-    },
-  });
-
-  // Mark statement approved
   const updated = await prisma.importedStatement.update({
     where: { id: statementId },
-    data: { status: ImportedStatementStatus.APPROVED, approvedBy, approvedAt: new Date() },
+    data: {
+      status: ImportedStatementStatus.APPROVED,
+      approvedBy,
+      approvedAt: new Date(),
+      ...(approvalNotes ? { notes: approvalNotes } : {}),
+    },
     include: {
       building: { select: { name: true } },
       accountBalances: { include: { account: { select: { name: true, code: true } } } },
@@ -756,6 +876,31 @@ export async function rejectStatement(
 /* ══════════════════════════════════════════════════════════════
    List / get
    ══════════════════════════════════════════════════════════════ */
+
+const STATEMENT_INCLUDE = {
+  building: { select: { name: true } },
+  accountBalances: { include: { account: { select: { name: true, code: true } } } },
+} as const;
+
+export async function listBatches(
+  prisma: PrismaClient,
+  orgId: string,
+  opts: { limit?: number; offset?: number } = {},
+): Promise<{ data: UploadBatchDTO[]; total: number }> {
+  const [batches, total] = await Promise.all([
+    prisma.uploadBatch.findMany({
+      where: { orgId },
+      orderBy: { createdAt: "desc" },
+      take: opts.limit ?? 50,
+      skip: opts.offset ?? 0,
+      include: {
+        statements: { include: STATEMENT_INCLUDE, orderBy: { sectionType: "asc" } },
+      },
+    }),
+    prisma.uploadBatch.count({ where: { orgId } }),
+  ]);
+  return { data: batches.map((b) => mapBatchDTO(b, b.statements)), total };
+}
 
 export async function listStatements(
   prisma: PrismaClient,
@@ -986,9 +1131,8 @@ export async function getLedgerPreview(
    ══════════════════════════════════════════════════════════════ */
 
 /**
- * Wipe the existing scan results for a statement and re-run the OCR + Claude
- * pipeline with a new doc-type hint.  Sets status → PROCESSING immediately
- * and fires the background job.  Returns the updated statement DTO.
+ * Wipe all statements in the batch, reset the placeholder, and re-run the
+ * full sectioned pipeline from the stored file.
  */
 export async function reExtractStatement(
   prisma: PrismaClient,
@@ -1008,19 +1152,37 @@ export async function reExtractStatement(
     throw new ImportedStatementError("INVALID_STATUS", "Approved statements cannot be re-extracted");
   }
 
-  // Fetch the stored file from object storage
   let buffer: Buffer;
   try {
     buffer = await storage.get(statement.sourceFileUrl);
-  } catch (e: any) {
+  } catch {
     throw new ImportedStatementError("FILE_NOT_FOUND", "Source file could not be retrieved from storage");
   }
 
-  // Wipe existing balance rows and reset statement to PROCESSING
+  // If this statement belongs to a batch, wipe all sibling sections (except APPROVED ones)
+  // so the re-extraction starts clean.
+  if (statement.uploadBatchId) {
+    const siblings = await prisma.importedStatement.findMany({
+      where: {
+        uploadBatchId: statement.uploadBatchId,
+        orgId,
+        id: { not: statementId },
+        status: { not: ImportedStatementStatus.APPROVED },
+      },
+      select: { id: true },
+    });
+    for (const sib of siblings) {
+      await prisma.importedAccountBalance.deleteMany({ where: { statementId: sib.id } });
+      await prisma.importedStatement.delete({ where: { id: sib.id } });
+    }
+  }
+
+  // Reset this statement as the placeholder for the new run
   await prisma.importedAccountBalance.deleteMany({ where: { statementId } });
   const reset = await prisma.importedStatement.update({
     where: { id: statementId },
     data: {
+      sectionType: StatementSectionType.BALANCE_SHEET,
       status: ImportedStatementStatus.PROCESSING,
       rawOcrText: null,
       ocrConfidence: null,
@@ -1032,14 +1194,13 @@ export async function reExtractStatement(
     },
   });
 
-  // Derive fileName from the stored key (last path segment)
   const fileName = statement.sourceFileUrl.split("/").pop() ?? "document.pdf";
   const mimeType = fileName.endsWith(".pdf") ? "application/pdf" : "application/octet-stream";
+  const batchId = statement.uploadBatchId ?? statementId; // fallback: treat statement itself as batch key
 
-  // Re-run background ingestion with the new hint
   setImmediate(() => {
     runIngestionBackground(
-      prisma, statementId, orgId, buffer, fileName, mimeType,
+      prisma, batchId, statementId, orgId, buffer, fileName, mimeType,
       statement.fiscalYear, statement.buildingId, statement.sourceFileUrl, hintDocType,
     ).catch((err) => {
       console.error(`[IMPORT] Unhandled error in re-extraction for ${statementId}:`, err);
@@ -1069,6 +1230,18 @@ export async function resolveAccountBalance(
 type StatementWithIncludes = Awaited<ReturnType<PrismaClient["importedStatement"]["findUniqueOrThrow"]>>;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function mapBatchDTO(batch: any, statements: any[]): UploadBatchDTO {
+  return {
+    id: batch.id,
+    orgId: batch.orgId,
+    sourceFileUrl: batch.sourceFileUrl,
+    fileName: batch.fileName,
+    uploadedBy: batch.uploadedBy,
+    createdAt: batch.createdAt.toISOString(),
+    statements: statements.map((s) => mapDTO(s)),
+  };
+}
+
 function mapDTO(s: any, linkedInvoices: any[] = []): ImportedStatementDTO {
   const balances: any[] = s.accountBalances ?? [];
 
@@ -1088,6 +1261,8 @@ function mapDTO(s: any, linkedInvoices: any[] = []): ImportedStatementDTO {
   return {
     id: s.id,
     orgId: s.orgId,
+    uploadBatchId: s.uploadBatchId ?? null,
+    sectionType: s.sectionType ?? StatementSectionType.BALANCE_SHEET,
     buildingId: s.buildingId,
     buildingName: s.building?.name ?? null,
     fiscalYear: s.fiscalYear,
