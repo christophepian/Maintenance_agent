@@ -195,14 +195,28 @@ body {
 @media print {
   body { background: #fff; }
   .print-bar { display: none; }
+  #hub-bar { display: none; }
   .page {
     max-width: 100%; margin: 0; padding: 48px 56px;
     border: none; box-shadow: none;
   }
 }
 </style>
+<style>
+#hub-bar{position:fixed;top:0;left:0;right:0;z-index:9000;height:36px;background:#0f172a;display:flex;align-items:center;padding:0 20px;font-family:'Inter',-apple-system,sans-serif;font-size:12px;font-weight:500;border-bottom:1px solid rgba(255,255,255,.08)}
+#hub-bar a{color:rgba(255,255,255,.5);text-decoration:none;padding:0 8px;height:36px;display:flex;align-items:center;transition:color .12s}
+#hub-bar a:hover,#hub-bar a.hub-active{color:#fff}
+#hub-bar .hub-brand{color:rgba(255,255,255,.9)!important;font-weight:700;padding-right:14px;margin-right:6px;border-right:1px solid rgba(255,255,255,.15)}
+#hub-bar .hub-open{margin-left:auto;background:#4f46e5;color:#fff!important;padding:0 12px;height:24px;border-radius:4px;font-size:11px;font-weight:600}
+#hub-bar .hub-open:hover{background:#4338ca!important}
+body { padding-top: 36px; }
+</style>
 </head>
 <body>
+
+<!-- HUB-BAR -->
+<div id="hub-bar"><span class="hub-brand">MA Docs</span><a href="/docs/wiki.html" target="_blank">Wiki</a><a href="/docs/blueprint.html" target="_blank">Blueprint</a><a href="/docs/product-overview.html" target="_blank">Product</a><a href="/docs/roadmap.html" target="_blank">Roadmap</a><a href="/docs/design-system.html" target="_blank">Design</a><a href="/docs/pitchdeck.html" target="_blank">Pitch</a><a href="/website/index.html">Website</a><a href="/website/invest.html">Invest</a><a href="https://maintenance-agent-api-git-main-christophepians-projects.vercel.app/login" target="_blank" class="hub-open">Open App →</a></div>
+<script>(function(){var p=window.location.pathname;document.querySelectorAll('#hub-bar a[href]').forEach(function(a){var h=a.getAttribute('href');if(h&&(p===h||p===h.replace(/\/index\.html$/,'/')||h===p+'/index.html'))a.classList.add('hub-active');});})()</script>
 
 <!-- Helper bar — hidden on print -->
 <div class="print-bar">

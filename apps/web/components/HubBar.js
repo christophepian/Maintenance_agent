@@ -20,6 +20,11 @@ const DOC_LINKS = [
   { href: "pitchdeck.html",       label: "Pitch" },
 ];
 
+const WEBSITE_LINKS = [
+  { href: "/website/index.html",  label: "Website" },
+  { href: "/website/invest.html", label: "Invest" },
+];
+
 export default function HubBar() {
   return (
     <div
@@ -62,6 +67,29 @@ export default function HubBar() {
         <a
           key={href}
           href={`${DOCS_BASE}/${href}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            color: "rgba(255,255,255,.5)",
+            textDecoration: "none",
+            padding: "0 8px",
+            height: 36,
+            display: "flex",
+            alignItems: "center",
+            transition: "color .12s",
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = "#fff")}
+          onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(255,255,255,.5)")}
+        >
+          {label}
+        </a>
+      ))}
+
+      {/* Website links */}
+      {WEBSITE_LINKS.map(({ href, label }) => (
+        <a
+          key={href}
+          href={href}
           target="_blank"
           rel="noopener noreferrer"
           style={{
