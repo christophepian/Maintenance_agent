@@ -1,0 +1,1029 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Invest in Sencilo — Pre-Seed Convertible Round</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+
+<style>
+/* ─────────────────────────────────────────────
+   TOKENS — identical to website/index.html
+───────────────────────────────────────────── */
+:root {
+  --dark:          #05081a;
+  --dark-2:        #0d1226;
+  --dark-3:        #141d38;
+  --dark-4:        #1c2548;
+  --indigo:        #4f46e5;
+  --indigo-light:  #818cf8;
+  --violet:        #7c3aed;
+  --violet-light:  #a78bfa;
+  --emerald:       #059669;
+  --emerald-light: #34d399;
+  --amber:         #d97706;
+  --amber-light:   #fbbf24;
+  --rose:          #e11d48;
+  --text:          #ffffff;
+  --text-muted:    rgba(255,255,255,.6);
+  --text-dim:      rgba(255,255,255,.35);
+  --surface:       rgba(255,255,255,.05);
+  --surface-2:     rgba(255,255,255,.08);
+  --surface-3:     rgba(255,255,255,.12);
+  --border:        rgba(255,255,255,.1);
+  --border-2:      rgba(255,255,255,.15);
+  --radius:        14px;
+  --radius-sm:     8px;
+  --radius-lg:     20px;
+}
+
+*,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'Inter', -apple-system, sans-serif;
+  background: var(--dark);
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+img { display: block; max-width: 100%; }
+a { text-decoration: none; }
+.container { max-width: 1100px; margin: 0 auto; padding: 0 28px; }
+.container-narrow { max-width: 760px; margin: 0 auto; padding: 0 28px; }
+section { padding: 88px 0; }
+
+/* ─── NAV ─── */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+  padding: 16px 0;
+  transition: background .3s, border-color .3s;
+}
+nav.scrolled {
+  background: rgba(5,8,26,.88);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+}
+.nav-inner { display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+.nav-logo { display: flex; align-items: center; gap: 10px; }
+.nav-logo-mark {
+  width: 32px; height: 32px; border-radius: 8px;
+  background: linear-gradient(135deg, var(--indigo), var(--violet));
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: 12px; color: #fff;
+  box-shadow: 0 0 16px rgba(79,70,229,.4);
+}
+.nav-logo-text { font-weight: 700; font-size: 16px; letter-spacing: -0.4px; color: #fff; }
+.nav-back {
+  display: inline-flex; align-items: center; gap: 6px;
+  color: var(--text-dim); font-size: 13px; font-weight: 500;
+  transition: color .15s;
+}
+.nav-back:hover { color: var(--text-muted); }
+.nav-cta {
+  display: inline-flex; align-items: center; gap: 7px;
+  background: linear-gradient(135deg, var(--indigo), var(--violet));
+  color: #fff; font-size: 13px; font-weight: 600;
+  padding: 9px 20px; border-radius: var(--radius-sm);
+  box-shadow: 0 4px 16px rgba(79,70,229,.4);
+  transition: opacity .15s, transform .15s;
+}
+.nav-cta:hover { opacity: .9; transform: translateY(-1px); }
+
+/* ─── DISCLAIMER BANNER ─── */
+.disclaimer-banner {
+  background: rgba(217,119,6,.12);
+  border-bottom: 1px solid rgba(251,191,36,.2);
+  padding: 12px 0;
+  text-align: center;
+}
+.disclaimer-banner p {
+  font-size: 12px; color: var(--amber-light); line-height: 1.5;
+  max-width: 900px; margin: 0 auto; padding: 0 24px;
+}
+.disclaimer-banner strong { font-weight: 600; }
+
+/* ─── HERO ─── */
+.hero {
+  padding: 160px 0 100px;
+  position: relative; overflow: hidden;
+}
+.hero-bg {
+  position: absolute; inset: 0; z-index: 0;
+  background:
+    radial-gradient(ellipse 70% 60% at 15% 20%, rgba(79,70,229,.22) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 50% at 85% 40%, rgba(124,58,237,.18) 0%, transparent 55%),
+    radial-gradient(ellipse 40% 30% at 50% 85%, rgba(5,150,105,.10) 0%, transparent 50%);
+}
+.hero-grid {
+  position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255,255,255,.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.02) 1px, transparent 1px);
+  background-size: 60px 60px;
+  mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black, transparent);
+}
+.hero-inner { position: relative; z-index: 1; max-width: 820px; }
+.hero-eyebrow {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(79,70,229,.15);
+  border: 1px solid rgba(129,140,248,.25);
+  color: var(--indigo-light);
+  font-size: 11px; font-weight: 600; letter-spacing: .6px; text-transform: uppercase;
+  padding: 5px 14px; border-radius: 20px; margin-bottom: 28px;
+}
+.eyebrow-dot {
+  width: 6px; height: 6px; border-radius: 50%; background: var(--emerald-light);
+  box-shadow: 0 0 6px var(--emerald-light);
+  animation: pulse 2s ease-in-out infinite;
+}
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .4; } }
+.hero h1 {
+  font-family: 'DM Serif Display', Georgia, serif;
+  font-size: clamp(38px, 5vw, 62px);
+  font-weight: 900; line-height: 1.06;
+  letter-spacing: -2px;
+  margin-bottom: 24px;
+}
+.hero h1 em { font-style: italic; color: var(--indigo-light); }
+.hero-sub {
+  font-size: 17px; color: var(--text-muted); line-height: 1.75;
+  max-width: 620px; margin-bottom: 44px;
+}
+.hero-ctas { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+.btn-primary {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: linear-gradient(135deg, var(--indigo), var(--violet));
+  color: #fff; font-size: 15px; font-weight: 600;
+  padding: 13px 28px; border-radius: var(--radius-sm);
+  box-shadow: 0 4px 20px rgba(79,70,229,.45);
+  transition: opacity .15s, transform .15s;
+}
+.btn-primary:hover { opacity: .9; transform: translateY(-2px); }
+.btn-outline {
+  display: inline-flex; align-items: center; gap: 8px;
+  color: var(--text-muted); font-size: 15px; font-weight: 500;
+  padding: 13px 22px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border-2);
+  transition: all .15s;
+}
+.btn-outline:hover { color: var(--text); background: var(--surface); }
+
+/* ─── ROUND STATUS BAR ─── */
+.round-bar {
+  margin-top: 64px;
+  background: var(--surface);
+  border: 1px solid var(--border-2);
+  border-radius: var(--radius);
+  padding: 28px 32px;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr auto 1fr auto 1fr;
+  gap: 0;
+  align-items: center;
+}
+.round-stat {}
+.round-stat-num {
+  font-family: 'DM Serif Display', Georgia, serif;
+  font-size: 28px; font-weight: 800; letter-spacing: -1px;
+  color: var(--text); line-height: 1; margin-bottom: 4px;
+}
+.round-stat-num.green { color: var(--emerald-light); }
+.round-stat-label { font-size: 12px; color: var(--text-dim); font-weight: 500; }
+.round-divider { width: 1px; height: 48px; background: var(--border); margin: 0 32px; }
+.round-progress-wrap { grid-column: 1 / -1; margin-top: 24px; }
+.round-progress-label {
+  display: flex; justify-content: space-between;
+  font-size: 12px; color: var(--text-dim); margin-bottom: 8px;
+}
+.round-progress-track {
+  height: 6px; background: var(--surface-3); border-radius: 999px; overflow: hidden;
+}
+.round-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--indigo), var(--violet));
+  border-radius: 999px;
+  width: 35%; /* ← UPDATE when allocation fills */
+  transition: width 1s ease;
+}
+
+/* ─── SECTION LABELS ─── */
+.section-eyebrow {
+  font-size: 11px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase;
+  color: var(--indigo-light); margin-bottom: 14px;
+}
+.section-title {
+  font-family: 'DM Serif Display', Georgia, serif;
+  font-size: clamp(28px, 3.5vw, 42px);
+  font-weight: 800; line-height: 1.15;
+  letter-spacing: -1px; margin-bottom: 18px;
+}
+.section-title em { font-style: italic; color: var(--indigo-light); }
+.section-sub {
+  font-size: 15px; color: var(--text-muted); line-height: 1.75;
+  max-width: 640px; margin-bottom: 52px;
+}
+
+/* ─── OPPORTUNITY ─── */
+.opp-grid {
+  display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px;
+  margin-top: 48px;
+}
+.opp-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 28px 24px;
+  transition: border-color .2s;
+}
+.opp-card:hover { border-color: rgba(129,140,248,.3); }
+.opp-num {
+  font-family: 'DM Serif Display', Georgia, serif;
+  font-size: 36px; font-weight: 800;
+  background: linear-gradient(135deg, var(--indigo-light), var(--violet-light));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 6px;
+}
+.opp-label { font-size: 13px; font-weight: 700; margin-bottom: 6px; }
+.opp-desc { font-size: 12px; color: var(--text-dim); line-height: 1.6; }
+
+/* ─── INSTRUMENT TERMS ─── */
+.terms-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 48px;
+}
+.term-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px 26px;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.term-card.highlight {
+  background: rgba(79,70,229,.1);
+  border-color: rgba(129,140,248,.25);
+}
+.term-label {
+  font-size: 11px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase;
+  color: var(--text-dim);
+}
+.term-value {
+  font-family: 'DM Serif Display', Georgia, serif;
+  font-size: 24px; font-weight: 800; letter-spacing: -.5px;
+  color: var(--text);
+}
+.term-value.accent { color: var(--indigo-light); }
+.term-note { font-size: 12px; color: var(--text-dim); line-height: 1.5; margin-top: 2px; }
+
+/* ─── SCENARIOS ─── */
+.scenarios-section { background: var(--dark-2); }
+.scenario-tabs {
+  display: flex; gap: 8px; margin-bottom: 36px; flex-wrap: wrap;
+}
+.scenario-tab {
+  padding: 8px 18px; border-radius: 999px;
+  border: 1px solid var(--border);
+  font-size: 13px; font-weight: 500; color: var(--text-dim);
+  cursor: pointer; background: var(--surface);
+  transition: all .15s;
+}
+.scenario-tab.active {
+  background: rgba(79,70,229,.2);
+  border-color: rgba(129,140,248,.35);
+  color: var(--indigo-light); font-weight: 600;
+}
+.scenario-panels { position: relative; }
+.scenario-panel { display: none; }
+.scenario-panel.active { display: block; }
+.scenario-card {
+  background: var(--dark-3);
+  border: 1px solid var(--border-2);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.scenario-header {
+  padding: 22px 28px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 14px;
+}
+.scenario-badge {
+  font-size: 10px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase;
+  padding: 4px 11px; border-radius: 20px;
+}
+.badge-green { background: rgba(5,150,105,.2); color: var(--emerald-light); border: 1px solid rgba(52,211,153,.2); }
+.badge-amber { background: rgba(217,119,6,.2); color: var(--amber-light); border: 1px solid rgba(251,191,36,.2); }
+.badge-blue  { background: rgba(37,99,235,.2); color: #93c5fd; border: 1px solid rgba(147,197,253,.2); }
+.scenario-title { font-size: 15px; font-weight: 700; }
+.scenario-body { padding: 28px; }
+.scenario-row {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 24px;
+}
+.scenario-metric {}
+.scenario-metric-label { font-size: 11px; color: var(--text-dim); margin-bottom: 4px; }
+.scenario-metric-val {
+  font-family: 'DM Serif Display', Georgia, serif;
+  font-size: 22px; font-weight: 800; letter-spacing: -.5px;
+}
+.scenario-metric-val.green { color: var(--emerald-light); }
+.scenario-metric-val.amber { color: var(--amber-light); }
+.scenario-note {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px 18px;
+  font-size: 13px; color: var(--text-muted); line-height: 1.65;
+}
+
+/* ─── MECHANICS / HOW IT WORKS ─── */
+.mechanics-steps {
+  display: flex; flex-direction: column; gap: 0; margin-top: 48px;
+  border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden;
+}
+.mechanic-step {
+  padding: 28px 32px;
+  border-bottom: 1px solid var(--border);
+  display: grid; grid-template-columns: 48px 1fr; gap: 20px; align-items: flex-start;
+}
+.mechanic-step:last-child { border-bottom: none; }
+.mechanic-num {
+  width: 40px; height: 40px; border-radius: 10px;
+  background: rgba(79,70,229,.15);
+  border: 1px solid rgba(129,140,248,.2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 700; color: var(--indigo-light);
+  flex-shrink: 0; margin-top: 2px;
+}
+.mechanic-title { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
+.mechanic-desc { font-size: 13px; color: var(--text-muted); line-height: 1.7; }
+.mechanic-tag {
+  display: inline-block; margin-top: 10px;
+  font-size: 11px; font-weight: 600; color: var(--indigo-light);
+  background: rgba(79,70,229,.12); border: 1px solid rgba(129,140,248,.2);
+  padding: 3px 10px; border-radius: 20px;
+}
+
+/* ─── LONG-STOP ─── */
+.longstop-section { background: var(--dark-3); }
+.longstop-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 40px;
+}
+.longstop-card {
+  border-radius: var(--radius); padding: 30px 28px;
+  border: 1px solid var(--border-2);
+}
+.longstop-card.repay {
+  background: rgba(5,150,105,.08);
+  border-color: rgba(52,211,153,.2);
+}
+.longstop-card.convert {
+  background: rgba(79,70,229,.1);
+  border-color: rgba(129,140,248,.25);
+}
+.longstop-icon { font-size: 28px; margin-bottom: 16px; }
+.longstop-title { font-size: 16px; font-weight: 700; margin-bottom: 10px; }
+.longstop-desc { font-size: 13px; color: var(--text-muted); line-height: 1.7; }
+.longstop-tag {
+  display: inline-block; margin-top: 14px;
+  font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px;
+}
+.longstop-card.repay .longstop-tag {
+  background: rgba(5,150,105,.2); color: var(--emerald-light);
+  border: 1px solid rgba(52,211,153,.2);
+}
+.longstop-card.convert .longstop-tag {
+  background: rgba(79,70,229,.2); color: var(--indigo-light);
+  border: 1px solid rgba(129,140,248,.2);
+}
+
+/* ─── USE OF PROCEEDS ─── */
+.proceeds-bars { margin-top: 44px; display: flex; flex-direction: column; gap: 16px; }
+.proceed-row { display: grid; grid-template-columns: 180px 1fr 60px; gap: 16px; align-items: center; }
+.proceed-label { font-size: 13px; font-weight: 600; }
+.proceed-track {
+  height: 8px; background: var(--surface-3); border-radius: 999px; overflow: hidden;
+}
+.proceed-fill {
+  height: 100%; border-radius: 999px;
+  background: linear-gradient(90deg, var(--indigo), var(--violet));
+}
+.proceed-fill.green { background: linear-gradient(90deg, var(--emerald), #10b981); }
+.proceed-fill.amber { background: linear-gradient(90deg, var(--amber), #f59e0b); }
+.proceed-pct { font-size: 13px; font-weight: 700; color: var(--text-muted); text-align: right; }
+
+/* ─── FOUNDERS ─── */
+.founders-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 44px; }
+.founder-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 28px 26px;
+}
+.founder-avatar {
+  width: 52px; height: 52px; border-radius: 13px;
+  background: linear-gradient(135deg, var(--indigo), var(--violet));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; font-weight: 800; color: #fff;
+  margin-bottom: 16px;
+}
+.founder-name { font-size: 15px; font-weight: 700; margin-bottom: 3px; }
+.founder-role { font-size: 12px; color: var(--indigo-light); font-weight: 600; margin-bottom: 12px; }
+.founder-bio { font-size: 13px; color: var(--text-muted); line-height: 1.65; }
+
+/* ─── CTA ─── */
+.cta-section {
+  background: var(--dark-2);
+  text-align: center;
+}
+.cta-box {
+  max-width: 640px; margin: 0 auto;
+  background: var(--surface);
+  border: 1px solid var(--border-2);
+  border-radius: var(--radius-lg);
+  padding: 52px 48px;
+  position: relative; overflow: hidden;
+}
+.cta-box::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, var(--indigo), var(--violet), var(--emerald));
+}
+.cta-title {
+  font-family: 'DM Serif Display', Georgia, serif;
+  font-size: 32px; font-weight: 800; letter-spacing: -.8px;
+  margin-bottom: 14px;
+}
+.cta-title em { font-style: italic; color: var(--indigo-light); }
+.cta-sub {
+  font-size: 14px; color: var(--text-muted); line-height: 1.7; margin-bottom: 32px;
+}
+.cta-form { display: flex; flex-direction: column; gap: 12px; }
+.cta-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.cta-input {
+  width: 100%;
+  background: var(--surface-2); border: 1px solid var(--border-2);
+  border-radius: var(--radius-sm); padding: 12px 16px;
+  color: var(--text); font-size: 14px; font-family: inherit;
+  outline: none; transition: border-color .15s;
+}
+.cta-input::placeholder { color: var(--text-dim); }
+.cta-input:focus { border-color: rgba(129,140,248,.5); }
+.cta-select {
+  width: 100%; appearance: none;
+  background: var(--surface-2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='rgba(255,255,255,0.35)' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat right 14px center;
+  border: 1px solid var(--border-2);
+  border-radius: var(--radius-sm); padding: 12px 16px;
+  color: var(--text); font-size: 14px; font-family: inherit;
+  outline: none; cursor: pointer; transition: border-color .15s;
+}
+.cta-select:focus { border-color: rgba(129,140,248,.5); }
+.cta-submit {
+  width: 100%; padding: 14px;
+  background: linear-gradient(135deg, var(--indigo), var(--violet));
+  color: #fff; font-size: 15px; font-weight: 600; font-family: inherit;
+  border: none; border-radius: var(--radius-sm); cursor: pointer;
+  box-shadow: 0 4px 20px rgba(79,70,229,.4);
+  transition: opacity .15s, transform .15s;
+}
+.cta-submit:hover { opacity: .9; transform: translateY(-1px); }
+.cta-legal {
+  margin-top: 16px;
+  font-size: 11px; color: var(--text-dim); line-height: 1.6;
+}
+.cta-success {
+  display: none; padding: 20px;
+  text-align: center; color: var(--emerald-light);
+  font-size: 15px; font-weight: 600;
+}
+
+/* ─── FULL DISCLAIMER ─── */
+.legal-section { background: var(--dark); border-top: 1px solid var(--border); }
+.legal-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 36px 40px;
+  font-size: 12px; color: var(--text-dim); line-height: 1.8;
+}
+.legal-box h4 { font-size: 13px; font-weight: 700; color: var(--text-muted); margin-bottom: 10px; margin-top: 20px; }
+.legal-box h4:first-child { margin-top: 0; }
+
+/* ─── FOOTER ─── */
+footer {
+  padding: 36px 0;
+  border-top: 1px solid var(--border);
+  text-align: center;
+}
+footer p { font-size: 12px; color: var(--text-dim); }
+footer a { color: var(--text-dim); transition: color .15s; }
+footer a:hover { color: var(--text-muted); }
+
+/* ─── FADE-UP ─── */
+.fade-up { opacity: 0; transform: translateY(24px); transition: opacity .55s ease, transform .55s ease; }
+.fade-up.visible { opacity: 1; transform: translateY(0); }
+
+/* ─── RESPONSIVE ─── */
+@media (max-width: 768px) {
+  .round-bar { grid-template-columns: 1fr 1fr; gap: 20px; }
+  .round-divider { display: none; }
+  .round-progress-wrap { grid-column: 1 / -1; }
+  .opp-grid { grid-template-columns: 1fr; }
+  .terms-grid { grid-template-columns: 1fr; }
+  .scenario-row { grid-template-columns: 1fr 1fr; }
+  .longstop-grid { grid-template-columns: 1fr; }
+  .founders-grid { grid-template-columns: 1fr; }
+  .cta-row { grid-template-columns: 1fr; }
+  .cta-box { padding: 36px 24px; }
+  .mechanic-step { grid-template-columns: 1fr; }
+  .proceed-row { grid-template-columns: 120px 1fr 48px; }
+}
+</style>
+</head>
+
+<body>
+
+<!-- ─── DISCLAIMER BANNER ─── -->
+<div class="disclaimer-banner">
+  <p><strong>Informational purposes only.</strong> This page does not constitute a public offer or solicitation of securities under Swiss law (FISA/FinSA). Access is restricted to qualified investors or persons approached directly by Sencilo. This is a pre-incorporation convertible instrument — no shares are issued at this stage.</p>
+</div>
+
+<!-- ─── NAV ─── -->
+<nav id="nav">
+  <div class="container">
+    <div class="nav-inner">
+      <a href="index.html" class="nav-logo">
+        <div class="nav-logo-mark">S</div>
+        <span class="nav-logo-text">Sencilo</span>
+      </a>
+      <a href="index.html" class="nav-back">
+        ← Back to website
+      </a>
+      <a href="#express-interest" class="nav-cta">
+        Express interest
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 7h10M8 3l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
+    </div>
+  </div>
+</nav>
+
+<!-- ─── HERO ─── -->
+<div class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-grid"></div>
+  <div class="container">
+    <div class="hero-inner">
+      <div class="hero-eyebrow">
+        <span class="eyebrow-dot"></span>
+        Pre-Seed · Convertible Round · CHF 300K
+      </div>
+      <h1>Back the platform <em>Swiss landlords<br>have been waiting for</em>.</h1>
+      <p class="hero-sub">Sencilo is building the operating system for Swiss residential property — automation, financial transparency, and compliance in one platform. We're raising our pre-seed convertible round to reach our first commercial milestones.</p>
+      <div class="hero-ctas">
+        <a href="#express-interest" class="btn-primary">
+          Express interest
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <a href="https://maintenance-agent-api-git-main-christophepians-projects.vercel.app/docs/pitchdeck.html" target="_blank" class="btn-outline">
+          Read the pitch deck →
+        </a>
+      </div>
+
+      <!-- Round status -->
+      <div class="round-bar fade-up">
+        <div class="round-stat">
+          <div class="round-stat-num">CHF 300K</div>
+          <div class="round-stat-label">Round size</div>
+        </div>
+        <div class="round-divider"></div>
+        <div class="round-stat">
+          <div class="round-stat-num accent" style="color:var(--indigo-light);"><!-- FILL when committed -->—</div>
+          <div class="round-stat-label">Committed to date</div>
+        </div>
+        <div class="round-divider"></div>
+        <div class="round-stat">
+          <div class="round-stat-num">CHF 25K</div>
+          <div class="round-stat-label">Minimum ticket</div>
+        </div>
+        <div class="round-divider"></div>
+        <div class="round-stat">
+          <div class="round-stat-num">24 mo</div>
+          <div class="round-stat-label">Long-stop maturity</div>
+        </div>
+        <div class="round-progress-wrap">
+          <div class="round-progress-label">
+            <span>Allocation progress</span>
+            <span><!-- FILL: e.g. 25% committed -->Open</span>
+          </div>
+          <div class="round-progress-track">
+            <div class="round-progress-fill"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── OPPORTUNITY ─── -->
+<section id="opportunity">
+  <div class="container">
+    <div class="section-eyebrow">The opportunity</div>
+    <h2 class="section-title">A large, underserved market <em>with no real incumbent</em>.</h2>
+    <p class="section-sub">Switzerland has 341,000 private landlords managing their properties with a mix of spreadsheets, manual rent slips, and expensive property managers. No software platform has ever been purpose-built for Swiss residential property law, payments, and operations.</p>
+    <div class="opp-grid fade-up">
+      <div class="opp-card">
+        <div class="opp-num">341K</div>
+        <div class="opp-label">Private landlords in Switzerland</div>
+        <div class="opp-desc">Self-managing owners with no dedicated software. Our primary TAM segment.</div>
+      </div>
+      <div class="opp-card">
+        <div class="opp-num">CHF 1.59B</div>
+        <div class="opp-label">Total addressable market / year</div>
+        <div class="opp-desc">Estimated annual spend on property management fees and compliance across the private landlord segment.</div>
+      </div>
+      <div class="opp-card">
+        <div class="opp-num">0</div>
+        <div class="opp-label">Swiss-native competitors</div>
+        <div class="opp-desc">No platform today combines QR-bill payments, Swiss tenancy law compliance, and full operational workflows in a single product.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── INSTRUMENT TERMS ─── -->
+<section id="terms" style="background:var(--dark-2);">
+  <div class="container">
+    <div class="section-eyebrow">Instrument terms</div>
+    <h2 class="section-title">A Swiss convertible loan — <em>simple, standard, founder-fair</em>.</h2>
+    <p class="section-sub">The instrument is a pre-incorporation convertible loan agreement (CLA) governed by Swiss OR. No shares are issued today — investors hold a right to convert into equity at the next qualified financing round, at a discount to the round price.</p>
+    <div class="terms-grid fade-up">
+      <div class="term-card highlight">
+        <div class="term-label">Valuation cap</div>
+        <div class="term-value accent">CHF 2.0M</div>
+        <div class="term-note">Pre-money cap on conversion valuation. Equals the planned seed round pre-money — early investors convert at this price or better, never worse.</div>
+      </div>
+      <div class="term-card highlight">
+        <div class="term-label">Discount rate</div>
+        <div class="term-value accent">20%</div>
+        <div class="term-note">Applied to the qualified financing price. Investors convert at the lower of: cap-implied price or the seed round price minus 20%.</div>
+      </div>
+      <div class="term-card">
+        <div class="term-label">Round size</div>
+        <div class="term-value">CHF 300K</div>
+        <div class="term-note">Maximum aggregate principal across all convertible loan agreements in this pre-seed tranche.</div>
+      </div>
+      <div class="term-card">
+        <div class="term-label">Minimum ticket</div>
+        <div class="term-value">CHF 25K</div>
+        <div class="term-note">Minimum investment per investor. Multiple tickets by the same investor are permitted with founder consent.</div>
+      </div>
+      <div class="term-card">
+        <div class="term-label">Interest rate</div>
+        <div class="term-value">0% p.a.</div>
+        <div class="term-note">No interest accrues on principal. Economic return comes entirely through the conversion discount and cap — aligned with seed-stage market norms.</div>
+      </div>
+      <div class="term-card">
+        <div class="term-label">Qualified financing threshold</div>
+        <div class="term-value">CHF 500K</div>
+        <div class="term-note">A financing round at or above CHF 500K triggers automatic conversion — aligned with the planned seed round of CHF 500K at CHF 2.0M pre-money.</div>
+      </div>
+      <div class="term-card">
+        <div class="term-label">Long-stop maturity</div>
+        <div class="term-value">24 months</div>
+        <div class="term-note">If no qualified financing has occurred within 24 months of execution, the long-stop provisions are triggered and investor election rights activate.</div>
+      </div>
+      <div class="term-card">
+        <div class="term-label">Governing law</div>
+        <div class="term-value" style="font-size:18px;">Swiss OR</div>
+        <div class="term-note">Agreement governed by Swiss law (Code of Obligations). Jurisdiction: Canton of Vaud.<!-- ← confirm canton with lawyer --></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── HOW IT WORKS ─── -->
+<section id="mechanics">
+  <div class="container">
+    <div class="section-eyebrow">How it works</div>
+    <h2 class="section-title">From investment to equity — <em>three paths</em>.</h2>
+    <p class="section-sub">The convertible loan has a clear, predictable lifecycle. Here is how your investment moves from signed agreement to equity.</p>
+    <div class="mechanics-steps fade-up">
+      <div class="mechanic-step">
+        <div class="mechanic-num">1</div>
+        <div>
+          <div class="mechanic-title">You sign a Convertible Loan Agreement and transfer principal</div>
+          <div class="mechanic-desc">A bilateral CLA is signed between you and Sencilo (pre-incorporation: between you and the founding entity). Your principal — minimum CHF 25K — is transferred to the company account. You hold a contractual right to future conversion; no shares are issued at this stage. The agreement is governed by Swiss OR.</div><!-- ← update min ticket if changed -->
+          <span class="mechanic-tag">Day 0</span>
+        </div>
+      </div>
+      <div class="mechanic-step">
+        <div class="mechanic-num">2</div>
+        <div>
+          <div class="mechanic-title">Qualified financing triggers automatic conversion</div>
+          <div class="mechanic-desc">If Sencilo closes a priced equity round of CHF 500K or more within the 24-month window, your loan converts automatically into shares of the same class as the lead investor — at the lower of: the cap-implied price (CHF 2.0M pre-money / total shares) or the round price less 20% discount. The planned seed round is CHF 500K at CHF 2.0M pre-money: at that price, cap and discounted price are equal, giving early investors parity with seed investors at minimum. No further action required from you.</div>
+          <span class="mechanic-tag">Path A — Conversion on financing</span>
+        </div>
+      </div>
+      <div class="mechanic-step">
+        <div class="mechanic-num">3</div>
+        <div>
+          <div class="mechanic-title">Long-stop reached — you choose your outcome</div>
+          <div class="mechanic-desc">If no qualified financing has occurred after 24 months, the long-stop provisions activate. You have two options: <strong>(a) request repayment</strong> of your principal in full, or <strong>(b) elect conversion</strong> at the cap-implied price (CHF 2.0M pre-money valuation), acquiring equity without needing a third-party round. This choice is yours — the company cannot force either outcome unilaterally.</div>
+          <span class="mechanic-tag">Path B — Long-stop investor election</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── LONG-STOP ─── -->
+<section class="longstop-section">
+  <div class="container">
+    <div class="section-eyebrow">Investor protection</div>
+    <h2 class="section-title">24-month long-stop — <em>your choice at maturity</em>.</h2>
+    <p class="section-sub">Unlike hard mandatory-repayment instruments, this structure gives investors genuine optionality at the long-stop. You are never forced into an outcome that doesn't serve your interests.</p>
+    <div class="longstop-grid fade-up">
+      <div class="longstop-card repay">
+        <div class="longstop-icon">🔄</div>
+        <div class="longstop-title">Option A — Repayment</div>
+        <div class="longstop-desc">Request full repayment of your principal. Sencilo is contractually obligated to return your CHF investment within a defined repayment window (typically 60–90 days of notice). No conversion, no dilution, no lock-in beyond maturity.</div>
+        <span class="longstop-tag">Capital protection</span>
+      </div>
+      <div class="longstop-card convert">
+        <div class="longstop-icon">📈</div>
+        <div class="longstop-title">Option B — Convert at cap</div>
+        <div class="longstop-desc">Elect to convert your principal into equity at the cap valuation (CHF 2.0M pre-money), regardless of whether a formal financing round has occurred. You become a shareholder at the price agreed on day one — useful if the company is growing but hasn't yet closed a priced round.</div>
+        <span class="longstop-tag">Upside optionality</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── SCENARIOS ─── -->
+<section class="scenarios-section" id="scenarios">
+  <div class="container">
+    <div class="section-eyebrow">Investor scenarios</div>
+    <h2 class="section-title">What your investment looks like <em>in practice</em>.</h2>
+    <p class="section-sub">Illustrative scenarios for a CHF 50K investment at the CHF 2.0M pre-money cap. These are projections only — not a guarantee of returns. Actual outcomes depend on company performance and future financing terms.</p>
+
+    <div class="scenario-tabs">
+      <div class="scenario-tab active" onclick="showScenario('series-a')">Seed + Series A</div>
+      <div class="scenario-tab" onclick="showScenario('longstop-convert')">Long-stop: convert</div>
+      <div class="scenario-tab" onclick="showScenario('longstop-repay')">Long-stop: repayment</div>
+    </div>
+
+    <div class="scenario-panels">
+
+      <!-- Scenario 1: Series A -->
+      <div class="scenario-panel active" id="panel-series-a">
+        <div class="scenario-card">
+          <div class="scenario-header">
+            <span class="scenario-badge badge-green">Upside case</span>
+            <span class="scenario-title">Converts at seed (CHF 2.0M pre) — held through Series A positioning (CHF 71–94M)</span>
+          </div>
+          <div class="scenario-body">
+            <div class="scenario-row">
+              <div class="scenario-metric">
+                <div class="scenario-metric-label">Your investment</div>
+                <div class="scenario-metric-val">CHF 50K</div>
+              </div>
+              <div class="scenario-metric">
+                <div class="scenario-metric-label">Conversion valuation</div>
+                <div class="scenario-metric-val green">CHF 2.0M pre</div>
+              </div>
+              <div class="scenario-metric">
+                <div class="scenario-metric-label">Ownership at seed</div>
+                <div class="scenario-metric-val">~2.0%</div>
+              </div>
+              <div class="scenario-metric">
+                <div class="scenario-metric-label">Paper value at CHF 71M Series A</div>
+                <div class="scenario-metric-val green">~CHF 1.1M</div>
+              </div>
+            </div>
+            <div class="scenario-note">At the planned seed round (CHF 500K at CHF 2.0M pre / CHF 2.5M post), your loan converts at the cap: CHF 50K ÷ CHF 2.5M post = ~2.0% ownership. The pitchdeck projects Series A positioning at CHF 71–94M by month 24–36. At the low end (CHF 71M), 2.0% implies ~CHF 1.1M paper value before Series A dilution. Illustrative only.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Scenario 2: Long-stop convert -->
+      <div class="scenario-panel" id="panel-longstop-convert">
+        <div class="scenario-card">
+          <div class="scenario-header">
+            <span class="scenario-badge badge-blue">Long-stop</span>
+            <span class="scenario-title">No qualified round at month 24 — you elect to convert</span>
+          </div>
+          <div class="scenario-body">
+            <div class="scenario-row">
+              <div class="scenario-metric">
+                <div class="scenario-metric-label">Your investment</div>
+                <div class="scenario-metric-val">CHF 50K</div>
+              </div>
+              <div class="scenario-metric">
+                <div class="scenario-metric-label">Conversion valuation</div>
+                <div class="scenario-metric-val">CHF 2.0M pre</div>
+              </div>
+              <div class="scenario-metric">
+                <div class="scenario-metric-label">Ownership acquired</div>
+                <div class="scenario-metric-val">~2.0%</div>
+              </div>
+              <div class="scenario-metric">
+                <div class="scenario-metric-label">Future upside</div>
+                <div class="scenario-metric-val green">Fully preserved</div>
+              </div>
+            </div>
+            <div class="scenario-note">If the company is growing but no formal round has closed by month 24, you elect conversion at the CHF 2.0M pre-money cap. CHF 50K ÷ CHF 2.5M post = ~2.0% equity. You become a shareholder at the price agreed on day one and participate in all future upside — including any eventual Series A or exit.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Scenario 3: Long-stop repay -->
+      <div class="scenario-panel" id="panel-longstop-repay">
+        <div class="scenario-card">
+          <div class="scenario-header">
+            <span class="scenario-badge badge-amber">Long-stop</span>
+            <span class="scenario-title">No qualified round at month 24 — you elect repayment</span>
+          </div>
+          <div class="scenario-body">
+            <div class="scenario-row">
+              <div class="scenario-metric">
+                <div class="scenario-metric-label">Your investment</div>
+                <div class="scenario-metric-val">CHF 50K</div>
+              </div>
+              <div class="scenario-metric">
+                <div class="scenario-metric-label">Repayment due</div>
+                <div class="scenario-metric-val">CHF 50K</div>
+              </div>
+              <div class="scenario-metric">
+                <div class="scenario-metric-label">Interest accrued</div>
+                <div class="scenario-metric-val amber">0%</div>
+              </div>
+              <div class="scenario-metric">
+                <div class="scenario-metric-label">Downside</div>
+                <div class="scenario-metric-val">Principal only</div>
+              </div>
+            </div>
+            <div class="scenario-note">If no qualifying round has occurred and you prefer capital return over equity, you may request repayment of your full CHF 50K principal. The company must repay within the contractually agreed window. Important: this is an early-stage investment — repayment capacity depends on the company's cash position at maturity. The 0% interest rate means no nominal return in this scenario.</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ─── USE OF PROCEEDS ─── -->
+<section id="proceeds">
+  <div class="container">
+    <div class="section-eyebrow">Use of proceeds</div>
+    <h2 class="section-title">CHF 300K — <em>deployed with focus</em>.</h2>
+    <p class="section-sub">The round is sized to reach three commercial milestones: first paying customers, a validated go-to-market motion, and a metrics story strong enough for a Series A conversation.</p>
+    <div class="proceeds-bars fade-up">
+      <div class="proceed-row">
+        <div class="proceed-label">Product &amp; engineering</div>
+        <div class="proceed-track"><div class="proceed-fill" style="width:45%;"></div></div>
+        <div class="proceed-pct">45%</div>
+      </div>
+      <div class="proceed-row">
+        <div class="proceed-label">Sales &amp; marketing</div>
+        <div class="proceed-track"><div class="proceed-fill green" style="width:30%;"></div></div>
+        <div class="proceed-pct">30%</div>
+      </div>
+      <div class="proceed-row">
+        <div class="proceed-label">Operations &amp; legal</div>
+        <div class="proceed-track"><div class="proceed-fill amber" style="width:15%;"></div></div>
+        <div class="proceed-pct">15%</div>
+      </div>
+      <div class="proceed-row">
+        <div class="proceed-label">Reserve</div>
+        <div class="proceed-track"><div class="proceed-fill" style="width:10%;opacity:.5;"></div></div>
+        <div class="proceed-pct">10%</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── FOUNDERS ─── -->
+<section id="founders" style="background:var(--dark-2);">
+  <div class="container">
+    <div class="section-eyebrow">The founders</div>
+    <h2 class="section-title">Built by people who <em>understand the problem</em>.</h2>
+    <p class="section-sub">Sencilo was built by two founders with direct experience of Swiss property pain — one from the software side, one from the management side.</p>
+    <div class="founders-grid fade-up">
+      <div class="founder-card">
+        <div class="founder-avatar">CP</div>
+        <div class="founder-name">Christophe Pian</div>
+        <div class="founder-role">CEO &amp; Co-founder</div>
+        <div class="founder-bio">Product and engineering lead. Built the platform from scratch — architecture, compliance engine, Swiss QR-bill implementation, and AI-assisted maintenance triage. Direct experience managing residential property in Switzerland.</div>
+      </div>
+      <div class="founder-card">
+        <div class="founder-avatar">ML</div>
+        <div class="founder-name">Magno Martin Leon</div>
+        <div class="founder-role">COO &amp; Co-founder</div>
+        <div class="founder-bio">Operations and go-to-market lead. Background in property management and client-facing financial services. Brings the domain knowledge of how landlords and property managers actually operate in practice.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── CTA / EXPRESS INTEREST ─── -->
+<section class="cta-section" id="express-interest">
+  <div class="container">
+    <div class="cta-box fade-up">
+      <div class="cta-title">Ready to <em>invest</em>?</div>
+      <p class="cta-sub">Submit your expression of interest below. We'll follow up with the full data room, a draft CLA, and a call to answer any questions. No commitment until you sign.</p>
+      <form class="cta-form" id="investForm" onsubmit="handleInvestSubmit(event)">
+        <div class="cta-row">
+          <input class="cta-input" type="text" name="name" placeholder="Full name" required>
+          <input class="cta-input" type="email" name="email" placeholder="Email address" required>
+        </div>
+        <div class="cta-row">
+          <input class="cta-input" type="text" name="company" placeholder="Company / fund (optional)">
+          <select class="cta-select" name="ticket">
+            <option value="" disabled selected>Indicative ticket size</option>
+            <option>CHF 25K – 50K</option>
+            <option>CHF 50K – 100K</option>
+            <option>CHF 100K – 200K</option>
+            <option>CHF 200K+</option>
+          </select>
+        </div>
+        <input class="cta-input" type="text" name="source" placeholder="How did you hear about Sencilo? (optional)">
+        <button type="submit" class="cta-submit">Submit expression of interest →</button>
+        <p class="cta-legal">By submitting this form you confirm you have read the disclaimer at the top of this page and that you are a qualified investor or have been directly approached by Sencilo. This form does not constitute a binding commitment.</p>
+      </form>
+      <div class="cta-success" id="investSuccess">
+        ✓ &nbsp;Thank you — we'll be in touch within 48 hours with the full data room.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── FULL LEGAL DISCLAIMER ─── -->
+<section class="legal-section">
+  <div class="container-narrow">
+    <div class="section-eyebrow">Legal notice</div>
+    <div class="legal-box fade-up">
+      <h4>Nature of this document</h4>
+      <p>This page is for informational purposes only and does not constitute a public offer, solicitation, or advertisement for the purchase or sale of securities under Swiss law (Financial Services Act / FinSA, Financial Institutions Act / FinIA, or the Collective Investment Schemes Act / CISA). It is addressed exclusively to qualified investors within the meaning of Art. 10(3) CISA or persons who have been approached directly and individually by the company.</p>
+
+      <h4>Pre-incorporation instrument</h4>
+      <p>The convertible loan described on this page is a pre-incorporation instrument. No shares or participation rights in a Swiss legal entity are issued at this stage. Investors receive a contractual right to future conversion into equity, subject to the terms of the individual Convertible Loan Agreement (CLA) executed between the investor and the founding entity. The CLA is governed by Swiss law (Code of Obligations / OR).</p>
+
+      <h4>Risk warning</h4>
+      <p>Investment in early-stage companies involves a high degree of risk, including the possible loss of the entire invested capital. Past performance is not indicative of future results. The scenarios presented on this page are illustrative only and do not constitute a forecast or guarantee of returns. Investors should conduct their own due diligence and, where appropriate, seek independent legal, tax, and financial advice before investing.</p>
+
+      <h4>No public offer</h4>
+      <p>This page does not constitute a prospectus within the meaning of FinSA. No public offering of securities is being made. Access to this page by persons in jurisdictions where such access would constitute a public offer is not permitted and those persons should not rely on the information contained herein.</p>
+
+      <h4>Forward-looking statements</h4>
+      <p>This page contains forward-looking statements regarding Sencilo's business, strategy, financial position, and market opportunity. These statements involve known and unknown risks and uncertainties. Actual results may differ materially from those expressed or implied.</p>
+
+      <h4>Contact</h4>
+      <p>For questions regarding this instrument, please contact: <a href="mailto:christophe@sencilo.ch" style="color:var(--indigo-light);">christophe@sencilo.ch</a></p><!-- ← update email -->
+    </div>
+  </div>
+</section>
+
+<!-- ─── FOOTER ─── -->
+<footer>
+  <div class="container">
+    <p>© 2026 Sencilo · <a href="index.html">Back to website</a> · <a href="mailto:christophe@sencilo.ch">christophe@sencilo.ch</a></p>
+    <p style="margin-top:6px;">Private &amp; Confidential · For qualified investors only · Not a public offer</p>
+  </div>
+</footer>
+
+<script>
+/* Nav scroll */
+const nav = document.getElementById('nav');
+window.addEventListener('scroll', () => {
+  nav.classList.toggle('scrolled', window.scrollY > 20);
+});
+
+/* Fade-up observer */
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); observer.unobserve(e.target); } });
+}, { threshold: 0.1 });
+document.querySelectorAll('.fade-up').forEach(el => observer.observe(el));
+
+/* Scenario tabs */
+function showScenario(id) {
+  document.querySelectorAll('.scenario-tab').forEach((t, i) => {
+    const ids = ['series-a','longstop-convert','longstop-repay'];
+    t.classList.toggle('active', ids[i] === id);
+  });
+  document.querySelectorAll('.scenario-panel').forEach(p => {
+    p.classList.toggle('active', p.id === 'panel-' + id);
+  });
+}
+
+/* Expression of interest form */
+function handleInvestSubmit(e) {
+  e.preventDefault();
+  const form = document.getElementById('investForm');
+  const success = document.getElementById('investSuccess');
+  /* ← WIRE TO BACKEND: POST form data to your endpoint (Resend / Supabase / etc.) */
+  form.style.display = 'none';
+  success.style.display = 'block';
+}
+</script>
+</body>
+</html>
