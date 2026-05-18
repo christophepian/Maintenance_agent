@@ -29,7 +29,8 @@ import {
   listStatements,
   listBatches,
   getStatement,
-  resolveAccountBalance,
+  updateAccountBalance,
+  createAccountBalance,
   assignBuilding,
   deleteStatement,
   deleteAllStatements,
@@ -341,35 +342,124 @@ export function registerImportedStatementRoutes(router: Router) {
   });
 
   // ── PATCH /imported-statements/:id/balances/:balanceId ──────────────────
+  // Accepts any combination of accountId, balanceCents, balanceType.
+  // Returns the updated parent statement so the client recomputes imbalance.
   router.patch(
     "/imported-statements/:id/balances/:balanceId",
     async ({ req, res, orgId, prisma, params }) => {
       const user = requireAnyRole(req, res, ["MANAGER"]);
       if (!user) return;
 
-      let accountId: string;
+      let update: { accountId?: string; balanceCents?: number; balanceType?: string };
       try {
         const rawBody = await readRawBody(req, 4096);
         const body = JSON.parse(rawBody.toString("utf8"));
-        if (!body.accountId || typeof body.accountId !== "string") {
-          return sendError(res, 400, "MISSING_FIELD", "accountId is required");
+        update = {};
+        if (body.accountId !== undefined) {
+          if (typeof body.accountId !== "string") {
+            return sendError(res, 400, "INVALID_FIELD", "accountId must be a string");
+          }
+          update.accountId = body.accountId.trim();
         }
-        accountId = body.accountId.trim();
+        if (body.balanceCents !== undefined) {
+          if (
+            typeof body.balanceCents !== "number" ||
+            !Number.isInteger(body.balanceCents) ||
+            body.balanceCents < 0
+          ) {
+            return sendError(res, 400, "INVALID_FIELD", "balanceCents must be a non-negative integer");
+          }
+          update.balanceCents = body.balanceCents;
+        }
+        if (body.balanceType !== undefined) {
+          if (body.balanceType !== "DEBIT" && body.balanceType !== "CREDIT") {
+            return sendError(res, 400, "INVALID_FIELD", "balanceType must be DEBIT or CREDIT");
+          }
+          update.balanceType = body.balanceType;
+        }
+        if (Object.keys(update).length === 0) {
+          return sendError(
+            res, 400, "MISSING_FIELD",
+            "At least one of accountId, balanceCents, balanceType is required",
+          );
+        }
       } catch {
         return sendError(res, 400, "INVALID_JSON", "Request body must be valid JSON");
       }
 
       try {
-        const balance = await resolveAccountBalance(prisma, params.balanceId, accountId, orgId);
-        sendJson(res, 200, { data: balance });
+        await updateAccountBalance(prisma, params.balanceId, orgId, update);
+        const statement = await getStatement(prisma, params.id, orgId);
+        if (!statement) return sendError(res, 404, "NOT_FOUND", "Statement not found");
+        sendJson(res, 200, { data: statement });
       } catch (e: any) {
         if (e instanceof ImportedStatementError) {
           const status = e.code === "NOT_FOUND" ? 404 : 400;
           return sendError(res, status, e.code, e.message);
         }
-        console.error("[IMPORT] resolve balance error:", e);
-        sendError(res, 500, "INTERNAL_ERROR", "Failed to resolve balance", e.message);
+        console.error("[IMPORT] update balance error:", e);
+        sendError(res, 500, "INTERNAL_ERROR", "Failed to update balance", e.message);
       }
     },
   );
+
+  // ── POST /imported-statements/:id/balances ───────────────────────────────
+  // Manually add a balance row. Returns the updated parent statement.
+  router.post("/imported-statements/:id/balances", async ({ req, res, orgId, prisma, params }) => {
+    const user = requireAnyRole(req, res, ["MANAGER"]);
+    if (!user) return;
+
+    let input: {
+      rawAccountCode: string;
+      rawAccountName: string;
+      balanceCents: number;
+      balanceType: string;
+      accountId?: string;
+    };
+    try {
+      const rawBody = await readRawBody(req, 4096);
+      const body = JSON.parse(rawBody.toString("utf8"));
+      if (!body.rawAccountCode || typeof body.rawAccountCode !== "string") {
+        return sendError(res, 400, "MISSING_FIELD", "rawAccountCode is required");
+      }
+      if (!body.rawAccountName || typeof body.rawAccountName !== "string") {
+        return sendError(res, 400, "MISSING_FIELD", "rawAccountName is required");
+      }
+      if (
+        typeof body.balanceCents !== "number" ||
+        !Number.isInteger(body.balanceCents) ||
+        body.balanceCents < 0
+      ) {
+        return sendError(res, 400, "INVALID_FIELD", "balanceCents must be a non-negative integer");
+      }
+      if (body.balanceType !== "DEBIT" && body.balanceType !== "CREDIT") {
+        return sendError(res, 400, "INVALID_FIELD", "balanceType must be DEBIT or CREDIT");
+      }
+      input = {
+        rawAccountCode: body.rawAccountCode.trim(),
+        rawAccountName: body.rawAccountName.trim(),
+        balanceCents: body.balanceCents,
+        balanceType: body.balanceType,
+        ...(body.accountId && typeof body.accountId === "string"
+          ? { accountId: body.accountId.trim() }
+          : {}),
+      };
+    } catch {
+      return sendError(res, 400, "INVALID_JSON", "Request body must be valid JSON");
+    }
+
+    try {
+      await createAccountBalance(prisma, params.id, orgId, input);
+      const statement = await getStatement(prisma, params.id, orgId);
+      if (!statement) return sendError(res, 404, "NOT_FOUND", "Statement not found");
+      sendJson(res, 201, { data: statement });
+    } catch (e: any) {
+      if (e instanceof ImportedStatementError) {
+        const status = e.code === "NOT_FOUND" ? 404 : 400;
+        return sendError(res, status, e.code, e.message);
+      }
+      console.error("[IMPORT] create balance error:", e);
+      sendError(res, 500, "INTERNAL_ERROR", "Failed to create balance row", e.message);
+    }
+  });
 }

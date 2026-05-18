@@ -5,11 +5,12 @@
  *
  * Manager reviews OCR-extracted data:
  *   - Statement metadata (building, fiscal year, period, status)
- *   - Account balances list with match confidence + manual resolution
+ *   - Account balances — editable (amount, type, COA match) with inline add-row
+ *   - Accounting equation gate: approve is locked until debits = credits exactly
  *   - Approve / Reject actions
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef, Fragment } from "react";
 import { useRouter } from "next/router";
 import { useTranslation } from "next-i18next";
 import Link from "next/link";
@@ -57,41 +58,145 @@ function confidenceVariant(conf) {
   }
 }
 
-// ── Account resolve inline form ───────────────────────────────────────────────
+// ── Searchable account combobox ───────────────────────────────────────────────
 
-function ResolveAccountRow({ balance, orgId, onResolved }) {
-  const { t } = useTranslation("manager");
-  const [accounts, setAccounts] = useState([]);
-  const [accountId, setAccountId] = useState(balance.accountId ?? "");
+function SearchableAccountSelect({ accounts, value, onChange, placeholder = "Search by code or name…", loading = false }) {
+  const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
+  const inputRef = useRef(null);
+
+  const selected = useMemo(() => accounts.find((a) => a.id === value), [accounts, value]);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return accounts.slice(0, 80);
+    return accounts
+      .filter(
+        (a) =>
+          (a.code && a.code.toLowerCase().includes(q)) ||
+          a.name.toLowerCase().includes(q),
+      )
+      .slice(0, 80);
+  }, [accounts, query]);
+
+  function handleFocus() {
+    setOpen(true);
+    setQuery("");
+  }
+
+  function handleBlur() {
+    // Small delay so onMouseDown on a list item fires before the blur closes the list
+    setTimeout(() => setOpen(false), 150);
+  }
+
+  const displayValue = open
+    ? query
+    : selected
+      ? `${selected.code ? selected.code + " — " : ""}${selected.name}`
+      : "";
+
+  return (
+    <div className="relative">
+      <input
+        ref={inputRef}
+        type="text"
+        className="form-input text-sm w-full"
+        placeholder={loading ? "Loading accounts…" : placeholder}
+        disabled={loading}
+        value={displayValue}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
+        onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
+      />
+      {open && !loading && (
+        <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-56 overflow-y-auto">
+          {filtered.length === 0 ? (
+            <p className="px-3 py-2 text-sm text-slate-400">No accounts match</p>
+          ) : (
+            filtered.map((a) => (
+              <button
+                key={a.id}
+                type="button"
+                className={cn(
+                  "w-full text-left px-3 py-1.5 text-sm hover:bg-slate-50 transition-colors",
+                  value === a.id ? "bg-brand-50 text-brand-dark font-medium" : "text-slate-800",
+                )}
+                onMouseDown={() => { onChange(a.id); setOpen(false); setQuery(""); }}
+              >
+                {a.code && (
+                  <span className="font-mono text-xs text-slate-400 mr-2">{a.code}</span>
+                )}
+                {a.name}
+              </button>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Balance row editor (edit existing or add new) ────────────────────────────
+
+function BalanceRowEditor({ balance, statementId, accounts, accountsLoading, onSaved, onCancel }) {
+  const isNew = !balance;
+
+  const [rawAccountCode, setRawAccountCode] = useState(balance?.rawAccountCode ?? "");
+  const [rawAccountName, setRawAccountName] = useState(balance?.rawAccountName ?? "");
+  const [amountStr, setAmountStr] = useState(
+    balance ? (balance.balanceCents / 100).toFixed(2) : "",
+  );
+  const [balanceType, setBalanceType] = useState(balance?.balanceType ?? "DEBIT");
+  const [accountId, setAccountId] = useState(balance?.accountId ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const [open, setOpen] = useState(false);
-
-  useEffect(() => {
-    if (!open) return;
-    fetch("/api/coa", { headers: authHeaders() })
-      .then((r) => r.json())
-      .then((j) => setAccounts(j.data ?? []))
-      .catch(() => {});
-  }, [open]);
 
   async function handleSave() {
-    if (!accountId) return;
+    const balanceCents = Math.round(parseFloat(amountStr) * 100);
+    if (isNaN(balanceCents) || balanceCents < 0) {
+      setError("Enter a valid positive amount in CHF");
+      return;
+    }
+
+    if (isNew && (!rawAccountCode.trim() || !rawAccountName.trim())) {
+      setError("Account code and name are required");
+      return;
+    }
+
     setSaving(true);
     setError("");
+
     try {
-      const res = await fetch(
-        `/api/imported-statements/${balance.statementId ?? ""}/balances/${balance.id}`,
-        {
-          method: "PATCH",
+      let res;
+      if (isNew) {
+        res = await fetch(`/api/imported-statements/${statementId}/balances`, {
+          method: "POST",
           headers: { ...authHeaders(), "Content-Type": "application/json" },
-          body: JSON.stringify({ accountId }),
-        },
-      );
+          body: JSON.stringify({
+            rawAccountCode: rawAccountCode.trim(),
+            rawAccountName: rawAccountName.trim(),
+            balanceCents,
+            balanceType,
+            ...(accountId ? { accountId } : {}),
+          }),
+        });
+      } else {
+        res = await fetch(
+          `/api/imported-statements/${statementId}/balances/${balance.id}`,
+          {
+            method: "PATCH",
+            headers: { ...authHeaders(), "Content-Type": "application/json" },
+            body: JSON.stringify({
+              balanceCents,
+              balanceType,
+              ...(accountId ? { accountId } : {}),
+            }),
+          },
+        );
+      }
       const json = await res.json().catch(() => null);
-      if (!res.ok || !json) throw new Error(json?.error?.message || "Failed");
-      setOpen(false);
-      onResolved();
+      if (!res.ok) throw new Error(json?.error?.message || "Failed to save");
+      onSaved(json.data); // pass updated statement back so parent can skip a re-fetch
     } catch (e) {
       setError(String(e?.message || e));
     } finally {
@@ -99,37 +204,84 @@ function ResolveAccountRow({ balance, orgId, onResolved }) {
     }
   }
 
-  if (!open) {
-    return (
-      <button
-        className="text-xs text-brand-dark hover:underline"
-        onClick={() => setOpen(true)}
-      >
-        {t("manager:financeImports.action.resolveAccount")}
-      </button>
-    );
-  }
-
   return (
-    <div className="flex flex-col gap-1 min-w-[200px]">
-      <select
-        className="form-input text-xs"
-        value={accountId}
-        onChange={(e) => setAccountId(e.target.value)}
-      >
-        <option value="">— select —</option>
-        {accounts.map((a) => (
-          <option key={a.id} value={a.id}>
-            {a.code ? `${a.code} ` : ""}{a.name}
-          </option>
-        ))}
-      </select>
+    <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-3">
+      {isNew && (
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="form-label text-xs">Account code</label>
+            <input
+              className="form-input text-sm font-mono"
+              value={rawAccountCode}
+              onChange={(e) => setRawAccountCode(e.target.value)}
+              placeholder="e.g. 1020"
+            />
+          </div>
+          <div>
+            <label className="form-label text-xs">Account name</label>
+            <input
+              className="form-input text-sm"
+              value={rawAccountName}
+              onChange={(e) => setRawAccountName(e.target.value)}
+              placeholder="e.g. Bank account"
+            />
+          </div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <label className="form-label text-xs">Amount (CHF)</label>
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            className="form-input text-sm font-mono"
+            value={amountStr}
+            onChange={(e) => setAmountStr(e.target.value)}
+            placeholder="0.00"
+          />
+        </div>
+        <div>
+          <label className="form-label text-xs">Side</label>
+          <select
+            className="form-input text-sm"
+            value={balanceType}
+            onChange={(e) => setBalanceType(e.target.value)}
+          >
+            <option value="DEBIT">Debit — Asset / Expense</option>
+            <option value="CREDIT">Credit — Liability / Equity / Income</option>
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <label className="form-label text-xs">Chart of accounts match (optional)</label>
+        <SearchableAccountSelect
+          accounts={accounts}
+          loading={accountsLoading}
+          value={accountId}
+          onChange={setAccountId}
+        />
+      </div>
+
       {error && <p className="text-xs text-destructive-text">{error}</p>}
-      <div className="flex gap-1">
-        <button className="button-primary text-xs py-0.5 px-2" onClick={handleSave} disabled={saving || !accountId}>
-          Save
+
+      <div className="flex gap-2">
+        <button
+          type="button"
+          className="button-primary text-xs py-1 px-3"
+          onClick={handleSave}
+          disabled={saving}
+        >
+          {saving ? "Saving…" : "Save"}
         </button>
-        <button className="button-secondary text-xs py-0.5 px-2" onClick={() => setOpen(false)} disabled={saving}>
+        <button
+          type="button"
+          className="button-secondary text-xs py-1 px-3"
+          onClick={onCancel}
+          disabled={saving}
+        >
           Cancel
         </button>
       </div>
@@ -178,7 +330,6 @@ function AssignBuildingInline({ statementId, onAssigned }) {
 
   function handleCreated(newBuilding) {
     setCreateOpen(false);
-    // Refresh list and auto-select the newly created building
     loadBuildings();
     setBuildingId(newBuilding.id);
   }
@@ -236,7 +387,6 @@ function AssignBuildingInline({ statementId, onAssigned }) {
 function ExtractedDataPanel({ rawOcrText }) {
   const [open, setOpen] = useState(false);
 
-  // Split the stored string at the "---" separator inserted during ingestion
   const parts = rawOcrText.split(/\n---\n/);
   const summary = parts[0]?.trim() || "";
   let fields = null;
@@ -303,8 +453,6 @@ function ExtractedDataPanel({ rawOcrText }) {
     </div>
   );
 }
-
-// ── Main page ─────────────────────────────────────────────────────────────────
 
 // ── Re-extract form ───────────────────────────────────────────────────────────
 
@@ -424,7 +572,6 @@ function ApproveModal({ preview, onConfirm, onClose, loading }) {
         </div>
 
         <div className="overflow-y-auto flex-1 px-6 py-4 space-y-4">
-          {/* Summary row */}
           <div className="flex flex-wrap gap-4 text-sm">
             <div className="bg-slate-50 rounded-lg px-4 py-2 text-center">
               <p className="text-xs text-slate-500 uppercase tracking-wide">Entries</p>
@@ -446,7 +593,6 @@ function ApproveModal({ preview, onConfirm, onClose, loading }) {
             )}
           </div>
 
-          {/* Entry table */}
           <div className="overflow-hidden rounded-lg border border-table-border">
             <div className="overflow-x-auto">
               <table className="data-table text-sm">
@@ -502,17 +648,27 @@ export default function ImportedStatementReviewPage() {
   const router = useRouter();
   const { id } = router.query;
 
-  const [statement, setStatement] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [statement, setStatement]       = useState(null);
+  const [loading, setLoading]           = useState(true);
+  const [error, setError]               = useState("");
   const [actionLoading, setActionLoading] = useState(false);
-  const [actionError, setActionError] = useState("");
+  const [actionError, setActionError]   = useState("");
 
-  // Ledger preview state
-  const [preview, setPreview] = useState(null);
+  // Ledger preview
+  const [preview, setPreview]           = useState(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState("");
   const [approveModalOpen, setApproveModalOpen] = useState(false);
+
+  // COA accounts for the combobox
+  const [coaAccounts, setCoaAccounts]   = useState([]);
+  const [coaLoading, setCoaLoading]     = useState(true);
+
+  // Balance row editing state
+  const [editingBalanceId, setEditingBalanceId] = useState(null);
+  const [addingRow, setAddingRow]       = useState(false);
+
+  // ── Data fetching ──────────────────────────────────────────────────────────
 
   const fetchStatement = useCallback(async () => {
     if (!id) return;
@@ -557,7 +713,7 @@ export default function ImportedStatementReviewPage() {
     return () => clearTimeout(timer);
   }, [statement, fetchStatement]);
 
-  // Load preview whenever we land on PENDING_REVIEW with balances
+  // Load preview whenever we land on PENDING_REVIEW with balances (auto-refreshes on statement change)
   useEffect(() => {
     if (
       statement?.status === "PENDING_REVIEW" &&
@@ -569,8 +725,31 @@ export default function ImportedStatementReviewPage() {
     }
   }, [statement, fetchPreview]);
 
+  // Load COA accounts once for the combobox
+  useEffect(() => {
+    fetch("/api/coa/accounts", { headers: authHeaders() })
+      .then((r) => r.json())
+      .then((j) => { setCoaAccounts(j.data ?? []); setCoaLoading(false); })
+      .catch(() => setCoaLoading(false));
+  }, []);
+
+  // ── Balance edit callbacks ─────────────────────────────────────────────────
+
+  // Called by BalanceRowEditor when a PATCH or POST succeeds.
+  // The endpoint returns the updated statement, so we can skip a re-fetch.
+  function handleBalanceSaved(updatedStatement) {
+    setEditingBalanceId(null);
+    setAddingRow(false);
+    if (updatedStatement) {
+      setStatement(updatedStatement);
+    } else {
+      fetchStatement();
+    }
+  }
+
+  // ── Approve / Reject ───────────────────────────────────────────────────────
+
   async function handleApprove() {
-    // INVOICES and INCOME_STATEMENT sections bypass the ledger preview modal
     if (isInvoicesSection) {
       if (!window.confirm("Confirm all invoices in this section? Their status will be set to Issued.")) return;
       await doApprove();
@@ -610,7 +789,7 @@ export default function ImportedStatementReviewPage() {
 
   async function handleReject() {
     const notes = window.prompt(t("manager:financeImports.text.rejectConfirm"));
-    if (notes === null) return; // cancelled
+    if (notes === null) return;
     setActionLoading(true);
     setActionError("");
     try {
@@ -629,28 +808,70 @@ export default function ImportedStatementReviewPage() {
     }
   }
 
+  // ── Derived state ──────────────────────────────────────────────────────────
+
   const s = statement;
-  const isPendingReview = s?.status === "PENDING_REVIEW";
-  const sectionType = s?.sectionType ?? "BALANCE_SHEET";
+  const isPendingReview   = s?.status === "PENDING_REVIEW";
+  const sectionType       = s?.sectionType ?? "BALANCE_SHEET";
   const isBalanceSheet    = sectionType === "BALANCE_SHEET";
   const isIncomeStatement = sectionType === "INCOME_STATEMENT";
   const isInvoicesSection = sectionType === "INVOICES";
-  const hasUnmatched = s?.accountBalances?.some((ab) => ab.matchConfidence === "UNMATCHED");
-  const needsBuilding = isPendingReview && !s?.buildingId;
-  const hasNoBalances = (s?.accountBalances?.length ?? 0) === 0;
-  // Accounting equation: imbalance > CHF 1 means something was not captured
-  const imbalanceCents = s?.balanceImbalanceCents ?? null;
-  const hasBalanceWarning = imbalanceCents !== null && Math.abs(imbalanceCents) > 100;
-  // Approve availability depends on section type:
-  // - BS: need building + balances + preview
-  // - IS: need building + balances (no preview required — posting is conditional)
-  // - INVOICES: need building only (no balances required)
+  const hasUnmatched      = s?.accountBalances?.some((ab) => ab.matchConfidence === "UNMATCHED");
+  const needsBuilding     = isPendingReview && !s?.buildingId;
+  const hasNoBalances     = (s?.accountBalances?.length ?? 0) === 0;
+
+  // Running totals (client-side, mirrors server mapDTO logic)
+  const totalDebitCents  = s?.accountBalances?.reduce((sum, ab) => sum + (ab.balanceType === "DEBIT"  ? ab.balanceCents : 0), 0) ?? 0;
+  const totalCreditCents = s?.accountBalances?.reduce((sum, ab) => sum + (ab.balanceType === "CREDIT" ? ab.balanceCents : 0), 0) ?? 0;
+
+  // Authoritative imbalance from the server DTO (recomputed on every fetch)
+  const imbalanceCents    = s?.balanceImbalanceCents ?? null;
+  // For BALANCE_SHEET the equation must hold exactly before posting
+  const isExactlyBalanced = isBalanceSheet ? (imbalanceCents === 0) : true;
+  // Show the imbalance warning banner only for balance sheets
+  const hasBalanceWarning = isBalanceSheet && imbalanceCents !== null && imbalanceCents !== 0;
+
+  // Approve availability:
+  // - INVOICES: building only
+  // - IS: building + balances (posting is conditional)
+  // - BS: building + balances + exact equation + preview loaded
   const canApprove =
     isPendingReview && !needsBuilding && (
       isInvoicesSection ? true
       : isIncomeStatement ? !hasNoBalances
-      : /* BS */ !hasNoBalances && preview !== null && !previewLoading
+      : /* BS */ !hasNoBalances && preview !== null && !previewLoading && isExactlyBalanced
     );
+
+  const approveButtonLabel = isInvoicesSection
+    ? `Confirm ${s?.linkedInvoices?.length ?? 0} invoice${s?.linkedInvoices?.length !== 1 ? "s" : ""}`
+    : isIncomeStatement
+      ? t("manager:financeImports.action.approve")
+      : !isExactlyBalanced
+        ? "Equation unbalanced"
+        : previewLoading
+          ? "Loading…"
+          : preview
+            ? `Post ${preview.entries.length} entries`
+            : t("manager:financeImports.action.approve");
+
+  const approveButtonTitle = needsBuilding
+    ? t("manager:financeImports.text.noBuildingAssigned")
+    : !isInvoicesSection && hasNoBalances
+      ? "No account balances extracted — re-extract first"
+      : isBalanceSheet && !isExactlyBalanced
+        ? `Equation off by CHF ${((Math.abs(imbalanceCents ?? 0)) / 100).toFixed(2)} — edit balances until debits = credits exactly`
+        : isBalanceSheet && previewLoading
+          ? "Loading preview…"
+          : undefined;
+
+  // Pencil icon for edit button
+  const PencilIcon = (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+      <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+    </svg>
+  );
+
+  // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
     <AppShell role="MANAGER">
@@ -691,22 +912,9 @@ export default function ImportedStatementReviewPage() {
                   className="button-primary text-sm"
                   onClick={handleApprove}
                   disabled={actionLoading || !canApprove}
-                  title={
-                    needsBuilding ? t("manager:financeImports.text.noBuildingAssigned")
-                    : !isInvoicesSection && hasNoBalances ? "No account balances extracted — re-extract first"
-                    : isBalanceSheet && previewLoading ? "Loading preview…"
-                    : undefined
-                  }
+                  title={approveButtonTitle}
                 >
-                  {isInvoicesSection
-                    ? `Confirm ${s.linkedInvoices?.length ?? 0} invoice${s.linkedInvoices?.length !== 1 ? "s" : ""}`
-                    : isIncomeStatement
-                      ? t("manager:financeImports.action.approve")
-                      : previewLoading
-                        ? "Loading…"
-                        : preview
-                          ? `Post ${preview.entries.length} entries`
-                          : t("manager:financeImports.action.approve")}
+                  {approveButtonLabel}
                 </button>
               </div>
             ) : null
@@ -824,18 +1032,18 @@ export default function ImportedStatementReviewPage() {
                 </div>
               )}
 
-              {/* ── Balance equation warning ── */}
+              {/* ── Accounting equation warning (balance sheet only) ── */}
               {hasBalanceWarning && !hasNoBalances && (
                 <div className="rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800">
                   <p className="font-semibold mb-1">Accounting equation not balanced</p>
                   <p>
-                    Total debits and total credits differ by{" "}
+                    Debits and credits differ by{" "}
                     <strong className="font-mono">
                       CHF {(Math.abs(imbalanceCents) / 100).toLocaleString("de-CH", { minimumFractionDigits: 2 })}
                     </strong>
                     {imbalanceCents > 0 ? " (debits exceed credits)" : " (credits exceed debits)"}.
-                    This suggests one or more account balances were not captured correctly.
-                    Review the extracted balances below before approving.
+                    {" "}The equation must reach exactly zero before entries can be posted.
+                    Use the edit buttons below to correct amounts or add missing rows.
                   </p>
                 </div>
               )}
@@ -972,37 +1180,60 @@ export default function ImportedStatementReviewPage() {
               {/* ── Account Balances ── */}
               {s.accountBalances?.length > 0 && (
                 <Section title={t("manager:financeImports.title.accountBalances")}>
-                  {/* Mobile */}
+                  {/* ── Mobile ── */}
                   <div className="md:hidden overflow-hidden rounded-lg border border-table-border divide-y divide-table-divider">
                     {s.accountBalances.map((ab) => (
-                      <div key={ab.id} className="table-card">
-                        <div className="flex items-center justify-between">
-                          <span className="table-card-head">
-                            {ab.rawAccountCode} — {ab.rawAccountName}
-                          </span>
-                          <Badge variant={confidenceVariant(ab.matchConfidence)}>
-                            {t(`manager:financeImports.confidence.${ab.matchConfidence}`)}
-                          </Badge>
+                      <Fragment key={ab.id}>
+                        <div className="table-card">
+                          <div className="flex items-start justify-between gap-2">
+                            <span className="table-card-head flex-1">
+                              {ab.rawAccountCode} — {ab.rawAccountName}
+                            </span>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <Badge variant={confidenceVariant(ab.matchConfidence)}>
+                                {t(`manager:financeImports.confidence.${ab.matchConfidence}`)}
+                              </Badge>
+                              {isPendingReview && (
+                                <button
+                                  type="button"
+                                  className={cn(
+                                    "icon-btn",
+                                    editingBalanceId === ab.id ? "text-brand-dark" : "text-slate-400 hover:text-slate-600",
+                                  )}
+                                  onClick={() => setEditingBalanceId(editingBalanceId === ab.id ? null : ab.id)}
+                                  title="Edit this row"
+                                >
+                                  {PencilIcon}
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                          <div className="table-card-footer">
+                            <span className={cn("font-mono font-medium text-sm", ab.balanceType === "CREDIT" ? "text-success-text" : "")}>
+                              {ab.balanceType === "DEBIT" ? "Dr " : "Cr "}{formatChfCents(ab.balanceCents)}
+                            </span>
+                            {ab.accountName && (
+                              <span className="text-slate-500 text-xs">{ab.accountCode ? `${ab.accountCode} ` : ""}{ab.accountName}</span>
+                            )}
+                          </div>
                         </div>
-                        <div className="table-card-footer">
-                          <span className={cn("font-mono font-medium", ab.balanceType === "CREDIT" ? "text-success-text" : "")}>
-                            {ab.balanceType === "CREDIT" ? "+" : ""}{formatChfCents(ab.balanceCents)}
-                          </span>
-                          {ab.accountName && <span className="text-slate-500">{ab.accountCode} {ab.accountName}</span>}
-                        </div>
-                        {ab.matchConfidence === "UNMATCHED" && (
-                          <div className="mt-1">
-                            <ResolveAccountRow
-                              balance={{ ...ab, statementId: s.id }}
-                              onResolved={fetchStatement}
+                        {editingBalanceId === ab.id && isPendingReview && (
+                          <div className="px-3 py-3 bg-slate-50">
+                            <BalanceRowEditor
+                              balance={ab}
+                              statementId={s.id}
+                              accounts={coaAccounts}
+                              accountsLoading={coaLoading}
+                              onSaved={handleBalanceSaved}
+                              onCancel={() => setEditingBalanceId(null)}
                             />
                           </div>
                         )}
-                      </div>
+                      </Fragment>
                     ))}
                   </div>
 
-                  {/* Desktop */}
+                  {/* ── Desktop ── */}
                   <div className="hidden md:block overflow-hidden rounded-lg border border-table-border">
                     <div className="overflow-x-auto">
                       <table className="data-table">
@@ -1010,43 +1241,159 @@ export default function ImportedStatementReviewPage() {
                           <tr>
                             <th>{t("manager:financeImports.prop.accountCode")}</th>
                             <th>{t("manager:financeImports.prop.accountName")}</th>
-                            <th className="text-right">{t("manager:financeImports.prop.balance")}</th>
+                            <th className="text-right">Debit</th>
+                            <th className="text-right">Credit</th>
                             <th>{t("manager:financeImports.prop.matchConfidence")}</th>
                             <th>{t("manager:financeImports.prop.matchedAccount")}</th>
+                            {isPendingReview && <th className="w-8" />}
                           </tr>
                         </thead>
                         <tbody>
                           {s.accountBalances.map((ab) => (
-                            <tr key={ab.id}>
-                              <td className="font-mono text-sm">{ab.rawAccountCode}</td>
-                              <td>{ab.rawAccountName}</td>
-                              <td className={cn("text-right font-mono", ab.balanceType === "CREDIT" ? "text-success-text" : "")}>
-                                {ab.balanceType === "CREDIT" ? "+" : ""}{formatChfCents(ab.balanceCents)}
-                              </td>
-                              <td>
-                                <Badge variant={confidenceVariant(ab.matchConfidence)}>
-                                  {t(`manager:financeImports.confidence.${ab.matchConfidence}`)}
-                                </Badge>
-                              </td>
-                              <td>
-                                {ab.matchConfidence === "UNMATCHED" ? (
-                                  <ResolveAccountRow
-                                    balance={{ ...ab, statementId: s.id }}
-                                    onResolved={fetchStatement}
-                                  />
-                                ) : (
-                                  <span className="text-sm text-slate-700">
-                                    {ab.accountCode ? `${ab.accountCode} ` : ""}{ab.accountName ?? "—"}
-                                  </span>
+                            <Fragment key={ab.id}>
+                              <tr className={editingBalanceId === ab.id ? "bg-slate-50" : ""}>
+                                <td className="font-mono text-sm">{ab.rawAccountCode}</td>
+                                <td>{ab.rawAccountName}</td>
+                                <td className="text-right font-mono text-sm">
+                                  {ab.balanceType === "DEBIT" ? formatChfCents(ab.balanceCents) : "—"}
+                                </td>
+                                <td className="text-right font-mono text-sm text-success-text">
+                                  {ab.balanceType === "CREDIT" ? formatChfCents(ab.balanceCents) : "—"}
+                                </td>
+                                <td>
+                                  <Badge variant={confidenceVariant(ab.matchConfidence)}>
+                                    {t(`manager:financeImports.confidence.${ab.matchConfidence}`)}
+                                  </Badge>
+                                </td>
+                                <td className="text-sm text-slate-700">
+                                  {ab.accountCode ? `${ab.accountCode} ` : ""}{ab.accountName ?? "—"}
+                                </td>
+                                {isPendingReview && (
+                                  <td>
+                                    <button
+                                      type="button"
+                                      className={cn(
+                                        "icon-btn",
+                                        editingBalanceId === ab.id ? "text-brand-dark" : "text-slate-300 hover:text-slate-600",
+                                      )}
+                                      onClick={() => setEditingBalanceId(editingBalanceId === ab.id ? null : ab.id)}
+                                      title={editingBalanceId === ab.id ? "Close editor" : "Edit this row"}
+                                    >
+                                      {PencilIcon}
+                                    </button>
+                                  </td>
                                 )}
-                              </td>
-                            </tr>
+                              </tr>
+                              {editingBalanceId === ab.id && isPendingReview && (
+                                <tr>
+                                  <td
+                                    colSpan={isPendingReview ? 7 : 6}
+                                    className="p-0 bg-slate-50 border-t border-slate-200"
+                                  >
+                                    <div className="px-4 py-3">
+                                      <BalanceRowEditor
+                                        balance={ab}
+                                        statementId={s.id}
+                                        accounts={coaAccounts}
+                                        accountsLoading={coaLoading}
+                                        onSaved={handleBalanceSaved}
+                                        onCancel={() => setEditingBalanceId(null)}
+                                      />
+                                    </div>
+                                  </td>
+                                </tr>
+                              )}
+                            </Fragment>
                           ))}
                         </tbody>
+
+                        {/* ── Totals footer (balance sheet only) ── */}
+                        {isBalanceSheet && (
+                          <tfoot>
+                            <tr className="border-t-2 border-slate-200 bg-slate-50 text-sm font-medium">
+                              <td colSpan={2} className="px-3 py-2 text-xs text-slate-500 uppercase tracking-wide text-right">
+                                Total
+                              </td>
+                              <td className="px-3 py-2 text-right font-mono">
+                                {formatChfCents(totalDebitCents)}
+                              </td>
+                              <td className={cn(
+                                "px-3 py-2 text-right font-mono",
+                                isExactlyBalanced ? "text-success-text" : "text-destructive-text",
+                              )}>
+                                {formatChfCents(totalCreditCents)}
+                              </td>
+                              <td colSpan={isPendingReview ? 3 : 2} className="px-3 py-2">
+                                {imbalanceCents === 0 ? (
+                                  <span className="text-xs text-success-text font-medium">✓ Balanced</span>
+                                ) : imbalanceCents !== null ? (
+                                  <span className="text-xs text-destructive-text">
+                                    Δ {formatChfCents(Math.abs(imbalanceCents))}{" "}
+                                    {imbalanceCents > 0 ? "(Dr > Cr)" : "(Cr > Dr)"}
+                                  </span>
+                                ) : null}
+                              </td>
+                            </tr>
+                          </tfoot>
+                        )}
                       </table>
                     </div>
                   </div>
+
+                  {/* ── Add row ── */}
+                  {isPendingReview && (
+                    <div className="mt-3">
+                      {addingRow ? (
+                        <BalanceRowEditor
+                          balance={null}
+                          statementId={s.id}
+                          accounts={coaAccounts}
+                          accountsLoading={coaLoading}
+                          onSaved={handleBalanceSaved}
+                          onCancel={() => setAddingRow(false)}
+                        />
+                      ) : (
+                        <button
+                          type="button"
+                          className="text-sm text-brand-dark hover:underline flex items-center gap-1"
+                          onClick={() => { setAddingRow(true); setEditingBalanceId(null); }}
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+                          </svg>
+                          Add balance row
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </Section>
+              )}
+
+              {/* ── Add row when no balances yet ── */}
+              {isPendingReview && hasNoBalances && !isInvoicesSection && (
+                <div className="mt-2">
+                  {addingRow ? (
+                    <BalanceRowEditor
+                      balance={null}
+                      statementId={s.id}
+                      accounts={coaAccounts}
+                      accountsLoading={coaLoading}
+                      onSaved={handleBalanceSaved}
+                      onCancel={() => setAddingRow(false)}
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      className="text-sm text-brand-dark hover:underline flex items-center gap-1"
+                      onClick={() => setAddingRow(true)}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+                      </svg>
+                      Add balance row manually
+                    </button>
+                  )}
+                </div>
               )}
             </div>
           )}

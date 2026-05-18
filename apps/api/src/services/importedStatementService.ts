@@ -1210,16 +1210,71 @@ export async function reExtractStatement(
   return mapDTO(reset);
 }
 
-/** Manually update the accountId for an UNMATCHED balance row. */
-export async function resolveAccountBalance(
+/**
+ * Update fields on an existing balance row.
+ * Any combination of accountId, balanceCents, and balanceType may be supplied.
+ * Setting accountId always flips matchConfidence to MANUAL.
+ */
+export async function updateAccountBalance(
   prisma: PrismaClient,
   balanceId: string,
-  accountId: string,
   orgId: string,
+  update: {
+    accountId?: string;
+    balanceCents?: number;
+    balanceType?: string;
+  },
 ): Promise<void> {
+  const data: Record<string, unknown> = {};
+  if (update.accountId !== undefined) {
+    data.accountId = update.accountId;
+    data.matchConfidence = MatchConfidence.MANUAL;
+  }
+  if (update.balanceCents !== undefined) data.balanceCents = update.balanceCents;
+  if (update.balanceType !== undefined) data.balanceType = update.balanceType;
   await prisma.importedAccountBalance.updateMany({
     where: { id: balanceId, orgId },
-    data: { accountId, matchConfidence: MatchConfidence.MANUAL },
+    data,
+  });
+}
+
+/**
+ * Manually add a balance row to a PENDING_REVIEW statement.
+ * COA account resolution is optional — approval will auto-create an account
+ * when accountId is absent, just like it does for UNMATCHED extracted rows.
+ */
+export async function createAccountBalance(
+  prisma: PrismaClient,
+  statementId: string,
+  orgId: string,
+  input: {
+    rawAccountCode: string;
+    rawAccountName: string;
+    balanceCents: number;
+    balanceType: string;
+    accountId?: string;
+  },
+): Promise<void> {
+  const statement = await prisma.importedStatement.findFirst({
+    where: { id: statementId, orgId, status: ImportedStatementStatus.PENDING_REVIEW },
+  });
+  if (!statement) {
+    throw new ImportedStatementError(
+      "NOT_FOUND",
+      "Statement not found or not in PENDING_REVIEW status",
+    );
+  }
+  await prisma.importedAccountBalance.create({
+    data: {
+      orgId,
+      statementId,
+      rawAccountCode: input.rawAccountCode,
+      rawAccountName: input.rawAccountName,
+      balanceCents: input.balanceCents,
+      balanceType: input.balanceType,
+      accountId: input.accountId ?? null,
+      matchConfidence: input.accountId ? MatchConfidence.MANUAL : MatchConfidence.UNMATCHED,
+    },
   });
 }
 
