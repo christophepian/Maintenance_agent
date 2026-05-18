@@ -456,6 +456,69 @@ footer a:hover { color: var(--text-muted); }
   .tranches-grid { grid-template-columns: 1fr; }
   .tranche-card.tc-active { transform: none; }
 }
+
+/* ─── TRANCHE COMPARE (calculator) ─── */
+.tranche-compare {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 10px; margin-top: 24px; margin-bottom: 20px;
+}
+.tc-col {
+  border-radius: var(--radius-sm); padding: 16px 14px;
+  border: 1px solid var(--border);
+}
+.tc-col.tc-col-active {
+  background: rgba(79,70,229,.07); border-color: rgba(129,140,248,.3);
+}
+.tc-col.tc-col-locked {
+  background: rgba(255,255,255,.015); opacity: .7;
+}
+.tc-col-head { margin-bottom: 12px; }
+.tc-col-name { font-size: 13px; font-weight: 700; margin-bottom: 5px; }
+.tc-col-badge {
+  font-size: 10px; font-weight: 600; letter-spacing: .3px; text-transform: uppercase;
+  padding: 2px 8px; border-radius: 20px; display: inline-block;
+}
+.tc-col-badge.open        { background: rgba(52,211,153,.12); color: var(--emerald-light); border: 1px solid rgba(52,211,153,.2); }
+.tc-col-badge.locked-badge { background: var(--surface); color: var(--text-dim); border: 1px solid var(--border); }
+.tc-col-row {
+  display: flex; justify-content: space-between; align-items: baseline;
+  font-size: 11px; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,.04);
+}
+.tc-col-row:last-child { border-bottom: none; }
+.tc-col-row span:first-child { color: var(--text-dim); }
+.tc-col-row span.indigo { color: var(--indigo-light); font-weight: 600; }
+.tc-col-row span.green  { color: var(--emerald-light); font-weight: 600; }
+.tc-col-row.muted span { color: var(--text-dim) !important; font-size: 11px; }
+.tc-col-divider { border-top: 1px dashed rgba(255,255,255,.08); margin: 6px 0; }
+
+/* ─── EXIT TABLE ─── */
+.exit-table-wrap { margin-top: 4px; }
+.exit-table-label {
+  font-size: 10px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase;
+  color: var(--text-dim); margin-bottom: 8px;
+}
+.exit-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.exit-table th {
+  padding: 8px 10px; text-align: right;
+  font-size: 10px; font-weight: 600; letter-spacing: .4px; text-transform: uppercase;
+  color: var(--text-dim); border-bottom: 1px solid var(--border);
+}
+.exit-table th:first-child { text-align: left; }
+.exit-table th.active-col { color: var(--indigo-light); }
+.exit-table td {
+  padding: 9px 10px; text-align: right;
+  border-bottom: 1px solid rgba(255,255,255,.04); color: var(--text-dim); font-size: 12px;
+}
+.exit-table td:first-child { text-align: left; color: var(--text-dim); font-size: 11px; }
+.exit-table td.active-col  { color: var(--indigo-light); font-weight: 600; }
+.exit-table td.locked-col  { color: var(--text-dim); }
+.exit-table tr:last-child td { border-bottom: none; }
+
+@media (max-width: 640px) {
+  .tranche-compare { grid-template-columns: 1fr; }
+  .exit-table { font-size: 11px; }
+  .exit-table th, .exit-table td { padding: 7px 6px; }
+}
 </style>
 </head>
 <body>
@@ -689,13 +752,9 @@ footer a:hover { color: var(--text-muted); }
 <section class="calc-section" id="calculator">
   <div class="container">
     <div class="eyebrow">Run the numbers</div>
-    <h2 class="section-title">See what <em>your</em> investment looks like.</h2>
-    <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.2);border-radius:20px;padding:4px 14px;margin-bottom:16px;font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--emerald-light);">
-      <span style="width:6px;height:6px;border-radius:50%;background:var(--emerald-light);display:inline-block;animation:pulse 2s infinite;"></span>
-      Round 1 — Early Bird terms (35% discount)
-    </div>
+    <h2 class="section-title">See what your investment means — <em>across all three rounds</em>.</h2>
     <div class="calc-box fade-up">
-      <div class="calc-label">How much would you like to invest?</div>
+      <div class="calc-label">How much are you thinking of investing?</div>
       <div class="calc-input-wrap">
         <span class="calc-currency">CHF</span>
         <input class="calc-input" type="number" id="calcAmount" value="500" min="100" oninput="updateCalc()">
@@ -707,83 +766,84 @@ footer a:hover { color: var(--text-muted); }
         <span class="calc-preset" onclick="setAmount(2000)">CHF 2 000</span>
         <span class="calc-preset" onclick="setAmount(5000)">CHF 5 000</span>
       </div>
-      <div class="calc-results">
-        <div class="calc-result">
-          <div class="calc-result-label">If you convert → ownership</div>
-          <div class="calc-result-val indigo" id="calcOwnership">0.036%</div>
-        </div>
-        <div class="calc-result">
-          <div class="calc-result-label">If you don't → back after 18 mo</div>
-          <div class="calc-result-val green" id="calcRepay">CHF 537.50</div>
-        </div>
-        <div class="calc-result">
-          <div class="calc-result-label">Your share of the early pool</div>
-          <div class="calc-result-val" id="calcPool">0.67%</div>
-        </div>
-      </div>
-      <div class="calc-pool-warning" id="poolWarning">
-        The total pool is capped at CHF 75K so that all early investors together hold no more than 5% of Sencilo at conversion. At your amount, you would represent a meaningful share of the available allocation.
-      </div>
-      <p class="calc-note">Showing Early Bird (Round 1) terms: 35% discount → effective valuation CHF 1.3M. Interest assumes 18 months at 5% p.a. simple. These are illustrative figures — actual seed terms may differ.</p>
-    </div>
-  </div>
-</section>
 
-<!-- SCENARIOS TABLE -->
-<section class="scenarios-section">
-  <div class="container">
-    <div class="eyebrow">Scenarios at a glance</div>
-    <h2 class="section-title">What different amounts <em>actually mean</em>.</h2>
-    <p class="section-sub">Shown at current Early Bird (Round 1) terms — 35% discount, CHF 2.0M pre-money, 18 months for the repayment case.</p>
-    <table class="scenario-table fade-up">
-      <thead>
-        <tr>
-          <th>Investment</th>
-          <th>Ownership if you convert</th>
-          <th>Repayment if you don't</th>
-          <th>Share of early pool</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>CHF 100</td>
-          <td class="indigo">0.0077%</td>
-          <td class="green">CHF 107.50</td>
-          <td class="muted">0.13%</td>
-        </tr>
-        <tr>
-          <td>CHF 250</td>
-          <td class="indigo">0.0192%</td>
-          <td class="green">CHF 268.75</td>
-          <td class="muted">0.33%</td>
-        </tr>
-        <tr class="scenario-highlight">
-          <td>CHF 500</td>
-          <td class="indigo">0.0385%</td>
-          <td class="green">CHF 537.50</td>
-          <td class="muted">0.67%</td>
-        </tr>
-        <tr>
-          <td>CHF 1 000</td>
-          <td class="indigo">0.0769%</td>
-          <td class="green">CHF 1 075</td>
-          <td class="muted">1.33%</td>
-        </tr>
-        <tr>
-          <td>CHF 2 000</td>
-          <td class="indigo">0.154%</td>
-          <td class="green">CHF 2 150</td>
-          <td class="muted">2.67%</td>
-        </tr>
-        <tr>
-          <td>CHF 5 000</td>
-          <td class="indigo">0.383%</td>
-          <td class="green">CHF 5 375</td>
-          <td class="muted">6.67%</td>
-        </tr>
-      </tbody>
-    </table>
-    <p style="margin-top:16px; font-size:12px; color:var(--text-dim);">The total pool is capped at CHF 75K. All early investors together will hold no more than 5% at conversion. First come, first served within the cap.</p>
+      <!-- 3-tranche comparison -->
+      <div class="tranche-compare">
+        <div class="tc-col tc-col-active">
+          <div class="tc-col-head">
+            <div class="tc-col-name">Early Bird</div>
+            <div class="tc-col-badge open">⬤ Open · 35% off</div>
+          </div>
+          <div class="tc-col-row"><span>Ownership</span><span class="indigo" id="tc1-own">—</span></div>
+          <div class="tc-col-row"><span>Value at seed *</span><span class="green" id="tc1-seed">—</span></div>
+          <div class="tc-col-row"><span>Day-1 uplift</span><span class="green" id="tc1-uplift">—</span></div>
+          <div class="tc-col-divider"></div>
+          <div class="tc-col-row muted"><span>Or repay (18 mo)</span><span id="tc1-repay">—</span></div>
+        </div>
+        <div class="tc-col tc-col-locked">
+          <div class="tc-col-head">
+            <div class="tc-col-name">Trailblazer</div>
+            <div class="tc-col-badge locked-badge">🔒 Round 2 · 25% off</div>
+          </div>
+          <div class="tc-col-row"><span>Ownership</span><span class="indigo" id="tc2-own">—</span></div>
+          <div class="tc-col-row"><span>Value at seed *</span><span class="green" id="tc2-seed">—</span></div>
+          <div class="tc-col-row"><span>Day-1 uplift</span><span class="green" id="tc2-uplift">—</span></div>
+          <div class="tc-col-divider"></div>
+          <div class="tc-col-row muted"><span>Or repay (18 mo)</span><span id="tc2-repay">—</span></div>
+        </div>
+        <div class="tc-col tc-col-locked">
+          <div class="tc-col-head">
+            <div class="tc-col-name">Steady Backer</div>
+            <div class="tc-col-badge locked-badge">🔒 Round 3 · 20% off</div>
+          </div>
+          <div class="tc-col-row"><span>Ownership</span><span class="indigo" id="tc3-own">—</span></div>
+          <div class="tc-col-row"><span>Value at seed *</span><span class="green" id="tc3-seed">—</span></div>
+          <div class="tc-col-row"><span>Day-1 uplift</span><span class="green" id="tc3-uplift">—</span></div>
+          <div class="tc-col-divider"></div>
+          <div class="tc-col-row muted"><span>Or repay (18 mo)</span><span id="tc3-repay">—</span></div>
+        </div>
+      </div>
+
+      <!-- Exit scenarios -->
+      <div class="exit-table-wrap">
+        <div class="exit-table-label">If you convert — stake value at exit</div>
+        <table class="exit-table">
+          <thead>
+            <tr>
+              <th>Company reaches…</th>
+              <th class="active-col">Early Bird</th>
+              <th class="locked-col">Trailblazer</th>
+              <th class="locked-col">Steady Backer</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>2× seed valuation (CHF 4M)</td>
+              <td class="active-col" id="ex1-2x">—</td>
+              <td class="locked-col" id="ex2-2x">—</td>
+              <td class="locked-col" id="ex3-2x">—</td>
+            </tr>
+            <tr>
+              <td>5× seed valuation (CHF 10M)</td>
+              <td class="active-col" id="ex1-5x">—</td>
+              <td class="locked-col" id="ex2-5x">—</td>
+              <td class="locked-col" id="ex3-5x">—</td>
+            </tr>
+            <tr>
+              <td>10× seed valuation (CHF 20M)</td>
+              <td class="active-col" id="ex1-10x">—</td>
+              <td class="locked-col" id="ex2-10x">—</td>
+              <td class="locked-col" id="ex3-10x">—</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="calc-pool-warning" id="poolWarning">
+        At this amount you represent a meaningful share of the CHF 75K early pool. The pool is shared across all three rounds — first come, first served.
+      </div>
+      <p class="calc-note">* Value at seed price = investment ÷ (1 − discount) — what your shares are worth at the seed round price on day 1 of conversion. Exit multiples applied to that figure. Assumes seed pre-money CHF 2.0M. Repayment: 5% p.a. simple × 18 months. Trailblazer &amp; Steady Backer rounds not yet open; figures shown for comparison only.</p>
+    </div>
   </div>
 </section>
 
@@ -821,19 +881,19 @@ footer a:hover { color: var(--text-muted); }
     </button>
     <div class="legal-body" id="legalBody">
       <h4>Nature of this agreement</h4>
-      <p>This page is shared privately with individuals known to the founders. It does not constitute a public offer or solicitation of securities under Swiss law (FinSA / FinIA). The instrument described is a private convertible loan (Darlehen mit Wandlungsrecht) governed by Swiss law (Code of Obligations / OR).</p>
+      <p>This page is shared privately with individuals known to the founders. It does not constitute a public offer or solicitation of securities under Swiss law (FinSA / OR). The instrument described is a private convertible loan (Darlehen mit Wandlungsrecht) governed by Swiss law (Code of Obligations / OR). It is a bilateral private loan — not a standardised security or bond — and is not intended for mass trading or public distribution.</p>
 
       <h4>Instrument summary</h4>
-      <p>Investors lend a principal amount (minimum CHF 100) to Sencilo. The loan bears interest at 5% per annum (simple, not compounded) from the date of transfer. The loan matures at the close of Sencilo's first formal seed financing round (the "Qualified Financing"). At maturity, the investor may elect either: (a) conversion into equity at a 30% discount to the seed round price per share, or (b) repayment of principal plus accrued interest. The investor's choice must be communicated within 30 days of written notice from Sencilo of the Qualified Financing close.</p>
+      <p>Investors lend a principal amount to Sencilo under a written agreement that specifies the applicable round and conversion discount (35% for Early Bird / 25% for Trailblazer / 20% for Steady Backer). The loan bears interest at 5% per annum (simple, not compounded) from the date of transfer. The loan matures at the close of Sencilo's first formal seed financing round (the "Qualified Financing"). At maturity, the investor may elect either: (a) conversion into equity at the agreed discount to the seed round price per share, or (b) repayment of principal plus accrued interest. The investor's choice must be communicated within 30 days of written notice from Sencilo of the Qualified Financing close. Minimum ticket: Early Bird CHF 100 · Trailblazer CHF 500 · Steady Backer CHF 1,000.</p>
 
       <h4>Pool cap</h4>
-      <p>The aggregate principal raised under this instrument is capped at CHF 75,000. This is calibrated so that, assuming conversion at a CHF 2.0M pre-money seed valuation with a 30% discount, all early investors collectively hold no more than approximately 5% of the company at conversion. Sencilo will not accept investments that would cause the aggregate to exceed this cap.</p>
+      <p>The aggregate principal raised under this instrument is capped at CHF 75,000 across all three rounds. At the highest discount (Early Bird, 35%), CHF 75K converts to approximately 5.5% of Sencilo at a CHF 2.0M pre-money seed valuation; at lower discounts the dilution is smaller. Sencilo will not accept investments that would cause the aggregate to exceed this cap.</p>
 
       <h4>Risk warning</h4>
       <p>This is an early-stage investment. The repayment option (Option B) depends on Sencilo's financial position at maturity. If the company has not raised a seed round and has insufficient cash, repayment may be delayed or impossible. Invest only amounts you are prepared to lose in full. The conversion option (Option A) results in equity in a private, illiquid company — there is no guarantee of future value or exit.</p>
 
       <h4>No prospectus</h4>
-      <p>No prospectus has been prepared. This page is not a prospectus within the meaning of FinSA. Investors are encouraged to seek independent financial and legal advice before investing.</p>
+      <p>No prospectus has been prepared. This page is not a prospectus within the meaning of FinSA. This offer is exempt from prospectus requirements under Art. 36(1)(b) FinSA (fewer than 500 investors) and Art. 36(1)(e) FinSA (total offer value below CHF 8 million in any 12-month period). Investors are encouraged to seek independent financial and legal advice before investing.</p>
 
       <h4>Governing law</h4>
       <p>The convertible loan agreement is governed by Swiss law. Jurisdiction: Canton of Vaud.</p>
@@ -864,35 +924,48 @@ const obs = new IntersectionObserver(entries => {
 document.querySelectorAll('.fade-up').forEach(el => obs.observe(el));
 
 /* Calculator */
-const SEED_PRE   = 2_000_000;   // CHF 2.0M pre-money seed
-const DISCOUNT   = 0.35;         // 35% — Early Bird (Round 1)
-const INTEREST   = 0.05;         // 5% p.a.
-const MONTHS     = 18;           // assumed duration
-const POOL_CAP   = 75_000;       // CHF 75K total raise
+const SEED_PRE = 2_000_000;
+const INTEREST = 0.05;
+const MONTHS   = 18;
+const POOL_CAP = 75_000;
 
-function fmt(n) {
+const TRANCHES = [
+  { id: 1, discount: 0.35 },   // Early Bird
+  { id: 2, discount: 0.25 },   // Trailblazer
+  { id: 3, discount: 0.20 },   // Steady Backer
+];
+
+function fmtCHF(n) {
+  if (n === 0) return '—';
   return n >= 1000
-    ? 'CHF ' + n.toLocaleString('de-CH', {minimumFractionDigits: 0, maximumFractionDigits: 2})
-    : 'CHF ' + n.toFixed(2);
+    ? 'CHF\u202f' + Math.round(n).toLocaleString('de-CH')
+    : 'CHF\u202f' + n.toFixed(2);
 }
 
 function updateCalc() {
   const amount = parseFloat(document.getElementById('calcAmount').value) || 0;
-  const effectiveVal = SEED_PRE * (1 - DISCOUNT);                   // CHF 1.4M
-  const postMoney    = effectiveVal + amount;
-  const ownership    = (amount / postMoney) * 100;
-  const interest     = amount * INTEREST * (MONTHS / 12);
-  const repay        = amount + interest;
-  const poolShare    = (amount / POOL_CAP) * 100;
 
-  document.getElementById('calcOwnership').textContent = ownership.toFixed(4) + '%';
-  document.getElementById('calcRepay').textContent     = fmt(repay);
-  document.getElementById('calcPool').textContent      = poolShare.toFixed(2) + '%';
+  TRANCHES.forEach(t => {
+    const n = t.id;
+    const effectiveVal = SEED_PRE * (1 - t.discount);
+    const ownership    = amount > 0 ? (amount / (effectiveVal + amount)) * 100 : 0;
+    const seedVal      = amount > 0 ? amount / (1 - t.discount) : 0;
+    const uplift       = amount > 0 ? ((seedVal - amount) / amount) * 100 : 0;
+    const repay        = amount + amount * INTEREST * (MONTHS / 12);
+
+    document.getElementById(`tc${n}-own`).textContent    = amount > 0 ? ownership.toFixed(4) + '%' : '—';
+    document.getElementById(`tc${n}-seed`).textContent   = fmtCHF(seedVal);
+    document.getElementById(`tc${n}-uplift`).textContent = amount > 0 ? '+' + uplift.toFixed(1) + '%' : '—';
+    document.getElementById(`tc${n}-repay`).textContent  = fmtCHF(repay);
+
+    [2, 5, 10].forEach(mult => {
+      document.getElementById(`ex${n}-${mult}x`).textContent = fmtCHF(seedVal * mult);
+    });
+  });
 
   const warning = document.getElementById('poolWarning');
   warning.style.display = (amount >= POOL_CAP * 0.1) ? 'block' : 'none';
 
-  // update active preset
   document.querySelectorAll('.calc-preset').forEach(p => {
     p.classList.toggle('active', parseInt(p.textContent.replace(/\D/g,'')) === amount);
   });

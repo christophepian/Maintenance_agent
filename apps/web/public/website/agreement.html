@@ -251,6 +251,12 @@ body {
         <div class="party-detail"><span class="fill">&nbsp;Address&nbsp;</span></div>
         <div class="party-detail"><span class="fill fill-sm">&nbsp;Nationality&nbsp;</span></div>
       </div>
+      <div class="party" style="flex:0 0 auto;min-width:160px;">
+        <div class="party-role">Round &amp; Terms</div>
+        <div class="party-name"><span class="fill fill-sm">&nbsp;Round name&nbsp;</span></div>
+        <div class="party-detail">Conversion discount: <span class="fill fill-sm">&nbsp;&nbsp;%</span></div>
+        <div class="party-detail">Principal: CHF <span class="fill fill-sm">&nbsp;&nbsp;&nbsp;&nbsp;</span></div>
+      </div>
     </div>
   </div>
 
@@ -270,7 +276,8 @@ body {
       <div class="clause-text">
         The Investor agrees to lend to the Company the principal amount of
         <strong>CHF <span class="fill fill-sm">&nbsp;amount&nbsp;</span></strong>
-        (the <strong>"Principal"</strong>), subject to a minimum of CHF 100 and the
+        (the <strong>"Principal"</strong>), subject to the minimum ticket for the applicable
+        round (CHF 100 Early Bird · CHF 500 Trailblazer · CHF 1,000 Steady Backer) and the
         aggregate pool cap set out in clause 6.
       </div>
     </div>
@@ -367,7 +374,7 @@ body {
         <strong>Option A — Conversion into equity.</strong> The Investor may elect to
         convert the Principal into shares of the Company at a price per share equal to
         the price paid by investors in the Qualified Financing multiplied by
-        <strong>(1 − 30%) = 0.70</strong> (the <strong>"Conversion Price"</strong>).
+        <strong>(1 − <span class="fill fill-sm">&nbsp;&nbsp;%&nbsp;</span>) = <span class="fill fill-sm">&nbsp;&nbsp;&nbsp;&nbsp;</span></strong> (the <strong>"Conversion Discount"</strong>, as stated in the Round &amp; Terms box on page 1) (the resulting price being the <strong>"Conversion Price"</strong>).
         The number of shares issued shall be:
         <div style="text-align:center;margin:10px 0;font-family:'Inter',sans-serif;font-size:13px;background:var(--cream);padding:8px 16px;border-radius:4px;border:1px solid var(--rule);">
           Shares = Principal ÷ Conversion Price
@@ -390,7 +397,7 @@ body {
     </div>
 
     <div class="term-box">
-      <div style="font-family:'Inter',sans-serif;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">Illustrative example (for information only)</div>
+      <div style="font-family:'Inter',sans-serif;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">Illustrative example — Early Bird round (35% discount, CHF 500 principal)</div>
       <div class="term-row">
         <span class="term-label">Principal invested</span>
         <span class="term-value">CHF 500</span>
@@ -404,16 +411,23 @@ body {
         <span class="term-value">CHF 2.00</span>
       </div>
       <div class="term-row">
-        <span class="term-label">Conversion Price (30% discount)</span>
-        <span class="term-value">CHF 1.40 per share</span>
+        <span class="term-label">Conversion Price (35% discount → × 0.65)</span>
+        <span class="term-value">CHF 1.30 per share</span>
       </div>
       <div class="term-row">
-        <span class="term-label">Option A — Shares received</span>
-        <span class="term-value">357 shares</span>
+        <span class="term-label">Option A — Shares received (500 ÷ 1.30)</span>
+        <span class="term-value">~385 shares</span>
+      </div>
+      <div class="term-row">
+        <span class="term-label">Option A — Value at seed price (385 × CHF 2.00)</span>
+        <span class="term-value">CHF 769 (day-1 paper gain: +54%)</span>
       </div>
       <div class="term-row">
         <span class="term-label">Option B — Cash back after 18 months</span>
         <span class="term-value">CHF 537.50</span>
+      </div>
+      <div style="margin-top:8px;font-family:'Inter',sans-serif;font-size:10px;color:var(--muted);line-height:1.5;">
+        For Trailblazer (25%): CHF 500 ÷ CHF 1.50 = ~333 shares / value CHF 667. &nbsp;|&nbsp; Steady Backer (20%): CHF 1 000 ÷ CHF 1.60 = ~625 shares / value CHF 1 250. Actual figures depend on seed round price.
       </div>
     </div>
   </div>
@@ -439,11 +453,12 @@ body {
       <div class="clause-num">6.1</div>
       <div class="clause-text">
         The aggregate principal amount raised by the Company under this instrument
-        (across all investors) shall not exceed <strong>CHF 75,000</strong>
-        (the <strong>"Pool Cap"</strong>). This cap is set so that all investors
-        who convert under clause 4.2 collectively hold no more than approximately
-        <strong>5%</strong> of the Company's fully-diluted share capital at conversion,
-        assuming a Qualified Financing at a CHF 2,000,000 pre-money valuation.
+        (across all rounds and all investors) shall not exceed <strong>CHF 75,000</strong>
+        (the <strong>"Pool Cap"</strong>). At the highest applicable discount (35% Early Bird),
+        CHF 75,000 converts to approximately <strong>5.5%</strong> of the Company's
+        fully-diluted share capital at conversion, assuming a Qualified Financing at a
+        CHF 2,000,000 pre-money valuation; at lower discounts the resulting dilution is
+        proportionally smaller.
       </div>
     </div>
     <div class="clause">
