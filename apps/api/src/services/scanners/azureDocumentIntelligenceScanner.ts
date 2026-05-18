@@ -713,7 +713,9 @@ function parseNumberFromKv(
 const FINANCIAL_STATEMENT_BALANCE_TOOL = {
   name: "extractAccountBalances",
   description:
-    "Extract the list of account closing balances from a Swiss property management financial statement or balance sheet. " +
+    "Extract all account rows from a Swiss property management financial statement — " +
+    "including balance sheet positions (Bilan / Bilanz: asset codes 1xxx, liability/equity codes 2xxx) " +
+    "AND income statement rows (Compte de résultat / Betriebsrechnung: revenue codes 3xxx, expense codes 4xxx–8xxx). " +
     "Return every account line found: its code, name, balance amount, and whether it is a debit or credit balance. " +
     "IMPORTANT — account codes: Swiss chart of accounts uses 3- or 4-digit codes (e.g. '1020', '4200', '630'). " +
     "Extract the code from the leftmost column ONLY — do NOT include digits from the amount or name columns. " +
@@ -1245,8 +1247,8 @@ async function classifyPages(
                       type: "string",
                       enum: ["COVER_LETTER", "BALANCE_SHEET", "INCOME_STATEMENT", "INVOICE", "OTHER"],
                       description:
-                        "BALANCE_SHEET: Bilan or balance sheet — closing positions for assets (actifs), liabilities (passifs), equity. Account codes typically 1xxx–3xxx. " +
-                        "INCOME_STATEMENT: Compte de résultat, Betriebsrechnung, compte de gestion, P&L — revenue and expense rows for a period. Account codes typically 4xxx–8xxx. " +
+                        "BALANCE_SHEET: Bilan or balance sheet — closing positions for assets (actifs/Aktiven, codes 1xxx) and liabilities/equity (passifs/Passiven, codes 2xxx). " +
+                        "INCOME_STATEMENT: Compte de résultat, Betriebsrechnung, compte de gestion, P&L — revenue and expense rows for a period. Revenue codes 3xxx (Ertrag/recettes), expense codes 4xxx–8xxx (Aufwand/charges). " +
                         "INVOICE: a vendor invoice, receipt, or Facture with an invoice number, supplier name, and CHF total. " +
                         "COVER_LETTER: introductory or transmittal letter with no financial data. " +
                         "OTHER: table of contents, tenant list, état locatif, property description, annexes, or anything that does not fit above.",

@@ -1,0 +1,2145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sencilo — Swiss Property, Made Simple</title>
+<meta name="description" content="Sencilo handles Swiss compliance, maintenance, and finances for you — so you can focus on what matters. Built for landlords and property managers across Switzerland.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+
+<style>
+/* ─────────────────────────────────────────────
+   TOKENS
+───────────────────────────────────────────── */
+:root {
+  --dark:          #05081a;
+  --dark-2:        #0d1226;
+  --dark-3:        #141d38;
+  --dark-4:        #1c2548;
+  --indigo:        #4f46e5;
+  --indigo-light:  #818cf8;
+  --violet:        #7c3aed;
+  --violet-light:  #a78bfa;
+  --emerald:       #059669;
+  --emerald-light: #34d399;
+  --amber:         #d97706;
+  --amber-light:   #fbbf24;
+  --blue:          #2563eb;
+  --rose:          #e11d48;
+  --text:          #ffffff;
+  --text-muted:    rgba(255,255,255,.6);
+  --text-dim:      rgba(255,255,255,.35);
+  --surface:       rgba(255,255,255,.05);
+  --surface-2:     rgba(255,255,255,.08);
+  --surface-3:     rgba(255,255,255,.12);
+  --border:        rgba(255,255,255,.1);
+  --border-2:      rgba(255,255,255,.15);
+  --radius:        14px;
+  --radius-sm:     8px;
+  --radius-lg:     20px;
+}
+
+/* ─────────────────────────────────────────────
+   RESET & BASE
+───────────────────────────────────────────── */
+*,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'Inter', -apple-system, sans-serif;
+  background: var(--dark);
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+img { display: block; max-width: 100%; }
+a { text-decoration: none; }
+
+/* ─────────────────────────────────────────────
+   LAYOUT
+───────────────────────────────────────────── */
+.container { max-width: 1180px; margin: 0 auto; padding: 0 28px; }
+section { padding: 96px 0; }
+
+/* ─────────────────────────────────────────────
+   NAV
+───────────────────────────────────────────── */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+  padding: 16px 0;
+  transition: background .3s, border-color .3s;
+}
+nav.scrolled {
+  background: rgba(5,8,26,.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+}
+.nav-inner {
+  display: flex; align-items: center; justify-content: space-between; gap: 32px;
+}
+.nav-logo {
+  display: flex; align-items: center; gap: 10px; flex-shrink: 0;
+}
+.nav-logo-mark {
+  width: 34px; height: 34px; border-radius: 9px;
+  background: linear-gradient(135deg, var(--indigo), var(--violet));
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: 13px; letter-spacing: -0.5px; color: #fff;
+  box-shadow: 0 0 20px rgba(79,70,229,.4);
+}
+.nav-logo-text { font-weight: 700; font-size: 17px; letter-spacing: -0.4px; color: #fff; }
+.nav-badge {
+  background: rgba(5,150,105,.15); color: var(--emerald-light);
+  border: 1px solid rgba(52,211,153,.2);
+  font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 20px;
+  letter-spacing: 0.3px;
+}
+.nav-links {
+  display: flex; gap: 30px; align-items: center;
+}
+.nav-links a {
+  font-size: 14px; font-weight: 500; color: var(--text-muted);
+  transition: color .15s;
+}
+.nav-links a:hover { color: var(--text); }
+.nav-actions { display: flex; gap: 10px; align-items: center; flex-shrink: 0; }
+.btn-ghost-nav {
+  font-size: 13px; font-weight: 600; color: var(--text-muted);
+  padding: 8px 16px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border); transition: all .15s;
+}
+.btn-ghost-nav:hover { color: var(--text); border-color: var(--border-2); background: var(--surface); }
+.btn-primary-nav {
+  font-size: 13px; font-weight: 600; color: #fff;
+  padding: 9px 20px; border-radius: var(--radius-sm);
+  background: linear-gradient(135deg, var(--indigo), var(--violet));
+  transition: opacity .15s, transform .1s;
+  box-shadow: 0 4px 14px rgba(79,70,229,.35);
+}
+.btn-primary-nav:hover { opacity: .9; transform: translateY(-1px); }
+
+/* ─────────────────────────────────────────────
+   HERO
+───────────────────────────────────────────── */
+.hero {
+  min-height: 100vh;
+  display: flex; align-items: center;
+  padding: 120px 0 80px;
+  position: relative; overflow: hidden;
+}
+
+/* Photo background */
+.hero-photo {
+  position: absolute; inset: 0; z-index: 0;
+}
+.hero-photo img {
+  width: 100%; height: 100%; object-fit: cover; object-position: 65% center; transform: scaleX(-1);
+  display: block;
+}
+.hero-photo-overlay {
+  position: absolute; inset: 0;
+  background: linear-gradient(
+    105deg,
+    rgba(5,8,26,0.93) 0%,
+    rgba(5,8,26,0.85) 30%,
+    rgba(5,8,26,0.60) 55%,
+    rgba(5,8,26,0.30) 100%
+  );
+}
+
+/* Grid overlay */
+.hero-grid {
+  position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
+  background-size: 60px 60px;
+  mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black, transparent);
+}
+
+.hero-inner {
+  position: relative; z-index: 1;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: center;
+}
+
+.hero-eyebrow {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(79,70,229,.15);
+  border: 1px solid rgba(129,140,248,.25);
+  color: var(--indigo-light);
+  font-size: 12px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase;
+  padding: 6px 14px; border-radius: 20px; margin-bottom: 24px;
+}
+.eyebrow-dot {
+  width: 6px; height: 6px; border-radius: 50%; background: var(--emerald-light);
+  box-shadow: 0 0 6px var(--emerald-light);
+  animation: pulse 2s ease-in-out infinite;
+}
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .4; } }
+
+.hero h1 {
+  font-family: 'DM Serif Display', Georgia, serif;
+  font-size: clamp(40px, 5vw, 60px);
+  font-weight: 900; line-height: 1.05;
+  letter-spacing: -2px;
+  margin-bottom: 22px;
+}
+.hero h1 em { font-style: italic; color: var(--indigo-light); }
+
+.hero-sub {
+  font-size: 17px; color: var(--text-muted); line-height: 1.7;
+  max-width: 480px; margin-bottom: 36px;
+}
+
+.hero-ctas {
+  display: flex; gap: 12px; align-items: center; margin-bottom: 52px; flex-wrap: wrap;
+}
+.btn-primary {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: linear-gradient(135deg, var(--indigo), var(--violet));
+  color: #fff; font-size: 15px; font-weight: 600;
+  padding: 13px 26px; border-radius: var(--radius-sm);
+  box-shadow: 0 4px 20px rgba(79,70,229,.45);
+  transition: opacity .15s, transform .15s;
+}
+.btn-primary:hover { opacity: .9; transform: translateY(-2px); }
+.btn-outline {
+  display: inline-flex; align-items: center; gap: 8px;
+  color: var(--text-muted); font-size: 15px; font-weight: 500;
+  padding: 13px 22px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border-2);
+  transition: all .15s;
+}
+.btn-outline:hover { color: var(--text); border-color: var(--border-2); background: var(--surface); }
+
+.hero-stats {
+  display: flex; gap: 0;
+  border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden;
+  width: fit-content;
+}
+.hero-stat {
+  padding: 14px 22px; border-right: 1px solid var(--border); background: var(--surface);
+}
+.hero-stat:last-child { border-right: none; }
+.hero-stat-num {
+  font-family: 'DM Serif Display', Georgia, serif;
+  font-size: 26px; font-weight: 800; color: var(--text); letter-spacing: -1px; line-height: 1;
+  margin-bottom: 2px;
+}
+.hero-stat-label { font-size: 11px; color: var(--text-dim); font-weight: 500; }
+
+/* Hero visual — dashboard mockup */
+.hero-visual { position: relative; transform: translateX(40px) translateY(40px); }
+
+.browser-frame {
+  background: var(--dark-3);
+  border: 1px solid var(--border-2);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: 0 32px 80px rgba(0,0,0,.6), 0 0 0 1px var(--border);
+  transform: perspective(1000px) rotateY(-4deg) rotateX(2deg);
+  transition: transform .4s ease;
+}
+.browser-frame:hover { transform: perspective(1000px) rotateY(-1deg) rotateX(0deg); }
+.browser-bar {
+  display: flex; align-items: center; gap: 6px;
+  padding: 10px 14px; background: rgba(0,0,0,.3);
+  border-bottom: 1px solid var(--border);
+}
+.browser-dot { width: 10px; height: 10px; border-radius: 50%; }
+.browser-dot:nth-child(1) { background: #ff5f57; }
+.browser-dot:nth-child(2) { background: #febc2e; }
+.browser-dot:nth-child(3) { background: #28c840; }
+.browser-bar-url {
+  flex: 1; margin-left: 8px; background: rgba(255,255,255,.06);
+  border-radius: 4px; padding: 4px 10px;
+  font-size: 11px; color: var(--text-dim); letter-spacing: 0.2px;
+}
+.browser-frame img { width: 100%; height: auto; }
+
+/* Phone float badge */
+.hero-phone-float {
+  position: absolute; bottom: -20px; right: -24px; z-index: 2;
+  width: 130px;
+  background: var(--dark-3);
+  border: 1px solid var(--border-2);
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 16px 40px rgba(0,0,0,.5), 0 0 0 1px var(--border);
+  transform: rotate(3deg);
+}
+.hero-phone-float img { width: 100%; height: auto; }
+
+/* Live pill float */
+.hero-live-badge {
+  position: absolute; top: 16px; right: -10px; z-index: 3;
+  display: flex; align-items: center; gap: 6px;
+  background: rgba(5,150,105,.15); border: 1px solid rgba(52,211,153,.3);
+  color: var(--emerald-light); font-size: 11px; font-weight: 700;
+  padding: 6px 12px; border-radius: 20px;
+  box-shadow: 0 8px 20px rgba(0,0,0,.3);
+  backdrop-filter: blur(8px);
+}
+.live-dot {
+  width: 6px; height: 6px; border-radius: 50%; background: var(--emerald-light);
+  animation: pulse 2s infinite;
+}
+
+/* ─────────────────────────────────────────────
+   TRUST BAR
+───────────────────────────────────────────── */
+.trust-bar {
+  padding: 28px 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  background: rgba(255,255,255,.02);
+}
+.trust-bar-inner {
+  display: flex; align-items: center; justify-content: center;
+  gap: 40px; flex-wrap: wrap;
+}
+.trust-label {
+  font-size: 11px; color: var(--text-dim); font-weight: 500; letter-spacing: 0.5px;
+  text-transform: uppercase; white-space: nowrap;
+}
+.trust-divider {
+  width: 1px; height: 20px; background: var(--border); flex-shrink: 0;
+}
+.trust-item {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12px; color: var(--text-muted); font-weight: 500; white-space: nowrap;
+}
+.trust-icon {
+  width: 26px; height: 26px; border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; background: var(--surface-2);
+}
+
+/* ─────────────────────────────────────────────
+   SECTION LABELS
+───────────────────────────────────────────── */
+.section-eyebrow {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase;
+  color: var(--indigo-light); margin-bottom: 14px;
+}
+.section-eyebrow::before {
+  content: ''; width: 20px; height: 1px;
+  background: linear-gradient(90deg, var(--indigo-light), transparent);
+}
+.section-title {
+  font-family: 'DM Serif Display', Georgia, serif;
+  font-size: clamp(28px, 3.5vw, 42px);
+  font-weight: 800; line-height: 1.1; letter-spacing: -1px;
+  margin-bottom: 16px;
+}
+.section-title em { font-style: italic; color: var(--indigo-light); }
+.section-sub {
+  font-size: 16px; color: var(--text-muted); line-height: 1.7; max-width: 560px;
+}
+
+/* ─────────────────────────────────────────────
+   PROBLEM SECTION
+───────────────────────────────────────────── */
+.problem-section {
+  background: var(--dark-2);
+  padding: 96px 0;
+}
+.problem-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 2px;
+  background: var(--border); border-radius: var(--radius); overflow: hidden;
+  margin-top: 48px;
+}
+.problem-cell {
+  background: var(--dark-3); padding: 40px;
+}
+.problem-cell.bad {
+  position: relative;
+}
+.problem-cell.bad::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: var(--rose);
+}
+.problem-cell.good {
+  background: linear-gradient(135deg, rgba(79,70,229,.15), rgba(124,58,237,.1));
+  position: relative;
+}
+.problem-cell.good::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, var(--indigo), var(--violet));
+}
+.problem-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
+  padding: 4px 10px; border-radius: 20px; margin-bottom: 18px;
+}
+.problem-badge.old { background: rgba(225,29,72,.15); color: #fb7185; border: 1px solid rgba(225,29,72,.2); }
+.problem-badge.new { background: rgba(79,70,229,.2); color: var(--indigo-light); border: 1px solid rgba(129,140,248,.2); }
+.problem-heading {
+  font-family: 'DM Serif Display', Georgia, serif;
+  font-size: 22px; font-weight: 700; line-height: 1.25; margin-bottom: 12px;
+}
+.problem-body { font-size: 14px; color: var(--text-muted); line-height: 1.7; margin-bottom: 20px; }
+.problem-bullets { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.problem-bullets li {
+  display: flex; align-items: flex-start; gap: 10px;
+  font-size: 13px; color: var(--text-muted); line-height: 1.55;
+}
+.bullet-icon { flex-shrink: 0; margin-top: 2px; font-size: 14px; }
+.problem-stat {
+  margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border);
+  display: flex; align-items: baseline; gap: 8px;
+}
+.problem-stat-num {
+  font-family: 'DM Serif Display', Georgia, serif;
+  font-size: 32px; font-weight: 800; line-height: 1;
+}
+.problem-stat-num.bad-num { color: #fb7185; }
+.problem-stat-num.good-num { color: var(--indigo-light); }
+.problem-stat-label { font-size: 12px; color: var(--text-dim); }
+
+/* ─────────────────────────────────────────────
+   ROLES SECTION
+───────────────────────────────────────────── */
+.roles-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 52px;
+}
+.role-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 26px 22px;
+  transition: transform .2s, border-color .2s, background .2s;
+  position: relative; overflow: hidden;
+}
+.role-card::before {
+  content: ''; position: absolute; inset: 0;
+  opacity: 0; transition: opacity .2s;
+}
+.role-card:hover { transform: translateY(-4px); border-color: var(--border-2); }
+.role-card:hover::before { opacity: 1; }
+
+.role-card-manager::before { background: linear-gradient(135deg, rgba(79,70,229,.12), transparent); }
+.role-card-owner::before { background: linear-gradient(135deg, rgba(217,119,6,.12), transparent); }
+.role-card-tenant::before { background: linear-gradient(135deg, rgba(5,150,105,.12), transparent); }
+.role-card-contractor::before { background: linear-gradient(135deg, rgba(37,99,235,.12), transparent); }
+
+.role-card:hover.role-card-manager { border-color: rgba(129,140,248,.35); }
+.role-card:hover.role-card-owner { border-color: rgba(251,191,36,.3); }
+.role-card:hover.role-card-tenant { border-color: rgba(52,211,153,.3); }
+.role-card:hover.role-card-contractor { border-color: rgba(96,165,250,.3); }
+
+.role-icon {
+  width: 46px; height: 46px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; margin-bottom: 16px; position: relative; z-index: 1;
+}
+.role-icon-manager { background: rgba(79,70,229,.2); }
+.role-icon-owner { background: rgba(217,119,6,.2); }
+.role-icon-tenant { background: rgba(5,150,105,.2); }
+.role-icon-contractor { background: rgba(37,99,235,.2); }
+
+.role-name {
+  font-size: 16px; font-weight: 700; margin-bottom: 8px;
+  position: relative; z-index: 1;
+}
+.role-desc {
+  font-size: 13px; color: var(--text-muted); line-height: 1.6;
+  margin-bottom: 18px; position: relative; z-index: 1;
+}
+.role-tags { display: flex; flex-wrap: wrap; gap: 5px; position: relative; z-index: 1; }
+.role-tag {
+  font-size: 10px; font-weight: 600; padding: 3px 8px; border-radius: 20px;
+  border: 1px solid; letter-spacing: 0.2px;
+}
+.tag-indigo { background: rgba(79,70,229,.15); color: var(--indigo-light); border-color: rgba(129,140,248,.2); }
+.tag-amber { background: rgba(217,119,6,.15); color: var(--amber-light); border-color: rgba(251,191,36,.2); }
+.tag-emerald { background: rgba(5,150,105,.15); color: var(--emerald-light); border-color: rgba(52,211,153,.2); }
+.tag-blue { background: rgba(37,99,235,.15); color: #93c5fd; border-color: rgba(96,165,250,.2); }
+
+/* ─────────────────────────────────────────────
+   FEATURES SECTION
+───────────────────────────────────────────── */
+.features-section { background: var(--dark-2); }
+.features-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 52px;
+}
+.feature-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 26px 24px;
+  position: relative; overflow: hidden;
+  transition: transform .2s, border-color .2s;
+}
+.feature-card:hover { transform: translateY(-3px); border-color: var(--border-2); }
+.feature-card-accent {
+  position: absolute; top: 0; left: 0; right: 0; height: 2px;
+}
+.accent-indigo { background: linear-gradient(90deg, var(--indigo), var(--violet)); }
+.accent-emerald { background: linear-gradient(90deg, var(--emerald), #10b981); }
+.accent-amber { background: linear-gradient(90deg, var(--amber), #f59e0b); }
+.accent-blue { background: linear-gradient(90deg, var(--blue), #60a5fa); }
+
+.feature-live {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 9px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
+  background: rgba(5,150,105,.15); color: var(--emerald-light);
+  border: 1px solid rgba(52,211,153,.2);
+  padding: 3px 8px; border-radius: 20px; margin-bottom: 14px;
+}
+.live-dot-sm { width: 5px; height: 5px; border-radius: 50%; background: var(--emerald-light); animation: pulse 2s infinite; }
+.feature-icon { font-size: 26px; margin-bottom: 12px; }
+.feature-title { font-size: 15px; font-weight: 700; margin-bottom: 8px; }
+.feature-desc { font-size: 13px; color: var(--text-muted); line-height: 1.65; margin-bottom: 16px; }
+.feature-list { list-style: none; display: flex; flex-direction: column; gap: 5px; }
+.feature-list li {
+  display: flex; align-items: flex-start; gap: 7px;
+  font-size: 12px; color: var(--text-dim); line-height: 1.5;
+}
+.feature-list li::before {
+  content: '✓'; color: var(--emerald-light); font-weight: 700; flex-shrink: 0; font-size: 11px; margin-top: 1px;
+}
+
+/* ─────────────────────────────────────────────
+   SWISS COMPLIANCE
+───────────────────────────────────────────── */
+.swiss-section { position: relative; overflow: hidden; }
+.swiss-section::before {
+  content: '';
+  position: absolute; right: -100px; top: 50%;
+  transform: translateY(-50%);
+  width: 500px; height: 500px;
+  background: radial-gradient(circle, rgba(79,70,229,.1), transparent 70%);
+  pointer-events: none;
+}
+.swiss-grid {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-top: 52px;
+}
+.swiss-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 30px 28px;
+  transition: border-color .2s;
+}
+.swiss-card:hover { border-color: rgba(129,140,248,.3); }
+.swiss-flag { font-size: 26px; margin-bottom: 14px; }
+.swiss-card-title { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+.swiss-card-desc { font-size: 13px; color: var(--text-muted); line-height: 1.65; margin-bottom: 18px; }
+.swiss-items { display: flex; flex-direction: column; gap: 8px; }
+.swiss-item {
+  display: flex; align-items: flex-start; gap: 8px;
+  font-size: 12.5px; color: var(--text-dim);
+}
+.swiss-arrow { color: var(--indigo-light); flex-shrink: 0; font-size: 12px; margin-top: 1px; }
+
+/* ─────────────────────────────────────────────
+   HOW IT WORKS (WORKFLOW)
+───────────────────────────────────────────── */
+.workflow-section { background: var(--dark-2); }
+.workflow-block {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 28px 32px; margin-top: 16px;
+  first-child: { margin-top: 48px; }
+}
+.workflow-block:first-child { margin-top: 48px; }
+.workflow-label {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
+  padding: 4px 12px; border-radius: 6px; margin-bottom: 20px;
+}
+.wl-maintenance { background: rgba(79,70,229,.2); color: var(--indigo-light); }
+.wl-financial { background: rgba(5,150,105,.2); color: var(--emerald-light); }
+.wl-lease { background: rgba(37,99,235,.2); color: #93c5fd; }
+.wl-title { font-size: 15px; font-weight: 700; margin-bottom: 20px; }
+.workflow-steps {
+  display: flex; align-items: flex-start; flex-wrap: wrap; gap: 0; row-gap: 10px;
+}
+.workflow-step { display: flex; align-items: center; }
+.step-node {
+  background: var(--dark-3); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 8px 14px; white-space: nowrap;
+}
+.step-node.active {
+  background: rgba(79,70,229,.15); border-color: rgba(129,140,248,.3);
+}
+.step-node-label { font-size: 12px; font-weight: 600; }
+.step-node.active .step-node-label { color: var(--indigo-light); }
+.step-node-sub { font-size: 10px; color: var(--text-dim); margin-top: 2px; }
+.step-arrow { padding: 0 10px; color: var(--text-dim); font-size: 16px; }
+
+/* ─────────────────────────────────────────────
+   SCREENSHOTS — EDITORIAL
+───────────────────────────────────────────── */
+.screenshots-section { overflow: hidden; }
+.editorial-row {
+  display: grid; grid-template-columns: 55% 1fr; gap: 72px; align-items: center;
+  margin-bottom: 96px;
+}
+.editorial-row:last-child { margin-bottom: 0; }
+.editorial-row.reverse { grid-template-columns: 1fr 52%; }
+.editorial-row.reverse .editorial-copy { order: -1; }
+
+.editorial-copy { display: flex; flex-direction: column; gap: 18px; }
+.editorial-eyebrow {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase;
+  color: var(--indigo-light);
+}
+.editorial-heading {
+  font-family: 'DM Serif Display', Georgia, serif;
+  font-size: 26px; font-weight: 700; line-height: 1.25; letter-spacing: -0.5px;
+}
+.editorial-body { font-size: 14px; color: var(--text-muted); line-height: 1.7; }
+.editorial-features { display: flex; flex-direction: column; gap: 16px; }
+.editorial-feature {
+  padding-left: 14px; border-left: 2px solid rgba(129,140,248,.3);
+}
+.editorial-feature-title { font-size: 13px; font-weight: 700; margin-bottom: 3px; }
+.editorial-feature-desc { font-size: 13px; color: var(--text-muted); line-height: 1.6; }
+
+.screen-wrap {
+  border-radius: var(--radius); overflow: hidden;
+  border: 1px solid var(--border-2);
+  box-shadow: 0 24px 64px rgba(0,0,0,.5);
+  background: var(--dark-3);
+}
+.screen-bar {
+  display: flex; gap: 5px; padding: 8px 12px;
+  background: rgba(0,0,0,.4); border-bottom: 1px solid var(--border);
+}
+.screen-bar span { width: 9px; height: 9px; border-radius: 50%; }
+.screen-bar span:nth-child(1) { background: #ff5f57; }
+.screen-bar span:nth-child(2) { background: #febc2e; }
+.screen-bar span:nth-child(3) { background: #28c840; }
+.screen-wrap img { width: 100%; height: auto; }
+
+.phones-cluster {
+  position: relative; height: 420px; display: flex;
+  justify-content: center; align-items: flex-end;
+}
+.phone-wrap {
+  position: absolute; bottom: 0;
+  border-radius: 20px; overflow: hidden;
+  border: 1px solid var(--border-2);
+  box-shadow: 0 16px 48px rgba(0,0,0,.5), 0 0 0 6px rgba(255,255,255,.04);
+}
+.phone-back {
+  left: 0; width: 160px; height: 346px;
+  transform: rotate(-4deg) translateY(10px);
+  filter: brightness(.8);
+  z-index: 1;
+}
+.phone-front {
+  right: 0; width: 168px; height: 364px;
+  transform: rotate(3deg);
+  z-index: 2;
+}
+.phone-wrap img { width: 100%; height: auto; }
+
+/* persona badge */
+.persona-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.3px;
+  padding: 3px 8px; border-radius: 20px; margin-top: 8px;
+}
+.persona-mgr { background: rgba(79,70,229,.2); color: var(--indigo-light); }
+.persona-own { background: rgba(217,119,6,.2); color: var(--amber-light); }
+.screen-caption { font-size: 11px; color: var(--text-dim); margin-top: 10px; display: flex; align-items: center; gap: 6px; }
+
+/* ─────────────────────────────────────────────
+   PRICING
+───────────────────────────────────────────── */
+.pricing-section { background: var(--dark-2); }
+.pricing-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 52px;
+}
+.pricing-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 32px 28px;
+  position: relative; overflow: hidden;
+  transition: transform .2s, border-color .2s;
+}
+.pricing-card:hover { transform: translateY(-4px); }
+.pricing-card.popular {
+  border-color: rgba(129,140,248,.4);
+  background: linear-gradient(135deg, rgba(79,70,229,.12), rgba(124,58,237,.08));
+}
+.pricing-popular-badge {
+  position: absolute; top: 16px; right: 16px;
+  background: linear-gradient(135deg, var(--indigo), var(--violet));
+  color: #fff; font-size: 10px; font-weight: 700;
+  padding: 3px 10px; border-radius: 20px; letter-spacing: 0.3px;
+}
+.pricing-plan { font-size: 13px; font-weight: 600; color: var(--text-muted); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+.pricing-price {
+  display: flex; align-items: baseline; gap: 4px; margin-bottom: 6px;
+}
+.pricing-chf { font-size: 22px; font-weight: 700; color: var(--text-muted); }
+.pricing-num {
+  font-family: 'DM Serif Display', Georgia, serif;
+  font-size: 46px; font-weight: 800; letter-spacing: -2px; line-height: 1;
+}
+.pricing-per { font-size: 13px; color: var(--text-dim); align-self: flex-end; padding-bottom: 6px; }
+.pricing-desc { font-size: 13px; color: var(--text-muted); margin-bottom: 24px; line-height: 1.6; }
+.pricing-divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+.pricing-features { list-style: none; display: flex; flex-direction: column; gap: 10px; margin-bottom: 28px; }
+.pricing-features li {
+  display: flex; align-items: flex-start; gap: 9px;
+  font-size: 13px; color: var(--text-muted); line-height: 1.5;
+}
+.check-icon { color: var(--emerald-light); flex-shrink: 0; font-size: 14px; font-weight: 700; margin-top: 1px; }
+.cross-icon { color: var(--text-dim); flex-shrink: 0; font-size: 14px; margin-top: 1px; }
+.pricing-cta {
+  display: block; text-align: center; font-size: 14px; font-weight: 600;
+  padding: 12px; border-radius: var(--radius-sm); width: 100%;
+  border: 1px solid var(--border-2); color: var(--text-muted);
+  transition: all .15s;
+}
+.pricing-cta:hover { color: var(--text); border-color: var(--border-2); background: var(--surface); }
+.pricing-cta.primary {
+  background: linear-gradient(135deg, var(--indigo), var(--violet));
+  color: #fff; border-color: transparent;
+  box-shadow: 0 4px 14px rgba(79,70,229,.3);
+}
+.pricing-cta.primary:hover { opacity: .9; }
+.pricing-note {
+  text-align: center; font-size: 12px; color: var(--text-dim);
+  margin-top: 20px;
+}
+
+/* ─────────────────────────────────────────────
+   ROADMAP STRIP
+───────────────────────────────────────────── */
+.roadmap-strip {
+  padding: 80px 0;
+  background: linear-gradient(135deg, rgba(79,70,229,.06), rgba(124,58,237,.04));
+  border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+}
+.roadmap-phases {
+  display: flex; gap: 0; margin-top: 44px; overflow-x: auto;
+  scrollbar-width: none; -ms-overflow-style: none;
+}
+.roadmap-phases::-webkit-scrollbar { display: none; }
+.phase-item {
+  flex: 1; min-width: 0;
+  border-right: 1px solid var(--border); padding: 20px 22px;
+  position: relative;
+}
+.phase-item:last-child { border-right: none; }
+.phase-item.active::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, var(--indigo), var(--violet));
+}
+.phase-num-label {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
+  padding: 3px 8px; border-radius: 4px; margin-bottom: 8px; display: inline-block;
+}
+.pn-0 { background: rgba(5,150,105,.2); color: var(--emerald-light); }
+.pn-1 { background: rgba(37,99,235,.2); color: #93c5fd; }
+.pn-2 { background: rgba(79,70,229,.2); color: var(--indigo-light); }
+.pn-3 { background: rgba(217,119,6,.2); color: var(--amber-light); }
+.pn-4 { background: rgba(225,29,72,.15); color: #fb7185; }
+.pn-5 { background: rgba(124,58,237,.2); color: var(--violet-light); }
+.phase-name-txt { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+.phase-window { font-size: 11px; color: var(--text-dim); margin-bottom: 6px; }
+.phase-status-badge {
+  font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 20px;
+}
+.ps-active { background: rgba(5,150,105,.15); color: var(--emerald-light); }
+.ps-planned { background: var(--surface); color: var(--text-dim); border: 1px solid var(--border); }
+
+/* ─────────────────────────────────────────────
+   CLOSING CTA
+───────────────────────────────────────────── */
+.cta-section {
+  padding: 120px 0;
+  position: relative; overflow: hidden;
+}
+.cta-section::before {
+  content: '';
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse 60% 60% at 30% 50%, rgba(79,70,229,.2), transparent 60%),
+    radial-gradient(ellipse 50% 50% at 70% 50%, rgba(124,58,237,.15), transparent 60%);
+}
+.cta-inner {
+  position: relative; z-index: 1;
+  text-align: center; max-width: 640px; margin: 0 auto;
+}
+.cta-inner h2 {
+  font-family: 'DM Serif Display', Georgia, serif;
+  font-size: clamp(32px, 4vw, 48px);
+  font-weight: 800; letter-spacing: -1.5px; line-height: 1.1;
+  margin-bottom: 18px;
+}
+.cta-inner h2 em { font-style: italic; color: var(--indigo-light); }
+.cta-inner p {
+  font-size: 16px; color: var(--text-muted); line-height: 1.7;
+  max-width: 480px; margin: 0 auto 36px;
+}
+.cta-form {
+  display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;
+}
+.cta-input {
+  flex: 1; max-width: 320px; min-width: 220px;
+  background: var(--surface); border: 1px solid var(--border-2);
+  border-radius: var(--radius-sm); padding: 13px 18px;
+  font-size: 14px; font-family: inherit; color: var(--text);
+  transition: border-color .15s;
+  outline: none;
+}
+.cta-input::placeholder { color: var(--text-dim); }
+.cta-input:focus { border-color: rgba(129,140,248,.5); }
+.cta-btn {
+  background: linear-gradient(135deg, var(--indigo), var(--violet));
+  color: #fff; font-size: 14px; font-weight: 600;
+  padding: 13px 26px; border-radius: var(--radius-sm); border: none;
+  cursor: pointer; font-family: inherit;
+  box-shadow: 0 4px 20px rgba(79,70,229,.4);
+  transition: opacity .15s, transform .15s;
+}
+.cta-btn:hover { opacity: .9; transform: translateY(-1px); }
+.cta-note { font-size: 12px; color: var(--text-dim); margin-top: 14px; }
+
+/* ─────────────────────────────────────────────
+   FOOTER
+───────────────────────────────────────────── */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 56px 0 36px;
+  background: var(--dark-2);
+}
+.footer-grid {
+  display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 48px; margin-bottom: 48px;
+}
+.footer-brand { display: flex; flex-direction: column; gap: 12px; }
+.footer-logo { display: flex; align-items: center; gap: 10px; }
+.footer-logo-mark {
+  width: 30px; height: 30px; border-radius: 7px;
+  background: linear-gradient(135deg, var(--indigo), var(--violet));
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: 12px; color: #fff;
+}
+.footer-logo-text { font-weight: 700; font-size: 15px; letter-spacing: -0.3px; }
+.footer-tagline { font-size: 13px; color: var(--text-dim); line-height: 1.6; max-width: 260px; }
+.footer-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: rgba(5,150,105,.12); border: 1px solid rgba(52,211,153,.2);
+  color: var(--emerald-light); font-size: 10px; font-weight: 600;
+  padding: 4px 10px; border-radius: 20px; width: fit-content;
+}
+.footer-col-title {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
+  color: var(--text-muted); margin-bottom: 14px;
+}
+.footer-links { list-style: none; display: flex; flex-direction: column; gap: 9px; }
+.footer-links li a { font-size: 13px; color: var(--text-dim); transition: color .15s; }
+.footer-links li a:hover { color: var(--text); }
+.footer-bottom {
+  border-top: 1px solid var(--border); padding-top: 24px;
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+}
+.footer-bottom-left { font-size: 12px; color: var(--text-dim); }
+.footer-bottom-right { display: flex; gap: 20px; }
+.footer-bottom-right a { font-size: 12px; color: var(--text-dim); transition: color .15s; }
+.footer-bottom-right a:hover { color: var(--text); }
+
+/* Swiss flag accent */
+.ch-pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11px; color: var(--text-dim); font-weight: 500;
+}
+
+/* ─────────────────────────────────────────────
+   CALENDLY MODAL
+───────────────────────────────────────────── */
+.calendly-overlay {
+  display: none; position: fixed; inset: 0; z-index: 500;
+  background: rgba(0,0,0,.7); backdrop-filter: blur(6px);
+  align-items: center; justify-content: center;
+}
+.calendly-overlay.open { display: flex; }
+.calendly-modal {
+  background: var(--dark-3); border: 1px solid var(--border-2);
+  border-radius: var(--radius-lg); overflow: hidden;
+  width: 90vw; max-width: 780px; height: 80vh; max-height: 700px;
+  position: relative; box-shadow: 0 40px 100px rgba(0,0,0,.6);
+}
+.calendly-modal-close {
+  position: absolute; top: 14px; right: 16px; z-index: 10;
+  background: var(--surface-2); border: 1px solid var(--border);
+  color: var(--text-muted); font-size: 18px; line-height: 1;
+  width: 32px; height: 32px; border-radius: 50%; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .15s, color .15s;
+}
+.calendly-modal-close:hover { background: var(--surface-3); color: var(--text); }
+.calendly-modal iframe { width: 100%; height: 100%; border: none; }
+
+/* btn-demo variant */
+.btn-demo {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: transparent; color: var(--text);
+  font-size: 15px; font-weight: 600;
+  padding: 13px 22px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border-2);
+  transition: all .15s; cursor: pointer; font-family: inherit;
+}
+.btn-demo:hover { background: var(--surface); border-color: rgba(129,140,248,.3); }
+.btn-demo-nav {
+  font-size: 13px; font-weight: 600; color: var(--text-muted);
+  padding: 9px 20px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border); background: transparent;
+  transition: all .15s; cursor: pointer; font-family: inherit;
+}
+.btn-demo-nav:hover { color: var(--text); border-color: var(--border-2); background: var(--surface); }
+
+/* ─────────────────────────────────────────────
+   DIFF SECTION
+───────────────────────────────────────────── */
+.diff-section { background: var(--dark); }
+.diff-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 52px;
+}
+.diff-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 28px 24px;
+  transition: border-color .2s, transform .2s;
+}
+.diff-card:hover { border-color: rgba(129,140,248,.3); transform: translateY(-3px); }
+.diff-num {
+  font-family: 'DM Serif Display', Georgia, serif;
+  font-size: 48px; font-weight: 800; line-height: 1;
+  color: rgba(79,70,229,.25); letter-spacing: -3px; margin-bottom: 8px;
+}
+.diff-title { font-size: 15px; font-weight: 700; margin-bottom: 8px; }
+.diff-desc { font-size: 13px; color: var(--text-muted); line-height: 1.65; }
+
+/* ─────────────────────────────────────────────
+   ANIMATIONS ON SCROLL
+───────────────────────────────────────────── */
+.fade-up {
+  opacity: 0; transform: translateY(24px);
+  transition: opacity .6s ease, transform .6s ease;
+}
+.fade-up.visible { opacity: 1; transform: translateY(0); }
+.fade-up-delay-1 { transition-delay: .1s; }
+.fade-up-delay-2 { transition-delay: .2s; }
+.fade-up-delay-3 { transition-delay: .3s; }
+
+/* ─────────────────────────────────────────────
+   RESPONSIVE
+───────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .hero-inner { grid-template-columns: 1fr; gap: 48px; }
+  .hero-visual { order: -1; max-width: 600px; margin: 0 auto; }
+  .browser-frame { transform: none; }
+  .roles-grid { grid-template-columns: 1fr 1fr; }
+  .features-grid { grid-template-columns: 1fr 1fr; }
+  .editorial-row, .editorial-row.reverse { grid-template-columns: 1fr; gap: 40px; }
+  .editorial-row.reverse .editorial-copy { order: 0; }
+  .footer-grid { grid-template-columns: 1fr 1fr; gap: 32px; }
+}
+
+@media (max-width: 768px) {
+  section { padding: 64px 0; }
+  .container { padding: 0 18px; }
+  .nav-links { display: none; }
+  .hero h1 { font-size: 38px; letter-spacing: -1.5px; }
+  .hero-stats { flex-wrap: wrap; }
+  .problem-grid { grid-template-columns: 1fr; }
+  .roles-grid { grid-template-columns: 1fr; }
+  .features-grid { grid-template-columns: 1fr; }
+  .swiss-grid { grid-template-columns: 1fr; }
+  .pricing-grid { grid-template-columns: 1fr; }
+  .diff-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .footer-grid { grid-template-columns: 1fr; }
+  .roadmap-phases { flex-direction: column; }
+  .phase-item { border-right: none; border-bottom: 1px solid var(--border); }
+  .phones-cluster { height: 280px; }
+  .phone-back { width: 110px; }
+  .phone-front { width: 116px; }
+  .trust-bar-inner { gap: 20px; }
+  .trust-divider { display: none; }
+  .cta-section { padding: 80px 0; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════
+     NAV
+═══════════════════════════════════════ -->
+<nav id="mainnav">
+  <div class="container">
+    <div class="nav-inner">
+      <a href="#" class="nav-logo">
+        <div class="nav-logo-mark">S</div>
+        <span class="nav-logo-text">Sencilo</span>
+        <span class="nav-badge">Beta</span>
+      </a>
+      <div class="nav-links">
+        <a href="#platform">Platform</a>
+        <a href="#features">Features</a>
+        <a href="#compliance">Swiss Compliance</a>
+        <a href="#pricing">Pricing</a>
+        <a href="#roadmap">Roadmap</a>
+      </div>
+      <div class="nav-actions">
+        <button class="btn-demo-nav" onclick="openDemo()">Book a demo</button>
+        <a href="#cta" class="btn-primary-nav">Get early access →</a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- ═══════════════════════════════════════
+     HERO
+═══════════════════════════════════════ -->
+<div class="hero" id="top">
+  <div class="hero-photo">
+    <img src="assets/hero-bg.png" alt="" aria-hidden="true" fetchpriority="high">
+    <div class="hero-photo-overlay"></div>
+  </div>
+  <div class="hero-grid"></div>
+
+  <div class="container">
+    <div class="hero-inner">
+      <!-- Copy -->
+      <div class="hero-copy">
+        <div class="hero-eyebrow">
+          <span class="eyebrow-dot"></span>
+          Built for Switzerland · Now in closed beta
+        </div>
+        <h1>Your properties, <em>running smoothly</em>.</h1>
+        <p class="hero-sub">
+          Sencilo takes care of the compliance, the paperwork, and the back-and-forth — so you spend your time on what actually matters, not chasing tenants or second-guessing Swiss law.
+        </p>
+        <div class="hero-ctas">
+          <a href="#cta" class="btn-primary">
+            Get early access
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+          <button class="btn-demo" onclick="openDemo()">
+            <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><circle cx="7.5" cy="7.5" r="6.5" stroke="currentColor" stroke-width="1.3"/><path d="M6 5.5l4 2-4 2V5.5z" fill="currentColor"/></svg>
+            Book a demo
+          </button>
+        </div>
+      </div>
+
+      <!-- Visual: dashboard screenshot -->
+      <div class="hero-visual fade-up">
+        <div class="browser-frame">
+          <div class="browser-bar">
+            <span class="browser-dot"></span>
+            <span class="browser-dot"></span>
+            <span class="browser-dot"></span>
+            <span class="browser-bar-url">app.sencilo.ch/manager</span>
+          </div>
+          <!-- CSS mockup: Manager Dashboard -->
+          <div style="font-family:'Inter',-apple-system,sans-serif;display:flex;background:#f8fafc;min-height:320px;overflow:hidden;font-size:11px;line-height:1.4;">
+            <!-- Sidebar -->
+            <div style="width:180px;flex-shrink:0;background:#f1f5f9;border-right:1px solid #e2e8f0;padding:12px 9px;display:flex;flex-direction:column;gap:1px;">
+              <div style="display:flex;align-items:center;gap:7px;padding:0 5px 12px;margin-bottom:5px;border-bottom:1px solid #e2e8f0;">
+                <div style="width:22px;height:22px;border-radius:5px;background:linear-gradient(135deg,#4f46e5,#7c3aed);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:8px;flex-shrink:0;">S</div>
+                <span style="font-weight:700;font-size:11px;color:#0f172a;letter-spacing:-.3px;">Sencilo</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:7px;padding:6px 7px;border-radius:6px;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.06);">
+                <span style="font-size:10px;">📊</span><span style="font-size:10px;font-weight:600;color:#0f172a;">Dashboard</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:7px;padding:6px 7px;border-radius:6px;">
+                <span style="font-size:10px;">🏢</span><span style="font-size:10px;color:#475569;">Properties</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:7px;padding:6px 7px;border-radius:6px;">
+                <span style="font-size:10px;">🔧</span><span style="font-size:10px;color:#475569;">Requests</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:7px;padding:6px 7px;border-radius:6px;">
+                <span style="font-size:10px;">🔑</span><span style="font-size:10px;color:#475569;">Leases</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:7px;padding:6px 7px;border-radius:6px;">
+                <span style="font-size:10px;">💳</span><span style="font-size:10px;color:#475569;">Finances</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:7px;padding:6px 7px;border-radius:6px;">
+                <span style="font-size:10px;">👥</span><span style="font-size:10px;color:#475569;">Contacts</span>
+              </div>
+            </div>
+            <!-- Main -->
+            <div style="flex:1;padding:16px;overflow:hidden;display:flex;flex-direction:column;gap:9px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span style="font-size:8px;font-weight:600;letter-spacing:.7px;text-transform:uppercase;color:#94a3b8;">Portfolio overview</span>
+                <span style="font-size:9px;color:#94a3b8;">↻</span>
+              </div>
+              <!-- KPI row 1 -->
+              <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;">
+                <div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:8px 10px;"><div style="font-size:7.5px;color:#94a3b8;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;">NOI YTD</div><div style="font-size:14px;font-weight:700;color:#15803d;font-variant-numeric:tabular-nums;">3 240</div><div style="font-size:7px;color:#94a3b8;">CHF</div></div>
+                <div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:8px 10px;"><div style="font-size:7.5px;color:#94a3b8;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;">Spend MTD</div><div style="font-size:14px;font-weight:700;color:#0f172a;font-variant-numeric:tabular-nums;">1 840</div><div style="font-size:7px;color:#94a3b8;">CHF</div></div>
+                <div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:8px 10px;"><div style="font-size:7.5px;color:#94a3b8;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;">Collection</div><div style="font-size:14px;font-weight:700;color:#15803d;font-variant-numeric:tabular-nums;">97%</div><div style="font-size:7px;color:#94a3b8;">rate</div></div>
+                <div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:8px 10px;"><div style="font-size:7.5px;color:#94a3b8;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;">Pending inv.</div><div style="font-size:14px;font-weight:700;color:#b45309;font-variant-numeric:tabular-nums;">2</div><div style="font-size:7px;color:#94a3b8;">invoices</div></div>
+              </div>
+              <!-- KPI row 2 -->
+              <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;">
+                <div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:8px 10px;"><div style="font-size:7.5px;color:#94a3b8;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;">Open requests</div><div style="font-size:14px;font-weight:700;color:#b45309;font-variant-numeric:tabular-nums;">5</div><div style="font-size:7px;color:#4f46e5;text-decoration:underline;">View all</div></div>
+                <div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:8px 10px;"><div style="font-size:7.5px;color:#94a3b8;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;">Open jobs</div><div style="font-size:14px;font-weight:700;color:#b45309;font-variant-numeric:tabular-nums;">3</div><div style="font-size:7px;color:#4f46e5;text-decoration:underline;">View all</div></div>
+                <div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:8px 10px;"><div style="font-size:7.5px;color:#94a3b8;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;">Avg duration</div><div style="font-size:14px;font-weight:700;color:#0f172a;font-variant-numeric:tabular-nums;">11d</div><div style="font-size:7px;color:#94a3b8;">avg</div></div>
+                <div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:8px 10px;"><div style="font-size:7.5px;color:#94a3b8;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;">Stale jobs</div><div style="font-size:14px;font-weight:700;color:#b45309;font-variant-numeric:tabular-nums;">1</div><div style="font-size:7px;color:#4f46e5;text-decoration:underline;">Review</div></div>
+              </div>
+              <!-- Headline -->
+              <div style="font-size:13px;font-weight:700;color:#0f172a;">3 items need your attention</div>
+              <!-- Action feed -->
+              <div style="display:flex;flex-direction:column;gap:4px;">
+                <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:8px 11px;display:flex;align-items:center;gap:8px;">
+                  <span style="background:#dbeafe;color:#1d4ed8;font-size:7.5px;font-weight:700;padding:2px 5px;border-radius:20px;white-space:nowrap;flex-shrink:0;">REVIEW</span>
+                  <div style="flex:1;min-width:0;"><div style="font-size:10.5px;font-weight:600;color:#0f172a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Radiator leak — needs inspection</div><div style="font-size:8.5px;color:#64748b;margin-top:1px;">Rue du Lac 4 · Apt 2B · 3h ago</div></div>
+                  <span style="color:#cbd5e1;font-size:12px;flex-shrink:0;">›</span>
+                </div>
+                <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:8px 11px;display:flex;align-items:center;gap:8px;">
+                  <span style="background:#fef3c7;color:#b45309;font-size:7.5px;font-weight:700;padding:2px 5px;border-radius:20px;white-space:nowrap;flex-shrink:0;">APPROVAL</span>
+                  <div style="flex:1;min-width:0;"><div style="font-size:10.5px;font-weight:600;color:#0f172a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Boiler replacement — CHF 4,200</div><div style="font-size:8.5px;color:#64748b;margin-top:1px;">Chemin des Lilas 8 · Unit 1A · 1d ago</div></div>
+                  <span style="color:#cbd5e1;font-size:12px;flex-shrink:0;">›</span>
+                </div>
+                <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:8px 11px;display:flex;align-items:center;gap:8px;">
+                  <span style="background:#fef3c7;color:#b45309;font-size:7.5px;font-weight:700;padding:2px 5px;border-radius:20px;white-space:nowrap;flex-shrink:0;">STALE</span>
+                  <div style="flex:1;min-width:0;"><div style="font-size:10.5px;font-weight:600;color:#0f172a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Window seal repair — no update in 4 days</div><div style="font-size:8.5px;color:#64748b;margin-top:1px;">Avenue des Alpes 12 · Unit 1A · 4d ago</div></div>
+                  <span style="color:#cbd5e1;font-size:12px;flex-shrink:0;">›</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="hero-live-badge">
+          <span class="live-dot"></span>
+          Platform live
+        </div>
+        <div class="hero-phone-float">
+          <img
+            src="../docs/screenshots/owner-reporting-mobile.png"
+            alt="Owner reporting on mobile"
+            loading="eager"
+          >
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     TRUST BAR
+═══════════════════════════════════════ -->
+<div class="trust-bar">
+  <div class="container">
+    <div class="trust-bar-inner">
+      <span class="trust-label">Built for Switzerland</span>
+      <span class="trust-divider"></span>
+      <div class="trust-item">
+        <span class="trust-icon">🏦</span>
+        SIX QR-Bill · ISO 20022
+      </div>
+      <div class="trust-item">
+        <span class="trust-icon">📜</span>
+        CO 259a / 269d Compliance
+      </div>
+      <div class="trust-item">
+        <span class="trust-icon">🗂️</span>
+        274 PAIF Depreciation Standards
+      </div>
+      <div class="trust-item">
+        <span class="trust-icon">🌐</span>
+        FR / DE / IT · Trilingual
+      </div>
+      <div class="trust-item">
+        <span class="trust-icon">⚡</span>
+        Azure OCR + AI Triage
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     PEACE OF MIND SECTION
+═══════════════════════════════════════ -->
+<section class="problem-section">
+  <div class="container">
+    <div class="section-eyebrow">Sound familiar?</div>
+    <h2 class="section-title">Property management shouldn't feel like a <em>second job</em>.</h2>
+    <p class="section-sub">Whether you own two apartments or manage a portfolio for clients, the admin, the compliance, and the chasing never quite go away — until now.</p>
+
+    <div class="problem-grid fade-up" style="grid-template-columns: repeat(3,1fr);">
+      <div class="problem-cell" style="border-top: 2px solid rgba(129,140,248,.4);">
+        <div class="problem-badge" style="background:rgba(79,70,229,.15);color:var(--indigo-light);border:1px solid rgba(129,140,248,.2);">⏱ Time</div>
+        <div class="problem-heading">Hours lost to admin every month.</div>
+        <div class="problem-body">Chasing signatures, sending reminders, generating invoices, filing documents — routine tasks that pile up and steal time you'd rather spend elsewhere.</div>
+        <div class="problem-stat">
+          <div class="problem-stat-num" style="color:var(--indigo-light);">8–12h</div>
+          <div class="problem-stat-label">average admin hours per month, per landlord</div>
+        </div>
+      </div>
+
+      <div class="problem-cell" style="border-top: 2px solid rgba(5,150,105,.4);">
+        <div class="problem-badge" style="background:rgba(5,150,105,.15);color:var(--emerald-light);border:1px solid rgba(52,211,153,.2);">⚖️ Compliance</div>
+        <div class="problem-heading">Swiss law is complex, and one mistake is expensive.</div>
+        <div class="problem-body">Reference interest rates, rent adjustment notices, depreciation deductions, lease templates — the rules change and the consequences of getting it wrong can follow you for years.</div>
+        <div class="problem-stat">
+          <div class="problem-stat-num" style="color:var(--emerald-light);">274</div>
+          <div class="problem-stat-label">Swiss depreciation standards — built into Sencilo</div>
+        </div>
+      </div>
+
+      <div class="problem-cell" style="border-top: 2px solid rgba(217,119,6,.4);">
+        <div class="problem-badge" style="background:rgba(217,119,6,.15);color:var(--amber-light);border:1px solid rgba(251,191,36,.2);">📊 Visibility</div>
+        <div class="problem-heading">You don't really know what your properties earn.</div>
+        <div class="problem-body">Income, expenses, vacancies, maintenance costs — the numbers live in different places and a true picture only comes once a year, from your accountant, too late to act on.</div>
+        <div class="problem-stat">
+          <div class="problem-stat-num" style="color:var(--amber-light);">Real-time</div>
+          <div class="problem-stat-label">per-building financial snapshot, every month</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════
+     PLATFORM — ROLES
+═══════════════════════════════════════ -->
+<section id="platform">
+  <div class="container">
+    <div class="section-eyebrow">Who it's for</div>
+    <h2 class="section-title">One platform. <em>Four roles.</em></h2>
+    <p class="section-sub">Every party in a property relationship gets a dedicated interface — with the right access and exactly the information they need.</p>
+
+    <div class="roles-grid">
+      <div class="role-card role-card-manager fade-up">
+        <div class="role-icon role-icon-manager">🏢</div>
+        <div class="role-name">Property Manager</div>
+        <div class="role-desc">Full operational control across your entire portfolio. Maintenance, leases, legal cases, invoices, and financials — unified.</div>
+        <div class="role-tags">
+          <span class="role-tag tag-indigo">Maintenance hub</span>
+          <span class="role-tag tag-indigo">Legal engine</span>
+          <span class="role-tag tag-indigo">Invoicing</span>
+          <span class="role-tag tag-indigo">Leases</span>
+          <span class="role-tag tag-indigo">Asset registry</span>
+          <span class="role-tag tag-indigo">General ledger</span>
+        </div>
+      </div>
+
+      <div class="role-card role-card-owner fade-up fade-up-delay-1">
+        <div class="role-icon role-icon-owner">🏠</div>
+        <div class="role-name">Building Owner</div>
+        <div class="role-desc">Real-time portfolio visibility without operational noise. Approve work orders, review financials, and track performance on your phone.</div>
+        <div class="role-tags">
+          <span class="role-tag tag-amber">Approval workflow</span>
+          <span class="role-tag tag-amber">Financial overview</span>
+          <span class="role-tag tag-amber">Portfolio view</span>
+          <span class="role-tag tag-amber">Strategy profiles</span>
+        </div>
+      </div>
+
+      <div class="role-card role-card-tenant fade-up fade-up-delay-2">
+        <div class="role-icon role-icon-tenant">🏡</div>
+        <div class="role-name">Tenant</div>
+        <div class="role-desc">Submit requests, pay rent by QR slip, access leases, and apply for new units — no phone calls or email chains required.</div>
+        <div class="role-tags">
+          <span class="role-tag tag-emerald">Request intake</span>
+          <span class="role-tag tag-emerald">QR-Bill payment</span>
+          <span class="role-tag tag-emerald">Lease access</span>
+          <span class="role-tag tag-emerald">Apply online</span>
+        </div>
+      </div>
+
+      <div class="role-card role-card-contractor fade-up fade-up-delay-3">
+        <div class="role-icon role-icon-contractor">🔧</div>
+        <div class="role-name">Contractor</div>
+        <div class="role-desc">A focused job list with all context needed to act. Accept jobs, update progress, and submit invoices from the same interface.</div>
+        <div class="role-tags">
+          <span class="role-tag tag-blue">Job queue</span>
+          <span class="role-tag tag-blue">Status updates</span>
+          <span class="role-tag tag-blue">Invoice creation</span>
+          <span class="role-tag tag-blue">Performance ratings</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════
+     3 KILLER FEATURES
+═══════════════════════════════════════ -->
+<section class="features-section" id="features">
+  <div class="container">
+    <div class="section-eyebrow">What Sencilo does for you</div>
+    <h2 class="section-title">Three things that give you your <em>time back</em>.</h2>
+    <p class="section-sub">Sencilo automates the operational grind from tenant request to closed invoice, and gives owners a real-time financial cockpit across their entire portfolio. Swiss compliance comes standard — so you never need to think about it.</p>
+
+    <!-- Feature 1: Maintenance -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center;margin-top:72px;" class="fade-up">
+      <div>
+        <!-- Illustration: maintenance flow card -->
+        <div style="background:var(--dark-3);border:1px solid var(--border-2);border-radius:var(--radius);overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.45);">
+          <div style="padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;">
+            <span style="font-size:18px;">🔧</span>
+            <span style="font-size:13px;font-weight:700;">Maintenance request</span>
+            <span style="margin-left:auto;background:rgba(5,150,105,.2);color:var(--emerald-light);font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;border:1px solid rgba(52,211,153,.2);">Resolved</span>
+          </div>
+          <div style="padding:20px 24px;display:flex;flex-direction:column;gap:10px;">
+            <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 16px;">
+              <div style="font-size:11px;color:var(--text-dim);margin-bottom:4px;">Tenant — Apt 3B</div>
+              <div style="font-size:13px;color:var(--text-muted);">"The radiator in the bedroom isn't working since Monday."</div>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <div style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;">
+                <div style="font-size:10px;color:var(--text-dim);margin-bottom:3px;">Category</div>
+                <div style="font-size:12px;font-weight:600;">Heating · Urgent</div>
+              </div>
+              <div style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;">
+                <div style="font-size:10px;color:var(--text-dim);margin-bottom:3px;">Contractor assigned</div>
+                <div style="font-size:12px;font-weight:600;">Chauffage Dupont SA</div>
+              </div>
+            </div>
+            <div style="background:rgba(79,70,229,.1);border:1px solid rgba(129,140,248,.2);border-radius:var(--radius-sm);padding:10px 14px;display:flex;align-items:center;gap:8px;">
+              <span style="font-size:14px;">⚡</span>
+              <span style="font-size:12px;color:var(--indigo-light);">Automatically triaged, assigned, and tracked. Owner notified.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:18px;">
+        <div style="font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--indigo-light);">01 — Maintenance</div>
+        <h3 style="font-family:'DM Serif Display',Georgia,serif;font-size:28px;font-weight:800;line-height:1.2;letter-spacing:-.5px;">From tenant message to closed job — <em>without lifting a finger</em>.</h3>
+        <p style="font-size:14px;color:var(--text-muted);line-height:1.75;">When a tenant reports an issue, Sencilo classifies it, routes it to the right contractor, keeps everyone updated, and closes the invoice — automatically. You step in only when a decision actually needs you.</p>
+        <div style="display:flex;flex-direction:column;gap:12px;padding-top:4px;">
+          <div style="display:flex;align-items:flex-start;gap:12px;">
+            <div style="width:28px;height:28px;border-radius:7px;background:rgba(79,70,229,.2);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;">✓</div>
+            <div>
+              <div style="font-size:13px;font-weight:700;margin-bottom:2px;">Tenants report via a clean portal — no WhatsApp</div>
+              <div style="font-size:12px;color:var(--text-dim);">Structured intake means contractors always have the full context before they show up.</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:12px;">
+            <div style="width:28px;height:28px;border-radius:7px;background:rgba(79,70,229,.2);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;">✓</div>
+            <div>
+              <div style="font-size:13px;font-weight:700;margin-bottom:2px;">Set approval thresholds per building</div>
+              <div style="font-size:12px;color:var(--text-dim);">Routine repairs go straight through. Big jobs wait for your sign-off. You define the rules once.</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:12px;">
+            <div style="width:28px;height:28px;border-radius:7px;background:rgba(79,70,229,.2);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;">✓</div>
+            <div>
+              <div style="font-size:13px;font-weight:700;margin-bottom:2px;">Every invoice captured and posted to your ledger</div>
+              <div style="font-size:12px;color:var(--text-dim);">Photograph or upload the contractor's bill. Sencilo reads it, drafts the entry, and books it.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Feature 2: Compliance -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center;margin-top:96px;" class="fade-up">
+      <div style="display:flex;flex-direction:column;gap:18px;">
+        <div style="font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--emerald-light);">02 — Compliance</div>
+        <h3 style="font-family:'DM Serif Display',Georgia,serif;font-size:28px;font-weight:800;line-height:1.2;letter-spacing:-.5px;">Swiss law, handled. <em>Never think about it again.</em></h3>
+        <p style="font-size:14px;color:var(--text-muted);line-height:1.75;">Leases, rent adjustments, legal notices — Sencilo generates the right document for the right situation automatically. Swiss law is baked in, not bolted on.</p>
+        <div style="display:flex;flex-direction:column;gap:12px;padding-top:4px;">
+          <div style="display:flex;align-items:flex-start;gap:12px;">
+            <div style="width:28px;height:28px;border-radius:7px;background:rgba(5,150,105,.2);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;">✓</div>
+            <div>
+              <div style="font-size:13px;font-weight:700;margin-bottom:2px;">Rent adjustments flagged automatically</div>
+              <div style="font-size:12px;color:var(--text-dim);">Sencilo monitors the SNB reference rate and tells you who's eligible — with the notice already drafted.</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:12px;">
+            <div style="width:28px;height:28px;border-radius:7px;background:rgba(5,150,105,.2);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;">✓</div>
+            <div>
+              <div style="font-size:13px;font-weight:700;margin-bottom:2px;">Leases generated, signed, and stored</div>
+              <div style="font-size:12px;color:var(--text-dim);">Correct canton template, legally valid e-signature, instantly accessible to both parties.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <!-- Illustration: compliance card (compact) -->
+        <div style="background:var(--dark-3);border:1px solid var(--border-2);border-radius:var(--radius);overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.45);">
+          <div style="padding:18px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;">
+            <span style="font-size:16px;">⚖️</span>
+            <span style="font-size:13px;font-weight:700;">Compliance alert</span>
+            <span style="margin-left:auto;background:rgba(217,119,6,.2);color:var(--amber-light);font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;border:1px solid rgba(251,191,36,.2);">Action available</span>
+          </div>
+          <div style="padding:18px 22px;display:flex;flex-direction:column;gap:10px;">
+            <div style="background:rgba(5,150,105,.08);border:1px solid rgba(52,211,153,.2);border-radius:var(--radius-sm);padding:14px 16px;">
+              <div style="font-size:12px;font-weight:700;color:var(--emerald-light);margin-bottom:5px;">Reference interest rate dropped to 1.50%</div>
+              <div style="font-size:12px;color:var(--text-muted);line-height:1.55;">3 tenants are eligible for a rent reduction. Notices prepared — review and send in one click.</div>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <div style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;">
+                <div style="font-size:10px;color:var(--text-dim);margin-bottom:3px;">Rule applied</div>
+                <div style="font-size:12px;font-weight:600;">CO 269d · Art. 13</div>
+              </div>
+              <div style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;">
+                <div style="font-size:10px;color:var(--text-dim);margin-bottom:3px;">Notices ready</div>
+                <div style="font-size:12px;font-weight:600;">3 tenants · FR / DE</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Feature 3: Financial clarity -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center;margin-top:96px;" class="fade-up">
+      <div>
+        <!-- Illustration: financial snapshot -->
+        <div style="background:var(--dark-3);border:1px solid var(--border-2);border-radius:var(--radius);overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.45);">
+          <div style="padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;">
+            <span style="font-size:18px;">📊</span>
+            <span style="font-size:13px;font-weight:700;">Chemin des Lilas 4 — April 2026</span>
+          </div>
+          <div style="padding:20px 24px;display:flex;flex-direction:column;gap:12px;">
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+              <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;text-align:center;">
+                <div style="font-size:10px;color:var(--text-dim);margin-bottom:4px;">Income</div>
+                <div style="font-family:'DM Serif Display',Georgia,serif;font-size:18px;font-weight:800;color:var(--emerald-light);">4 200</div>
+                <div style="font-size:9px;color:var(--text-dim);">CHF</div>
+              </div>
+              <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;text-align:center;">
+                <div style="font-size:10px;color:var(--text-dim);margin-bottom:4px;">Expenses</div>
+                <div style="font-family:'DM Serif Display',Georgia,serif;font-size:18px;font-weight:800;color:#fb7185;">−740</div>
+                <div style="font-size:9px;color:var(--text-dim);">CHF</div>
+              </div>
+              <div style="background:rgba(79,70,229,.1);border:1px solid rgba(129,140,248,.2);border-radius:var(--radius-sm);padding:12px 14px;text-align:center;">
+                <div style="font-size:10px;color:var(--text-dim);margin-bottom:4px;">Net</div>
+                <div style="font-family:'DM Serif Display',Georgia,serif;font-size:18px;font-weight:800;color:var(--indigo-light);">3 460</div>
+                <div style="font-size:9px;color:var(--text-dim);">CHF</div>
+              </div>
+            </div>
+            <!-- Mini bar chart -->
+            <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px;">
+              <div style="font-size:10px;color:var(--text-dim);margin-bottom:10px;">Last 6 months · Net operating</div>
+              <div style="display:flex;align-items:flex-end;gap:6px;height:48px;">
+                <div style="flex:1;background:rgba(79,70,229,.35);border-radius:3px 3px 0 0;height:70%;"></div>
+                <div style="flex:1;background:rgba(79,70,229,.35);border-radius:3px 3px 0 0;height:80%;"></div>
+                <div style="flex:1;background:rgba(79,70,229,.35);border-radius:3px 3px 0 0;height:65%;"></div>
+                <div style="flex:1;background:rgba(79,70,229,.35);border-radius:3px 3px 0 0;height:75%;"></div>
+                <div style="flex:1;background:rgba(79,70,229,.35);border-radius:3px 3px 0 0;height:72%;"></div>
+                <div style="flex:1;background:linear-gradient(to top,var(--indigo),var(--violet));border-radius:3px 3px 0 0;height:82%;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:18px;">
+        <div style="font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--amber-light);">03 — Financial transparency</div>
+        <h3 style="font-family:'DM Serif Display',Georgia,serif;font-size:28px;font-weight:800;line-height:1.2;letter-spacing:-.5px;">Your portfolio cockpit — <em>income, costs, and net, always live</em>.</h3>
+        <p style="font-size:14px;color:var(--text-muted);line-height:1.75;">Most landlords only know how their portfolio performed when the accountant sends a file in February. Sencilo posts every franc — rent received, invoice paid, maintenance cost booked — to a live ledger the moment it happens. Owners see a real P&amp;L per building, not a pile of PDFs.</p>
+        <div style="display:flex;flex-direction:column;gap:12px;padding-top:4px;">
+          <div style="display:flex;align-items:flex-start;gap:12px;">
+            <div style="width:28px;height:28px;border-radius:7px;background:rgba(217,119,6,.2);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;">✓</div>
+            <div>
+              <div style="font-size:13px;font-weight:700;margin-bottom:2px;">Live ledger — every entry posted automatically</div>
+              <div style="font-size:12px;color:var(--text-dim);">Rent collected, invoice approved, maintenance closed — all posted in real time, no manual reconciliation.</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:12px;">
+            <div style="width:28px;height:28px;border-radius:7px;background:rgba(217,119,6,.2);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;">✓</div>
+            <div>
+              <div style="font-size:13px;font-weight:700;margin-bottom:2px;">Per-building P&amp;L with plain-language narrative</div>
+              <div style="font-size:12px;color:var(--text-dim);">Income, costs, net balance, and a one-paragraph summary of what drove performance this month.</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:12px;">
+            <div style="width:28px;height:28px;border-radius:7px;background:rgba(217,119,6,.2);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;">✓</div>
+            <div>
+              <div style="font-size:13px;font-weight:700;margin-bottom:2px;">Portfolio-level dashboard across all buildings</div>
+              <div style="font-size:12px;color:var(--text-dim);">NOI, collection rate, open spend, and pending approvals — visible at a glance the moment you log in.</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:12px;">
+            <div style="width:28px;height:28px;border-radius:7px;background:rgba(217,119,6,.2);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;">✓</div>
+            <div>
+              <div style="font-size:13px;font-weight:700;margin-bottom:2px;">Everything your accountant needs, ready to export</div>
+              <div style="font-size:12px;color:var(--text-dim);">Annual income, expense, and lease summary — structured and ready to hand over without extra prep.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════
+     SCREENSHOTS — EDITORIAL
+═══════════════════════════════════════ -->
+<section class="screenshots-section">
+  <div class="container">
+    <div class="section-eyebrow">The platform</div>
+    <h2 class="section-title">Built for the way you <em>actually work</em>.</h2>
+    <p class="section-sub" style="margin-bottom:64px;">A clean, focused interface for every person in the property relationship — managers, owners, tenants, and contractors.</p>
+
+    <!-- Row 1: manager desktop left -->
+    <div class="editorial-row fade-up">
+      <div>
+        <div class="screen-wrap">
+          <div class="screen-bar"><span></span><span></span><span></span></div>
+          <!-- CSS mockup: Manager Dashboard (editorial) -->
+          <div style="font-family:'Inter',-apple-system,sans-serif;display:flex;background:#f8fafc;overflow:hidden;font-size:11px;line-height:1.4;">
+            <!-- Sidebar -->
+            <div style="width:190px;flex-shrink:0;background:#f1f5f9;border-right:1px solid #e2e8f0;padding:14px 10px;display:flex;flex-direction:column;gap:2px;">
+              <div style="display:flex;align-items:center;gap:7px;padding:0 6px 14px;margin-bottom:6px;border-bottom:1px solid #e2e8f0;">
+                <div style="width:26px;height:26px;border-radius:6px;background:linear-gradient(135deg,#4f46e5,#7c3aed);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:9px;flex-shrink:0;">S</div>
+                <span style="font-weight:700;font-size:12px;color:#0f172a;letter-spacing:-.3px;">Sencilo</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:7px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.06);">
+                <span>📊</span><span style="font-size:11px;font-weight:600;color:#0f172a;">Dashboard</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:7px;color:#475569;"><span>🏢</span><span style="font-size:11px;">Properties</span></div>
+              <div style="display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:7px;color:#475569;"><span>🔧</span><span style="font-size:11px;">Requests</span></div>
+              <div style="display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:7px;color:#475569;"><span>🔑</span><span style="font-size:11px;">Leases</span></div>
+              <div style="display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:7px;color:#475569;"><span>💳</span><span style="font-size:11px;">Finances</span></div>
+              <div style="display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:7px;color:#475569;"><span>👥</span><span style="font-size:11px;">Contacts</span></div>
+            </div>
+            <!-- Main -->
+            <div style="flex:1;padding:18px 20px;overflow:hidden;display:flex;flex-direction:column;gap:10px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span style="font-size:9px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;color:#94a3b8;">Portfolio overview</span>
+                <span style="font-size:11px;color:#94a3b8;">↻</span>
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:7px;">
+                <div style="background:#fff;border:1px solid #e2e8f0;border-radius:9px;padding:10px 12px;"><div style="font-size:8px;color:#94a3b8;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;">NOI YTD</div><div style="font-size:16px;font-weight:700;color:#15803d;font-variant-numeric:tabular-nums;">3 240</div><div style="font-size:7.5px;color:#94a3b8;">CHF</div></div>
+                <div style="background:#fff;border:1px solid #e2e8f0;border-radius:9px;padding:10px 12px;"><div style="font-size:8px;color:#94a3b8;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;">Spend MTD</div><div style="font-size:16px;font-weight:700;color:#0f172a;font-variant-numeric:tabular-nums;">1 840</div><div style="font-size:7.5px;color:#94a3b8;">CHF</div></div>
+                <div style="background:#fff;border:1px solid #e2e8f0;border-radius:9px;padding:10px 12px;"><div style="font-size:8px;color:#94a3b8;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;">Collection</div><div style="font-size:16px;font-weight:700;color:#15803d;font-variant-numeric:tabular-nums;">97%</div><div style="font-size:7.5px;color:#94a3b8;">rate</div></div>
+                <div style="background:#fff;border:1px solid #e2e8f0;border-radius:9px;padding:10px 12px;"><div style="font-size:8px;color:#94a3b8;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;">Pending inv.</div><div style="font-size:16px;font-weight:700;color:#b45309;font-variant-numeric:tabular-nums;">2</div><div style="font-size:7.5px;color:#94a3b8;">invoices</div></div>
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:7px;">
+                <div style="background:#fff;border:1px solid #e2e8f0;border-radius:9px;padding:10px 12px;"><div style="font-size:8px;color:#94a3b8;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;">Open requests</div><div style="font-size:16px;font-weight:700;color:#b45309;font-variant-numeric:tabular-nums;">5</div><div style="font-size:7.5px;color:#4f46e5;text-decoration:underline;">View all</div></div>
+                <div style="background:#fff;border:1px solid #e2e8f0;border-radius:9px;padding:10px 12px;"><div style="font-size:8px;color:#94a3b8;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;">Open jobs</div><div style="font-size:16px;font-weight:700;color:#b45309;font-variant-numeric:tabular-nums;">3</div><div style="font-size:7.5px;color:#4f46e5;text-decoration:underline;">View all</div></div>
+                <div style="background:#fff;border:1px solid #e2e8f0;border-radius:9px;padding:10px 12px;"><div style="font-size:8px;color:#94a3b8;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;">Avg duration</div><div style="font-size:16px;font-weight:700;color:#0f172a;font-variant-numeric:tabular-nums;">11d</div><div style="font-size:7.5px;color:#94a3b8;">avg</div></div>
+                <div style="background:#fff;border:1px solid #e2e8f0;border-radius:9px;padding:10px 12px;"><div style="font-size:8px;color:#94a3b8;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;">Stale jobs</div><div style="font-size:16px;font-weight:700;color:#b45309;font-variant-numeric:tabular-nums;">1</div><div style="font-size:7.5px;color:#4f46e5;text-decoration:underline;">Review</div></div>
+              </div>
+              <div style="font-size:15px;font-weight:700;color:#0f172a;">3 items need your attention</div>
+              <div style="display:flex;flex-direction:column;gap:5px;">
+                <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:9px;padding:9px 12px;display:flex;align-items:center;gap:9px;">
+                  <span style="background:#dbeafe;color:#1d4ed8;font-size:8px;font-weight:700;padding:2px 6px;border-radius:20px;white-space:nowrap;flex-shrink:0;">REVIEW</span>
+                  <div style="flex:1;min-width:0;"><div style="font-size:11px;font-weight:600;color:#0f172a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Radiator leak — needs inspection</div><div style="font-size:9px;color:#64748b;margin-top:1px;">Rue du Lac 4 · Apt 2B · 3h ago</div></div>
+                  <span style="color:#cbd5e1;flex-shrink:0;">›</span>
+                </div>
+                <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:9px;padding:9px 12px;display:flex;align-items:center;gap:9px;">
+                  <span style="background:#fef3c7;color:#b45309;font-size:8px;font-weight:700;padding:2px 6px;border-radius:20px;white-space:nowrap;flex-shrink:0;">APPROVAL</span>
+                  <div style="flex:1;min-width:0;"><div style="font-size:11px;font-weight:600;color:#0f172a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Boiler replacement — CHF 4,200</div><div style="font-size:9px;color:#64748b;margin-top:1px;">Chemin des Lilas 8 · Unit 1A · 1d ago</div></div>
+                  <span style="color:#cbd5e1;flex-shrink:0;">›</span>
+                </div>
+                <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:9px;padding:9px 12px;display:flex;align-items:center;gap:9px;">
+                  <span style="background:#fef3c7;color:#b45309;font-size:8px;font-weight:700;padding:2px 6px;border-radius:20px;white-space:nowrap;flex-shrink:0;">STALE</span>
+                  <div style="flex:1;min-width:0;"><div style="font-size:11px;font-weight:600;color:#0f172a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Window seal repair — no update in 4 days</div><div style="font-size:9px;color:#64748b;margin-top:1px;">Avenue des Alpes 12 · Unit 1A · 4d ago</div></div>
+                  <span style="color:#cbd5e1;flex-shrink:0;">›</span>
+                </div>
+                <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:9px;padding:9px 12px;display:flex;align-items:center;gap:9px;">
+                  <span style="background:#dcfce7;color:#15803d;font-size:8px;font-weight:700;padding:2px 6px;border-radius:20px;white-space:nowrap;flex-shrink:0;">RFP</span>
+                  <div style="flex:1;min-width:0;"><div style="font-size:11px;font-weight:600;color:#0f172a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Painting quote — 3 bids received</div><div style="font-size:9px;color:#64748b;margin-top:1px;">Rue du Lac 4 · Building · 2d ago</div></div>
+                  <span style="color:#cbd5e1;flex-shrink:0;">›</span>
+                </div>
+              </div>
+              <div style="display:flex;gap:7px;padding-top:4px;">
+                <span style="background:#f1f5f9;border:1px solid #e2e8f0;border-radius:20px;padding:4px 10px;font-size:9px;color:#475569;font-weight:500;">Finance</span>
+                <span style="background:#f1f5f9;border:1px solid #e2e8f0;border-radius:20px;padding:4px 10px;font-size:9px;color:#475569;font-weight:500;">Ledger</span>
+                <span style="background:#4f46e5;border-radius:20px;padding:4px 10px;font-size:9px;color:#fff;font-weight:600;">All Requests</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="screen-caption">
+          <span class="persona-badge persona-mgr">Manager</span>
+          Dashboard — desktop
+        </div>
+      </div>
+      <div class="editorial-copy">
+        <div class="editorial-eyebrow">Operations at a glance</div>
+        <h3 class="editorial-heading">Everything that needs attention, surfaced up front.</h3>
+        <p class="editorial-body">The manager dashboard opens on a live pulse of the portfolio — open requests, jobs in flight, spend this month, and a building-by-building health grid. No hunting through menus.</p>
+        <div class="editorial-features">
+          <div class="editorial-feature">
+            <div class="editorial-feature-title">Action-first tabs</div>
+            <div class="editorial-feature-desc">Pending review, owner approval needed, disputed invoices, and stale jobs are each one click away.</div>
+          </div>
+          <div class="editorial-feature">
+            <div class="editorial-feature-title">Portfolio NOI surfaced immediately</div>
+            <div class="editorial-feature-desc">Net operating income and collection rate are top-level KPIs — not buried in a finance sub-menu.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 2: two phones right, copy left -->
+    <div class="editorial-row reverse fade-up">
+      <div class="editorial-copy">
+        <div class="editorial-eyebrow">Built for owners on the go</div>
+        <h3 class="editorial-heading">Owners get full visibility — without any of the noise.</h3>
+        <p class="editorial-body">The owner surface is intentionally separate from the manager's. Owners see their portfolio summary, what drove performance this month, and any work requests waiting for sign-off — readable on a phone in under a minute.</p>
+        <div class="editorial-features">
+          <div class="editorial-feature">
+            <div class="editorial-feature-title">Plain-language monthly narrative</div>
+            <div class="editorial-feature-desc">The report leads with commentary — "Operating costs came down by CHF 4k" — before showing the numbers.</div>
+          </div>
+          <div class="editorial-feature">
+            <div class="editorial-feature-title">One-tap approvals</div>
+            <div class="editorial-feature-desc">Work orders show contractor, quote amount, and full context. Approve or reject in two taps.</div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="phones-cluster">
+          <div class="phone-wrap phone-back">
+            <!-- CSS mockup: Owner request approval (mobile) -->
+            <div style="font-family:'Inter',-apple-system,sans-serif;background:#f8fafc;padding:14px 12px;display:flex;flex-direction:column;gap:9px;font-size:11px;line-height:1.4;">
+              <div style="display:flex;align-items:center;gap:6px;">
+                <span style="font-size:13px;color:#64748b;">‹</span>
+                <span style="font-size:11px;font-weight:700;color:#0f172a;">Approval request</span>
+                <span style="margin-left:auto;background:#fef3c7;color:#b45309;font-size:8px;font-weight:700;padding:2px 7px;border-radius:20px;">PENDING</span>
+              </div>
+              <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:13px;">
+                <div style="font-size:9px;color:#94a3b8;margin-bottom:3px;">Chemin des Lilas 8 · Unit 1A</div>
+                <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:6px;">Boiler replacement</div>
+                <div style="font-size:10px;color:#475569;line-height:1.6;margin-bottom:10px;">"The boiler failed completely. No heating in unit. Contractor recommends immediate replacement."</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px;">
+                  <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px 10px;"><div style="font-size:8px;color:#94a3b8;margin-bottom:2px;">Contractor</div><div style="font-size:10px;font-weight:600;color:#0f172a;">Chauffage Dupont</div></div>
+                  <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px 10px;"><div style="font-size:8px;color:#94a3b8;margin-bottom:2px;">Quote</div><div style="font-size:10px;font-weight:700;color:#0f172a;">CHF 4,200</div></div>
+                </div>
+                <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:8px 10px;font-size:9px;color:#92400e;">⚠ Urgent — tenant without heating since Monday</div>
+              </div>
+              <div style="display:flex;gap:7px;">
+                <button style="flex:1;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:9px;padding:10px;font-size:11px;font-weight:600;color:#475569;cursor:pointer;font-family:inherit;">Decline</button>
+                <button style="flex:2;background:linear-gradient(135deg,#4f46e5,#7c3aed);border:none;border-radius:9px;padding:10px;font-size:11px;font-weight:700;color:#fff;cursor:pointer;font-family:inherit;">Approve CHF 4,200 →</button>
+              </div>
+            </div>
+          </div>
+          <div class="phone-wrap phone-front">
+            <!-- CSS mockup: Owner reporting (mobile) -->
+            <div style="font-family:'Inter',-apple-system,sans-serif;background:#f8fafc;padding:14px 12px;display:flex;flex-direction:column;gap:9px;font-size:11px;line-height:1.4;">
+              <div style="display:flex;align-items:center;justify-content:space-between;">
+                <span style="font-size:12px;font-weight:700;color:#0f172a;">Reporting</span>
+                <span style="background:#0f172a;color:#fff;font-size:8px;font-weight:600;padding:3px 8px;border-radius:6px;">Jun 2026</span>
+              </div>
+              <!-- Month strip -->
+              <div style="display:flex;gap:3px;overflow:hidden;">
+                <span style="background:#0f172a;color:#fff;font-size:8px;font-weight:600;padding:3px 7px;border-radius:5px;white-space:nowrap;">Jun</span>
+                <span style="color:#64748b;font-size:8px;padding:3px 6px;white-space:nowrap;">May</span>
+                <span style="color:#64748b;font-size:8px;padding:3px 6px;white-space:nowrap;">Apr</span>
+                <span style="color:#64748b;font-size:8px;padding:3px 6px;white-space:nowrap;">Mar</span>
+                <span style="color:#94a3b8;font-size:8px;padding:3px 6px;white-space:nowrap;">Feb</span>
+              </div>
+              <!-- Hero card -->
+              <div style="background:linear-gradient(135deg,#f5f3ff,#e0f2fe,#d1fae5);border:1px solid #e2e8f0;border-radius:13px;padding:13px;">
+                <div style="font-size:8px;font-weight:600;color:#7c3aed;letter-spacing:.5px;text-transform:uppercase;margin-bottom:3px;">June 2026 · Monthly report</div>
+                <div style="font-size:12px;font-weight:700;color:#0f172a;margin-bottom:8px;">Strong month across your portfolio.</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;">
+                  <div style="background:rgba(255,255,255,.85);border-radius:8px;padding:8px 10px;"><div style="font-size:7.5px;color:#94a3b8;margin-bottom:2px;">Net result</div><div style="font-size:15px;font-weight:800;color:#15803d;font-variant-numeric:tabular-nums;">+3 460</div><div style="font-size:7px;color:#94a3b8;">CHF</div></div>
+                  <div style="background:rgba(255,255,255,.85);border-radius:8px;padding:8px 10px;"><div style="font-size:7.5px;color:#94a3b8;margin-bottom:2px;">Collection</div><div style="font-size:15px;font-weight:800;color:#15803d;">97%</div><div style="font-size:7px;color:#94a3b8;">rate</div></div>
+                </div>
+              </div>
+              <!-- By property -->
+              <div style="background:#fff;border:1px solid #e2e8f0;border-radius:11px;overflow:hidden;">
+                <div style="padding:8px 11px;border-bottom:1px solid #f1f5f9;font-size:9.5px;font-weight:600;color:#0f172a;">By property</div>
+                <div style="padding:0 11px;">
+                  <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f8fafc;">
+                    <span style="font-size:10px;font-weight:500;color:#0f172a;">Chemin des Lilas 4</span>
+                    <div style="display:flex;gap:10px;"><span style="font-size:9.5px;color:#94a3b8;">4 200</span><span style="font-size:9.5px;color:#94a3b8;">−380</span><span style="font-size:9.5px;font-weight:700;color:#15803d;">+3 820</span></div>
+                  </div>
+                  <div style="display:flex;justify-content:space-between;padding:7px 0;">
+                    <span style="font-size:10px;font-weight:500;color:#0f172a;">Rue du Lac 14</span>
+                    <div style="display:flex;gap:10px;"><span style="font-size:9.5px;color:#94a3b8;">2 800</span><span style="font-size:9.5px;color:#94a3b8;">−360</span><span style="font-size:9.5px;font-weight:700;color:#15803d;">+2 440</span></div>
+                  </div>
+                </div>
+              </div>
+              <!-- Insight -->
+              <div style="background:#fff;border:1px solid #e2e8f0;border-radius:11px;padding:10px 11px;">
+                <div style="font-size:9.5px;font-weight:600;color:#0f172a;margin-bottom:7px;">What drove performance?</div>
+                <div style="display:flex;gap:7px;align-items:flex-start;">
+                  <div style="width:18px;height:18px;border-radius:50%;background:#ede9fe;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:#7c3aed;flex-shrink:0;">1</div>
+                  <div style="font-size:9px;color:#475569;line-height:1.55;">Full rent collection — all 3 tenants paid on time. No arrears this month.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;gap:12px;justify-content:center;margin-top:16px;flex-wrap:wrap;">
+          <span class="persona-badge persona-own">Owner</span>
+          <span style="font-size:11px;color:var(--text-dim);">Request detail · Portfolio report</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════
+     SWISS COMPLIANCE
+═══════════════════════════════════════ -->
+<section class="swiss-section" id="compliance" style="background:var(--dark-2);">
+  <div class="container">
+    <div class="section-eyebrow">Built for Switzerland</div>
+    <h2 class="section-title" style="font-size:clamp(24px,3vw,34px);">Swiss compliance, standard — <em>zero configuration required</em>.</h2>
+    <p class="section-sub" style="max-width:600px;">Not a generic platform adapted for Switzerland. Every rule, format, and legal notice is built in from day one.</p>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:40px;max-width:780px;" class="fade-up">
+      <div style="display:flex;align-items:flex-start;gap:12px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px;">
+        <span style="font-size:18px;flex-shrink:0;">🏦</span>
+        <div>
+          <div style="font-size:13px;font-weight:700;margin-bottom:3px;">SIX QR-Bill (ISO 20022)</div>
+          <div style="font-size:12px;color:var(--text-dim);line-height:1.5;">Every rent demand generates a compliant QR payment slip. Tenants pay directly from the portal.</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:flex-start;gap:12px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px;">
+        <span style="font-size:18px;flex-shrink:0;">📜</span>
+        <div>
+          <div style="font-size:13px;font-weight:700;margin-bottom:3px;">CO 259a / 269d tenancy law</div>
+          <div style="font-size:12px;color:var(--text-dim);line-height:1.5;">Live SNB reference rate ingestion. Rent adjustments flagged and notices drafted automatically.</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:flex-start;gap:12px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px;">
+        <span style="font-size:18px;flex-shrink:0;">🗂️</span>
+        <div>
+          <div style="font-size:13px;font-weight:700;margin-bottom:3px;">PAIF depreciation standards</div>
+          <div style="font-size:12px;color:var(--text-dim);line-height:1.5;">Swiss asset taxonomy, residual value calculation, and per-intervention deduction tracking.</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:flex-start;gap:12px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px;">
+        <span style="font-size:18px;flex-shrink:0;">🌐</span>
+        <div>
+          <div style="font-size:13px;font-weight:700;margin-bottom:3px;">FR / DE / IT — all cantons</div>
+          <div style="font-size:12px;color:var(--text-dim);line-height:1.5;">Canton-specific lease templates, multilingual tenant portal, and bilingual legal term matching.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════
+     DIFFERENTIATORS
+═══════════════════════════════════════ -->
+<section class="diff-section">
+  <div class="container">
+    <div class="section-eyebrow">Why Sencilo</div>
+    <h2 class="section-title">What makes it <em>different</em>.</h2>
+    <p class="section-sub">Most property tools are either too simple for professional managers or too complex for small landlords. We built both, on the same platform.</p>
+
+    <div class="diff-grid">
+      <div class="diff-card fade-up">
+        <div class="diff-num">01</div>
+        <div class="diff-title">One source of truth</div>
+        <div class="diff-desc">Maintenance events, lease data, invoices, and legal cases all live in the same system and cross-reference each other. No more spreadsheet bridges between tools.</div>
+      </div>
+      <div class="diff-card fade-up fade-up-delay-1">
+        <div class="diff-num">02</div>
+        <div class="diff-title">End-to-end automation</div>
+        <div class="diff-desc">From tenant request to closed invoice, every step flows automatically. No handoffs between apps, no copy-pasting, no chasing — the platform runs the loop.</div>
+      </div>
+      <div class="diff-card fade-up fade-up-delay-2">
+        <div class="diff-num">03</div>
+        <div class="diff-title">All four parties, one platform</div>
+        <div class="diff-desc">Manager, owner, tenant, and contractor each have a role-scoped interface. Communication flows through the platform, not via email chains and WhatsApp.</div>
+      </div>
+      <div class="diff-card fade-up">
+        <div class="diff-num">04</div>
+        <div class="diff-title">Real-time financial cockpit</div>
+        <div class="diff-desc">Live ledger, per-building P&amp;L, and portfolio NOI — updated the moment each transaction posts. Owners stop waiting for the accountant's file in February.</div>
+      </div>
+      <div class="diff-card fade-up fade-up-delay-1">
+        <div class="diff-num">05</div>
+        <div class="diff-title">Scales from 1 to 1,000 units</div>
+        <div class="diff-desc">The same backend powers the professional manager view and a simplified private landlord mode (Phase 2). No separate product, no data migration.</div>
+      </div>
+      <div class="diff-card fade-up fade-up-delay-2">
+        <div class="diff-num">06</div>
+        <div class="diff-title">AI-augmented by design</div>
+        <div class="diff-desc">Triage, classification, and legal analysis already use rule-based AI. The architecture is built to add LLM-based triage and self-service resolution as the next layer.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════
+     COMING SOON
+═══════════════════════════════════════ -->
+<section class="roadmap-strip" id="roadmap">
+  <div class="container">
+    <div class="section-eyebrow">Coming soon</div>
+    <h2 class="section-title">Getting better, <em>every month</em>.</h2>
+    <p class="section-sub">Sencilo is a living platform. Here's what's arriving for early users over the next months.</p>
+
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:48px;" class="fade-up">
+
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px 22px;position:relative;overflow:hidden;">
+        <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--indigo),var(--violet));"></div>
+        <div style="display:inline-flex;align-items:center;gap:5px;background:rgba(79,70,229,.15);color:var(--indigo-light);font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;border:1px solid rgba(129,140,248,.2);margin-bottom:14px;">Coming Q3 2026</div>
+        <div style="font-size:22px;margin-bottom:10px;">💬</div>
+        <div style="font-size:15px;font-weight:700;margin-bottom:8px;">Automated rent reminders</div>
+        <div style="font-size:13px;color:var(--text-muted);line-height:1.65;">Overdue rent triggers a polite reminder, then a formal notice, and finally a ready-to-send <em>Betreibungshinweis</em> — all on a schedule you set once.</div>
+      </div>
+
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px 22px;position:relative;overflow:hidden;">
+        <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--emerald),#10b981);"></div>
+        <div style="display:inline-flex;align-items:center;gap:5px;background:rgba(5,150,105,.15);color:var(--emerald-light);font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;border:1px solid rgba(52,211,153,.2);margin-bottom:14px;">Coming Q3 2026</div>
+        <div style="font-size:22px;margin-bottom:10px;">📱</div>
+        <div style="font-size:15px;font-weight:700;margin-bottom:8px;">Tenant app (iOS &amp; Android)</div>
+        <div style="font-size:13px;color:var(--text-muted);line-height:1.65;">Your tenants get a proper app — report issues with photos, pay rent with a QR scan, and access their lease. No more emails, no more phone calls.</div>
+      </div>
+
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px 22px;position:relative;overflow:hidden;">
+        <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--amber),#f59e0b);"></div>
+        <div style="display:inline-flex;align-items:center;gap:5px;background:rgba(217,119,6,.15);color:var(--amber-light);font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;border:1px solid rgba(251,191,36,.2);margin-bottom:14px;">Coming Q4 2026</div>
+        <div style="font-size:22px;margin-bottom:10px;">🏦</div>
+        <div style="font-size:15px;font-weight:700;margin-bottom:8px;">Bank reconciliation</div>
+        <div style="font-size:13px;color:var(--text-muted);line-height:1.65;">Import your bank statement and Sencilo matches every incoming payment to the right tenant and invoice automatically — no manual ticking required.</div>
+      </div>
+
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px 22px;position:relative;overflow:hidden;">
+        <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--violet),var(--violet-light));"></div>
+        <div style="display:inline-flex;align-items:center;gap:5px;background:rgba(124,58,237,.15);color:var(--violet-light);font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;border:1px solid rgba(167,139,250,.2);margin-bottom:14px;">Coming Q4 2026</div>
+        <div style="font-size:22px;margin-bottom:10px;">🧾</div>
+        <div style="font-size:15px;font-weight:700;margin-bottom:8px;">Nebenkosten statements</div>
+        <div style="font-size:13px;color:var(--text-muted);line-height:1.65;">Annual utility charge statements generated per tenant in one click — correct amounts, correct format, ready to send. No spreadsheet needed.</div>
+      </div>
+
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px 22px;position:relative;overflow:hidden;">
+        <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#2563eb,#60a5fa);"></div>
+        <div style="display:inline-flex;align-items:center;gap:5px;background:rgba(37,99,235,.15);color:#93c5fd;font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;border:1px solid rgba(96,165,250,.2);margin-bottom:14px;">2027</div>
+        <div style="font-size:22px;margin-bottom:10px;">🤖</div>
+        <div style="font-size:15px;font-weight:700;margin-bottom:8px;">AI self-service resolution</div>
+        <div style="font-size:13px;color:var(--text-muted);line-height:1.65;">Routine tenant requests — "how do I adjust my radiator?", "what's included in Nebenkosten?" — answered instantly by the platform, before a human needs to respond.</div>
+      </div>
+
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px 22px;position:relative;overflow:hidden;">
+        <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#059669,var(--emerald-light));"></div>
+        <div style="display:inline-flex;align-items:center;gap:5px;background:rgba(5,150,105,.15);color:var(--emerald-light);font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;border:1px solid rgba(52,211,153,.2);margin-bottom:14px;">2027</div>
+        <div style="font-size:22px;margin-bottom:10px;">🌿</div>
+        <div style="font-size:15px;font-weight:700;margin-bottom:8px;">Energy &amp; ESG reporting</div>
+        <div style="font-size:13px;color:var(--text-muted);line-height:1.65;">Track energy consumption per building, surface cantonal compliance deadlines, and model the return on heating or insulation retrofits before committing to the work.</div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════
+     PRICING
+═══════════════════════════════════════ -->
+<section class="pricing-section" id="pricing">
+  <div class="container">
+    <div class="section-eyebrow">Pricing</div>
+    <h2 class="section-title">Simple plans. <em>No régie commissions.</em></h2>
+    <p class="section-sub">All plans include the full platform — maintenance, legal, financials, leases, and compliance. Start free, upgrade as you grow.</p>
+
+    <div class="pricing-grid">
+
+      <!-- Starter -->
+      <div class="pricing-card fade-up">
+        <div class="pricing-plan">Starter</div>
+        <div class="pricing-price">
+          <span class="pricing-chf">CHF</span>
+          <span class="pricing-num">49</span>
+          <span class="pricing-per">/ month</span>
+        </div>
+        <div class="pricing-desc">For private landlords managing up to 5 units. Simple, powerful, fully compliant from day one.</div>
+        <hr class="pricing-divider">
+        <ul class="pricing-features">
+          <li><span class="check-icon">✓</span>Up to 5 units &amp; 1 building</li>
+          <li><span class="check-icon">✓</span>Maintenance management</li>
+          <li><span class="check-icon">✓</span>Tenant portal</li>
+          <li><span class="check-icon">✓</span>Lease management + digital signing</li>
+          <li><span class="check-icon">✓</span>QR-Bill invoice generation</li>
+          <li><span class="check-icon">✓</span>Swiss legal compliance engine</li>
+          <li><span class="cross-icon">–</span>Owner portal</li>
+          <li><span class="cross-icon">–</span>Financial snapshots &amp; reporting</li>
+          <li><span class="cross-icon">–</span>Cashflow forecasting</li>
+        </ul>
+        <a href="#cta" class="pricing-cta">Start free trial →</a>
+      </div>
+
+      <!-- Pro -->
+      <div class="pricing-card popular fade-up fade-up-delay-1">
+        <div class="pricing-popular-badge">Most popular</div>
+        <div class="pricing-plan">Pro</div>
+        <div class="pricing-price">
+          <span class="pricing-chf">CHF</span>
+          <span class="pricing-num">149</span>
+          <span class="pricing-per">/ month</span>
+        </div>
+        <div class="pricing-desc">For professional managers and growing landlords. Full platform, unlimited buildings, owner approval workflows.</div>
+        <hr class="pricing-divider">
+        <ul class="pricing-features">
+          <li><span class="check-icon">✓</span>Unlimited units &amp; buildings</li>
+          <li><span class="check-icon">✓</span>Everything in Starter</li>
+          <li><span class="check-icon">✓</span>Owner portal with approval workflows</li>
+          <li><span class="check-icon">✓</span>Per-building financial snapshots</li>
+          <li><span class="check-icon">✓</span>Cashflow dashboard</li>
+          <li><span class="check-icon">✓</span>Asset inventory + depreciation calculator</li>
+          <li><span class="check-icon">✓</span>OCR invoice capture (camera + upload)</li>
+          <li><span class="check-icon">✓</span>Strategy profiles &amp; financial scoring</li>
+          <li><span class="cross-icon">–</span>ESG / institutional reporting</li>
+        </ul>
+        <a href="#cta" class="pricing-cta primary">Start free trial →</a>
+      </div>
+
+      <!-- Enterprise -->
+      <div class="pricing-card fade-up fade-up-delay-2">
+        <div class="pricing-plan">Enterprise</div>
+        <div class="pricing-price">
+          <span class="pricing-num" style="font-size:36px;">Custom</span>
+        </div>
+        <div class="pricing-desc">For institutional owners, gérance firms, and large portfolios requiring custom onboarding, SLAs, and ESG reporting.</div>
+        <hr class="pricing-divider">
+        <ul class="pricing-features">
+          <li><span class="check-icon">✓</span>Everything in Pro</li>
+          <li><span class="check-icon">✓</span>ESG energy tracking &amp; reporting</li>
+          <li><span class="check-icon">✓</span>Retrofit ROI modelling</li>
+          <li><span class="check-icon">✓</span>Institutional owner reporting</li>
+          <li><span class="check-icon">✓</span>SIX bLink live bank feed</li>
+          <li><span class="check-icon">✓</span>White-label tenant portal</li>
+          <li><span class="check-icon">✓</span>Dedicated onboarding</li>
+          <li><span class="check-icon">✓</span>Priority support + SLA</li>
+          <li><span class="check-icon">✓</span>Accountant export (annual summary)</li>
+        </ul>
+        <a href="#cta" class="pricing-cta">Contact us →</a>
+      </div>
+
+    </div>
+    <div class="pricing-note">All plans include a <strong>14-day free trial</strong>. No credit card required. Cancel anytime. Prices exclude VAT.</div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════
+     CLOSING CTA
+═══════════════════════════════════════ -->
+<section class="cta-section" id="cta">
+  <div class="container">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:900px;margin:0 auto;" class="fade-up">
+
+      <!-- Early access -->
+      <div style="background:linear-gradient(135deg,rgba(79,70,229,.15),rgba(124,58,237,.1));border:1px solid rgba(129,140,248,.3);border-radius:var(--radius-lg);padding:44px 40px;display:flex;flex-direction:column;gap:16px;">
+        <div style="font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--indigo-light);">Get early access</div>
+        <h2 style="font-family:'DM Serif Display',Georgia,serif;font-size:28px;font-weight:800;letter-spacing:-1px;line-height:1.15;">Start your <em>14-day free trial</em>.</h2>
+        <p style="font-size:14px;color:var(--text-muted);line-height:1.7;">No credit card. No commitment. We'll walk you through setup — properties live in under 15 minutes.</p>
+        <form onsubmit="handleSubmit(event)" style="display:flex;flex-direction:column;gap:10px;margin-top:4px;">
+          <input
+            type="email"
+            class="cta-input"
+            placeholder="your@email.ch"
+            required
+            id="cta-email"
+            style="width:100%;"
+          >
+          <button type="submit" class="cta-btn" style="width:100%;">Get early access →</button>
+        </form>
+        <div class="cta-note" style="text-align:left;">🇨🇭 Swiss data residency · Cancel anytime</div>
+      </div>
+
+      <!-- Book a demo -->
+      <div style="background:var(--surface);border:1px solid var(--border-2);border-radius:var(--radius-lg);padding:44px 40px;display:flex;flex-direction:column;gap:16px;">
+        <div style="font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--text-muted);">Prefer to talk first?</div>
+        <h2 style="font-family:'DM Serif Display',Georgia,serif;font-size:28px;font-weight:800;letter-spacing:-1px;line-height:1.15;">Book a <em>live demo</em>.</h2>
+        <p style="font-size:14px;color:var(--text-muted);line-height:1.7;">30 minutes. We'll walk through the platform with your buildings in mind — no slides, just the product.</p>
+        <div style="margin-top:4px;display:flex;flex-direction:column;gap:12px;">
+          <button onclick="openDemo()" class="cta-btn" style="width:100%;background:transparent;border:1px solid var(--border-2);color:var(--text);">
+            📅 Book a 30-min demo
+          </button>
+          <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);">
+            <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--indigo),var(--violet));display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;">👤</div>
+            <div>
+              <div style="font-size:13px;font-weight:600;">Christophe Pian</div>
+              <div style="font-size:11px;color:var(--text-dim);">Co-founder · speaks EN, FR, DE</div>
+            </div>
+          </div>
+        </div>
+        <div class="cta-note" style="text-align:left;">Usually responds within a few hours · Lausanne, CH</div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════
+     FOOTER
+═══════════════════════════════════════ -->
+<footer>
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="footer-logo">
+          <div class="footer-logo-mark">S</div>
+          <span class="footer-logo-text">Sencilo</span>
+        </div>
+        <div class="footer-tagline">Swiss property management — compliance built in, time given back, peace of mind included.</div>
+        <div class="footer-badge">
+          <span class="live-dot" style="width:5px;height:5px;"></span>
+          Platform live · Swiss PropTech
+        </div>
+      </div>
+
+      <div>
+        <div class="footer-col-title">Product</div>
+        <ul class="footer-links">
+          <li><a href="#platform">Platform overview</a></li>
+          <li><a href="#features">Features</a></li>
+          <li><a href="#compliance">Swiss compliance</a></li>
+          <li><a href="#pricing">Pricing</a></li>
+          <li><a href="#roadmap">Roadmap</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <div class="footer-col-title">Roles</div>
+        <ul class="footer-links">
+          <li><a href="#platform">Property managers</a></li>
+          <li><a href="#platform">Building owners</a></li>
+          <li><a href="#platform">Tenants</a></li>
+          <li><a href="#platform">Contractors</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <div class="footer-col-title">Company</div>
+        <ul class="footer-links">
+          <li><a href="#cta">Early access</a></li>
+          <li><a href="mailto:christophe@sencilo.ch">Contact us</a></li>
+          <li><a href="#">Privacy policy</a></li>
+          <li><a href="#">Terms of service</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <div class="footer-bottom-left">
+        © 2026 Sencilo — Swiss Property Intelligence · Lausanne, CH ·
+        <span class="ch-pill">🇨🇭</span>
+      </div>
+      <div class="footer-bottom-right">
+        <a href="#">Privacy</a>
+        <a href="#">Terms</a>
+        <a href="mailto:christophe@sencilo.ch">Contact</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<!-- ═══════════════════════════════════════
+     CALENDLY MODAL
+═══════════════════════════════════════ -->
+<div class="calendly-overlay" id="calendlyOverlay" onclick="closeDemo(event)">
+  <div class="calendly-modal">
+    <button class="calendly-modal-close" onclick="closeDemo(null, true)">✕</button>
+    <!-- Replace the src URL below with your Calendly link, e.g.:
+         https://calendly.com/christophe-sencilo/30min -->
+    <iframe
+      id="calendlyFrame"
+      src="about:blank"
+      data-src="https://calendly.com/christophe-pian/30min"
+      title="Book a demo"
+    ></iframe>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     SCRIPTS
+═══════════════════════════════════════ -->
+<script>
+/* NAV scroll effect */
+const nav = document.getElementById('mainnav');
+window.addEventListener('scroll', () => {
+  nav.classList.toggle('scrolled', window.scrollY > 40);
+}, { passive: true });
+
+/* Animate numbers on hero */
+function animateCount(el, target, duration) {
+  const start = performance.now();
+  const from = 0;
+  function step(now) {
+    const elapsed = now - start;
+    const progress = Math.min(elapsed / duration, 1);
+    const ease = 1 - Math.pow(1 - progress, 3);
+    el.textContent = Math.round(from + (target - from) * ease);
+    if (progress < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+/* IntersectionObserver for fade-up and counter */
+const countersStarted = new Set();
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('visible');
+      /* counters */
+      entry.target.querySelectorAll('[data-count]').forEach(el => {
+        if (!countersStarted.has(el)) {
+          countersStarted.add(el);
+          animateCount(el, parseInt(el.dataset.count), 1400);
+        }
+      });
+      observer.unobserve(entry.target);
+    }
+  });
+}, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+document.querySelectorAll('.fade-up').forEach(el => observer.observe(el));
+
+/* Also observe hero copy for counters (immediate, not fade-up) */
+const heroCounters = document.querySelectorAll('[data-count]');
+const countObserver = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting && !countersStarted.has(entry.target)) {
+      countersStarted.add(entry.target);
+      animateCount(entry.target, parseInt(entry.target.dataset.count), 1600);
+    }
+  });
+}, { threshold: 0.5 });
+heroCounters.forEach(el => countObserver.observe(el));
+
+/* CTA form */
+function handleSubmit(e) {
+  e.preventDefault();
+  const emailEl = e.target.querySelector('input[type=email]');
+  const btn = e.target.querySelector('.cta-btn');
+  btn.textContent = '✓ You\'re on the list — we\'ll be in touch!';
+  btn.style.background = 'linear-gradient(135deg, #059669, #10b981)';
+  btn.disabled = true;
+  emailEl.disabled = true;
+  /* TODO: POST to your waitlist endpoint or Mailchimp/Resend/Supabase */
+}
+
+/* Calendly modal */
+function openDemo() {
+  const overlay = document.getElementById('calendlyOverlay');
+  const frame = document.getElementById('calendlyFrame');
+  // Lazy-load the iframe on first open
+  if (frame.src === 'about:blank' || !frame.src) {
+    frame.src = frame.dataset.src;
+  }
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeDemo(e, force) {
+  if (force || (e && e.target === document.getElementById('calendlyOverlay'))) {
+    document.getElementById('calendlyOverlay').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDemo(null, true); });
+
+/* Smooth active-section highlight for nav links */
+const sections = document.querySelectorAll('section[id], div[id]');
+const navLinks = document.querySelectorAll('.nav-links a[href^="#"]');
+window.addEventListener('scroll', () => {
+  let current = '';
+  sections.forEach(section => {
+    if (window.scrollY >= section.offsetTop - 120) {
+      current = section.id;
+    }
+  });
+  navLinks.forEach(link => {
+    link.style.color = link.getAttribute('href') === '#' + current
+      ? 'white'
+      : '';
+  });
+}, { passive: true });
+</script>
+
+</body>
+</html>

@@ -513,7 +513,7 @@ async function runIngestionBackground(
     const orgAccounts = await accountRepo.findAccountsByOrg(prisma, orgId);
 
     // 4. Classify accounts into balance-sheet vs income-statement by account code prefix.
-    //    Swiss chart of accounts: 1xxx-3xxx = balance sheet, 4xxx-9xxx = income statement.
+    //    Swiss chart of accounts: 1xxx–2xxx = balance sheet, 3xxx–8xxx = income statement.
     const allBalances = scanResult.accountBalances ?? [];
     const bsBalances = allBalances.filter((b) => isBalanceSheetAccount(b.rawAccountCode));
     const isBalances = allBalances.filter((b) => !isBalanceSheetAccount(b.rawAccountCode));
@@ -626,12 +626,19 @@ async function runIngestionBackground(
   }
 }
 
-/** Returns true for balance-sheet account codes (Swiss chart: 1xxx–3xxx). */
+/**
+ * Returns true for balance-sheet account codes.
+ * Swiss Kontenrahmen KMU:
+ *   1xxx = Assets (Aktiven)        → balance sheet
+ *   2xxx = Liabilities/Equity      → balance sheet
+ *   3xxx = Revenue (Nettoerlöse)   → income statement  ← NOT balance sheet
+ *   4xxx–8xxx = Expenses           → income statement
+ */
 function isBalanceSheetAccount(code: string): boolean {
   const trimmed = code.trim().replace(/\D/g, "");
   if (!trimmed) return true; // default to balance sheet when unknown
   const first = parseInt(trimmed[0], 10);
-  return first >= 1 && first <= 3;
+  return first >= 1 && first <= 2;
 }
 
 /** Match and persist a set of extracted account balances for a statement. */
