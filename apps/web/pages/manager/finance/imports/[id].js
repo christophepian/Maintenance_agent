@@ -88,8 +88,8 @@ function ResolveAccountRow({ balance, orgId, onResolved }) {
           body: JSON.stringify({ accountId }),
         },
       );
-      const json = await res.json();
-      if (!res.ok) throw new Error(json?.error?.message || "Failed");
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json) throw new Error(json?.error?.message || "Failed");
       setOpen(false);
       onResolved();
     } catch (e) {
@@ -166,8 +166,8 @@ function AssignBuildingInline({ statementId, onAssigned }) {
         headers: { ...authHeaders(), "Content-Type": "application/json" },
         body: JSON.stringify({ buildingId }),
       });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json?.error?.message || "Failed");
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json) throw new Error(json?.error?.message || "Failed");
       onAssigned(json.data);
     } catch (e) {
       setError(String(e?.message || e));
@@ -330,8 +330,8 @@ function ReExtractPanel({ statementId, hasBalances, onStarted }) {
         headers: { ...authHeaders(), "Content-Type": "application/json" },
         body: JSON.stringify({ hintDocType }),
       });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json?.error?.message || "Failed to re-extract");
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json) throw new Error(json?.error?.message || "Failed to re-extract");
       onStarted(json.data);
     } catch (e) {
       setError(String(e?.message || e));
@@ -520,8 +520,8 @@ export default function ImportedStatementReviewPage() {
     setError("");
     try {
       const res = await fetch(`/api/imported-statements/${id}`, { headers: authHeaders() });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json?.error?.message || t("manager:financeImports.text.notFound"));
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json) throw new Error(json?.error?.message || t("manager:financeImports.text.notFound"));
       setStatement(json.data);
     } catch (e) {
       setError(String(e?.message || e));
@@ -538,8 +538,8 @@ export default function ImportedStatementReviewPage() {
       const res = await fetch(`/api/imported-statements/${id}/ledger-preview`, {
         headers: authHeaders(),
       });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json?.error?.message || "Failed to load preview");
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json) throw new Error(json?.error?.message || "Failed to load preview");
       setPreview(json.data);
     } catch (e) {
       setPreviewError(String(e?.message || e));
@@ -597,8 +597,8 @@ export default function ImportedStatementReviewPage() {
         method: "POST",
         headers: authHeaders(),
       });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json?.error?.message || "Failed to approve");
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json) throw new Error(json?.error?.message || "Failed to approve");
       setApproveModalOpen(false);
       setStatement(json.data);
     } catch (e) {
@@ -619,8 +619,8 @@ export default function ImportedStatementReviewPage() {
         headers: { ...authHeaders(), "Content-Type": "application/json" },
         body: JSON.stringify({ notes: notes.trim() }),
       });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json?.error?.message || "Failed to reject");
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json) throw new Error(json?.error?.message || "Failed to reject");
       setStatement(json.data);
     } catch (e) {
       setActionError(String(e?.message || e));

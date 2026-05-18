@@ -388,8 +388,8 @@ export default function ImportedStatementsPanel() {
       const res = await fetch("/api/imported-statements/batches?limit=50&offset=0", {
         headers: authHeaders(),
       });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json?.error?.message || "Failed to load imports");
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json) throw new Error(json?.error?.message || `Failed to load imports (${res.status})`);
       setBatches(json.data ?? []);
       setTotal(json.pagination?.total ?? 0);
     } catch (e) {
