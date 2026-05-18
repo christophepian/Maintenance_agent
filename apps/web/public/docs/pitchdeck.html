@@ -816,7 +816,7 @@
 </head>
 <body>
 <style>#hub-bar{position:fixed;top:0;left:0;right:0;z-index:9000;height:36px;background:#0f172a;display:flex;align-items:center;padding:0 20px;font-family:'Inter',-apple-system,sans-serif;font-size:12px;font-weight:500;border-bottom:1px solid rgba(255,255,255,.08)}#hub-bar a{color:rgba(255,255,255,.5);text-decoration:none;padding:0 8px;height:36px;display:flex;align-items:center;transition:color .12s}#hub-bar a:hover,#hub-bar a.hub-active{color:#fff}#hub-bar .hub-brand{color:rgba(255,255,255,.9)!important;font-weight:700;padding-right:14px;margin-right:6px;border-right:1px solid rgba(255,255,255,.15)}#hub-bar .hub-open{margin-left:auto;background:#4f46e5;color:#fff!important;padding:0 12px;height:24px;border-radius:4px;font-size:11px;font-weight:600}#hub-bar .hub-open:hover{background:#4338ca!important}</style>
-<div id="hub-bar"><a href="index.html" class="hub-brand">MA Docs</a><a href="wiki.html">Wiki</a><a href="blueprint.html">Blueprint</a><a href="product-overview.html">Product</a><a href="roadmap.html">Roadmap</a><a href="design-system.html">Design</a><a href="pitchdeck.html">Pitch</a><a href="/website/index.html" target="_blank">Website</a><a href="/website/invest.html" target="_blank">Invest</a><a href="https://maintenance-agent-api-git-main-christophepians-projects.vercel.app/login" target="_blank" class="hub-open">Open App →</a></div>
+<div id="hub-bar"><a href="index.html" class="hub-brand">MA Docs</a><a href="wiki.html">Wiki</a><a href="blueprint.html">Blueprint</a><a href="product-overview.html">Product</a><a href="roadmap.html">Roadmap</a><a href="design-system.html">Design</a><a href="pitchdeck.html">Pitch</a><a href="../website/index.html" target="_blank" class="hub-open">Public Website →</a><a href="https://maintenance-agent-api-git-main-christophepians-projects.vercel.app/login" target="_blank" class="hub-open">Open App →</a></div>
 <script>(function(){var c=window.location.pathname.split('/').pop()||'index.html';document.querySelectorAll('#hub-bar a[href]').forEach(function(a){if(a.getAttribute('href')===c)a.classList.add('hub-active');});})()</script>
 <script>(function(){var isInvestor=document.cookie.split(';').some(function(c){return c.trim()==='ma_docs_role=investor';});if(!isInvestor)return;var restricted=['wiki.html','blueprint.html','product-overview.html','roadmap.html','design-system.html','index.html'];document.querySelectorAll('#hub-bar a[href]').forEach(function(a){if(restricted.indexOf(a.getAttribute('href'))!==-1)a.style.display='none';});})()</script>
 
@@ -1000,6 +1000,9 @@
       <span class="tag">Track A: Compliance SaaS</span>
       <span class="tag">Track B: RE Advisory</span>
       <span class="tag">Swiss-native · Trilingual</span>
+    </div>
+    <div style="margin-top:1.2rem;font-family:'Inter',-apple-system,sans-serif;font-size:0.75rem;color:var(--slate);">
+      Public Website: <a href="https://maintenance-agent-api-git-main-christophepians-projects.vercel.app/docs/website/index.html" target="_blank" style="color:var(--gold);text-decoration:none;border-bottom:1px solid rgba(79,70,229,0.3);">maintenance-agent-api-git-main-christophepians-projects.vercel.app</a>
     </div>
   </div>
 
@@ -3103,7 +3106,7 @@
   <!-- STAGE CONTEXT -->
   <div style="background:linear-gradient(135deg,var(--gold),var(--rust));color:#fff;padding:1.5rem 2rem;margin-bottom:2.5rem;">
     <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.58rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--gold-light);margin-bottom:0.5rem;">Stage context</div>
-    <p style="font-size:0.88rem;line-height:1.7;color:rgba(255,255,255,0.85);">The company is pre-revenue, product in active development. At this stage, traction means problem validation — evidence that the pain is real, that people want a solution, and that the market will pay for it. The metrics below reflect that honestly. Revenue traction will be added as it is generated.</p>
+    <p style="font-size:0.88rem;line-height:1.7;color:rgba(255,255,255,0.85);">The company is pre-revenue. The product is built and live — a fully functional platform deployed on Vercel, not a prototype. Current focus is signing the first beta users: several owners have expressed interest in VD/GE and we are in active discussions. Target: 5 signed beta testers by end of June 2026. Revenue traction will be added as it is generated.</p>
   </div>
 
   <!-- WHAT IS VALIDATED -->
@@ -3135,6 +3138,57 @@
 
   </div>
 
+  <!-- PRODUCT MILESTONE -->
+  <div class="d-label-muted" style="margin-top:2.5rem;">Product milestone — May 2026</div>
+  <div style="background:var(--paper);border:1px solid var(--rule);padding:1.6rem 2rem;margin-bottom:2.5rem;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:2rem;">
+      <div>
+        <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--forest);margin-bottom:0.8rem;">Platform — live and deployed</div>
+        <div style="display:flex;flex-direction:column;gap:0.55rem;">
+          <div style="display:flex;gap:0.6rem;align-items:flex-start;font-size:0.82rem;color:var(--slate);">
+            <span style="color:var(--forest);font-weight:700;flex-shrink:0;">✓</span>Full-stack platform across all 4 roles (manager, owner, tenant, contractor) — 291 API operations
+          </div>
+          <div style="display:flex;gap:0.6rem;align-items:flex-start;font-size:0.82rem;color:var(--slate);">
+            <span style="color:var(--forest);font-weight:700;flex-shrink:0;">✓</span>End-to-end workflows: maintenance, lease lifecycle (digital signature, SHA-256), invoice capture &amp; approval
+          </div>
+          <div style="display:flex;gap:0.6rem;align-items:flex-start;font-size:0.82rem;color:var(--slate);">
+            <span style="color:var(--forest);font-weight:700;flex-shrink:0;">✓</span>AI-powered invoice extraction: photo / PDF → Azure OCR + Claude → auto-drafted line items
+          </div>
+          <div style="display:flex;gap:0.6rem;align-items:flex-start;font-size:0.82rem;color:var(--slate);">
+            <span style="color:var(--forest);font-weight:700;flex-shrink:0;">✓</span>Swiss compliance engine: 274 depreciation standards, cantonal form generation, QR-invoice
+          </div>
+          <div style="display:flex;gap:0.6rem;align-items:flex-start;font-size:0.82rem;color:var(--slate);">
+            <span style="color:var(--forest);font-weight:700;flex-shrink:0;">✓</span>Double-entry general ledger + real-time financial cockpit per building for owners
+          </div>
+        </div>
+      </div>
+      <div>
+        <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--gold);margin-bottom:0.8rem;">Commercial pipeline — beta stage</div>
+        <div style="display:flex;flex-direction:column;gap:0.55rem;margin-bottom:1rem;">
+          <div style="display:flex;gap:0.6rem;align-items:flex-start;font-size:0.82rem;color:var(--slate);">
+            <span style="color:var(--gold);font-weight:700;flex-shrink:0;">→</span>In active discussions with first potential users — property owners in cantons VD &amp; GE
+          </div>
+          <div style="display:flex;gap:0.6rem;align-items:flex-start;font-size:0.82rem;color:var(--slate);">
+            <span style="color:var(--gold);font-weight:700;flex-shrink:0;">→</span>Several owners have expressed interest in the beta testing phase
+          </div>
+          <div style="display:flex;gap:0.6rem;align-items:flex-start;font-size:0.82rem;color:var(--slate);">
+            <span style="color:var(--gold);font-weight:700;flex-shrink:0;">→</span>Target: 5 signed beta testers by end of June 2026
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem;">
+          <div style="padding:0.9rem;background:var(--cream);text-align:center;">
+            <div style="font-family:'DM Serif Display',Georgia,serif;font-size:1.5rem;font-weight:700;color:var(--gold);">0 → 5</div>
+            <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.55rem;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase;margin-top:0.2rem;">beta target by Jun 2026</div>
+          </div>
+          <div style="padding:0.9rem;background:var(--cream);text-align:center;">
+            <div style="font-family:'DM Serif Display',Georgia,serif;font-size:1.5rem;font-weight:700;color:var(--forest);">Live</div>
+            <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.55rem;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase;margin-top:0.2rem;">product on Vercel</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- WHAT IS NOT YET VALIDATED -->
   <div class="d-label-muted">What is not yet validated — discovery priorities</div>
   <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:2px;background:var(--rule);border:1px solid var(--rule);margin-bottom:2.5rem;">
@@ -3158,7 +3212,7 @@
   <!-- PLACEHOLDER FOR FUTURE METRICS -->
   <div style="border:2px dashed var(--rule);padding:2rem 2.5rem;background:var(--cream);position:relative;">
     <div style="position:absolute;top:-0.75rem;left:1.5rem;background:var(--cream);padding:0 0.6rem;font-family:'Inter',-apple-system,sans-serif;font-size:0.58rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--rust);">⚑ To be completed as traction builds</div>
-    <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.62rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:0.5rem;">Revenue &amp; growth metrics</div>
+    <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.62rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:0.5rem;">Revenue &amp; growth metrics — to be updated as beta converts to paid</div>
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;">
       <div style="text-align:center;padding:1rem;background:var(--paper);">
         <div style="font-family:'DM Serif Display',Georgia,serif;font-size:1.4rem;font-weight:700;color:var(--rule);">—</div>
@@ -3166,11 +3220,11 @@
       </div>
       <div style="text-align:center;padding:1rem;background:var(--paper);">
         <div style="font-family:'DM Serif Display',Georgia,serif;font-size:1.4rem;font-weight:700;color:var(--rule);">—</div>
-        <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.55rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-top:0.3rem;">Paying customers</div>
+        <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.55rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-top:0.3rem;">Beta users</div>
       </div>
       <div style="text-align:center;padding:1rem;background:var(--paper);">
         <div style="font-family:'DM Serif Display',Georgia,serif;font-size:1.4rem;font-weight:700;color:var(--rule);">—</div>
-        <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.55rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-top:0.3rem;">Régie pilots</div>
+        <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.55rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-top:0.3rem;">Owner portfolios</div>
       </div>
       <div style="text-align:center;padding:1rem;background:var(--paper);">
         <div style="font-family:'DM Serif Display',Georgia,serif;font-size:1.4rem;font-weight:700;color:var(--rule);">—</div>

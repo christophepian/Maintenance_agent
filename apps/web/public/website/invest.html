@@ -375,6 +375,87 @@ footer a:hover { color: var(--text-muted); }
   .cta-row { grid-template-columns: 1fr; }
   .step { grid-template-columns: 1fr; }
 }
+
+/* ─── WHERE WE STAND ─── */
+.momentum-item {
+  display: flex; gap: 10px; align-items: flex-start;
+  font-size: 13px; color: var(--text-muted); line-height: 1.6;
+}
+.momentum-dot {
+  width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; margin-top: 6px;
+}
+.momentum-dot.green  { background: var(--emerald-light); box-shadow: 0 0 5px var(--emerald-light); }
+.momentum-dot.indigo { background: var(--indigo-light);  box-shadow: 0 0 5px var(--indigo-light); }
+.beta-step { display: flex; align-items: flex-start; gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+.beta-step:last-child { border-bottom: none; }
+.beta-step-num {
+  width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 700;
+}
+.beta-step-num.done   { background: var(--emerald-light); color: var(--dark); }
+.beta-step-num.active { background: rgba(79,70,229,.2); color: var(--indigo-light); border: 1px solid rgba(129,140,248,.3); }
+.beta-step-num.future { background: var(--surface); color: var(--text-dim); border: 1px solid var(--border); }
+.beta-step-body { flex: 1; }
+.beta-step-title { font-size: 12px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
+.beta-step-sub   { font-size: 11px; color: var(--text-dim); }
+
+/* ─── TRANCHES ─── */
+.tranches-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 12px; margin-top: 40px;
+}
+.tranche-card {
+  border-radius: var(--radius); padding: 26px 22px;
+  border: 1px solid var(--border-2); position: relative; overflow: hidden;
+}
+.tranche-card.tc-active {
+  border-color: rgba(129,140,248,.4);
+  background: rgba(79,70,229,.08);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 32px rgba(79,70,229,.18);
+}
+.tranche-card.tc-locked {
+  background: rgba(255,255,255,.02); opacity: .6;
+}
+.tranche-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+}
+.tranche-card.tc-active::before { background: linear-gradient(90deg, var(--indigo), var(--violet)); }
+.tranche-card.tc-locked::before  { background: var(--border); }
+.tc-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 10px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase;
+  padding: 3px 10px; border-radius: 20px; margin-bottom: 14px;
+}
+.tc-badge.open   { background: rgba(52,211,153,.12); color: var(--emerald-light); border: 1px solid rgba(52,211,153,.2); }
+.tc-badge.closed { background: var(--surface); color: var(--text-dim); border: 1px solid var(--border); }
+.tc-you-are-here {
+  position: absolute; top: 14px; right: 14px;
+  font-size: 10px; font-weight: 600; color: var(--indigo-light);
+  background: rgba(79,70,229,.15); border: 1px solid rgba(129,140,248,.25);
+  padding: 2px 8px; border-radius: 4px;
+}
+.tc-num  { font-size: 10px; font-weight: 600; color: var(--text-dim); letter-spacing: .4px; text-transform: uppercase; margin-bottom: 3px; }
+.tc-name { font-family: 'DM Serif Display', Georgia, serif; font-size: 20px; font-weight: 700; letter-spacing: -.3px; margin-bottom: 5px; }
+.tc-line { font-size: 12px; color: var(--text-muted); margin-bottom: 18px; line-height: 1.5; }
+.tc-terms { display: flex; flex-direction: column; gap: 8px; }
+.tc-term { display: flex; justify-content: space-between; align-items: baseline; font-size: 12px; }
+.tc-term-label { color: var(--text-dim); }
+.tc-term-val { font-weight: 700; color: var(--text); }
+.tc-term-val.accent { color: var(--indigo-light); }
+.tc-term-val.green  { color: var(--emerald-light); }
+.tc-unlock {
+  margin-top: 14px; padding: 8px 12px;
+  background: rgba(255,255,255,.03); border-radius: var(--radius-sm);
+  font-size: 11px; color: var(--text-dim); line-height: 1.6;
+  border: 1px dashed var(--border);
+}
+
+@media (max-width: 640px) {
+  .tranches-grid { grid-template-columns: 1fr; }
+  .tranche-card.tc-active { transform: none; }
+}
 </style>
 </head>
 <body>
@@ -416,8 +497,8 @@ footer a:hover { color: var(--text-muted); }
       <!-- Key terms strip -->
       <div class="terms-strip fade-up">
         <div class="term-item">
-          <div class="term-val accent">30%</div>
-          <div class="term-key">Discount if you convert</div>
+          <div class="term-val accent">35%</div>
+          <div class="term-key">Early Bird discount</div>
         </div>
         <div class="term-item">
           <div class="term-val green">5% p.a.</div>
@@ -435,6 +516,55 @@ footer a:hover { color: var(--text-muted); }
     </div>
   </div>
 </div>
+
+<!-- WHERE WE STAND -->
+<section style="background:var(--dark-3);" id="momentum">
+  <div class="container">
+    <div class="eyebrow">Where we stand — May 2026</div>
+    <h2 class="section-title">A working product. <em>First users incoming.</em></h2>
+    <p class="section-sub">This isn't a deck. It's a live platform — deployed, functional, used to demo to real people today.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:36px;" class="fade-up">
+
+      <div style="background:var(--surface);border:1px solid rgba(52,211,153,.15);border-radius:var(--radius);padding:28px 26px;">
+        <div style="font-size:10px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:var(--emerald-light);margin-bottom:18px;">Product — live on Vercel</div>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <div class="momentum-item"><span class="momentum-dot green"></span><span>Full-stack platform across all 4 roles — manager, owner, tenant, contractor</span></div>
+          <div class="momentum-item"><span class="momentum-dot green"></span><span>End-to-end workflows: maintenance requests, lease lifecycle, invoice capture &amp; approval</span></div>
+          <div class="momentum-item"><span class="momentum-dot green"></span><span>AI-powered invoice extraction — photo or PDF → auto-drafted line items in seconds (Azure OCR + Claude)</span></div>
+          <div class="momentum-item"><span class="momentum-dot green"></span><span>Swiss compliance engine: 274 depreciation standards, cantonal form generation, digital lease signing</span></div>
+          <div class="momentum-item"><span class="momentum-dot green"></span><span>Double-entry general ledger with per-building financial cockpit for owners</span></div>
+        </div>
+      </div>
+
+      <div style="background:var(--surface);border:1px solid rgba(129,140,248,.18);border-radius:var(--radius);padding:28px 26px;">
+        <div style="font-size:10px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:var(--indigo-light);margin-bottom:18px;">Commercial — beta pipeline</div>
+        <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:22px;">
+          <div class="momentum-item"><span class="momentum-dot indigo"></span><span>In active discussions with first potential users — property owners in cantons VD &amp; GE</span></div>
+          <div class="momentum-item"><span class="momentum-dot indigo"></span><span>Several owners have expressed interest in the beta testing phase</span></div>
+          <div class="momentum-item"><span class="momentum-dot indigo"></span><span>Target: <strong style="color:var(--text);">5 signed beta testers by end of June 2026</strong></span></div>
+        </div>
+        <div style="background:var(--dark-2);border-radius:var(--radius-sm);padding:14px 16px;">
+          <div style="font-size:10px;font-weight:600;color:var(--text-dim);letter-spacing:.5px;text-transform:uppercase;margin-bottom:12px;">Beta milestone tracker</div>
+          <div class="beta-step">
+            <div class="beta-step-num active">→</div>
+            <div class="beta-step-body">
+              <div class="beta-step-title">3 beta testers signed → Round 2 opens</div>
+              <div class="beta-step-sub">Trailblazer terms unlock (25% discount, CHF 500 min)</div>
+            </div>
+          </div>
+          <div class="beta-step">
+            <div class="beta-step-num future">○</div>
+            <div class="beta-step-body">
+              <div class="beta-step-title">5 beta testers signed → Round 3 opens</div>
+              <div class="beta-step-sub">Steady Backer terms unlock (20% discount, CHF 1 000 min)</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
 
 <!-- HOW IT WORKS -->
 <section>
@@ -479,10 +609,10 @@ footer a:hover { color: var(--text-muted); }
       <div class="maturity-card equity">
         <div class="maturity-icon">📈</div>
         <div class="maturity-title">Option A — Become a shareholder</div>
-        <div class="maturity-desc">Convert your investment into shares of Sencilo at a <strong>30% discount</strong> to the price paid by seed investors. Early believers get a better price than the institutional money that comes in later.</div>
+        <div class="maturity-desc">Convert your investment into shares of Sencilo at a <strong>35% discount</strong> to the price paid by seed investors. Early believers get a better price than the institutional money that comes in later.</div>
         <div class="maturity-example">
           <strong>Example — CHF 500 invested:</strong><br>
-          Seed round at CHF 2.0M pre-money. Seed price = CHF 2.0 per share (illustrative). Your price = CHF 1.40 per share (30% less). Your CHF 500 buys ~357 shares instead of ~250. You own a small but real piece of Sencilo.
+          Seed round at CHF 2.0M pre-money. Seed price = CHF 2.0 per share (illustrative). Your price = CHF 1.30 per share (35% less). Your CHF 500 buys ~385 shares instead of ~250. You own a small but real piece of Sencilo.
         </div>
       </div>
       <div class="maturity-card repay">
@@ -501,11 +631,69 @@ footer a:hover { color: var(--text-muted); }
   </div>
 </section>
 
+<!-- THREE ROUNDS -->
+<section style="background:var(--dark);" id="rounds">
+  <div class="container">
+    <div class="eyebrow">How early you come in shapes your terms</div>
+    <h2 class="section-title">Three rounds — <em>one chance per window</em>.</h2>
+    <p class="section-sub">As we hit milestones, the discount steps down and the minimum ticket steps up. The earlier you back us, the better price you get.</p>
+    <div class="tranches-grid fade-up">
+
+      <div class="tranche-card tc-active">
+        <span class="tc-you-are-here">← You are here</span>
+        <div class="tc-badge open"><span style="width:6px;height:6px;border-radius:50%;background:var(--emerald-light);display:inline-block;animation:pulse 2s infinite;"></span>&nbsp;Open now</div>
+        <div class="tc-num">Round 01</div>
+        <div class="tc-name">Early Bird</div>
+        <div class="tc-line">You're in before the proof. Maximum upside — maximum trust.</div>
+        <div class="tc-terms">
+          <div class="tc-term"><span class="tc-term-label">Discount at conversion</span><span class="tc-term-val accent">35%</span></div>
+          <div class="tc-term"><span class="tc-term-label">Minimum ticket</span><span class="tc-term-val">CHF 100</span></div>
+          <div class="tc-term"><span class="tc-term-label">Interest (repayment path)</span><span class="tc-term-val green">5% p.a.</span></div>
+        </div>
+      </div>
+
+      <div class="tranche-card tc-locked">
+        <div class="tc-badge closed">🔒 Not yet open</div>
+        <div class="tc-num">Round 02</div>
+        <div class="tc-name">Trailblazer</div>
+        <div class="tc-line">You join when the first beta users are on board. Some proof, fair deal.</div>
+        <div class="tc-terms">
+          <div class="tc-term"><span class="tc-term-label">Discount at conversion</span><span class="tc-term-val accent">25%</span></div>
+          <div class="tc-term"><span class="tc-term-label">Minimum ticket</span><span class="tc-term-val">CHF 500</span></div>
+          <div class="tc-term"><span class="tc-term-label">Interest (repayment path)</span><span class="tc-term-val green">5% p.a.</span></div>
+        </div>
+        <div class="tc-unlock">🎯 Unlocks when we sign our 3rd beta user — target June 2026.</div>
+      </div>
+
+      <div class="tranche-card tc-locked">
+        <div class="tc-badge closed">🔒 Not yet open</div>
+        <div class="tc-num">Round 03</div>
+        <div class="tc-name">Steady Backer</div>
+        <div class="tc-line">You back us once traction is real. Lower risk, honest terms.</div>
+        <div class="tc-terms">
+          <div class="tc-term"><span class="tc-term-label">Discount at conversion</span><span class="tc-term-val accent">20%</span></div>
+          <div class="tc-term"><span class="tc-term-label">Minimum ticket</span><span class="tc-term-val">CHF 1 000</span></div>
+          <div class="tc-term"><span class="tc-term-label">Interest (repayment path)</span><span class="tc-term-val green">5% p.a.</span></div>
+        </div>
+        <div class="tc-unlock">🎯 Unlocks when we sign our 5th beta user — target end of June 2026.</div>
+      </div>
+
+    </div>
+    <div style="margin-top:14px;background:var(--surface);border:1px solid var(--border-2);border-radius:var(--radius-sm);padding:14px 20px;font-size:12px;color:var(--text-dim);line-height:1.7;">
+      <strong style="color:var(--text-muted);">Why does this matter?</strong> At the same investment, an Early Bird gets <strong style="color:var(--indigo-light);">23% more equity</strong> than a Steady Backer. CHF 500 in Round 1 buys the same shares as CHF 615 in Round 3. The total pool cap (CHF 75K) is shared across all three rounds — first come, first served.
+    </div>
+  </div>
+</section>
+
 <!-- CALCULATOR -->
 <section class="calc-section" id="calculator">
   <div class="container">
     <div class="eyebrow">Run the numbers</div>
     <h2 class="section-title">See what <em>your</em> investment looks like.</h2>
+    <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.2);border-radius:20px;padding:4px 14px;margin-bottom:16px;font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--emerald-light);">
+      <span style="width:6px;height:6px;border-radius:50%;background:var(--emerald-light);display:inline-block;animation:pulse 2s infinite;"></span>
+      Round 1 — Early Bird terms (35% discount)
+    </div>
     <div class="calc-box fade-up">
       <div class="calc-label">How much would you like to invest?</div>
       <div class="calc-input-wrap">
@@ -536,7 +724,7 @@ footer a:hover { color: var(--text-muted); }
       <div class="calc-pool-warning" id="poolWarning">
         The total pool is capped at CHF 75K so that all early investors together hold no more than 5% of Sencilo at conversion. At your amount, you would represent a meaningful share of the available allocation.
       </div>
-      <p class="calc-note">Ownership calculated at seed conversion: CHF 2.0M pre-money, 30% discount → effective valuation CHF 1.4M. Interest assumes 18 months at 5% p.a. simple. These are illustrative figures — actual seed terms may differ.</p>
+      <p class="calc-note">Showing Early Bird (Round 1) terms: 35% discount → effective valuation CHF 1.3M. Interest assumes 18 months at 5% p.a. simple. These are illustrative figures — actual seed terms may differ.</p>
     </div>
   </div>
 </section>
@@ -546,7 +734,7 @@ footer a:hover { color: var(--text-muted); }
   <div class="container">
     <div class="eyebrow">Scenarios at a glance</div>
     <h2 class="section-title">What different amounts <em>actually mean</em>.</h2>
-    <p class="section-sub">All scenarios assume seed conversion at CHF 2.0M pre-money, 30% discount, and 18 months duration for the repayment case.</p>
+    <p class="section-sub">Shown at current Early Bird (Round 1) terms — 35% discount, CHF 2.0M pre-money, 18 months for the repayment case.</p>
     <table class="scenario-table fade-up">
       <thead>
         <tr>
@@ -559,37 +747,37 @@ footer a:hover { color: var(--text-muted); }
       <tbody>
         <tr>
           <td>CHF 100</td>
-          <td class="indigo">0.0071%</td>
+          <td class="indigo">0.0077%</td>
           <td class="green">CHF 107.50</td>
           <td class="muted">0.13%</td>
         </tr>
         <tr>
           <td>CHF 250</td>
-          <td class="indigo">0.018%</td>
+          <td class="indigo">0.0192%</td>
           <td class="green">CHF 268.75</td>
           <td class="muted">0.33%</td>
         </tr>
         <tr class="scenario-highlight">
           <td>CHF 500</td>
-          <td class="indigo">0.036%</td>
+          <td class="indigo">0.0385%</td>
           <td class="green">CHF 537.50</td>
           <td class="muted">0.67%</td>
         </tr>
         <tr>
           <td>CHF 1 000</td>
-          <td class="indigo">0.071%</td>
+          <td class="indigo">0.0769%</td>
           <td class="green">CHF 1 075</td>
           <td class="muted">1.33%</td>
         </tr>
         <tr>
           <td>CHF 2 000</td>
-          <td class="indigo">0.14%</td>
+          <td class="indigo">0.154%</td>
           <td class="green">CHF 2 150</td>
           <td class="muted">2.67%</td>
         </tr>
         <tr>
           <td>CHF 5 000</td>
-          <td class="indigo">0.36%</td>
+          <td class="indigo">0.383%</td>
           <td class="green">CHF 5 375</td>
           <td class="muted">6.67%</td>
         </tr>
@@ -677,7 +865,7 @@ document.querySelectorAll('.fade-up').forEach(el => obs.observe(el));
 
 /* Calculator */
 const SEED_PRE   = 2_000_000;   // CHF 2.0M pre-money seed
-const DISCOUNT   = 0.30;         // 30%
+const DISCOUNT   = 0.35;         // 35% — Early Bird (Round 1)
 const INTEREST   = 0.05;         // 5% p.a.
 const MONTHS     = 18;           // assumed duration
 const POOL_CAP   = 75_000;       // CHF 75K total raise
