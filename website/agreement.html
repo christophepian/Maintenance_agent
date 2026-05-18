@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Convertible Loan Agreement — Sencilo</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink:     #111827;
+  --ink-2:   #374151;
+  --muted:   #6b7280;
+  --rule:    #d1d5db;
+  --rule-2:  #e5e7eb;
+  --indigo:  #4f46e5;
+  --paper:   #ffffff;
+  --cream:   #f9fafb;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'EB Garamond', Georgia, serif;
+  background: #f3f4f6;
+  color: var(--ink);
+  font-size: 15px;
+  line-height: 1.75;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Print helper bar */
+.print-bar {
+  background: var(--indigo);
+  color: #fff;
+  padding: 12px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+}
+.print-bar a { color: rgba(255,255,255,.7); text-decoration: none; }
+.print-bar a:hover { color: #fff; }
+.print-btn {
+  background: rgba(255,255,255,.15);
+  border: 1px solid rgba(255,255,255,.25);
+  color: #fff; padding: 6px 16px; border-radius: 6px;
+  font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: background .15s;
+}
+.print-btn:hover { background: rgba(255,255,255,.25); }
+
+/* Document page */
+.page {
+  max-width: 760px;
+  margin: 32px auto 64px;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  padding: 72px 80px;
+}
+
+/* Header */
+.doc-header {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  margin-bottom: 40px; padding-bottom: 28px;
+  border-bottom: 2px solid var(--ink);
+}
+.doc-logo { display: flex; align-items: center; gap: 10px; }
+.doc-logo-mark {
+  width: 34px; height: 34px; border-radius: 8px;
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Inter', sans-serif; font-weight: 800; font-size: 13px; color: #fff;
+}
+.doc-logo-text {
+  font-family: 'Inter', sans-serif; font-weight: 700; font-size: 17px;
+  color: var(--ink); letter-spacing: -.4px;
+}
+.doc-meta {
+  text-align: right;
+  font-family: 'Inter', sans-serif; font-size: 11px; color: var(--muted);
+  line-height: 1.6;
+}
+
+/* Title block */
+.doc-title-block {
+  text-align: center; margin-bottom: 40px;
+}
+.doc-title {
+  font-size: 22px; font-weight: 600; letter-spacing: -.2px;
+  margin-bottom: 6px;
+}
+.doc-subtitle {
+  font-family: 'Inter', sans-serif;
+  font-size: 11px; font-weight: 600; letter-spacing: .8px; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 20px;
+}
+.doc-parties-strip {
+  display: flex; gap: 0;
+  border: 1px solid var(--rule); border-radius: 4px; overflow: hidden;
+  font-family: 'Inter', sans-serif; font-size: 12px;
+}
+.party {
+  flex: 1; padding: 12px 16px;
+  border-right: 1px solid var(--rule);
+}
+.party:last-child { border-right: none; }
+.party-role {
+  font-size: 10px; font-weight: 600; letter-spacing: .5px; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 3px;
+}
+.party-name { font-weight: 600; color: var(--ink); }
+.party-detail { color: var(--muted); font-size: 11px; }
+
+/* Fill-in fields */
+.fill {
+  display: inline-block;
+  border-bottom: 1px solid var(--ink);
+  min-width: 180px; padding: 0 4px;
+  font-style: italic; color: var(--muted);
+}
+.fill-sm { min-width: 80px; }
+.fill-lg { min-width: 260px; }
+
+/* Clauses */
+.clause-group { margin-bottom: 32px; }
+.clause-heading {
+  font-family: 'Inter', sans-serif;
+  font-size: 10px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase;
+  color: var(--indigo); padding-bottom: 6px;
+  border-bottom: 1px solid var(--rule-2); margin-bottom: 14px;
+}
+.clause { margin-bottom: 12px; display: grid; grid-template-columns: 40px 1fr; gap: 0; }
+.clause-num {
+  font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600;
+  color: var(--muted); padding-top: 2px; flex-shrink: 0;
+}
+.clause-text { font-size: 14.5px; line-height: 1.78; color: var(--ink-2); }
+.clause-text strong { color: var(--ink); font-weight: 600; }
+
+/* Term box */
+.term-box {
+  background: var(--cream); border: 1px solid var(--rule);
+  border-radius: 4px; padding: 16px 20px; margin: 12px 0 18px;
+  font-family: 'Inter', sans-serif; font-size: 12px;
+}
+.term-row { display: flex; justify-content: space-between; align-items: baseline; padding: 4px 0; }
+.term-row + .term-row { border-top: 1px solid var(--rule-2); }
+.term-label { color: var(--muted); font-weight: 500; }
+.term-value { font-weight: 600; color: var(--ink); }
+
+/* Signature block */
+.sig-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 48px; }
+.sig-block { }
+.sig-role {
+  font-family: 'Inter', sans-serif; font-size: 10px; font-weight: 700;
+  letter-spacing: .6px; text-transform: uppercase; color: var(--muted);
+  margin-bottom: 14px;
+}
+.sig-line { border-bottom: 1px solid var(--ink); margin-bottom: 6px; height: 32px; }
+.sig-label {
+  font-family: 'Inter', sans-serif; font-size: 11px; color: var(--muted);
+}
+.sig-fields { display: flex; flex-direction: column; gap: 14px; margin-top: 10px; }
+.sig-field { }
+.sig-field-line { border-bottom: 1px solid var(--rule); margin-bottom: 4px; height: 22px; }
+.sig-field-label { font-family: 'Inter', sans-serif; font-size: 10px; color: var(--muted); }
+
+/* Annex */
+.annex-box {
+  margin-top: 40px; padding-top: 24px;
+  border-top: 1px solid var(--rule);
+}
+.annex-title {
+  font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 700;
+  letter-spacing: .5px; text-transform: uppercase; color: var(--muted);
+  margin-bottom: 12px;
+}
+.annex-note { font-size: 13px; color: var(--muted); font-style: italic; line-height: 1.7; }
+
+/* Page break */
+.page-break { page-break-after: always; }
+
+/* Footer */
+.doc-footer {
+  margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--rule-2);
+  display: flex; justify-content: space-between; align-items: center;
+  font-family: 'Inter', sans-serif; font-size: 10px; color: var(--muted);
+}
+
+/* Print */
+@media print {
+  body { background: #fff; }
+  .print-bar { display: none; }
+  .page {
+    max-width: 100%; margin: 0; padding: 48px 56px;
+    border: none; box-shadow: none;
+  }
+}
+</style>
+</head>
+<body>
+
+<!-- Helper bar — hidden on print -->
+<div class="print-bar">
+  <div>
+    <a href="invest.html">← Back to investment page</a>
+  </div>
+  <div style="display:flex;gap:12px;align-items:center;">
+    <span style="opacity:.6;">Sencilo — Convertible Loan Agreement</span>
+    <button class="print-btn" onclick="window.print()">Print / Save PDF</button>
+  </div>
+</div>
+
+<div class="page">
+
+  <!-- Header -->
+  <div class="doc-header">
+    <div class="doc-logo">
+      <div class="doc-logo-mark">S</div>
+      <span class="doc-logo-text">Sencilo</span>
+    </div>
+    <div class="doc-meta">
+      Convertible Loan Agreement<br>
+      Private &amp; Confidential<br>
+      Version 1.0 · May 2026
+    </div>
+  </div>
+
+  <!-- Title -->
+  <div class="doc-title-block">
+    <div class="doc-subtitle">Darlehen mit Wandlungsrecht · Swiss Code of Obligations</div>
+    <div class="doc-title">Convertible Loan Agreement</div>
+    <div style="font-family:'Inter',sans-serif;font-size:12px;color:var(--muted);margin-bottom:24px;">
+      This agreement is entered into on <span class="fill fill-sm">&nbsp;date&nbsp;</span>
+    </div>
+
+    <div class="doc-parties-strip">
+      <div class="party">
+        <div class="party-role">Borrower ("Company")</div>
+        <div class="party-name">Sencilo Sàrl</div>
+        <div class="party-detail">Registered in Canton of Vaud, Switzerland</div>
+        <div class="party-detail">Represented by: Christophe Pian, Founder</div>
+      </div>
+      <div class="party">
+        <div class="party-role">Lender ("Investor")</div>
+        <div class="party-name"><span class="fill">&nbsp;Full legal name&nbsp;</span></div>
+        <div class="party-detail"><span class="fill">&nbsp;Address&nbsp;</span></div>
+        <div class="party-detail"><span class="fill fill-sm">&nbsp;Nationality&nbsp;</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Background -->
+  <div class="clause-group">
+    <div class="clause-heading">Preamble</div>
+    <div class="clause-text" style="font-style:italic;color:var(--muted);font-size:14px;line-height:1.8;margin-bottom:8px;">
+      The Company is developing a property management platform targeting Swiss landlords and property managers. The Company wishes to raise a small amount from its close network to fund early operations and product development prior to a formal seed financing round. The Investor wishes to provide a loan on the terms set out below, with the option to convert into equity at a later date.
+    </div>
+  </div>
+
+  <!-- 1. Loan Amount -->
+  <div class="clause-group">
+    <div class="clause-heading">1 — Loan Amount</div>
+    <div class="clause">
+      <div class="clause-num">1.1</div>
+      <div class="clause-text">
+        The Investor agrees to lend to the Company the principal amount of
+        <strong>CHF <span class="fill fill-sm">&nbsp;amount&nbsp;</span></strong>
+        (the <strong>"Principal"</strong>), subject to a minimum of CHF 100 and the
+        aggregate pool cap set out in clause 6.
+      </div>
+    </div>
+    <div class="clause">
+      <div class="clause-num">1.2</div>
+      <div class="clause-text">
+        The Principal shall be transferred by the Investor to the Company's designated bank
+        account within <strong>10 business days</strong> of the date of this Agreement.
+        The Company will provide payment details separately by email.
+      </div>
+    </div>
+    <div class="clause">
+      <div class="clause-num">1.3</div>
+      <div class="clause-text">
+        The loan is made in Swiss Francs (CHF). No foreign currency risk applies.
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Interest -->
+  <div class="clause-group">
+    <div class="clause-heading">2 — Interest</div>
+    <div class="clause">
+      <div class="clause-num">2.1</div>
+      <div class="clause-text">
+        The Principal shall bear interest at the rate of <strong>5% per annum</strong>,
+        calculated as simple interest (not compounded) from the date the
+        Principal is received by the Company.
+      </div>
+    </div>
+    <div class="clause">
+      <div class="clause-num">2.2</div>
+      <div class="clause-text">
+        Interest accrues daily on the outstanding Principal. No interest payments are
+        made periodically; accrued interest is paid (or converted) only at Maturity
+        in accordance with clause 4.
+      </div>
+    </div>
+    <div class="clause">
+      <div class="clause-num">2.3</div>
+      <div class="clause-text">
+        For the avoidance of doubt, if the Investor elects to convert under clause 4.2,
+        accrued interest is <strong>forgiven</strong> and does not form part of the
+        conversion calculation — the conversion is based solely on the Principal.
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Maturity -->
+  <div class="clause-group">
+    <div class="clause-heading">3 — Maturity</div>
+    <div class="clause">
+      <div class="clause-num">3.1</div>
+      <div class="clause-text">
+        This loan matures automatically upon the closing of the Company's first
+        <strong>Qualified Financing</strong>, defined as a priced equity round with aggregate
+        proceeds of at least <strong>CHF 500,000</strong> from one or more institutional or
+        professional investors (the <strong>"Maturity Event"</strong>).
+      </div>
+    </div>
+    <div class="clause">
+      <div class="clause-num">3.2</div>
+      <div class="clause-text">
+        If no Maturity Event has occurred within <strong>36 months</strong> of the date of
+        this Agreement (the <strong>"Long-Stop Date"</strong>), either party may declare the
+        loan due and payable by providing 30 days' written notice, in which case
+        clause 4.3 applies.
+      </div>
+    </div>
+    <div class="clause">
+      <div class="clause-num">3.3</div>
+      <div class="clause-text">
+        The Company shall notify the Investor in writing within 5 business days of
+        the closing of a Qualified Financing.
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. Repayment & Conversion -->
+  <div class="clause-group">
+    <div class="clause-heading">4 — Conversion and Repayment at Maturity</div>
+    <div class="clause">
+      <div class="clause-num">4.1</div>
+      <div class="clause-text">
+        Within <strong>30 days</strong> of receiving written notice of the Maturity Event
+        under clause 3.3, the Investor shall notify the Company in writing of their
+        election under clause 4.2 or 4.3. If no election is received within this period,
+        the Investor shall be deemed to have elected repayment under clause 4.3.
+      </div>
+    </div>
+    <div class="clause">
+      <div class="clause-num">4.2</div>
+      <div class="clause-text">
+        <strong>Option A — Conversion into equity.</strong> The Investor may elect to
+        convert the Principal into shares of the Company at a price per share equal to
+        the price paid by investors in the Qualified Financing multiplied by
+        <strong>(1 − 30%) = 0.70</strong> (the <strong>"Conversion Price"</strong>).
+        The number of shares issued shall be:
+        <div style="text-align:center;margin:10px 0;font-family:'Inter',sans-serif;font-size:13px;background:var(--cream);padding:8px 16px;border-radius:4px;border:1px solid var(--rule);">
+          Shares = Principal ÷ Conversion Price
+        </div>
+        Shares issued on conversion shall be of the same class and rank as the shares
+        issued to investors in the Qualified Financing, subject to any rights attaching
+        to that class. The Company shall take all corporate steps necessary to issue
+        such shares promptly following the election.
+      </div>
+    </div>
+    <div class="clause">
+      <div class="clause-num">4.3</div>
+      <div class="clause-text">
+        <strong>Option B — Cash repayment.</strong> The Investor may elect to receive
+        repayment of the Principal plus all accrued and unpaid interest calculated
+        pursuant to clause 2. The Company shall make such payment within
+        <strong>30 business days</strong> of receiving the election notice (or of the
+        deemed election under clause 4.1).
+      </div>
+    </div>
+
+    <div class="term-box">
+      <div style="font-family:'Inter',sans-serif;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">Illustrative example (for information only)</div>
+      <div class="term-row">
+        <span class="term-label">Principal invested</span>
+        <span class="term-value">CHF 500</span>
+      </div>
+      <div class="term-row">
+        <span class="term-label">Seed round pre-money valuation (illustrative)</span>
+        <span class="term-value">CHF 2,000,000</span>
+      </div>
+      <div class="term-row">
+        <span class="term-label">Seed price per share (illustrative)</span>
+        <span class="term-value">CHF 2.00</span>
+      </div>
+      <div class="term-row">
+        <span class="term-label">Conversion Price (30% discount)</span>
+        <span class="term-value">CHF 1.40 per share</span>
+      </div>
+      <div class="term-row">
+        <span class="term-label">Option A — Shares received</span>
+        <span class="term-value">357 shares</span>
+      </div>
+      <div class="term-row">
+        <span class="term-label">Option B — Cash back after 18 months</span>
+        <span class="term-value">CHF 537.50</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. Use of Proceeds -->
+  <div class="clause-group">
+    <div class="clause-heading">5 — Use of Proceeds</div>
+    <div class="clause">
+      <div class="clause-num">5.1</div>
+      <div class="clause-text">
+        The Company shall use the proceeds from this loan for general corporate
+        purposes, including but not limited to product development, sales and
+        marketing activities, and working capital. The Company shall not use the
+        proceeds to repay existing shareholder loans or make distributions.
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. Aggregate Cap -->
+  <div class="clause-group">
+    <div class="clause-heading">6 — Aggregate Pool Cap</div>
+    <div class="clause">
+      <div class="clause-num">6.1</div>
+      <div class="clause-text">
+        The aggregate principal amount raised by the Company under this instrument
+        (across all investors) shall not exceed <strong>CHF 75,000</strong>
+        (the <strong>"Pool Cap"</strong>). This cap is set so that all investors
+        who convert under clause 4.2 collectively hold no more than approximately
+        <strong>5%</strong> of the Company's fully-diluted share capital at conversion,
+        assuming a Qualified Financing at a CHF 2,000,000 pre-money valuation.
+      </div>
+    </div>
+    <div class="clause">
+      <div class="clause-num">6.2</div>
+      <div class="clause-text">
+        If accepting this investment would cause the aggregate to exceed the Pool Cap,
+        the Company may, at its option, (a) decline the investment or
+        (b) accept only the portion that fits within the remaining capacity, with the
+        Investor's written consent.
+      </div>
+    </div>
+  </div>
+
+  <!-- 7. Representations -->
+  <div class="clause-group">
+    <div class="clause-heading">7 — Representations and Warranties</div>
+    <div class="clause">
+      <div class="clause-num">7.1</div>
+      <div class="clause-text">
+        <em>By the Company.</em> The Company represents that: (a) it is duly formed
+        and validly existing under Swiss law; (b) it has the corporate authority to enter
+        into this Agreement; (c) the execution and performance of this Agreement do not
+        violate any other agreement to which the Company is a party; and (d) no
+        insolvency proceedings have been commenced against it.
+      </div>
+    </div>
+    <div class="clause">
+      <div class="clause-num">7.2</div>
+      <div class="clause-text">
+        <em>By the Investor.</em> The Investor represents that: (a) they have the legal
+        capacity and authority to enter into this Agreement; (b) they are investing on
+        their own behalf; (c) they have read and understood the risk warning in clause 8;
+        and (d) the amount invested represents funds they can afford to lose.
+      </div>
+    </div>
+  </div>
+
+  <!-- 8. Risk Warning -->
+  <div class="clause-group">
+    <div class="clause-heading">8 — Risk Acknowledgement</div>
+    <div class="clause">
+      <div class="clause-num">8.1</div>
+      <div class="clause-text">
+        The Investor acknowledges that: (a) the Company is an early-stage venture and
+        there is a material risk of total loss of the Principal; (b) repayment under
+        clause 4.3 depends on the Company having sufficient cash at maturity, which is
+        not guaranteed; (c) conversion under clause 4.2 results in shares in a private,
+        illiquid company with no guaranteed future value or exit; and (d) no prospectus
+        has been prepared and no regulatory approval has been obtained in connection with
+        this offer.
+      </div>
+    </div>
+    <div class="clause">
+      <div class="clause-num">8.2</div>
+      <div class="clause-text">
+        This Agreement is offered privately to individuals personally known to the
+        founders and does not constitute a public offer of securities under the Swiss
+        Financial Services Act (FinSA) or any other applicable law.
+      </div>
+    </div>
+  </div>
+
+  <!-- 9. Confidentiality -->
+  <div class="clause-group">
+    <div class="clause-heading">9 — Confidentiality</div>
+    <div class="clause">
+      <div class="clause-num">9.1</div>
+      <div class="clause-text">
+        Each party agrees to keep the existence and terms of this Agreement confidential
+        and not to disclose them to any third party without the prior written consent of
+        the other party, except: (a) to professional advisers bound by confidentiality;
+        (b) as required by applicable law or regulatory authority; or (c) in connection
+        with the enforcement of this Agreement.
+      </div>
+    </div>
+  </div>
+
+  <!-- 10. Transfer -->
+  <div class="clause-group">
+    <div class="clause-heading">10 — Transfer and Assignment</div>
+    <div class="clause">
+      <div class="clause-num">10.1</div>
+      <div class="clause-text">
+        The Investor may not assign or transfer their rights or obligations under this
+        Agreement without the prior written consent of the Company. The Company may
+        assign this Agreement in connection with a merger, acquisition, or corporate
+        restructuring, provided that the assignee assumes all obligations hereunder.
+      </div>
+    </div>
+  </div>
+
+  <!-- 11. Miscellaneous -->
+  <div class="clause-group">
+    <div class="clause-heading">11 — Miscellaneous</div>
+    <div class="clause">
+      <div class="clause-num">11.1</div>
+      <div class="clause-text">
+        <strong>Entire agreement.</strong> This Agreement constitutes the entire
+        agreement between the parties with respect to its subject matter and supersedes
+        all prior discussions and understandings.
+      </div>
+    </div>
+    <div class="clause">
+      <div class="clause-num">11.2</div>
+      <div class="clause-text">
+        <strong>Amendments.</strong> Any amendment to this Agreement must be made in
+        writing and signed by both parties.
+      </div>
+    </div>
+    <div class="clause">
+      <div class="clause-num">11.3</div>
+      <div class="clause-text">
+        <strong>Severability.</strong> If any provision of this Agreement is held to be
+        invalid or unenforceable, it shall be modified to the minimum extent necessary to
+        make it valid. The remaining provisions shall continue in full force and effect.
+      </div>
+    </div>
+    <div class="clause">
+      <div class="clause-num">11.4</div>
+      <div class="clause-text">
+        <strong>Waiver.</strong> No failure or delay in exercising any right under this
+        Agreement shall constitute a waiver of that right.
+      </div>
+    </div>
+    <div class="clause">
+      <div class="clause-num">11.5</div>
+      <div class="clause-text">
+        <strong>Notices.</strong> Notices under this Agreement shall be sent by email to
+        the addresses stated at signing, with written confirmation requested.
+      </div>
+    </div>
+  </div>
+
+  <!-- 12. Governing Law -->
+  <div class="clause-group">
+    <div class="clause-heading">12 — Governing Law and Jurisdiction</div>
+    <div class="clause">
+      <div class="clause-num">12.1</div>
+      <div class="clause-text">
+        This Agreement is governed by <strong>Swiss law</strong>, in particular
+        the Swiss Code of Obligations (OR). The parties submit to the exclusive
+        jurisdiction of the courts of <strong>Canton of Vaud</strong>, Switzerland.
+      </div>
+    </div>
+    <div class="clause">
+      <div class="clause-num">12.2</div>
+      <div class="clause-text">
+        This Agreement may be executed in counterparts, each of which shall constitute
+        an original. Signed PDF copies transmitted by email shall have the same legal
+        effect as originals.
+      </div>
+    </div>
+  </div>
+
+  <!-- Signature block -->
+  <div class="sig-grid">
+    <div class="sig-block">
+      <div class="sig-role">For and on behalf of the Company — Sencilo Sàrl</div>
+      <div class="sig-line"></div>
+      <div class="sig-label">Signature</div>
+      <div class="sig-fields">
+        <div class="sig-field">
+          <div class="sig-field-line"></div>
+          <div class="sig-field-label">Name: Christophe Pian</div>
+        </div>
+        <div class="sig-field">
+          <div class="sig-field-line"></div>
+          <div class="sig-field-label">Capacity: Founder &amp; Managing Director</div>
+        </div>
+        <div class="sig-field">
+          <div class="sig-field-line"></div>
+          <div class="sig-field-label">Date</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sig-block">
+      <div class="sig-role">The Investor</div>
+      <div class="sig-line"></div>
+      <div class="sig-label">Signature</div>
+      <div class="sig-fields">
+        <div class="sig-field">
+          <div class="sig-field-line"></div>
+          <div class="sig-field-label">Full legal name</div>
+        </div>
+        <div class="sig-field">
+          <div class="sig-field-line"></div>
+          <div class="sig-field-label">Principal amount: CHF</div>
+        </div>
+        <div class="sig-field">
+          <div class="sig-field-line"></div>
+          <div class="sig-field-label">Date</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Annex -->
+  <div class="annex-box">
+    <div class="annex-title">Annex A — Payment Details (to be completed by Company)</div>
+    <div class="annex-note">
+      Bank: <span class="fill fill-lg"></span><br>
+      IBAN: <span class="fill fill-lg"></span><br>
+      BIC/SWIFT: <span class="fill"></span><br>
+      Account holder: Sencilo Sàrl<br>
+      Payment reference: <em>CLA – [Investor surname] – [amount]</em>
+    </div>
+  </div>
+
+  <!-- Doc footer -->
+  <div class="doc-footer">
+    <span>Sencilo Sàrl · Canton de Vaud, Switzerland</span>
+    <span>Convertible Loan Agreement · v1.0 · May 2026 · Private &amp; Confidential</span>
+  </div>
+
+</div>
+
+<script>
+// Nothing interactive needed — print button wired inline
+</script>
+</body>
+</html>
