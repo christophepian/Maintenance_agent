@@ -1537,26 +1537,41 @@ export default function ManagerRequestsPage() {
 
                   return (
                     <SwipeableCard actions={swipeActions}>
-                      <div className="table-card">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-mono text-xs text-slate-400">
+                      <div className={cn(
+                        "table-card border-l-4",
+                        r.urgency === "EMERGENCY" ? "border-l-red-500" :
+                        r.urgency === "HIGH"      ? "border-l-orange-400" :
+                                                    "border-l-transparent"
+                      )}>
+                        {/* Row 1 — number (muted) + date (right-aligned) */}
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="font-mono text-[0.7rem] text-slate-400 leading-none">
                             {r.requestNumber ? `#${r.requestNumber}` : "—"}
                           </span>
-                          <StatusBadge request={r} />
-                          {(r.urgency === "EMERGENCY" || r.urgency === "HIGH") && (
-                            <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold", r.urgency === "EMERGENCY"
-                                ? "bg-red-100 text-red-700 border border-red-200"
-                                : "bg-orange-100 text-orange-700 border border-orange-200")}>
-                              {r.urgency === "EMERGENCY" ? "🚨" : "⚠"} {r.urgency === "EMERGENCY" ? "Emergency" : "High"}
-                            </span>
-                          )}
+                          <span className="text-[0.7rem] text-slate-400 leading-none">
+                            {formatDate(r.createdAt)}
+                          </span>
                         </div>
-                        <p className="table-card-head mt-1.5">{r.buildingName || "—"}{r.unitNumber ? ` / ${r.unitNumber}` : ""}</p>
-                        {r.category && (
-                          <p className="mt-0.5">
-                            <span className="inline-block rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">{r.category}</span>
+                        {/* Row 2 — building / unit (primary headline) */}
+                        <p className="text-sm font-semibold text-slate-900 leading-snug truncate">
+                          {r.buildingName || "—"}{r.unitNumber ? ` · ${r.unitNumber}` : ""}
+                        </p>
+                        {/* Row 3 — description (secondary, two lines max) */}
+                        {r.description && (
+                          <p className="text-sm text-slate-600 mt-0.5 line-clamp-2 leading-snug">
+                            {r.description}
                           </p>
                         )}
+                        {/* Footer — status badge + category text + optional tenant flag */}
+                        <div className="flex items-center gap-2 flex-wrap mt-2 pt-2 border-t border-slate-100">
+                          <StatusBadge request={r} />
+                          {r.category && (
+                            <span className="text-xs text-slate-500">{r.category}</span>
+                          )}
+                          {r.payingParty === "TENANT" && (
+                            <span className="text-xs text-orange-600 font-medium ml-auto">Tenant-funded</span>
+                          )}
+                        </div>
                         {/* Assign sub-flow — shown inline after tapping Assign in the swipe panel */}
                         {isAssigning && (
                           <div className="flex items-center gap-1.5 mt-2 flex-wrap" onClick={(e) => e.stopPropagation()}>
