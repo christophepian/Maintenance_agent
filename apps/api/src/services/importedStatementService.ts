@@ -503,7 +503,10 @@ async function runIngestionBackground(
     const { periodStart, periodEnd } = parsePeriodLabel(periodLabel, detectedFiscalYear);
     const rawOcrText = truncate(scanResult.summary + "\n---\n" + JSON.stringify(scanResult.fields), 8000);
 
-    const commonStatementData = {
+    // Shared metadata — status intentionally excluded so we can set it only after
+    // balances are persisted. This prevents a polling race where PENDING_REVIEW is
+    // visible while accountBalances is still empty (false "no balances" banner).
+    const metadataUpdate = {
       buildingId: finalBuildingId,
       buildingMatchConfidence: finalBuildingMatchConf,
       fiscalYear: detectedFiscalYear,
@@ -511,7 +514,6 @@ async function runIngestionBackground(
       periodEnd,
       ocrConfidence: scanResult.confidence,
       rawOcrText,
-      status: ImportedStatementStatus.PENDING_REVIEW,
     };
 
     const orgAccounts = await accountRepo.findAccountsByOrg(prisma, orgId);
@@ -522,7 +524,9 @@ async function runIngestionBackground(
     const bsBalances = allBalances.filter((b) => isBalanceSheetAccount(b.rawAccountCode));
     const isBalances = allBalances.filter((b) => !isBalanceSheetAccount(b.rawAccountCode));
 
-    // 5. Populate the placeholder statement as BALANCE_SHEET (or INCOME_STATEMENT if no BS rows)
+    // 5. Populate the placeholder statement as BALANCE_SHEET (or INCOME_STATEMENT if no BS rows).
+    //    Persist balances BEFORE flipping status to PENDING_REVIEW so the UI never sees
+    //    a PENDING_REVIEW statement with an empty accountBalances array.
     const firstSectionType = bsBalances.length > 0 || isBalances.length === 0
       ? StatementSectionType.BALANCE_SHEET
       : StatementSectionType.INCOME_STATEMENT;
@@ -530,26 +534,39 @@ async function runIngestionBackground(
 
     await prisma.importedStatement.update({
       where: { id: placeholderStatementId },
-      data: { ...commonStatementData, sectionType: firstSectionType },
+      data: { ...metadataUpdate, sectionType: firstSectionType },
     });
 
     if (firstSectionBalances.length > 0) {
       await persistBalances(prisma, orgId, placeholderStatementId, firstSectionBalances, orgAccounts);
     }
 
-    // 6. Create a separate INCOME_STATEMENT record if we have both section types
+    // Status flip happens last — after balances are committed
+    await prisma.importedStatement.update({
+      where: { id: placeholderStatementId },
+      data: { status: ImportedStatementStatus.PENDING_REVIEW },
+    });
+
+    // 6. Create a separate INCOME_STATEMENT record if we have both section types.
+    //    Same ordering: persist balances, then set PENDING_REVIEW.
     if (bsBalances.length > 0 && isBalances.length > 0) {
+      const uploader = (await prisma.uploadBatch.findFirst({ where: { id: batchId }, select: { uploadedBy: true } }))?.uploadedBy ?? "";
       const isStatement = await prisma.importedStatement.create({
         data: {
           orgId,
           uploadBatchId: batchId,
           sectionType: StatementSectionType.INCOME_STATEMENT,
           sourceFileUrl: fileKey,
-          uploadedBy: (await prisma.uploadBatch.findFirst({ where: { id: batchId }, select: { uploadedBy: true } }))?.uploadedBy ?? "",
-          ...commonStatementData,
+          uploadedBy: uploader,
+          status: ImportedStatementStatus.PROCESSING,
+          ...metadataUpdate,
         },
       });
       await persistBalances(prisma, orgId, isStatement.id, isBalances, orgAccounts);
+      await prisma.importedStatement.update({
+        where: { id: isStatement.id },
+        data: { status: ImportedStatementStatus.PENDING_REVIEW },
+      });
       console.log(`[IMPORT] [bg] Created INCOME_STATEMENT section: id=${isStatement.id} rows=${isBalances.length}`);
     }
 
@@ -567,7 +584,8 @@ async function runIngestionBackground(
             sectionType: StatementSectionType.INVOICES,
             sourceFileUrl: fileKey,
             uploadedBy: uploader,
-            ...commonStatementData,
+            status: ImportedStatementStatus.PROCESSING,
+            ...metadataUpdate,
           },
         });
         invoiceStatementId = invStatement.id;
@@ -1174,8 +1192,10 @@ export async function getLedgerPreview(
       accountId,
       accountName,
       willAutoCreate,
-      debitCents:  ab.balanceType === "DEBIT"  ? ab.balanceCents : 0,
-      creditCents: ab.balanceType === "CREDIT" ? ab.balanceCents : 0,
+      // Use Math.abs: balanceCents may be negative for contra-accounts; balanceType
+      // already encodes the direction, so the posted amount must always be positive.
+      debitCents:  ab.balanceType === "DEBIT"  ? Math.abs(ab.balanceCents) : 0,
+      creditCents: ab.balanceType === "CREDIT" ? Math.abs(ab.balanceCents) : 0,
       description: `[Import FY${statement.fiscalYear}] ${ab.rawAccountCode} ${ab.rawAccountName}`,
     });
   }
