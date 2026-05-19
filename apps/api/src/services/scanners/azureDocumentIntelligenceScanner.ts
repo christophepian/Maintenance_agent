@@ -713,9 +713,8 @@ function parseNumberFromKv(
 const FINANCIAL_STATEMENT_BALANCE_TOOL = {
   name: "extractAccountBalances",
   description:
-    "Extract all account rows from a Swiss property management financial statement — " +
-    "including balance sheet positions (Bilan / Bilanz: asset codes 1xxx, liability/equity codes 2xxx) " +
-    "AND income statement rows (Compte de résultat / Betriebsrechnung: revenue codes 3xxx, expense codes 4xxx–8xxx). " +
+    "Extract ALL account balance rows from a Swiss property management financial statement — " +
+    "include every row regardless of account code range (balance sheet positions, income/expense lines, statistical accounts, sub-totals, everything). " +
     "Return every account line found: its code, name, balance amount, and whether it is a debit or credit balance. " +
     "IMPORTANT — account codes: Swiss chart of accounts uses 3- or 4-digit codes (e.g. '1020', '4200', '630'). " +
     "Extract the code from the leftmost column ONLY — do NOT include digits from the amount or name columns. " +
