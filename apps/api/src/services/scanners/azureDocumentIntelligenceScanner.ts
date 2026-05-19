@@ -1429,9 +1429,10 @@ async function extractFinancialStatementWithClaude(
     let mergedFields: Record<string, string | number | boolean | null> = {};
     const allBalances: ExtractedAccountBalance[] = [];
     const allInvoiceLines: ExtractedInvoiceLine[] = [];
-    // Deduplicate account balances across chunks by (normalizedName, amount, documentSection).
-    // Using name+amount+section rather than rawAccountCode because the OCR produces
-    // inconsistent codes for the same account (e.g. "1020", "10200", "100" for Bank).
+    // Deduplicate account balances across chunks by (normalizedName, absAmount).
+    // documentSection is NOT in the key — it can vary per chunk since a page may
+    // not repeat the section header from the previous page.
+    // rawAccountCode is also excluded — OCR produces inconsistent codes for the same account.
     const seenBalances = new Set<string>();
     // Track seen invoices to deduplicate across overlapping chunks.
     // Key: vendor|invoiceNumber|amount — all three must match to be considered duplicate.
@@ -1456,12 +1457,13 @@ async function extractFinancialStatementWithClaude(
         }
       }
 
-      // Append balances, deduplicating by name+amount+section across chunks
+      // Append balances, deduplicating by name+absAmount across chunks.
+      // Do NOT include documentSection in the key — section labels vary across page chunks
+      // (a row near the top of page 2 may not see the section header from page 1).
       for (const b of chunkResult.accountBalances) {
         const key = [
           b.rawAccountName.trim().toLowerCase().replace(/\s+/g, " "),
-          String(b.balanceChf),
-          b.documentSection,
+          String(Math.abs(b.balanceChf)),
         ].join("|");
         if (!seenBalances.has(key)) {
           seenBalances.add(key);
@@ -1507,8 +1509,7 @@ async function extractFinancialStatementWithClaude(
     for (const b of allBalances) {
       const key = [
         b.rawAccountName.trim().toLowerCase().replace(/\s+/g, " "),
-        String(b.balanceChf),
-        b.documentSection,
+        String(Math.abs(b.balanceChf)),
       ].join("|");
       if (!finalBalanceKeys.has(key)) {
         finalBalanceKeys.add(key);

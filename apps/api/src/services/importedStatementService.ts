@@ -519,8 +519,8 @@ async function runIngestionBackground(
     // 4. Classify accounts into balance-sheet vs income-statement by account code prefix.
     //    Swiss chart of accounts: 1xxx–2xxx = balance sheet, 3xxx–8xxx = income statement.
     const allBalances = scanResult.accountBalances ?? [];
-    const bsBalances = allBalances.filter((b) => isBalanceSheetAccount(b.rawAccountCode, b.documentSection));
-    const isBalances = allBalances.filter((b) => !isBalanceSheetAccount(b.rawAccountCode, b.documentSection));
+    const bsBalances = allBalances.filter((b) => isBalanceSheetAccount(b.rawAccountCode));
+    const isBalances = allBalances.filter((b) => !isBalanceSheetAccount(b.rawAccountCode));
 
     // 5. Populate the placeholder statement as BALANCE_SHEET (or INCOME_STATEMENT if no BS rows)
     const firstSectionType = bsBalances.length > 0 || isBalances.length === 0
@@ -631,18 +631,17 @@ async function runIngestionBackground(
 }
 
 /**
- * Returns true for balance-sheet account codes/sections.
- * Prefers documentSection when available (ACTIF/PASSIF → BS; REVENUE/EXPENSE → IS).
- * Falls back to Swiss Kontenrahmen KMU account code prefix when section is unknown:
+ * Returns true for balance-sheet account codes.
+ * Uses account code prefix only — documentSection is NOT used for BS/IS routing
+ * because Claude can misclassify equity accounts (e.g. 2900 "Résultat" as REVENUE).
+ * documentSection is only used for the balance check (ACTIF vs PASSIF totals).
+ * Swiss Kontenrahmen KMU:
  *   1xxx = Assets (Aktiven)        → balance sheet
  *   2xxx = Liabilities/Equity      → balance sheet
  *   3xxx = Revenue (Nettoerlöse)   → income statement
  *   4xxx–8xxx = Expenses           → income statement
  */
-function isBalanceSheetAccount(code: string, documentSection?: string): boolean {
-  if (documentSection === "ACTIF" || documentSection === "PASSIF") return true;
-  if (documentSection === "REVENUE" || documentSection === "EXPENSE") return false;
-  // Fall back to code prefix
+function isBalanceSheetAccount(code: string): boolean {
   const trimmed = code.trim().replace(/\D/g, "");
   if (!trimmed) return true; // default to balance sheet when unknown
   const first = parseInt(trimmed[0], 10);
