@@ -448,17 +448,29 @@ export async function ingestStatement(
     },
   });
 
-  // 5. Kick off background processing (non-blocking — response already sent)
-  setImmediate(() => {
-    runIngestionBackground(
-      prisma, batch.id, placeholder.id, orgId, buffer, fileName, mimeType,
-      fiscalYear, buildingId, fileKey, hintDocType,
-    ).catch((err) => {
-      console.error(`[IMPORT] Unhandled error in background ingestion for batch ${batch.id}:`, err);
-    });
-  });
+  // 5. Run ingestion synchronously — do NOT use setImmediate.
+  //    On Vercel serverless, the function is frozen as soon as the HTTP response
+  //    is sent, so setImmediate callbacks may never fire. Awaiting here ensures
+  //    the extraction always completes before the client gets a response.
+  //    Trade-off: the upload takes 20–40 s instead of <1 s, but the returned
+  //    statement is PENDING_REVIEW (not stuck in PROCESSING).
+  await runIngestionBackground(
+    prisma, batch.id, placeholder.id, orgId, buffer, fileName, mimeType,
+    fiscalYear, buildingId, fileKey, hintDocType,
+  );
 
-  return mapBatchDTO(batch, [placeholder]);
+  // Re-fetch the batch so the response includes all sections created by the run
+  // (placeholder now PENDING_REVIEW, and any IS / INVOICES siblings).
+  const finalBatch = await prisma.uploadBatch.findUniqueOrThrow({
+    where: { id: batch.id },
+    include: {
+      statements: {
+        include: STATEMENT_INCLUDE,
+        orderBy: { sectionType: "asc" },
+      },
+    },
+  });
+  return mapBatchDTO(finalBatch, finalBatch.statements);
 }
 
 /**
@@ -1300,16 +1312,21 @@ export async function reExtractStatement(
   const mimeType = fileName.endsWith(".pdf") ? "application/pdf" : "application/octet-stream";
   const batchId = statement.uploadBatchId ?? statementId; // fallback: treat statement itself as batch key
 
-  setImmediate(() => {
-    runIngestionBackground(
-      prisma, batchId, statementId, orgId, buffer, fileName, mimeType,
-      statement.fiscalYear, statement.buildingId, statement.sourceFileUrl, hintDocType,
-    ).catch((err) => {
-      console.error(`[IMPORT] Unhandled error in re-extraction for ${statementId}:`, err);
-    });
-  });
+  // Run synchronously for the same reason as ingestStatement (serverless freeze).
+  await runIngestionBackground(
+    prisma, batchId, statementId, orgId, buffer, fileName, mimeType,
+    statement.fiscalYear, statement.buildingId, statement.sourceFileUrl, hintDocType,
+  );
 
-  return mapDTO(reset);
+  // Re-fetch so the returned statement reflects final PENDING_REVIEW state.
+  const finalStatement = await prisma.importedStatement.findUniqueOrThrow({
+    where: { id: statementId },
+    include: {
+      building: { select: { name: true } },
+      accountBalances: { include: { account: { select: { name: true, code: true } } } },
+    },
+  });
+  return mapDTO(finalStatement);
 }
 
 /**

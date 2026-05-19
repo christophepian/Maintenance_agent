@@ -486,9 +486,8 @@ export default function ImportedStatementsPanel() {
         const json = await res.json().catch(() => ({}));
         throw new Error(json?.error?.message || "Failed to delete batch");
       }
-      // Remove the batch from state (or refetch if approved sections remain)
-      setBatches((prev) => prev.filter((b) => b.id !== batchId || hasApproved));
-      if (hasApproved) fetchBatches();
+      // Always re-fetch so the list reflects server state (no stale placeholders).
+      fetchBatches();
     } catch (e) {
       setError(String(e?.message || e));
     } finally {
