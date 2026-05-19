@@ -23,6 +23,7 @@ import {
   listLedgerEntries,
   getAccountBalance,
   getTrialBalance,
+  getBalanceSheet,
   postInvoiceIssued,
   postInvoicePaid,
   getDraftInvoiceIds,
@@ -84,6 +85,30 @@ export function registerLedgerRoutes(router: Router) {
     } catch (e: any) {
       console.error("[GET /ledger/trial-balance]", e);
       sendError(res, 500, "INTERNAL_ERROR", "Failed to load trial balance");
+    }
+  });
+
+  /* ── GET /ledger/balance-sheet ───────────────────────────── */
+  router.get("/ledger/balance-sheet", async ({ req, res, orgId, prisma }) => {
+    if (!requireAuth(req, res)) return;
+    if (!requireOrgViewer(req, res)) return;
+
+    const { query } = parseQuery(req.url);
+    const buildingId = first(query, "buildingId");
+    const asOfStr    = first(query, "asOf");
+
+    if (!buildingId) {
+      return sendError(res, 400, "MISSING_PARAM", "buildingId is required");
+    }
+
+    const asOf = asOfStr ? new Date(asOfStr + "T23:59:59.999Z") : new Date();
+
+    try {
+      const data = await getBalanceSheet(prisma, orgId, buildingId, asOf);
+      sendJson(res, 200, { data });
+    } catch (e: any) {
+      console.error("[GET /ledger/balance-sheet]", e);
+      sendError(res, 500, "INTERNAL_ERROR", "Failed to load balance sheet");
     }
   });
 

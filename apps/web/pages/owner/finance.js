@@ -29,6 +29,7 @@ const FINANCE_TABS = [
   { key: "overview" },
   { key: "invoices" },
   { key: "planning" },
+  { key: "balance-sheet" },
 ];
 
 const STATUS_TABS = [
@@ -641,6 +642,176 @@ function InvoicesTab() {
 }
 
 /* ═══════════════════════════════════════════════════════════════
+   Balance Sheet Tab
+   ═══════════════════════════════════════════════════════════════ */
+
+function BalanceSheetTab() {
+  const [buildings, setBuildings] = useState([]);
+  const [bsBuildingId, setBsBuildingId] = useState("");
+  const today = new Date().toISOString().slice(0, 10);
+  const [bsAsOf, setBsAsOf] = useState(today);
+  const [bsData, setBsData] = useState(null);
+  const [bsLoading, setBsLoading] = useState(false);
+  const [bsError, setBsError] = useState(null);
+
+  // Load buildings on mount
+  useEffect(() => {
+    fetch("/api/buildings?limit=100", { headers: ownerAuthHeaders() })
+      .then((r) => r.json())
+      .then((j) => {
+        const list = j.data ?? j ?? [];
+        setBuildings(list);
+        if (list.length === 1) setBsBuildingId(list[0].id);
+      })
+      .catch(() => {});
+  }, []);
+
+  const fetchBalanceSheet = useCallback(async () => {
+    if (!bsBuildingId) return;
+    setBsLoading(true);
+    setBsError(null);
+    const params = new URLSearchParams({ buildingId: bsBuildingId, asOf: bsAsOf });
+    try {
+      const res = await fetch(`/api/ledger/balance-sheet?${params}`, { headers: ownerAuthHeaders() });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error?.message || "Failed to load balance sheet");
+      setBsData(json.data);
+    } catch (e) {
+      setBsError(String(e?.message || e));
+    } finally {
+      setBsLoading(false);
+    }
+  }, [bsBuildingId, bsAsOf]);
+
+  // Auto-load when building or date changes
+  useEffect(() => {
+    if (bsBuildingId) fetchBalanceSheet();
+  }, [fetchBalanceSheet, bsBuildingId]);
+
+  const renderLine = (line) => {
+    const isDeduction = line.displayCents < 0;
+    return (
+      <tr key={line.accountId} className={cn("hover:bg-slate-50", isDeduction && "text-slate-400")}>
+        <td className="font-mono text-xs text-slate-400">{line.accountCode || "—"}</td>
+        <td className={isDeduction ? "italic text-slate-500" : "text-slate-800"}>{line.accountName}</td>
+        <td className={cn("text-right font-mono", isDeduction ? "text-slate-400" : "text-slate-900")}>
+          {isDeduction
+            ? `(${formatChfCents(Math.abs(line.displayCents))})`
+            : formatChfCents(line.displayCents)}
+        </td>
+      </tr>
+    );
+  };
+
+  return (
+    <div className="space-y-4 mt-4">
+      {/* Controls */}
+      <div className="flex flex-wrap items-end gap-3">
+        {buildings.length > 1 && (
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-slate-600">Building</label>
+            <select
+              className="form-select text-sm"
+              value={bsBuildingId}
+              onChange={(e) => setBsBuildingId(e.target.value)}
+            >
+              <option value="">— select —</option>
+              {buildings.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+            </select>
+          </div>
+        )}
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-slate-600">As of</label>
+          <input
+            type="date"
+            className="form-input text-sm"
+            value={bsAsOf}
+            onChange={(e) => setBsAsOf(e.target.value)}
+          />
+        </div>
+        <button
+          className="btn btn-primary btn-sm"
+          onClick={fetchBalanceSheet}
+          disabled={!bsBuildingId || bsLoading}
+        >
+          {bsLoading ? "Loading…" : "Refresh"}
+        </button>
+      </div>
+
+      {!bsBuildingId && (
+        <p className="text-sm text-slate-400 py-8 text-center">Select a building to view its balance sheet.</p>
+      )}
+
+      {bsError && <p className="text-sm text-red-600">{bsError}</p>}
+
+      {bsData && !bsLoading && (() => {
+        const { assets, liabilities, totalAssetsCents, totalLiabilitiesCents, differenceCents, isBalanced } = bsData;
+        if (assets.length === 0 && liabilities.length === 0) return (
+          <p className="text-sm text-slate-400 py-8 text-center">
+            No financial data available for this building as of {bsAsOf}.
+          </p>
+        );
+        return (
+          <>
+            <div className={cn("px-4 py-2 rounded text-sm font-medium border", isBalanced ? "bg-green-50 text-green-700 border-green-200" : "bg-amber-50 text-amber-700 border-amber-200")}>
+              {isBalanced
+                ? `Balance sheet as of ${bsAsOf} — balanced`
+                : `As of ${bsAsOf} — difference: CHF ${formatChfCents(Math.abs(differenceCents))}`}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Actifs */}
+              <div>
+                <div className="bg-slate-100 text-slate-700 text-xs font-semibold uppercase tracking-wide px-3 py-1.5 rounded-t">
+                  Actifs
+                </div>
+                <div className="border border-slate-200 rounded-b overflow-x-auto">
+                  <table className="data-table w-full">
+                    <thead><tr className="bg-slate-50"><th>Code</th><th>Account</th><th className="text-right">CHF</th></tr></thead>
+                    <tbody>{assets.map(renderLine)}</tbody>
+                    <tfoot>
+                      <tr className="border-t-2 border-slate-300 bg-slate-50 font-semibold text-sm">
+                        <td colSpan={2} className="text-slate-700">Total Actifs</td>
+                        <td className="text-right font-mono">{formatChfCents(totalAssetsCents)}</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </div>
+
+              {/* Passifs */}
+              <div>
+                <div className="bg-slate-100 text-slate-700 text-xs font-semibold uppercase tracking-wide px-3 py-1.5 rounded-t">
+                  Passifs
+                </div>
+                <div className="border border-slate-200 rounded-b overflow-x-auto">
+                  <table className="data-table w-full">
+                    <thead><tr className="bg-slate-50"><th>Code</th><th>Account</th><th className="text-right">CHF</th></tr></thead>
+                    <tbody>{liabilities.map(renderLine)}</tbody>
+                    <tfoot>
+                      <tr className="border-t-2 border-slate-300 bg-slate-50 font-semibold text-sm">
+                        <td colSpan={2} className="text-slate-700">Total Passifs</td>
+                        <td className="text-right font-mono">{formatChfCents(totalLiabilitiesCents)}</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            {(assets.some((l) => l.displayCents < 0) || liabilities.some((l) => l.displayCents < 0)) && (
+              <p className="text-xs text-slate-400">
+                Amounts in parentheses are deductions (contra-assets or debit-balance equity accounts).
+              </p>
+            )}
+          </>
+        );
+      })()}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════
    Main Page
    ═══════════════════════════════════════════════════════════════ */
 
@@ -685,6 +856,7 @@ export default function OwnerFinance() {
           {activeTabKey === "invoices" && <InvoicesTab />}
           {/* Planning tab: ownerMode hides Create button and shows Approve on SUBMITTED plans */}
           {activeTabKey === "planning" && <CashflowPlansList ownerMode />}
+          {activeTabKey === "balance-sheet" && <BalanceSheetTab />}
         </PageContent>
       </PageShell>
     </AppShell>

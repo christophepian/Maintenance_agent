@@ -364,6 +364,123 @@ export async function getTrialBalance(
   );
 }
 
+/* ── Query: balance sheet (building-scoped, as-of date) ────────── */
+
+export interface BalanceSheetLine {
+  accountId: string;
+  accountCode: string | null;
+  accountName: string;
+  accountType: string;
+  /** Signed display amount:
+   *  ASSET:     positive = normal asset, negative = contra-asset deduction
+   *  LIABILITY: positive = normal liability/equity, negative = debit-balance deduction
+   */
+  displayCents: number;
+}
+
+export interface BalanceSheetReport {
+  asOf: string;           // ISO date
+  buildingId: string;
+  assets: BalanceSheetLine[];
+  liabilities: BalanceSheetLine[];
+  totalAssetsCents: number;
+  totalLiabilitiesCents: number;
+  differenceCents: number; // assets - liabilities; 0 = balanced
+  isBalanced: boolean;
+}
+
+export async function getBalanceSheet(
+  prisma: PrismaClient,
+  orgId: string,
+  buildingId: string,
+  asOf: Date,
+): Promise<BalanceSheetReport> {
+  // One aggregation per account for this building up to asOf
+  const groups = await prisma.ledgerEntry.groupBy({
+    by: ["accountId"],
+    where: {
+      orgId,
+      buildingId,
+      date: { lte: asOf },
+    },
+    _sum: { debitCents: true, creditCents: true },
+  });
+
+  if (groups.length === 0) {
+    return {
+      asOf: asOf.toISOString(),
+      buildingId,
+      assets: [],
+      liabilities: [],
+      totalAssetsCents: 0,
+      totalLiabilitiesCents: 0,
+      differenceCents: 0,
+      isBalanced: true,
+    };
+  }
+
+  // Fetch account details in a single query
+  const accounts = await prisma.account.findMany({
+    where: { id: { in: groups.map((g) => g.accountId) } },
+  });
+  const accountMap = new Map(accounts.map((a) => [a.id, a]));
+
+  const assets: BalanceSheetLine[] = [];
+  const liabilities: BalanceSheetLine[] = [];
+
+  for (const group of groups) {
+    const account = accountMap.get(group.accountId);
+    if (!account) continue;
+
+    const debitCents  = group._sum.debitCents  ?? 0;
+    const creditCents = group._sum.creditCents ?? 0;
+    const balanceCents = debitCents - creditCents; // positive = debit balance
+
+    if (account.accountType === "ASSET") {
+      // Normal asset: debit balance → positive; contra-asset: credit balance → negative
+      assets.push({
+        accountId:   account.id,
+        accountCode: account.code,
+        accountName: account.name,
+        accountType: account.accountType,
+        displayCents: balanceCents,
+      });
+    } else if (account.accountType === "LIABILITY") {
+      // Normal liability: credit balance (negative balanceCents) → negate → positive display
+      // Debit-balance liability (e.g. owner drawings): balanceCents > 0 → negate → negative display
+      liabilities.push({
+        accountId:   account.id,
+        accountCode: account.code,
+        accountName: account.name,
+        accountType: account.accountType,
+        displayCents: -balanceCents,
+      });
+    }
+    // REVENUE / EXPENSE accounts do not appear on the balance sheet
+  }
+
+  // Sort both sections by account code
+  const byCode = (a: BalanceSheetLine, b: BalanceSheetLine) =>
+    (a.accountCode ?? "").localeCompare(b.accountCode ?? "");
+  assets.sort(byCode);
+  liabilities.sort(byCode);
+
+  const totalAssetsCents      = assets.reduce((s, l) => s + l.displayCents, 0);
+  const totalLiabilitiesCents = liabilities.reduce((s, l) => s + l.displayCents, 0);
+  const differenceCents       = totalAssetsCents - totalLiabilitiesCents;
+
+  return {
+    asOf: asOf.toISOString(),
+    buildingId,
+    assets,
+    liabilities,
+    totalAssetsCents,
+    totalLiabilitiesCents,
+    differenceCents,
+    isBalanced: Math.abs(differenceCents) < 2, // 1-cent rounding tolerance
+  };
+}
+
 /* ── Mapper ─────────────────────────────────────────────────────── */
 
 function mapEntryToDTO(entry: any): LedgerEntryDTO {

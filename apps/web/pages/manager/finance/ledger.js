@@ -17,11 +17,13 @@ import { useTranslation } from "next-i18next";
 /* ── Constants ─────────────────────────────────────────────── */
 
 const SOURCE_TYPE_LABELS = {
-  INVOICE_ISSUED:      "Invoice issued",
-  INVOICE_PAID:        "Invoice paid",
-  RENT_RECEIPT:        "Rent receipt",
-  MANUAL:              "Manual entry",
-  IMPORTED_STATEMENT:  "Imported statement",
+  INVOICE_ISSUED:            "Invoice issued",
+  INVOICE_PAID:              "Invoice paid",
+  RENT_RECEIPT:              "Rent receipt",
+  MANUAL:                    "Manual entry",
+  IMPORTED_STATEMENT:        "Imported statement",
+  BALANCE_SHEET_IMPORT:      "Balance sheet import",
+  INCOME_STATEMENT_IMPORT:   "Income statement import",
 };
 
 const ACCOUNT_TYPE_LABELS = {
@@ -66,7 +68,7 @@ function AccountTypeBadge({ type }) {
 
 export default function LedgerPage() {
   const { t } = useTranslation("manager");
-  // Tab: journal | trial-balance
+  // Tab: journal | trial-balance | balance-sheet
   const [tab, setTab] = useState("journal");
 
   // Reference data for selects
@@ -84,6 +86,14 @@ export default function LedgerPage() {
   const [balances, setBalances] = useState([]);
   const [tbLoading, setTbLoading] = useState(false);
   const [tbError, setTbError] = useState(null);
+
+  // Balance sheet state
+  const [bsData, setBsData] = useState(null);
+  const [bsLoading, setBsLoading] = useState(false);
+  const [bsError, setBsError] = useState(null);
+  const [bsBuildingId, setBsBuildingId] = useState("");
+  const today = new Date().toISOString().slice(0, 10);
+  const [bsAsOf, setBsAsOf] = useState(today);
 
   // Backfill / setup state
   const [backfilling, setBackfilling] = useState(false);
@@ -162,10 +172,29 @@ export default function LedgerPage() {
     }
   }, [from, to]);
 
+  /* ── Fetch balance sheet ─────────────────────────────────── */
+  const fetchBalanceSheet = useCallback(async () => {
+    if (!bsBuildingId) { setBsData(null); return; }
+    setBsLoading(true);
+    setBsError(null);
+    const params = new URLSearchParams({ buildingId: bsBuildingId, asOf: bsAsOf });
+    try {
+      const res = await fetch(`/api/ledger/balance-sheet?${params}`, { headers: authHeaders() });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error?.message || "Failed to load balance sheet");
+      setBsData(json.data);
+    } catch (e) {
+      setBsError(e.message);
+    } finally {
+      setBsLoading(false);
+    }
+  }, [bsBuildingId, bsAsOf]);
+
   useEffect(() => {
     if (tab === "journal") fetchEntries(0);
-    else fetchTrialBalance();
-  }, [tab, fetchEntries, fetchTrialBalance]);
+    else if (tab === "trial-balance") fetchTrialBalance();
+    else if (tab === "balance-sheet") fetchBalanceSheet();
+  }, [tab, fetchEntries, fetchTrialBalance, fetchBalanceSheet]);
 
   function clearFilters() {
     const d = last30Days();
@@ -280,20 +309,26 @@ export default function LedgerPage() {
           })()}
 
           {/* ── Tab bar ─────────────────────────────────────── */}
-          <ScrollableTabs activeIndex={tab === "journal" ? 0 : 1}>
-            {[
+          {(() => {
+            const TABS = [
               { key: "journal",       label: "Journal" },
               { key: "trial-balance", label: "Trial Balance" },
-            ].map((tabItem) => (
-              <button
-                key={tabItem.key}
-                onClick={() => setTab(tabItem.key)}
-                className={tab === tabItem.key ? "tab-btn-active" : "tab-btn"}
-              >
-                {tabItem.label}
-              </button>
-            ))}
-          </ScrollableTabs>
+              { key: "balance-sheet", label: "Balance Sheet" },
+            ];
+            return (
+              <ScrollableTabs activeIndex={TABS.findIndex((t) => t.key === tab)}>
+                {TABS.map((tabItem) => (
+                  <button
+                    key={tabItem.key}
+                    onClick={() => setTab(tabItem.key)}
+                    className={tab === tabItem.key ? "tab-btn-active" : "tab-btn"}
+                  >
+                    {tabItem.label}
+                  </button>
+                ))}
+              </ScrollableTabs>
+            );
+          })()}
 
           {/* ── Filters ─────────────────────────────────────── */}
           <FilterToggle open={filterOpen} onToggle={() => setFilterOpen((v) => !v)} activeCount={activeCount} />
@@ -566,6 +601,160 @@ export default function LedgerPage() {
                 </>
               )}
             </Panel>
+          )}
+
+          {/* ── Balance Sheet tab ───────────────────────────── */}
+          {tab === "balance-sheet" && (
+            <div className="space-y-4">
+              {/* Controls */}
+              <div className="flex flex-wrap items-end gap-3">
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-medium text-slate-600">Building</label>
+                  <select
+                    className="form-select text-sm"
+                    value={bsBuildingId}
+                    onChange={(e) => setBsBuildingId(e.target.value)}
+                  >
+                    <option value="">— select a building —</option>
+                    {buildings.map((b) => (
+                      <option key={b.id} value={b.id}>{b.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-medium text-slate-600">As of</label>
+                  <input
+                    type="date"
+                    className="form-input text-sm"
+                    value={bsAsOf}
+                    onChange={(e) => setBsAsOf(e.target.value)}
+                  />
+                </div>
+                <button
+                  className="btn btn-primary btn-sm"
+                  onClick={fetchBalanceSheet}
+                  disabled={!bsBuildingId || bsLoading}
+                >
+                  {bsLoading ? "Loading…" : "Load"}
+                </button>
+              </div>
+
+              {!bsBuildingId && (
+                <div className="py-12 text-center text-slate-400 text-sm">
+                  Select a building to view its balance sheet.
+                </div>
+              )}
+
+              {bsError && <p className="text-red-600 text-sm">{bsError}</p>}
+
+              {bsData && !bsLoading && (() => {
+                const { assets, liabilities, totalAssetsCents, totalLiabilitiesCents, differenceCents, isBalanced } = bsData;
+                const hasData = assets.length > 0 || liabilities.length > 0;
+
+                if (!hasData) return (
+                  <div className="py-12 text-center text-slate-400 text-sm">
+                    No ledger entries for this building up to {bsAsOf}.
+                    Approve a balance sheet import to establish the opening position.
+                  </div>
+                );
+
+                const renderLine = (line) => {
+                  const isDeduction = line.displayCents < 0;
+                  return (
+                    <tr key={line.accountId} className={cn("hover:bg-slate-50", isDeduction && "text-slate-500")}>
+                      <td className="font-mono text-xs text-slate-400">{line.accountCode || "—"}</td>
+                      <td className={isDeduction ? "italic" : "text-slate-800"}>{line.accountName}</td>
+                      <td className={cn("text-right font-mono", isDeduction ? "text-slate-500" : "text-slate-900")}>
+                        {isDeduction
+                          ? `(${formatChfCents(Math.abs(line.displayCents))})`
+                          : formatChfCents(line.displayCents)}
+                      </td>
+                    </tr>
+                  );
+                };
+
+                return (
+                  <>
+                    {/* Balance status */}
+                    <div className={cn("px-4 py-2 rounded text-sm font-medium border", isBalanced ? "bg-green-50 text-green-700 border-green-200" : "bg-red-50 text-red-700 border-red-200")}>
+                      {isBalanced
+                        ? `✓ Balance sheet is balanced as of ${bsAsOf}`
+                        : `⚠ Out of balance — difference: CHF ${formatChfCents(Math.abs(differenceCents))}`}
+                    </div>
+
+                    {/* Two-column layout for wide screens, stacked on mobile */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {/* Actifs */}
+                      <div>
+                        <div className="bg-slate-100 text-slate-700 text-xs font-semibold uppercase tracking-wide px-3 py-1.5 rounded-t">
+                          Actifs
+                        </div>
+                        <div className="border border-slate-200 rounded-b overflow-x-auto">
+                          <table className="data-table w-full">
+                            <thead>
+                              <tr className="bg-slate-50">
+                                <th>Code</th>
+                                <th>Account</th>
+                                <th className="text-right">CHF</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {assets.map(renderLine)}
+                              {assets.length === 0 && (
+                                <tr><td colSpan={3} className="text-center text-slate-400 text-xs py-4">No asset accounts</td></tr>
+                              )}
+                            </tbody>
+                            <tfoot>
+                              <tr className="border-t-2 border-slate-300 bg-slate-50 font-semibold text-sm">
+                                <td colSpan={2} className="text-slate-700">Total Actifs</td>
+                                <td className="text-right font-mono">{formatChfCents(totalAssetsCents)}</td>
+                              </tr>
+                            </tfoot>
+                          </table>
+                        </div>
+                      </div>
+
+                      {/* Passifs */}
+                      <div>
+                        <div className="bg-slate-100 text-slate-700 text-xs font-semibold uppercase tracking-wide px-3 py-1.5 rounded-t">
+                          Passifs
+                        </div>
+                        <div className="border border-slate-200 rounded-b overflow-x-auto">
+                          <table className="data-table w-full">
+                            <thead>
+                              <tr className="bg-slate-50">
+                                <th>Code</th>
+                                <th>Account</th>
+                                <th className="text-right">CHF</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {liabilities.map(renderLine)}
+                              {liabilities.length === 0 && (
+                                <tr><td colSpan={3} className="text-center text-slate-400 text-xs py-4">No liability accounts</td></tr>
+                              )}
+                            </tbody>
+                            <tfoot>
+                              <tr className="border-t-2 border-slate-300 bg-slate-50 font-semibold text-sm">
+                                <td colSpan={2} className="text-slate-700">Total Passifs</td>
+                                <td className="text-right font-mono">{formatChfCents(totalLiabilitiesCents)}</td>
+                              </tr>
+                            </tfoot>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Note on deduction lines */}
+                    {(assets.some((l) => l.displayCents < 0) || liabilities.some((l) => l.displayCents < 0)) && (
+                      <p className="text-xs text-slate-400">
+                        Amounts shown in parentheses are deductions (contra-assets or debit-balance equity accounts).
+                      </p>
+                    )}
+                  </>
+                );
+              })()}
+            </div>
           )}
 
         </PageContent>

@@ -785,6 +785,10 @@ export async function approveStatement(
   // For income statements: check whether the building already has ledger activity for this
   // fiscal year. If yes, store as reference-only (no journal entries). The manager can see
   // the data for comparison but the existing ledger is the authoritative source.
+  //
+  // Balance sheets are NEVER reference-only: they always post as opening-balance journal
+  // entries (Option A). The building balance sheet is the foundation of the running ledger —
+  // subsequent operational transactions build on top of the posted opening position.
   let referenceOnly = false;
   if (isIncomeStatement) {
     const periodStart = statement.periodStart ?? new Date(`${statement.fiscalYear}-01-01T00:00:00Z`);
@@ -794,7 +798,7 @@ export async function approveStatement(
         orgId,
         buildingId: statement.buildingId,
         date: { gte: periodStart, lte: periodEnd },
-        sourceType: { not: "IMPORTED_STATEMENT" },
+        sourceType: { not: { in: ["IMPORTED_STATEMENT", "BALANCE_SHEET_IMPORT", "INCOME_STATEMENT_IMPORT"] } },
       },
     });
     if (existingActivity > 0) {
@@ -883,7 +887,7 @@ export async function approveStatement(
         creditCents: ab.balanceType === "CREDIT" ? absCents : 0,
         description: `[Import FY${statement.fiscalYear}] ${ab.rawAccountCode} ${ab.rawAccountName}`,
         reference:   `Statement FY${statement.fiscalYear}`,
-        sourceType:  "IMPORTED_STATEMENT",
+        sourceType:  isIncomeStatement ? "INCOME_STATEMENT_IMPORT" : "BALANCE_SHEET_IMPORT",
         sourceId:    statement.id,
         buildingId:  statement.buildingId,
         date:        periodDate,
