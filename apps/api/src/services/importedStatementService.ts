@@ -405,6 +405,30 @@ export async function ingestStatement(
 ): Promise<UploadBatchDTO> {
   const { buffer, fileName, mimeType, orgId, uploadedBy, hintDocType } = input;
 
+  // 0. Purge orphaned PROCESSING batches for this org.
+  //    These accumulate when the server times out mid-ingestion and leaves the
+  //    placeholder statement stuck in PROCESSING. Delete any batch that:
+  //      • belongs to this org
+  //      • has been stuck in PROCESSING for more than 5 minutes
+  //      • has NO APPROVED or PENDING_REVIEW statements (safe to remove)
+  const staleThreshold = new Date(Date.now() - 5 * 60 * 1000);
+  const orphanBatches = await prisma.uploadBatch.findMany({
+    where: {
+      orgId,
+      createdAt: { lt: staleThreshold },
+      statements: {
+        every: { status: ImportedStatementStatus.PROCESSING },
+      },
+    },
+    select: { id: true },
+  });
+  if (orphanBatches.length > 0) {
+    const orphanIds = orphanBatches.map((b) => b.id);
+    await prisma.importedStatement.deleteMany({ where: { uploadBatchId: { in: orphanIds } } });
+    await prisma.uploadBatch.deleteMany({ where: { id: { in: orphanIds } } });
+    console.log(`[IMPORT] Purged ${orphanIds.length} orphaned PROCESSING batch(es) for org ${orgId}`);
+  }
+
   // 1. Store the source file
   const fileKey = `imported-statements/${orgId}/${Date.now()}-${crypto.randomBytes(4).toString("hex")}/${fileName}`;
   await storage.put(fileKey, buffer);

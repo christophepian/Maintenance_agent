@@ -51,6 +51,11 @@ export function registerImportedStatementRoutes(router: Router) {
     const user = requireAnyRole(req, res, ["MANAGER"]);
     if (!user) return;
 
+    // Azure OCR + Claude extraction can take 30–60 s. Extend the socket timeout
+    // for this request only so the server's global 30 s timeout doesn't fire
+    // mid-ingestion and leave orphaned PROCESSING batches in the DB.
+    req.socket?.setTimeout(120_000);
+
     const contentType = req.headers["content-type"] ?? "";
     const boundaryMatch = contentType.match(/boundary=([^\s;]+)/);
     if (!boundaryMatch) {
