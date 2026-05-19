@@ -249,8 +249,8 @@ function BalanceRowEditor({ balance, statementId, accounts, accountsLoading, onS
             value={balanceType}
             onChange={(e) => setBalanceType(e.target.value)}
           >
-            <option value="DEBIT">Debit — Asset / Expense</option>
-            <option value="CREDIT">Credit — Liability / Equity / Income</option>
+            <option value="DEBIT">Debit (Dr) — Asset / Expense</option>
+            <option value="CREDIT">Credit (Cr) — Liability / Equity / Income</option>
           </select>
         </div>
       </div>
@@ -851,13 +851,36 @@ export default function ImportedStatementReviewPage() {
   const needsBuilding     = isPendingReview && !s?.buildingId;
   const hasNoBalances     = (s?.accountBalances?.length ?? 0) === 0;
 
-  // Running totals (client-side, mirrors server mapDTO logic)
-  const totalDebitCents  = s?.accountBalances?.reduce((sum, ab) => sum + (ab.balanceType === "DEBIT"  ? ab.balanceCents : 0), 0) ?? 0;
-  const totalCreditCents = s?.accountBalances?.reduce((sum, ab) => sum + (ab.balanceType === "CREDIT" ? ab.balanceCents : 0), 0) ?? 0;
+  // Running totals — section-aware (mirrors server mapDTO logic).
+  // Rows with documentSection="UNKNOWN" (legacy/manual) fall back to DEBIT/CREDIT.
+  const totalActifCents = s?.accountBalances?.reduce((sum, ab) => {
+    if (ab.documentSection === "ACTIF") return sum + ab.balanceCents;
+    if (ab.documentSection === "UNKNOWN" && ab.balanceType === "DEBIT") return sum + ab.balanceCents;
+    return sum;
+  }, 0) ?? 0;
+  const totalPassifCents = s?.accountBalances?.reduce((sum, ab) => {
+    if (ab.documentSection === "PASSIF") return sum + ab.balanceCents;
+    if (ab.documentSection === "UNKNOWN" && ab.balanceType === "CREDIT") return sum + ab.balanceCents;
+    return sum;
+  }, 0) ?? 0;
+  const totalRevenueCents = s?.accountBalances?.reduce((sum, ab) => {
+    if (ab.documentSection === "REVENUE") return sum + ab.balanceCents;
+    if (ab.documentSection === "UNKNOWN" && ab.balanceType === "CREDIT") return sum + ab.balanceCents;
+    return sum;
+  }, 0) ?? 0;
+  const totalExpenseCents = s?.accountBalances?.reduce((sum, ab) => {
+    if (ab.documentSection === "EXPENSE") return sum + ab.balanceCents;
+    if (ab.documentSection === "UNKNOWN" && ab.balanceType === "DEBIT") return sum + ab.balanceCents;
+    return sum;
+  }, 0) ?? 0;
 
-  // Income statement breakdown: credits = revenue, debits = expenses
-  const isRevenueCents   = totalCreditCents;
-  const isExpensesCents  = totalDebitCents;
+  // For legacy compatibility
+  const totalDebitCents  = isBalanceSheet ? totalActifCents  : totalExpenseCents;
+  const totalCreditCents = isBalanceSheet ? totalPassifCents : totalRevenueCents;
+
+  // Income statement breakdown
+  const isRevenueCents   = totalRevenueCents;
+  const isExpensesCents  = totalExpenseCents;
   const isNetIncomeCents = isRevenueCents - isExpensesCents; // positive = profit
 
   // Sibling section labels for the nav bar (excluding the current statement)
@@ -1106,13 +1129,13 @@ export default function ImportedStatementReviewPage() {
               {/* ── Accounting equation warning (balance sheet only) ── */}
               {hasBalanceWarning && !hasNoBalances && (
                 <div className="rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800">
-                  <p className="font-semibold mb-1">Accounting equation not balanced</p>
+                  <p className="font-semibold mb-1">Balance sheet not balanced</p>
                   <p>
-                    Debits and credits differ by{" "}
+                    Total Actifs and Total Passifs differ by{" "}
                     <strong className="font-mono">
                       CHF {(Math.abs(imbalanceCents) / 100).toLocaleString("de-CH", { minimumFractionDigits: 2 })}
                     </strong>
-                    {imbalanceCents > 0 ? " (debits exceed credits)" : " (credits exceed debits)"}.
+                    {imbalanceCents > 0 ? " (Actifs exceed Passifs)" : " (Passifs exceed Actifs)"}.
                     {" "}The equation must reach exactly zero before entries can be posted.
                     Use the edit buttons below to correct amounts or add missing rows.
                   </p>
@@ -1291,8 +1314,15 @@ export default function ImportedStatementReviewPage() {
                             </div>
                           </div>
                           <div className="table-card-footer">
-                            <span className={cn("font-mono font-medium text-sm", ab.balanceType === "CREDIT" ? "text-success-text" : "")}>
-                              {ab.balanceType === "DEBIT" ? "Dr " : "Cr "}{formatChfCents(ab.balanceCents)}
+                            <span className={cn("font-mono font-medium text-sm",
+                              (ab.documentSection === "PASSIF" || ab.documentSection === "REVENUE" || (ab.documentSection === "UNKNOWN" && ab.balanceType === "CREDIT"))
+                                ? "text-success-text" : "")}>
+                              {ab.documentSection !== "UNKNOWN"
+                                ? `[${ab.documentSection}] `
+                                : (ab.balanceType === "DEBIT" ? "Dr " : "Cr ")}
+                              {ab.balanceCents < 0
+                                ? `(${formatChfCents(Math.abs(ab.balanceCents))})`
+                                : formatChfCents(ab.balanceCents)}
                             </span>
                             {ab.accountName && (
                               <span className="text-slate-500 text-xs">{ab.accountCode ? `${ab.accountCode} ` : ""}{ab.accountName}</span>
@@ -1323,8 +1353,12 @@ export default function ImportedStatementReviewPage() {
                           <tr>
                             <th>{t("manager:financeImports.prop.accountCode")}</th>
                             <th>{t("manager:financeImports.prop.accountName")}</th>
-                            <th className="text-right">Debit</th>
-                            <th className="text-right">Credit</th>
+                            <th className="text-right">
+                              {isBalanceSheet ? "Actifs" : isIncomeStatement ? "Expenses" : "Debit"}
+                            </th>
+                            <th className="text-right">
+                              {isBalanceSheet ? "Passifs" : isIncomeStatement ? "Revenue" : "Credit"}
+                            </th>
                             <th>{t("manager:financeImports.prop.matchConfidence")}</th>
                             <th>{t("manager:financeImports.prop.matchedAccount")}</th>
                             {isPendingReview && <th className="w-8" />}
@@ -1337,10 +1371,14 @@ export default function ImportedStatementReviewPage() {
                                 <td className="font-mono text-sm">{ab.rawAccountCode}</td>
                                 <td>{ab.rawAccountName}</td>
                                 <td className="text-right font-mono text-sm">
-                                  {ab.balanceType === "DEBIT" ? formatChfCents(ab.balanceCents) : "—"}
+                                  {(ab.documentSection === "ACTIF" || ab.documentSection === "EXPENSE" || (ab.documentSection === "UNKNOWN" && ab.balanceType === "DEBIT"))
+                                    ? (ab.balanceCents < 0 ? `(${formatChfCents(Math.abs(ab.balanceCents))})` : formatChfCents(ab.balanceCents))
+                                    : "—"}
                                 </td>
                                 <td className="text-right font-mono text-sm text-success-text">
-                                  {ab.balanceType === "CREDIT" ? formatChfCents(ab.balanceCents) : "—"}
+                                  {(ab.documentSection === "PASSIF" || ab.documentSection === "REVENUE" || (ab.documentSection === "UNKNOWN" && ab.balanceType === "CREDIT"))
+                                    ? (ab.balanceCents < 0 ? `(${formatChfCents(Math.abs(ab.balanceCents))})` : formatChfCents(ab.balanceCents))
+                                    : "—"}
                                 </td>
                                 <td>
                                   <Badge variant={confidenceVariant(ab.matchConfidence)}>
@@ -1408,13 +1446,13 @@ export default function ImportedStatementReviewPage() {
                                 Total
                               </td>
                               <td className="px-3 py-2 text-right font-mono">
-                                {formatChfCents(totalDebitCents)}
+                                {formatChfCents(totalActifCents)}
                               </td>
                               <td className={cn(
                                 "px-3 py-2 text-right font-mono",
                                 isExactlyBalanced ? "text-success-text" : "text-destructive-text",
                               )}>
-                                {formatChfCents(totalCreditCents)}
+                                {formatChfCents(totalPassifCents)}
                               </td>
                               <td colSpan={isPendingReview ? 3 : 2} className="px-3 py-2">
                                 {imbalanceCents === 0 ? (
@@ -1422,7 +1460,7 @@ export default function ImportedStatementReviewPage() {
                                 ) : imbalanceCents !== null ? (
                                   <span className="text-xs text-destructive-text">
                                     Δ {formatChfCents(Math.abs(imbalanceCents))}{" "}
-                                    {imbalanceCents > 0 ? "(Dr > Cr)" : "(Cr > Dr)"}
+                                    {imbalanceCents > 0 ? "(Actifs > Passifs)" : "(Passifs > Actifs)"}
                                   </span>
                                 ) : null}
                               </td>

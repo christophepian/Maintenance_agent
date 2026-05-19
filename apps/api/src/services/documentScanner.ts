@@ -25,9 +25,23 @@ export type DetectedDocType =
 export interface ExtractedAccountBalance {
   rawAccountCode: string;
   rawAccountName: string;
-  /** Amount in CHF (decimal, not cents — converted to cents at ingestion time) */
+  /**
+   * Signed amount in CHF. Negative values represent contra-accounts or deductions
+   * within their section (e.g. a negative line under Actifs reduces total assets).
+   * Converted to signed cents at ingestion time.
+   */
   balanceChf: number;
+  /**
+   * Ledger direction derived from documentSection + sign.
+   * ACTIF positive → DEBIT; ACTIF negative → CREDIT; PASSIF positive → CREDIT; etc.
+   */
   balanceType: "DEBIT" | "CREDIT";
+  /**
+   * Section from the document header this row appears under.
+   * ACTIF / PASSIF for balance sheets; REVENUE / EXPENSE for P&L.
+   * Used for the section-based balance check (sum ACTIF = sum PASSIF).
+   */
+  documentSection: "ACTIF" | "PASSIF" | "REVENUE" | "EXPENSE" | "OTHER";
 }
 
 /** One invoice line extracted from a multi-document PDF. */

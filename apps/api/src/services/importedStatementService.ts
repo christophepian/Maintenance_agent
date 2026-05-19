@@ -96,8 +96,12 @@ export interface ImportedAccountBalanceDTO {
   id: string;
   rawAccountCode: string;
   rawAccountName: string;
+  /** Signed balance in cents — negative values are contra-accounts / deductions within their section */
   balanceCents: number;
+  /** Ledger direction: "DEBIT" | "CREDIT" */
   balanceType: string;
+  /** Document section: "ACTIF" | "PASSIF" | "REVENUE" | "EXPENSE" | "OTHER" | "UNKNOWN" */
+  documentSection: string;
   matchConfidence: MatchConfidence;
   accountId: string | null;
   accountName: string | null;
@@ -515,8 +519,8 @@ async function runIngestionBackground(
     // 4. Classify accounts into balance-sheet vs income-statement by account code prefix.
     //    Swiss chart of accounts: 1xxx–2xxx = balance sheet, 3xxx–8xxx = income statement.
     const allBalances = scanResult.accountBalances ?? [];
-    const bsBalances = allBalances.filter((b) => isBalanceSheetAccount(b.rawAccountCode));
-    const isBalances = allBalances.filter((b) => !isBalanceSheetAccount(b.rawAccountCode));
+    const bsBalances = allBalances.filter((b) => isBalanceSheetAccount(b.rawAccountCode, b.documentSection));
+    const isBalances = allBalances.filter((b) => !isBalanceSheetAccount(b.rawAccountCode, b.documentSection));
 
     // 5. Populate the placeholder statement as BALANCE_SHEET (or INCOME_STATEMENT if no BS rows)
     const firstSectionType = bsBalances.length > 0 || isBalances.length === 0
@@ -627,14 +631,18 @@ async function runIngestionBackground(
 }
 
 /**
- * Returns true for balance-sheet account codes.
- * Swiss Kontenrahmen KMU:
+ * Returns true for balance-sheet account codes/sections.
+ * Prefers documentSection when available (ACTIF/PASSIF → BS; REVENUE/EXPENSE → IS).
+ * Falls back to Swiss Kontenrahmen KMU account code prefix when section is unknown:
  *   1xxx = Assets (Aktiven)        → balance sheet
  *   2xxx = Liabilities/Equity      → balance sheet
- *   3xxx = Revenue (Nettoerlöse)   → income statement  ← NOT balance sheet
+ *   3xxx = Revenue (Nettoerlöse)   → income statement
  *   4xxx–8xxx = Expenses           → income statement
  */
-function isBalanceSheetAccount(code: string): boolean {
+function isBalanceSheetAccount(code: string, documentSection?: string): boolean {
+  if (documentSection === "ACTIF" || documentSection === "PASSIF") return true;
+  if (documentSection === "REVENUE" || documentSection === "EXPENSE") return false;
+  // Fall back to code prefix
   const trimmed = code.trim().replace(/\D/g, "");
   if (!trimmed) return true; // default to balance sheet when unknown
   const first = parseInt(trimmed[0], 10);
@@ -651,16 +659,18 @@ async function persistBalances(
 ): Promise<void> {
   const rows = await Promise.all(
     balances.map(async (ab) => {
+      // Preserve sign — negative values are contra-accounts / deductions within their section
       const balanceCents = Math.round(ab.balanceChf * 100);
-      const match = await matchAccount(orgAccounts, ab.rawAccountCode, ab.rawAccountName, balanceCents);
+      const match = await matchAccount(orgAccounts, ab.rawAccountCode, ab.rawAccountName, Math.abs(balanceCents));
       return {
         orgId,
         statementId,
         accountId: match.accountId,
         rawAccountCode: ab.rawAccountCode,
         rawAccountName: ab.rawAccountName,
-        balanceCents,
-        balanceType: ab.balanceType,
+        balanceCents,                             // signed
+        balanceType: ab.balanceType,              // derived from section + sign
+        documentSection: ab.documentSection ?? "UNKNOWN",
         matchConfidence: match.confidence,
       };
     }),
@@ -790,10 +800,12 @@ export async function approveStatement(
         alreadyMatched++;
       }
 
+      // balanceCents may be negative (contra-account); balanceType already accounts for the sign.
+      const absCents = Math.abs(ab.balanceCents);
       legs.push({
         accountId: resolvedAccountId,
-        debitCents:  ab.balanceType === "DEBIT"  ? ab.balanceCents : 0,
-        creditCents: ab.balanceType === "CREDIT" ? ab.balanceCents : 0,
+        debitCents:  ab.balanceType === "DEBIT"  ? absCents : 0,
+        creditCents: ab.balanceType === "CREDIT" ? absCents : 0,
         description: `[Import FY${statement.fiscalYear}] ${ab.rawAccountCode} ${ab.rawAccountName}`,
         reference:   `Statement FY${statement.fiscalYear}`,
         sourceType:  "IMPORTED_STATEMENT",
@@ -1390,17 +1402,47 @@ export function mapBatchDTO(batch: any, statements: any[]): UploadBatchDTO {
 function mapDTO(s: any, linkedInvoices: any[] = []): ImportedStatementDTO {
   const balances: any[] = s.accountBalances ?? [];
 
-  // Accounting equation: Assets (DEBIT) = Liabilities + Equity (CREDIT)
-  // Any non-zero imbalance means the extraction is incomplete or contains errors.
+  // Accounting equation check.
+  // For sectioned balance sheets (ACTIF/PASSIF): sum(signed ACTIF) − sum(signed PASSIF) = 0
+  // For P&L (REVENUE/EXPENSE): net income = sum(REVENUE) − sum(EXPENSE), not expected to be zero.
+  // Legacy rows with documentSection="UNKNOWN" fall back to sum(DEBIT) − sum(CREDIT).
   let balanceImbalanceCents: number | null = null;
   if (balances.length > 0) {
-    let debitTotal = 0;
-    let creditTotal = 0;
-    for (const ab of balances) {
-      if (ab.balanceType === "DEBIT")  debitTotal  += ab.balanceCents;
-      else                             creditTotal += ab.balanceCents;
+    const hasSectionData = balances.some(
+      (ab: any) => ab.documentSection && ab.documentSection !== "UNKNOWN",
+    );
+    if (hasSectionData) {
+      let actifTotal = 0, passifTotal = 0, revenueTotal = 0, expenseTotal = 0;
+      let legacyDebit = 0, legacyCredit = 0;
+      for (const ab of balances) {
+        switch (ab.documentSection) {
+          case "ACTIF":   actifTotal   += ab.balanceCents; break;
+          case "PASSIF":  passifTotal  += ab.balanceCents; break;
+          case "REVENUE": revenueTotal += ab.balanceCents; break;
+          case "EXPENSE": expenseTotal += ab.balanceCents; break;
+          default:
+            if (ab.balanceType === "DEBIT") legacyDebit  += Math.abs(ab.balanceCents);
+            else                            legacyCredit += Math.abs(ab.balanceCents);
+        }
+      }
+      if (actifTotal !== 0 || passifTotal !== 0) {
+        // Balance sheet: Total Actifs must equal Total Passifs
+        balanceImbalanceCents = actifTotal - passifTotal;
+      } else if (revenueTotal !== 0 || expenseTotal !== 0) {
+        // P&L: show net income (Revenue − Expenses). Gate is informational, not zero-check.
+        balanceImbalanceCents = revenueTotal - expenseTotal;
+      } else {
+        balanceImbalanceCents = legacyDebit - legacyCredit;
+      }
+    } else {
+      // Legacy records without section data — old DEBIT/CREDIT trial balance approach
+      let debitTotal = 0, creditTotal = 0;
+      for (const ab of balances) {
+        if (ab.balanceType === "DEBIT") debitTotal  += Math.abs(ab.balanceCents);
+        else                            creditTotal += Math.abs(ab.balanceCents);
+      }
+      balanceImbalanceCents = debitTotal - creditTotal;
     }
-    balanceImbalanceCents = debitTotal - creditTotal;
   }
 
   return {
@@ -1428,6 +1470,7 @@ function mapDTO(s: any, linkedInvoices: any[] = []): ImportedStatementDTO {
       rawAccountName: ab.rawAccountName,
       balanceCents: ab.balanceCents,
       balanceType: ab.balanceType,
+      documentSection: ab.documentSection ?? "UNKNOWN",
       matchConfidence: ab.matchConfidence,
       accountId: ab.accountId ?? null,
       accountName: ab.account?.name ?? null,

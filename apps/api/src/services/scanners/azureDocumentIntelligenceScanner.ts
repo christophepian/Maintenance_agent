@@ -709,19 +709,44 @@ function parseNumberFromKv(
    Claude enrichment — fills null fields from raw OCR text
    ══════════════════════════════════════════════════════════════ */
 
+/**
+ * Derive the double-entry ledger direction from a document section and the sign of the amount.
+ * - ACTIF (asset):  positive = DEBIT (normal),  negative = CREDIT (contra-asset)
+ * - PASSIF (liab/equity): positive = CREDIT (normal), negative = DEBIT (e.g. owner drawings)
+ * - REVENUE: positive = CREDIT, negative = DEBIT
+ * - EXPENSE: positive = DEBIT,  negative = CREDIT
+ */
+function deriveLedgerDirection(
+  section: "ACTIF" | "PASSIF" | "REVENUE" | "EXPENSE" | "OTHER",
+  amount: number,
+): "DEBIT" | "CREDIT" {
+  const positive = amount >= 0;
+  switch (section) {
+    case "ACTIF":   return positive ? "DEBIT" : "CREDIT";
+    case "PASSIF":  return positive ? "CREDIT" : "DEBIT";
+    case "REVENUE": return positive ? "CREDIT" : "DEBIT";
+    case "EXPENSE": return positive ? "DEBIT" : "CREDIT";
+    default:        return positive ? "DEBIT" : "CREDIT";
+  }
+}
+
 /** Claude tool for extracting account balance rows from a financial statement. */
 const FINANCIAL_STATEMENT_BALANCE_TOOL = {
   name: "extractAccountBalances",
   description:
     "Extract ALL account balance rows from a Swiss property management financial statement — " +
-    "include every row regardless of account code range (balance sheet positions, income/expense lines, statistical accounts, sub-totals, everything). " +
-    "Return every account line found: its code, name, balance amount, and whether it is a debit or credit balance. " +
-    "IMPORTANT — account codes: Swiss chart of accounts uses 3- or 4-digit codes (e.g. '1020', '4200', '630'). " +
+    "include every row regardless of account code range (balance sheet, income/expense, statistical accounts, sub-totals, everything). " +
+    "For each row, record the documentSection from the nearest printed section header above it: " +
+    "ACTIF for assets (Actifs / Aktiven), PASSIF for liabilities + equity (Passifs / Passiven), " +
+    "REVENUE for income lines (Produits / Ertrag), EXPENSE for expense lines (Charges / Aufwand), OTHER when unclear. " +
+    "IMPORTANT — signed amounts: preserve negative signs exactly as printed. " +
+    "A negative amount under ACTIF is a deduction or contra-asset — keep it negative and keep documentSection=ACTIF. " +
+    "Do NOT flip the section because the amount is negative. " +
+    "IMPORTANT — account codes: Swiss chart uses 3- or 4-digit codes (e.g. '1020', '4200', '630'). " +
     "Extract the code from the leftmost column ONLY — do NOT include digits from the amount or name columns. " +
-    "If OCR has merged a code with adjacent text, use only the leading 3-4 digits that form a valid account code. " +
-    "IMPORTANT — amounts: Swiss documents use apostrophe (') as the thousands separator and period (.) as the decimal separator. " +
-    "Example: 62'405.24 = 62405.24. European format uses period as thousands and comma as decimal: 62.405,24 = 62405.24. " +
-    "Return balanceChf as a plain JSON number (e.g. 62405.24), never as a formatted string.",
+    "IMPORTANT — amounts: Swiss format uses apostrophe (') as thousands separator and period (.) as decimal: 62'405.24 = 62405.24. " +
+    "European format uses period as thousands, comma as decimal: 62.405,24 = 62405.24. " +
+    "Return balanceChf as a plain signed JSON number (e.g. -16736.80), never as a formatted string.",
   input_schema: {
     type: "object",
     required: ["balances"],
@@ -743,12 +768,12 @@ const FINANCIAL_STATEMENT_BALANCE_TOOL = {
         description: "All account balance rows found in the document",
         items: {
           type: "object",
-          required: ["rawAccountCode", "rawAccountName", "balanceChf", "balanceType"],
+          required: ["rawAccountCode", "rawAccountName", "balanceChf", "documentSection"],
           properties: {
             rawAccountCode: { type: "string", description: "Account code from the leftmost column only — 3 or 4 digits, e.g. '1020' or '4200'. Never more than 4 digits." },
-            rawAccountName: { type: "string", description: "Account name as printed, e.g. 'Bank account'" },
-            balanceChf: { type: "number", description: "Closing balance amount in CHF as a plain decimal number (e.g. 62405.24). Apostrophes and periods are Swiss number formatting — 62'405.24 = 62405.24." },
-            balanceType: { type: "string", enum: ["DEBIT", "CREDIT"], description: "DEBIT for asset/expense accounts, CREDIT for liability/income accounts" },
+            rawAccountName: { type: "string", description: "Account name as printed, e.g. 'Compte courant propriétaires'" },
+            balanceChf: { type: "number", description: "Signed closing balance in CHF as a plain decimal number. Negative values are valid (e.g. -16736.80 for a deduction within the Actifs section)." },
+            documentSection: { type: "string", enum: ["ACTIF", "PASSIF", "REVENUE", "EXPENSE", "OTHER"], description: "Section header from the document this row falls under. ACTIF=assets, PASSIF=liabilities/equity, REVENUE=income, EXPENSE=charges. Never change the section because the amount is negative." },
           },
         },
       },
@@ -987,7 +1012,7 @@ async function extractBalancesFromChunk(
         rawAccountCode: string;
         rawAccountName: string;
         balanceChf: number;
-        balanceType: "DEBIT" | "CREDIT";
+        documentSection?: string;
       }>;
     };
     if (input.fiscalYear) fields.fiscalYear = input.fiscalYear;
@@ -995,12 +1020,18 @@ async function extractBalancesFromChunk(
     if (input.buildingAddress) fields.buildingAddress = input.buildingAddress;
     accountBalances = (input.balances ?? [])
       .filter((b) => b.rawAccountCode && b.rawAccountName && typeof b.balanceChf === "number")
-      .map((b) => ({
-        rawAccountCode: normalizeSwissAccountCode(b.rawAccountCode),
-        rawAccountName: b.rawAccountName,
-        balanceChf: b.balanceChf,
-        balanceType: b.balanceType === "CREDIT" ? "CREDIT" : "DEBIT",
-      }));
+      .map((b) => {
+        const section = (["ACTIF","PASSIF","REVENUE","EXPENSE","OTHER"].includes(b.documentSection ?? "")
+          ? b.documentSection!
+          : "OTHER") as "ACTIF" | "PASSIF" | "REVENUE" | "EXPENSE" | "OTHER";
+        return {
+          rawAccountCode: normalizeSwissAccountCode(b.rawAccountCode),
+          rawAccountName: b.rawAccountName,
+          balanceChf: b.balanceChf, // preserve sign — negative = contra/deduction
+          documentSection: section,
+          balanceType: deriveLedgerDirection(section, b.balanceChf),
+        };
+      });
   }
 
   return { fields, accountBalances };
@@ -1398,8 +1429,8 @@ async function extractFinancialStatementWithClaude(
     let mergedFields: Record<string, string | number | boolean | null> = {};
     const allBalances: ExtractedAccountBalance[] = [];
     const allInvoiceLines: ExtractedInvoiceLine[] = [];
-    // Deduplicate account balances across chunks by (normalizedName, amount, direction).
-    // Using name+amount+type rather than rawAccountCode because the OCR produces
+    // Deduplicate account balances across chunks by (normalizedName, amount, documentSection).
+    // Using name+amount+section rather than rawAccountCode because the OCR produces
     // inconsistent codes for the same account (e.g. "1020", "10200", "100" for Bank).
     const seenBalances = new Set<string>();
     // Track seen invoices to deduplicate across overlapping chunks.
@@ -1425,12 +1456,12 @@ async function extractFinancialStatementWithClaude(
         }
       }
 
-      // Append balances, deduplicating by name+amount+direction across chunks
+      // Append balances, deduplicating by name+amount+section across chunks
       for (const b of chunkResult.accountBalances) {
         const key = [
           b.rawAccountName.trim().toLowerCase().replace(/\s+/g, " "),
           String(b.balanceChf),
-          b.balanceType,
+          b.documentSection,
         ].join("|");
         if (!seenBalances.has(key)) {
           seenBalances.add(key);
@@ -1477,7 +1508,7 @@ async function extractFinancialStatementWithClaude(
       const key = [
         b.rawAccountName.trim().toLowerCase().replace(/\s+/g, " "),
         String(b.balanceChf),
-        b.balanceType,
+        b.documentSection,
       ].join("|");
       if (!finalBalanceKeys.has(key)) {
         finalBalanceKeys.add(key);

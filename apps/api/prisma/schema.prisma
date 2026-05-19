@@ -2537,8 +2537,9 @@ model ImportedAccountBalance {
   accountId        String?         /// FK to Account — null when match confidence = UNMATCHED
   rawAccountCode   String          /// As extracted from the PDF, e.g. "1020"
   rawAccountName   String          /// As extracted from the PDF, e.g. "Bank account"
-  balanceCents     Int             /// Closing balance in CHF cents
-  balanceType      String          @default("DEBIT") /// "DEBIT" | "CREDIT"
+  balanceCents     Int             /// Signed closing balance in CHF cents (negative = contra-account / deduction within section)
+  balanceType      String          @default("DEBIT") /// Ledger direction: "DEBIT" | "CREDIT" — derived from documentSection + sign
+  documentSection  String          @default("UNKNOWN") /// Document section: "ACTIF" | "PASSIF" | "REVENUE" | "EXPENSE" | "OTHER" | "UNKNOWN"
   matchConfidence  MatchConfidence @default(UNMATCHED)
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
