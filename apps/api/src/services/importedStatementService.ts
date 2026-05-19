@@ -217,25 +217,43 @@ async function matchAccount(
   rawName: string,
   balanceCents: number,
 ): Promise<{ accountId: string | null; confidence: MatchConfidence }> {
-  // 1. Exact code match
+  // 1. Exact code match — always authoritative regardless of account type
   const exactCode = orgAccounts.find(
     (a) => a.code && a.code.trim() === rawCode.trim(),
   );
   if (exactCode) return { accountId: exactCode.id, confidence: MatchConfidence.AUTO };
 
-  // 2. Name fuzzy match (case-insensitive substring)
+  // Narrow the candidate pool to accounts whose code starts with the same digit as
+  // the raw code.  This prevents a 2xxx liability row (e.g. "2210 Compte courant")
+  // from being matched to a 1xxx asset entry (e.g. "Bank Account") when the COA
+  // has no 2xxx entries yet.  Accounts with no code are included as wildcards.
+  const rawFirstDigit = rawCode.trim().replace(/\D/g, "")[0] ?? "";
+  const sameTypeAccounts = rawFirstDigit
+    ? orgAccounts.filter((a) => {
+        const aFirst = (a.code ?? "").trim().replace(/\D/g, "")[0];
+        return !aFirst || aFirst === rawFirstDigit;
+      })
+    : orgAccounts;
+
+  // 2. Name fuzzy match (case-insensitive substring) — same account type only
   const nameNorm = rawName.toLowerCase().trim();
-  const fuzzy = orgAccounts.find(
+  const fuzzy = sameTypeAccounts.find(
     (a) =>
       a.name.toLowerCase().includes(nameNorm) ||
       nameNorm.includes(a.name.toLowerCase()),
   );
   if (fuzzy) return { accountId: fuzzy.id, confidence: MatchConfidence.FUZZY };
 
-  // 3. Claude Haiku classification
+  // 3. Claude Haiku classification — same account type only.
+  //    If there are no same-type candidates, skip Claude and return UNMATCHED so
+  //    that approveStatement auto-creates the correct stub account.
+  if (sameTypeAccounts.length === 0) {
+    return { accountId: null, confidence: MatchConfidence.UNMATCHED };
+  }
+
   try {
     const client = getAnthropicClient();
-    const accountList = orgAccounts
+    const accountList = sameTypeAccounts
       .map((a) => `${a.code ?? "—"} | ${a.name}`)
       .join("\n");
 
@@ -273,7 +291,7 @@ async function matchAccount(
     if (toolUse && toolUse.type === "tool_use") {
       const input = toolUse.input as { accountCode: string; confidence: number };
       if (input.confidence >= 0.85) {
-        const matched = orgAccounts.find((a) => a.code === input.accountCode);
+        const matched = sameTypeAccounts.find((a) => a.code === input.accountCode);
         if (matched) return { accountId: matched.id, confidence: MatchConfidence.CLAUDE };
       }
     }
