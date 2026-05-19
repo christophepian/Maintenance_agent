@@ -734,19 +734,18 @@ function deriveLedgerDirection(
 const FINANCIAL_STATEMENT_BALANCE_TOOL = {
   name: "extractAccountBalances",
   description:
-    "Extract ALL account balance rows from a Swiss property management financial statement — " +
-    "include every row regardless of account code range (balance sheet, income/expense, statistical accounts, sub-totals, everything). " +
-    "For each row, record the documentSection from the nearest printed section header above it: " +
-    "ACTIF for assets (Actifs / Aktiven), PASSIF for liabilities + equity (Passifs / Passiven), " +
-    "REVENUE for income lines (Produits / Ertrag), EXPENSE for expense lines (Charges / Aufwand), OTHER when unclear. " +
-    "IMPORTANT — signed amounts: preserve negative signs exactly as printed. " +
-    "A negative amount under ACTIF is a deduction or contra-asset — keep it negative and keep documentSection=ACTIF. " +
-    "Do NOT flip the section because the amount is negative. " +
-    "IMPORTANT — account codes: Swiss chart uses 3- or 4-digit codes (e.g. '1020', '4200', '630'). " +
-    "Extract the code from the leftmost column ONLY — do NOT include digits from the amount or name columns. " +
-    "IMPORTANT — amounts: Swiss format uses apostrophe (') as thousands separator and period (.) as decimal: 62'405.24 = 62405.24. " +
-    "European format uses period as thousands, comma as decimal: 62.405,24 = 62405.24. " +
-    "Return balanceChf as a plain signed JSON number (e.g. -16736.80), never as a formatted string.",
+    "Extract account balance rows from a Swiss property management financial statement. " +
+    "For each row record the documentSection from the nearest printed section header: " +
+    "ACTIF (Actifs/Aktiven), PASSIF (Passifs/Passiven), REVENUE (Produits/Ertrag), EXPENSE (Charges/Aufwand), OTHER when unclear. " +
+    "IMPORTANT — equity and result accounts: 'Bénéfice de l'exercice', 'Résultat net', 'Report bénéfices-pertes' are PASSIF equity rows even if they appear after income data. " +
+    "IMPORTANT — signed amounts: preserve negative signs exactly as printed. A negative under ACTIF is a contra-asset — keep it negative, keep documentSection=ACTIF. Never flip the section due to a negative sign. " +
+    "IMPORTANT — no hierarchy double-counting: Swiss balance sheets often show a parent subtotal AND the detail rows that make it up, all under the same account code. " +
+    "Example: '1295 Acomptes -24'900' is the subtotal of '1295 Frais chauffage -4'980' + '1295 Frais exploitation -19'920'. " +
+    "Extract the DETAIL rows only (the leaves). Skip any row whose amount equals the exact sum of other rows you are already extracting with the same code. " +
+    "If there are no detail sub-rows, extract the parent row. " +
+    "IMPORTANT — account codes: Swiss chart uses 3- or 4-digit codes (e.g. '1020', '4200', '630'). Extract from the leftmost column ONLY. " +
+    "IMPORTANT — amounts: Swiss format: apostrophe=thousands, period=decimal: 62'405.24 → 62405.24. European format: period=thousands, comma=decimal: 62.405,24 → 62405.24. " +
+    "Return balanceChf as a plain signed JSON number, never a formatted string.",
   input_schema: {
     type: "object",
     required: ["balances"],
@@ -1405,11 +1404,17 @@ async function extractFinancialStatementWithClaude(
         balanceSheetTexts    = pageTexts.filter((_, i) => classes[i] === "BALANCE_SHEET");
         incomeStatementTexts = pageTexts.filter((_, i) => classes[i] === "INCOME_STATEMENT");
         invoiceOnlyPageTexts = pageTexts.filter((_, i) => classes[i] === "INVOICE");
-        const skipped = classes.filter((c) => c === "COVER_LETTER" || c === "OTHER").length;
+        // Include OTHER pages too — a page that only shows equity/result totals
+        // (Bénéfice de l'exercice, Résultat net, etc.) may be misclassified as OTHER
+        // by the classifier because it lacks the typical ACTIF/PASSIF column headers.
+        const otherTexts = pageTexts.filter((_, i) => classes[i] === "OTHER");
+        incomeStatementTexts = [...incomeStatementTexts, ...otherTexts];
+        const skipped = classes.filter((c) => c === "COVER_LETTER").length;
         console.log(
           `[DOC-SCAN] Page filter: ${balanceSheetTexts.length} balance-sheet, ` +
-          `${incomeStatementTexts.length} income-statement, ` +
-          `${invoiceOnlyPageTexts.length} invoice-only, ${skipped} skipped`,
+          `${incomeStatementTexts.length - otherTexts.length} income-statement, ` +
+          `${otherTexts.length} other (included), ` +
+          `${invoiceOnlyPageTexts.length} invoice-only, ${skipped} cover-letter (skipped)`,
         );
       }
     }
@@ -1457,12 +1462,14 @@ async function extractFinancialStatementWithClaude(
         }
       }
 
-      // Append balances, deduplicating by name+absAmount across chunks.
-      // Do NOT include documentSection in the key — section labels vary across page chunks
-      // (a row near the top of page 2 may not see the section header from page 1).
+      // Append balances, deduplicating by code+absAmount across chunks.
+      // The same account (same code, same amount) can appear on multiple pages
+      // (summary page + detail page) with different names — code+amount is the
+      // most reliable identity. Different amounts under the same code are kept
+      // (e.g. 2900 with two different equity amounts are genuinely different rows).
       for (const b of chunkResult.accountBalances) {
         const key = [
-          b.rawAccountName.trim().toLowerCase().replace(/\s+/g, " "),
+          normalizeSwissAccountCode(b.rawAccountCode),
           String(Math.abs(b.balanceChf)),
         ].join("|");
         if (!seenBalances.has(key)) {
@@ -1502,13 +1509,12 @@ async function extractFinancialStatementWithClaude(
       }
     }
 
-    // Final dedup pass — catches within-chunk duplicates that the per-chunk
-    // seenBalances Set cannot catch (same account extracted twice on the same page).
+    // Final dedup pass — catches within-chunk duplicates (code+absAmount).
     const finalBalances: ExtractedAccountBalance[] = [];
     const finalBalanceKeys = new Set<string>();
     for (const b of allBalances) {
       const key = [
-        b.rawAccountName.trim().toLowerCase().replace(/\s+/g, " "),
+        normalizeSwissAccountCode(b.rawAccountCode),
         String(Math.abs(b.balanceChf)),
       ].join("|");
       if (!finalBalanceKeys.has(key)) {

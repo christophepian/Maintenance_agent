@@ -851,30 +851,16 @@ export default function ImportedStatementReviewPage() {
   const needsBuilding     = isPendingReview && !s?.buildingId;
   const hasNoBalances     = (s?.accountBalances?.length ?? 0) === 0;
 
-  // Running totals — section-aware (mirrors server mapDTO logic).
-  // Rows with documentSection="UNKNOWN" (legacy/manual) fall back to DEBIT/CREDIT.
-  const totalActifCents = s?.accountBalances?.reduce((sum, ab) => {
-    if (ab.documentSection === "ACTIF") return sum + ab.balanceCents;
-    if (ab.documentSection === "UNKNOWN" && ab.balanceType === "DEBIT") return sum + ab.balanceCents;
-    return sum;
-  }, 0) ?? 0;
-  const totalPassifCents = s?.accountBalances?.reduce((sum, ab) => {
-    if (ab.documentSection === "PASSIF") return sum + ab.balanceCents;
-    if (ab.documentSection === "UNKNOWN" && ab.balanceType === "CREDIT") return sum + ab.balanceCents;
-    return sum;
-  }, 0) ?? 0;
-  const totalRevenueCents = s?.accountBalances?.reduce((sum, ab) => {
-    if (ab.documentSection === "REVENUE") return sum + ab.balanceCents;
-    if (ab.documentSection === "UNKNOWN" && ab.balanceType === "CREDIT") return sum + ab.balanceCents;
-    return sum;
-  }, 0) ?? 0;
-  const totalExpenseCents = s?.accountBalances?.reduce((sum, ab) => {
-    if (ab.documentSection === "EXPENSE") return sum + ab.balanceCents;
-    if (ab.documentSection === "UNKNOWN" && ab.balanceType === "DEBIT") return sum + ab.balanceCents;
-    return sum;
-  }, 0) ?? 0;
+  // Running totals — uses account code prefix as authoritative (mirrors server mapDTO).
+  // 1xxx=ACTIF, 2xxx=PASSIF, 3xxx=REVENUE, 4-9xxx=EXPENSE.
+  // This is more reliable than documentSection from Claude (which can mislabel equity accounts).
+  function codeFirst(code) { const d = (code ?? "").replace(/\D/g, ""); return d ? parseInt(d[0], 10) : NaN; }
+  const totalActifCents   = s?.accountBalances?.reduce((sum, ab) => codeFirst(ab.rawAccountCode) === 1 ? sum + ab.balanceCents : sum, 0) ?? 0;
+  const totalPassifCents  = s?.accountBalances?.reduce((sum, ab) => codeFirst(ab.rawAccountCode) === 2 ? sum + ab.balanceCents : sum, 0) ?? 0;
+  const totalRevenueCents = s?.accountBalances?.reduce((sum, ab) => codeFirst(ab.rawAccountCode) === 3 ? sum + ab.balanceCents : sum, 0) ?? 0;
+  const totalExpenseCents = s?.accountBalances?.reduce((sum, ab) => { const f = codeFirst(ab.rawAccountCode); return (f >= 4 && f <= 9) ? sum + ab.balanceCents : sum; }, 0) ?? 0;
 
-  // For legacy compatibility
+  // For backward compat with parts of UI that reference debit/credit
   const totalDebitCents  = isBalanceSheet ? totalActifCents  : totalExpenseCents;
   const totalCreditCents = isBalanceSheet ? totalPassifCents : totalRevenueCents;
 
@@ -1371,14 +1357,10 @@ export default function ImportedStatementReviewPage() {
                                 <td className="font-mono text-sm">{ab.rawAccountCode}</td>
                                 <td>{ab.rawAccountName}</td>
                                 <td className="text-right font-mono text-sm">
-                                  {(ab.documentSection === "ACTIF" || ab.documentSection === "EXPENSE" || (ab.documentSection === "UNKNOWN" && ab.balanceType === "DEBIT"))
-                                    ? (ab.balanceCents < 0 ? `(${formatChfCents(Math.abs(ab.balanceCents))})` : formatChfCents(ab.balanceCents))
-                                    : "—"}
+                                  {(() => { const f = codeFirst(ab.rawAccountCode); const inLeft = isBalanceSheet ? f===1 : (f>=4&&f<=9); const inRight = isBalanceSheet ? f===2 : f===3; const useFallback = !inLeft && !inRight; return (inLeft || (useFallback && ab.balanceType==="DEBIT")) ? (ab.balanceCents < 0 ? `(${formatChfCents(Math.abs(ab.balanceCents))})` : formatChfCents(ab.balanceCents)) : "—"; })()}
                                 </td>
                                 <td className="text-right font-mono text-sm text-success-text">
-                                  {(ab.documentSection === "PASSIF" || ab.documentSection === "REVENUE" || (ab.documentSection === "UNKNOWN" && ab.balanceType === "CREDIT"))
-                                    ? (ab.balanceCents < 0 ? `(${formatChfCents(Math.abs(ab.balanceCents))})` : formatChfCents(ab.balanceCents))
-                                    : "—"}
+                                  {(() => { const f = codeFirst(ab.rawAccountCode); const inLeft = isBalanceSheet ? f===1 : (f>=4&&f<=9); const inRight = isBalanceSheet ? f===2 : f===3; const useFallback = !inLeft && !inRight; return (inRight || (useFallback && ab.balanceType==="CREDIT")) ? (ab.balanceCents < 0 ? `(${formatChfCents(Math.abs(ab.balanceCents))})` : formatChfCents(ab.balanceCents)) : "—"; })()}
                                 </td>
                                 <td>
                                   <Badge variant={confidenceVariant(ab.matchConfidence)}>

@@ -1402,45 +1402,36 @@ function mapDTO(s: any, linkedInvoices: any[] = []): ImportedStatementDTO {
   const balances: any[] = s.accountBalances ?? [];
 
   // Accounting equation check.
-  // For sectioned balance sheets (ACTIF/PASSIF): sum(signed ACTIF) − sum(signed PASSIF) = 0
-  // For P&L (REVENUE/EXPENSE): net income = sum(REVENUE) − sum(EXPENSE), not expected to be zero.
-  // Legacy rows with documentSection="UNKNOWN" fall back to sum(DEBIT) − sum(CREDIT).
+  // Uses account code prefix as the authoritative section indicator:
+  //   1xxx → ACTIF (assets)       2xxx → PASSIF (liabilities + equity)
+  //   3xxx → REVENUE              4xxx–9xxx → EXPENSE
+  // This overrides Claude's documentSection label, which can be wrong for
+  // equity accounts like 2900 Bénéfice that Claude may call REVENUE.
+  // Signed amounts: negative within a section = contra-account / deduction.
   let balanceImbalanceCents: number | null = null;
   if (balances.length > 0) {
-    const hasSectionData = balances.some(
-      (ab: any) => ab.documentSection && ab.documentSection !== "UNKNOWN",
-    );
-    if (hasSectionData) {
-      let actifTotal = 0, passifTotal = 0, revenueTotal = 0, expenseTotal = 0;
-      let legacyDebit = 0, legacyCredit = 0;
-      for (const ab of balances) {
-        switch (ab.documentSection) {
-          case "ACTIF":   actifTotal   += ab.balanceCents; break;
-          case "PASSIF":  passifTotal  += ab.balanceCents; break;
-          case "REVENUE": revenueTotal += ab.balanceCents; break;
-          case "EXPENSE": expenseTotal += ab.balanceCents; break;
-          default:
-            if (ab.balanceType === "DEBIT") legacyDebit  += Math.abs(ab.balanceCents);
-            else                            legacyCredit += Math.abs(ab.balanceCents);
-        }
+    let actifTotal = 0, passifTotal = 0, revenueTotal = 0, expenseTotal = 0;
+    for (const ab of balances) {
+      const code = ((ab.rawAccountCode ?? "") as string).trim().replace(/\D/g, "");
+      const first = code ? parseInt(code[0], 10) : NaN;
+      if (first === 1) actifTotal  += ab.balanceCents;
+      else if (first === 2) passifTotal += ab.balanceCents;
+      else if (first === 3) revenueTotal += ab.balanceCents;
+      else if (first >= 4 && first <= 9) expenseTotal += ab.balanceCents;
+      else {
+        // No recognised code — fall back to stored balanceType
+        if (ab.balanceType === "DEBIT") actifTotal  += Math.abs(ab.balanceCents);
+        else                            passifTotal += Math.abs(ab.balanceCents);
       }
-      if (actifTotal !== 0 || passifTotal !== 0) {
-        // Balance sheet: Total Actifs must equal Total Passifs
-        balanceImbalanceCents = actifTotal - passifTotal;
-      } else if (revenueTotal !== 0 || expenseTotal !== 0) {
-        // P&L: show net income (Revenue − Expenses). Gate is informational, not zero-check.
-        balanceImbalanceCents = revenueTotal - expenseTotal;
-      } else {
-        balanceImbalanceCents = legacyDebit - legacyCredit;
-      }
+    }
+    if (actifTotal !== 0 || passifTotal !== 0) {
+      // Balance sheet: Total Actifs must equal Total Passifs
+      balanceImbalanceCents = actifTotal - passifTotal;
+    } else if (revenueTotal !== 0 || expenseTotal !== 0) {
+      // P&L: show net income (Revenue − Expenses). Not expected to be zero.
+      balanceImbalanceCents = revenueTotal - expenseTotal;
     } else {
-      // Legacy records without section data — old DEBIT/CREDIT trial balance approach
-      let debitTotal = 0, creditTotal = 0;
-      for (const ab of balances) {
-        if (ab.balanceType === "DEBIT") debitTotal  += Math.abs(ab.balanceCents);
-        else                            creditTotal += Math.abs(ab.balanceCents);
-      }
-      balanceImbalanceCents = debitTotal - creditTotal;
+      balanceImbalanceCents = 0;
     }
   }
 
