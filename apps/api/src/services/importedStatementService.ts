@@ -958,19 +958,25 @@ export async function getStatement(
   });
   if (!s) return null;
 
-  const linkedInvoices = await prisma.invoice.findMany({
-    where: { orgId, sourceFileUrl: s.sourceFileUrl },
-    select: {
-      id: true,
-      description: true,
-      recipientName: true,
-      amount: true,
-      currency: true,
-      issueDate: true,
-      status: true,
-    },
-    orderBy: { createdAt: "asc" },
-  });
+  // Linked invoices are only relevant on the INVOICES section.
+  // All sections share the same sourceFileUrl so querying without this filter
+  // would return the same invoice list on BS and IS sections too.
+  const linkedInvoices =
+    s.sectionType === StatementSectionType.INVOICES
+      ? await prisma.invoice.findMany({
+          where: { orgId, sourceFileUrl: s.sourceFileUrl },
+          select: {
+            id: true,
+            description: true,
+            recipientName: true,
+            totalAmount: true, // cents — use totalAmount, not amount (which is CHF)
+            currency: true,
+            issueDate: true,
+            status: true,
+          },
+          orderBy: { createdAt: "asc" },
+        })
+      : [];
 
   return mapDTO(s, linkedInvoices);
 }
@@ -1001,6 +1007,42 @@ export async function assignBuilding(
     },
   });
   return mapDTO(s);
+}
+
+/**
+ * Delete all non-approved statements in a batch, then delete the batch record
+ * itself if it becomes empty.
+ * Returns the number of statements deleted.
+ */
+export async function deleteStatementBatch(
+  prisma: PrismaClient,
+  batchId: string,
+  orgId: string,
+): Promise<number> {
+  const batch = await prisma.uploadBatch.findFirst({
+    where: { id: batchId, orgId },
+    include: { statements: { select: { id: true, status: true } } },
+  });
+  if (!batch) throw new ImportedStatementError("NOT_FOUND", "Batch not found");
+
+  const toDelete = batch.statements.filter(
+    (s) => s.status !== ImportedStatementStatus.APPROVED,
+  );
+  for (const s of toDelete) {
+    await prisma.ledgerEntry.deleteMany({
+      where: { orgId, sourceType: "IMPORTED_STATEMENT", sourceId: s.id },
+    });
+    await prisma.importedAccountBalance.deleteMany({ where: { statementId: s.id } });
+    await prisma.importedStatement.delete({ where: { id: s.id } });
+  }
+
+  // Only delete the batch record if all statements are gone
+  const remaining = batch.statements.length - toDelete.length;
+  if (remaining === 0) {
+    await prisma.uploadBatch.delete({ where: { id: batchId } });
+  }
+
+  return toDelete.length;
 }
 
 /** Permanently delete a single imported statement and its related ledger entries. */
@@ -1396,7 +1438,8 @@ function mapDTO(s: any, linkedInvoices: any[] = []): ImportedStatementDTO {
       id: inv.id,
       description: inv.description ?? null,
       recipientName: inv.recipientName ?? null,
-      totalCents: inv.amount ?? null,
+      // totalAmount is stored in cents; Invoice.amount is in CHF (legacy field).
+      totalCents: inv.totalAmount ?? null,
       currency: inv.currency ?? null,
       issueDate: inv.issueDate ? new Date(inv.issueDate).toISOString() : null,
       status: inv.status,

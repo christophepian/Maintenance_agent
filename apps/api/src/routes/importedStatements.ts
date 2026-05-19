@@ -29,6 +29,7 @@ import {
   listStatements,
   listBatches,
   getBatch,
+  deleteStatementBatch,
   getStatement,
   updateAccountBalance,
   createAccountBalance,
@@ -137,6 +138,24 @@ export function registerImportedStatementRoutes(router: Router) {
     } catch (e: any) {
       console.error("[IMPORT] get-batch error:", e);
       sendError(res, 500, "INTERNAL_ERROR", "Failed to get batch", e.message);
+    }
+  });
+
+  // ── DELETE /imported-statements/batch/:batchId ───────────────────────────
+  // Delete all non-approved statements in the batch, then the batch record.
+  // Must be registered BEFORE /:id to avoid conflict.
+  router.delete("/imported-statements/batch/:batchId", async ({ req, res, orgId, prisma, params }) => {
+    const user = requireAnyRole(req, res, ["MANAGER"]);
+    if (!user) return;
+    try {
+      const count = await deleteStatementBatch(prisma, params.batchId, orgId);
+      sendJson(res, 200, { data: { deleted: count } });
+    } catch (e: any) {
+      if (e instanceof ImportedStatementError) {
+        return sendError(res, 404, e.code, e.message);
+      }
+      console.error("[IMPORT] delete-batch error:", e);
+      sendError(res, 500, "INTERNAL_ERROR", "Failed to delete batch", e.message);
     }
   });
 

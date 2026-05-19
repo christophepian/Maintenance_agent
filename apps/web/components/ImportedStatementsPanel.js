@@ -214,13 +214,14 @@ function UploadModal({ onClose, onUploaded }) {
 
 // ── Batch row ─────────────────────────────────────────────────────────────────
 
-function BatchRow({ batch, onDeleted, deletingId, onDelete }) {
+function BatchRow({ batch, onDeleted, deletingId, onDelete, onDeleteBatch, deletingBatchId }) {
   const router = useRouter();
   const [expanded, setExpanded] = useState(true);
 
   const overallStatus = batchOverallStatus(batch.statements);
   const fileName = batch.fileName || "document.pdf";
   const buildingName = batch.statements?.[0]?.buildingName ?? null;
+  const hasApproved = batch.statements?.some((s) => s.status === "APPROVED");
 
   return (
     <div className="border border-table-border rounded-lg overflow-hidden">
@@ -255,6 +256,23 @@ function BatchRow({ batch, onDeleted, deletingId, onDelete }) {
         <Badge variant={statusVariant(overallStatus)} className="shrink-0">
           {overallStatus.replace(/_/g, " ")}
         </Badge>
+        <button
+          aria-label="Delete batch"
+          className="icon-btn text-slate-300 hover:text-destructive-text shrink-0"
+          disabled={deletingBatchId === batch.id}
+          title={hasApproved ? "Batch contains approved sections — only non-approved sections will be deleted" : "Delete this batch"}
+          onClick={(e) => { e.stopPropagation(); onDeleteBatch(batch.id); }}
+        >
+          {deletingBatchId === batch.id ? (
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+          ) : (
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+            </svg>
+          )}
+        </button>
       </div>
 
       {/* Nested section statements */}
@@ -313,7 +331,7 @@ function BatchRow({ batch, onDeleted, deletingId, onDelete }) {
 
 // ── Mobile batch card ─────────────────────────────────────────────────────────
 
-function BatchCard({ batch, onDelete, deletingId }) {
+function BatchCard({ batch, onDelete, deletingId, onDeleteBatch, deletingBatchId }) {
   const router = useRouter();
   const [expanded, setExpanded] = useState(true);
   const overallStatus = batchOverallStatus(batch.statements);
@@ -328,10 +346,20 @@ function BatchCard({ batch, onDelete, deletingId }) {
         onClick={() => setExpanded((v) => !v)}
       >
         <div className="flex items-center justify-between gap-2">
-          <span className="table-card-head truncate">{fileName}</span>
+          <span className="table-card-head truncate flex-1">{fileName}</span>
           <Badge variant={statusVariant(overallStatus)}>
             {overallStatus.replace(/_/g, " ")}
           </Badge>
+          <button
+            aria-label="Delete batch"
+            className="icon-btn text-slate-300 hover:text-destructive-text shrink-0"
+            disabled={deletingBatchId === batch.id}
+            onClick={(e) => { e.stopPropagation(); onDeleteBatch(batch.id); }}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+            </svg>
+          </button>
         </div>
         <div className="table-card-footer">
           {buildingName && <span>{buildingName}</span>}
@@ -379,6 +407,7 @@ export default function ImportedStatementsPanel() {
   const [error, setError] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
+  const [deletingBatchId, setDeletingBatchId] = useState(null);
   const [deletingAll, setDeletingAll] = useState(false);
 
   const fetchBatches = useCallback(async () => {
@@ -437,6 +466,33 @@ export default function ImportedStatementsPanel() {
       setError(String(e?.message || e));
     } finally {
       setDeletingId(null);
+    }
+  }
+
+  async function handleDeleteBatch(batchId) {
+    const batch = batches.find((b) => b.id === batchId);
+    const hasApproved = batch?.statements?.some((s) => s.status === "APPROVED");
+    const msg = hasApproved
+      ? "This batch contains approved sections that cannot be deleted. Delete all non-approved sections?"
+      : "Delete this batch and all its sections? This cannot be undone.";
+    if (!window.confirm(msg)) return;
+    setDeletingBatchId(batchId);
+    try {
+      const res = await fetch(`/api/imported-statements/batch/${batchId}`, {
+        method: "DELETE",
+        headers: authHeaders(),
+      });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        throw new Error(json?.error?.message || "Failed to delete batch");
+      }
+      // Remove the batch from state (or refetch if approved sections remain)
+      setBatches((prev) => prev.filter((b) => b.id !== batchId || hasApproved));
+      if (hasApproved) fetchBatches();
+    } catch (e) {
+      setError(String(e?.message || e));
+    } finally {
+      setDeletingBatchId(null);
     }
   }
 
@@ -508,6 +564,8 @@ export default function ImportedStatementsPanel() {
                   batch={batch}
                   onDelete={handleDelete}
                   deletingId={deletingId}
+                  onDeleteBatch={handleDeleteBatch}
+                  deletingBatchId={deletingBatchId}
                 />
               ))}
             </div>
@@ -520,6 +578,8 @@ export default function ImportedStatementsPanel() {
                   batch={batch}
                   onDelete={handleDelete}
                   deletingId={deletingId}
+                  onDeleteBatch={handleDeleteBatch}
+                  deletingBatchId={deletingBatchId}
                 />
               ))}
             </div>
