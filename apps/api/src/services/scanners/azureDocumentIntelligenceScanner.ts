@@ -1404,16 +1404,18 @@ async function extractFinancialStatementWithClaude(
         balanceSheetTexts    = pageTexts.filter((_, i) => classes[i] === "BALANCE_SHEET");
         incomeStatementTexts = pageTexts.filter((_, i) => classes[i] === "INCOME_STATEMENT");
         invoiceOnlyPageTexts = pageTexts.filter((_, i) => classes[i] === "INVOICE");
-        // Include OTHER pages too — a page that only shows equity/result totals
-        // (Bénéfice de l'exercice, Résultat net, etc.) may be misclassified as OTHER
-        // by the classifier because it lacks the typical ACTIF/PASSIF column headers.
+        // OTHER pages go into the balance-sheet pool, NOT income-statement.
+        // Equity/result pages (Bénéfice de l'exercice, Résultat net, 2900 rows) may
+        // be misclassified as OTHER because they lack ACTIF/PASSIF column headers.
+        // Putting them in the IS pool was creating a spurious INCOME_STATEMENT section
+        // in the batch whenever those pages yielded 3xxx/4xxx-looking codes.
         const otherTexts = pageTexts.filter((_, i) => classes[i] === "OTHER");
-        incomeStatementTexts = [...incomeStatementTexts, ...otherTexts];
+        balanceSheetTexts = [...balanceSheetTexts, ...otherTexts];
         const skipped = classes.filter((c) => c === "COVER_LETTER").length;
         console.log(
-          `[DOC-SCAN] Page filter: ${balanceSheetTexts.length} balance-sheet, ` +
-          `${incomeStatementTexts.length - otherTexts.length} income-statement, ` +
-          `${otherTexts.length} other (included), ` +
+          `[DOC-SCAN] Page filter: ${balanceSheetTexts.length - otherTexts.length} balance-sheet, ` +
+          `${incomeStatementTexts.length} income-statement, ` +
+          `${otherTexts.length} other→balance-sheet, ` +
           `${invoiceOnlyPageTexts.length} invoice-only, ${skipped} cover-letter (skipped)`,
         );
       }

@@ -224,14 +224,18 @@ async function matchAccount(
   if (exactCode) return { accountId: exactCode.id, confidence: MatchConfidence.AUTO };
 
   // Narrow the candidate pool to accounts whose code starts with the same digit as
-  // the raw code.  This prevents a 2xxx liability row (e.g. "2210 Compte courant")
-  // from being matched to a 1xxx asset entry (e.g. "Bank Account") when the COA
-  // has no 2xxx entries yet.  Accounts with no code are included as wildcards.
+  // the raw code.  This prevents a 2xxx liability row (e.g. "2210 Compte courant
+  // propriétaires") from being fuzzy-matched to a 1xxx asset entry (e.g. "Compte
+  // courant" the bank account) because both names share the substring "compte courant".
+  // COA accounts with no code are deliberately excluded from the fuzzy-match pool;
+  // they can only be reached by the exact-code step (impossible without a code) or
+  // manually by the manager.  If the same-type pool is empty, UNMATCHED is returned
+  // and approveStatement will auto-create a correctly-typed stub account.
   const rawFirstDigit = rawCode.trim().replace(/\D/g, "")[0] ?? "";
   const sameTypeAccounts = rawFirstDigit
     ? orgAccounts.filter((a) => {
         const aFirst = (a.code ?? "").trim().replace(/\D/g, "")[0];
-        return !aFirst || aFirst === rawFirstDigit;
+        return !!aFirst && aFirst === rawFirstDigit; // require matching prefix; no-code = excluded
       })
     : orgAccounts;
 
