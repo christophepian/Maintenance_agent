@@ -1218,6 +1218,47 @@ export async function reExtractStatement(
 }
 
 /**
+ * Delete a single balance row. Only allowed on PENDING_REVIEW statements.
+ */
+export async function deleteAccountBalance(
+  prisma: PrismaClient,
+  balanceId: string,
+  orgId: string,
+): Promise<void> {
+  const existing = await prisma.importedAccountBalance.findFirst({
+    where: { id: balanceId, orgId },
+    include: { statement: { select: { status: true } } },
+  });
+  if (!existing) throw new ImportedStatementError("NOT_FOUND", "Balance row not found");
+  if (existing.statement.status !== ImportedStatementStatus.PENDING_REVIEW) {
+    throw new ImportedStatementError(
+      "INVALID_STATUS",
+      "Only balance rows on PENDING_REVIEW statements can be deleted",
+    );
+  }
+  await prisma.importedAccountBalance.delete({ where: { id: balanceId } });
+}
+
+/**
+ * Return a single upload batch with its child statements.
+ * Used by the detail page to render the sibling-section navigation bar.
+ */
+export async function getBatch(
+  prisma: PrismaClient,
+  batchId: string,
+  orgId: string,
+): Promise<UploadBatchDTO | null> {
+  const batch = await prisma.uploadBatch.findFirst({
+    where: { id: batchId, orgId },
+    include: {
+      statements: { include: STATEMENT_INCLUDE, orderBy: { sectionType: "asc" } },
+    },
+  });
+  if (!batch) return null;
+  return mapBatchDTO(batch, batch.statements);
+}
+
+/**
  * Update fields on an existing balance row.
  * Any combination of accountId, balanceCents, and balanceType may be supplied.
  * Setting accountId always flips matchConfidence to MANUAL.

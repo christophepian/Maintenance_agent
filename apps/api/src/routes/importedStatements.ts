@@ -28,9 +28,11 @@ import {
   rejectStatement,
   listStatements,
   listBatches,
+  getBatch,
   getStatement,
   updateAccountBalance,
   createAccountBalance,
+  deleteAccountBalance,
   assignBuilding,
   deleteStatement,
   deleteAllStatements,
@@ -119,6 +121,22 @@ export function registerImportedStatementRoutes(router: Router) {
       }
       console.error("[IMPORT] upload error:", e);
       sendError(res, 500, "INTERNAL_ERROR", "Failed to ingest statement", e.message);
+    }
+  });
+
+  // ── GET /imported-statements/batch/:batchId ─────────────────────────────
+  // Returns a single upload batch with its child statements.
+  // Used by the detail page for sibling-section navigation.
+  // Must be registered BEFORE /:id to avoid conflict.
+  router.get("/imported-statements/batch/:batchId", async ({ req, res, orgId, prisma, params }) => {
+    if (!requireOrgViewer(req, res)) return;
+    try {
+      const batch = await getBatch(prisma, params.batchId, orgId);
+      if (!batch) return sendError(res, 404, "NOT_FOUND", "Batch not found");
+      sendJson(res, 200, { data: batch });
+    } catch (e: any) {
+      console.error("[IMPORT] get-batch error:", e);
+      sendError(res, 500, "INTERNAL_ERROR", "Failed to get batch", e.message);
     }
   });
 
@@ -399,6 +417,31 @@ export function registerImportedStatementRoutes(router: Router) {
         }
         console.error("[IMPORT] update balance error:", e);
         sendError(res, 500, "INTERNAL_ERROR", "Failed to update balance", e.message);
+      }
+    },
+  );
+
+  // ── DELETE /imported-statements/:id/balances/:balanceId ─────────────────
+  // Permanently remove a balance row. Only allowed on PENDING_REVIEW statements.
+  // Returns the updated parent statement.
+  router.delete(
+    "/imported-statements/:id/balances/:balanceId",
+    async ({ req, res, orgId, prisma, params }) => {
+      const user = requireAnyRole(req, res, ["MANAGER"]);
+      if (!user) return;
+
+      try {
+        await deleteAccountBalance(prisma, params.balanceId, orgId);
+        const statement = await getStatement(prisma, params.id, orgId);
+        if (!statement) return sendError(res, 404, "NOT_FOUND", "Statement not found");
+        sendJson(res, 200, { data: statement });
+      } catch (e: any) {
+        if (e instanceof ImportedStatementError) {
+          const status = e.code === "NOT_FOUND" ? 404 : 409;
+          return sendError(res, status, e.code, e.message);
+        }
+        console.error("[IMPORT] delete balance error:", e);
+        sendError(res, 500, "INTERNAL_ERROR", "Failed to delete balance row", e.message);
       }
     },
   );
