@@ -396,6 +396,28 @@ export function registerInventoryRoutes(router: Router) {
     }
   });
 
+  // POST /people/owners/:id/sync-buildings — insert BuildingOwner rows for all
+  // active buildings. Called by admin/users after setting ownerId in app_metadata.
+  router.post("/people/owners/:id/sync-buildings", async ({ req, res, orgId, params, prisma }) => {
+    if (!requireRole(req, res, "MANAGER")) return;
+    try {
+      const userId = params.id;
+      const user = await prisma.user.findFirst({ where: { id: userId, orgId } });
+      if (!user) return sendError(res, 404, "NOT_FOUND", "User not found");
+
+      const synced: number = await prisma.$executeRaw`
+        INSERT INTO "BuildingOwner" (id, "buildingId", "userId")
+        SELECT gen_random_uuid(), id, ${userId}
+        FROM "Building"
+        WHERE "orgId" = ${orgId} AND "isActive" = true
+        ON CONFLICT DO NOTHING
+      `;
+      sendJson(res, 200, { synced });
+    } catch (e) {
+      sendError(res, 500, "DB_ERROR", "Failed to sync buildings", String(e));
+    }
+  });
+
   router.delete("/buildings/:id/owners/:userId", async ({ req, res, params, prisma }) => {
     if (!requireRole(req, res, "MANAGER")) return;
     try {

@@ -114,9 +114,10 @@ export default async function handler(req, res) {
 
     const { data: existing } = await admin.auth.admin.getUserById(userId);
     const currentMeta = existing?.user?.app_metadata ?? {};
+    const previousOwnerId = currentMeta.ownerId ?? null;
 
-    // Build updated metadata — omit tenantId key entirely when null so it
-    // doesn't leave a stale null in the JWT claims.
+    // Build updated metadata — omit tenantId/ownerId keys entirely when null
+    // so stale nulls don't accumulate in JWT claims.
     const updatedMeta = {
       ...currentMeta,
       accessLevel,
@@ -138,6 +139,26 @@ export default async function handler(req, res) {
     });
 
     if (error) return res.status(500).json({ error: error.message });
+
+    // When ownerId is newly set (or changed), sync BuildingOwner rows so the
+    // owner surface immediately shows all active buildings.
+    if (ownerId && ownerId !== previousOwnerId) {
+      try {
+        const apiBase = process.env.API_BASE_URL || "http://127.0.0.1:3001";
+        const supabase = createApiClient(req, res);
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        await fetch(`${apiBase}/people/owners/${ownerId}/sync-buildings`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+        });
+      } catch {
+        // Non-fatal — metadata was saved; buildings can be synced manually
+      }
+    }
 
     return res.status(200).json({ ok: true });
   }
