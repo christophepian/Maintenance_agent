@@ -89,7 +89,7 @@ Remaining known limitation: OCR extracts amount and date reliably from phone pho
 |-------|-------|--------|
 | Models | 70 | prisma/schema.prisma — derived |
 | Enums | 64 | prisma/schema.prisma — derived |
-| Migrations | 86 | prisma/migrations/ — derived |
+| Migrations | 97 | prisma/migrations/ — derived |
 | Workflows | 29 | src/workflows/ — derived |
 | Repositories | 39 | src/repositories/ — derived (excl. index.ts) |
 | Route modules | 28 | src/routes/ — derived (excl. helpers.ts utility) |
@@ -104,11 +104,17 @@ Remaining known limitation: OCR extracts amount and date reliably from phone pho
 | Audit findings open | 3 (SI-2/3/4: legal model orgId doc drift) | docs/AUDIT.md — manual |
 | Audit findings resolved | 91 | docs/AUDIT.md — manual |
 | Last auto-sync | 2026-05-06 | blueprint.js |
-| Last manual review | 2026-05-06 | human |
+| Last manual review | 2026-05-20 | human |
 
 > Derived fields are auto-updated by `npm run blueprint`. Manual fields must be updated at the end of each slice.
 
 ---
+
+✅ **Manager assignment Phase 1 + Balance sheet redesign (2026-05-20).** `managerId` FK added to `Building` — MANAGER sees only assigned buildings, new buildings auto-assigned to creator. Owner surface uses `?filterByOwner=true` flag to scope by `ownerId` independently of role. `BuildingOwner` rows auto-synced via admin/users UI when `ownerId` set. Balance sheet redesigned: `BALANCE_SHEET_IMPORT` / `INCOME_STATEMENT_IMPORT` sourceTypes, `getBalanceSheet` service, balance sheet tab on manager + owner finance pages. Upload timeout extended to 120 s + orphaned PROCESSING batch auto-purge. 97 migrations. See [EPIC_HISTORY.md](EPIC_HISTORY.md) for full narrative.
+
+**Pending — Phase 2 (deferred):** OWNER_DIRECT UI blend for self-managing owners.
+
+**Operational requirement for new users:** Supabase `app_metadata` must include `prismaUserId` + `orgId`. Use admin/users UI to set `ownerId` (auto-syncs `BuildingOwner` rows). Manager users need manual SQL assignment of `managerId` on existing buildings after first deploy.
 
 ## Owner Surface Segregation Rules
 

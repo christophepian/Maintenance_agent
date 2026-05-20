@@ -3,6 +3,79 @@
 > **Extracted from PROJECT_STATE.md** — this is the canonical record of all completed epics and slices.
 > Do not duplicate epic narratives in PROJECT_STATE.md; that file contains a pointer here.
 
+---
+
+## Session 2026-05-20 — Balance sheet redesign + Manager assignment (Phase 1)
+
+### Commits: `41b8a29` → `c39e152` (all pushed to origin/main)
+
+### Balance sheet redesign (`41b8a29`)
+
+`approveStatement` was posting all imported entries with `sourceType: "IMPORTED_STATEMENT"`, producing a ledger that didn't yield a meaningful balance sheet. Redesigned:
+
+- `sourceType` now distinguishes `BALANCE_SHEET_IMPORT` vs `INCOME_STATEMENT_IMPORT`
+- Balance sheets always post as opening-balance journal entries (never reference-only)
+- `getBalanceSheet` added to `ledgerService.ts`: Prisma `groupBy` on `LedgerEntry`, signed arithmetic (ASSET: Dr−Cr, LIABILITY: −(Dr−Cr)), returns `BalanceSheetReport`
+- `GET /ledger/balance-sheet?buildingId=&asOf=` route added
+- Balance Sheet tab added to both manager and owner finance pages
+- `BALANCE_SHEET_IMPORT` / `INCOME_STATEMENT_IMPORT` labels added to ledger journal view
+
+### Upload timeout + orphan cleanup (`29338aa`)
+
+Root cause of 6 empty reports accumulating alongside each good extraction: 30 s Vercel serverless timeout fired before Azure OCR + Claude completed, sending 504 while leaving PROCESSING placeholder batch committed in DB.
+
+- `req.socket?.setTimeout(120_000)` on the upload route to extend per-request timeout
+- Auto-purge orphaned PROCESSING batches older than 5 min at start of each `ingestStatement`
+
+### Manager assignment — Phase 1 (`0a67944`, `5cc8315`, `558aa9d`, `c39e152`)
+
+Added `managerId` FK to `Building` (nullable, `SET NULL` on delete) so each building can be assigned to one property manager. MANAGER-role users see only their assigned buildings; new buildings auto-assign to the creating manager.
+
+**Schema + migration:**
+- `managerId String?` + `manager User? @relation("BuildingManager")` added to `Building`
+- `managedBuildings Building[] @relation("BuildingManager")` added to `User`
+- Migration `20260520000000_add_manager_to_building` — `ALTER TABLE + CREATE INDEX`
+
+**Backend:**
+- `listBuildings` repository + service: `managerId?` filter parameter
+- `createBuilding` repository + service: accepts `managerId?: string | null`
+- `GET /buildings` + `GET /properties`: MANAGER role injects `managerId = user.userId`; OWNER role injects `ownerId` based on role only (not JWT `ownerId` field, to avoid AND-filter collision)
+- `POST /buildings`: auto-assigns `managerId = creating manager's userId`
+- `GET /buildings/:id`: hard 404 gate if MANAGER's userId ≠ building's managerId
+- `POST /people/owners/:id/sync-buildings`: inserts `BuildingOwner` rows for all active buildings via raw SQL (`gen_random_uuid()` + `ON CONFLICT DO NOTHING`)
+- Building detail DTO: exposes `managerId` + `manager { id, name, email }`
+
+**Frontend:**
+- Owner properties page passes `?filterByOwner=true` — backend applies `ownerId` filter only when this flag is present, allowing same-user manager+owner access to both surfaces
+- `admin/users` `update-role` handler: after saving `ownerId` to JWT metadata, auto-calls `sync-buildings` so `BuildingOwner` rows are created without manual SQL
+
+**Operational notes (one-time setup):**
+- All existing buildings assigned to manager via SQL: `UPDATE "Building" SET "managerId" = '<id>' WHERE "isActive" = true`
+- Manager Supabase `app_metadata` must include `prismaUserId` (set via Admin API curl) — without it, JWT `userId` falls back to Supabase UUID which doesn't match Prisma `User.id`
+- Owner users need `prismaUserId` + `ownerId` + `orgId` in `app_metadata`; `BuildingOwner` rows auto-synced when ownerId set via admin/users UI
+
+**Deferred — Phase 2:** OWNER_DIRECT UI blend (manager who self-manages owns buildings sees unified surface). Scoped separately.
+
+### Files Changed
+
+| File | Change |
+|---|---|
+| `apps/api/prisma/schema.prisma` | `managerId` FK + relation + index on Building; back-relation on User |
+| `apps/api/prisma/migrations/20260520000000_add_manager_to_building/migration.sql` | New migration |
+| `apps/api/src/repositories/inventoryRepository.ts` | `listBuildings` managerId filter; `createBuilding` managerId; `findBuildingByIdDeep` includes manager |
+| `apps/api/src/services/inventory.ts` | `listBuildings` + `createBuilding` managerId passthrough |
+| `apps/api/src/routes/inventory.ts` | GET/POST /buildings manager gate + auto-assign; GET /buildings/:id MANAGER access gate; POST /people/owners/:id/sync-buildings; filterByOwner flag |
+| `apps/api/src/dto/buildingDetail.ts` | `managerId` + `manager` fields added to DTO + type |
+| `apps/api/src/services/ledgerService.ts` | `getBalanceSheet` + `BalanceSheetReport` types |
+| `apps/api/src/routes/ledger.ts` | `GET /ledger/balance-sheet` route |
+| `apps/api/src/services/importedStatementService.ts` | sourceType distinction + orphan cleanup |
+| `apps/api/src/routes/importedStatements.ts` | `req.socket?.setTimeout(120_000)` |
+| `apps/web/pages/api/admin/users.js` | Auto-call sync-buildings after ownerId saved |
+| `apps/web/pages/owner/properties.js` | `?filterByOwner=true` on buildings fetch |
+| `apps/web/pages/manager/finance/ledger.js` | Balance Sheet tab |
+| `apps/web/pages/owner/finance.js` | Balance Sheet tab |
+| `apps/web/pages/api/ledger/balance-sheet.js` | New proxy route |
+
 
 ## 11. Cleanup & Refactoring (Feb 3, 2026)
 
