@@ -218,8 +218,9 @@ model User {
   supabaseId     String?  @unique  /// Supabase auth.users UUID — set on first Supabase login
   updatedAt      DateTime        @updatedAt
   org            Org             @relation(fields: [orgId], references: [id])
-  ownedBuildings BuildingOwner[]
-  billingEntity  BillingEntity?
+  ownedBuildings   BuildingOwner[]
+  managedBuildings Building[]      @relation("BuildingManager")
+  billingEntity    BillingEntity?
   marginalTaxRate Float?         /// User's marginal income tax rate (0–1) for CapEx tax impact
   strategyProfile OwnerStrategyProfile?
 
@@ -355,6 +356,8 @@ model Building {
 
   // Management
   managedSince DateTime?
+  managerId    String?
+  manager      User?    @relation("BuildingManager", fields: [managerId], references: [id], onDelete: SetNull)
 
   // Legal engine: canton derivation
   canton          String?
@@ -383,6 +386,7 @@ model Building {
   assets             Asset[]
 
   @@index([orgId])
+  @@index([managerId])
 }
 
 model BuildingOwner {

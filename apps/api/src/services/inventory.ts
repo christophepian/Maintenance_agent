@@ -12,15 +12,15 @@ const assetModelName = (model: { manufacturer: string; model: string }) => {
 // =========================
 // Buildings
 // =========================
-export async function listBuildings(orgId: string, includeInactive?: boolean, ownerId?: string) {
-  return inventoryRepo.listBuildings(prisma, orgId, includeInactive, ownerId);
+export async function listBuildings(orgId: string, includeInactive?: boolean, ownerId?: string, managerId?: string) {
+  return inventoryRepo.listBuildings(prisma, orgId, includeInactive, ownerId, managerId);
 }
 export async function createBuilding(
   orgId: string,
-  data: { name: string; address?: string }
+  data: { name: string; address?: string; managerId?: string | null },
 ) {
   const address = data.address?.trim() || data.name;
-  const building = await inventoryRepo.createBuilding(prisma, orgId, { name: data.name, address });
+  const building = await inventoryRepo.createBuilding(prisma, orgId, { name: data.name, address, managerId: data.managerId });
   // Seed default building-level assets (fire-and-forget; non-blocking)
   seedDefaultBuildingAssets(prisma, orgId, building.id, { hasElevator: false }).catch((e) =>
     console.warn("[createBuilding] Failed to seed default assets:", e),

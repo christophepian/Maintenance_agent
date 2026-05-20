@@ -53,8 +53,9 @@ export function registerInventoryRoutes(router: Router) {
     try {
       const includeInactive = first(query, "includeInactive") === "true";
       const user = getAuthUser(req);
-      const ownerId = (user?.role === "OWNER" || user?.ownerId) ? (user.ownerId || user.userId) : undefined;
-      const buildings = await listBuildings(orgId, includeInactive, ownerId);
+      const ownerId   = (user?.role === "OWNER"   || user?.ownerId) ? (user.ownerId || user.userId) : undefined;
+      const managerId = user?.role === "MANAGER" ? user.userId : undefined;
+      const buildings = await listBuildings(orgId, includeInactive, ownerId, managerId);
       const properties = buildings.map(propertyFromBuilding);
       sendJson(res, 200, { data: properties, total: properties.length });
     } catch (e) {
@@ -226,12 +227,13 @@ export function registerInventoryRoutes(router: Router) {
 
   /* ── Buildings ─────────────────────────────────────────────── */
 
-  router.get("/buildings", withAuthRequired(async ({ req, res, orgId, query, prisma }) => {
+  router.get("/buildings", withAuthRequired(async ({ req, res, orgId, query }) => {
     try {
       const includeInactive = first(query, "includeInactive") === "true";
       const user = getAuthUser(req);
-      const ownerId = (user?.role === "OWNER" || user?.ownerId) ? (user.ownerId || user.userId) : undefined;
-      const buildings = await listBuildings(orgId, includeInactive, ownerId);
+      const ownerId   = (user?.role === "OWNER" || user?.ownerId) ? (user.ownerId || user.userId) : undefined;
+      const managerId = user?.role === "MANAGER" ? user.userId : undefined;
+      const buildings = await listBuildings(orgId, includeInactive, ownerId, managerId);
       sendJson(res, 200, { data: buildings, total: buildings.length });
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to fetch buildings", String(e));
@@ -244,7 +246,10 @@ export function registerInventoryRoutes(router: Router) {
       const raw = await readJson(req);
       const parsed = CreateBuildingSchema.safeParse(raw);
       if (!parsed.success) return sendError(res, 400, "VALIDATION_ERROR", "Invalid building data", parsed.error.flatten());
-      const created = await createBuilding(orgId, parsed.data);
+      // Auto-assign the creating manager so they can immediately see the building
+      const user = getAuthUser(req);
+      const managerId = user?.userId ?? null;
+      const created = await createBuilding(orgId, { ...parsed.data, managerId });
       sendJson(res, 201, { data: created });
     } catch (e: any) {
       const msg = String(e?.message || e);
@@ -253,10 +258,15 @@ export function registerInventoryRoutes(router: Router) {
     }
   });
 
-  router.get("/buildings/:id", withAuthRequired(async ({ res, orgId, params, prisma }) => {
+  router.get("/buildings/:id", withAuthRequired(async ({ req, res, orgId, params, prisma }) => {
     try {
       const building = await inventoryRepo.findBuildingByIdDeep(prisma, params.id, orgId);
       if (!building) return sendError(res, 404, "NOT_FOUND", "Building not found");
+      // MANAGER role: only see buildings explicitly assigned to them
+      const user = getAuthUser(req);
+      if (user?.role === "MANAGER" && (building as any).managerId !== user.userId) {
+        return sendError(res, 404, "NOT_FOUND", "Building not found");
+      }
       sendJson(res, 200, { data: mapBuildingToDetailDTO(building as any) });
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to fetch building", String(e));

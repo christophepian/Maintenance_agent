@@ -57,12 +57,17 @@ export async function listBuildings(
   orgId: string,
   includeInactive?: boolean,
   ownerId?: string,
+  managerId?: string,
 ) {
   return prisma.building.findMany({
     where: {
       orgId,
       ...activeFilter(includeInactive),
-      ...(ownerId ? { owners: { some: { userId: ownerId } } } : {}),
+      ...(ownerId    ? { owners: { some: { userId: ownerId } } } : {}),
+      ...(managerId  ? { managerId } : {}),
+    },
+    include: {
+      manager: { select: { id: true, name: true, email: true } },
     },
     orderBy: { createdAt: "desc" },
   });
@@ -89,6 +94,7 @@ export async function findBuildingByIdDeep(
   return prisma.building.findFirst({
     where: { id: buildingId, orgId },
     include: {
+      manager: { select: { id: true, name: true, email: true } },
       owners: {
         include: {
           user: {
@@ -126,13 +132,14 @@ export async function findBuildingByIdDeep(
 export async function createBuilding(
   prisma: PrismaClient,
   orgId: string,
-  data: { name: string; address: string },
+  data: { name: string; address: string; managerId?: string | null },
 ) {
   return prisma.building.create({
     data: {
       orgId,
       name: data.name,
       address: data.address,
+      ...(data.managerId ? { managerId: data.managerId } : {}),
     },
   });
 }

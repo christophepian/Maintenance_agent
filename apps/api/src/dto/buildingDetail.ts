@@ -31,6 +31,12 @@ export interface BuildingTenantDTO {
   source: "BOTH" | "LEASE" | "DIRECTORY";
 }
 
+export interface ManagerDTO {
+  id: string;
+  name: string;
+  email: string | null;
+}
+
 export interface BuildingDetailDTO {
   id: string;
   orgId: string;
@@ -44,6 +50,8 @@ export interface BuildingDetailDTO {
   createdAt: string;
   updatedAt: string;
   isActive: boolean;
+  managerId: string | null;
+  manager: ManagerDTO | null;
   owners: OwnerDTO[];
   tenants: BuildingTenantDTO[];
 }
@@ -63,6 +71,8 @@ type DeepBuilding = {
   createdAt: Date;
   updatedAt: Date;
   isActive: boolean;
+  managerId: string | null;
+  manager: { id: string; name: string; email: string | null } | null;
   owners: {
     user: { id: string; name: string; email: string | null };
   }[];
@@ -158,6 +168,8 @@ export function mapBuildingToDetailDTO(b: DeepBuilding): BuildingDetailDTO {
     createdAt: b.createdAt.toISOString(),
     updatedAt: b.updatedAt.toISOString(),
     isActive: b.isActive,
+    managerId: b.managerId,
+    manager: b.manager ?? null,
     owners,
     tenants: Array.from(tenantMap.values()),
   };
