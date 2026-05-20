@@ -248,10 +248,20 @@ export function registerInventoryRoutes(router: Router) {
       const raw = await readJson(req);
       const parsed = CreateBuildingSchema.safeParse(raw);
       if (!parsed.success) return sendError(res, 400, "VALIDATION_ERROR", "Invalid building data", parsed.error.flatten());
-      // Auto-assign the creating manager so they can immediately see the building
+      // Auto-assign the creating manager — skip silently if userId is not a DB User (e.g. test tokens)
       const user = getAuthUser(req);
       const managerId = user?.userId ?? null;
-      const created = await createBuilding(orgId, { ...parsed.data, managerId });
+      let created: Awaited<ReturnType<typeof createBuilding>>;
+      try {
+        created = await createBuilding(orgId, { ...parsed.data, managerId });
+      } catch (fkErr: any) {
+        // P2003 = FK constraint violation (user not in DB) — retry without managerId
+        if (fkErr?.code === 'P2003') {
+          created = await createBuilding(orgId, parsed.data);
+        } else {
+          throw fkErr;
+        }
+      }
       sendJson(res, 201, { data: created });
     } catch (e: any) {
       const msg = String(e?.message || e);

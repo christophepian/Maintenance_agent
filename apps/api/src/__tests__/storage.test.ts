@@ -136,12 +136,22 @@ describe("S3AttachmentStorage — put()", () => {
     });
   });
 
-  it("rejects with error if file exceeds MAX_FILE_SIZE", async () => {
-    withEnv(BASE_S3_ENV, () => {
+  it("rejects with error if file exceeds MAX_PUT_FILE_SIZE", async () => {
+    // S3AttachmentStorage.put() guards against MAX_PUT_FILE_SIZE (25 MB), not MAX_FILE_SIZE.
+    // withEnv is synchronous, so we set env vars manually and await the assertion.
+    const saved: Record<string, string | undefined> = {};
+    for (const k of Object.keys(BASE_S3_ENV)) saved[k] = process.env[k];
+    Object.assign(process.env, BASE_S3_ENV);
+    try {
       const mod = loadStorageModule();
-      const oversized = Buffer.alloc(mod.MAX_FILE_SIZE + 1);
-      return expect(mod.storage.put("key", oversized)).rejects.toThrow(/exceeds maximum size/);
-    });
+      const oversized = Buffer.alloc(mod.MAX_PUT_FILE_SIZE + 1);
+      await expect(mod.storage.put("key", oversized)).rejects.toThrow(/exceeds maximum size/);
+    } finally {
+      for (const [k, v] of Object.entries(saved)) {
+        if (v === undefined) delete process.env[k];
+        else process.env[k] = v;
+      }
+    }
   });
 });
 

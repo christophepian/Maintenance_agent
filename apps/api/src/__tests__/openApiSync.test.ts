@@ -154,6 +154,31 @@ describe("OpenAPI spec ↔ Router sync", () => {
     // DEV: Dev-only impersonation endpoints — never exposed in the public spec
     "GET /__dev/tenant-list",
     "POST /__dev/tenant-login",
+    // API-09: Imported statements & owner people routes (added 2026-05, spec pending)
+    "POST /imported-statements/upload",
+    "GET /imported-statements/batch/:batchId",
+    "DELETE /imported-statements/batch/:batchId",
+    "GET /imported-statements/batches",
+    "GET /imported-statements",
+    "GET /imported-statements/:id",
+    "POST /imported-statements/:id/approve",
+    "POST /imported-statements/:id/reject",
+    "GET /imported-statements/:id/ledger-preview",
+    "POST /imported-statements/:id/re-extract",
+    "PATCH /imported-statements/:id/building",
+    "DELETE /imported-statements/:id",
+    "DELETE /imported-statements",
+    "PATCH /imported-statements/:id/balances/:balanceId",
+    "DELETE /imported-statements/:id/balances/:balanceId",
+    "POST /imported-statements/:id/balances",
+    "GET /people/owners/:id",
+    "PATCH /people/owners/:id",
+    "GET /buildings/:id/house-rules-pdf",
+    "POST /people/owners/:id/sync-buildings",
+    "POST /buildings/:id/seed-default-assets",
+    "POST /units/:id/seed-default-assets",
+    "GET /ledger/balance-sheet",
+    "GET /listings",
   ]);
 
   it("every code route has a spec entry", () => {

@@ -64,7 +64,7 @@ export async function listBuildings(
       orgId,
       ...activeFilter(includeInactive),
       ...(ownerId    ? { owners: { some: { userId: ownerId } } } : {}),
-      ...(managerId  ? { managerId } : {}),
+      ...(managerId  ? { OR: [{ managerId: null }, { managerId }] } : {}),
     },
     include: {
       manager: { select: { id: true, name: true, email: true } },

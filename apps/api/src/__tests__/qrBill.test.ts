@@ -163,18 +163,18 @@ describe("Slice 8.4 - QR-Bill Integration", () => {
       creditorAddressType: "K",
       creditorName: "Test Contractor",
       creditorAddressLine1: "Hauptstrasse 123",
-      creditorAddressLine2: "",
-      creditorPostalCode: "8000",
-      creditorCity: "Zurich",
+      creditorAddressLine2: "8000 Zurich",  // K type: full address in lines; postalCode/city must be empty
+      creditorPostalCode: "",
+      creditorCity: "",
       creditorCountry: "CH",
       amount: "269.25",
       currency: "CHF",
       debtorAddressType: "K",
       debtorName: "Test Tenant",
       debtorAddressLine1: "456 Tenant St",
-      debtorAddressLine2: "",
-      debtorPostalCode: "8001",
-      debtorCity: "Zurich",
+      debtorAddressLine2: "8001 Zurich",   // K type: full address in lines; postalCode/city must be empty
+      debtorPostalCode: "",
+      debtorCity: "",
       debtorCountry: "CH",
       referenceType: "QRR",
       reference: "000000000000000000000000000", // 27 zeros
@@ -202,10 +202,10 @@ describe("Slice 8.4 - QR-Bill Integration", () => {
       // Creditor address
       expect(lines[4]).toBe("K");          // 5  Address type
       expect(lines[5]).toBe("Test Contractor"); // 6  Name
-      expect(lines[6]).toBe("Hauptstrasse 123"); // 7  Street
-      expect(lines[7]).toBe("");           // 8  House no / addr line 2
-      expect(lines[8]).toBe("8000");       // 9  Postal code
-      expect(lines[9]).toBe("Zurich");     // 10 City
+      expect(lines[6]).toBe("Hauptstrasse 123"); // 7  Addr line 1
+      expect(lines[7]).toBe("8000 Zurich");     // 8  Addr line 2 (K type: postal+city combined)
+      expect(lines[8]).toBe("");                // 9  Postal code (empty for K type)
+      expect(lines[9]).toBe("");               // 10 City (empty for K type)
       expect(lines[10]).toBe("CH");        // 11 Country
 
       // Ultimate creditor — 7 empty lines (12–18)
