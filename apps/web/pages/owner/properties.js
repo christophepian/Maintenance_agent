@@ -309,7 +309,7 @@ function BuildingsTab({ refreshKey }) {
   useEffect(() => {
     setLoading(true);
     setError("");
-    fetch("/api/buildings", { headers: ownerAuthHeaders() })
+    fetch("/api/buildings?filterByOwner=true", { headers: ownerAuthHeaders() })
       .then((res) => {
         if (!res.ok) throw new Error("Failed to load properties");
         return res.json();

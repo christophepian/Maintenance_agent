@@ -230,9 +230,11 @@ export function registerInventoryRoutes(router: Router) {
   router.get("/buildings", withAuthRequired(async ({ req, res, orgId, query }) => {
     try {
       const includeInactive = first(query, "includeInactive") === "true";
+      const filterByOwner = first(query, "filterByOwner") === "true";
       const user = getAuthUser(req);
-      const ownerId   = user?.role === "OWNER" ? (user.ownerId || user.userId) : undefined;
-      const managerId = user?.role === "MANAGER" ? user.userId : undefined;
+      // filterByOwner=true: owner surface requesting owner-scoped view (works for any role)
+      const ownerId   = filterByOwner ? (user?.ownerId || user?.userId) : user?.role === "OWNER" ? (user.ownerId || user.userId) : undefined;
+      const managerId = !filterByOwner && user?.role === "MANAGER" ? user.userId : undefined;
       const buildings = await listBuildings(orgId, includeInactive, ownerId, managerId);
       sendJson(res, 200, { data: buildings, total: buildings.length });
     } catch (e) {
