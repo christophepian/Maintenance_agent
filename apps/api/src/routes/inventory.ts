@@ -53,7 +53,7 @@ export function registerInventoryRoutes(router: Router) {
     try {
       const includeInactive = first(query, "includeInactive") === "true";
       const user = getAuthUser(req);
-      const ownerId   = (user?.role === "OWNER"   || user?.ownerId) ? (user.ownerId || user.userId) : undefined;
+      const ownerId   = user?.role === "OWNER" ? (user.ownerId || user.userId) : undefined;
       const managerId = user?.role === "MANAGER" ? user.userId : undefined;
       const buildings = await listBuildings(orgId, includeInactive, ownerId, managerId);
       const properties = buildings.map(propertyFromBuilding);
@@ -231,7 +231,7 @@ export function registerInventoryRoutes(router: Router) {
     try {
       const includeInactive = first(query, "includeInactive") === "true";
       const user = getAuthUser(req);
-      const ownerId   = (user?.role === "OWNER" || user?.ownerId) ? (user.ownerId || user.userId) : undefined;
+      const ownerId   = user?.role === "OWNER" ? (user.ownerId || user.userId) : undefined;
       const managerId = user?.role === "MANAGER" ? user.userId : undefined;
       const buildings = await listBuildings(orgId, includeInactive, ownerId, managerId);
       sendJson(res, 200, { data: buildings, total: buildings.length });
