@@ -82,10 +82,36 @@ function BuildingSelect({ buildings, value, onChange }) {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function NOITrendPanel({ portfolio }) {
+export default function NOITrendPanel() {
   const { t } = useTranslation("manager");
 
-  const buildings = portfolio?.buildings ?? [];
+  // Fetch buildings independently — DO NOT derive from portfolio prop.
+  // The portfolio-summary endpoint filters by ownerId when the JWT has it set,
+  // which would hide buildings the manager manages but doesn't own.
+  const [buildings, setBuildings] = useState([]);
+  const [buildingsLoading, setBuildingsLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        const res = await fetch("/api/buildings", { headers: authHeaders() });
+        const json = await res.json();
+        if (!cancelled && res.ok) {
+          const list = (json.data ?? []).map((b) => ({
+            buildingId: b.id,
+            buildingName: b.name,
+          }));
+          setBuildings(list);
+        }
+      } finally {
+        if (!cancelled) setBuildingsLoading(false);
+      }
+    }
+    load();
+    return () => { cancelled = true; };
+  }, []);
+
   const [selectedId, setSelectedId] = useState("");
   const [snapshots, setSnapshots] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -93,7 +119,7 @@ export default function NOITrendPanel({ portfolio }) {
   const [refreshing, setRefreshing] = useState(false);
   const [refreshError, setRefreshError] = useState("");
 
-  // Auto-select first building when portfolio loads
+  // Auto-select first building once the list loads
   useEffect(() => {
     if (buildings.length > 0 && !selectedId) {
       setSelectedId(buildings[0].buildingId);
@@ -159,7 +185,9 @@ export default function NOITrendPanel({ portfolio }) {
       <div className="space-y-4">
         {/* Controls row */}
         <div className="flex flex-wrap items-center justify-between gap-3">
-          {buildings.length > 0 ? (
+          {buildingsLoading ? (
+            <p className="text-sm text-slate-400">{t("manager:noiTrend.text.loading")}</p>
+          ) : buildings.length > 0 ? (
             <BuildingSelect
               buildings={buildings}
               value={selectedId}

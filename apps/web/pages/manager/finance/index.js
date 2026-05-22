@@ -358,7 +358,7 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
           {/* ── Planning ── */}
           {activeTabKey === "planning" && (
             <div className="space-y-4">
-              <NOITrendPanel portfolio={portfolio} />
+              <NOITrendPanel />
               <CapExSummaryBridge />
               <CashflowPlansList />
             </div>
