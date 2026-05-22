@@ -18,6 +18,7 @@ import { CapExSummaryBridge } from "../../../components/RenovationTaxPlanning";
 import CashflowPlansList from "../../../components/CashflowPlansList";
 import NOITrendPanel from "../../../components/NOITrendPanel";
 import CapexSchedulePanel from "../../../components/CapexSchedulePanel";
+import NPVScenariosPanel from "../../../components/NPVScenariosPanel";
 import { cn } from "../../../lib/utils";
 import { FilterToggle, FilterPanelBody, FilterSection, FilterSectionClear, DateField } from "../../../components/ui/FilterPanel";
 import ScrollableTabs from "../../../components/mobile/ScrollableTabs";
@@ -364,6 +365,7 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
                 <NOITrendPanel onBuildingChange={setPlanningBuildingId} />
                 <CapexSchedulePanel buildingId={planningBuildingId} />
               </div>
+              <NPVScenariosPanel buildingId={planningBuildingId} />
               <CapExSummaryBridge />
               <CashflowPlansList />
             </div>

@@ -885,6 +885,30 @@
       "capitalized": "Capitalized (investment)"
     }
   },
+  "npvScenarios": {
+    "title": {
+      "npvScenarios": "NPV Scenarios"
+    },
+    "controls": {
+      "discountRate": "Discount rate",
+      "incomeGrowth": "Income growth",
+      "horizon": "Horizon"
+    },
+    "scenario": {
+      "invest": "Invest",
+      "investHint": "Full capex executed on schedule",
+      "defer": "Defer {{years}} yrs",
+      "deferHint": "Near-term replacements pushed back {{years}} years",
+      "neglect": "Neglect",
+      "neglectHint": "No capex spending — deferred liability only"
+    },
+    "text": {
+      "loading": "Computing scenarios…",
+      "selectBuilding": "Select a building in the NOI panel above.",
+      "baseNoi": "Base NOI",
+      "footnote": "Discount rate {{discount}}% · Income growth {{growth}}% · Standard DCF, cash flows at end of each year."
+    }
+  },
   "noiTrend": {
     "title": {
       "historicalNoi": "Historical NOI"

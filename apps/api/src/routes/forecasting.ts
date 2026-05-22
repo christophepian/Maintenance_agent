@@ -4,9 +4,11 @@
  * Read-only endpoints — all use maybeRequireManager.
  *
  * Endpoints:
- *   GET /forecasting/asset-health         — portfolio asset-health summary
- *   GET /forecasting/capex-projection     — 5-year CapEx projection with bundling + timing
- *   GET /forecasting/renovation-catalog   — Swiss renovation classification catalog
+ *   GET /forecasting/asset-health                — portfolio asset-health summary
+ *   GET /forecasting/capex-projection            — 5-year CapEx projection with bundling + timing
+ *   GET /forecasting/renovation-catalog          — Swiss renovation classification catalog
+ *   GET /buildings/:id/capex-schedule            — per-building forward capex schedule
+ *   GET /buildings/:id/npv-scenarios             — 3-scenario NPV (Invest / Defer / Neglect)
  */
 
 import { Router } from "../http/router";
@@ -18,6 +20,7 @@ import { getAssetHealthForecast } from "../services/assetHealthService";
 import { getCapExProjection } from "../services/capexProjectionService";
 import { getAssetInventoryForBuilding } from "../services/assetInventory";
 import { findBuildingByIdAndOrg } from "../repositories/inventoryRepository";
+import { computeNPVScenarios } from "../services/npvService";
 import {
   getAllEntries,
   searchCatalog,
@@ -152,6 +155,36 @@ export function registerForecastingRoutes(router: Router) {
       });
     } catch (e) {
       sendError(res, 500, "FORECAST_ERROR", "Failed to compute capex schedule", String(e));
+    }
+  }));
+
+  // ── GET /buildings/:id/npv-scenarios ─────────────────────────
+  // 3-scenario NPV: Invest (on schedule) / Defer (+N years) / Neglect (zero capex).
+  router.get("/buildings/:id/npv-scenarios", withAuthRequired(async ({ req, res, params, orgId, prisma }) => {
+    if (!maybeRequireManager(req, res)) return;
+    try {
+      const url = new URL(req.url || "", `http://${req.headers.host}`);
+      const discountRatePct = url.searchParams.get("discountRatePct")
+        ? Number(url.searchParams.get("discountRatePct")) : undefined;
+      const incomeGrowthRatePct = url.searchParams.get("incomeGrowthRatePct")
+        ? Number(url.searchParams.get("incomeGrowthRatePct")) : undefined;
+      const horizonYears = url.searchParams.get("horizonYears")
+        ? Number(url.searchParams.get("horizonYears")) : undefined;
+      const deferYears = url.searchParams.get("deferYears")
+        ? Number(url.searchParams.get("deferYears")) : undefined;
+
+      const result = await computeNPVScenarios(prisma, orgId, params.id, {
+        discountRatePct,
+        incomeGrowthRatePct,
+        horizonYears,
+        deferYears,
+      });
+      sendJson(res, 200, { data: result });
+    } catch (e: any) {
+      if (e?.statusCode === 404) {
+        return sendError(res, 404, "NOT_FOUND", e.message);
+      }
+      sendError(res, 500, "NPV_ERROR", "Failed to compute NPV scenarios", String(e));
     }
   }));
 

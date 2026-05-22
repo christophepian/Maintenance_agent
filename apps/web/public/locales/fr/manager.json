@@ -885,6 +885,30 @@
       "capitalized": "Capitalisé (investissement)"
     }
   },
+  "npvScenarios": {
+    "title": {
+      "npvScenarios": "Scénarios VAN"
+    },
+    "controls": {
+      "discountRate": "Taux d'actualisation",
+      "incomeGrowth": "Croissance des revenus",
+      "horizon": "Horizon"
+    },
+    "scenario": {
+      "invest": "Investir",
+      "investHint": "Travaux réalisés selon le calendrier prévu",
+      "defer": "Reporter {{years}} ans",
+      "deferHint": "Remplacements proches reportés de {{years}} ans",
+      "neglect": "Négliger",
+      "neglectHint": "Aucune dépense d'investissement — passif différé uniquement"
+    },
+    "text": {
+      "loading": "Calcul des scénarios…",
+      "selectBuilding": "Sélectionnez un bâtiment dans le panneau REN ci-dessus.",
+      "baseNoi": "REN de base",
+      "footnote": "Taux d'actualisation {{discount}}% · Croissance des revenus {{growth}}% · DCF standard, flux en fin d'année."
+    }
+  },
   "noiTrend": {
     "title": {
       "historicalNoi": "Résultat d'exploitation historique"

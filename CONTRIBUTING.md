@@ -103,8 +103,9 @@ ports causes `EADDRINUSE` failures.
 | 3224 | tenantConversation.test.ts |
 | 3225 | noiSnapshots.test.ts |
 | 3226 | capexSchedule.test.ts |
+| 3227 | npvScenarios.test.ts |
 
-**Next available: 3227.** Claim the next port and add it to this table in the same PR.
+**Next available: 3228.** Claim the next port and add it to this table in the same PR.
 
 ---
 
