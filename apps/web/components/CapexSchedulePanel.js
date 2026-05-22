@@ -164,44 +164,61 @@ export default function CapexSchedulePanel({ buildingId }) {
         {/* Chart */}
         {!loading && hasData && (
           <>
-            <div className="space-y-2" role="list" aria-label="Capex schedule">
+            <div className="space-y-3" role="list" aria-label="Capex schedule">
               {scaledSchedule.map((bucket) => (
-                <div
-                  key={bucket.year}
-                  role="listitem"
-                  className="flex items-center gap-3 text-sm"
-                >
-                  <span className="w-10 shrink-0 text-right font-mono text-slate-500">
-                    {bucket.year}
-                  </span>
-                  <div className="flex-1 min-w-0 relative h-5 bg-slate-100 rounded overflow-hidden">
-                    {bucket.totalChf > 0 && (
-                      <>
-                        {/* Total bar */}
-                        <div
-                          className="absolute inset-y-0 left-0 bg-amber-200 rounded"
-                          style={{ width: `${bucket.barWidthPct}%` }}
-                        />
-                        {/* Deductible portion */}
-                        {bucket.deductibleChf > 0 && (
+                <div key={bucket.year} role="listitem" className="space-y-1">
+                  {/* Bar row */}
+                  <div className="flex items-center gap-3 text-sm">
+                    <span className="w-10 shrink-0 text-right font-mono text-slate-500">
+                      {bucket.year}
+                    </span>
+                    <div className="flex-1 min-w-0 relative h-5 bg-slate-100 rounded overflow-hidden">
+                      {bucket.totalChf > 0 && (
+                        <>
+                          {/* Total bar */}
                           <div
-                            className="absolute inset-y-0 left-0 bg-amber-500 rounded"
-                            style={{
-                              width: `${Math.round((bucket.deductibleChf / maxChf) * 100)}%`,
-                            }}
+                            className="absolute inset-y-0 left-0 bg-amber-200 rounded"
+                            style={{ width: `${bucket.barWidthPct}%` }}
                           />
-                        )}
-                      </>
-                    )}
+                          {/* Deductible portion */}
+                          {bucket.deductibleChf > 0 && (
+                            <div
+                              className="absolute inset-y-0 left-0 bg-amber-500 rounded"
+                              style={{
+                                width: `${Math.round((bucket.deductibleChf / maxChf) * 100)}%`,
+                              }}
+                            />
+                          )}
+                        </>
+                      )}
+                    </div>
+                    <span
+                      className={cn(
+                        "w-28 shrink-0 text-right font-mono text-xs font-semibold",
+                        bucket.totalChf > 0 ? "text-amber-800" : "text-slate-400",
+                      )}
+                    >
+                      {bucket.totalChf > 0 ? `CHF ${formatChf(bucket.totalChf)}` : "—"}
+                    </span>
                   </div>
-                  <span
-                    className={cn(
-                      "w-28 shrink-0 text-right font-mono text-xs font-semibold",
-                      bucket.totalChf > 0 ? "text-amber-800" : "text-slate-400",
-                    )}
-                  >
-                    {bucket.totalChf > 0 ? `CHF ${formatChf(bucket.totalChf)}` : "—"}
-                  </span>
+
+                  {/* Asset labels for this year */}
+                  {bucket.items && bucket.items.length > 0 && (
+                    <div className="flex flex-wrap gap-x-3 gap-y-0.5" style={{ paddingLeft: "3.25rem" }}>
+                      {bucket.items.map((item) => (
+                        <span key={item.assetId} className="text-xs text-slate-500 flex items-center gap-1">
+                          <span className={cn(
+                            "inline-block w-1.5 h-1.5 rounded-full shrink-0",
+                            item.deductiblePct > 0 ? "bg-amber-500" : "bg-amber-200",
+                          )} />
+                          {item.assetName}
+                          {item.estimatedCostChf > 0 && (
+                            <span className="text-slate-400">· CHF {formatChf(item.estimatedCostChf)}</span>
+                          )}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

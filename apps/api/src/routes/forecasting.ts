@@ -115,7 +115,7 @@ export function registerForecastingRoutes(router: Router) {
             fromYear: projection.fromYear,
             toYear: projection.toYear,
             totalProjectedChf: 0,
-            schedule: [],
+            schedule: [] as Array<{ year: number; totalChf: number; deductibleChf: number; capitalizedChf: number; assetCount: number; items: unknown[] }>,
             excludedAssets,
           },
         });
@@ -128,6 +128,14 @@ export function registerForecastingRoutes(router: Router) {
         deductibleChf: bucket.deductibleChf,
         capitalizedChf: bucket.capitalizedChf,
         assetCount: bucket.assetCount,
+        items: bucket.items.map((item) => ({
+          assetId: item.assetId,
+          assetName: item.assetName,
+          topic: item.topic,
+          estimatedCostChf: item.estimatedCostChf,
+          deductiblePct: item.deductiblePct,
+          taxClassification: item.taxClassification,
+        })),
       }));
 
       sendJson(res, 200, {
