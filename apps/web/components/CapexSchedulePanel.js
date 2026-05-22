@@ -51,6 +51,7 @@ export default function CapexSchedulePanel({ buildingId }) {
 
   const [schedule, setSchedule] = useState(null);
   const [meta, setMeta] = useState(null);
+  const [excludedAssets, setExcludedAssets] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -65,6 +66,7 @@ export default function CapexSchedulePanel({ buildingId }) {
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error?.message || "Failed to load capex schedule");
       setSchedule(json.data?.schedule ?? []);
+      setExcludedAssets(json.data?.excludedAssets ?? []);
       setMeta({
         buildingName: json.data?.buildingName,
         totalProjectedChf: json.data?.totalProjectedChf,
@@ -81,6 +83,7 @@ export default function CapexSchedulePanel({ buildingId }) {
   useEffect(() => {
     if (buildingId) {
       setSchedule(null);
+      setExcludedAssets([]);
       fetchSchedule(buildingId);
     }
   }, [buildingId, fetchSchedule]);
@@ -131,6 +134,30 @@ export default function CapexSchedulePanel({ buildingId }) {
             <p className="text-xs text-slate-400 mt-1">
               {t("manager:capexSchedule.text.noAssetsHint")}
             </p>
+          </div>
+        )}
+
+        {/* Excluded assets warning — assets missing installation date */}
+        {!loading && excludedAssets.length > 0 && (
+          <div className="rounded-md border border-amber-200 bg-amber-50 p-3 space-y-1.5">
+            <p className="text-xs font-medium text-amber-800">
+              {t("manager:capexSchedule.text.excludedWarning", {
+                count: excludedAssets.filter((a) => a.reason === "MISSING_INSTALLATION_DATE").length,
+              })}
+            </p>
+            <ul className="space-y-0.5">
+              {excludedAssets
+                .filter((a) => a.reason === "MISSING_INSTALLATION_DATE")
+                .map((a) => (
+                  <li key={a.assetId} className="text-xs text-amber-700 flex items-center gap-1">
+                    <span className="shrink-0">·</span>
+                    <span className="font-medium">{a.assetName}</span>
+                    <span className="text-amber-600">
+                      — {t("manager:capexSchedule.text.missingDateHint")}
+                    </span>
+                  </li>
+                ))}
+            </ul>
           </div>
         )}
 

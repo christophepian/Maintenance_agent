@@ -16,6 +16,8 @@ import { maybeRequireManager } from "../authz";
 import { withAuthRequired } from "../http/routeProtection";
 import { getAssetHealthForecast } from "../services/assetHealthService";
 import { getCapExProjection } from "../services/capexProjectionService";
+import { getAssetInventoryForBuilding } from "../services/assetInventory";
+import { findBuildingByIdAndOrg } from "../repositories/inventoryRepository";
 import {
   getAllEntries,
   searchCatalog,
@@ -75,11 +77,49 @@ export function registerForecastingRoutes(router: Router) {
       const horizonStr = url.searchParams.get("horizonYears");
       const horizonYears = horizonStr ? Math.min(10, Math.max(1, Number(horizonStr))) : undefined;
 
+      // Verify building exists and belongs to this org
+      const dbBuilding = await findBuildingByIdAndOrg(prisma, params.id, orgId);
+      if (!dbBuilding) {
+        return sendError(res, 404, "NOT_FOUND", `Building ${params.id} not found`);
+      }
+
       const projection = await getCapExProjection(prisma, orgId, { horizonYears });
       const building = projection.buildings.find((b) => b.buildingId === params.id);
 
+      // Get all assets for this building (for excluded-asset diagnostics)
+      const allAssets = await getAssetInventoryForBuilding(
+        prisma, orgId, params.id,
+        { canton: dbBuilding.canton ?? undefined, buildingLevelOnly: false },
+      );
+
+      // Assets excluded from capex: those with no depreciation data (missing installedAt / no standard)
+      const excludedAssets = allAssets
+        .filter((a) => a.depreciation === null)
+        .map((a) => ({
+          assetId: a.id,
+          assetName: a.name ?? a.topic,
+          assetType: a.type,
+          topic: a.topic,
+          reason: a.installedAt == null
+            ? "MISSING_INSTALLATION_DATE"
+            : "NO_DEPRECIATION_STANDARD",
+        }));
+
       if (!building) {
-        return sendError(res, 404, "NOT_FOUND", `Building ${params.id} not found or has no assets`);
+        // Building exists but no assets passed the capex filter — return empty schedule with diagnostics
+        sendJson(res, 200, {
+          data: {
+            buildingId: params.id,
+            buildingName: dbBuilding.name,
+            horizonYears: projection.projectionHorizonYears,
+            fromYear: projection.fromYear,
+            toYear: projection.toYear,
+            totalProjectedChf: 0,
+            schedule: [],
+            excludedAssets,
+          },
+        });
+        return;
       }
 
       const schedule = building.yearlyBuckets.map((bucket) => ({
@@ -99,6 +139,7 @@ export function registerForecastingRoutes(router: Router) {
           toYear: projection.toYear,
           totalProjectedChf: building.totalProjectedChf,
           schedule,
+          excludedAssets,
         },
       });
     } catch (e) {

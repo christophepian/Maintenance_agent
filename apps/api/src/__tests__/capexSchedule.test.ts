@@ -50,29 +50,25 @@ describe("Capex Schedule — Phase 2", () => {
 
   afterAll(() => stopTestServer(proc));
 
-  // ── Building with no assets returns empty schedule ──────────────────────
-  it("GET /buildings/:id/capex-schedule returns schedule array for building with no assets", async () => {
+  // ── Building with no assets returns 200 with empty schedule ──────────────
+  it("GET /buildings/:id/capex-schedule returns 200 with empty schedule for building with no assets", async () => {
     const res = await get(`/buildings/${buildingId}/capex-schedule`);
-    // Building exists but has no assets — projection finds no items → 404 (not in portfolio)
-    // OR returns empty schedule. Both are acceptable depending on service behavior.
-    // We accept 200 with empty schedule OR 404.
-    expect([200, 404]).toContain(res.status);
+    // Building exists but has no assets — route now always returns 200 with empty schedule
+    expect(res.status).toBe(200);
 
-    if (res.status === 200) {
-      const json = await res.json();
-      expect(json.data).toHaveProperty("buildingId");
-      expect(json.data).toHaveProperty("schedule");
-      expect(Array.isArray(json.data.schedule)).toBe(true);
+    const json = await res.json();
+    expect(json.data).toHaveProperty("buildingId");
+    expect(json.data).toHaveProperty("schedule");
+    expect(Array.isArray(json.data.schedule)).toBe(true);
 
-      // Each bucket should have the expected shape
-      for (const bucket of json.data.schedule) {
-        expect(typeof bucket.year).toBe("number");
-        expect(typeof bucket.totalChf).toBe("number");
-        expect(typeof bucket.deductibleChf).toBe("number");
-        expect(typeof bucket.capitalizedChf).toBe("number");
-        expect(typeof bucket.assetCount).toBe("number");
-      }
+    // All buckets should have zero amounts (building has no assets)
+    for (const bucket of json.data.schedule) {
+      expect(bucket.totalChf).toBe(0);
+      expect(bucket.assetCount).toBe(0);
     }
+
+    // excludedAssets array must be present (empty since building has no assets at all)
+    expect(Array.isArray(json.data.excludedAssets)).toBe(true);
   });
 
   // ── Unknown building returns 404 ──────────────────────────────────────
@@ -84,8 +80,7 @@ describe("Capex Schedule — Phase 2", () => {
   // ── horizonYears param is accepted ──────────────────────────────────────
   it("GET with horizonYears=3 responds without error", async () => {
     const res = await get(`/buildings/${buildingId}/capex-schedule?horizonYears=3`);
-    expect([200, 404]).toContain(res.status);
-    // Must not be a 500
+    expect(res.status).toBe(200);
     expect(res.status).not.toBe(500);
   });
 });

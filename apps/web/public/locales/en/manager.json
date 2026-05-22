@@ -876,7 +876,9 @@
       "noAssets": "No asset replacement timelines found.",
       "noAssetsHint": "Add assets with installation dates to generate a replacement forecast.",
       "totalLabel": "Total projected",
-      "chartNote": "Derived from asset depreciation timelines. Darker bar = tax-deductible portion."
+      "chartNote": "Derived from asset depreciation timelines. Darker bar = tax-deductible portion.",
+      "excludedWarning": "{{count}} asset(s) excluded — missing installation date",
+      "missingDateHint": "set installation date in asset inventory"
     },
     "legend": {
       "deductible": "Deductible (maintenance)",
