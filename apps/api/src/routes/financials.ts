@@ -8,6 +8,8 @@ import {
   getBuildingFinancials,
   getPortfolioSummary,
   setInvoiceExpenseCategory,
+  listBuildingSnapshots,
+  computeAnnualSnapshots,
   NotFoundError,
   ValidationError,
   ConflictError,
@@ -16,6 +18,7 @@ import {
   GetBuildingFinancialsSchema,
   PortfolioSummarySchema,
   SetExpenseCategorySchema,
+  RefreshSnapshotsSchema,
 } from "../validation/financials";
 
 export function registerFinancialRoutes(router: Router) {
@@ -161,6 +164,59 @@ export function registerFinancialRoutes(router: Router) {
           "INTERNAL_ERROR",
           "Failed to set expense category",
         );
+      }
+    },
+  );
+
+  // ── GET /buildings/:id/financial-snapshots ────────────────
+  router.get(
+    "/buildings/:id/financial-snapshots",
+    async ({ req, res, params, orgId }) => {
+      if (!requireAuth(req, res)) return;
+      if (!requireOrgViewer(req, res)) return;
+
+      try {
+        const snapshots = await listBuildingSnapshots(orgId, params.id);
+        sendJson(res, 200, { data: snapshots });
+      } catch (e: any) {
+        if (e instanceof NotFoundError) {
+          return sendError(res, 404, "NOT_FOUND", e.message);
+        }
+        console.error("[GET /buildings/:id/financial-snapshots]", e);
+        sendError(res, 500, "INTERNAL_ERROR", "Failed to load snapshots");
+      }
+    },
+  );
+
+  // ── POST /buildings/:id/financial-snapshots/refresh ───────
+  router.post(
+    "/buildings/:id/financial-snapshots/refresh",
+    async ({ req, res, params, orgId }) => {
+      if (!requireAuth(req, res)) return;
+      if (!requireRole(req, res, "MANAGER")) return;
+
+      let body: any = {};
+      try {
+        body = await readJson(req);
+      } catch {
+        // empty body is fine — defaults apply
+      }
+
+      const parsed = RefreshSnapshotsSchema.safeParse(body);
+      if (!parsed.success) {
+        const msg = parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ");
+        return sendError(res, 400, "VALIDATION_ERROR", msg);
+      }
+
+      try {
+        const snapshots = await computeAnnualSnapshots(orgId, params.id, parsed.data.years);
+        sendJson(res, 200, { data: snapshots });
+      } catch (e: any) {
+        if (e instanceof NotFoundError) {
+          return sendError(res, 404, "NOT_FOUND", e.message);
+        }
+        console.error("[POST /buildings/:id/financial-snapshots/refresh]", e);
+        sendError(res, 500, "INTERNAL_ERROR", "Failed to refresh snapshots");
       }
     },
   );

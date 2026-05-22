@@ -78,6 +78,21 @@ export async function upsertBuildingFinancialSnapshot(
   });
 }
 
+/**
+ * Return all snapshots for a building, ordered by periodStart ascending.
+ * Used for NOI trendline display (all stored annual/custom periods).
+ */
+export async function findAllSnapshotsForBuilding(
+  prisma: PrismaClient,
+  orgId: string,
+  buildingId: string,
+) {
+  return prisma.buildingFinancialSnapshot.findMany({
+    where: { orgId, buildingId },
+    orderBy: { periodStart: "asc" },
+  });
+}
+
 export async function findSnapshotsByBuildingAndPeriod(
   prisma: PrismaClient,
   orgId: string,

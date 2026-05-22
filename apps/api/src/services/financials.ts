@@ -505,6 +505,81 @@ export async function setInvoiceExpenseCategory(
 }
 
 // ==========================================
+// Annual snapshot listing + batch refresh
+// ==========================================
+
+export interface AnnualSnapshotDTO {
+  periodStart: string; // YYYY-MM-DD
+  periodEnd: string;   // YYYY-MM-DD
+  earnedIncomeCents: number;
+  projectedIncomeCents: number;
+  expensesTotalCents: number;
+  maintenanceTotalCents: number;
+  capexTotalCents: number;
+  operatingTotalCents: number;
+  netIncomeCents: number;
+  netOperatingIncomeCents: number;
+  activeUnitsCount: number;
+  computedAt: string; // ISO datetime
+}
+
+/** List all stored financial snapshots for a building. */
+export async function listBuildingSnapshots(
+  orgId: string,
+  buildingId: string,
+): Promise<AnnualSnapshotDTO[]> {
+  const building = await inventoryRepo.findBuildingByIdAndOrg(prisma, buildingId, orgId);
+  if (!building) throw new NotFoundError(`Building ${buildingId} not found`);
+
+  const rows = await snapshotRepo.findAllSnapshotsForBuilding(prisma, orgId, buildingId);
+  return rows.map((r) => ({
+    periodStart: r.periodStart.toISOString().slice(0, 10),
+    periodEnd: r.periodEnd.toISOString().slice(0, 10),
+    earnedIncomeCents: r.earnedIncomeCents,
+    projectedIncomeCents: r.projectedIncomeCents,
+    expensesTotalCents: r.expensesTotalCents,
+    maintenanceTotalCents: r.maintenanceTotalCents,
+    capexTotalCents: r.capexTotalCents,
+    operatingTotalCents: r.operatingTotalCents,
+    netIncomeCents: r.netIncomeCents,
+    netOperatingIncomeCents: r.netOperatingIncomeCents,
+    activeUnitsCount: r.activeUnitsCount,
+    computedAt: r.computedAt.toISOString(),
+  }));
+}
+
+/**
+ * Compute (or refresh) annual financial snapshots for a building.
+ *
+ * Loops over the last `years` completed fiscal years (Jan 1 → Dec 31)
+ * and calls getBuildingFinancials() for each, which upserts the snapshot.
+ * Returns the refreshed snapshot list.
+ */
+export async function computeAnnualSnapshots(
+  orgId: string,
+  buildingId: string,
+  years: number = 5,
+): Promise<AnnualSnapshotDTO[]> {
+  const building = await inventoryRepo.findBuildingByIdAndOrg(prisma, buildingId, orgId);
+  if (!building) throw new NotFoundError(`Building ${buildingId} not found`);
+
+  const currentYear = new Date().getUTCFullYear();
+  // Compute the last `years` fully-completed fiscal years (exclude current year)
+  for (let y = currentYear - years; y < currentYear; y++) {
+    const from = `${y}-01-01`;
+    const to = `${y}-12-31`;
+    try {
+      await getBuildingFinancials(orgId, buildingId, { from, to, forceRefresh: true });
+    } catch (e) {
+      // Skip years with no data — don't abort the whole refresh
+      console.warn(`[computeAnnualSnapshots] Skipping ${y} for building ${buildingId}: ${e}`);
+    }
+  }
+
+  return listBuildingSnapshots(orgId, buildingId);
+}
+
+// ==========================================
 // Custom error classes
 // ==========================================
 

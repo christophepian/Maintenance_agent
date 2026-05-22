@@ -214,6 +214,35 @@ components:
           description: Only present when groupByAccount=true
           items: { $ref: '#/components/schemas/AccountTotalDTO' }
 
+    AnnualSnapshotDTO:
+      type: object
+      required:
+        - periodStart
+        - periodEnd
+        - earnedIncomeCents
+        - projectedIncomeCents
+        - expensesTotalCents
+        - maintenanceTotalCents
+        - capexTotalCents
+        - operatingTotalCents
+        - netIncomeCents
+        - netOperatingIncomeCents
+        - activeUnitsCount
+        - computedAt
+      properties:
+        periodStart: { type: string, format: date }
+        periodEnd: { type: string, format: date }
+        earnedIncomeCents: { type: integer }
+        projectedIncomeCents: { type: integer }
+        expensesTotalCents: { type: integer }
+        maintenanceTotalCents: { type: integer }
+        capexTotalCents: { type: integer }
+        operatingTotalCents: { type: integer }
+        netIncomeCents: { type: integer }
+        netOperatingIncomeCents: { type: integer }
+        activeUnitsCount: { type: integer }
+        computedAt: { type: string, format: date-time }
+
     AccountTotalDTO:
       type: object
       required: [accountId, accountName, totalCents]
@@ -6195,6 +6224,60 @@ paths:
                   data: { $ref: '#/components/schemas/BuildingFinancialsDTO' }
         '400':
           $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /buildings/{id}/financial-snapshots:
+    get:
+      tags: [Financials]
+      summary: List all stored financial snapshots for a building
+      operationId: listBuildingFinancialSnapshots
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Array of BuildingFinancialSnapshot records ordered by period
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/AnnualSnapshotDTO' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /buildings/{id}/financial-snapshots/refresh:
+    post:
+      tags: [Financials]
+      summary: Recompute annual NOI snapshots from ledger data (last N fiscal years)
+      operationId: refreshBuildingFinancialSnapshots
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                years:
+                  type: integer
+                  minimum: 1
+                  maximum: 20
+                  default: 5
+                  description: Number of completed fiscal years to recompute
+      responses:
+        '200':
+          description: Refreshed snapshot list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/AnnualSnapshotDTO' }
         '404':
           $ref: '#/components/responses/NotFound'
 

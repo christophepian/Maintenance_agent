@@ -16,6 +16,7 @@ import ImportedStatementsPanel from "../../../components/ImportedStatementsPanel
 import BillingEntityManager from "../../../components/BillingEntityManager";
 import { CapExSummaryBridge } from "../../../components/RenovationTaxPlanning";
 import CashflowPlansList from "../../../components/CashflowPlansList";
+import NOITrendPanel from "../../../components/NOITrendPanel";
 import { cn } from "../../../lib/utils";
 import { FilterToggle, FilterPanelBody, FilterSection, FilterSectionClear, DateField } from "../../../components/ui/FilterPanel";
 import ScrollableTabs from "../../../components/mobile/ScrollableTabs";
@@ -357,6 +358,7 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
           {/* ── Planning ── */}
           {activeTabKey === "planning" && (
             <div className="space-y-4">
+              <NOITrendPanel portfolio={portfolio} />
               <CapExSummaryBridge />
               <CashflowPlansList />
             </div>

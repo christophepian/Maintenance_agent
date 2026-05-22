@@ -866,6 +866,27 @@
       "imports": "Imports"
     }
   },
+  "noiTrend": {
+    "title": {
+      "historicalNoi": "Historical NOI"
+    },
+    "label": {
+      "building": "Building",
+      "selectBuilding": "Select a building…"
+    },
+    "text": {
+      "loading": "Loading snapshots…",
+      "refreshing": "Refreshing…",
+      "refreshData": "Refresh Data",
+      "noBuildings": "No buildings available.",
+      "noSnapshots": "No annual snapshots yet.",
+      "noSnapshotsHint": "Click "Refresh Data" to compute the last 5 fiscal years from ledger data.",
+      "chartNote": "NOI = Earned Income − Operating Expenses (excl. CapEx). Negative values shown in red."
+    },
+    "ariaLabel": {
+      "refresh": "Refresh historical NOI data"
+    }
+  },
   "financeInvoices": {
     "heading": {
       "disputeInvoice": "Dispute Invoice",

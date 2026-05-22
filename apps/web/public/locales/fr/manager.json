@@ -866,6 +866,27 @@
       "imports": "Importations"
     }
   },
+  "noiTrend": {
+    "title": {
+      "historicalNoi": "Résultat d'exploitation historique"
+    },
+    "label": {
+      "building": "Bâtiment",
+      "selectBuilding": "Sélectionner un bâtiment…"
+    },
+    "text": {
+      "loading": "Chargement des instantanés…",
+      "refreshing": "Actualisation…",
+      "refreshData": "Actualiser",
+      "noBuildings": "Aucun bâtiment disponible.",
+      "noSnapshots": "Aucun instantané annuel disponible.",
+      "noSnapshotsHint": "Cliquez sur « Actualiser » pour calculer les 5 derniers exercices depuis les données du grand livre.",
+      "chartNote": "REN = Revenus encaissés − Charges d'exploitation (hors investissements). Les valeurs négatives sont en rouge."
+    },
+    "ariaLabel": {
+      "refresh": "Actualiser les données REN historiques"
+    }
+  },
   "financeInvoices": {
     "heading": {
       "disputeInvoice": "Dispute Invoice",

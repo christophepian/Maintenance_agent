@@ -35,6 +35,20 @@ export const SetExpenseCategorySchema = z.object({
 
 export type SetExpenseCategoryBody = z.infer<typeof SetExpenseCategorySchema>;
 
+// ── POST /buildings/:id/financial-snapshots/refresh body ────
+
+export const RefreshSnapshotsSchema = z.object({
+  years: z
+    .number()
+    .int()
+    .min(1)
+    .max(20)
+    .optional()
+    .default(5),
+});
+
+export type RefreshSnapshotsBody = z.infer<typeof RefreshSnapshotsSchema>;
+
 // ── GET /financials/portfolio-summary query params ──────────
 
 export const PortfolioSummarySchema = z.object({
