@@ -880,7 +880,7 @@
       "refreshData": "Refresh Data",
       "noBuildings": "No buildings available.",
       "noSnapshots": "No annual snapshots yet.",
-      "noSnapshotsHint": "Click "Refresh Data" to compute the last 5 fiscal years from ledger data.",
+      "noSnapshotsHint": "Click Refresh Data to compute the last 5 fiscal years from ledger data.",
       "chartNote": "NOI = Earned Income − Operating Expenses (excl. CapEx). Negative values shown in red."
     },
     "ariaLabel": {
