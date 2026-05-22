@@ -98,7 +98,7 @@ export default function CapexSchedulePanel({ buildingId }) {
     barWidthPct: Math.round((s.totalChf / maxChf) * 100),
   }));
 
-  const hasData = schedule !== null && schedule.some((s) => s.totalChf > 0);
+  const hasData = schedule !== null && schedule.some((s) => s.totalChf > 0 || s.assetCount > 0);
 
   const subtitle = meta
     ? `${meta.fromYear}–${meta.toYear} · ${t("manager:capexSchedule.text.totalLabel")} CHF ${formatChf(meta.totalProjectedChf)}`
