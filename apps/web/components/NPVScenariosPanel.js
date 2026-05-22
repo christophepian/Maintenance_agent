@@ -208,6 +208,17 @@ export default function NPVScenariosPanel({ buildingId }) {
         {/* Error */}
         {error && <div className="notice notice-err">{error}</div>}
 
+        {/* No income data warning */}
+        {!loading && data?.noIncomeData && (
+          <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            <span className="mt-0.5 shrink-0">⚠</span>
+            <span>
+              No income history found for this building — NOI is shown as CHF 0.
+              Compute a financial snapshot in the <strong>Historical NOI</strong> panel above to populate real figures.
+            </span>
+          </div>
+        )}
+
         {/* Loading */}
         {loading && <p className="loading-text">{t("manager:npvScenarios.text.loading")}</p>}
 

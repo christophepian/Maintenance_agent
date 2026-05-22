@@ -46,6 +46,8 @@ export interface NPVScenariosResult {
   horizonYears: number;
   deferYears: number;
   baseAnnualNoiChf: number;
+  /** True when no income history was found (NOI estimated from leases or defaulted to 0) */
+  noIncomeData: boolean;
   fromYear: number;
   toYear: number;
   scenarios: {
@@ -154,11 +156,31 @@ export async function computeNPVScenarios(
   });
 
   let baseAnnualNoiChf = 0;
+  let noIncomeData = false;
   if (annualSnapshots.length > 0) {
+    // Best case: a full Jan 1–Dec 31 snapshot from a prior year
     const latest = annualSnapshots[annualSnapshots.length - 1];
     baseAnnualNoiChf = Math.round(Number(latest.netOperatingIncomeCents) / 100);
-  } else {
-    // Fallback: use projected income from active leases
+  } else if (snapshots.length > 0) {
+    // Fallback A: annualize whatever snapshot history exists (any period length)
+    const today = new Date();
+    const relevant = snapshots.filter((s) => new Date(s.periodEnd) <= today);
+    if (relevant.length > 0) {
+      const totalNoiCents = relevant.reduce(
+        (s, snap) => s + Number(snap.netOperatingIncomeCents), 0,
+      );
+      const startMs = new Date(relevant[0].periodStart).getTime();
+      const endMs = new Date(relevant[relevant.length - 1].periodEnd).getTime();
+      const totalDays = Math.max(1, (endMs - startMs) / (1000 * 60 * 60 * 24));
+      if (totalDays >= 30) {
+        // Annualize: scale to 365 days regardless of how many months we have
+        baseAnnualNoiChf = Math.round((totalNoiCents / 100) * (365 / totalDays));
+      }
+    }
+  }
+
+  if (baseAnnualNoiChf === 0) {
+    // Fallback B: active lease rent as proxy for annual gross income
     const leases = await prisma.lease.findMany({
       where: { orgId, unit: { buildingId }, status: { in: ["ACTIVE", "SIGNED"] } },
       select: { rentTotalChf: true },
@@ -166,6 +188,7 @@ export async function computeNPVScenarios(
     baseAnnualNoiChf = Math.round(
       leases.reduce((s, l) => s + (l.rentTotalChf ?? 0), 0) * 12,
     );
+    noIncomeData = baseAnnualNoiChf === 0; // flag only if all fallbacks failed
   }
 
   // ── 3. Capex projection — use extended horizon for defer rebucketing ──
@@ -219,6 +242,7 @@ export async function computeNPVScenarios(
     horizonYears,
     deferYears,
     baseAnnualNoiChf,
+    noIncomeData,
     fromYear,
     toYear,
     scenarios: { invest, defer, neglect },

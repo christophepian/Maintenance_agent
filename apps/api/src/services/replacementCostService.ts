@@ -15,6 +15,52 @@ import { normalizeTopicKey } from "../utils/topicKey";
 import * as taxRuleRepo from "../repositories/taxRuleRepository";
 import { findReplacementInterventionsByTypeAndTopic } from "../repositories/assetRepository";
 
+// ─── Static Fallback Benchmarks (HEV 2024) ─────────────────────
+// Used when no row exists in the ReplacementBenchmark table.
+// Values mirror apps/api/prisma/seed.ts — keep in sync when seed changes.
+
+type BenchmarkKey = string; // `${AssetType}::${topic}`
+const STATIC_BENCHMARKS: Record<BenchmarkKey, { lowChf: number; medianChf: number; highChf: number }> = {
+  "SYSTEM::ELEVATOR":                      { lowChf: 70000,  medianChf: 110000, highChf: 160000 },
+  "SYSTEM::ELEVATOR_ELECTRICS":            { lowChf: 8000,   medianChf: 16000,  highChf: 28000  },
+  "SYSTEM::CENTRAL_HEATING":               { lowChf: 12000,  medianChf: 22000,  highChf: 38000  },
+  "SYSTEM::BOILER":                        { lowChf: 4500,   medianChf: 7500,   highChf: 12000  },
+  "SYSTEM::CIRCULATION_PUMP":              { lowChf: 600,    medianChf: 1100,   highChf: 1800   },
+  "SYSTEM::HEATING_CONTROL":               { lowChf: 1800,   medianChf: 3200,   highChf: 5500   },
+  "SYSTEM::WATER_PIPES":                   { lowChf: 7000,   medianChf: 14000,  highChf: 24000  },
+  "SYSTEM::PIPE_COLD_COPPER":              { lowChf: 5000,   medianChf: 9000,   highChf: 16000  },
+  "SYSTEM::PIPE_HOT_COPPER_INSULATED":     { lowChf: 6000,   medianChf: 11000,  highChf: 19000  },
+  "SYSTEM::ELECTRICAL_INSTALLATION":       { lowChf: 10000,  medianChf: 20000,  highChf: 35000  },
+  "SYSTEM::ELECTRICAL_CABLES":             { lowChf: 8000,   medianChf: 16000,  highChf: 28000  },
+  "SYSTEM::INTERCOM":                      { lowChf: 1500,   medianChf: 3000,   highChf: 5500   },
+  "SYSTEM::POWER_SOCKET":                  { lowChf: 80,     medianChf: 130,    highChf: 220    },
+  "SYSTEM::SWITCH":                        { lowChf: 40,     medianChf: 70,     highChf: 120    },
+  "STRUCTURAL::STAIRCASE":                 { lowChf: 15000,  medianChf: 35000,  highChf: 65000  },
+  "STRUCTURAL::ROOF_COVERING":             { lowChf: 18000,  medianChf: 38000,  highChf: 65000  },
+  "STRUCTURAL::PITCHED_ROOF_TILES":        { lowChf: 20000,  medianChf: 42000,  highChf: 72000  },
+  "STRUCTURAL::EXTERIOR_WALL_COATING":     { lowChf: 15000,  medianChf: 30000,  highChf: 52000  },
+  "STRUCTURAL::RENDER_MINERAL":            { lowChf: 12000,  medianChf: 25000,  highChf: 44000  },
+  "STRUCTURAL::BALCONY_METAL":             { lowChf: 2500,   medianChf: 4500,   highChf: 8000   },
+  "FIXTURE::ENTRANCE_DOOR":                { lowChf: 2500,   medianChf: 4500,   highChf: 7500   },
+  "FIXTURE::WINDOW_INSULATED_PLASTIC_WOOD":{ lowChf: 700,    medianChf: 1100,   highChf: 1800   },
+  "FIXTURE::ROLLER_SHUTTER_PLASTIC":       { lowChf: 350,    medianChf: 550,    highChf: 900    },
+  "FIXTURE::DOOR_CHIPBOARD":               { lowChf: 250,    medianChf: 450,    highChf: 750    },
+  "FIXTURE::KITCHEN_CABINET_CHIPBOARD":    { lowChf: 2500,   medianChf: 4500,   highChf: 8000   },
+  "FIXTURE::COUNTERTOP_SYNTHETIC":         { lowChf: 700,    medianChf: 1200,   highChf: 2200   },
+  "FIXTURE::KITCHEN_TAP":                  { lowChf: 200,    medianChf: 400,    highChf: 700    },
+  "FIXTURE::BATHTUB_ACRYLIC":              { lowChf: 500,    medianChf: 900,    highChf: 1600   },
+  "FIXTURE::SANITARY_CERAMIC":             { lowChf: 600,    medianChf: 1200,   highChf: 2000   },
+  "FIXTURE::BATHROOM_TAP":                 { lowChf: 200,    medianChf: 400,    highChf: 700    },
+  "FIXTURE::BALCONY_RAILING_METAL":        { lowChf: 400,    medianChf: 800,    highChf: 1400   },
+  "FIXTURE::COMBINED_LOCK_SYSTEM":         { lowChf: 1200,   medianChf: 2200,   highChf: 3800   },
+  "FINISH::PAINT_WALLS_DISPERSION":        { lowChf: 1200,   medianChf: 2200,   highChf: 3800   },
+  "FINISH::PARQUET_MOSAIC":                { lowChf: 2000,   medianChf: 3500,   highChf: 6000   },
+  "FINISH::KITCHEN_TILES_CERAMIC":         { lowChf: 800,    medianChf: 1600,   highChf: 2800   },
+  "FINISH::BATHROOM_TILES_CERAMIC":        { lowChf: 1200,   medianChf: 2200,   highChf: 3800   },
+  "APPLIANCE::WASHING_MACHINE_COMMON":     { lowChf: 700,    medianChf: 1100,   highChf: 1800   },
+  "APPLIANCE::DRYER_COMMON":               { lowChf: 700,    medianChf: 1100,   highChf: 1800   },
+};
+
 // ─── Types ─────────────────────────────────────────────────────
 
 export interface CostRange {
@@ -83,9 +129,15 @@ export async function estimateReplacementCost(
     taxRuleRepo.findBenchmark(prisma, assetType, topic),
   ]);
 
+  // Use DB benchmark if available, otherwise fall back to static HEV 2024 table
+  const staticKey = `${assetType}::${normalizeTopicKey(topic)}`;
+  const staticFallback = !benchmark ? STATIC_BENCHMARKS[staticKey] ?? null : null;
+
   const benchmarkRange: CostRange | null = benchmark
     ? { lowChf: benchmark.lowChf, medianChf: benchmark.medianChf, highChf: benchmark.highChf }
-    : null;
+    : staticFallback
+      ? { lowChf: staticFallback.lowChf, medianChf: staticFallback.medianChf, highChf: staticFallback.highChf }
+      : null;
 
   const sources: string[] = [];
   let confidence = 0.2; // base confidence (no data)
@@ -106,8 +158,8 @@ export async function estimateReplacementCost(
     sources.push("Historical replacement data");
   } else if (benchmarkRange) {
     bestEstimate = benchmarkRange;
-    confidence = 0.6;
-    sources.push("Industry benchmark");
+    confidence = staticFallback ? 0.5 : 0.6; // slightly lower for static fallback vs DB row
+    sources.push(staticFallback ? "Industry benchmark (HEV 2024 static)" : "Industry benchmark");
   } else {
     // No data at all — return a zero estimate with very low confidence
     bestEstimate = { lowChf: 0, medianChf: 0, highChf: 0 };
