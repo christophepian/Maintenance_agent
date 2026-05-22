@@ -866,6 +866,23 @@
       "imports": "Imports"
     }
   },
+  "capexSchedule": {
+    "title": {
+      "forwardCapex": "Forward Capex Schedule"
+    },
+    "text": {
+      "loading": "Loading capex schedule…",
+      "selectBuilding": "Select a building in the NOI panel above to see its capex schedule.",
+      "noAssets": "No asset replacement timelines found.",
+      "noAssetsHint": "Add assets with installation dates to generate a replacement forecast.",
+      "totalLabel": "Total projected",
+      "chartNote": "Derived from asset depreciation timelines. Darker bar = tax-deductible portion."
+    },
+    "legend": {
+      "deductible": "Deductible (maintenance)",
+      "capitalized": "Capitalized (investment)"
+    }
+  },
   "noiTrend": {
     "title": {
       "historicalNoi": "Historical NOI"

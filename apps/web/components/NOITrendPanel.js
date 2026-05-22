@@ -82,7 +82,7 @@ function BuildingSelect({ buildings, value, onChange }) {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function NOITrendPanel() {
+export default function NOITrendPanel({ onBuildingChange } = {}) {
   const { t } = useTranslation("manager");
 
   // Fetch buildings independently — DO NOT derive from portfolio prop.
@@ -122,9 +122,11 @@ export default function NOITrendPanel() {
   // Auto-select first building once the list loads
   useEffect(() => {
     if (buildings.length > 0 && !selectedId) {
-      setSelectedId(buildings[0].buildingId);
+      const first = buildings[0].buildingId;
+      setSelectedId(first);
+      onBuildingChange?.(first);
     }
-  }, [buildings, selectedId]);
+  }, [buildings, selectedId, onBuildingChange]);
 
   const fetchSnapshots = useCallback(async (buildingId) => {
     if (!buildingId) return;
@@ -173,6 +175,7 @@ export default function NOITrendPanel() {
     setSnapshots(null);
     setError("");
     setRefreshError("");
+    onBuildingChange?.(id);
   };
 
   // Filter to only annual snapshots (periodStart = Jan 1, periodEnd = Dec 31 same year)

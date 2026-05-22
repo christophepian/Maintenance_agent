@@ -866,6 +866,23 @@
       "imports": "Importations"
     }
   },
+  "capexSchedule": {
+    "title": {
+      "forwardCapex": "Planification des investissements"
+    },
+    "text": {
+      "loading": "Chargement du plan d'investissement…",
+      "selectBuilding": "Sélectionnez un bâtiment dans le panneau REN ci-dessus.",
+      "noAssets": "Aucune échéance de remplacement d'actifs trouvée.",
+      "noAssetsHint": "Ajoutez des actifs avec des dates d'installation pour générer une prévision.",
+      "totalLabel": "Total prévu",
+      "chartNote": "Basé sur les durées de vie des actifs. Barre foncée = portion déductible fiscalement."
+    },
+    "legend": {
+      "deductible": "Déductible (entretien)",
+      "capitalized": "Capitalisé (investissement)"
+    }
+  },
   "noiTrend": {
     "title": {
       "historicalNoi": "Résultat d'exploitation historique"

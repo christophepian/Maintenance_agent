@@ -214,6 +214,28 @@ components:
           description: Only present when groupByAccount=true
           items: { $ref: '#/components/schemas/AccountTotalDTO' }
 
+    BuildingCapexScheduleDTO:
+      type: object
+      required: [buildingId, buildingName, horizonYears, fromYear, toYear, totalProjectedChf, schedule]
+      properties:
+        buildingId: { type: string, format: uuid }
+        buildingName: { type: string }
+        horizonYears: { type: integer }
+        fromYear: { type: integer }
+        toYear: { type: integer }
+        totalProjectedChf: { type: number }
+        schedule:
+          type: array
+          items:
+            type: object
+            required: [year, totalChf, deductibleChf, capitalizedChf, assetCount]
+            properties:
+              year: { type: integer }
+              totalChf: { type: number }
+              deductibleChf: { type: number }
+              capitalizedChf: { type: number }
+              assetCount: { type: integer }
+
     AnnualSnapshotDTO:
       type: object
       required:
@@ -8528,6 +8550,29 @@ paths:
       responses:
         '200':
           description: CapEx projection data
+
+  /buildings/{id}/capex-schedule:
+    get:
+      tags: [Forecasting]
+      summary: Get forward capex schedule for a single building
+      operationId: getBuildingCapexSchedule
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+        - name: horizonYears
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 10, default: 5 }
+          description: Number of years to project forward
+      responses:
+        '200':
+          description: Per-building capex schedule derived from asset depreciation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/BuildingCapexScheduleDTO' }
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /forecasting/renovation-catalog:
     get:

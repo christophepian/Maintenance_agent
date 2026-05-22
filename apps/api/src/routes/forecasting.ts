@@ -65,6 +65,47 @@ export function registerForecastingRoutes(router: Router) {
     }
   }));
 
+  // ── GET /buildings/:id/capex-schedule ───────────────────────
+  // Per-building forward capex schedule derived from asset depreciation timelines.
+  // Calls the full portfolio projection and slices the result for the requested building.
+  router.get("/buildings/:id/capex-schedule", withAuthRequired(async ({ req, res, params, orgId, prisma }) => {
+    if (!maybeRequireManager(req, res)) return;
+    try {
+      const url = new URL(req.url || "", `http://${req.headers.host}`);
+      const horizonStr = url.searchParams.get("horizonYears");
+      const horizonYears = horizonStr ? Math.min(10, Math.max(1, Number(horizonStr))) : undefined;
+
+      const projection = await getCapExProjection(prisma, orgId, { horizonYears });
+      const building = projection.buildings.find((b) => b.buildingId === params.id);
+
+      if (!building) {
+        return sendError(res, 404, "NOT_FOUND", `Building ${params.id} not found or has no assets`);
+      }
+
+      const schedule = building.yearlyBuckets.map((bucket) => ({
+        year: bucket.year,
+        totalChf: bucket.totalChf,
+        deductibleChf: bucket.deductibleChf,
+        capitalizedChf: bucket.capitalizedChf,
+        assetCount: bucket.assetCount,
+      }));
+
+      sendJson(res, 200, {
+        data: {
+          buildingId: building.buildingId,
+          buildingName: building.buildingName,
+          horizonYears: projection.projectionHorizonYears,
+          fromYear: projection.fromYear,
+          toYear: projection.toYear,
+          totalProjectedChf: building.totalProjectedChf,
+          schedule,
+        },
+      });
+    } catch (e) {
+      sendError(res, 500, "FORECAST_ERROR", "Failed to compute capex schedule", String(e));
+    }
+  }));
+
   // ── GET /forecasting/renovation-catalog ──────────────────────
   router.get("/forecasting/renovation-catalog", withAuthRequired(async ({ req, res }) => {
     if (!maybeRequireManager(req, res)) return;

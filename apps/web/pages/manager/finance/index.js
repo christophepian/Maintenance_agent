@@ -17,6 +17,7 @@ import BillingEntityManager from "../../../components/BillingEntityManager";
 import { CapExSummaryBridge } from "../../../components/RenovationTaxPlanning";
 import CashflowPlansList from "../../../components/CashflowPlansList";
 import NOITrendPanel from "../../../components/NOITrendPanel";
+import CapexSchedulePanel from "../../../components/CapexSchedulePanel";
 import { cn } from "../../../lib/utils";
 import { FilterToggle, FilterPanelBody, FilterSection, FilterSectionClear, DateField } from "../../../components/ui/FilterPanel";
 import ScrollableTabs from "../../../components/mobile/ScrollableTabs";
@@ -89,6 +90,7 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
     router.push({ pathname: router.pathname, query: { ...router.query, tab: key } }, undefined, { shallow: true });
   }, [router]);
 
+  const [planningBuildingId, setPlanningBuildingId] = useState("");
   const [range, setRange] = useState(defaultRange);
   const [portfolio, setPortfolio] = useState(null);
   const [portfolioLoading, setPortfolioLoading] = useState(true);
@@ -358,7 +360,10 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
           {/* ── Planning ── */}
           {activeTabKey === "planning" && (
             <div className="space-y-4">
-              <NOITrendPanel />
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <NOITrendPanel onBuildingChange={setPlanningBuildingId} />
+                <CapexSchedulePanel buildingId={planningBuildingId} />
+              </div>
               <CapExSummaryBridge />
               <CashflowPlansList />
             </div>
