@@ -282,6 +282,16 @@ export async function computeNPVScenarios(
   const defer = buildScenario(fromYear, toYear, baseAnnualNoiChf, incomeGrowthRatePct, discountRatePct, deferCapex);
   const neglect = buildScenario(fromYear, toYear, baseAnnualNoiChf, incomeGrowthRatePct, discountRatePct, neglectCapex);
 
+  // Temporary probe — remove once zero-values root cause is confirmed
+  console.log("[npvService] computed scenarios", {
+    baseAnnualNoiChf,
+    fromYear,
+    toYear,
+    neglectNpvChf: neglect.npvChf,
+    neglectTotalNoiChf: neglect.totalNoiChf,
+    investNpvChf: invest.npvChf,
+  });
+
   return {
     buildingId,
     buildingName: building.name,
@@ -294,5 +304,13 @@ export async function computeNPVScenarios(
     fromYear,
     toYear,
     scenarios: { invest, defer, neglect },
+    /** Temporary probe — remove once confirmed */
+    _probe: {
+      baseAnnualNoiChf,
+      neglectNpvChf: neglect.npvChf,
+      neglectTotalNoiChf: neglect.totalNoiChf,
+      investNpvChf: invest.npvChf,
+      investTotalCapexChf: invest.totalCapexChf,
+    },
   };
 }

@@ -227,6 +227,13 @@ export default function NPVScenariosPanel({ buildingId }) {
           <p className="text-sm text-slate-400">{t("manager:npvScenarios.text.selectBuilding")}</p>
         )}
 
+        {/* Temporary probe — remove once zero-values confirmed */}
+        {!loading && data?._probe && (
+          <pre className="text-xs bg-slate-100 rounded p-2 overflow-x-auto">
+            {JSON.stringify(data._probe, null, 2)}
+          </pre>
+        )}
+
         {/* Scenario cards */}
         {!loading && data && (
           <>
