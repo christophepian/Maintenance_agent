@@ -16,6 +16,7 @@
 
 import { PrismaClient } from "@prisma/client";
 import { getCapExProjection } from "./capexProjectionService";
+import { getAssetInventoryForBuilding } from "./assetInventory";
 import { findAllSnapshotsForBuilding } from "../repositories/buildingFinancialSnapshotRepository";
 import { findBuildingByIdAndOrg } from "../repositories/inventoryRepository";
 
@@ -62,6 +63,8 @@ export interface NPVScenariosResult {
     capexItemCount: number;
     capexTotalChf: number;
     noiBasis: "annual_snapshot" | "annualized_history" | "leases" | "zero";
+    /** Raw assets for this building — shows actual topic values vs what static table expects */
+    assets: Array<{ assetType: string; topic: string; hasDepreciation: boolean; depreciationPct: number | null }>;
   };
 }
 
@@ -249,6 +252,11 @@ export async function computeNPVScenarios(
   const defer = buildScenario(fromYear, toYear, baseAnnualNoiChf, incomeGrowthRatePct, discountRatePct, deferCapex);
   const neglect = buildScenario(fromYear, toYear, baseAnnualNoiChf, incomeGrowthRatePct, discountRatePct, neglectCapex);
 
+  // ── Diagnostics: fetch raw assets to show actual topic values ─
+  const rawAssets = await getAssetInventoryForBuilding(prisma, orgId, buildingId, {
+    canton: building.canton ?? null,
+  });
+
   return {
     buildingId,
     buildingName: building.name,
@@ -267,6 +275,12 @@ export async function computeNPVScenarios(
       capexItemCount: allItems.length,
       capexTotalChf: allItems.reduce((s, i) => s + i.estimatedCostChf, 0),
       noiBasis,
+      assets: rawAssets.map((a) => ({
+        assetType: a.type,
+        topic: a.topic,
+        hasDepreciation: a.depreciation !== null,
+        depreciationPct: a.depreciation?.depreciationPct ?? null,
+      })),
     },
   };
 }
