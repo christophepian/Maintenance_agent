@@ -275,6 +275,75 @@ async function main() {
     });
   }
 
+  // ── Depreciation standards (Swiss HEV 2024 useful lives) ─────────────────
+  const depStandards: Array<{
+    assetType: "SYSTEM" | "STRUCTURAL" | "FIXTURE" | "FINISH" | "APPLIANCE" | "OTHER";
+    topic: string;
+    usefulLifeMonths: number;
+    notes?: string;
+  }> = [
+    { assetType: "SYSTEM",     topic: "ELEVATOR",                      usefulLifeMonths: 300, notes: "HEV 2024: 25 yr" },
+    { assetType: "SYSTEM",     topic: "ELEVATOR_ELECTRICS",            usefulLifeMonths: 240, notes: "HEV 2024: 20 yr" },
+    { assetType: "SYSTEM",     topic: "CENTRAL_HEATING",               usefulLifeMonths: 300, notes: "HEV 2024: 25 yr" },
+    { assetType: "SYSTEM",     topic: "BOILER",                        usefulLifeMonths: 240, notes: "HEV 2024: 20 yr" },
+    { assetType: "SYSTEM",     topic: "CIRCULATION_PUMP",              usefulLifeMonths: 180, notes: "HEV 2024: 15 yr" },
+    { assetType: "SYSTEM",     topic: "HEATING_CONTROL",               usefulLifeMonths: 180, notes: "HEV 2024: 15 yr" },
+    { assetType: "SYSTEM",     topic: "WATER_PIPES",                   usefulLifeMonths: 360, notes: "HEV 2024: 30 yr" },
+    { assetType: "SYSTEM",     topic: "PIPE_COLD_COPPER",              usefulLifeMonths: 360, notes: "HEV 2024: 30 yr" },
+    { assetType: "SYSTEM",     topic: "PIPE_HOT_COPPER_INSULATED",     usefulLifeMonths: 360, notes: "HEV 2024: 30 yr" },
+    { assetType: "SYSTEM",     topic: "ELECTRICAL_INSTALLATION",       usefulLifeMonths: 300, notes: "HEV 2024: 25 yr" },
+    { assetType: "SYSTEM",     topic: "ELECTRICAL_CABLES",             usefulLifeMonths: 360, notes: "HEV 2024: 30 yr" },
+    { assetType: "SYSTEM",     topic: "INTERCOM",                      usefulLifeMonths: 180, notes: "HEV 2024: 15 yr" },
+    { assetType: "SYSTEM",     topic: "POWER_SOCKET",                  usefulLifeMonths: 240, notes: "HEV 2024: 20 yr" },
+    { assetType: "SYSTEM",     topic: "SWITCH",                        usefulLifeMonths: 240, notes: "HEV 2024: 20 yr" },
+    { assetType: "STRUCTURAL", topic: "STAIRCASE",                     usefulLifeMonths: 480, notes: "HEV 2024: 40 yr" },
+    { assetType: "STRUCTURAL", topic: "ROOF_COVERING",                 usefulLifeMonths: 360, notes: "HEV 2024: 30 yr" },
+    { assetType: "STRUCTURAL", topic: "PITCHED_ROOF_TILES",            usefulLifeMonths: 480, notes: "HEV 2024: 40 yr" },
+    { assetType: "STRUCTURAL", topic: "EXTERIOR_WALL_COATING",         usefulLifeMonths: 240, notes: "HEV 2024: 20 yr" },
+    { assetType: "STRUCTURAL", topic: "RENDER_MINERAL",                usefulLifeMonths: 300, notes: "HEV 2024: 25 yr" },
+    { assetType: "STRUCTURAL", topic: "BALCONY_METAL",                 usefulLifeMonths: 300, notes: "HEV 2024: 25 yr" },
+    { assetType: "FIXTURE",    topic: "ENTRANCE_DOOR",                 usefulLifeMonths: 360, notes: "HEV 2024: 30 yr" },
+    { assetType: "FIXTURE",    topic: "WINDOW_INSULATED_PLASTIC_WOOD", usefulLifeMonths: 300, notes: "HEV 2024: 25 yr" },
+    { assetType: "FIXTURE",    topic: "ROLLER_SHUTTER_PLASTIC",        usefulLifeMonths: 240, notes: "HEV 2024: 20 yr" },
+    { assetType: "FIXTURE",    topic: "DOOR_CHIPBOARD",                usefulLifeMonths: 240, notes: "HEV 2024: 20 yr" },
+    { assetType: "FIXTURE",    topic: "KITCHEN_CABINET_CHIPBOARD",     usefulLifeMonths: 240, notes: "HEV 2024: 20 yr" },
+    { assetType: "FIXTURE",    topic: "COUNTERTOP_SYNTHETIC",          usefulLifeMonths: 240, notes: "HEV 2024: 20 yr" },
+    { assetType: "FIXTURE",    topic: "KITCHEN_TAP",                   usefulLifeMonths: 180, notes: "HEV 2024: 15 yr" },
+    { assetType: "FIXTURE",    topic: "BATHTUB_ACRYLIC",               usefulLifeMonths: 240, notes: "HEV 2024: 20 yr" },
+    { assetType: "FIXTURE",    topic: "SANITARY_CERAMIC",              usefulLifeMonths: 300, notes: "HEV 2024: 25 yr" },
+    { assetType: "FIXTURE",    topic: "BATHROOM_TAP",                  usefulLifeMonths: 180, notes: "HEV 2024: 15 yr" },
+    { assetType: "FIXTURE",    topic: "BALCONY_RAILING_METAL",         usefulLifeMonths: 300, notes: "HEV 2024: 25 yr" },
+    { assetType: "FIXTURE",    topic: "COMBINED_LOCK_SYSTEM",          usefulLifeMonths: 180, notes: "HEV 2024: 15 yr" },
+    { assetType: "FINISH",     topic: "PAINT_WALLS_DISPERSION",        usefulLifeMonths: 120, notes: "HEV 2024: 10 yr" },
+    { assetType: "FINISH",     topic: "PARQUET_MOSAIC",                usefulLifeMonths: 360, notes: "HEV 2024: 30 yr" },
+    { assetType: "FINISH",     topic: "KITCHEN_TILES_CERAMIC",         usefulLifeMonths: 240, notes: "HEV 2024: 20 yr" },
+    { assetType: "FINISH",     topic: "BATHROOM_TILES_CERAMIC",        usefulLifeMonths: 240, notes: "HEV 2024: 20 yr" },
+    { assetType: "APPLIANCE",  topic: "WASHING_MACHINE_COMMON",        usefulLifeMonths: 144, notes: "HEV 2024: 12 yr" },
+    { assetType: "APPLIANCE",  topic: "DRYER_COMMON",                  usefulLifeMonths: 144, notes: "HEV 2024: 12 yr" },
+  ];
+
+  for (const s of depStandards) {
+    await prisma.depreciationStandard.upsert({
+      where: {
+        jurisdiction_canton_assetType_topic: {
+          jurisdiction: "CH",
+          canton: null,
+          assetType: s.assetType,
+          topic: s.topic,
+        },
+      },
+      update: { usefulLifeMonths: s.usefulLifeMonths, notes: s.notes },
+      create: {
+        jurisdiction: "CH",
+        canton: null,
+        assetType: s.assetType,
+        topic: s.topic,
+        usefulLifeMonths: s.usefulLifeMonths,
+        notes: s.notes,
+      },
+    });
+  }
+
   console.log("Seed complete:");
   console.log({
     orgId,

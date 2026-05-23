@@ -122,6 +122,53 @@ export function computeDepreciation(
   };
 }
 
+// ─── Static Depreciation Standards (Swiss HEV 2024) ───────────
+// Fallback useful-life values used when the DepreciationStandard table has no
+// matching row (e.g. fresh DB without seed). Mirrors the values in seed.ts.
+// Keys are UPPER_SNAKE_CASE topic values.
+
+type UsefulLifeKey = string; // `${AssetType}::${topic}`
+const STATIC_USEFUL_LIFE_MONTHS: Record<UsefulLifeKey, number> = {
+  "SYSTEM::ELEVATOR":                      300, // 25 yr
+  "SYSTEM::ELEVATOR_ELECTRICS":            240, // 20 yr
+  "SYSTEM::CENTRAL_HEATING":               300, // 25 yr
+  "SYSTEM::BOILER":                        240, // 20 yr
+  "SYSTEM::CIRCULATION_PUMP":              180, // 15 yr
+  "SYSTEM::HEATING_CONTROL":               180, // 15 yr
+  "SYSTEM::WATER_PIPES":                   360, // 30 yr
+  "SYSTEM::PIPE_COLD_COPPER":              360, // 30 yr
+  "SYSTEM::PIPE_HOT_COPPER_INSULATED":     360, // 30 yr
+  "SYSTEM::ELECTRICAL_INSTALLATION":       300, // 25 yr
+  "SYSTEM::ELECTRICAL_CABLES":             360, // 30 yr
+  "SYSTEM::INTERCOM":                      180, // 15 yr
+  "SYSTEM::POWER_SOCKET":                  240, // 20 yr
+  "SYSTEM::SWITCH":                        240, // 20 yr
+  "STRUCTURAL::STAIRCASE":                 480, // 40 yr
+  "STRUCTURAL::ROOF_COVERING":             360, // 30 yr
+  "STRUCTURAL::PITCHED_ROOF_TILES":        480, // 40 yr
+  "STRUCTURAL::EXTERIOR_WALL_COATING":     240, // 20 yr
+  "STRUCTURAL::RENDER_MINERAL":            300, // 25 yr
+  "STRUCTURAL::BALCONY_METAL":             300, // 25 yr
+  "FIXTURE::ENTRANCE_DOOR":                360, // 30 yr
+  "FIXTURE::WINDOW_INSULATED_PLASTIC_WOOD":300, // 25 yr
+  "FIXTURE::ROLLER_SHUTTER_PLASTIC":       240, // 20 yr
+  "FIXTURE::DOOR_CHIPBOARD":               240, // 20 yr
+  "FIXTURE::KITCHEN_CABINET_CHIPBOARD":    240, // 20 yr
+  "FIXTURE::COUNTERTOP_SYNTHETIC":         240, // 20 yr
+  "FIXTURE::KITCHEN_TAP":                  180, // 15 yr
+  "FIXTURE::BATHTUB_ACRYLIC":              240, // 20 yr
+  "FIXTURE::SANITARY_CERAMIC":             300, // 25 yr
+  "FIXTURE::BATHROOM_TAP":                180, // 15 yr
+  "FIXTURE::BALCONY_RAILING_METAL":        300, // 25 yr
+  "FIXTURE::COMBINED_LOCK_SYSTEM":         180, // 15 yr
+  "FINISH::PAINT_WALLS_DISPERSION":        120, // 10 yr
+  "FINISH::PARQUET_MOSAIC":               360, // 30 yr
+  "FINISH::KITCHEN_TILES_CERAMIC":         240, // 20 yr
+  "FINISH::BATHROOM_TILES_CERAMIC":        240, // 20 yr
+  "APPLIANCE::WASHING_MACHINE_COMMON":     144, // 12 yr
+  "APPLIANCE::DRYER_COMMON":               144, // 12 yr
+};
+
 // ─── Depreciation Resolution ───────────────────────────────────
 //
 // Resolution priority (topic-first):
@@ -129,7 +176,8 @@ export function computeDepreciation(
 //   2. AssetModel default life     (AssetModel.defaultUsefulLifeMonths)
 //   3. DepreciationStandard by topic + canton (exact match)
 //   4. DepreciationStandard by topic, national (canton = null)
-//   5. null → no depreciation computed
+//   5. Static HEV 2024 fallback    (STATIC_USEFUL_LIFE_MONTHS table above)
+//   6. null → no depreciation computed
 
 /** Identifies which resolution tier produced the useful life value. */
 export type DepreciationSource =
@@ -198,6 +246,13 @@ async function resolveUsefulLife(
     orderBy: { assetType: "asc" },
   });
   if (fallback) return { usefulLifeMonths: fallback.usefulLifeMonths, standardId: fallback.id, source: "STANDARD_NATIONAL" };
+
+  // Tier 6: static HEV 2024 fallback (used when DepreciationStandard table is empty)
+  const staticKey = `${assetType}::${topicKey}`;
+  const staticMonths = STATIC_USEFUL_LIFE_MONTHS[staticKey];
+  if (staticMonths != null) {
+    return { usefulLifeMonths: staticMonths, standardId: null, source: "STANDARD_NATIONAL" };
+  }
 
   return null;
 }
