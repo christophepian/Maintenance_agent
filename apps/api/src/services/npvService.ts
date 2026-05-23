@@ -62,12 +62,15 @@ export interface NPVScenariosResult {
     annualSnapshotCount: number;
     annualLatestNoiCents: number | null;
     noiBasis: string;
-    fallbackADays: number;
-    fallbackANoiCents: number;
-    leasesCount: number;
-    leasesRentChf: number;
     baseAnnualNoiChf: number;
+    fromYear: number;
+    toYear: number;
+    horizonYearsResolved: number;
+    discountRatePctResolved: number;
+    incomeGrowthRatePctResolved: number;
+    neglectFlowCount: number;
     neglectNpvChf: number;
+    neglectTotalNoiChf: number;
     investNpvChf: number;
   };
 }
@@ -327,12 +330,15 @@ export async function computeNPVScenarios(
       annualSnapshotCount: annualSnapshots.length,
       annualLatestNoiCents: _annualLatestNoiCents,
       noiBasis: _noiBasis,
-      fallbackADays: _fallbackADays,
-      fallbackANoiCents: _fallbackANoiCents,
-      leasesCount: _leasesCount,
-      leasesRentChf: _leasesRentChf,
       baseAnnualNoiChf,
+      fromYear,
+      toYear,
+      horizonYearsResolved: horizonYears,
+      discountRatePctResolved: discountRatePct,
+      incomeGrowthRatePctResolved: incomeGrowthRatePct,
+      neglectFlowCount: neglect.yearlyFlows.length,
       neglectNpvChf: neglect.npvChf,
+      neglectTotalNoiChf: neglect.totalNoiChf,
       investNpvChf: invest.npvChf,
     },
   };
