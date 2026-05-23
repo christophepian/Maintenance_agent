@@ -14,9 +14,9 @@
  * beyond the NOI snapshot lookup delegated to the repository).
  */
 
-import { PrismaClient } from "@prisma/client";
-import { projectBuilding } from "./capexProjectionService";
+import { PrismaClient, AssetType } from "@prisma/client";
 import { getAssetInventoryForBuilding } from "./assetInventory";
+import { estimateReplacementCost } from "./replacementCostService";
 import { findAllSnapshotsForBuilding } from "../repositories/buildingFinancialSnapshotRepository";
 import { findBuildingByIdAndOrg } from "../repositories/inventoryRepository";
 
@@ -210,19 +210,62 @@ export async function computeNPVScenarios(
     }
   }
 
-  // ── 3. Capex projection for this building (direct — bypasses listBuildings isActive filter) ──
+  // ── 3. Capex projection — inline, directly from asset inventory ──
+  // We bypass getCapExProjection/projectBuilding because those go through
+  // listBuildings() which filters isActive=true and may exclude this building.
   const extendedHorizon = horizonYears + deferYears;
   const extendedToYear = currentYear + extendedHorizon - 1;
-  const buildingProjection = await projectBuilding(
-    prisma,
-    orgId,
-    { id: buildingId, name: building.name, canton: building.canton ?? null },
-    fromYear,
-    extendedToYear,
-  );
 
-  // All projected items across the extended horizon for this building
-  const allItems = buildingProjection.yearlyBuckets.flatMap((b) => b.items);
+  const buildingAssets = await getAssetInventoryForBuilding(prisma, orgId, buildingId, {
+    canton: building.canton ?? null,
+  });
+
+  // Cost cache: avoid duplicate DB lookups for same (assetType, topic) pair
+  const costCache = new Map<string, number>();
+
+  interface CapexItem {
+    assetId: string;
+    assetName: string;
+    topic: string;
+    estimatedReplacementYear: number;
+    estimatedCostChf: number;
+  }
+
+  const allItems: CapexItem[] = [];
+
+  for (const asset of buildingAssets) {
+    const dep = asset.depreciation;
+    if (!dep) continue;
+
+    // Compute replacement year from depreciation
+    let replacementYear: number;
+    if (dep.depreciationPct >= 100) {
+      replacementYear = currentYear;
+    } else {
+      const remainingMonths = dep.usefulLifeMonths - dep.ageMonths;
+      replacementYear = currentYear + Math.max(0, Math.ceil(remainingMonths / 12));
+    }
+
+    // Only include assets due for replacement within the extended horizon
+    if (replacementYear > extendedToYear) continue;
+
+    // Cost estimate (cached per type+topic)
+    const costKey = `${asset.type}::${asset.topic}`;
+    let estimatedCostChf = costCache.get(costKey);
+    if (estimatedCostChf === undefined) {
+      const cost = await estimateReplacementCost(prisma, orgId, asset.type as AssetType, asset.topic);
+      estimatedCostChf = cost.bestEstimate.medianChf;
+      costCache.set(costKey, estimatedCostChf);
+    }
+
+    allItems.push({
+      assetId: asset.id,
+      assetName: asset.name,
+      topic: asset.topic,
+      estimatedReplacementYear: replacementYear,
+      estimatedCostChf,
+    });
+  }
 
   // ── 4. Build capex maps per scenario ─────────────────────────
 
@@ -257,11 +300,6 @@ export async function computeNPVScenarios(
   const defer = buildScenario(fromYear, toYear, baseAnnualNoiChf, incomeGrowthRatePct, discountRatePct, deferCapex);
   const neglect = buildScenario(fromYear, toYear, baseAnnualNoiChf, incomeGrowthRatePct, discountRatePct, neglectCapex);
 
-  // ── Diagnostics: fetch raw assets to show actual topic values ─
-  const rawAssets = await getAssetInventoryForBuilding(prisma, orgId, buildingId, {
-    canton: building.canton ?? null,
-  });
-
   return {
     buildingId,
     buildingName: building.name,
@@ -281,16 +319,15 @@ export async function computeNPVScenarios(
       capexItemCount: allItems.length,
       capexTotalChf: allItems.reduce((s, i) => s + i.estimatedCostChf, 0),
       noiBasis,
-      assets: rawAssets.map((a) => {
+      assets: buildingAssets.map((a) => {
         const dep = a.depreciation;
         let replacementYear: number | null = null;
         if (dep) {
-          const currentYr = new Date().getFullYear();
           if (dep.depreciationPct >= 100) {
-            replacementYear = currentYr;
+            replacementYear = currentYear;
           } else {
             const remaining = dep.usefulLifeMonths - dep.ageMonths;
-            replacementYear = currentYr + Math.max(0, Math.ceil(remaining / 12));
+            replacementYear = currentYear + Math.max(0, Math.ceil(remaining / 12));
           }
         }
         return {
