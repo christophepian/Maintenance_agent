@@ -260,6 +260,14 @@ export default function NPVScenariosPanel({ buildingId }) {
                 growth: data.incomeGrowthRatePct,
               })}
             </p>
+
+            {/* Temporary diagnostics — remove once root cause confirmed */}
+            {data._diag && (
+              <details className="text-xs text-slate-400 border border-slate-200 rounded p-2">
+                <summary className="cursor-pointer select-none font-medium text-slate-500">Debug info</summary>
+                <pre className="mt-1 whitespace-pre-wrap font-mono text-xs">{JSON.stringify(data._diag, null, 2)}</pre>
+              </details>
+            )}
           </>
         )}
       </div>

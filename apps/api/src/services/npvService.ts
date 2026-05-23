@@ -55,6 +55,14 @@ export interface NPVScenariosResult {
     defer: NPVScenarioResult;
     neglect: NPVScenarioResult;
   };
+  /** Temporary diagnostics — remove once root cause is confirmed */
+  _diag: {
+    totalSnapshotCount: number;
+    annualSnapshotCount: number;
+    capexItemCount: number;
+    capexTotalChf: number;
+    noiBasis: "annual_snapshot" | "annualized_history" | "leases" | "zero";
+  };
 }
 
 export interface NPVOptions {
@@ -157,10 +165,13 @@ export async function computeNPVScenarios(
 
   let baseAnnualNoiChf = 0;
   let noIncomeData = false;
+  let noiBasis: "annual_snapshot" | "annualized_history" | "leases" | "zero" = "zero";
+
   if (annualSnapshots.length > 0) {
     // Best case: a full Jan 1–Dec 31 snapshot from a prior year
     const latest = annualSnapshots[annualSnapshots.length - 1];
     baseAnnualNoiChf = Math.round(Number(latest.netOperatingIncomeCents) / 100);
+    noiBasis = "annual_snapshot";
   } else if (snapshots.length > 0) {
     // Fallback A: annualize whatever snapshot history exists (any period length)
     const today = new Date();
@@ -173,8 +184,8 @@ export async function computeNPVScenarios(
       const endMs = new Date(relevant[relevant.length - 1].periodEnd).getTime();
       const totalDays = Math.max(1, (endMs - startMs) / (1000 * 60 * 60 * 24));
       if (totalDays >= 30) {
-        // Annualize: scale to 365 days regardless of how many months we have
         baseAnnualNoiChf = Math.round((totalNoiCents / 100) * (365 / totalDays));
+        noiBasis = "annualized_history";
       }
     }
   }
@@ -188,7 +199,11 @@ export async function computeNPVScenarios(
     baseAnnualNoiChf = Math.round(
       leases.reduce((s, l) => s + (l.rentTotalChf ?? 0), 0) * 12,
     );
-    noIncomeData = baseAnnualNoiChf === 0; // flag only if all fallbacks failed
+    if (baseAnnualNoiChf > 0) {
+      noiBasis = "leases";
+    } else {
+      noIncomeData = true;
+    }
   }
 
   // ── 3. Capex projection — use extended horizon for defer rebucketing ──
@@ -246,5 +261,12 @@ export async function computeNPVScenarios(
     fromYear,
     toYear,
     scenarios: { invest, defer, neglect },
+    _diag: {
+      totalSnapshotCount: snapshots.length,
+      annualSnapshotCount: annualSnapshots.length,
+      capexItemCount: allItems.length,
+      capexTotalChf: allItems.reduce((s, i) => s + i.estimatedCostChf, 0),
+      noiBasis,
+    },
   };
 }
