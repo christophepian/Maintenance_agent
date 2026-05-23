@@ -167,6 +167,14 @@ const STATIC_USEFUL_LIFE_MONTHS: Record<UsefulLifeKey, number> = {
   "FINISH::BATHROOM_TILES_CERAMIC":        240, // 20 yr
   "APPLIANCE::WASHING_MACHINE_COMMON":     144, // 12 yr
   "APPLIANCE::DRYER_COMMON":               144, // 12 yr
+  // Common free-text topics not in the HEV controlled-vocabulary list
+  "FIXTURE::BATHROOM_INSTALLATION":        300, // 25 yr (equiv. SANITARY_CERAMIC)
+  "FIXTURE::KITCHEN_INSTALLATION":         240, // 20 yr (equiv. KITCHEN_CABINET_CHIPBOARD)
+  "FIXTURE::INTERIOR_DOORS":               240, // 20 yr (equiv. DOOR_CHIPBOARD)
+  "FIXTURE::WINDOWS":                      300, // 25 yr (equiv. WINDOW_INSULATED_PLASTIC_WOOD)
+  "FINISH::CEILING_PAINT":                 120, // 10 yr (equiv. PAINT_WALLS_DISPERSION)
+  "FINISH::WALL_COATING":                  120, // 10 yr (equiv. PAINT_WALLS_DISPERSION)
+  "STRUCTURAL::BALCONY":                   300, // 25 yr (equiv. BALCONY_METAL)
 };
 
 // ─── Depreciation Resolution ───────────────────────────────────

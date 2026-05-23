@@ -15,7 +15,7 @@
  */
 
 import { PrismaClient } from "@prisma/client";
-import { getCapExProjection } from "./capexProjectionService";
+import { projectBuilding } from "./capexProjectionService";
 import { getAssetInventoryForBuilding } from "./assetInventory";
 import { findAllSnapshotsForBuilding } from "../repositories/buildingFinancialSnapshotRepository";
 import { findBuildingByIdAndOrg } from "../repositories/inventoryRepository";
@@ -60,11 +60,12 @@ export interface NPVScenariosResult {
   _diag: {
     totalSnapshotCount: number;
     annualSnapshotCount: number;
+    baseAnnualNoiChf: number;
     capexItemCount: number;
     capexTotalChf: number;
     noiBasis: "annual_snapshot" | "annualized_history" | "leases" | "zero";
     /** Raw assets for this building — shows actual topic values vs what static table expects */
-    assets: Array<{ assetType: string; topic: string; hasDepreciation: boolean; depreciationPct: number | null }>;
+    assets: Array<{ assetType: string; topic: string; hasDepreciation: boolean; depreciationPct: number | null; replacementYear: number | null }>;
   };
 }
 
@@ -209,15 +210,19 @@ export async function computeNPVScenarios(
     }
   }
 
-  // ── 3. Capex projection — use extended horizon for defer rebucketing ──
+  // ── 3. Capex projection for this building (direct — bypasses listBuildings isActive filter) ──
   const extendedHorizon = horizonYears + deferYears;
-  const projection = await getCapExProjection(prisma, orgId, { horizonYears: extendedHorizon });
-  const buildingProjection = projection.buildings.find((b) => b.buildingId === buildingId);
+  const extendedToYear = currentYear + extendedHorizon - 1;
+  const buildingProjection = await projectBuilding(
+    prisma,
+    orgId,
+    { id: buildingId, name: building.name, canton: building.canton ?? null },
+    fromYear,
+    extendedToYear,
+  );
 
   // All projected items across the extended horizon for this building
-  const allItems = buildingProjection
-    ? buildingProjection.yearlyBuckets.flatMap((b) => b.items)
-    : [];
+  const allItems = buildingProjection.yearlyBuckets.flatMap((b) => b.items);
 
   // ── 4. Build capex maps per scenario ─────────────────────────
 
@@ -272,15 +277,30 @@ export async function computeNPVScenarios(
     _diag: {
       totalSnapshotCount: snapshots.length,
       annualSnapshotCount: annualSnapshots.length,
+      baseAnnualNoiChf,
       capexItemCount: allItems.length,
       capexTotalChf: allItems.reduce((s, i) => s + i.estimatedCostChf, 0),
       noiBasis,
-      assets: rawAssets.map((a) => ({
-        assetType: a.type,
-        topic: a.topic,
-        hasDepreciation: a.depreciation !== null,
-        depreciationPct: a.depreciation?.depreciationPct ?? null,
-      })),
+      assets: rawAssets.map((a) => {
+        const dep = a.depreciation;
+        let replacementYear: number | null = null;
+        if (dep) {
+          const currentYr = new Date().getFullYear();
+          if (dep.depreciationPct >= 100) {
+            replacementYear = currentYr;
+          } else {
+            const remaining = dep.usefulLifeMonths - dep.ageMonths;
+            replacementYear = currentYr + Math.max(0, Math.ceil(remaining / 12));
+          }
+        }
+        return {
+          assetType: a.type,
+          topic: a.topic,
+          hasDepreciation: dep !== null,
+          depreciationPct: dep?.depreciationPct ?? null,
+          replacementYear,
+        };
+      }),
     },
   };
 }

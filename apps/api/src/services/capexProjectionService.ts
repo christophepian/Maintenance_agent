@@ -210,7 +210,7 @@ function estimateReplacementYear(
 
 // ─── Per-Building Projection ───────────────────────────────────
 
-async function projectBuilding(
+export async function projectBuilding(
   prisma: PrismaClient,
   orgId: string,
   building: { id: string; name: string; canton: string | null },
