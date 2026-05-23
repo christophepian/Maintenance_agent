@@ -56,6 +56,14 @@ export interface NPVScenariosResult {
     defer: NPVScenarioResult;
     neglect: NPVScenarioResult;
   };
+  /** Temporary probe — remove once zero-values root cause is confirmed */
+  _probe?: {
+    baseAnnualNoiChf: number;
+    neglectNpvChf: number;
+    neglectTotalNoiChf: number;
+    investNpvChf: number;
+    investTotalCapexChf: number;
+  };
 }
 
 export interface NPVOptions {
