@@ -56,17 +56,6 @@ export interface NPVScenariosResult {
     defer: NPVScenarioResult;
     neglect: NPVScenarioResult;
   };
-  /** Temporary diagnostics — remove once root cause is confirmed */
-  _diag: {
-    totalSnapshotCount: number;
-    annualSnapshotCount: number;
-    baseAnnualNoiChf: number;
-    capexItemCount: number;
-    capexTotalChf: number;
-    noiBasis: "annual_snapshot" | "annualized_history" | "leases" | "zero";
-    /** Raw assets for this building — shows actual topic values vs what static table expects */
-    assets: Array<{ assetType: string; topic: string; hasDepreciation: boolean; depreciationPct: number | null; replacementYear: number | null }>;
-  };
 }
 
 export interface NPVOptions {
@@ -169,13 +158,11 @@ export async function computeNPVScenarios(
 
   let baseAnnualNoiChf = 0;
   let noIncomeData = false;
-  let noiBasis: "annual_snapshot" | "annualized_history" | "leases" | "zero" = "zero";
 
   if (annualSnapshots.length > 0) {
     // Best case: a full Jan 1–Dec 31 snapshot from a prior year
     const latest = annualSnapshots[annualSnapshots.length - 1];
     baseAnnualNoiChf = Math.round(Number(latest.netOperatingIncomeCents) / 100);
-    noiBasis = "annual_snapshot";
   } else if (snapshots.length > 0) {
     // Fallback A: annualize whatever snapshot history exists (any period length)
     const today = new Date();
@@ -189,7 +176,6 @@ export async function computeNPVScenarios(
       const totalDays = Math.max(1, (endMs - startMs) / (1000 * 60 * 60 * 24));
       if (totalDays >= 30) {
         baseAnnualNoiChf = Math.round((totalNoiCents / 100) * (365 / totalDays));
-        noiBasis = "annualized_history";
       }
     }
   }
@@ -203,11 +189,7 @@ export async function computeNPVScenarios(
     baseAnnualNoiChf = Math.round(
       leases.reduce((s, l) => s + (l.rentTotalChf ?? 0), 0) * 12,
     );
-    if (baseAnnualNoiChf > 0) {
-      noiBasis = "leases";
-    } else {
-      noIncomeData = true;
-    }
+    noIncomeData = baseAnnualNoiChf === 0;
   }
 
   // ── 3. Capex projection — inline, directly from asset inventory ──
@@ -312,32 +294,5 @@ export async function computeNPVScenarios(
     fromYear,
     toYear,
     scenarios: { invest, defer, neglect },
-    _diag: {
-      totalSnapshotCount: snapshots.length,
-      annualSnapshotCount: annualSnapshots.length,
-      baseAnnualNoiChf,
-      capexItemCount: allItems.length,
-      capexTotalChf: allItems.reduce((s, i) => s + i.estimatedCostChf, 0),
-      noiBasis,
-      assets: buildingAssets.map((a) => {
-        const dep = a.depreciation;
-        let replacementYear: number | null = null;
-        if (dep) {
-          if (dep.depreciationPct >= 100) {
-            replacementYear = currentYear;
-          } else {
-            const remaining = dep.usefulLifeMonths - dep.ageMonths;
-            replacementYear = currentYear + Math.max(0, Math.ceil(remaining / 12));
-          }
-        }
-        return {
-          assetType: a.type,
-          topic: a.topic,
-          hasDepreciation: dep !== null,
-          depreciationPct: dep?.depreciationPct ?? null,
-          replacementYear,
-        };
-      }),
-    },
   };
 }
