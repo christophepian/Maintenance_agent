@@ -243,8 +243,14 @@ export default function NPVScenariosPanel({ buildingId }) {
   const isIdenticalDeferInvest = data && Math.abs(data.scenarios.invest.npvChf - data.scenarios.defer.npvChf) /
     Math.max(Math.abs(data.scenarios.invest.npvChf), 1) < 0.005;
 
-  const investNeglectDelta = data
-    ? data.scenarios.invest.npvChf - data.scenarios.neglect.npvChf
+  // Determine the actual best scenario by NPV
+  const bestScenarioKey = data
+    ? (["invest", "defer", "neglect"]).reduce((best, key) =>
+        data.scenarios[key].npvChf > data.scenarios[best].npvChf ? key : best, "invest")
+    : null;
+  const bestScenario = bestScenarioKey && data ? data.scenarios[bestScenarioKey] : null;
+  const bestVsNeglectDelta = (bestScenario && data)
+    ? bestScenario.npvChf - data.scenarios.neglect.npvChf
     : 0;
 
   // Breakdown: decompose the invest-vs-neglect NPV delta into its three drivers
@@ -263,28 +269,46 @@ export default function NPVScenariosPanel({ buildingId }) {
     return { pvNoi, pvCapex, pvTax };
   })();
 
-  // Per-scenario plain-language summaries (client-side)
+  // Per-scenario plain-language summaries (client-side, direction-aware)
   function buildSummary(scenarioKey) {
     if (!data) return null;
     const { invest, defer, neglect } = data.scenarios;
 
     if (scenarioKey === "invest") {
-      const vsNeglect = Math.abs(invest.npvChf - neglect.npvChf);
+      const vsDeferDiff = invest.npvChf - defer.npvChf;
+      if (vsDeferDiff < 0) {
+        // Defer is actually better — note the NPV gap
+        return t("manager:npvScenarios.summary.investDeferBetter", {
+          years: data.deferYears,
+          diff: formatChf(Math.abs(vsDeferDiff)),
+        });
+      }
+      const vsNeglect = invest.npvChf - neglect.npvChf;
       return vsNeglect > 0
         ? t("manager:npvScenarios.summary.invest", { delta: formatChf(vsNeglect) })
         : t("manager:npvScenarios.summary.investNeutral");
     }
     if (scenarioKey === "defer") {
       if (isIdenticalDeferInvest) return null; // notice already shown
-      const diff = Math.abs(invest.npvChf - defer.npvChf);
+      const diff = defer.npvChf - invest.npvChf; // positive = defer beats invest
+      if (diff > 0) {
+        return t("manager:npvScenarios.summary.deferWins", {
+          years: data.deferYears,
+          diff: formatChf(diff),
+        });
+      }
       return t("manager:npvScenarios.summary.defer", {
         years: data.deferYears,
-        diff: formatChf(diff),
+        diff: formatChf(Math.abs(diff)),
       });
     }
     if (scenarioKey === "neglect") {
-      const delta = Math.abs(invest.npvChf - neglect.npvChf);
-      return t("manager:npvScenarios.summary.neglect", { delta: formatChf(delta) });
+      // Compare against best scenario, not always invest
+      const bestNpv = bestScenario?.npvChf ?? invest.npvChf;
+      const delta = bestNpv - neglect.npvChf;
+      return delta > 0
+        ? t("manager:npvScenarios.summary.neglect", { delta: formatChf(delta) })
+        : t("manager:npvScenarios.summary.neglectNeutral");
     }
     return null;
   }
@@ -445,24 +469,19 @@ export default function NPVScenariosPanel({ buildingId }) {
         {!loading && data && (
           <>
             {/* Delta callout with breakdown */}
-            {investNeglectDelta !== 0 && (
+            {bestVsNeglectDelta !== 0 && bestScenarioKey !== "neglect" && (
               <div className={cn(
                 "rounded-md border px-3 py-2 space-y-1.5",
-                investNeglectDelta > 0
+                bestVsNeglectDelta > 0
                   ? "border-emerald-200 bg-emerald-50 text-emerald-800"
                   : "border-red-200 bg-red-50 text-red-800",
               )}>
                 <p className="text-xs font-semibold">
-                  {investNeglectDelta > 0
-                    ? t("manager:npvScenarios.delta.investWins", {
-                        delta: formatChf(Math.abs(investNeglectDelta)),
-                        years: data.horizonYears,
-                      })
-                    : t("manager:npvScenarios.delta.neglectWins", {
-                        delta: formatChf(Math.abs(investNeglectDelta)),
-                        years: data.horizonYears,
-                      })
-                  }
+                  {t(`manager:npvScenarios.delta.${bestScenarioKey}Wins`, {
+                    delta: formatChf(Math.abs(bestVsNeglectDelta)),
+                    years: data.horizonYears,
+                    deferYears: data.deferYears,
+                  })}
                 </p>
                 {investVsNeglect && (
                   <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs opacity-80 font-mono">

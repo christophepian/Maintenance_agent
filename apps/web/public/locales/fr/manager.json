@@ -937,13 +937,17 @@
       "identicalScenarios": "Aucune dépense ne tombe dans les {{years}} premières années du calendrier — Investir et Reporter sont équivalents selon les hypothèses actuelles. Essayez une fenêtre de report plus courte."
     },
     "summary": {
-      "invest": "Réaliser les travaux selon le calendrier surpasse la négligence de {{delta}} sur l'horizon. Maximise la valeur patrimoniale à long terme.",
+      "invest": "Réaliser les travaux selon le calendrier surpasse la négligence de {{delta}} sur l'horizon. Maintient l'état de l'actif selon le calendrier optimal.",
       "investNeutral": "Investir selon le calendrier maintient l'état de l'actif. Pas de différence VAN significative par rapport à la négligence selon les hypothèses actuelles.",
+      "investDeferBetter": "Reporter de {{years}} ans produit une VAN supérieure de {{diff}}. Investir selon le calendrier protège l'état mais coûte plus en valeur actuelle.",
       "defer": "Reporter de {{years}} ans coûte {{diff}} de VAN par rapport à l'investissement selon le calendrier. Réduit les sorties de trésorerie à court terme mais retarde la protection de la valeur.",
-      "neglect": "Négliger les investissements sous-performe de {{delta}}, l'érosion du REN et le passif accumulé s'amplifient dans le temps."
+      "deferWins": "Reporter de {{years}} ans surpasse l'investissement selon le calendrier de {{diff}} en VAN. Les dépenses proches sont plus coûteuses en valeur actuelle qu'en attendant.",
+      "neglect": "La meilleure approche surpasse la négligence de {{delta}}. L'érosion du REN et le passif accumulé s'amplifient dans le temps.",
+      "neglectNeutral": "Pas d'avantage VAN significatif par rapport à la négligence — vérifier les estimations de revenus et d'investissements."
     },
     "delta": {
-      "investWins": "Investir surpasse la négligence de {{delta}} sur {{years}} ans.",
+      "investWins": "Investir selon le calendrier surpasse la négligence de {{delta}} sur {{years}} ans.",
+      "deferWins": "Reporter de {{deferYears}} ans est la meilleure approche, surpassant la négligence de {{delta}} sur {{years}} ans.",
       "neglectWins": "La négligence produit une VAN supérieure de {{delta}} sur {{years}} ans — vérifier les estimations de coûts et les hypothèses de revenus.",
       "breakdown": {
         "noi": "REN protégé (VA) :",

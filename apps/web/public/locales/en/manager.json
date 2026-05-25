@@ -937,13 +937,17 @@
       "identicalScenarios": "No capex falls in the first {{years}} years of this building's schedule — Invest and Defer are equivalent under current assumptions. Try a shorter defer window to see a difference."
     },
     "summary": {
-      "invest": "Executing capex on schedule outperforms neglect by {{delta}} over the projection horizon. Maximises long-term asset value.",
+      "invest": "Executing capex on schedule outperforms neglect by {{delta}} over the projection horizon. Maintains asset condition on the optimal schedule.",
       "investNeutral": "Investing on schedule maintains asset condition. No significant NPV difference vs neglect under current assumptions.",
+      "investDeferBetter": "Deferring {{years}} years produces a higher NPV by {{diff}}. Executing on-schedule still protects condition but costs more in present-value terms.",
       "defer": "Deferring {{years}} years costs {{diff}} in NPV vs investing on schedule. Reduces near-term cash outflow but delays value protection.",
-      "neglect": "Neglecting capex underperforms investment by {{delta}}. NOI erosion and end-of-horizon backlog cost compound over time."
+      "deferWins": "Deferring {{years}} years outperforms on-schedule investment by {{diff}} in NPV. Near-term capex is more expensive in present-value terms than waiting.",
+      "neglect": "The best approach outperforms neglect by {{delta}}. NOI erosion and end-of-horizon backlog compound over time.",
+      "neglectNeutral": "No significant NPV advantage over neglect under current assumptions — review income and capex estimates."
     },
     "delta": {
-      "investWins": "Investing outperforms neglect by {{delta}} over {{years}} years.",
+      "investWins": "Investing on schedule outperforms neglect by {{delta}} over {{years}} years.",
+      "deferWins": "Deferring {{deferYears}} years is the strongest approach, outperforming neglect by {{delta}} over {{years}} years.",
       "neglectWins": "Neglect produces a higher NPV by {{delta}} over {{years}} years — review capex estimates and income assumptions.",
       "breakdown": {
         "noi": "NOI erosion saved (PV):",
