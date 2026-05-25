@@ -95,6 +95,7 @@
     <button class="tab-btn active" onclick="switchTab('atoms',this)">Atoms</button>
     <button class="tab-btn" onclick="switchTab('molecules',this)">Molecules</button>
     <button class="tab-btn" onclick="switchTab('organisms',this)">Organisms</button>
+    <button class="tab-btn" onclick="switchTab('architecture',this)">Architecture</button>
   </div>
 
   <!-- ====== ATOMS ====== -->
@@ -859,6 +860,395 @@ Main:      bg-slate-50 p-6</div>
     </div>
   </div>
 
+  <!-- ====== ARCHITECTURE ====== -->
+  <div class="tab-pane" id="tab-architecture">
+<style>
+/* ── Architecture diagram styles ── */
+.arch-page{padding:8px 0 40px}
+.arch-intro{font-size:13px;color:var(--text-dim);line-height:1.7;max-width:720px;margin-bottom:32px}
+.arch-intro strong{color:var(--text)}
+
+/* layer card */
+.arch-layer{border:1px solid var(--border2);border-radius:8px;overflow:hidden;margin-bottom:12px;transition:box-shadow .15s}
+.arch-layer:hover{box-shadow:0 0 0 1px var(--border2),0 4px 24px rgba(0,0,0,.35)}
+.arch-layer-head{display:flex;align-items:center;gap:12px;padding:14px 20px;cursor:pointer;user-select:none}
+.arch-layer-icon{width:34px;height:34px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.arch-layer-meta{flex:1}
+.arch-layer-name{font-family:'IBM Plex Mono',mono;font-size:13px;font-weight:600;color:var(--text-bright);letter-spacing:-.01em}
+.arch-layer-desc{font-size:11px;color:var(--text-dim);margin-top:2px}
+.arch-layer-tag{font-family:'IBM Plex Mono',mono;font-size:10px;letter-spacing:.12em;text-transform:uppercase;padding:3px 8px;border-radius:3px;flex-shrink:0}
+.arch-layer-chevron{color:var(--text-dim);font-size:12px;transition:transform .2s;flex-shrink:0}
+.arch-layer-body{display:none;padding:0 20px 18px;border-top:1px solid var(--border)}
+.arch-layer-body.open{display:block}
+
+/* connector arrow between layers */
+.arch-arrow{display:flex;flex-direction:column;align-items:center;margin:0 0 4px;gap:0}
+.arch-arrow-line{width:2px;height:18px;background:linear-gradient(to bottom,var(--border2),var(--accent-blue));}
+.arch-arrow-head{width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:7px solid var(--accent-blue)}
+.arch-arrow-label{font-family:'IBM Plex Mono',mono;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim);margin-top:2px}
+
+/* token grid */
+.token-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin-top:12px}
+.token-row{display:flex;align-items:center;gap:10px;background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:8px 10px}
+.token-swatch{width:22px;height:22px;border-radius:4px;border:1px solid rgba(255,255,255,.1);flex-shrink:0}
+.token-name{font-family:'IBM Plex Mono',mono;font-size:10px;color:var(--accent-cyan);line-height:1.3}
+.token-val{font-family:'IBM Plex Mono',mono;font-size:9px;color:var(--text-dim);margin-top:1px}
+
+/* chip grids */
+.chip-grid{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.chip{font-family:'IBM Plex Mono',mono;font-size:10px;padding:3px 8px;border-radius:4px;white-space:nowrap}
+.chip-blue{background:rgba(61,126,255,.12);color:#7ab0ff;border:1px solid rgba(61,126,255,.25)}
+.chip-cyan{background:rgba(0,212,200,.1);color:#40d8d0;border:1px solid rgba(0,212,200,.22)}
+.chip-green{background:rgba(46,204,138,.1);color:#60d8a0;border:1px solid rgba(46,204,138,.22)}
+.chip-amber{background:rgba(245,166,35,.1);color:#f5c060;border:1px solid rgba(245,166,35,.22)}
+.chip-purple{background:rgba(155,109,255,.1);color:#b89aff;border:1px solid rgba(155,109,255,.22)}
+.chip-red{background:rgba(255,90,90,.1);color:#ff8080;border:1px solid rgba(255,90,90,.22)}
+.chip-gray{background:var(--surface2);color:var(--text-dim);border:1px solid var(--border)}
+
+/* flow diagram */
+.flow-diagram{display:flex;align-items:flex-start;gap:0;overflow-x:auto;padding:16px 0 8px}
+.flow-node{display:flex;flex-direction:column;align-items:center;min-width:120px}
+.flow-box{border-radius:6px;padding:10px 14px;font-family:'IBM Plex Mono',mono;font-size:11px;font-weight:600;text-align:center;white-space:nowrap;width:100%;box-sizing:border-box}
+.flow-sub{font-family:'IBM Plex Mono',mono;font-size:9px;color:var(--text-dim);text-align:center;margin-top:5px;max-width:110px;line-height:1.4}
+.flow-connector{display:flex;align-items:center;padding:0 2px;margin-top:18px}
+.flow-connector-line{height:2px;width:32px;background:linear-gradient(to right,var(--border2),var(--accent-blue))}
+.flow-connector-head{width:0;height:0;border-top:5px solid transparent;border-bottom:5px solid transparent;border-left:7px solid var(--accent-blue)}
+
+/* data pipe */
+.pipe-row{display:flex;align-items:stretch;gap:0;margin-top:14px;border:1px solid var(--border);border-radius:6px;overflow:hidden}
+.pipe-cell{flex:1;padding:10px 12px;font-size:11px;border-right:1px solid var(--border)}
+.pipe-cell:last-child{border-right:none}
+.pipe-cell-head{font-family:'IBM Plex Mono',mono;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim);margin-bottom:5px}
+.pipe-cell-val{font-family:'IBM Plex Mono',mono;font-size:11px;color:var(--text-bright)}
+
+.arch-rule{background:rgba(61,126,255,.06);border:1px solid rgba(61,126,255,.2);border-radius:5px;padding:9px 12px;font-size:11px;color:var(--text);line-height:1.6;margin-top:8px}
+.arch-rule code{font-family:'IBM Plex Mono',mono;font-size:10px;background:rgba(255,255,255,.07);padding:1px 5px;border-radius:3px;color:var(--accent-cyan)}
+.arch-rule.warn{background:rgba(245,166,35,.06);border-color:rgba(245,166,35,.2);color:#c8a050}
+.arch-rule.good{background:rgba(46,204,138,.06);border-color:rgba(46,204,138,.2);color:#70c8a0}
+
+.section-badge{font-family:'IBM Plex Mono',mono;font-size:9px;letter-spacing:.14em;text-transform:uppercase;padding:2px 7px;border-radius:3px}
+</style>
+
+<div class="arch-page">
+  <div class="section">
+    <div class="section-header"><span class="section-num">AR</span><span class="section-title">Design System Architecture</span><div class="section-line"></div></div>
+    <p class="arch-intro">Every visual decision in the app flows through a <strong>single source of truth chain</strong>: semantic tokens defined once in <code style="font-family:'IBM Plex Mono',mono;font-size:11px;background:rgba(255,255,255,.08);padding:1px 5px;border-radius:3px;color:var(--accent-cyan)">globals.css @theme {}</code> feed Tailwind v4, which generates utility classes consumed by CVA-powered UI primitives in <code style="font-family:'IBM Plex Mono',mono;font-size:11px;background:rgba(255,255,255,.08);padding:1px 5px;border-radius:3px;color:var(--accent-cyan)">components/ui/</code>, with domain status mapping handled by <code style="font-family:'IBM Plex Mono',mono;font-size:11px;background:rgba(255,255,255,.08);padding:1px 5px;border-radius:3px;color:var(--accent-cyan)">statusVariants.js</code>. Format helpers in <code style="font-family:'IBM Plex Mono',mono;font-size:11px;background:rgba(255,255,255,.08);padding:1px 5px;border-radius:3px;color:var(--accent-cyan)">lib/format.js</code> and layout helpers from <code style="font-family:'IBM Plex Mono',mono;font-size:11px;background:rgba(255,255,255,.08);padding:1px 5px;border-radius:3px;color:var(--accent-cyan)">lib/utils.js</code> (<code style="font-family:'IBM Plex Mono',mono;font-size:11px;background:rgba(255,255,255,.08);padding:1px 5px;border-radius:3px;color:var(--accent-cyan)">cn()</code>) complete the system. Click any layer to expand its detail.</p>
+  </div>
+
+  <!-- FLOW OVERVIEW -->
+  <div class="section">
+    <div class="section-header"><span class="section-num">AR01</span><span class="section-title">End-to-end flow</span><div class="section-line"></div></div>
+    <div class="flow-diagram">
+      <div class="flow-node">
+        <div class="flow-box" style="background:rgba(155,109,255,.12);border:1px solid rgba(155,109,255,.3);color:#b89aff">globals.css<br><span style="font-size:9px;font-weight:400;opacity:.7">@theme {}</span></div>
+        <div class="flow-sub">23 semantic token groups<br>Tailwind v4 CSS custom props</div>
+      </div>
+      <div class="flow-connector"><div class="flow-connector-line"></div><div class="flow-connector-head"></div></div>
+      <div class="flow-node">
+        <div class="flow-box" style="background:rgba(0,212,200,.1);border:1px solid rgba(0,212,200,.25);color:#40d8d0">Tailwind v4<br><span style="font-size:9px;font-weight:400;opacity:.7">utility classes</span></div>
+        <div class="flow-sub">Reads @theme vars<br>generates bg-brand, text-destructive&hellip;</div>
+      </div>
+      <div class="flow-connector"><div class="flow-connector-line"></div><div class="flow-connector-head"></div></div>
+      <div class="flow-node">
+        <div class="flow-box" style="background:rgba(61,126,255,.12);border:1px solid rgba(61,126,255,.3);color:#7ab0ff">@layer components<br><span style="font-size:9px;font-weight:400;opacity:.7">.data-table, .kpi-grid&hellip;</span></div>
+        <div class="flow-sub">78 @apply aliases<br>reusable CSS classes</div>
+      </div>
+      <div class="flow-connector"><div class="flow-connector-line"></div><div class="flow-connector-head"></div></div>
+      <div class="flow-node">
+        <div class="flow-box" style="background:rgba(46,204,138,.1);border:1px solid rgba(46,204,138,.25);color:#60d8a0">CVA primitives<br><span style="font-size:9px;font-weight:400;opacity:.7">components/ui/</span></div>
+        <div class="flow-sub">Button, Badge, Card&hellip;<br>10+ variant-aware components</div>
+      </div>
+      <div class="flow-connector"><div class="flow-connector-line"></div><div class="flow-connector-head"></div></div>
+      <div class="flow-node">
+        <div class="flow-box" style="background:rgba(245,166,35,.1);border:1px solid rgba(245,166,35,.25);color:#f5c060">statusVariants.js<br><span style="font-size:9px;font-weight:400;opacity:.7">domain &rarr; Badge</span></div>
+        <div class="flow-sub">26 mapper functions<br>status string &rarr; variant</div>
+      </div>
+      <div class="flow-connector"><div class="flow-connector-line"></div><div class="flow-connector-head"></div></div>
+      <div class="flow-node">
+        <div class="flow-box" style="background:rgba(255,255,255,.06);border:1px solid var(--border2);color:var(--text)">Page JSX<br><span style="font-size:9px;font-weight:400;opacity:.7">pages/ &amp; components/</span></div>
+        <div class="flow-sub">288 pages<br>consume primitives only</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LAYER 1: globals.css @theme -->
+  <div class="section">
+    <div class="section-header"><span class="section-num">AR02</span><span class="section-title">Layer 1 — Semantic Tokens</span><div class="section-line"></div></div>
+
+    <div class="arch-layer" id="al-tokens">
+      <div class="arch-layer-head" onclick="toggleLayer('tokens')">
+        <div class="arch-layer-icon" style="background:rgba(155,109,255,.15);color:#b89aff">&#9670;</div>
+        <div class="arch-layer-meta">
+          <div class="arch-layer-name">apps/web/styles/globals.css &mdash; @theme {}</div>
+          <div class="arch-layer-desc">Single source of truth for every design value. Tailwind v4 reads these CSS custom properties natively.</div>
+        </div>
+        <span class="arch-layer-tag" style="background:rgba(155,109,255,.12);color:#b89aff;border:1px solid rgba(155,109,255,.25)">23 token groups</span>
+        <span class="arch-layer-chevron" id="chev-tokens">&#9660;</span>
+      </div>
+      <div class="arch-layer-body" id="body-tokens">
+        <div class="arch-rule good" style="margin-bottom:12px">&#10003; Tailwind v4 rule: all custom theme values live here. <code>tailwind.config.js</code> has no <code>theme.extend</code>. Never add color extensions to the config file.</div>
+        <div style="font-family:'IBM Plex Mono',mono;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim);margin-bottom:8px">Token groups &mdash; each has a base, -light, -dark, -ring, -text variant</div>
+        <div class="token-grid">
+          <div class="token-row"><div class="token-swatch" style="background:#4f46e5"></div><div><div class="token-name">--color-brand</div><div class="token-val">#4f46e5 &mdash; indigo-600</div></div></div>
+          <div class="token-row"><div class="token-swatch" style="background:#dc2626"></div><div><div class="token-name">--color-destructive</div><div class="token-val">#dc2626 &mdash; red-600</div></div></div>
+          <div class="token-row"><div class="token-swatch" style="background:#16a34a"></div><div><div class="token-name">--color-success</div><div class="token-val">#16a34a &mdash; green-600</div></div></div>
+          <div class="token-row"><div class="token-swatch" style="background:#d97706"></div><div><div class="token-name">--color-warning</div><div class="token-val">#d97706 &mdash; amber-600</div></div></div>
+          <div class="token-row"><div class="token-swatch" style="background:#64748b"></div><div><div class="token-name">--color-muted</div><div class="token-val">#64748b &mdash; slate-500</div></div></div>
+          <div class="token-row"><div class="token-swatch" style="background:#ffffff;border-color:rgba(255,255,255,.3)"></div><div><div class="token-name">--color-surface</div><div class="token-val">#ffffff &mdash; card / page bg</div></div></div>
+          <div class="token-row"><div class="token-swatch" style="background:#f1f5f9"></div><div><div class="token-name">--color-table-header</div><div class="token-val">#f1f5f9 &mdash; slate-100</div></div></div>
+          <div class="token-row"><div class="token-swatch" style="background:#e2e8f0"></div><div><div class="token-name">--color-surface-border</div><div class="token-val">#e2e8f0 &mdash; slate-200</div></div></div>
+        </div>
+        <div class="arch-rule warn" style="margin-top:12px">&#9888; Banned: hardcoded hex/rgb in JSX (<code>style={{color:&quot;#dc2626&quot;}}</code>). Use <code>text-destructive</code> or <code>text-red-600</code> instead. Hardcoded hex breaks theming.</div>
+        <div class="arch-rule warn" style="margin-top:6px">&#9888; Banned: template-literal className interpolation (<code>`bg-${color}-100`</code>). Tailwind cannot statically analyse these. Use <code>cn()</code> with full class names.</div>
+      </div>
+    </div>
+
+    <!-- Arrow -->
+    <div class="arch-arrow"><div class="arch-arrow-line"></div><div class="arch-arrow-head"></div><div class="arch-arrow-label">consumed by</div></div>
+
+    <!-- LAYER 2: Tailwind -->
+    <div class="arch-layer" id="al-tw">
+      <div class="arch-layer-head" onclick="toggleLayer('tw')">
+        <div class="arch-layer-icon" style="background:rgba(0,212,200,.12);color:#40d8d0">&#9636;</div>
+        <div class="arch-layer-meta">
+          <div class="arch-layer-name">Tailwind v4 &mdash; utility class generation</div>
+          <div class="arch-layer-desc">Reads @theme custom properties. Generates <code style="font-family:'IBM Plex Mono',mono;font-size:10px">bg-brand</code>, <code style="font-family:'IBM Plex Mono',mono;font-size:10px">text-destructive</code>, <code style="font-family:'IBM Plex Mono',mono;font-size:10px">border-success</code>&hellip; all token-aware utilities.</div>
+        </div>
+        <span class="arch-layer-tag" style="background:rgba(0,212,200,.1);color:#40d8d0;border:1px solid rgba(0,212,200,.22)">utility-first</span>
+        <span class="arch-layer-chevron" id="chev-tw">&#9660;</span>
+      </div>
+      <div class="arch-layer-body" id="body-tw">
+        <div class="arch-rule good" style="margin-bottom:12px">&#10003; Tailwind v4 uses CSS-native @theme. No <code>theme.extend</code> in config. New tokens go in globals.css only.</div>
+        <div style="font-family:'IBM Plex Mono',mono;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim);margin:10px 0 6px">Token &rarr; utility class examples</div>
+        <div class="pipe-row">
+          <div class="pipe-cell" style="background:var(--surface)"><div class="pipe-cell-head">Token</div><div class="pipe-cell-val" style="color:#b89aff">--color-brand</div></div>
+          <div class="pipe-cell" style="background:var(--surface)"><div class="pipe-cell-head">Generated utilities</div><div class="pipe-cell-val">bg-brand &nbsp;&#183;&nbsp; text-brand &nbsp;&#183;&nbsp; border-brand &nbsp;&#183;&nbsp; ring-brand</div></div>
+        </div>
+        <div class="pipe-row" style="margin-top:4px">
+          <div class="pipe-cell" style="background:var(--surface)"><div class="pipe-cell-head">Token</div><div class="pipe-cell-val" style="color:#ff8080">--color-destructive</div></div>
+          <div class="pipe-cell" style="background:var(--surface)"><div class="pipe-cell-head">Generated utilities</div><div class="pipe-cell-val">bg-destructive &nbsp;&#183;&nbsp; text-destructive &nbsp;&#183;&nbsp; border-destructive</div></div>
+        </div>
+        <div class="pipe-row" style="margin-top:4px">
+          <div class="pipe-cell" style="background:var(--surface)"><div class="pipe-cell-head">Token</div><div class="pipe-cell-val" style="color:#60d8a0">--color-table-header</div></div>
+          <div class="pipe-cell" style="background:var(--surface)"><div class="pipe-cell-head">Generated utilities</div><div class="pipe-cell-val">bg-table-header &nbsp;&#183;&nbsp; text-table-header &nbsp;&#183;&nbsp; border-table-header</div></div>
+        </div>
+        <div style="font-family:'IBM Plex Mono',mono;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim);margin:14px 0 6px">Key utility groups used across the codebase</div>
+        <div class="chip-grid">
+          <span class="chip chip-cyan">bg-* / text-* / border-*</span>
+          <span class="chip chip-blue">p-* / px-* / py-* / gap-*</span>
+          <span class="chip chip-blue">rounded-* / shadow-*</span>
+          <span class="chip chip-green">flex / grid / items-* / justify-*</span>
+          <span class="chip chip-amber">sm: / md: / lg: responsive prefixes</span>
+          <span class="chip chip-purple">hover: / focus-visible: / disabled:</span>
+          <span class="chip chip-gray">truncate / min-w-0 / overflow-hidden</span>
+        </div>
+        <div class="arch-rule warn" style="margin-top:12px">&#9888; <code>cn()</code> from <code>lib/utils.js</code> (twMerge + clsx) is <strong>required</strong> for all conditional class composition. Never use template-literal string interpolation.</div>
+      </div>
+    </div>
+
+    <!-- Arrow -->
+    <div class="arch-arrow"><div class="arch-arrow-line"></div><div class="arch-arrow-head"></div><div class="arch-arrow-label">aliased into</div></div>
+
+    <!-- LAYER 3: @layer components -->
+    <div class="arch-layer" id="al-apply">
+      <div class="arch-layer-head" onclick="toggleLayer('apply')">
+        <div class="arch-layer-icon" style="background:rgba(61,126,255,.12);color:#7ab0ff">&#9632;</div>
+        <div class="arch-layer-meta">
+          <div class="arch-layer-name">globals.css &mdash; @layer components</div>
+          <div class="arch-layer-desc">Reusable CSS class aliases built with <code style="font-family:'IBM Plex Mono',mono;font-size:10px">@apply</code>. Keeps JSX clean while preserving Tailwind utility semantics. Single file, no new .css files ever.</div>
+        </div>
+        <span class="arch-layer-tag" style="background:rgba(61,126,255,.12);color:#7ab0ff;border:1px solid rgba(61,126,255,.25)">78 @apply classes</span>
+        <span class="arch-layer-chevron" id="chev-apply">&#9660;</span>
+      </div>
+      <div class="arch-layer-body" id="body-apply">
+        <div class="arch-rule good" style="margin-bottom:12px">&#10003; All shared styles live here. Do not create new .css files. Do not add <code>style={{}}</code> inline props for anything achievable with Tailwind.</div>
+        <div style="font-family:'IBM Plex Mono',mono;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim);margin-bottom:8px">Class categories</div>
+        <div class="chip-grid">
+          <span class="chip chip-blue">.data-table</span>
+          <span class="chip chip-blue">.data-table-wrap</span>
+          <span class="chip chip-blue">.data-table th/td</span>
+          <span class="chip chip-cyan">.kpi-grid</span>
+          <span class="chip chip-cyan">.kpi-card</span>
+          <span class="chip chip-green">.tab-strip</span>
+          <span class="chip chip-green">.tab-btn</span>
+          <span class="chip chip-green">.tab-btn-active</span>
+          <span class="chip chip-green">.tab-panel</span>
+          <span class="chip chip-amber">.status-pill</span>
+          <span class="chip chip-amber">.section-title</span>
+          <span class="chip chip-purple">.main-container</span>
+          <span class="chip chip-purple">.card</span>
+          <span class="chip chip-purple">.label</span>
+          <span class="chip chip-purple">.input</span>
+          <span class="chip chip-purple">.button-primary</span>
+          <span class="chip chip-purple">.button-secondary</span>
+          <span class="chip chip-gray">.notice / .notice-ok / .notice-err</span>
+          <span class="chip chip-gray">.row / .help / .subtle / .code</span>
+        </div>
+        <div style="font-family:'IBM Plex Mono',mono;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim);margin:14px 0 6px">Example &mdash; .data-table</div>
+        <div class="code" style="font-size:10px">.data-table {
+  @apply w-full text-sm border border-[--color-table-border] rounded-md overflow-hidden;
+}
+.data-table th {
+  @apply bg-[--color-table-header] text-xs font-semibold text-slate-600
+         uppercase tracking-wide px-3 py-2 text-left
+         border-b border-[--color-table-border];
+}</div>
+      </div>
+    </div>
+
+    <!-- Arrow -->
+    <div class="arch-arrow"><div class="arch-arrow-line"></div><div class="arch-arrow-head"></div><div class="arch-arrow-label">composed by</div></div>
+
+    <!-- LAYER 4: CVA primitives -->
+    <div class="arch-layer" id="al-cva">
+      <div class="arch-layer-head" onclick="toggleLayer('cva')">
+        <div class="arch-layer-icon" style="background:rgba(46,204,138,.12);color:#60d8a0">&#9670;</div>
+        <div class="arch-layer-meta">
+          <div class="arch-layer-name">components/ui/ &mdash; CVA primitives</div>
+          <div class="arch-layer-desc">Variant-aware React components built with class-variance-authority. Every component that has multiple visual states uses CVA — never ad-hoc conditional class strings.</div>
+        </div>
+        <span class="arch-layer-tag" style="background:rgba(46,204,138,.1);color:#60d8a0;border:1px solid rgba(46,204,138,.22)">22 components</span>
+        <span class="arch-layer-chevron" id="chev-cva">&#9660;</span>
+      </div>
+      <div class="arch-layer-body" id="body-cva">
+        <div class="arch-rule good" style="margin-bottom:12px">&#10003; All stateful/variant UI primitives live here. Pages import from <code>components/ui/</code> — never hand-roll variant logic inline.</div>
+        <div style="font-family:'IBM Plex Mono',mono;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim);margin-bottom:8px">CVA components with variants</div>
+        <div class="chip-grid" style="margin-bottom:14px">
+          <span class="chip chip-green">Button &mdash; 10 variants</span>
+          <span class="chip chip-green">Badge &mdash; 8 variants</span>
+          <span class="chip chip-blue">Card</span>
+          <span class="chip chip-blue">Input</span>
+          <span class="chip chip-blue">Select</span>
+          <span class="chip chip-cyan">Modal / ModalFooter</span>
+          <span class="chip chip-cyan">Dialog</span>
+          <span class="chip chip-cyan">Popover</span>
+          <span class="chip chip-amber">KpiCard</span>
+          <span class="chip chip-amber">KpiInlineGrid</span>
+          <span class="chip chip-amber">DataTable</span>
+          <span class="chip chip-purple">ResourceShell</span>
+          <span class="chip chip-purple">DetailGrid / DetailList</span>
+          <span class="chip chip-purple">ActionBar</span>
+          <span class="chip chip-purple">Tabs</span>
+          <span class="chip chip-gray">ErrorBanner</span>
+          <span class="chip chip-gray">EmptyState</span>
+          <span class="chip chip-gray">QuickLinksRail</span>
+          <span class="chip chip-gray">FilterPanel</span>
+          <span class="chip chip-gray">StatusPill</span>
+          <span class="chip chip-gray">UndoToast</span>
+        </div>
+        <div style="font-family:'IBM Plex Mono',mono;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim);margin-bottom:6px">Button variant map</div>
+        <div class="pipe-row">
+          <div class="pipe-cell" style="background:var(--surface)"><div class="pipe-cell-head">variant</div><div class="pipe-cell-val" style="color:#7ab0ff">primary</div></div>
+          <div class="pipe-cell" style="background:var(--surface)"><div class="pipe-cell-head">classes</div><div class="pipe-cell-val">bg-brand text-white hover:bg-brand-dark focus-visible:ring-brand-ring</div></div>
+        </div>
+        <div class="pipe-row" style="margin-top:4px">
+          <div class="pipe-cell" style="background:var(--surface)"><div class="pipe-cell-head">variant</div><div class="pipe-cell-val" style="color:#ff8080">destructive</div></div>
+          <div class="pipe-cell" style="background:var(--surface)"><div class="pipe-cell-head">classes</div><div class="pipe-cell-val">bg-destructive text-white hover:bg-destructive-dark focus-visible:ring-destructive-ring</div></div>
+        </div>
+        <div class="pipe-row" style="margin-top:4px">
+          <div class="pipe-cell" style="background:var(--surface)"><div class="pipe-cell-head">variant</div><div class="pipe-cell-val" style="color:#f5c060">warning</div></div>
+          <div class="pipe-cell" style="background:var(--surface)"><div class="pipe-cell-head">classes</div><div class="pipe-cell-val">bg-warning text-white hover:bg-warning-dark focus-visible:ring-warning-ring</div></div>
+        </div>
+        <div class="code" style="font-size:10px;margin-top:12px">// Every CVA component uses cn() for overrides:
+export default function Button({ variant = 'primary', size, className, ...props }) {
+  return &lt;button className={cn(button({ variant, size }), className)} {...props} /&gt;
+}</div>
+      </div>
+    </div>
+
+    <!-- Arrow -->
+    <div class="arch-arrow"><div class="arch-arrow-line"></div><div class="arch-arrow-head"></div><div class="arch-arrow-label">status mapped via</div></div>
+
+    <!-- LAYER 5: statusVariants.js -->
+    <div class="arch-layer" id="al-status">
+      <div class="arch-layer-head" onclick="toggleLayer('status')">
+        <div class="arch-layer-icon" style="background:rgba(245,166,35,.12);color:#f5c060">&#9650;</div>
+        <div class="arch-layer-meta">
+          <div class="arch-layer-name">lib/statusVariants.js &mdash; domain status mapping</div>
+          <div class="arch-layer-desc">Canonical mapper from domain status strings to Badge variant names. One function per domain entity. No inline color maps in pages ever.</div>
+        </div>
+        <span class="arch-layer-tag" style="background:rgba(245,166,35,.1);color:#f5c060;border:1px solid rgba(245,166,35,.22)">26 mappers</span>
+        <span class="arch-layer-chevron" id="chev-status">&#9660;</span>
+      </div>
+      <div class="arch-layer-body" id="body-status">
+        <div class="arch-rule good" style="margin-bottom:12px">&#10003; Adding a new status domain: add a mapper function here. Never define <code>STATUS_COLORS</code> / <code>URGENCY_COLORS</code> objects in individual page files.</div>
+        <div class="chip-grid" style="margin-bottom:14px">
+          <span class="chip chip-amber">invoiceVariant()</span>
+          <span class="chip chip-amber">jobVariant()</span>
+          <span class="chip chip-amber">requestVariant()</span>
+          <span class="chip chip-amber">rfpVariant()</span>
+          <span class="chip chip-amber">quoteVariant()</span>
+          <span class="chip chip-amber">urgencyVariant()</span>
+          <span class="chip chip-amber">leaseVariant()</span>
+          <span class="chip chip-amber">legalVariant()</span>
+          <span class="chip chip-amber">ingestionVariant()</span>
+          <span class="chip chip-amber">billingEntityVariant()</span>
+          <span class="chip chip-amber">reconciliationVariant()</span>
+          <span class="chip chip-amber">rentAdjustmentVariant()</span>
+          <span class="chip chip-amber">planVariant()</span>
+          <span class="chip chip-gray">+ 13 more&hellip;</span>
+        </div>
+        <div style="font-family:'IBM Plex Mono',mono;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim);margin-bottom:6px">Pattern &mdash; every status indicator in the app follows this shape</div>
+        <div class="code" style="font-size:10px">import Badge from &quot;../../components/ui/Badge&quot;;
+import { requestVariant } from &quot;../../lib/statusVariants&quot;;
+
+&lt;Badge variant={requestVariant(request.status)}&gt;{request.status}&lt;/Badge&gt;
+
+// Never:
+&lt;span style={{color: status === 'PAID' ? '#16a34a' : '#dc2626'}}&gt;{status}&lt;/span&gt;</div>
+      </div>
+    </div>
+
+    <!-- Arrow -->
+    <div class="arch-arrow"><div class="arch-arrow-line"></div><div class="arch-arrow-head"></div><div class="arch-arrow-label">displayed in</div></div>
+
+    <!-- LAYER 6: Page JSX -->
+    <div class="arch-layer" id="al-pages">
+      <div class="arch-layer-head" onclick="toggleLayer('pages')">
+        <div class="arch-layer-icon" style="background:rgba(255,255,255,.06);color:var(--text)">&#9001;</div>
+        <div class="arch-layer-meta">
+          <div class="arch-layer-name">pages/ &amp; components/ &mdash; Page JSX</div>
+          <div class="arch-layer-desc">288 pages across 4 personas. Consume primitives from <code style="font-family:'IBM Plex Mono',mono;font-size:10px">components/ui/</code> and helpers from <code style="font-family:'IBM Plex Mono',mono;font-size:10px">lib/</code>. No design decisions at this layer.</div>
+        </div>
+        <span class="arch-layer-tag" style="background:rgba(255,255,255,.06);color:var(--text-dim);border:1px solid var(--border2)">288 pages</span>
+        <span class="arch-layer-chevron" id="chev-pages">&#9660;</span>
+      </div>
+      <div class="arch-layer-body" id="body-pages">
+        <div class="arch-rule good" style="margin-bottom:8px">&#10003; Pages import formatting from <code>lib/format.js</code> (<code>formatChf</code>, <code>formatDate</code>&hellip;). Never define inline format functions.</div>
+        <div class="arch-rule good" style="margin-bottom:8px">&#10003; Sorting uses <code>useLocalSort</code> + <code>clientSort</code> from <code>lib/tableUtils</code>. Every non-trivial &lt;th&gt; in a data-table is a <code>&lt;SortableHeader&gt;</code>.</div>
+        <div class="arch-rule good" style="margin-bottom:8px">&#10003; Fetch boilerplate replaced by <code>useDetailResource(url)</code>. Loading/error/not-found guards replaced by <code>&lt;ResourceShell&gt;</code>.</div>
+        <div class="arch-rule good" style="margin-bottom:8px">&#10003; Mutation pending state uses <code>useAction()</code> from <code>lib/hooks/</code>.</div>
+        <div class="arch-rule warn" style="margin-bottom:8px">&#9888; i18n: all visible strings use <code>t()</code> from <code>next-i18next</code>. Five namespaces: common, manager, owner, contractor, tenant. EN/FR live. Never hardcode UI strings.</div>
+        <div style="font-family:'IBM Plex Mono',mono;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim);margin:14px 0 6px">Persona pages breakdown</div>
+        <div class="chip-grid">
+          <span class="chip chip-blue">manager/ &mdash; property &amp; ops management</span>
+          <span class="chip chip-green">owner/ &mdash; portfolio &amp; finance</span>
+          <span class="chip chip-amber">contractor/ &mdash; job &amp; RFP management</span>
+          <span class="chip chip-purple">tenant/ &mdash; myhome, requests, messages</span>
+          <span class="chip chip-gray">api/ &mdash; 200 proxy routes to backend</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GOLDEN RULES -->
+  <div class="section" style="margin-top:36px">
+    <div class="section-header"><span class="section-num">AR03</span><span class="section-title">Golden Rules &mdash; quick reference</span><div class="section-line"></div></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="arch-rule good">&#10003; <strong>One token file.</strong> All colors, surfaces, and borders live in <code>globals.css @theme {}</code>. Zero theme extensions in tailwind config.</div>
+      <div class="arch-rule good">&#10003; <strong>cn() always.</strong> Use <code>cn(twMerge(clsx()))</code> from <code>lib/utils.js</code> for every conditional or composed className.</div>
+      <div class="arch-rule good">&#10003; <strong>CVA for variants.</strong> Any component with 2+ visual states gets a CVA definition in <code>components/ui/</code>.</div>
+      <div class="arch-rule good">&#10003; <strong>statusVariants for domain status.</strong> Never define per-file color maps. Import the relevant mapper and pass to Badge.</div>
+      <div class="arch-rule good">&#10003; <strong>format.js for all formatting.</strong> <code>formatChf</code>, <code>formatDate</code>, <code>formatDateTime</code> — never inline <code>new Intl.NumberFormat()</code>.</div>
+      <div class="arch-rule good">&#10003; <strong>No new .css files.</strong> Shared styles go in <code>globals.css @layer components</code> via <code>@apply</code>.</div>
+      <div class="arch-rule warn">&#9888; <strong>No inline style={{}}.</strong> Use Tailwind utilities or @apply classes. Inline styles bypass the token system.</div>
+      <div class="arch-rule warn">&#9888; <strong>No template-literal className.</strong> <code>`bg-${x}-100`</code> is invisible to Tailwind's scanner — Tailwind will not include that class in the build output.</div>
+    </div>
+  </div>
+
+</div>
+  </div>
+
 </div>
 
 <script>
@@ -868,6 +1258,22 @@ function switchTab(id, btn) {
   document.getElementById('tab-' + id).classList.add('active');
   btn.classList.add('active');
 }
+function toggleLayer(id) {
+  var body = document.getElementById('body-' + id);
+  var chev = document.getElementById('chev-' + id);
+  var isOpen = body.classList.contains('open');
+  body.classList.toggle('open', !isOpen);
+  chev.style.transform = isOpen ? '' : 'rotate(180deg)';
+}
+// Open first layer by default when tab is activated
+document.querySelector('[onclick="switchTab(\'architecture\',this)"]').addEventListener('click', function() {
+  setTimeout(function() {
+    ['tokens','tw','apply','cva','status','pages'].forEach(function(id) {
+      document.getElementById('body-' + id).classList.add('open');
+      document.getElementById('chev-' + id).style.transform = 'rotate(180deg)';
+    });
+  }, 10);
+});
 </script>
 </body>
 </html>
