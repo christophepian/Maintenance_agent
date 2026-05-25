@@ -914,7 +914,14 @@
       "baseNoi": "Base NOI",
       "footnote": "Discount rate {{discount}}% · Income growth {{growth}}% · Standard DCF, cash flows at end of each year.",
       "terminalValueMissing": "Terminal value impairment not modeled — enter est. property value above to include sale price impact",
-      "neglectErosion": "Neglect NOI erodes {{rate}}%/yr after yr {{offset}}."
+      "neglectErosion": "Neglect NOI erodes {{rate}}%/yr after yr {{offset}}.",
+      "taxShield": "Tax shield",
+      "taxShieldNote": "at {{rate}}% marginal rate",
+      "taxShieldDefaultNote": "default {{rate}}% — set owner rate in settings",
+      "fciLabel": "Facility Condition Index",
+      "fciCurrent": "Now",
+      "fciAtHorizon": "Neglect at {{year}}",
+      "fciThresholds": "<5% excellent · 5–10% good · 10–30% fair · >30% critical"
     }
   },
   "noiTrend": {

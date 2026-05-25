@@ -19,6 +19,15 @@ import { formatChf } from "../lib/format";
 import { cn } from "../lib/utils";
 import Panel from "./layout/Panel";
 
+// ─── FCI colour helper ─────────────────────────────────────────
+
+function fciColor(pct) {
+  if (pct < 5)  return "text-emerald-700";
+  if (pct < 10) return "text-amber-600";
+  if (pct < 30) return "text-orange-600";
+  return "text-red-700";
+}
+
 // ─── Scenario colours ─────────────────────────────────────────
 
 const SCENARIO_STYLES = {
@@ -54,9 +63,9 @@ function CumulativeBars({ flows, color }) {
 
 // ─── Single scenario card ─────────────────────────────────────
 
-function ScenarioCard({ scenario, label, hint, data, style }) {
+function ScenarioCard({ scenario, label, hint, data, style, t }) {
   if (!data) return null;
-  const { npvChf, totalCapexChf, totalNoiChf, yearlyFlows } = data;
+  const { npvChf, totalCapexChf, totalTaxShieldChf, totalNoiChf, yearlyFlows } = data;
 
   return (
     <div className={cn("rounded-lg border p-4 space-y-2", style.bg, style.border)}>
@@ -82,6 +91,15 @@ function ScenarioCard({ scenario, label, hint, data, style }) {
           <p className="font-mono font-medium">CHF {formatChf(totalCapexChf)}</p>
         </div>
       </div>
+
+      {totalTaxShieldChf > 0 && (
+        <div className="text-xs text-slate-600 border-t border-current border-opacity-10 pt-1.5">
+          <span className="text-slate-400">{t("manager:npvScenarios.text.taxShield")}</span>
+          <p className="font-mono font-medium text-emerald-600">
+            +CHF {formatChf(totalTaxShieldChf)}
+          </p>
+        </div>
+      )}
 
       <CumulativeBars flows={yearlyFlows} color={style.bar} />
 
@@ -247,6 +265,41 @@ export default function NPVScenariosPanel({ buildingId }) {
           <p className="text-sm text-slate-400">{t("manager:npvScenarios.text.selectBuilding")}</p>
         )}
 
+        {/* FCI + tax rate context strip */}
+        {!loading && data && (
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs">
+            <div className="flex items-center gap-3">
+              <span className="text-slate-500 font-medium shrink-0">
+                {t("manager:npvScenarios.text.fciLabel")}
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="text-slate-400">{t("manager:npvScenarios.text.fciCurrent")}</span>
+                <span className={cn("font-mono font-semibold", fciColor(data.fciCurrentPct))}>
+                  {data.fciCurrentPct.toFixed(1)}%
+                </span>
+              </span>
+              <span className="text-slate-300">→</span>
+              <span className="flex items-center gap-1">
+                <span className="text-slate-400">
+                  {t("manager:npvScenarios.text.fciAtHorizon", { year: data.toYear })}
+                </span>
+                <span className={cn("font-mono font-semibold", fciColor(data.fciNeglectHorizonPct))}>
+                  {data.fciNeglectHorizonPct.toFixed(1)}%
+                </span>
+              </span>
+            </div>
+            <span className="text-slate-300 hidden sm:inline">·</span>
+            <span className="text-slate-400 italic">
+              {t("manager:npvScenarios.text.fciThresholds")}
+            </span>
+            <span className="ml-auto text-slate-400 shrink-0">
+              {data.ownerTaxRateIsDefault
+                ? t("manager:npvScenarios.text.taxShieldDefaultNote", { rate: data.ownerMarginalTaxRatePct })
+                : t("manager:npvScenarios.text.taxShieldNote", { rate: data.ownerMarginalTaxRatePct })}
+            </span>
+          </div>
+        )}
+
         {/* Scenario cards */}
         {!loading && data && (
           <>
@@ -257,6 +310,7 @@ export default function NPVScenariosPanel({ buildingId }) {
                 hint={t("manager:npvScenarios.scenario.investHint")}
                 data={data.scenarios.invest}
                 style={SCENARIO_STYLES.invest}
+                t={t}
               />
               <ScenarioCard
                 scenario="defer"
@@ -264,6 +318,7 @@ export default function NPVScenariosPanel({ buildingId }) {
                 hint={t("manager:npvScenarios.scenario.deferHint", { years: data.deferYears })}
                 data={data.scenarios.defer}
                 style={SCENARIO_STYLES.defer}
+                t={t}
               />
               <div className="flex flex-col gap-1">
                 <ScenarioCard
@@ -272,6 +327,7 @@ export default function NPVScenariosPanel({ buildingId }) {
                   hint={t("manager:npvScenarios.scenario.neglectHint")}
                   data={data.scenarios.neglect}
                   style={SCENARIO_STYLES.neglect}
+                  t={t}
                 />
                 {!data.terminalValueModeled && (
                   <p className="text-xs text-slate-400 italic px-1">

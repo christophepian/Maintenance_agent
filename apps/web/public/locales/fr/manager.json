@@ -914,7 +914,14 @@
       "baseNoi": "REN de base",
       "footnote": "Taux d'actualisation {{discount}}% · Croissance des revenus {{growth}}% · DCF standard, flux en fin d'année.",
       "terminalValueMissing": "Dépréciation de la valeur terminale non modélisée — saisissez la valeur estimée ci-dessus pour inclure l'impact sur le prix de vente",
-      "neglectErosion": "REN Négliger s'érode de {{rate}}%/an après l'an {{offset}}."
+      "neglectErosion": "REN Négliger s'érode de {{rate}}%/an après l'an {{offset}}.",
+      "taxShield": "Bouclier fiscal",
+      "taxShieldNote": "au taux marginal de {{rate}}%",
+      "taxShieldDefaultNote": "défaut {{rate}}% — configurer le taux dans les paramètres",
+      "fciLabel": "Indice d'état des installations",
+      "fciCurrent": "Actuel",
+      "fciAtHorizon": "Négligence en {{year}}",
+      "fciThresholds": "<5% excellent · 5–10% bon · 10–30% passable · >30% critique"
     }
   },
   "noiTrend": {

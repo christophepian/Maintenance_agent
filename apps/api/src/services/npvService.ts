@@ -9,6 +9,12 @@
  *   Neglect — zero capex for the entire horizon (deferred liability only)
  *
  * All monetary values are in CHF. Discount is applied annually using standard DCF.
+ * Tax shield: deductible (value-preserving) capex reduces the owner's taxable income
+ * in the year it is expensed. After-tax capex = gross × (1 − deductiblePct × marginalRate).
+ * Neglect receives no tax shield since no consented work is carried out.
+ *
+ * FCI (Facility Condition Index): deferred maintenance cost / total replacement value.
+ * Industry benchmarks: <5% excellent, 5–10% good, 10–30% fair, >30% critical (BOMA/CBRE).
  *
  * Layer: service (orchestrates repository + capexProjectionService — no direct Prisma calls
  * beyond the NOI snapshot lookup delegated to the repository).
@@ -17,8 +23,14 @@
 import { PrismaClient, AssetType } from "@prisma/client";
 import { getAssetInventoryForBuilding } from "./assetInventory";
 import { estimateReplacementCost } from "./replacementCostService";
+import { classifyAsset } from "./taxClassificationService";
 import { findAllSnapshotsForBuilding } from "../repositories/buildingFinancialSnapshotRepository";
-import { findBuildingByIdAndOrg } from "../repositories/inventoryRepository";
+import { findBuildingByIdAndOrg, findBuildingOwnersWithTaxRate } from "../repositories/inventoryRepository";
+
+// ─── Constants ────────────────────────────────────────────────────
+
+/** Fallback marginal tax rate when the owner hasn't configured one (Swiss average) */
+const DEFAULT_MARGINAL_TAX_RATE_PCT = 25;
 
 // ─── Public types ──────────────────────────────────────────────
 
@@ -26,6 +38,8 @@ export interface NPVYearlyFlow {
   year: number;
   projectedNoiChf: number;
   capexChf: number;
+  /** Tax shield benefit from deductible capex in this year (0 for Neglect) */
+  taxShieldChf: number;
   netCashFlowChf: number;
   discountFactor: number;
   pvChf: number;
@@ -35,6 +49,8 @@ export interface NPVYearlyFlow {
 export interface NPVScenarioResult {
   npvChf: number;
   totalCapexChf: number;
+  /** Sum of annual tax shield benefits across the horizon */
+  totalTaxShieldChf: number;
   totalNoiChf: number;
   /** PV of terminal property sale value included in npvChf (0 when not modeled) */
   terminalValuePvChf: number;
@@ -64,6 +80,23 @@ export interface NPVScenariosResult {
   propertyValueChf?: number;
   /** Annual NOI erosion rate applied to the Neglect scenario, % (default 1) */
   neglectNoiErosionRatePct: number;
+  // ─── Tax shield ──────────────────────────────────────────────
+  /** Marginal tax rate used for shield computation (owner-configured or default), % */
+  ownerMarginalTaxRatePct: number;
+  /** True when the owner has not configured a marginal tax rate — default was used */
+  ownerTaxRateIsDefault: boolean;
+  // ─── FCI ─────────────────────────────────────────────────────
+  /**
+   * Facility Condition Index — deferred maintenance cost / total asset replacement value, %.
+   * Current: overdue assets only. Benchmarks: <5 excellent, 5–10 good, 10–30 fair, >30 critical.
+   */
+  fciCurrentPct: number;
+  /**
+   * Projected FCI at end of horizon under the Neglect scenario (all within-horizon capex deferred).
+   */
+  fciNeglectHorizonPct: number;
+  /** Sum of replacement cost estimates for all depreciable assets in the building (FCI denominator) */
+  totalReplacementValueChf: number;
 }
 
 export interface NPVOptions {
@@ -107,6 +140,12 @@ function buildScenario(
     erosionStartOffset?: number;
     /** Property value at horizon end — discounted and added to NPV */
     terminalValueChf?: number;
+    /**
+     * Tax shield benefit per year: deductible capex × owner marginal rate.
+     * Added to net cash flow in the year the work is expensed.
+     * Not passed for Neglect (no consented work = no deduction).
+     */
+    taxShieldByYear?: Map<number, number>;
   },
 ): NPVScenarioResult {
   const flows: NPVYearlyFlow[] = [];
@@ -128,7 +167,8 @@ function buildScenario(
     );
 
     const capexChf = capexByYear.get(year) ?? 0;
-    const netCashFlowChf = projectedNoiChf - capexChf;
+    const taxShieldChf = opts?.taxShieldByYear?.get(year) ?? 0;
+    const netCashFlowChf = projectedNoiChf - capexChf + taxShieldChf;
     const df = discountFactor(discountRatePct, yearsAhead + 1);
     const pvChf = Math.round(netCashFlowChf * df);
     cumulativePvChf += pvChf;
@@ -137,6 +177,7 @@ function buildScenario(
       year,
       projectedNoiChf,
       capexChf,
+      taxShieldChf,
       netCashFlowChf,
       discountFactor: Math.round(df * 10000) / 10000,
       pvChf,
@@ -146,6 +187,7 @@ function buildScenario(
 
   const totalNoiChf = flows.reduce((s, f) => s + f.projectedNoiChf, 0);
   const totalCapexChf = flows.reduce((s, f) => s + f.capexChf, 0);
+  const totalTaxShieldChf = flows.reduce((s, f) => s + f.taxShieldChf, 0);
   const cashFlowNpvChf = flows.reduce((s, f) => s + f.pvChf, 0);
 
   // Terminal sale value — discounted from end of horizon (after last cash flow)
@@ -159,7 +201,7 @@ function buildScenario(
 
   const npvChf = cashFlowNpvChf + terminalValuePvChf;
 
-  return { npvChf, totalCapexChf, totalNoiChf, terminalValuePvChf, yearlyFlows: flows };
+  return { npvChf, totalCapexChf, totalTaxShieldChf, totalNoiChf, terminalValuePvChf, yearlyFlows: flows };
 }
 
 // ─── Main function ─────────────────────────────────────────────
@@ -189,7 +231,16 @@ export async function computeNPVScenarios(
     throw Object.assign(new Error(`Building ${buildingId} not found`), { statusCode: 404 });
   }
 
-  // ── 2. Base annual NOI from most recent full-year snapshot ─────
+  // ── 2. Owner marginal tax rate ─────────────────────────────────
+  // Used to compute tax shield on deductible capex for Invest and Defer scenarios.
+  const owners = await findBuildingOwnersWithTaxRate(prisma, buildingId);
+  const ownerRate = owners.length > 0 && owners[0].user.marginalTaxRate != null
+    ? owners[0].user.marginalTaxRate
+    : null;
+  const ownerMarginalTaxRatePct = ownerRate ?? DEFAULT_MARGINAL_TAX_RATE_PCT;
+  const ownerTaxRateIsDefault = ownerRate === null;
+
+  // ── 3. Base annual NOI from most recent full-year snapshot ─────
   const snapshots = await findAllSnapshotsForBuilding(prisma, orgId, buildingId);
 
   // Use the most recent snapshot that covers a full calendar year
@@ -239,9 +290,13 @@ export async function computeNPVScenarios(
     noIncomeData = baseAnnualNoiChf === 0;
   }
 
-  // ── 3. Capex projection — inline, directly from asset inventory ──
+  // ── 4. Asset inventory → capex items + FCI accumulators ───────
   // We bypass getCapExProjection/projectBuilding because those go through
   // listBuildings() which filters isActive=true and may exclude this building.
+  //
+  // Two-phase loop:
+  //   All assets  → cost estimate → contribute to FCI denominator (totalReplacementValueChf)
+  //   Within-horizon assets only → also get tax classification → pushed to allItems
   const extendedHorizon = horizonYears + deferYears;
   const extendedToYear = currentYear + extendedHorizon - 1;
 
@@ -249,8 +304,9 @@ export async function computeNPVScenarios(
     canton: building.canton ?? null,
   });
 
-  // Cost cache: avoid duplicate DB lookups for same (assetType, topic) pair
+  // Caches: keyed by "assetType::topic" to avoid duplicate DB lookups
   const costCache = new Map<string, number>();
+  const taxCache = new Map<string, number>(); // stores deductiblePct
 
   interface CapexItem {
     assetId: string;
@@ -258,33 +314,48 @@ export async function computeNPVScenarios(
     topic: string;
     estimatedReplacementYear: number;
     estimatedCostChf: number;
+    deductiblePct: number;
   }
 
   const allItems: CapexItem[] = [];
+  let totalReplacementValueChf = 0; // FCI denominator
+  let currentOverdueChf = 0;        // FCI numerator (current state)
 
   for (const asset of buildingAssets) {
     const dep = asset.depreciation;
     if (!dep) continue;
 
-    // Compute replacement year from depreciation
-    let replacementYear: number;
-    if (dep.depreciationPct >= 100) {
-      replacementYear = currentYear;
-    } else {
-      const remainingMonths = dep.usefulLifeMonths - dep.ageMonths;
-      replacementYear = currentYear + Math.max(0, Math.ceil(remainingMonths / 12));
-    }
-
-    // Only include assets due for replacement within the extended horizon
-    if (replacementYear > extendedToYear) continue;
-
-    // Cost estimate (cached per type+topic)
+    // Cost estimate — computed for ALL assets (FCI needs the full denominator)
     const costKey = `${asset.type}::${asset.topic}`;
     let estimatedCostChf = costCache.get(costKey);
     if (estimatedCostChf === undefined) {
       const cost = await estimateReplacementCost(prisma, orgId, asset.type as AssetType, asset.topic);
       estimatedCostChf = cost.bestEstimate.medianChf;
       costCache.set(costKey, estimatedCostChf);
+    }
+    totalReplacementValueChf += estimatedCostChf;
+
+    // Replacement year
+    let replacementYear: number;
+    if (dep.depreciationPct >= 100) {
+      replacementYear = currentYear;
+      currentOverdueChf += estimatedCostChf; // Already overdue → FCI current numerator
+    } else {
+      const remainingMonths = dep.usefulLifeMonths - dep.ageMonths;
+      replacementYear = currentYear + Math.max(0, Math.ceil(remainingMonths / 12));
+    }
+
+    // Assets beyond the extended horizon don't enter the capex schedule
+    if (replacementYear > extendedToYear) continue;
+
+    // Tax classification — only needed for assets entering the schedule
+    let deductiblePct = taxCache.get(costKey);
+    if (deductiblePct === undefined) {
+      const tax = await classifyAsset(
+        prisma, asset.type as AssetType, asset.topic, building.canton ?? null,
+      );
+      deductiblePct = tax.deductiblePct;
+      taxCache.set(costKey, deductiblePct);
     }
 
     allItems.push({
@@ -293,53 +364,77 @@ export async function computeNPVScenarios(
       topic: asset.topic,
       estimatedReplacementYear: replacementYear,
       estimatedCostChf,
+      deductiblePct,
     });
   }
 
-  // ── 4. Build capex maps per scenario ─────────────────────────
+  // ── 5. Build capex and tax-shield maps per scenario ───────────
 
   // INVEST: bucket items by their scheduled year, capped to toYear
   const investCapex = new Map<number, number>();
+  const investTaxShield = new Map<number, number>();
   for (const item of allItems) {
     const y = item.estimatedReplacementYear;
-    if (y !== null && y >= fromYear && y <= toYear) {
+    if (y >= fromYear && y <= toYear) {
       investCapex.set(y, (investCapex.get(y) ?? 0) + item.estimatedCostChf);
+      const shield = Math.round(
+        item.estimatedCostChf * (item.deductiblePct / 100) * (ownerMarginalTaxRatePct / 100),
+      );
+      investTaxShield.set(y, (investTaxShield.get(y) ?? 0) + shield);
     }
   }
 
   // DEFER: push items due in the first `deferYears` window back by deferYears
   const deferCapex = new Map<number, number>();
+  const deferTaxShield = new Map<number, number>();
   for (const item of allItems) {
     const originalYear = item.estimatedReplacementYear;
-    if (originalYear === null) continue;
     const deferredYear =
       originalYear < fromYear + deferYears
         ? originalYear + deferYears
         : originalYear;
     if (deferredYear >= fromYear && deferredYear <= toYear) {
       deferCapex.set(deferredYear, (deferCapex.get(deferredYear) ?? 0) + item.estimatedCostChf);
+      const shield = Math.round(
+        item.estimatedCostChf * (item.deductiblePct / 100) * (ownerMarginalTaxRatePct / 100),
+      );
+      deferTaxShield.set(deferredYear, (deferTaxShield.get(deferredYear) ?? 0) + shield);
     }
   }
 
-  // NEGLECT: no ongoing capex. The capex backlog is either:
-  //   • charged as a terminal property value deduction (when propertyValueChf is known), or
-  //   • charged as a cash outflow at horizon end (when propertyValueChf is unknown).
-  // This avoids double-counting: if we know the sale value, the buyer deducts maintenance debt
-  // from the price (terminal value impairment); otherwise we show it as an explicit cash cost.
+  // NEGLECT: no ongoing capex — no tax shield either.
+  // Backlog is charged as a terminal property value deduction (when sale price is known)
+  // or as a cash outflow at horizon end (otherwise).
   const capexBacklog = [...investCapex.values()].reduce((s, v) => s + v, 0);
   const neglectCapex = new Map<number, number>();
   if (!terminalValueModeled && capexBacklog > 0) {
     neglectCapex.set(toYear, capexBacklog);
   }
 
-  // ── 5. Compute each scenario ───────────────────────────────────
+  // ── 6. FCI ─────────────────────────────────────────────────────
+  // Current: proportion of total replacement value that is already overdue.
+  // Neglect at horizon: all within-horizon capex accumulates as deferred backlog.
+  const fciCurrentPct = totalReplacementValueChf > 0
+    ? Math.round((currentOverdueChf / totalReplacementValueChf) * 1000) / 10
+    : 0;
+  const fciNeglectHorizonPct = totalReplacementValueChf > 0
+    ? Math.round((capexBacklog / totalReplacementValueChf) * 1000) / 10
+    : 0;
+
+  // ── 7. Compute each scenario ───────────────────────────────────
   const invest = buildScenario(
     fromYear, toYear, baseAnnualNoiChf, incomeGrowthRatePct, discountRatePct, investCapex,
-    { terminalValueChf: terminalValueModeled ? propertyValueChf : undefined },
+    {
+      terminalValueChf: terminalValueModeled ? propertyValueChf : undefined,
+      taxShieldByYear: investTaxShield,
+    },
   );
   const defer = buildScenario(
     fromYear, toYear, baseAnnualNoiChf, incomeGrowthRatePct, discountRatePct, deferCapex,
-    { terminalValueChf: terminalValueModeled ? propertyValueChf : undefined },
+    {
+      terminalValueChf: terminalValueModeled ? propertyValueChf : undefined,
+      taxShieldByYear: deferTaxShield,
+    },
   );
   const neglect = buildScenario(
     fromYear, toYear, baseAnnualNoiChf, incomeGrowthRatePct, discountRatePct, neglectCapex,
@@ -349,6 +444,7 @@ export async function computeNPVScenarios(
       terminalValueChf: terminalValueModeled
         ? Math.max(0, propertyValueChf! - capexBacklog)
         : undefined,
+      // No taxShieldByYear: Neglect performs no consented work
     },
   );
 
@@ -367,5 +463,10 @@ export async function computeNPVScenarios(
     terminalValueModeled,
     propertyValueChf,
     neglectNoiErosionRatePct,
+    ownerMarginalTaxRatePct,
+    ownerTaxRateIsDefault,
+    fciCurrentPct,
+    fciNeglectHorizonPct,
+    totalReplacementValueChf,
   };
 }
