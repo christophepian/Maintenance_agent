@@ -11,6 +11,10 @@
  *
  * Also covers new workflows added post-audit:
  *   - cashflowPlanWorkflow: DRAFT → SUBMITTED → APPROVED
+ *   - analyseClaimWorkflow: produces analysis DTO for a request
+ *   - processTurnWorkflow (conversationWorkflow): handles a conversation turn
+ *   - evaluateRecommendationWorkflow: scores decision options
+ *   - createOwnerProfileWorkflow (strategyProfileWorkflow): creates strategy profile
  *
  * Pattern: Direct DB + workflow calls, no server spawn.
  */
@@ -30,6 +34,15 @@ import { ownerRejectWorkflow } from "../workflows/ownerRejectWorkflow";
 import { InvalidTransitionError } from "../workflows/transitions";
 import { WorkflowContext } from "../workflows/context";
 import { createInvoice } from "../services/invoices";
+
+// Mock Anthropic-dependent service so processTurnWorkflow tests don't require live API keys
+jest.mock("../services/conversationService", () => ({
+  handleTurn: jest.fn().mockResolvedValue({
+    intent: "MAINTENANCE_REQUEST",
+    replyText: "I have received your request.",
+    threadId: "mock-thread-id",
+  }),
+}));
 
 const prisma = new PrismaClient();
 
@@ -576,5 +589,243 @@ describe("submitRentalApplicationWorkflow", () => {
         meta: { ip: "127.0.0.1", userAgent: "test-agent" },
       }),
     ).rejects.toThrow("ALREADY_SUBMITTED");
+  });
+});
+
+// ─── analyseClaimWorkflow ────────────────────────────────────
+
+describe("analyseClaimWorkflow", () => {
+  const prismaLocal = new PrismaClient();
+  let orgId: string;
+  let requestId: string;
+  let ctx: WorkflowContext;
+
+  beforeAll(async () => {
+    const org = await prismaLocal.org.create({ data: { name: `Claim Test ${Date.now()}` } });
+    orgId = org.id;
+    const building = await prismaLocal.building.create({
+      data: { orgId, name: "Claim Building", address: "Rue Test 1, 1200 Genève" },
+    });
+    const unit = await prismaLocal.unit.create({
+      data: { orgId, buildingId: building.id, unitNumber: "1A", floor: "1" },
+    });
+    const req = await prismaLocal.request.create({
+      data: {
+        orgId,
+        unitId: unit.id,
+        description: "Water leak in bathroom",
+        category: "PLUMBING",
+        status: "PENDING_REVIEW",
+      },
+    });
+    requestId = req.id;
+    ctx = { orgId, prisma: prismaLocal };
+  });
+
+  afterAll(async () => {
+    await prismaLocal.request.deleteMany({ where: { id: requestId } });
+    await prismaLocal.org.deleteMany({ where: { id: orgId } });
+    await prismaLocal.$disconnect();
+  });
+
+  it("analyseClaimWorkflow: returns an analysis DTO for a request", async () => {
+    const { analyseClaimWorkflow } = await import("../workflows/analyseClaimWorkflow");
+    const result = await analyseClaimWorkflow(ctx, { requestId });
+    expect(result.analysis).toBeDefined();
+    expect(result.analysis.legalObligation).toBeDefined();
+    expect(result.analysis.confidence).toBeGreaterThanOrEqual(0);
+  });
+
+  it("analyseClaimWorkflow: rejects a non-existent requestId", async () => {
+    const { analyseClaimWorkflow } = await import("../workflows/analyseClaimWorkflow");
+    await expect(analyseClaimWorkflow(ctx, { requestId: "non-existent-id" })).rejects.toThrow();
+  });
+});
+
+// ─── processTurnWorkflow (conversationWorkflow) ──────────────
+
+describe("processTurnWorkflow", () => {
+  const prismaLocal = new PrismaClient();
+  let orgId: string;
+  let tenantId: string;
+  let ctx: WorkflowContext;
+
+  beforeAll(async () => {
+    const org = await prismaLocal.org.create({ data: { name: `Conv Test ${Date.now()}` } });
+    orgId = org.id;
+    const phone = `+4179${Date.now().toString().slice(-7)}`;
+    const tenant = await prismaLocal.tenant.create({
+      data: { orgId, name: "Tenant Conv", phone },
+    });
+    tenantId = tenant.id;
+    ctx = { orgId, prisma: prismaLocal };
+  });
+
+  afterAll(async () => {
+    await prismaLocal.conversationThread.deleteMany({ where: { tenantId } });
+    await prismaLocal.tenant.deleteMany({ where: { id: tenantId } });
+    await prismaLocal.org.deleteMany({ where: { id: orgId } });
+    await prismaLocal.$disconnect();
+  });
+
+  it("processTurnWorkflow: creates a conversation turn and returns a result", async () => {
+    const { processTurnWorkflow } = await import("../workflows/conversationWorkflow");
+    const result = await processTurnWorkflow(ctx, {
+      tenantId,
+      channel: "IN_APP",
+      messageText: "Hello, I have a leaking tap",
+    });
+    expect(result).toBeDefined();
+    expect(result.intent).toBeDefined();
+  });
+});
+
+// ─── strategyProfileWorkflow ─────────────────────────────────
+
+describe("strategyProfileWorkflow — createOwnerProfileWorkflow", () => {
+  const prismaLocal = new PrismaClient();
+  let orgId: string;
+  let ownerId: string;
+
+  beforeAll(async () => {
+    const org = await prismaLocal.org.create({ data: { name: `Strat Test ${Date.now()}` } });
+    orgId = org.id;
+    const owner = await prismaLocal.user.create({
+      data: { orgId, name: "Strategy Owner", email: `owner-strat-${Date.now()}@test.com`, role: "OWNER", passwordHash: "x" },
+    });
+    ownerId = owner.id;
+  });
+
+  afterAll(async () => {
+    await prismaLocal.ownerStrategyProfile.deleteMany({ where: { ownerId } });
+    await prismaLocal.user.deleteMany({ where: { id: ownerId } });
+    await prismaLocal.org.deleteMany({ where: { id: orgId } });
+    await prismaLocal.$disconnect();
+  });
+
+  it("createOwnerProfileWorkflow: creates a strategy profile for an owner", async () => {
+    const { createOwnerProfileWorkflow } = await import("../workflows/strategyProfileWorkflow");
+    const result = await createOwnerProfileWorkflow(
+      { orgId, prisma: prismaLocal },
+      {
+        ownerId,
+        answers: {
+          mainGoal: 3,
+          holdPeriod: 4,
+          renovationAppetite: 3,
+          cashSensitivity: 3,
+          disruptionTolerance: 2,
+        },
+      },
+    );
+    expect(result.profile).toBeDefined();
+    expect(result.profile.primaryArchetype).toBeDefined();
+  });
+
+  it("createOwnerProfileWorkflow: rejects missing required fields", async () => {
+    const { createOwnerProfileWorkflow } = await import("../workflows/strategyProfileWorkflow");
+    await expect(
+      createOwnerProfileWorkflow(
+        { orgId, prisma: prismaLocal },
+        { ownerId, answers: {} as any },
+      ),
+    ).rejects.toThrow("Missing required questionnaire answers");
+  });
+});
+
+// ─── evaluateRecommendationWorkflow ──────────────────────────
+
+describe("evaluateRecommendationWorkflow", () => {
+  const prismaLocal = new PrismaClient();
+  let orgId: string;
+  let opportunityId: string;
+  let buildingProfileId: string;
+  let ownerProfileId: string;
+
+  beforeAll(async () => {
+    const org = await prismaLocal.org.create({ data: { name: `Rec Test ${Date.now()}` } });
+    orgId = org.id;
+    const building = await prismaLocal.building.create({
+      data: { orgId, name: "Rec Building", address: "Rue Rec 1" },
+    });
+    const unit = await prismaLocal.unit.create({
+      data: { orgId, buildingId: building.id, unitNumber: "R1" },
+    });
+    const owner = await prismaLocal.user.create({
+      data: { orgId, name: "Rec Owner", email: `owner-rec-${Date.now()}@test.com`, role: "OWNER", passwordHash: "x" },
+    });
+    // Create OwnerStrategyProfile with all required fields
+    const ownerProfile = await prismaLocal.ownerStrategyProfile.create({
+      data: {
+        orgId,
+        ownerId: owner.id,
+        userFacingGoalLabel: "Maximize rental income",
+        dimensionsJson: "{}",
+        archetypeScoresJson: "{}",
+        primaryArchetype: "yield_maximizer",
+      },
+    });
+    ownerProfileId = ownerProfile.id;
+    // Create BuildingStrategyProfile with all required fields
+    const buildingProfile = await prismaLocal.buildingStrategyProfile.create({
+      data: {
+        orgId,
+        buildingId: building.id,
+        ownerProfileId,
+        roleIntent: "stable_hold",
+        effectiveDimensionsJson: "{}",
+        archetypeScoresJson: "{}",
+        primaryArchetype: "yield_maximizer",
+      },
+    });
+    buildingProfileId = buildingProfile.id;
+    // opportunityId = Request.id per schema
+    const req = await prismaLocal.request.create({
+      data: {
+        orgId,
+        unitId: unit.id,
+        description: "Replace boiler",
+        category: "PLUMBING",
+        status: "PENDING_REVIEW",
+      },
+    });
+    opportunityId = req.id;
+    await prismaLocal.maintenanceDecisionOption.create({
+      data: {
+        orgId,
+        opportunityId,
+        optionType: "repair",
+        title: "Repair Now",
+        estimatedCost: 1000,
+      },
+    });
+  });
+
+  afterAll(async () => {
+    await prismaLocal.recommendationResult.deleteMany({ where: { opportunityId } });
+    await prismaLocal.maintenanceDecisionOption.deleteMany({ where: { opportunityId } });
+    await prismaLocal.request.deleteMany({ where: { id: opportunityId } });
+    await prismaLocal.buildingStrategyProfile.deleteMany({ where: { id: buildingProfileId } });
+    await prismaLocal.ownerStrategyProfile.deleteMany({ where: { id: ownerProfileId } });
+    await prismaLocal.$disconnect();
+  });
+
+  it("evaluateRecommendationWorkflow: scores options and returns a recommendation", async () => {
+    const { evaluateRecommendationWorkflow } = await import("../workflows/recommendationWorkflow");
+    const result = await evaluateRecommendationWorkflow(
+      { orgId, prisma: prismaLocal },
+      {
+        opportunityId,
+        buildingProfileId,
+        primaryArchetype: "yield_maximizer",
+        opportunity: {
+          urgency: "MEDIUM",
+          conditionState: "FAIR",
+          complianceRisk: "LOW",
+        },
+      },
+    );
+    expect(result.recommendation).toBeDefined();
+    expect(result.recommendation.opportunityId).toBe(opportunityId);
   });
 });

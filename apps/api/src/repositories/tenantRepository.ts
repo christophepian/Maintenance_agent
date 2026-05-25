@@ -185,3 +185,80 @@ export async function deleteOccupancies(
 ) {
   return prisma.occupancy.deleteMany({ where: { tenantId, unitId } });
 }
+
+// ─── Dev-only helpers ──────────────────────────────────────────
+
+/**
+ * List tenants with active occupancies for dev impersonation.
+ * Returns limited fields + one occupancy sample. Limited to 50.
+ */
+export async function listTenantsForDevImpersonation(
+  prisma: PrismaClient,
+  orgId: string,
+) {
+  return prisma.tenant.findMany({
+    where: {
+      occupancies: {
+        some: { unit: { building: { orgId } } },
+      },
+    },
+    select: {
+      id: true,
+      name: true,
+      phone: true,
+      email: true,
+      occupancies: {
+        select: {
+          unit: {
+            select: {
+              unitNumber: true,
+              floor: true,
+              building: { select: { name: true } },
+            },
+          },
+        },
+        take: 1,
+      },
+    },
+    take: 50,
+  });
+}
+
+/**
+ * Find a single tenant by ID for dev login JWT generation.
+ * Returns full occupancy + asset data needed for the tenant JWT payload.
+ */
+export async function findTenantForDevLogin(
+  prisma: PrismaClient,
+  tenantId: string,
+  orgId: string,
+) {
+  return prisma.tenant.findFirst({
+    where: {
+      id: tenantId,
+      occupancies: { some: { unit: { building: { orgId } } } },
+    },
+    select: {
+      id: true,
+      name: true,
+      phone: true,
+      email: true,
+      occupancies: {
+        select: {
+          unit: {
+            select: {
+              id: true,
+              unitNumber: true,
+              floor: true,
+              building: { select: { id: true, name: true, address: true } },
+              assets: {
+                select: { id: true, name: true, topic: true, type: true, serialNumber: true },
+              },
+            },
+          },
+        },
+        take: 1,
+      },
+    },
+  });
+}

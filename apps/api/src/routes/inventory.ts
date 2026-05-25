@@ -38,7 +38,7 @@ import { LinkTenantSchema } from "../validation/occupancies";
 import { normalizePhoneToE164 } from "../utils/phoneNormalization";
 import { normalizeTopicKey } from "../utils/topicKey";
 import * as inventoryRepo from "../repositories/inventoryRepository";
-import { findDepreciationTopicSuggestions, findAssetTopicSuggestions } from "../repositories/inventoryRepository";
+import { findDepreciationTopicSuggestions, findAssetTopicSuggestions, findOrgOwnerByIdFull, updateOwnerUser, syncAllBuildingsForOwner } from "../repositories/inventoryRepository";
 import { findUnlinkedJobsByUnit } from "../repositories/jobRepository";
 import { mapBuildingToDetailDTO } from "../dto/buildingDetail";
 import { mapUnitToListDTO } from "../dto/unitList";
@@ -121,17 +121,7 @@ export function registerInventoryRoutes(router: Router) {
   // GET /people/owners/:id — owner detail with billingEntity + buildings
   router.get("/people/owners/:id", withAuthRequired(async ({ res, params, orgId, prisma }) => {
     try {
-      const owner = await prisma.user.findFirst({
-        where: { id: params.id, orgId, role: "OWNER" },
-        include: {
-          billingEntity: true,
-          ownedBuildings: {
-            include: {
-              building: { select: { id: true, name: true, address: true } },
-            },
-          },
-        },
-      });
+      const owner = await findOrgOwnerByIdFull(prisma, orgId, params.id);
       if (!owner) return sendError(res, 404, "NOT_FOUND", "Owner not found");
       sendJson(res, 200, {
         data: {
@@ -211,13 +201,10 @@ export function registerInventoryRoutes(router: Router) {
       const email: string | undefined = raw.email?.trim() || undefined;
       if (!name && !email) return sendError(res, 400, "VALIDATION_ERROR", "At least name or email is required");
 
-      const user = await prisma.user.findFirst({ where: { id: params.id, orgId, role: "OWNER" } });
-      if (!user) return sendError(res, 404, "NOT_FOUND", "Owner not found");
+      const existing = await inventoryRepo.findOrgOwnerById(prisma, orgId, params.id);
+      if (!existing || existing.role !== "OWNER") return sendError(res, 404, "NOT_FOUND", "Owner not found");
 
-      const updated = await prisma.user.update({
-        where: { id: params.id },
-        data: { ...(name ? { name } : {}), ...(email ? { email } : {}) },
-      });
+      const updated = await updateOwnerUser(prisma, params.id, { ...(name ? { name } : {}), ...(email ? { email } : {}) });
       sendJson(res, 200, { data: { id: updated.id, name: updated.name, email: updated.email } });
     } catch (e: any) {
       if (e.message === "Invalid JSON") return sendError(res, 400, "INVALID_JSON", "Invalid JSON");
@@ -412,16 +399,10 @@ export function registerInventoryRoutes(router: Router) {
     if (!requireRole(req, res, "MANAGER")) return;
     try {
       const userId = params.id;
-      const user = await prisma.user.findFirst({ where: { id: userId, orgId } });
+      const user = await inventoryRepo.findOrgOwnerById(prisma, orgId, userId);
       if (!user) return sendError(res, 404, "NOT_FOUND", "User not found");
 
-      const synced: number = await prisma.$executeRaw`
-        INSERT INTO "BuildingOwner" (id, "buildingId", "userId")
-        SELECT gen_random_uuid(), id, ${userId}
-        FROM "Building"
-        WHERE "orgId" = ${orgId} AND "isActive" = true
-        ON CONFLICT DO NOTHING
-      `;
+      const synced = await syncAllBuildingsForOwner(prisma, orgId, userId);
       sendJson(res, 200, { synced });
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to sync buildings", String(e));

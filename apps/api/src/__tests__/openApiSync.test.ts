@@ -179,6 +179,8 @@ describe("OpenAPI spec ↔ Router sync", () => {
     "POST /units/:id/seed-default-assets",
     "GET /ledger/balance-sheet",
     "GET /listings",
+    // API-10: NPV scenarios route (added 2026-05, spec pending)
+    "GET /buildings/:id/npv-scenarios",
   ]);
 
   it("every code route has a spec entry", () => {

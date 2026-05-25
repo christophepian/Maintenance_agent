@@ -28,6 +28,7 @@ import {
 import { tenantSelfPayWorkflow } from "../workflows/tenantSelfPayWorkflow";
 import { InvalidTransitionError } from "../workflows/transitions";
 import { resolveTenantUserId } from "../services/tenantIdentity";
+import { listTenantsForDevImpersonation, findTenantForDevLogin } from "../repositories/tenantRepository";
 import { parseBody } from "../http/body";
 import { CreateRequestSchema } from "../validation/requests";
 import { createRequestWorkflow } from "../workflows/createRequestWorkflow";
@@ -560,34 +561,7 @@ export function registerAuthRoutes(router: Router) {
   router.get("/__dev/tenant-list", async ({ res, prisma, orgId }) => {
     if (process.env.NODE_ENV === "production") return sendError(res, 403, "FORBIDDEN", "Dev-only endpoint");
     try {
-      const tenants = await prisma.tenant.findMany({
-        where: {
-          occupancies: {
-            some: {
-              unit: { building: { orgId } },
-            },
-          },
-        },
-        select: {
-          id: true,
-          name: true,
-          phone: true,
-          email: true,
-          occupancies: {
-            select: {
-              unit: {
-                select: {
-                  unitNumber: true,
-                  floor: true,
-                  building: { select: { name: true } },
-                },
-              },
-            },
-            take: 1,
-          },
-        },
-        take: 50,
-      });
+      const tenants = await listTenantsForDevImpersonation(prisma, orgId);
       sendJson(res, 200, { data: tenants });
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to list tenants", String(e));
@@ -600,34 +574,7 @@ export function registerAuthRoutes(router: Router) {
     try {
       const { tenantId } = await readJson(req) as { tenantId?: string };
       if (!tenantId) return sendError(res, 400, "VALIDATION_ERROR", "tenantId required");
-      const tenant = await prisma.tenant.findFirst({
-        where: {
-          id: tenantId,
-          occupancies: { some: { unit: { building: { orgId } } } },
-        },
-        select: {
-          id: true,
-          name: true,
-          phone: true,
-          email: true,
-          occupancies: {
-            select: {
-              unit: {
-                select: {
-                  id: true,
-                  unitNumber: true,
-                  floor: true,
-                  building: { select: { id: true, name: true, address: true } },
-                  assets: {
-                    select: { id: true, name: true, topic: true, type: true, serialNumber: true },
-                  },
-                },
-              },
-            },
-            take: 1,
-          },
-        },
-      });
+      const tenant = await findTenantForDevLogin(prisma, tenantId, orgId);
       if (!tenant) return sendError(res, 404, "NOT_FOUND", "Tenant not found");
       const primaryUnit = tenant.occupancies[0]?.unit ?? null;
       const token = encodeToken({ userId: tenant.id, orgId, role: "TENANT", email: tenant.email || "" } as any);

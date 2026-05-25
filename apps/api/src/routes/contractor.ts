@@ -12,6 +12,7 @@ import { SubmitQuoteSchema } from "../validation/quoteSchema";
 import { parseBody } from "../http/body";
 import { submitQuoteWorkflow, QuoteSubmissionError } from "../workflows";
 import * as contractorRepo from "../repositories/contractorRepository";
+import { findContractorByOrgAndEmail } from "../repositories/contractorRepository";
 import { findJobRaw } from "../repositories/jobRepository";
 import { ContractorCompleteSchema, SubmitRatingSchema } from "../validation/completionSchemas";
 import {
@@ -39,10 +40,7 @@ async function resolveContractorId(
   if (user.accessLevel === "ADMIN") {
     return queryContractorId ?? null;
   }
-  const row = await prisma.contractor.findFirst({
-    where: { email: user.email, orgId },
-    select: { id: true },
-  });
+  const row = await findContractorByOrgAndEmail(prisma, user.email, orgId);
   return row?.id ?? null;
 }
 

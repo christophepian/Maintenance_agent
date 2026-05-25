@@ -548,6 +548,60 @@ export async function findOrgOwnerById(
   return user;
 }
 
+/** Canonical include for owner detail: billingEntity + ownedBuildings → building */
+export const OWNER_DETAIL_INCLUDE = {
+  billingEntity: true,
+  ownedBuildings: {
+    include: {
+      building: { select: { id: true, name: true, address: true } },
+    },
+  },
+} as const;
+
+/**
+ * Find an OWNER user by ID within an org with full billing + buildings include.
+ */
+export async function findOrgOwnerByIdFull(
+  prisma: PrismaClient,
+  orgId: string,
+  userId: string,
+) {
+  return prisma.user.findFirst({
+    where: { id: userId, orgId, role: "OWNER" },
+    include: OWNER_DETAIL_INCLUDE,
+  });
+}
+
+/**
+ * Update an OWNER user's name and/or email.
+ */
+export async function updateOwnerUser(
+  prisma: PrismaClient,
+  userId: string,
+  data: { name?: string; email?: string },
+) {
+  return prisma.user.update({ where: { id: userId }, data });
+}
+
+/**
+ * Sync all active org buildings to a given owner via BuildingOwner rows.
+ * Uses ON CONFLICT DO NOTHING — safe to call multiple times.
+ * Returns count of newly inserted rows.
+ */
+export async function syncAllBuildingsForOwner(
+  prisma: PrismaClient,
+  orgId: string,
+  userId: string,
+): Promise<number> {
+  return prisma.$executeRaw`
+    INSERT INTO "BuildingOwner" (id, "buildingId", "userId")
+    SELECT gen_random_uuid(), id, ${userId}
+    FROM "Building"
+    WHERE "orgId" = ${orgId} AND "isActive" = true
+    ON CONFLICT DO NOTHING
+  `;
+}
+
 /**
  * Fetch depreciation standards for asset-topic autocomplete.
  * Optionally filtered by assetType.

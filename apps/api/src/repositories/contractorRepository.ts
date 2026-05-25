@@ -165,3 +165,18 @@ export async function findContractorByOrgAndId(
 ) {
   return prisma.contractor.findFirst({ where: { id, orgId } });
 }
+
+/**
+ * Find a contractor by email within an org.
+ * Used by resolveContractorId to map JWT email → contractor row.
+ */
+export async function findContractorByOrgAndEmail(
+  prisma: PrismaClient,
+  email: string,
+  orgId: string,
+): Promise<{ id: string } | null> {
+  return prisma.contractor.findFirst({
+    where: { email, orgId },
+    select: { id: true },
+  });
+}
