@@ -67,8 +67,12 @@ export default function CapexSchedulePanel({ buildingId }) {
 
   const hasData = schedule !== null && schedule.some((s) => s.totalChf > 0 || s.assetCount > 0);
 
+  const totalDeductibleChf = schedule ? schedule.reduce((s, b) => s + b.deductibleChf, 0) : 0;
   const subtitle = meta
     ? `${meta.fromYear}–${meta.toYear} · ${t("manager:capexSchedule.text.totalLabel")} CHF ${formatChf(meta.totalProjectedChf)}`
+    : undefined;
+  const subtitleDetail = schedule && totalDeductibleChf > 0
+    ? `CHF ${formatChf(totalDeductibleChf)} ${t("manager:capexSchedule.legend.deductible").toLowerCase()} · CHF ${formatChf(meta.totalProjectedChf - totalDeductibleChf)} ${t("manager:capexSchedule.legend.capitalized").toLowerCase()}`
     : undefined;
 
   const missingDateCount = excludedAssets.filter((a) => a.reason === "MISSING_INSTALLATION_DATE").length;
@@ -78,7 +82,12 @@ export default function CapexSchedulePanel({ buildingId }) {
       <div className="space-y-4">
 
         {/* Subtitle */}
-        {subtitle && <p className="text-xs text-slate-500">{subtitle}</p>}
+        {subtitle && (
+          <div>
+            <p className="text-xs font-medium text-slate-600">{subtitle}</p>
+            {subtitleDetail && <p className="text-xs text-slate-400">{subtitleDetail}</p>}
+          </div>
+        )}
 
         {/* Error */}
         {error && <div className="notice notice-err">{error}</div>}
