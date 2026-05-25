@@ -897,6 +897,7 @@
       "discountRate": "Taux d'actualisation",
       "incomeGrowth": "Croissance des revenus",
       "horizon": "Horizon",
+      "deferWindow": "Fenêtre de report",
       "propertyValue": "Valeur estimée du bien",
       "propertyValuePlaceholder": "optionnel"
     },
@@ -922,6 +923,35 @@
       "fciCurrent": "Actuel",
       "fciAtHorizon": "Négligence en {{year}}",
       "fciThresholds": "<5% excellent · 5–10% bon · 10–30% passable · >30% critique"
+    },
+    "tooltip": {
+      "npv": "Valeur actuelle nette — somme de tous les flux de trésorerie futurs (REN moins investissements plus bouclier fiscal) actualisés à aujourd'hui.",
+      "noi": "Revenu net d'exploitation — revenus locatifs moins charges d'exploitation, projetés avec le taux de croissance des revenus.",
+      "taxShield": "L'entretien déductible (valeur conservatrice) réduit le revenu imposable dans l'année où il est comptabilisé. Ceci est le bénéfice cumulé sur l'horizon.",
+      "fci": "Indice d'état des installations = coût de l'entretien différé ÷ valeur totale de remplacement. Repères BOMA : <5% excellent, 5–10% bon, 10–30% passable, >30% critique.",
+      "discountRate": "Coût annualisé du capital (coût d'opportunité). Référence immobilière privée suisse : 3–5%. Des taux plus élevés pénalisent davantage les flux futurs.",
+      "incomeGrowth": "Taux de croissance annuel prévu des revenus locatifs. Moyenne suisse résidentielle long terme : 1–2%.",
+      "deferWindow": "Nombre d'années de report des investissements proches dans le scénario Reporter. Les actifs dus au-delà de cette fenêtre restent planifiés."
+    },
+    "notice": {
+      "identicalScenarios": "Aucune dépense ne tombe dans les {{years}} premières années du calendrier — Investir et Reporter sont équivalents selon les hypothèses actuelles. Essayez une fenêtre de report plus courte."
+    },
+    "summary": {
+      "invest": "Réaliser les travaux selon le calendrier surpasse la négligence de CHF {{delta}} sur l'horizon. Maximise la valeur patrimoniale à long terme.",
+      "investNeutral": "Investir selon le calendrier maintient l'état de l'actif. Pas de différence VAN significative par rapport à la négligence selon les hypothèses actuelles.",
+      "defer": "Reporter de {{years}} ans coûte CHF {{diff}} de VAN par rapport à l'investissement selon le calendrier. Réduit les sorties de trésorerie à court terme mais retarde la protection de la valeur.",
+      "neglect": "Négliger les investissements sous-performe de CHF {{delta}}, l'érosion du REN et le passif accumulé s'amplifient dans le temps."
+    },
+    "delta": {
+      "investWins": "Investir surpasse la négligence de CHF {{delta}} sur {{years}} ans.",
+      "neglectWins": "La négligence produit une VAN supérieure de CHF {{delta}} sur {{years}} ans — vérifier les estimations de coûts et les hypothèses de revenus."
+    },
+    "recommendation": {
+      "badge": "Recommandé"
+    },
+    "strategy": {
+      "noProfileHint": "Définissez un profil stratégique pour obtenir une recommandation personnalisée pour ce bâtiment.",
+      "noProfileLink": "Définir le profil"
     }
   },
   "noiTrend": {

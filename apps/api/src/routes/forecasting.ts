@@ -34,6 +34,93 @@ import {
   type TimingSensitivity,
 } from "../services/swissRenovationCatalog";
 import { TaxClassification, AssetType } from "@prisma/client";
+import { getBuildingProfileByBuildingId } from "../repositories/strategyProfileRepository";
+import type { NPVScenarioResult } from "../services/npvService";
+
+// ─── Strategy recommendation ──────────────────────────────────
+
+interface StrategyContext {
+  hasProfile: boolean;
+  roleIntent?: string;
+  archetype?: string | null;
+  recommendedScenario?: "invest" | "defer" | "neglect";
+  rationale?: string;
+}
+
+function computeRecommendation(
+  archetype: string | null | undefined,
+  dims: Record<string, number> | null,
+  fciCurrentPct: number,
+  scenarios: { invest: NPVScenarioResult; defer: NPVScenarioResult; neglect: NPVScenarioResult },
+  deferYears: number,
+): { scenario: "invest" | "defer" | "neglect"; rationale: string } {
+  const capexTolerance = dims?.capexTolerance ?? 50;
+  const saleReadiness = dims?.saleReadiness ?? 50;
+
+  // Critical FCI — recommend invest regardless of profile
+  if (fciCurrentPct >= 30) {
+    return {
+      scenario: "invest",
+      rationale: `Facility condition is critical (FCI ${fciCurrentPct.toFixed(1)}%). Continued deferral will accelerate deterioration and increase tenant risk.`,
+    };
+  }
+
+  // Archetype-first rules
+  if (archetype === "exit_optimizer" && saleReadiness >= 65) {
+    return {
+      scenario: "defer",
+      rationale: "Exit-oriented profile with high sale readiness — minimising near-term capex preserves liquidity for a planned exit.",
+    };
+  }
+  if (archetype === "yield_maximizer") {
+    return {
+      scenario: "invest",
+      rationale: "Yield-maximiser profile — executing capex on schedule protects rental income and prevents NOI erosion.",
+    };
+  }
+  if (archetype === "value_builder") {
+    return {
+      scenario: "invest",
+      rationale: "Value-builder profile — full investment on schedule maximises long-term equity and NPV.",
+    };
+  }
+  if (archetype === "capital_preserver") {
+    const scenario = fciCurrentPct >= 10 ? "invest" : "defer";
+    return {
+      scenario,
+      rationale: fciCurrentPct >= 10
+        ? "Capital-preserver profile — fair facility condition warrants proactive investment to avoid accelerating decline."
+        : "Capital-preserver profile — good facility condition allows near-term deferral without material risk.",
+    };
+  }
+
+  // Dimension-based fallback
+  if (saleReadiness >= 70 && capexTolerance < 40) {
+    return {
+      scenario: "defer",
+      rationale: "High sale readiness and limited capex appetite — deferring preserves cash for the exit transaction.",
+    };
+  }
+  if (capexTolerance >= 65 && fciCurrentPct >= 10) {
+    return {
+      scenario: "invest",
+      rationale: "Strong capex tolerance and fair facility condition — investing now avoids compounding deferred-maintenance costs.",
+    };
+  }
+
+  // NPV tie-breaker
+  const bestNpv = Math.max(scenarios.invest.npvChf, scenarios.defer.npvChf, scenarios.neglect.npvChf);
+  const scenario =
+    scenarios.invest.npvChf === bestNpv ? "invest"
+    : scenarios.defer.npvChf === bestNpv ? "defer"
+    : "neglect";
+  const rationaleByScenario: Record<string, string> = {
+    invest: "Full investment produces the highest projected NPV given current assumptions.",
+    defer: `Deferring ${deferYears} years maximises NPV given the near-term capex schedule.`,
+    neglect: "Caution: NPV-optimal under current assumptions, but carries significant long-term condition risk.",
+  };
+  return { scenario, rationale: rationaleByScenario[scenario] };
+}
 
 export function registerForecastingRoutes(router: Router) {
 
@@ -228,7 +315,32 @@ export function registerForecastingRoutes(router: Router) {
         propertyValueChf,
         neglectNoiErosionRatePct,
       });
-      sendJson(res, 200, { data: result });
+
+      // ── Strategy context + recommendation ─────────────────────
+      const strategyProfile = await getBuildingProfileByBuildingId(prisma, params.id, orgId);
+      let strategyContext: StrategyContext = { hasProfile: false };
+      if (strategyProfile) {
+        let dims: Record<string, number> | null = null;
+        try {
+          dims = JSON.parse(strategyProfile.effectiveDimensionsJson) as Record<string, number>;
+        } catch { /* malformed JSON — proceed without dims */ }
+        const { scenario, rationale } = computeRecommendation(
+          strategyProfile.primaryArchetype,
+          dims,
+          result.fciCurrentPct,
+          result.scenarios,
+          result.deferYears,
+        );
+        strategyContext = {
+          hasProfile: true,
+          roleIntent: strategyProfile.roleIntent ?? undefined,
+          archetype: strategyProfile.primaryArchetype,
+          recommendedScenario: scenario,
+          rationale,
+        };
+      }
+
+      sendJson(res, 200, { data: { ...result, strategyContext } });
     } catch (e: any) {
       if (e?.statusCode === 404) {
         return sendError(res, 404, "NOT_FOUND", e.message);

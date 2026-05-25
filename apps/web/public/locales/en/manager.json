@@ -897,6 +897,7 @@
       "discountRate": "Discount rate",
       "incomeGrowth": "Income growth",
       "horizon": "Horizon",
+      "deferWindow": "Defer window",
       "propertyValue": "Est. property value",
       "propertyValuePlaceholder": "optional"
     },
@@ -922,6 +923,35 @@
       "fciCurrent": "Now",
       "fciAtHorizon": "Neglect at {{year}}",
       "fciThresholds": "<5% excellent · 5–10% good · 10–30% fair · >30% critical"
+    },
+    "tooltip": {
+      "npv": "Net Present Value — the sum of all future cash flows (NOI minus capex plus tax shield) discounted back to today's value.",
+      "noi": "Net Operating Income — rental income minus operating expenses, projected forward with the income growth rate.",
+      "taxShield": "Deductible (value-preserving) maintenance reduces your taxable income in the year it is expensed. This is the cumulative benefit over the horizon.",
+      "fci": "Facility Condition Index = deferred maintenance cost ÷ total replacement value. BOMA benchmarks: <5% excellent, 5–10% good, 10–30% fair, >30% critical.",
+      "discountRate": "Annualised cost of capital (opportunity cost). Swiss private real estate benchmark: 3–5%. Higher rates penalise distant cash flows more.",
+      "incomeGrowth": "Expected annual rental income growth rate. Swiss residential long-run average: 1–2%. Inflation + market tightness drive this.",
+      "deferWindow": "Number of years by which near-term capex is postponed in the Defer scenario. Assets due beyond this window are still executed on schedule."
+    },
+    "notice": {
+      "identicalScenarios": "No capex falls in the first {{years}} years of this building's schedule — Invest and Defer are equivalent under current assumptions. Try a shorter defer window to see a difference."
+    },
+    "summary": {
+      "invest": "Executing capex on schedule outperforms neglect by CHF {{delta}} over the projection horizon. Maximises long-term asset value.",
+      "investNeutral": "Investing on schedule maintains asset condition. No significant NPV difference vs neglect under current assumptions.",
+      "defer": "Deferring {{years}} years costs CHF {{diff}} in NPV vs investing on schedule. Reduces near-term cash outflow but delays value protection.",
+      "neglect": "Neglecting capex underperforms investment by CHF {{delta}}. NOI erosion and end-of-horizon backlog cost compound over time."
+    },
+    "delta": {
+      "investWins": "Investing outperforms neglect by CHF {{delta}} over {{years}} years.",
+      "neglectWins": "Neglect produces a higher NPV by CHF {{delta}} over {{years}} years — review capex estimates and income assumptions."
+    },
+    "recommendation": {
+      "badge": "Recommended"
+    },
+    "strategy": {
+      "noProfileHint": "Set a strategy profile to get a personalised recommendation for this building.",
+      "noProfileLink": "Set profile"
     }
   },
   "noiTrend": {
