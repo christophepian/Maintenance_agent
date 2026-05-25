@@ -34,17 +34,9 @@ function fciColor(pct) {
   return "text-red-700";
 }
 
-// ─── Scenario colours ─────────────────────────────────────────
-
-const SCENARIO_STYLES = {
-  invest:  { bg: "bg-emerald-50",  border: "border-emerald-200", title: "text-emerald-800", value: "text-emerald-700", bar: "bg-emerald-500", ring: "ring-emerald-400" },
-  defer:   { bg: "bg-amber-50",    border: "border-amber-200",   title: "text-amber-800",   value: "text-amber-700",  bar: "bg-amber-400",  ring: "ring-amber-400"   },
-  neglect: { bg: "bg-red-50",      border: "border-red-200",     title: "text-red-800",     value: "text-red-700",    bar: "bg-red-400",    ring: "ring-red-400"     },
-};
-
 // ─── Mini cumulative-PV sparkbar ──────────────────────────────
 
-function CumulativeBars({ flows, color }) {
+function CumulativeBars({ flows, highlighted }) {
   if (!flows || flows.length === 0) return null;
   const values = flows.map((f) => f.cumulativePvChf);
   const maxAbs = Math.max(...values.map(Math.abs), 1);
@@ -55,9 +47,14 @@ function CumulativeBars({ flows, color }) {
         const pct = Math.round((Math.abs(f.cumulativePvChf) / maxAbs) * 100);
         const positive = f.cumulativePvChf >= 0;
         return (
-          <div key={f.year} className="flex-1 flex flex-col justify-end" title={`${f.year}: CHF ${formatChf(f.cumulativePvChf)}`}>
+          <div key={f.year} className="flex-1 flex flex-col justify-end" title={`${f.year}: ${formatChf(f.cumulativePvChf)}`}>
             <div
-              className={cn("rounded-sm", positive ? color : "bg-slate-300")}
+              className={cn(
+                "rounded-sm",
+                positive
+                  ? (highlighted ? "bg-slate-700" : "bg-slate-400")
+                  : "bg-slate-200",
+              )}
               style={{ height: `${Math.max(pct, 4)}%` }}
             />
           </div>
@@ -69,30 +66,34 @@ function CumulativeBars({ flows, color }) {
 
 // ─── Single scenario card ─────────────────────────────────────
 
-function ScenarioCard({ scenarioKey, label, hint, data, style, t, isRecommended, summary, identicalNotice }) {
+function ScenarioCard({ label, hint, data, t, isHighlighted, isRecommended, summary, identicalNotice }) {
   if (!data) return null;
   const { npvChf, totalCapexChf, totalTaxShieldChf, totalNoiChf, yearlyFlows } = data;
 
   return (
     <div
       className={cn(
-        "rounded-lg border p-4 space-y-2 relative",
-        style.bg,
-        style.border,
-        isRecommended && `ring-2 ${style.ring}`,
+        "rounded-lg p-4 space-y-2 relative bg-white",
+        isHighlighted
+          ? "border-2 border-slate-800 shadow-sm"
+          : "border border-slate-200",
       )}
     >
+      {/* Strategy recommendation badge */}
       {isRecommended && (
-        <span className={cn(
-          "absolute -top-2.5 left-3 text-[10px] font-semibold px-2 py-0.5 rounded-full",
-          "bg-slate-800 text-white",
-        )}>
+        <span className="absolute -top-2.5 left-3 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-800 text-white">
           {t("manager:npvScenarios.recommendation.badge")}
+        </span>
+      )}
+      {/* Best-NPV chip (shown when highlighted by NPV alone, not strategy) */}
+      {isHighlighted && !isRecommended && (
+        <span className="absolute -top-2.5 left-3 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-700 text-white">
+          {t("manager:npvScenarios.recommendation.bestNpv")}
         </span>
       )}
 
       <div>
-        <p className={cn("text-sm font-semibold", style.title)}>{label}</p>
+        <p className="text-sm font-semibold text-slate-800">{label}</p>
         <p className="text-xs text-slate-500">{hint}</p>
       </div>
 
@@ -101,7 +102,7 @@ function ScenarioCard({ scenarioKey, label, hint, data, style, t, isRecommended,
           NPV
           <Tooltip content={t("manager:npvScenarios.tooltip.npv")} />
         </p>
-        <p className={cn("text-xl font-bold font-mono", style.value)}>
+        <p className="text-xl font-bold font-mono text-slate-900">
           {formatChf(npvChf)}
         </p>
       </div>
@@ -121,20 +122,18 @@ function ScenarioCard({ scenarioKey, label, hint, data, style, t, isRecommended,
       </div>
 
       {totalTaxShieldChf > 0 && (
-        <div className="text-xs text-slate-600 border-t border-current border-opacity-10 pt-1.5 flex items-center gap-1">
-          <div>
-            <span className="text-slate-400 flex items-center gap-1">
-              {t("manager:npvScenarios.text.taxShield")}
-              <Tooltip content={t("manager:npvScenarios.tooltip.taxShield")} />
-            </span>
-            <p className="font-mono font-medium text-emerald-600">
-              +{formatChf(totalTaxShieldChf)}
-            </p>
-          </div>
+        <div className="text-xs text-slate-600 border-t border-slate-100 pt-1.5">
+          <span className="text-slate-400 flex items-center gap-1">
+            {t("manager:npvScenarios.text.taxShield")}
+            <Tooltip content={t("manager:npvScenarios.tooltip.taxShield")} />
+          </span>
+          <p className="font-mono font-medium text-emerald-600">
+            +{formatChf(totalTaxShieldChf)}
+          </p>
         </div>
       )}
 
-      <CumulativeBars flows={yearlyFlows} color={style.bar} />
+      <CumulativeBars flows={yearlyFlows} highlighted={isHighlighted} />
 
       <div className="flex justify-between text-xs text-slate-400 pt-0.5">
         <span>{yearlyFlows?.[0]?.year}</span>
@@ -143,11 +142,7 @@ function ScenarioCard({ scenarioKey, label, hint, data, style, t, isRecommended,
 
       {/* Per-scenario plain-language summary */}
       {summary && (
-        <p className={cn(
-          "text-xs border-t pt-2 leading-relaxed",
-          style.title,
-          "border-current border-opacity-10",
-        )}>
+        <p className="text-xs border-t border-slate-100 pt-2 leading-relaxed text-slate-600">
           {summary}
         </p>
       )}
@@ -315,6 +310,8 @@ export default function NPVScenariosPanel({ buildingId }) {
 
   const strategyContext = data?.strategyContext ?? null;
   const recommendedScenario = strategyContext?.recommendedScenario ?? null;
+  // Highlighted = strategy recommendation when profile exists, best NPV otherwise
+  const highlightedScenario = strategyContext?.hasProfile ? recommendedScenario : bestScenarioKey;
 
   return (
     <Panel title={t("manager:npvScenarios.title.npvScenarios")}>
@@ -537,23 +534,21 @@ export default function NPVScenariosPanel({ buildingId }) {
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <ScenarioCard
-                scenarioKey="invest"
                 label={t("manager:npvScenarios.scenario.invest")}
                 hint={t("manager:npvScenarios.scenario.investHint")}
                 data={data.scenarios.invest}
-                style={SCENARIO_STYLES.invest}
                 t={t}
-                isRecommended={recommendedScenario === "invest"}
+                isHighlighted={highlightedScenario === "invest"}
+                isRecommended={strategyContext?.hasProfile && recommendedScenario === "invest"}
                 summary={buildSummary("invest")}
               />
               <ScenarioCard
-                scenarioKey="defer"
                 label={t("manager:npvScenarios.scenario.defer", { years: data.deferYears })}
                 hint={t("manager:npvScenarios.scenario.deferHint", { years: data.deferYears })}
                 data={data.scenarios.defer}
-                style={SCENARIO_STYLES.defer}
                 t={t}
-                isRecommended={recommendedScenario === "defer"}
+                isHighlighted={highlightedScenario === "defer"}
+                isRecommended={strategyContext?.hasProfile && recommendedScenario === "defer"}
                 summary={buildSummary("defer")}
                 identicalNotice={isIdenticalDeferInvest
                   ? t("manager:npvScenarios.notice.identicalScenarios", { years: data.deferYears })
@@ -562,13 +557,12 @@ export default function NPVScenariosPanel({ buildingId }) {
               />
               <div className="flex flex-col gap-1">
                 <ScenarioCard
-                  scenarioKey="neglect"
                   label={t("manager:npvScenarios.scenario.neglect")}
                   hint={t("manager:npvScenarios.scenario.neglectHint")}
                   data={data.scenarios.neglect}
-                  style={SCENARIO_STYLES.neglect}
                   t={t}
-                  isRecommended={recommendedScenario === "neglect"}
+                  isHighlighted={highlightedScenario === "neglect"}
+                  isRecommended={strategyContext?.hasProfile && recommendedScenario === "neglect"}
                   summary={buildSummary("neglect")}
                 />
                 {!data.terminalValueModeled && (

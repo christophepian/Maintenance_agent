@@ -956,7 +956,8 @@
       }
     },
     "recommendation": {
-      "badge": "Recommended"
+      "badge": "Recommended",
+      "bestNpv": "Best NPV"
     },
     "strategy": {
       "noProfileHint": "Set a strategy profile to get a personalised recommendation for this building.",

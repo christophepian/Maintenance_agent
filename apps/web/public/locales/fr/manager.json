@@ -956,7 +956,8 @@
       }
     },
     "recommendation": {
-      "badge": "Recommandé"
+      "badge": "Recommandé",
+      "bestNpv": "Meilleure VAN"
     },
     "strategy": {
       "noProfileHint": "Définissez un profil stratégique pour obtenir une recommandation personnalisée pour ce bâtiment.",
