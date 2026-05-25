@@ -56,23 +56,6 @@ export interface NPVScenariosResult {
     defer: NPVScenarioResult;
     neglect: NPVScenarioResult;
   };
-  /** Temporary probe — remove once zero-values root cause is confirmed */
-  _probe?: {
-    totalSnapshotCount: number;
-    annualSnapshotCount: number;
-    annualLatestNoiCents: number | null;
-    noiBasis: string;
-    baseAnnualNoiChf: number;
-    fromYear: number;
-    toYear: number;
-    horizonYearsResolved: number;
-    discountRatePctResolved: number;
-    incomeGrowthRatePctResolved: number;
-    neglectFlowCount: number;
-    neglectNpvChf: number;
-    neglectTotalNoiChf: number;
-    investNpvChf: number;
-  };
 }
 
 export interface NPVOptions {
@@ -175,20 +158,11 @@ export async function computeNPVScenarios(
 
   let baseAnnualNoiChf = 0;
   let noIncomeData = false;
-  // Probe tracking
-  let _noiBasis = "zero";
-  let _annualLatestNoiCents: number | null = null;
-  let _fallbackADays = 0;
-  let _fallbackANoiCents = 0;
-  let _leasesCount = 0;
-  let _leasesRentChf = 0;
 
   if (annualSnapshots.length > 0) {
     // Best case: a full Jan 1–Dec 31 snapshot from a prior year
     const latest = annualSnapshots[annualSnapshots.length - 1];
-    _annualLatestNoiCents = Number(latest.netOperatingIncomeCents);
-    baseAnnualNoiChf = Math.round(_annualLatestNoiCents / 100);
-    _noiBasis = "annual_snapshot";
+    baseAnnualNoiChf = Math.round(Number(latest.netOperatingIncomeCents) / 100);
   } else if (snapshots.length > 0) {
     // Fallback A: annualize whatever snapshot history exists (any period length)
     const today = new Date();
@@ -200,11 +174,8 @@ export async function computeNPVScenarios(
       const startMs = new Date(relevant[0].periodStart).getTime();
       const endMs = new Date(relevant[relevant.length - 1].periodEnd).getTime();
       const totalDays = Math.max(1, (endMs - startMs) / (1000 * 60 * 60 * 24));
-      _fallbackADays = totalDays;
-      _fallbackANoiCents = totalNoiCents;
       if (totalDays >= 30) {
         baseAnnualNoiChf = Math.round((totalNoiCents / 100) * (365 / totalDays));
-        _noiBasis = "annualized_history";
       }
     }
   }
@@ -215,11 +186,10 @@ export async function computeNPVScenarios(
       where: { orgId, unit: { buildingId }, status: { in: ["ACTIVE", "SIGNED"] } },
       select: { rentTotalChf: true },
     });
-    _leasesCount = leases.length;
-    _leasesRentChf = leases.reduce((s, l) => s + (l.rentTotalChf ?? 0), 0);
-    baseAnnualNoiChf = Math.round(_leasesRentChf * 12);
+    baseAnnualNoiChf = Math.round(
+      leases.reduce((s, l) => s + (l.rentTotalChf ?? 0), 0) * 12,
+    );
     noIncomeData = baseAnnualNoiChf === 0;
-    if (!noIncomeData) _noiBasis = "leases";
   }
 
   // ── 3. Capex projection — inline, directly from asset inventory ──
@@ -324,22 +294,5 @@ export async function computeNPVScenarios(
     fromYear,
     toYear,
     scenarios: { invest, defer, neglect },
-    /** Temporary probe — remove once zero-values root cause is confirmed */
-    _probe: {
-      totalSnapshotCount: snapshots.length,
-      annualSnapshotCount: annualSnapshots.length,
-      annualLatestNoiCents: _annualLatestNoiCents,
-      noiBasis: _noiBasis,
-      baseAnnualNoiChf,
-      fromYear,
-      toYear,
-      horizonYearsResolved: horizonYears,
-      discountRatePctResolved: discountRatePct,
-      incomeGrowthRatePctResolved: incomeGrowthRatePct,
-      neglectFlowCount: neglect.yearlyFlows.length,
-      neglectNpvChf: neglect.npvChf,
-      neglectTotalNoiChf: neglect.totalNoiChf,
-      investNpvChf: invest.npvChf,
-    },
   };
 }
