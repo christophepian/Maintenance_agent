@@ -190,7 +190,7 @@ const TRADE_GROUP: Record<string, string> = {
  * Estimate which year an asset will need replacement based on depreciation.
  * Returns null if no depreciation data.
  */
-function estimateReplacementYear(
+export function estimateReplacementYear(
   dep: { depreciationPct: number; usefulLifeMonths: number; ageMonths: number } | null,
 ): number | null {
   if (!dep) return null;

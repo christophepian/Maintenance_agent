@@ -17,8 +17,9 @@ import { first } from "../http/query";
 import { maybeRequireManager } from "../authz";
 import { withAuthRequired } from "../http/routeProtection";
 import { getAssetHealthForecast } from "../services/assetHealthService";
-import { getCapExProjection } from "../services/capexProjectionService";
+import { getCapExProjection, estimateReplacementYear } from "../services/capexProjectionService";
 import { getAssetInventoryForBuilding } from "../services/assetInventory";
+import { estimateReplacementCost } from "../services/replacementCostService";
 import { findBuildingByIdAndOrg } from "../repositories/inventoryRepository";
 import { computeNPVScenarios } from "../services/npvService";
 import {
@@ -32,7 +33,7 @@ import {
   type BuildingSystem,
   type TimingSensitivity,
 } from "../services/swissRenovationCatalog";
-import { TaxClassification } from "@prisma/client";
+import { TaxClassification, AssetType } from "@prisma/client";
 
 export function registerForecastingRoutes(router: Router) {
 
@@ -108,6 +109,46 @@ export function registerForecastingRoutes(router: Router) {
             : "NO_DEPRECIATION_STANDARD",
         }));
 
+      // Assets nearing EOL but beyond the projection horizon (≥60% depreciated, due after toYear)
+      // These are silently dropped by projectBuilding — surface them as a forward planning signal.
+      const NEARING_EOL_THRESHOLD_PCT = 60;
+      const nearingEolCostCache = new Map<string, number>();
+      const nearingEolAssets: Array<{
+        assetId: string;
+        assetName: string;
+        topic: string;
+        depreciationPct: number;
+        estimatedReplacementYear: number;
+        estimatedCostChf: number;
+      }> = [];
+
+      for (const asset of allAssets) {
+        const dep = asset.depreciation;
+        if (!dep) continue; // already in excludedAssets
+        if (dep.depreciationPct < NEARING_EOL_THRESHOLD_PCT) continue;
+
+        const replacementYear = estimateReplacementYear(dep);
+        if (replacementYear === null || replacementYear <= projection.toYear) continue; // within horizon
+
+        const costKey = `${asset.type}::${asset.topic}`;
+        let estimatedCostChf = nearingEolCostCache.get(costKey);
+        if (estimatedCostChf === undefined) {
+          const cost = await estimateReplacementCost(prisma, orgId, asset.type as AssetType, asset.topic);
+          estimatedCostChf = cost.bestEstimate.medianChf;
+          nearingEolCostCache.set(costKey, estimatedCostChf);
+        }
+
+        nearingEolAssets.push({
+          assetId: asset.id,
+          assetName: asset.name,
+          topic: asset.topic,
+          depreciationPct: dep.depreciationPct,
+          estimatedReplacementYear: replacementYear,
+          estimatedCostChf,
+        });
+      }
+      nearingEolAssets.sort((a, b) => a.estimatedReplacementYear - b.estimatedReplacementYear);
+
       if (!building) {
         // Building exists but no assets passed the capex filter — return empty schedule with diagnostics
         sendJson(res, 200, {
@@ -120,6 +161,7 @@ export function registerForecastingRoutes(router: Router) {
             totalProjectedChf: 0,
             schedule: [] as Array<{ year: number; totalChf: number; deductibleChf: number; capitalizedChf: number; assetCount: number; items: unknown[] }>,
             excludedAssets,
+            nearingEolAssets,
           },
         });
         return;
@@ -151,6 +193,7 @@ export function registerForecastingRoutes(router: Router) {
           totalProjectedChf: building.totalProjectedChf,
           schedule,
           excludedAssets,
+          nearingEolAssets,
         },
       });
     } catch (e) {

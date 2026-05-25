@@ -52,6 +52,7 @@ export default function CapexSchedulePanel({ buildingId }) {
   const [schedule, setSchedule] = useState(null);
   const [meta, setMeta] = useState(null);
   const [excludedAssets, setExcludedAssets] = useState([]);
+  const [nearingEolAssets, setNearingEolAssets] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -67,6 +68,7 @@ export default function CapexSchedulePanel({ buildingId }) {
       if (!res.ok) throw new Error(json?.error?.message || "Failed to load capex schedule");
       setSchedule(json.data?.schedule ?? []);
       setExcludedAssets(json.data?.excludedAssets ?? []);
+      setNearingEolAssets(json.data?.nearingEolAssets ?? []);
       setMeta({
         buildingName: json.data?.buildingName,
         totalProjectedChf: json.data?.totalProjectedChf,
@@ -84,6 +86,7 @@ export default function CapexSchedulePanel({ buildingId }) {
     if (buildingId) {
       setSchedule(null);
       setExcludedAssets([]);
+      setNearingEolAssets([]);
       fetchSchedule(buildingId);
     }
   }, [buildingId, fetchSchedule]);
@@ -239,6 +242,39 @@ export default function CapexSchedulePanel({ buildingId }) {
               {t("manager:capexSchedule.text.chartNote")}
             </p>
           </>
+        )}
+
+        {/* Nearing EOL beyond horizon */}
+        {!loading && nearingEolAssets.length > 0 && (
+          <div className="rounded-md border border-slate-200 bg-slate-50 p-3 space-y-2">
+            <div>
+              <p className="text-xs font-medium text-slate-700">
+                {t("manager:capexSchedule.text.nearingEolTitle", { toYear: meta?.toYear })}
+              </p>
+              <p className="text-xs text-slate-500 mt-0.5">
+                {t("manager:capexSchedule.text.nearingEolHint")}
+              </p>
+            </div>
+            <ul className="space-y-1">
+              {nearingEolAssets.map((a) => (
+                <li key={a.assetId} className="flex items-center justify-between gap-2 text-xs">
+                  <span className="flex items-center gap-1.5 min-w-0">
+                    <span className="shrink-0 inline-block w-1.5 h-1.5 rounded-full bg-slate-400" />
+                    <span className="font-medium text-slate-700 truncate">{a.assetName}</span>
+                    <span className="text-slate-400 shrink-0">
+                      · {t("manager:capexSchedule.text.nearingEolDepreciation", { pct: Math.round(a.depreciationPct) })}
+                    </span>
+                  </span>
+                  <span className="shrink-0 text-right text-slate-500 font-mono">
+                    {t("manager:capexSchedule.text.nearingEolYear", { year: a.estimatedReplacementYear })}
+                    {a.estimatedCostChf > 0 && (
+                      <span className="text-slate-400"> · CHF {formatChf(a.estimatedCostChf)}</span>
+                    )}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
       </div>
     </Panel>

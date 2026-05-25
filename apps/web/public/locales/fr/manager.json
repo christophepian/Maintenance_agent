@@ -878,7 +878,11 @@
       "totalLabel": "Total prévu",
       "chartNote": "Basé sur les durées de vie des actifs. Barre foncée = portion déductible fiscalement.",
       "excludedWarning": "{{count}} actif(s) exclu(s) — date d'installation manquante",
-      "missingDateHint": "définir la date d'installation dans l'inventaire des actifs"
+      "missingDateHint": "définir la date d'installation dans l'inventaire des actifs",
+      "nearingEolTitle": "Fin de vie approchante — au-delà de {{toYear}}",
+      "nearingEolHint": "Ces actifs sont dépréciés à ≥60% mais leur remplacement est hors horizon. À anticiper.",
+      "nearingEolYear": "prévu ~{{year}}",
+      "nearingEolDepreciation": "{{pct}}% déprécié"
     },
     "legend": {
       "deductible": "Déductible (entretien)",

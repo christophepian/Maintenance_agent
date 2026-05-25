@@ -878,7 +878,11 @@
       "totalLabel": "Total projected",
       "chartNote": "Derived from asset depreciation timelines. Darker bar = tax-deductible portion.",
       "excludedWarning": "{{count}} asset(s) excluded — missing installation date",
-      "missingDateHint": "set installation date in asset inventory"
+      "missingDateHint": "set installation date in asset inventory",
+      "nearingEolTitle": "Nearing end of useful life — beyond {{toYear}}",
+      "nearingEolHint": "These assets are ≥60% depreciated but not due within the projection horizon. Plan ahead.",
+      "nearingEolYear": "due ~{{year}}",
+      "nearingEolDepreciation": "{{pct}}% depreciated"
     },
     "legend": {
       "deductible": "Deductible (maintenance)",
