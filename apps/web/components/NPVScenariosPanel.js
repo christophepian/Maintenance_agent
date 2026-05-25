@@ -102,7 +102,7 @@ function ScenarioCard({ scenarioKey, label, hint, data, style, t, isRecommended,
           <Tooltip content={t("manager:npvScenarios.tooltip.npv")} />
         </p>
         <p className={cn("text-xl font-bold font-mono", style.value)}>
-          CHF {formatChf(npvChf)}
+          {formatChf(npvChf)}
         </p>
       </div>
 
@@ -112,11 +112,11 @@ function ScenarioCard({ scenarioKey, label, hint, data, style, t, isRecommended,
             NOI
             <Tooltip content={t("manager:npvScenarios.tooltip.noi")} />
           </span>
-          <p className="font-mono font-medium">CHF {formatChf(totalNoiChf)}</p>
+          <p className="font-mono font-medium">{formatChf(totalNoiChf)}</p>
         </div>
         <div>
           <span className="text-slate-400">Capex</span>
-          <p className="font-mono font-medium">CHF {formatChf(totalCapexChf)}</p>
+          <p className="font-mono font-medium">{formatChf(totalCapexChf)}</p>
         </div>
       </div>
 
@@ -128,7 +128,7 @@ function ScenarioCard({ scenarioKey, label, hint, data, style, t, isRecommended,
               <Tooltip content={t("manager:npvScenarios.tooltip.taxShield")} />
             </span>
             <p className="font-mono font-medium text-emerald-600">
-              +CHF {formatChf(totalTaxShieldChf)}
+              +{formatChf(totalTaxShieldChf)}
             </p>
           </div>
         </div>
@@ -237,7 +237,7 @@ export default function NPVScenariosPanel({ buildingId }) {
   // ── Derived values ────────────────────────────────────────────
 
   const subtitle = data
-    ? `${data.fromYear}–${data.toYear} · ${t("manager:npvScenarios.text.baseNoi")} CHF ${formatChf(data.baseAnnualNoiChf)}/yr`
+    ? `${data.fromYear}–${data.toYear} · ${t("manager:npvScenarios.text.baseNoi")} ${formatChf(data.baseAnnualNoiChf)}/yr`
     : undefined;
 
   const isIdenticalDeferInvest = data && Math.abs(data.scenarios.invest.npvChf - data.scenarios.defer.npvChf) /
@@ -246,6 +246,22 @@ export default function NPVScenariosPanel({ buildingId }) {
   const investNeglectDelta = data
     ? data.scenarios.invest.npvChf - data.scenarios.neglect.npvChf
     : 0;
+
+  // Breakdown: decompose the invest-vs-neglect NPV delta into its three drivers
+  // (all in discounted PV terms), computed from the yearly cash flows.
+  const investVsNeglect = (() => {
+    if (!data) return null;
+    const inv = data.scenarios.invest.yearlyFlows;
+    const neg = data.scenarios.neglect.yearlyFlows;
+    if (!inv || !neg || inv.length !== neg.length) return null;
+    let pvNoi = 0, pvCapex = 0, pvTax = 0;
+    for (let i = 0; i < inv.length; i++) {
+      pvNoi   += Math.round((inv[i].projectedNoiChf - neg[i].projectedNoiChf) * inv[i].discountFactor);
+      pvCapex += Math.round((inv[i].capexChf - neg[i].capexChf) * inv[i].discountFactor);
+      pvTax   += Math.round(inv[i].taxShieldChf * inv[i].discountFactor);
+    }
+    return { pvNoi, pvCapex, pvTax };
+  })();
 
   // Per-scenario plain-language summaries (client-side)
   function buildSummary(scenarioKey) {
@@ -428,24 +444,56 @@ export default function NPVScenariosPanel({ buildingId }) {
         {/* Scenario cards */}
         {!loading && data && (
           <>
-            {/* Delta callout */}
+            {/* Delta callout with breakdown */}
             {investNeglectDelta !== 0 && (
               <div className={cn(
-                "rounded-md border px-3 py-2 text-xs font-medium",
+                "rounded-md border px-3 py-2 space-y-1.5",
                 investNeglectDelta > 0
                   ? "border-emerald-200 bg-emerald-50 text-emerald-800"
                   : "border-red-200 bg-red-50 text-red-800",
               )}>
-                {investNeglectDelta > 0
-                  ? t("manager:npvScenarios.delta.investWins", {
-                      delta: formatChf(Math.abs(investNeglectDelta)),
-                      years: data.horizonYears,
-                    })
-                  : t("manager:npvScenarios.delta.neglectWins", {
-                      delta: formatChf(Math.abs(investNeglectDelta)),
-                      years: data.horizonYears,
-                    })
-                }
+                <p className="text-xs font-semibold">
+                  {investNeglectDelta > 0
+                    ? t("manager:npvScenarios.delta.investWins", {
+                        delta: formatChf(Math.abs(investNeglectDelta)),
+                        years: data.horizonYears,
+                      })
+                    : t("manager:npvScenarios.delta.neglectWins", {
+                        delta: formatChf(Math.abs(investNeglectDelta)),
+                        years: data.horizonYears,
+                      })
+                  }
+                </p>
+                {investVsNeglect && (
+                  <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs opacity-80 font-mono">
+                    {investVsNeglect.pvNoi !== 0 && (
+                      <span>
+                        {t("manager:npvScenarios.delta.breakdown.noi")}
+                        {" "}
+                        <span className="font-semibold">
+                          {investVsNeglect.pvNoi > 0 ? "+" : ""}{formatChf(investVsNeglect.pvNoi)}
+                        </span>
+                      </span>
+                    )}
+                    {investVsNeglect.pvTax > 0 && (
+                      <span>
+                        {t("manager:npvScenarios.delta.breakdown.taxShield")}
+                        {" "}
+                        <span className="font-semibold">+{formatChf(investVsNeglect.pvTax)}</span>
+                      </span>
+                    )}
+                    {investVsNeglect.pvCapex !== 0 && (
+                      <span>
+                        {t("manager:npvScenarios.delta.breakdown.capex")}
+                        {" "}
+                        <span className="font-semibold">
+                          {investVsNeglect.pvCapex > 0 ? "+" : ""}{formatChf(-investVsNeglect.pvCapex)}
+                          {investVsNeglect.pvCapex > 0 ? " ↑earlier" : " ↓later"}
+                        </span>
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 

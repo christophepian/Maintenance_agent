@@ -69,10 +69,10 @@ export default function CapexSchedulePanel({ buildingId }) {
 
   const totalDeductibleChf = schedule ? schedule.reduce((s, b) => s + b.deductibleChf, 0) : 0;
   const subtitle = meta
-    ? `${meta.fromYear}–${meta.toYear} · ${t("manager:capexSchedule.text.totalLabel")} CHF ${formatChf(meta.totalProjectedChf)}`
+    ? `${meta.fromYear}–${meta.toYear} · ${t("manager:capexSchedule.text.totalLabel")} ${formatChf(meta.totalProjectedChf)}`
     : undefined;
   const subtitleDetail = schedule && totalDeductibleChf > 0
-    ? `CHF ${formatChf(totalDeductibleChf)} ${t("manager:capexSchedule.legend.deductible").toLowerCase()} · CHF ${formatChf(meta.totalProjectedChf - totalDeductibleChf)} ${t("manager:capexSchedule.legend.capitalized").toLowerCase()}`
+    ? `${formatChf(totalDeductibleChf)} ${t("manager:capexSchedule.legend.deductible").toLowerCase()} · ${formatChf(meta.totalProjectedChf - totalDeductibleChf)} ${t("manager:capexSchedule.legend.capitalized").toLowerCase()}`
     : undefined;
 
   const missingDateCount = excludedAssets.filter((a) => a.reason === "MISSING_INSTALLATION_DATE").length;
@@ -170,7 +170,7 @@ export default function CapexSchedulePanel({ buildingId }) {
                           bucket.totalChf > 0 ? "text-amber-800" : "text-slate-300",
                         )}
                       >
-                        {bucket.totalChf > 0 ? `CHF ${formatChf(bucket.totalChf)}` : "—"}
+                        {bucket.totalChf > 0 ? formatChf(bucket.totalChf) : "—"}
                       </span>
                     </div>
 
@@ -193,7 +193,7 @@ export default function CapexSchedulePanel({ buildingId }) {
                             </span>
                             {item.estimatedCostChf > 0 && (
                               <span className="shrink-0 font-mono text-slate-400">
-                                CHF {formatChf(item.estimatedCostChf)}
+                                {formatChf(item.estimatedCostChf)}
                               </span>
                             )}
                           </div>
@@ -255,7 +255,7 @@ export default function CapexSchedulePanel({ buildingId }) {
                   {/* Cost */}
                   {a.estimatedCostChf > 0 && (
                     <span className="shrink-0 w-24 text-right font-mono text-slate-400">
-                      CHF {formatChf(a.estimatedCostChf)}
+                      {formatChf(a.estimatedCostChf)}
                     </span>
                   )}
                 </div>

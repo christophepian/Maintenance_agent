@@ -937,14 +937,19 @@
       "identicalScenarios": "No capex falls in the first {{years}} years of this building's schedule — Invest and Defer are equivalent under current assumptions. Try a shorter defer window to see a difference."
     },
     "summary": {
-      "invest": "Executing capex on schedule outperforms neglect by CHF {{delta}} over the projection horizon. Maximises long-term asset value.",
+      "invest": "Executing capex on schedule outperforms neglect by {{delta}} over the projection horizon. Maximises long-term asset value.",
       "investNeutral": "Investing on schedule maintains asset condition. No significant NPV difference vs neglect under current assumptions.",
-      "defer": "Deferring {{years}} years costs CHF {{diff}} in NPV vs investing on schedule. Reduces near-term cash outflow but delays value protection.",
-      "neglect": "Neglecting capex underperforms investment by CHF {{delta}}. NOI erosion and end-of-horizon backlog cost compound over time."
+      "defer": "Deferring {{years}} years costs {{diff}} in NPV vs investing on schedule. Reduces near-term cash outflow but delays value protection.",
+      "neglect": "Neglecting capex underperforms investment by {{delta}}. NOI erosion and end-of-horizon backlog cost compound over time."
     },
     "delta": {
-      "investWins": "Investing outperforms neglect by CHF {{delta}} over {{years}} years.",
-      "neglectWins": "Neglect produces a higher NPV by CHF {{delta}} over {{years}} years — review capex estimates and income assumptions."
+      "investWins": "Investing outperforms neglect by {{delta}} over {{years}} years.",
+      "neglectWins": "Neglect produces a higher NPV by {{delta}} over {{years}} years — review capex estimates and income assumptions.",
+      "breakdown": {
+        "noi": "NOI erosion saved (PV):",
+        "taxShield": "Tax shield (PV):",
+        "capex": "Capex timing (PV):"
+      }
     },
     "recommendation": {
       "badge": "Recommended"
