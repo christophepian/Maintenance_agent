@@ -172,12 +172,18 @@ export function registerForecastingRoutes(router: Router) {
         ? Number(url.searchParams.get("horizonYears")) : undefined;
       const deferYears = url.searchParams.get("deferYears")
         ? Number(url.searchParams.get("deferYears")) : undefined;
+      const propertyValueChf = url.searchParams.get("propertyValueChf")
+        ? Number(url.searchParams.get("propertyValueChf")) : undefined;
+      const neglectNoiErosionRatePct = url.searchParams.get("neglectNoiErosionRatePct")
+        ? Number(url.searchParams.get("neglectNoiErosionRatePct")) : undefined;
 
       const result = await computeNPVScenarios(prisma, orgId, params.id, {
         discountRatePct,
         incomeGrowthRatePct,
         horizonYears,
         deferYears,
+        propertyValueChf,
+        neglectNoiErosionRatePct,
       });
       sendJson(res, 200, { data: result });
     } catch (e: any) {

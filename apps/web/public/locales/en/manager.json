@@ -892,7 +892,9 @@
     "controls": {
       "discountRate": "Discount rate",
       "incomeGrowth": "Income growth",
-      "horizon": "Horizon"
+      "horizon": "Horizon",
+      "propertyValue": "Est. property value",
+      "propertyValuePlaceholder": "optional"
     },
     "scenario": {
       "invest": "Invest",
@@ -900,13 +902,15 @@
       "defer": "Defer {{years}} yrs",
       "deferHint": "Near-term replacements pushed back {{years}} years",
       "neglect": "Neglect",
-      "neglectHint": "No ongoing capex — full backlog charged as terminal cost at horizon end"
+      "neglectHint": "No ongoing capex — NOI erodes after grace period; backlog charged at horizon end or at sale"
     },
     "text": {
       "loading": "Computing scenarios…",
       "selectBuilding": "Select a building in the NOI panel above.",
       "baseNoi": "Base NOI",
-      "footnote": "Discount rate {{discount}}% · Income growth {{growth}}% · Standard DCF, cash flows at end of each year."
+      "footnote": "Discount rate {{discount}}% · Income growth {{growth}}% · Standard DCF, cash flows at end of each year.",
+      "terminalValueMissing": "Terminal value impairment not modeled — enter est. property value above to include sale price impact",
+      "neglectErosion": "Neglect NOI erodes {{rate}}%/yr after yr {{offset}}."
     }
   },
   "noiTrend": {

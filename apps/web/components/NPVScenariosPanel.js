@@ -121,12 +121,13 @@ export default function NPVScenariosPanel({ buildingId }) {
   const [discountRatePct, setDiscountRatePct] = useState(4);
   const [incomeGrowthRatePct, setIncomeGrowthRatePct] = useState(2);
   const [horizonYears, setHorizonYears] = useState(10);
+  const [propertyValueChf, setPropertyValueChf] = useState("");
 
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const fetchScenarios = useCallback(async (id, discount, growth, horizon) => {
+  const fetchScenarios = useCallback(async (id, discount, growth, horizon, propertyValue) => {
     if (!id) return;
     setLoading(true);
     setError("");
@@ -135,6 +136,7 @@ export default function NPVScenariosPanel({ buildingId }) {
         discountRatePct: String(discount),
         incomeGrowthRatePct: String(growth),
         horizonYears: String(horizon),
+        ...(propertyValue > 0 ? { propertyValueChf: String(propertyValue) } : {}),
       }).toString();
       const res = await fetch(`/api/buildings/${id}/npv-scenarios?${qs}`, {
         headers: authHeaders(),
@@ -153,9 +155,10 @@ export default function NPVScenariosPanel({ buildingId }) {
   useEffect(() => {
     if (buildingId) {
       setData(null);
-      fetchScenarios(buildingId, discountRatePct, incomeGrowthRatePct, horizonYears);
+      const parsed = Number(propertyValueChf);
+      fetchScenarios(buildingId, discountRatePct, incomeGrowthRatePct, horizonYears, isFinite(parsed) ? parsed : 0);
     }
-  }, [buildingId, discountRatePct, incomeGrowthRatePct, horizonYears, fetchScenarios]);
+  }, [buildingId, discountRatePct, incomeGrowthRatePct, horizonYears, propertyValueChf, fetchScenarios]);
 
   const subtitle = data
     ? `${data.fromYear}–${data.toYear} · ${t("manager:npvScenarios.text.baseNoi")} CHF ${formatChf(data.baseAnnualNoiChf)}/yr`
@@ -203,6 +206,23 @@ export default function NPVScenariosPanel({ buildingId }) {
               ))}
             </div>
           </div>
+          <div className="flex items-center gap-3">
+            <label className="text-xs text-slate-600 w-32 shrink-0">
+              {t("manager:npvScenarios.controls.propertyValue")}
+            </label>
+            <div className="flex-1 flex items-center gap-1">
+              <span className="text-xs text-slate-400">CHF</span>
+              <input
+                type="number"
+                min={0}
+                step={50000}
+                value={propertyValueChf}
+                onChange={(e) => setPropertyValueChf(e.target.value)}
+                placeholder={t("manager:npvScenarios.controls.propertyValuePlaceholder")}
+                className="flex-1 text-xs border border-slate-300 rounded px-2 py-0.5 font-mono text-slate-700 focus:outline-none focus:border-slate-500"
+              />
+            </div>
+          </div>
         </div>
 
         {/* Error */}
@@ -245,19 +265,31 @@ export default function NPVScenariosPanel({ buildingId }) {
                 data={data.scenarios.defer}
                 style={SCENARIO_STYLES.defer}
               />
-              <ScenarioCard
-                scenario="neglect"
-                label={t("manager:npvScenarios.scenario.neglect")}
-                hint={t("manager:npvScenarios.scenario.neglectHint")}
-                data={data.scenarios.neglect}
-                style={SCENARIO_STYLES.neglect}
-              />
+              <div className="flex flex-col gap-1">
+                <ScenarioCard
+                  scenario="neglect"
+                  label={t("manager:npvScenarios.scenario.neglect")}
+                  hint={t("manager:npvScenarios.scenario.neglectHint")}
+                  data={data.scenarios.neglect}
+                  style={SCENARIO_STYLES.neglect}
+                />
+                {!data.terminalValueModeled && (
+                  <p className="text-xs text-slate-400 italic px-1">
+                    {t("manager:npvScenarios.text.terminalValueMissing")}
+                  </p>
+                )}
+              </div>
             </div>
 
             <p className="text-xs text-slate-400">
               {t("manager:npvScenarios.text.footnote", {
                 discount: data.discountRatePct,
                 growth: data.incomeGrowthRatePct,
+              })}
+              {" · "}
+              {t("manager:npvScenarios.text.neglectErosion", {
+                rate: data.neglectNoiErosionRatePct,
+                offset: data.deferYears,
               })}
             </p>
 

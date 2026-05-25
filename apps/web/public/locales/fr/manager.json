@@ -892,7 +892,9 @@
     "controls": {
       "discountRate": "Taux d'actualisation",
       "incomeGrowth": "Croissance des revenus",
-      "horizon": "Horizon"
+      "horizon": "Horizon",
+      "propertyValue": "Valeur estimée du bien",
+      "propertyValuePlaceholder": "optionnel"
     },
     "scenario": {
       "invest": "Investir",
@@ -900,13 +902,15 @@
       "defer": "Reporter {{years}} ans",
       "deferHint": "Remplacements proches reportés de {{years}} ans",
       "neglect": "Négliger",
-      "neglectHint": "Aucune dépense courante — tout le passif imputé en coût terminal en fin d'horizon"
+      "neglectHint": "Aucune dépense courante — REN s'érode après la période de grâce ; passif imputé en fin d'horizon ou à la vente"
     },
     "text": {
       "loading": "Calcul des scénarios…",
       "selectBuilding": "Sélectionnez un bâtiment dans le panneau REN ci-dessus.",
       "baseNoi": "REN de base",
-      "footnote": "Taux d'actualisation {{discount}}% · Croissance des revenus {{growth}}% · DCF standard, flux en fin d'année."
+      "footnote": "Taux d'actualisation {{discount}}% · Croissance des revenus {{growth}}% · DCF standard, flux en fin d'année.",
+      "terminalValueMissing": "Dépréciation de la valeur terminale non modélisée — saisissez la valeur estimée ci-dessus pour inclure l'impact sur le prix de vente",
+      "neglectErosion": "REN Négliger s'érode de {{rate}}%/an après l'an {{offset}}."
     }
   },
   "noiTrend": {

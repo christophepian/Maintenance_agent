@@ -36,6 +36,8 @@ export interface NPVScenarioResult {
   npvChf: number;
   totalCapexChf: number;
   totalNoiChf: number;
+  /** PV of terminal property sale value included in npvChf (0 when not modeled) */
+  terminalValuePvChf: number;
   yearlyFlows: NPVYearlyFlow[];
 }
 
@@ -56,6 +58,12 @@ export interface NPVScenariosResult {
     defer: NPVScenarioResult;
     neglect: NPVScenarioResult;
   };
+  /** True when property value was provided and terminal sale value is included in scenario NPVs */
+  terminalValueModeled: boolean;
+  /** Estimated property value used for terminal value computation, if provided */
+  propertyValueChf?: number;
+  /** Annual NOI erosion rate applied to the Neglect scenario, % (default 1) */
+  neglectNoiErosionRatePct: number;
 }
 
 export interface NPVOptions {
@@ -67,6 +75,10 @@ export interface NPVOptions {
   horizonYears?: number;
   /** Years by which near-term replacements are deferred in the Defer scenario — default 3 */
   deferYears?: number;
+  /** Current market / appraisal value of the building in CHF — enables terminal value modeling */
+  propertyValueChf?: number;
+  /** Annual NOI erosion rate for the Neglect scenario, % — default 1 */
+  neglectNoiErosionRatePct?: number;
 }
 
 // ─── Helpers ───────────────────────────────────────────────────
@@ -88,16 +100,36 @@ function buildScenario(
   incomeGrowthRatePct: number,
   discountRatePct: number,
   capexByYear: Map<number, number>,
+  opts?: {
+    /** Annual NOI erosion applied after erosionStartOffset years, % */
+    noiErosionRatePct?: number;
+    /** yearsAhead offset after which erosion begins (inclusive) */
+    erosionStartOffset?: number;
+    /** Property value at horizon end — discounted and added to NPV */
+    terminalValueChf?: number;
+  },
 ): NPVScenarioResult {
   const flows: NPVYearlyFlow[] = [];
   let cumulativePvChf = 0;
 
   for (let year = fromYear; year <= toYear; year++) {
     const yearsAhead = year - fromYear;
-    const projectedNoiChf = Math.round(baseAnnualNoiChf * growthFactor(incomeGrowthRatePct, yearsAhead));
+
+    // NOI with optional erosion after erosionStartOffset years
+    const erosionOffset = opts?.erosionStartOffset ?? 0;
+    const erosionYears = (opts?.noiErosionRatePct && yearsAhead > erosionOffset)
+      ? yearsAhead - erosionOffset
+      : 0;
+    const erosionFactor = erosionYears > 0 && opts?.noiErosionRatePct
+      ? Math.pow(1 - opts.noiErosionRatePct / 100, erosionYears)
+      : 1;
+    const projectedNoiChf = Math.round(
+      baseAnnualNoiChf * growthFactor(incomeGrowthRatePct, yearsAhead) * erosionFactor,
+    );
+
     const capexChf = capexByYear.get(year) ?? 0;
     const netCashFlowChf = projectedNoiChf - capexChf;
-    const df = discountFactor(discountRatePct, yearsAhead + 1); // convention: first cash flow at end of year 1
+    const df = discountFactor(discountRatePct, yearsAhead + 1);
     const pvChf = Math.round(netCashFlowChf * df);
     cumulativePvChf += pvChf;
 
@@ -114,9 +146,20 @@ function buildScenario(
 
   const totalNoiChf = flows.reduce((s, f) => s + f.projectedNoiChf, 0);
   const totalCapexChf = flows.reduce((s, f) => s + f.capexChf, 0);
-  const npvChf = flows.reduce((s, f) => s + f.pvChf, 0);
+  const cashFlowNpvChf = flows.reduce((s, f) => s + f.pvChf, 0);
 
-  return { npvChf, totalCapexChf, totalNoiChf, yearlyFlows: flows };
+  // Terminal sale value — discounted from end of horizon (after last cash flow)
+  let terminalValuePvChf = 0;
+  if (opts?.terminalValueChf != null) {
+    const horizonLength = toYear - fromYear + 1;
+    terminalValuePvChf = Math.round(
+      opts.terminalValueChf * discountFactor(discountRatePct, horizonLength),
+    );
+  }
+
+  const npvChf = cashFlowNpvChf + terminalValuePvChf;
+
+  return { npvChf, totalCapexChf, totalNoiChf, terminalValuePvChf, yearlyFlows: flows };
 }
 
 // ─── Main function ─────────────────────────────────────────────
@@ -131,6 +174,10 @@ export async function computeNPVScenarios(
   const incomeGrowthRatePct = options.incomeGrowthRatePct ?? 2;
   const horizonYears = Math.min(20, Math.max(1, options.horizonYears ?? 10));
   const deferYears = Math.min(10, Math.max(1, options.deferYears ?? 3));
+  const propertyValueChf = (options.propertyValueChf != null && options.propertyValueChf > 0)
+    ? options.propertyValueChf : undefined;
+  const neglectNoiErosionRatePct = options.neglectNoiErosionRatePct ?? 1;
+  const terminalValueModeled = propertyValueChf != null;
 
   const currentYear = new Date().getFullYear();
   const fromYear = currentYear;
@@ -274,19 +321,36 @@ export async function computeNPVScenarios(
     }
   }
 
-  // NEGLECT: no ongoing capex, but all deferred items land as a terminal liability
-  // at the final year of the horizon. This represents the maintenance backlog a
-  // buyer would discount from the purchase price (or that you must eventually pay).
+  // NEGLECT: no ongoing capex. The capex backlog is either:
+  //   • charged as a terminal property value deduction (when propertyValueChf is known), or
+  //   • charged as a cash outflow at horizon end (when propertyValueChf is unknown).
+  // This avoids double-counting: if we know the sale value, the buyer deducts maintenance debt
+  // from the price (terminal value impairment); otherwise we show it as an explicit cash cost.
+  const capexBacklog = [...investCapex.values()].reduce((s, v) => s + v, 0);
   const neglectCapex = new Map<number, number>();
-  const terminalLiability = allItems.reduce((s, i) => s + i.estimatedCostChf, 0);
-  if (terminalLiability > 0) {
-    neglectCapex.set(toYear, terminalLiability);
+  if (!terminalValueModeled && capexBacklog > 0) {
+    neglectCapex.set(toYear, capexBacklog);
   }
 
   // ── 5. Compute each scenario ───────────────────────────────────
-  const invest = buildScenario(fromYear, toYear, baseAnnualNoiChf, incomeGrowthRatePct, discountRatePct, investCapex);
-  const defer = buildScenario(fromYear, toYear, baseAnnualNoiChf, incomeGrowthRatePct, discountRatePct, deferCapex);
-  const neglect = buildScenario(fromYear, toYear, baseAnnualNoiChf, incomeGrowthRatePct, discountRatePct, neglectCapex);
+  const invest = buildScenario(
+    fromYear, toYear, baseAnnualNoiChf, incomeGrowthRatePct, discountRatePct, investCapex,
+    { terminalValueChf: terminalValueModeled ? propertyValueChf : undefined },
+  );
+  const defer = buildScenario(
+    fromYear, toYear, baseAnnualNoiChf, incomeGrowthRatePct, discountRatePct, deferCapex,
+    { terminalValueChf: terminalValueModeled ? propertyValueChf : undefined },
+  );
+  const neglect = buildScenario(
+    fromYear, toYear, baseAnnualNoiChf, incomeGrowthRatePct, discountRatePct, neglectCapex,
+    {
+      noiErosionRatePct: neglectNoiErosionRatePct,
+      erosionStartOffset: deferYears,
+      terminalValueChf: terminalValueModeled
+        ? Math.max(0, propertyValueChf! - capexBacklog)
+        : undefined,
+    },
+  );
 
   return {
     buildingId,
@@ -300,5 +364,8 @@ export async function computeNPVScenarios(
     fromYear,
     toYear,
     scenarios: { invest, defer, neglect },
+    terminalValueModeled,
+    propertyValueChf,
+    neglectNoiErosionRatePct,
   };
 }
