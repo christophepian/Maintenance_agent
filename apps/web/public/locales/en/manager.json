@@ -900,7 +900,7 @@
       "defer": "Defer {{years}} yrs",
       "deferHint": "Near-term replacements pushed back {{years}} years",
       "neglect": "Neglect",
-      "neglectHint": "No capex spending — deferred liability only"
+      "neglectHint": "No ongoing capex — full backlog charged as terminal cost at horizon end"
     },
     "text": {
       "loading": "Computing scenarios…",

@@ -274,8 +274,14 @@ export async function computeNPVScenarios(
     }
   }
 
-  // NEGLECT: no capex at all
+  // NEGLECT: no ongoing capex, but all deferred items land as a terminal liability
+  // at the final year of the horizon. This represents the maintenance backlog a
+  // buyer would discount from the purchase price (or that you must eventually pay).
   const neglectCapex = new Map<number, number>();
+  const terminalLiability = allItems.reduce((s, i) => s + i.estimatedCostChf, 0);
+  if (terminalLiability > 0) {
+    neglectCapex.set(toYear, terminalLiability);
+  }
 
   // ── 5. Compute each scenario ───────────────────────────────────
   const invest = buildScenario(fromYear, toYear, baseAnnualNoiChf, incomeGrowthRatePct, discountRatePct, investCapex);

@@ -900,7 +900,7 @@
       "defer": "Reporter {{years}} ans",
       "deferHint": "Remplacements proches reportés de {{years}} ans",
       "neglect": "Négliger",
-      "neglectHint": "Aucune dépense d'investissement — passif différé uniquement"
+      "neglectHint": "Aucune dépense courante — tout le passif imputé en coût terminal en fin d'horizon"
     },
     "text": {
       "loading": "Calcul des scénarios…",
