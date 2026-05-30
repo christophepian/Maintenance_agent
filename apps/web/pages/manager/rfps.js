@@ -47,11 +47,11 @@ function buildRfpColumns(t) {
     render: (rfp) =>
       rfp.request ? (
         <span className="text-sm">
-          <span className="font-medium text-slate-900">#{rfp.request.requestNumber}</span>
-          <span className="block text-xs text-slate-500 max-w-[200px] truncate">{rfp.request.description}</span>
+          <span className="font-medium text-foreground">#{rfp.request.requestNumber}</span>
+          <span className="block text-xs text-muted max-w-[200px] truncate">{rfp.request.description}</span>
         </span>
       ) : (
-        <span className="text-xs text-slate-400">{t("manager:rfps.text.noRequestLinked")}</span>
+        <span className="text-xs text-foreground-dim">{t("manager:rfps.text.noRequestLinked")}</span>
       ),
   },
   {
@@ -59,16 +59,16 @@ function buildRfpColumns(t) {
     label: t("manager:rfps.col.category"),
     sortable: true,
     defaultVisible: true,
-    render: (rfp) => <span className="text-sm text-slate-700">{rfp.category || "\u2014"}</span>,
+    render: (rfp) => <span className="text-sm text-muted-dark">{rfp.category || "\u2014"}</span>,
   },
   {
     id: "location",
     label: t("manager:rfps.col.buildingUnit"),
     defaultVisible: true,
     render: (rfp) => (
-      <span className="text-sm text-slate-700">
+      <span className="text-sm text-muted-dark">
         {rfp.building?.name || "\u2014"}
-        {rfp.unit && <span className="text-slate-400"> / {rfp.unit.unitNumber}</span>}
+        {rfp.unit && <span className="text-foreground-dim"> / {rfp.unit.unitNumber}</span>}
       </span>
     ),
   },
@@ -85,7 +85,7 @@ function buildRfpColumns(t) {
     sortable: true,
     defaultVisible: true,
     className: "text-center",
-    render: (rfp) => <span className="text-sm text-slate-700">{rfp.invites?.length ?? 0}</span>,
+    render: (rfp) => <span className="text-sm text-muted-dark">{rfp.invites?.length ?? 0}</span>,
   },
   {
     id: "quotes",
@@ -94,7 +94,7 @@ function buildRfpColumns(t) {
     defaultVisible: true,
     className: "text-center",
     render: (rfp) => (
-      <span className={rfp.quoteCount > 0 ? "font-medium text-green-700 text-sm" : "text-sm text-slate-700"}>
+      <span className={rfp.quoteCount > 0 ? "font-medium text-green-700 text-sm" : "text-sm text-muted-dark"}>
         {rfp.quoteCount ?? 0}
       </span>
     ),
@@ -104,7 +104,7 @@ function buildRfpColumns(t) {
     label: t("manager:rfps.col.created"),
     sortable: true,
     defaultVisible: true,
-    render: (rfp) => <span className="text-sm text-slate-500">{formatDate(rfp.createdAt)}</span>,
+    render: (rfp) => <span className="text-sm text-muted">{formatDate(rfp.createdAt)}</span>,
   },
 ];
 }
@@ -149,7 +149,7 @@ export default function ManagerRfpsPage() {
         />
         <PageContent>
           <div className="mb-4">
-            <Link href="/manager" className="text-sm font-medium text-slate-600 hover:text-slate-900">
+            <Link href="/manager" className="text-sm font-medium text-muted-text hover:text-foreground">
               ← Back to Dashboard
             </Link>
           </div>
@@ -169,7 +169,7 @@ export default function ManagerRfpsPage() {
           </ScrollableTabs>
 
           {loading ? (
-            <p className="px-4 py-8 text-center text-sm text-slate-500">{t("manager:rfps.text.loading")}</p>
+            <p className="px-4 py-8 text-center text-sm text-muted">{t("manager:rfps.text.loading")}</p>
           ) : (
               <ConfigurableTable
                 tableId="manager-rfps"
@@ -181,7 +181,7 @@ export default function ManagerRfpsPage() {
                 onSort={handleSort}
                 onRowClick={(rfp) => router.push(`/manager/rfps/${rfp.id}`)}
                 emptyState={
-                  <p className="px-4 py-8 text-center text-sm text-slate-400">
+                  <p className="px-4 py-8 text-center text-sm text-foreground-dim">
                     No RFPs found{activeTab !== "ALL" ? ` with status ${activeTab}` : ""}. RFPs are created automatically when the legal engine determines an obligation.
                   </p>
                 }

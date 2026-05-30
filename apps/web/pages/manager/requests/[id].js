@@ -170,7 +170,7 @@ function StatusPipeline({ status, jobStatus, payingParty }) {
   const isTenantFunded = payingParty === "TENANT";
 
   function connectorColor(i) {
-    if (i >= idx) return "bg-slate-200";
+    if (i >= idx) return "bg-surface-border";
     if (isRejected && !isTenantFunded) return "bg-red-300";
     if (isTenantFunded && isRejected) return "bg-orange-300";
     return "bg-green-400";
@@ -185,7 +185,7 @@ function StatusPipeline({ status, jobStatus, payingParty }) {
     if (tenantFundedHere) return "bg-orange-500 border-orange-600";
     if (isCurrent)        return "bg-indigo-500 border-indigo-600 ring-4 ring-indigo-100";
     if (reached)          return "bg-green-500 border-green-600";
-    return "bg-slate-200 border-muted-ring";
+    return "bg-surface-border border-muted-ring";
   }
 
   function getLabelText(stage, i) {
@@ -233,7 +233,7 @@ function StatusPipeline({ status, jobStatus, payingParty }) {
             <span className={cn("text-sm truncate", getLabelCls(idx))}>{getLabelText(currentStage, idx)}</span>
             {nextStage && (
               <>
-                <svg className="h-3.5 w-3.5 text-slate-300 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <svg className="h-3.5 w-3.5 text-foreground-dim shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                 </svg>
                 <div className={cn("h-3 w-3 rounded-full border-2 shrink-0", getDotCls(idx + 1))} />
@@ -327,7 +327,7 @@ function AssetRecommendationContent({ applianceId, repairReplaceData, requestEst
     return (
       <div className="py-4 text-center">
         <p className="text-sm text-foreground-dim m-0">{t("manager:requestsId.text.noRepairvsreplaceDataAvailableForThisAsset")}</p>
-        <p className="text-xs text-slate-300 mt-1 m-0">{t("manager:requestsId.text.assetInventoryRecordsAreRequiredForAnalysis")}</p>
+        <p className="text-xs text-foreground-dim mt-1 m-0">{t("manager:requestsId.text.assetInventoryRecordsAreRequiredForAnalysis")}</p>
       </div>
     );
   }

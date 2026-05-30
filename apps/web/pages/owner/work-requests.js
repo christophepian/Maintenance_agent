@@ -57,14 +57,14 @@ function buildWrColumns(t) {
     label: t("owner:workRequests.col.col"),
     sortable: true,
     alwaysVisible: true,
-    render: (r) => <span className="font-medium text-slate-900">{r.requestNumber ? `#${r.requestNumber}` : "\u2014"}</span>,
+    render: (r) => <span className="font-medium text-foreground">{r.requestNumber ? `#${r.requestNumber}` : "\u2014"}</span>,
   },
   {
     id: "category",
     label: t("owner:workRequests.col.category"),
     sortable: true,
     defaultVisible: true,
-    render: (r) => <span className="text-sm text-slate-700">{r.category || "\u2014"}</span>,
+    render: (r) => <span className="text-sm text-muted-dark">{r.category || "\u2014"}</span>,
   },
   {
     id: "building",
@@ -72,9 +72,9 @@ function buildWrColumns(t) {
     sortable: true,
     defaultVisible: true,
     render: (r) => (
-      <span className="text-sm text-slate-700">
+      <span className="text-sm text-muted-dark">
         {r.buildingName || "\u2014"}
-        {r.unitNumber && <span className="text-slate-400"> / {r.unitNumber}</span>}
+        {r.unitNumber && <span className="text-foreground-dim"> / {r.unitNumber}</span>}
       </span>
     ),
   },
@@ -91,20 +91,20 @@ function buildWrColumns(t) {
     sortable: true,
     defaultVisible: true,
     className: "text-right",
-    render: (r) => <span className="tabular-nums text-sm font-mono text-slate-700">{typeof r.estimatedCost === "number" ? formatChf(r.estimatedCost) : "\u2014"}</span>,
+    render: (r) => <span className="tabular-nums text-sm font-mono text-muted-dark">{typeof r.estimatedCost === "number" ? formatChf(r.estimatedCost) : "\u2014"}</span>,
   },
   {
     id: "contractor",
     label: t("owner:workRequests.col.contractor"),
     defaultVisible: true,
-    render: (r) => <span className="text-sm text-slate-600">{r.assignedContractorName || "\u2014"}</span>,
+    render: (r) => <span className="text-sm text-muted-text">{r.assignedContractorName || "\u2014"}</span>,
   },
   {
     id: "createdAt",
     label: t("owner:workRequests.col.created"),
     sortable: true,
     defaultVisible: true,
-    render: (r) => <span className="text-sm text-slate-500">{formatDate(r.createdAt)}</span>,
+    render: (r) => <span className="text-sm text-muted">{formatDate(r.createdAt)}</span>,
   },
 ];
 }
@@ -222,7 +222,7 @@ export default function OwnerWorkRequestsPage() {
                 >
                   {t(`owner:workRequests.tabs.${tab.key.toLowerCase()}`)}
                   {count > 0 && (
-                    <span className={cn("ml-1.5 inline-flex items-center rounded-full px-1.5 py-0.5 text-xs font-semibold", isActive ? "bg-indigo-100 text-indigo-700" : "bg-slate-100 text-slate-600")}>
+                    <span className={cn("ml-1.5 inline-flex items-center rounded-full px-1.5 py-0.5 text-xs font-semibold", isActive ? "bg-indigo-100 text-indigo-700" : "bg-surface-hover text-muted-text")}>
                       {count}
                     </span>
                   )}
@@ -236,12 +236,12 @@ export default function OwnerWorkRequestsPage() {
 
           {/* ── Loading ── */}
           {loading && (
-            <p className="text-sm text-slate-500">{t("owner:work_Requests.text.loadingRequests")}</p>
+            <p className="text-sm text-muted">{t("owner:work_Requests.text.loadingRequests")}</p>
           )}
 
           {/* ── Empty ── */}
           {!loading && !error && filteredRequests.length === 0 && (
-            <div className="rounded-lg border border-slate-200 bg-slate-50 p-6 text-center text-slate-500 text-sm">
+            <div className="rounded-lg border border-surface-border bg-surface-subtle p-6 text-center text-muted text-sm">
               No requests found{activeTabKey !== "ALL" ? " for this filter" : ""}.
             </div>
           )}
@@ -256,20 +256,20 @@ export default function OwnerWorkRequestsPage() {
                     key={r.id}
                     type="button"
                     onClick={() => router.push(`/owner/requests/${r.id}`)}
-                    className="w-full rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm hover:bg-slate-50 transition-colors"
+                    className="w-full rounded-2xl border border-surface-border bg-surface p-4 text-left shadow-sm hover:bg-surface-subtle transition-colors"
                   >
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-slate-900">{r.category || "—"}</p>
-                      <p className="text-xs text-slate-500 mt-0.5">
+                      <p className="text-sm font-medium text-foreground">{r.category || "—"}</p>
+                      <p className="text-xs text-muted mt-0.5">
                         {r.buildingName || "—"}{r.unitNumber ? ` / ${r.unitNumber}` : ""}
                       </p>
                     </div>
                     <div className="mt-3 flex flex-wrap items-center gap-2">
                       <StatusBadge status={r.status} />
                       {typeof r.estimatedCost === "number" && (
-                        <span className="text-xs font-medium text-slate-600">{formatChf(r.estimatedCost)}</span>
+                        <span className="text-xs font-medium text-muted-text">{formatChf(r.estimatedCost)}</span>
                       )}
-                      <span className="text-xs text-slate-500">{formatDate(r.createdAt)}</span>
+                      <span className="text-xs text-muted">{formatDate(r.createdAt)}</span>
                     </div>
                   </button>
                 ))}

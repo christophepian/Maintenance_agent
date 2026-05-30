@@ -346,9 +346,9 @@ export default function ChartOfAccountsPage() {
                   )}
 
                   {/* Inline create form */}
-                  <form onSubmit={handleCreateET} className="flex items-end gap-3 border-t border-slate-200 p-4">
+                  <form onSubmit={handleCreateET} className="flex items-end gap-3 border-t border-surface-border p-4">
                     <div className="flex-[2]">
-                      <label className="mb-1 block text-xs font-medium text-slate-500">{t("manager:financeChart_Of_Accounts.text.name")}</label>
+                      <label className="mb-1 block text-xs font-medium text-muted">{t("manager:financeChart_Of_Accounts.text.name")}</label>
                       <input
                         className="input"
                         value={newET.name}
@@ -357,7 +357,7 @@ export default function ChartOfAccountsPage() {
                       />
                     </div>
                     <div className="flex-1">
-                      <label className="mb-1 block text-xs font-medium text-slate-500">{t("manager:financeChart_Of_Accounts.text.code")}</label>
+                      <label className="mb-1 block text-xs font-medium text-muted">{t("manager:financeChart_Of_Accounts.text.code")}</label>
                       <input
                         className="input"
                         value={newET.code}
@@ -366,7 +366,7 @@ export default function ChartOfAccountsPage() {
                       />
                     </div>
                     <div className="flex-[2]">
-                      <label className="mb-1 block text-xs font-medium text-slate-500">{t("manager:financeChart_Of_Accounts.text.description")}</label>
+                      <label className="mb-1 block text-xs font-medium text-muted">{t("manager:financeChart_Of_Accounts.text.description")}</label>
                       <input
                         className="input"
                         value={newET.description}
@@ -437,9 +437,9 @@ export default function ChartOfAccountsPage() {
                   )}
 
                   {/* Inline create form */}
-                  <form onSubmit={handleCreateAcc} className="flex items-end gap-3 border-t border-slate-200 p-4">
+                  <form onSubmit={handleCreateAcc} className="flex items-end gap-3 border-t border-surface-border p-4">
                     <div className="flex-[2]">
-                      <label className="mb-1 block text-xs font-medium text-slate-500">{t("manager:financeChart_Of_Accounts.text.name")}</label>
+                      <label className="mb-1 block text-xs font-medium text-muted">{t("manager:financeChart_Of_Accounts.text.name")}</label>
                       <input
                         className="input"
                         value={newAcc.name}
@@ -448,7 +448,7 @@ export default function ChartOfAccountsPage() {
                       />
                     </div>
                     <div className="flex-1">
-                      <label className="mb-1 block text-xs font-medium text-slate-500">{t("manager:financeChart_Of_Accounts.text.code")}</label>
+                      <label className="mb-1 block text-xs font-medium text-muted">{t("manager:financeChart_Of_Accounts.text.code")}</label>
                       <input
                         className="input"
                         value={newAcc.code}
@@ -457,7 +457,7 @@ export default function ChartOfAccountsPage() {
                       />
                     </div>
                     <div className="flex-1">
-                      <label className="mb-1 block text-xs font-medium text-slate-500">{t("manager:financeChart_Of_Accounts.text.type")}</label>
+                      <label className="mb-1 block text-xs font-medium text-muted">{t("manager:financeChart_Of_Accounts.text.type")}</label>
                       <select
                         className="input"
                         value={newAcc.accountType}
@@ -481,7 +481,7 @@ export default function ChartOfAccountsPage() {
 
               {/* ─── Tab 2: Expense Mappings ──────────── */}
               <div className={activeTab === 2 ? "tab-panel-active" : "tab-panel"}>
-                  <p className="px-4 pt-3 pb-2 text-sm text-slate-500">
+                  <p className="px-4 pt-3 pb-2 text-sm text-muted">
                     Each mapping links an expense type to an accounting bucket. Org-wide defaults have no building override.
                   </p>
 
@@ -500,7 +500,7 @@ export default function ChartOfAccountsPage() {
                             <p className="table-card-head">{m.expenseType?.name || m.expenseTypeId}</p>
                             <p className="table-card-sub">→ {m.account?.name || m.accountId}{m.account?.code ? ` (${m.account.code})` : ""}</p>
                             <div className="table-card-footer">
-                              <span className="text-xs text-slate-400">{m.building?.name || "Org-wide"}</span>
+                              <span className="text-xs text-foreground-dim">{m.building?.name || "Org-wide"}</span>
                               <button
                                 onClick={() => handleDeleteMapping(m.id)}
                                 disabled={actionLoading}
@@ -527,10 +527,10 @@ export default function ChartOfAccountsPage() {
                             {sortedMappings.map((m) => (
                               <tr key={m.id}>
                                 <td className="cell-bold">{m.expenseType?.name || m.expenseTypeId}</td>
-                                <td className="text-slate-400">{"\u2192"}</td>
+                                <td className="text-foreground-dim">{"\u2192"}</td>
                                 <td>{m.account?.name || m.accountId}{m.account?.code ? ` (${m.account.code})` : ""}</td>
                                 <td>
-                                  <span className="text-xs text-slate-400">
+                                  <span className="text-xs text-foreground-dim">
                                     {m.building?.name || "Org-wide"}
                                   </span>
                                 </td>
@@ -552,9 +552,9 @@ export default function ChartOfAccountsPage() {
                   )}
 
                   {/* Inline create form */}
-                  <form onSubmit={handleCreateMapping} className="flex items-end gap-3 border-t border-slate-200 p-4">
+                  <form onSubmit={handleCreateMapping} className="flex items-end gap-3 border-t border-surface-border p-4">
                     <div className="flex-[2]">
-                      <label className="mb-1 block text-xs font-medium text-slate-500">{t("manager:financeChart_Of_Accounts.text.expenseType")}</label>
+                      <label className="mb-1 block text-xs font-medium text-muted">{t("manager:financeChart_Of_Accounts.text.expenseType")}</label>
                       <select
                         className="input"
                         value={newMapping.expenseTypeId}
@@ -567,7 +567,7 @@ export default function ChartOfAccountsPage() {
                       </select>
                     </div>
                     <div className="flex-[2]">
-                      <label className="mb-1 block text-xs font-medium text-slate-500">{t("manager:financeChart_Of_Accounts.text.account")}</label>
+                      <label className="mb-1 block text-xs font-medium text-muted">{t("manager:financeChart_Of_Accounts.text.account")}</label>
                       <select
                         className="input"
                         value={newMapping.accountId}

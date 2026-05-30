@@ -120,7 +120,7 @@ export default function ScrollableTabs({ children, activeIndex, className }) {
                   type="button"
                   className={cn(
                     'w-full text-left px-1 py-3.5 text-sm font-medium',
-                    isActive ? 'text-indigo-600 font-semibold' : 'text-slate-700 hover:text-slate-900',
+                    isActive ? 'text-indigo-600 font-semibold' : 'text-muted-dark hover:text-foreground',
                   )}
                   onClick={() => { tab.props.onClick?.(); closeMore(); }}
                 >

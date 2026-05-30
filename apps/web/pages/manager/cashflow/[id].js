@@ -27,7 +27,7 @@ const ALIGNMENT_TAG_ICON = { aligned: "✓", review: "~", low_priority: "↓" };
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
 const STATUS_BADGE = {
-  DRAFT: "bg-slate-100 text-slate-600",
+  DRAFT: "bg-surface-hover text-muted-text",
   SUBMITTED: "bg-blue-100 text-blue-700",
   APPROVED: "bg-green-100 text-green-700",
 };
@@ -165,10 +165,10 @@ function CashflowChart({ buckets, hasOpeningBalance }) {
 
       {/* Hover tooltip */}
       {hovB && (
-        <div className="absolute top-2 right-2 bg-white border border-slate-200 rounded-lg shadow-md p-3 text-xs min-w-48 pointer-events-none z-10">
-          <div className="font-semibold text-slate-700 mb-1.5">
+        <div className="absolute top-2 right-2 bg-surface border border-surface-border rounded-lg shadow-md p-3 text-xs min-w-48 pointer-events-none z-10">
+          <div className="font-semibold text-muted-dark mb-1.5">
             {fmtMonth(hovB.year, hovB.month)}
-            <span className="ml-2 font-normal text-slate-400">{hovB.isActual ? "Actual" : "Projected"}</span>
+            <span className="ml-2 font-normal text-foreground-dim">{hovB.isActual ? "Actual" : "Projected"}</span>
           </div>
           <div className="flex justify-between gap-4 text-green-700">
             <span>{t("manager:cashflowId.text.income")}</span><span className="font-mono">{formatChfCents(hovB.projectedIncomeCents)}</span>
@@ -181,28 +181,28 @@ function CashflowChart({ buckets, hasOpeningBalance }) {
               <span>{t("manager:cashflowId.text.capEx")}</span><span className="font-mono">{formatChfCents(hovB.scheduledCapexCents)}</span>
             </div>
           )}
-          <div className="border-t border-slate-100 mt-1.5 pt-1.5 flex justify-between gap-4 font-semibold">
+          <div className="border-t border-surface-divider mt-1.5 pt-1.5 flex justify-between gap-4 font-semibold">
             <span className={hovB.netCents >= 0 ? "text-green-700" : "text-red-600"}>{t("manager:cashflowId.text.net")}</span>
             <span className={cn("font-mono", hovB.netCents >= 0 ? "text-green-700" : "text-red-600")}>
               {formatChfCents(hovB.netCents)}
             </span>
           </div>
           {hovB.capexItems?.length > 0 && (
-            <div className="mt-1.5 pt-1.5 border-t border-slate-100 space-y-0.5">
+            <div className="mt-1.5 pt-1.5 border-t border-surface-divider space-y-0.5">
               {hovB.capexItems.slice(0, 4).map((ci, j) => (
                 <div key={j} className="flex justify-between gap-4 text-amber-700">
                   <span className="truncate" className="max-w-[96px]">{ci.assetName}</span>
                   <span className="font-mono">{formatChfCents(ci.costCents)}</span>
                 </div>
               ))}
-              {hovB.capexItems.length > 4 && <div className="text-slate-400">+{hovB.capexItems.length - 4} more</div>}
+              {hovB.capexItems.length > 4 && <div className="text-foreground-dim">+{hovB.capexItems.length - 4} more</div>}
             </div>
           )}
         </div>
       )}
 
       {/* Legend */}
-      <div className="flex flex-wrap gap-4 mt-3 text-xs text-slate-500">
+      <div className="flex flex-wrap gap-4 mt-3 text-xs text-muted">
         <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-sm bg-green-600" />Income (actual)</span>
         <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-sm bg-green-300" />Income (projected)</span>
         <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-sm bg-red-500" />OpEx (actual)</span>
@@ -226,10 +226,10 @@ function StrategyOverlayPanel({ overlay }) {
     <Panel>
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-sm font-semibold text-slate-800 m-0">
+          <h3 className="text-sm font-semibold text-foreground m-0">
             Strategy alignment — {overlay.archetypeLabel}
           </h3>
-          <p className="text-xs text-slate-500 m-0 mt-0.5">
+          <p className="text-xs text-muted m-0 mt-0.5">
             {overlay.alignedCount} aligned · {overlay.reviewCount} to review · {overlay.lowPriorityCount} low priority
           </p>
         </div>
@@ -264,7 +264,7 @@ function StrategyOverlayPanel({ overlay }) {
                   "rounded-lg border px-3 py-2.5",
                   item.tag === "aligned" ? "border-emerald-200 bg-emerald-50/50" :
                   item.tag === "review" ? "border-amber-200 bg-amber-50/50" :
-                  "border-slate-200 bg-slate-50/50"
+                  "border-surface-border bg-surface-subtle/50"
                 )}
               >
                 <div className="flex items-center justify-between">
@@ -272,15 +272,15 @@ function StrategyOverlayPanel({ overlay }) {
                     <Badge variant={ALIGNMENT_TAG_VARIANT[item.tag]} className="text-xs px-1.5 py-0">
                       {ALIGNMENT_TAG_LABEL[item.tag]}
                     </Badge>
-                    <span className="text-sm font-medium text-slate-900">
+                    <span className="text-sm font-medium text-foreground">
                       {item.assetName || item.assetId}
                     </span>
-                    <span className="text-xs text-slate-400">
+                    <span className="text-xs text-foreground-dim">
                       Score: {Math.round(item.score)}
                     </span>
                   </div>
                 </div>
-                <p className="text-xs text-slate-600 mt-1.5 leading-relaxed">
+                <p className="text-xs text-muted-text mt-1.5 leading-relaxed">
                   {item.explanation}
                 </p>
                 {dims.length > 0 && (
@@ -475,13 +475,13 @@ function CapexMobileCard({ ev, ov, rec, planId, isDraft, onRefresh, alignmentMap
   return (
     <div className="py-3 flex flex-col gap-1">
       <div className="flex items-start justify-between gap-2">
-        <span className={cn("text-sm font-medium text-slate-800", isOverridden && "italic text-slate-500")}>
+        <span className={cn("text-sm font-medium text-foreground", isOverridden && "italic text-muted")}>
           {isOverridden && <span className="mr-1 text-amber-500 text-xs">⟳</span>}
           {ev.assetName}
         </span>
-        <span className="text-sm font-mono text-slate-700 shrink-0">{formatChfCents(ev.costCents)}</span>
+        <span className="text-sm font-mono text-muted-dark shrink-0">{formatChfCents(ev.costCents)}</span>
       </div>
-      <div className="text-xs text-slate-500">
+      <div className="text-xs text-muted">
         {fmtMonth(ev.year, ev.month)}
         {isOverridden && ov && <span className="ml-1">(was {ov.originalYear})</span>}
         {ev.tradeGroup && <span className="ml-2">· {ev.tradeGroup}</span>}
@@ -492,7 +492,7 @@ function CapexMobileCard({ ev, ov, rec, planId, isDraft, onRefresh, alignmentMap
             onChange={(e) => e.target.value && handleShiftYear(Number(e.target.value))}
             value=""
             disabled={shifting}
-            className="border border-slate-200 rounded px-1.5 py-0.5 text-xs text-slate-600 disabled:opacity-50"
+            className="border border-surface-border rounded px-1.5 py-0.5 text-xs text-muted-text disabled:opacity-50"
           >
             <option value="">{t("manager:cashflowId.text.shiftYear")}</option>
             {yearOptions.map((y) => (
@@ -503,7 +503,7 @@ function CapexMobileCard({ ev, ov, rec, planId, isDraft, onRefresh, alignmentMap
             <button
               onClick={handleRemoveOverride}
               disabled={removing}
-              className="text-xs text-slate-400 hover:text-red-500 disabled:opacity-50"
+              className="text-xs text-foreground-dim hover:text-red-500 disabled:opacity-50"
             >
               {removing ? "…" : "Reset"}
             </button>
@@ -574,7 +574,7 @@ function CapexEventRow({ ev, ov, rec, planId, isDraft, onRefresh, alignmentMap }
   }
 
   const isOverridden = ev.isOverridden || !!ov;
-  const rowClass = isOverridden ? "italic text-slate-500" : "";
+  const rowClass = isOverridden ? "italic text-muted" : "";
 
   return (
     <tr className={rowClass}>
@@ -594,12 +594,12 @@ function CapexEventRow({ ev, ov, rec, planId, isDraft, onRefresh, alignmentMap }
       <td>
         {fmtMonth(ev.year, ev.month)}
         {isOverridden && ov && (
-          <span className="ml-1 text-xs text-slate-400">(was {ov.originalYear})</span>
+          <span className="ml-1 text-xs text-foreground-dim">(was {ov.originalYear})</span>
         )}
       </td>
       <td className="text-right font-mono">{formatChfCents(ev.costCents)}</td>
       <td>{ev.tradeGroup || "—"}</td>
-      <td>{ev.bundleId ? <span className="status-pill bg-blue-50 text-blue-700">{t("manager:cashflowId.text.bundled")}</span> : <span className="text-slate-400 text-xs">—</span>}</td>
+      <td>{ev.bundleId ? <span className="status-pill bg-blue-50 text-blue-700">{t("manager:cashflowId.text.bundled")}</span> : <span className="text-foreground-dim text-xs">—</span>}</td>
       {isDraft && (
         <td>
           <div className="flex flex-col gap-1 min-w-48">
@@ -623,7 +623,7 @@ function CapexEventRow({ ev, ov, rec, planId, isDraft, onRefresh, alignmentMap }
                 onChange={(e) => e.target.value && handleShiftYear(Number(e.target.value))}
                 value=""
                 disabled={shifting}
-                className="border border-slate-200 rounded px-1.5 py-0.5 text-xs text-slate-600 disabled:opacity-50"
+                className="border border-surface-border rounded px-1.5 py-0.5 text-xs text-muted-text disabled:opacity-50"
               >
                 <option value="">{t("manager:cashflowId.text.shiftYear")}</option>
                 {yearOptions.map((y) => (
@@ -634,7 +634,7 @@ function CapexEventRow({ ev, ov, rec, planId, isDraft, onRefresh, alignmentMap }
                 <button
                   onClick={handleRemoveOverride}
                   disabled={removing}
-                  className="text-xs text-slate-400 hover:text-red-500 disabled:opacity-50"
+                  className="text-xs text-foreground-dim hover:text-red-500 disabled:opacity-50"
                   title={t("manager:cashflowId.title.resetToBaselineYear")}
                 >
                   {removing ? "…" : "Reset"}
@@ -701,7 +701,7 @@ function IncomeGrowthRateEditor({ planId, currentRate, onUpdated }) {
     return (
       <button
         onClick={startEdit}
-        className="text-sm text-slate-600 hover:text-blue-600 underline underline-offset-2 tabular-nums"
+        className="text-sm text-muted-text hover:text-blue-600 underline underline-offset-2 tabular-nums"
         title={t("manager:cashflowId.title.clickToEditIncomeGrowthRate")}
       >
         Income growth: <span className="font-semibold">{currentRate ?? 0}%</span> / year
@@ -711,7 +711,7 @@ function IncomeGrowthRateEditor({ planId, currentRate, onUpdated }) {
 
   return (
     <div className="flex items-center gap-2">
-      <span className="text-sm text-slate-600">{t("manager:cashflowId.text.incomeGrowth")}</span>
+      <span className="text-sm text-muted-text">{t("manager:cashflowId.text.incomeGrowth")}</span>
       <input
         ref={inputRef}
         type="number"
@@ -725,8 +725,8 @@ function IncomeGrowthRateEditor({ planId, currentRate, onUpdated }) {
         className="border border-blue-300 rounded px-2 py-0.5 text-sm w-20 tabular-nums"
         autoFocus
       />
-      <span className="text-sm text-slate-500">{t("manager:cashflowId.text.year")}</span>
-      {saving && <span className="text-xs text-slate-400">{t("manager:cashflowId.text.saving")}</span>}
+      <span className="text-sm text-muted">{t("manager:cashflowId.text.year")}</span>
+      {saving && <span className="text-xs text-foreground-dim">{t("manager:cashflowId.text.saving")}</span>}
       {error && <span className="text-xs text-red-600">{error}</span>}
     </div>
   );
@@ -839,15 +839,15 @@ function RfpCandidateCard({ planId, candidate }) {
     <div className="card p-4 flex flex-col gap-3">
       <div className="flex items-start justify-between gap-2">
         <div>
-          <span className="font-semibold text-slate-800 text-sm">{candidate.tradeGroup}</span>
-          <span className="text-xs text-slate-400 ml-2">{candidate.scheduledYear}</span>
+          <span className="font-semibold text-foreground text-sm">{candidate.tradeGroup}</span>
+          <span className="text-xs text-foreground-dim ml-2">{candidate.scheduledYear}</span>
         </div>
         <span className="text-sm font-semibold text-amber-700 tabular-nums shrink-0">
           CHF {totalChf.toLocaleString("de-CH")}
         </span>
       </div>
 
-      <ul className="text-xs text-slate-500 space-y-0.5">
+      <ul className="text-xs text-muted space-y-0.5">
         {candidate.assets.map((a) => (
           <li key={a.assetId} className="flex items-center justify-between gap-2">
             <span>{a.assetName}{a.isOverridden && <em className="ml-1 text-violet-500">(shifted)</em>}</span>
@@ -857,7 +857,7 @@ function RfpCandidateCard({ planId, candidate }) {
       </ul>
 
       {sendDate && (
-        <div className="text-xs text-slate-400">
+        <div className="text-xs text-foreground-dim">
           Send by <strong>{sendDate}</strong>
         </div>
       )}
@@ -1013,10 +1013,10 @@ export default function CashflowPlanDetailPage() {
           title={plan.name}
           subtitle={
             <div className="flex flex-wrap items-center gap-3">
-              <span className={cn("status-pill", STATUS_BADGE[plan.status] || "bg-slate-100 text-slate-600")}>
+              <span className={cn("status-pill", STATUS_BADGE[plan.status] || "bg-surface-hover text-muted-text")}>
                 {plan.status}
               </span>
-              <span className="text-slate-400 text-xs">
+              <span className="text-foreground-dim text-xs">
                 {plan.buildingId ? "Building plan" : "Portfolio plan"}
                 {" · "}{plan.horizonMonths}-month horizon
               </span>
@@ -1028,7 +1028,7 @@ export default function CashflowPlanDetailPage() {
                   onUpdated={loadPlan}
                 />
               ) : (
-                <span className="text-slate-500 text-sm tabular-nums">
+                <span className="text-muted text-sm tabular-nums">
                   Income growth: <span className="font-semibold">{plan.incomeGrowthRatePct ?? 0}%</span> / year
                 </span>
               )}
@@ -1081,37 +1081,37 @@ export default function CashflowPlanDetailPage() {
           <Section title={t("manager:cashflowId.title.summary")}>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <div className="card p-4 flex flex-col gap-1">
-                <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">{t("manager:cashflowId.text.12moProjectedIncome")}</span>
+                <span className="text-xs font-medium text-muted uppercase tracking-wide">{t("manager:cashflowId.text.12moProjectedIncome")}</span>
                 <span className="text-xl font-bold text-green-700">{formatChfCents(stats.totalIncome)}</span>
-                <span className="text-xs text-slate-400">{t("manager:cashflowId.text.next12ProjectedMonths")}</span>
+                <span className="text-xs text-foreground-dim">{t("manager:cashflowId.text.next12ProjectedMonths")}</span>
               </div>
               <div className="card p-4 flex flex-col gap-1">
-                <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">{t("manager:cashflowId.text.totalProjectedCapex")}</span>
+                <span className="text-xs font-medium text-muted uppercase tracking-wide">{t("manager:cashflowId.text.totalProjectedCapex")}</span>
                 <span className="text-xl font-bold text-amber-700">{formatChfCents(stats.totalCapex)}</span>
-                <span className="text-xs text-slate-400">Over {plan.horizonMonths}-month horizon</span>
+                <span className="text-xs text-foreground-dim">Over {plan.horizonMonths}-month horizon</span>
               </div>
               <div className="card p-4 flex flex-col gap-1">
-                <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">{t("manager:cashflowId.text.peakMonthlyCapex")}</span>
+                <span className="text-xs font-medium text-muted uppercase tracking-wide">{t("manager:cashflowId.text.peakMonthlyCapex")}</span>
                 <span className="text-xl font-bold text-amber-700">{formatChfCents(stats.peakCapex?.v)}</span>
-                <span className="text-xs text-slate-400">
+                <span className="text-xs text-foreground-dim">
                   {stats.peakCapex?.b ? fmtMonth(stats.peakCapex.b.year, stats.peakCapex.b.month) : "—"}
                 </span>
               </div>
               <div className="card p-4 flex flex-col gap-1">
-                <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">{t("manager:cashflowId.text.lowestCumulativeBalance")}</span>
+                <span className="text-xs font-medium text-muted uppercase tracking-wide">{t("manager:cashflowId.text.lowestCumulativeBalance")}</span>
                 {hasOpeningBalance ? (
                   <>
-                    <span className={cn("text-xl font-bold", (stats.lowestBal?.v ?? 0) < 0 ? "text-red-600" : "text-slate-800")}>
+                    <span className={cn("text-xl font-bold", (stats.lowestBal?.v ?? 0) < 0 ? "text-red-600" : "text-foreground")}>
                       {formatChfCents(stats.lowestBal?.v)}
                     </span>
-                    <span className="text-xs text-slate-400">
+                    <span className="text-xs text-foreground-dim">
                       {stats.lowestBal?.b ? fmtMonth(stats.lowestBal.b.year, stats.lowestBal.b.month) : "—"}
                     </span>
                   </>
                 ) : (
                   <>
-                    <span className="text-xl font-bold text-slate-300">—</span>
-                    <span className="text-xs text-slate-400">{t("manager:cashflowId.text.setOpeningBalanceToSee")}</span>
+                    <span className="text-xl font-bold text-foreground-dim">—</span>
+                    <span className="text-xs text-foreground-dim">{t("manager:cashflowId.text.setOpeningBalanceToSee")}</span>
                   </>
                 )}
               </div>
@@ -1169,7 +1169,7 @@ export default function CashflowPlanDetailPage() {
                     {actionLoading ? "Approving…" : "Approve plan"}
                   </button>
                 )}
-                <span className="text-xs text-slate-400">
+                <span className="text-xs text-foreground-dim">
                   {plan.status === "DRAFT" && "Submit this plan for manager / owner approval."}
                   {plan.status === "SUBMITTED" && "Approve this plan to unlock RFP generation."}
                 </span>

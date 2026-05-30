@@ -41,11 +41,11 @@ export default function KpiInlineGrid({ items = [], className }) {
             key={item.label}
             className={cn(
               "flex flex-col px-3.5 py-2.5 gap-0.5",
-              !isLastRow && "border-b border-slate-100",
-              !isLastInRow && "border-r border-slate-100"
+              !isLastRow && "border-b border-surface-divider",
+              !isLastInRow && "border-r border-surface-divider"
             )}
           >
-            <span className="text-xs font-medium text-slate-500 uppercase tracking-wide leading-tight">
+            <span className="text-xs font-medium text-muted uppercase tracking-wide leading-tight">
               {item.label}
             </span>
             <span
@@ -53,7 +53,7 @@ export default function KpiInlineGrid({ items = [], className }) {
                 "text-base font-semibold tracking-tight tabular-nums leading-snug",
                 item.tone === "warn" && "text-destructive-text",
                 item.tone === "good" && "text-success-text",
-                !item.tone && "text-slate-900"
+                !item.tone && "text-foreground"
               )}
             >
               {item.value}

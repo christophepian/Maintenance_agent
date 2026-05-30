@@ -34,6 +34,16 @@ const DEV_TOKENS = {
 };
 
 function MyApp({ Component, pageProps }) {
+  // Restore dark/light theme preference on mount (before first paint where possible).
+  useEffect(() => {
+    const saved = localStorage.getItem('theme');
+    if (saved === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, []);
+
   useEffect(() => {
     if (process.env.NODE_ENV === 'production') return;
 

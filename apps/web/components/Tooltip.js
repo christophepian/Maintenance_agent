@@ -23,7 +23,7 @@ export default function Tooltip({ content, className }) {
         onMouseLeave={() => setVisible(false)}
         onFocus={() => setVisible(true)}
         onBlur={() => setVisible(false)}
-        className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-slate-200 text-slate-500 text-[9px] font-bold leading-none hover:bg-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-400"
+        className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-surface-border text-muted text-[9px] font-bold leading-none hover:bg-muted-ring focus:outline-none focus:ring-1 focus:ring-slate-400"
         aria-label="More information"
       >
         ?

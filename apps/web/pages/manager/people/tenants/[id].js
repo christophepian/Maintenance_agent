@@ -175,7 +175,7 @@ export default function TenantDetailPage() {
         <div className="mb-3">
             <button
               type="button"
-              className="text-sm font-medium text-slate-600 hover:text-slate-900"
+              className="text-sm font-medium text-muted-text hover:text-foreground"
               onClick={() => router.back()}
             >
               {t("manager:peopleTenantsId.text.back")}
@@ -224,67 +224,67 @@ export default function TenantDetailPage() {
                 >
                   <div className="grid gap-4 sm:grid-cols-2">
                     <label className="grid gap-2">
-                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleTenantsId.text.name")}</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:peopleTenantsId.text.name")}</span>
                       {isEditing ? (
                         <input
-                          className="input text-sm text-slate-700"
+                          className="input text-sm text-muted-dark"
                           type="text"
                           value={formData.name}
                           onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
                           placeholder={t("manager:peopleTenantsId.placeholder.tenantName")}
                         />
                       ) : (
-                        <div className="text-sm text-slate-700">{formData.name || "—"}</div>
+                        <div className="text-sm text-muted-dark">{formData.name || "—"}</div>
                       )}
                     </label>
                     <label className="grid gap-2">
-                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleTenantsId.text.phone")}</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:peopleTenantsId.text.phone")}</span>
                       {isEditing ? (
                         <input
-                          className="input text-sm text-slate-700"
+                          className="input text-sm text-muted-dark"
                           type="tel"
                           value={formData.phone}
                           onChange={(e) => setFormData((prev) => ({ ...prev, phone: e.target.value }))}
                           placeholder={t("manager:peopleTenantsId.placeholder.41XxXxxXxxx")}
                         />
                       ) : (
-                        <div className="text-sm text-slate-700">{formData.phone || "—"}</div>
+                        <div className="text-sm text-muted-dark">{formData.phone || "—"}</div>
                       )}
                     </label>
                     <label className="grid gap-2 sm:col-span-2">
-                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleTenantsId.text.email")}</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:peopleTenantsId.text.email")}</span>
                       {isEditing ? (
                         <input
-                          className="input text-sm text-slate-700"
+                          className="input text-sm text-muted-dark"
                           type="email"
                           value={formData.email}
                           onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
                           placeholder={t("manager:peopleTenantsId.placeholder.tenantExampleCom")}
                         />
                       ) : (
-                        <div className="text-sm text-slate-700">{formData.email || "—"}</div>
+                        <div className="text-sm text-muted-dark">{formData.email || "—"}</div>
                       )}
                     </label>
                   </div>
 
                   <div className="mt-6 grid gap-4 sm:grid-cols-2">
                     <div className="min-w-0">
-                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleTenantsId.text.tenantId")}</div>
-                      <div className="text-sm text-slate-700 mt-1 break-all">{tenant?.id}</div>
+                      <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:peopleTenantsId.text.tenantId")}</div>
+                      <div className="text-sm text-muted-dark mt-1 break-all">{tenant?.id}</div>
                     </div>
                     <div className="min-w-0">
-                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleTenantsId.text.orgId")}</div>
-                      <div className="text-sm text-slate-700 mt-1 break-all">{tenant?.orgId || "—"}</div>
+                      <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:peopleTenantsId.text.orgId")}</div>
+                      <div className="text-sm text-muted-dark mt-1 break-all">{tenant?.orgId || "—"}</div>
                     </div>
                     <div>
-                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleTenantsId.text.created")}</div>
-                      <div className="text-sm text-slate-700 mt-1">
+                      <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:peopleTenantsId.text.created")}</div>
+                      <div className="text-sm text-muted-dark mt-1">
                         {tenant?.createdAt ? formatDateTime(tenant.createdAt) : "—"}
                       </div>
                     </div>
                     <div>
-                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleTenantsId.text.updated")}</div>
-                      <div className="text-sm text-slate-700 mt-1">
+                      <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:peopleTenantsId.text.updated")}</div>
+                      <div className="text-sm text-muted-dark mt-1">
                         {tenant?.updatedAt ? formatDateTime(tenant.updatedAt) : "—"}
                       </div>
                     </div>
@@ -296,12 +296,12 @@ export default function TenantDetailPage() {
                 <Panel title={t("manager:peopleTenantsId.title.professional")}>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div>
-                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleTenantsId.text.unit")}</div>
-                      <div className="text-sm text-slate-700 mt-1">{unitLabel}</div>
+                      <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:peopleTenantsId.text.unit")}</div>
+                      <div className="text-sm text-muted-dark mt-1">{unitLabel}</div>
                     </div>
                     <div className="min-w-0">
-                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleTenantsId.text.buildingId")}</div>
-                      <div className="text-sm text-slate-700 mt-1 break-all">
+                      <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:peopleTenantsId.text.buildingId")}</div>
+                      <div className="text-sm text-muted-dark mt-1 break-all">
                         {tenant?.unit?.buildingId ? (
                           <Link href={`/manager/buildings/${tenant.unit.buildingId}/financials`} className="cell-link">
                             {tenant.unit.buildingId}
@@ -310,8 +310,8 @@ export default function TenantDetailPage() {
                       </div>
                     </div>
                     <div className="min-w-0">
-                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleTenantsId.text.unitId")}</div>
-                      <div className="text-sm text-slate-700 mt-1 break-all">
+                      <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:peopleTenantsId.text.unitId")}</div>
+                      <div className="text-sm text-muted-dark mt-1 break-all">
                         {(tenant?.unit?.id || tenant?.unitId) ? (
                           <Link href={`/admin-inventory/units/${tenant?.unit?.id || tenant?.unitId}`} className="cell-link">
                             {tenant?.unit?.id || tenant?.unitId}
@@ -320,8 +320,8 @@ export default function TenantDetailPage() {
                       </div>
                     </div>
                     <div>
-                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleTenantsId.text.floor")}</div>
-                      <div className="text-sm text-slate-700 mt-1">{tenant?.unit?.floor || "—"}</div>
+                      <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:peopleTenantsId.text.floor")}</div>
+                      <div className="text-sm text-muted-dark mt-1">{tenant?.unit?.floor || "—"}</div>
                     </div>
                   </div>
                 </Panel>
@@ -332,7 +332,7 @@ export default function TenantDetailPage() {
                   <DocumentsPanel applicationId={applicationId} title={t("manager:peopleTenantsId.title.corroborativeDocuments")} />
                 ) : (
                   <Panel title={t("manager:peopleTenantsId.title.corroborativeDocuments")}>
-                    <p className="text-sm text-slate-500 py-2">
+                    <p className="text-sm text-muted py-2">
                       {t("manager:peopleTenantsId.text.noApplicationLinked")}
                     </p>
                   </Panel>
@@ -342,9 +342,9 @@ export default function TenantDetailPage() {
               {activeTab === "contracts" && (
                 <Panel title={t("manager:peopleTenantsId.title.contracts")} bodyClassName="p-0">
                   {leasesLoading ? (
-                    <p className="px-4 py-3 text-sm text-slate-600">{t("manager:peopleTenantsId.text.loadingLeases")}</p>
+                    <p className="px-4 py-3 text-sm text-muted-text">{t("manager:peopleTenantsId.text.loadingLeases")}</p>
                   ) : leases.length === 0 ? (
-                    <p className="px-4 py-3 text-sm text-slate-500">{t("manager:peopleTenantsId.text.noLeasesFoundForThisTenant")}</p>
+                    <p className="px-4 py-3 text-sm text-muted">{t("manager:peopleTenantsId.text.noLeasesFoundForThisTenant")}</p>
                   ) : (
                     <>
                       {/* Mobile cards */}
@@ -357,8 +357,8 @@ export default function TenantDetailPage() {
                               </Link>
                               <Badge variant={leaseVariant(l.status)} size="sm">{l.status}</Badge>
                             </div>
-                            <span className="text-xs text-slate-500">{l.unit?.building?.name || "—"}</span>
-                            <div className="flex items-center justify-between text-xs text-slate-500">
+                            <span className="text-xs text-muted">{l.unit?.building?.name || "—"}</span>
+                            <div className="flex items-center justify-between text-xs text-muted">
                               <span>{formatDate(l.startDate)} – {formatDate(l.endDate)}</span>
                               <span>{l.netRentChf != null ? `CHF ${l.netRentChf}.-` : "—"}</span>
                             </div>
@@ -410,9 +410,9 @@ export default function TenantDetailPage() {
               {activeTab === "invoices" && (
                 <Panel title={t("manager:peopleTenantsId.title.invoices")} bodyClassName="p-0">
                   {invoicesLoading ? (
-                    <p className="px-4 py-3 text-sm text-slate-600">{t("manager:peopleTenantsId.text.loadingInvoices")}</p>
+                    <p className="px-4 py-3 text-sm text-muted-text">{t("manager:peopleTenantsId.text.loadingInvoices")}</p>
                   ) : leaseInvoices.length === 0 ? (
-                    <p className="px-4 py-3 text-sm text-slate-500">{t("manager:peopleTenantsId.text.noInvoicesFoundForThisTenant")}</p>
+                    <p className="px-4 py-3 text-sm text-muted">{t("manager:peopleTenantsId.text.noInvoicesFoundForThisTenant")}</p>
                   ) : (
                     <>
                       {/* Mobile cards */}
@@ -420,13 +420,13 @@ export default function TenantDetailPage() {
                         {sortedInvoices.map((inv) => (
                           <div key={inv.id} className="px-4 py-3 flex flex-col gap-1">
                             <div className="flex items-center justify-between gap-2">
-                              <span className="text-sm font-medium text-slate-800">
+                              <span className="text-sm font-medium text-foreground">
                                 {inv.invoiceNumber || inv.id?.slice(0, 8) || "—"}
                               </span>
                               <Badge variant={invoiceVariant(inv.status)} size="sm">{inv.status}</Badge>
                             </div>
-                            <span className="text-xs text-slate-500">{inv.description || "—"}</span>
-                            <div className="flex items-center justify-between text-xs text-slate-500">
+                            <span className="text-xs text-muted">{inv.description || "—"}</span>
+                            <div className="flex items-center justify-between text-xs text-muted">
                               <span>{t("manager:peopleTenantsId.text.due")} {formatDate(inv.dueDate)}</span>
                               <span className="font-mono">{inv.totalAmount != null ? formatChf(inv.totalAmount) : "—"}</span>
                             </div>
@@ -471,7 +471,7 @@ export default function TenantDetailPage() {
             </div>
           ) : (
             <Panel>
-              <p className="text-sm text-slate-600">{t("manager:peopleTenantsId.text.tenantNotFound")}</p>
+              <p className="text-sm text-muted-text">{t("manager:peopleTenantsId.text.tenantNotFound")}</p>
               <div className="mt-3">
                 <button type="button" className="button-secondary" onClick={() => router.back()}>
                   {t("manager:peopleTenantsId.text.goBack")}

@@ -128,18 +128,18 @@ export default function AppShell({ role: roleProp, children }) {
     <>
       {showHubBar && <HubBar />}
       <div
-        className="min-h-screen bg-white text-slate-900 font-sans md:grid md:grid-cols-[260px_1fr] md:grid-rows-[1fr] md:h-screen md:overflow-hidden"
+        className="min-h-screen bg-surface text-foreground font-sans md:grid md:grid-cols-[260px_1fr] md:grid-rows-[1fr] md:h-screen md:overflow-hidden"
         style={showHubBar ? { height: "calc(100vh - 36px)", marginTop: 36 } : undefined}
       >
         <a
           href="#main-content"
-          className="sr-only focus:not-sr-only focus:fixed focus:top-10 focus:left-2 focus:z-50 focus:rounded focus:bg-white focus:px-4 focus:py-2 focus:shadow-lg focus:ring-2 focus:ring-blue-500"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-10 focus:left-2 focus:z-50 focus:rounded focus:bg-surface focus:px-4 focus:py-2 focus:shadow-lg focus:ring-2 focus:ring-blue-500"
         >
           Skip to main content
         </a>
 
       <aside
-        className="hidden md:flex md:flex-col border-r border-slate-200 px-4 py-5 bg-slate-100"
+        className="hidden md:flex md:flex-col border-r border-surface-border px-4 py-5 bg-surface-hover"
         aria-label="Sidebar navigation"
       >
         <div className="font-bold text-lg mb-5">Sencilo</div>
@@ -147,12 +147,12 @@ export default function AppShell({ role: roleProp, children }) {
         {/* Role switcher — admin users and dev/staging environments */}
         {(ROLE_SWITCH_ENABLED || isAdmin) && (
           <div className="mb-5">
-            <div className="text-sm text-slate-500 mb-2">Role</div>
+            <div className="text-sm text-muted mb-2">Role</div>
             <select
               value={role || "MANAGER"}
               onChange={(e) => setRoleAndRoute(e.target.value)}
               aria-label="Switch role"
-              className="w-full px-2.5 py-2 rounded-lg border border-slate-300 bg-slate-50 text-slate-900 cursor-pointer"
+              className="w-full px-2.5 py-2 rounded-lg border border-muted-ring bg-surface-subtle text-foreground cursor-pointer"
             >
               <option value="MANAGER">Manager</option>
               <option value="OWNER">Owner</option>
@@ -176,11 +176,11 @@ export default function AppShell({ role: roleProp, children }) {
         </div>
 
         {/* Sign out — always visible at bottom of sidebar */}
-        <div className="pt-4 border-t border-slate-200">
+        <div className="pt-4 border-t border-surface-border">
           <button
             type="button"
             onClick={signOut}
-            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-slate-600 hover:bg-slate-200 hover:text-slate-900 transition-colors"
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-muted-text hover:bg-surface-border hover:text-foreground transition-colors"
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>

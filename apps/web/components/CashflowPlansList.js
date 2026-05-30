@@ -97,17 +97,17 @@ function CreatePlanModal({ buildings, onClose, onCreate }) {
 
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-start justify-center pt-20 px-4">
-      <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-lg">
+      <div className="bg-surface rounded-xl shadow-xl p-6 w-full max-w-lg">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-base font-semibold text-slate-800">New cashflow plan</h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-lg leading-none" aria-label="Close">×</button>
+          <h2 className="text-base font-semibold text-foreground">New cashflow plan</h2>
+          <button onClick={onClose} className="text-foreground-dim hover:text-muted-text text-lg leading-none" aria-label="Close">×</button>
         </div>
 
         {error && <div className="error-banner mb-3" role="alert">{error}</div>}
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-slate-600">{t("label.name", { ns: "common" })} *</label>
+            <label className="text-xs font-medium text-muted-text">{t("label.name", { ns: "common" })} *</label>
             <input
               className="edit-input"
               placeholder={t("cashflowPlan.namePlaceholder")}
@@ -117,7 +117,7 @@ function CreatePlanModal({ buildings, onClose, onCreate }) {
           </div>
 
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-slate-600">Building (leave empty for portfolio)</label>
+            <label className="text-xs font-medium text-muted-text">Building (leave empty for portfolio)</label>
             <select
               className="edit-input"
               value={form.buildingId}
@@ -132,7 +132,7 @@ function CreatePlanModal({ buildings, onClose, onCreate }) {
 
           <div className="flex gap-3">
             <div className="flex flex-col gap-1 flex-1">
-              <label className="text-xs font-medium text-slate-600">Income growth rate (% / year)</label>
+              <label className="text-xs font-medium text-muted-text">Income growth rate (% / year)</label>
               <input
                 type="number"
                 step="0.1"
@@ -144,7 +144,7 @@ function CreatePlanModal({ buildings, onClose, onCreate }) {
               />
             </div>
             <div className="flex flex-col gap-1 flex-1">
-              <label className="text-xs font-medium text-slate-600">Horizon (months)</label>
+              <label className="text-xs font-medium text-muted-text">Horizon (months)</label>
               <input
                 type="number"
                 min="12"
@@ -158,7 +158,7 @@ function CreatePlanModal({ buildings, onClose, onCreate }) {
           </div>
 
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-slate-600">Opening balance (CHF, optional)</label>
+            <label className="text-xs font-medium text-muted-text">Opening balance (CHF, optional)</label>
             <input
               type="number"
               min="0"
@@ -168,7 +168,7 @@ function CreatePlanModal({ buildings, onClose, onCreate }) {
               value={form.openingBalanceChf}
               onChange={(e) => set("openingBalanceChf", e.target.value)}
             />
-            <span className="text-xs text-slate-400">Leave empty to show net flows only. Can be added later.</span>
+            <span className="text-xs text-foreground-dim">Leave empty to show net flows only. Can be added later.</span>
           </div>
 
           <div className="flex justify-end gap-2 pt-2">
@@ -283,7 +283,7 @@ const CashflowPlansList = forwardRef(function CashflowPlansList({ ownerMode = fa
       label: "Name",
       sortable: true,
       alwaysVisible: true,
-      render: (p) => <span className="font-medium text-slate-900">{p.name}</span>,
+      render: (p) => <span className="font-medium text-foreground">{p.name}</span>,
     },
     {
       id: "status",
@@ -302,7 +302,7 @@ const CashflowPlansList = forwardRef(function CashflowPlansList({ ownerMode = fa
       sortable: true,
       defaultVisible: true,
       render: (p) => (
-        <span className="text-slate-600">
+        <span className="text-muted-text">
           {p.buildingId ? (buildingMap[p.buildingId] || t("cashflowPlan.building")) : t("cashflowPlan.portfolio")}
         </span>
       ),
@@ -312,14 +312,14 @@ const CashflowPlansList = forwardRef(function CashflowPlansList({ ownerMode = fa
       label: "Horizon",
       sortable: true,
       defaultVisible: true,
-      render: (p) => <span className="text-slate-600">{p.horizonMonths} mo</span>,
+      render: (p) => <span className="text-muted-text">{p.horizonMonths} mo</span>,
     },
     {
       id: "growth",
       label: "Growth",
       sortable: true,
       defaultVisible: true,
-      render: (p) => <span className="text-slate-600">{p.incomeGrowthRatePct ?? 0}%</span>,
+      render: (p) => <span className="text-muted-text">{p.incomeGrowthRatePct ?? 0}%</span>,
     },
     {
       id: "computed",
@@ -329,12 +329,12 @@ const CashflowPlansList = forwardRef(function CashflowPlansList({ ownerMode = fa
       render: (p) => {
         const stale = isPlanStale(p);
         return p.lastComputedAt ? (
-          <span className={stale ? "text-amber-600 font-medium" : "text-slate-600"}>
+          <span className={stale ? "text-amber-600 font-medium" : "text-muted-text"}>
             {formatDate(p.lastComputedAt)}
             {stale && " (stale)"}
           </span>
         ) : (
-          <span className="text-slate-400">—</span>
+          <span className="text-foreground-dim">—</span>
         );
       },
     },
@@ -343,7 +343,7 @@ const CashflowPlansList = forwardRef(function CashflowPlansList({ ownerMode = fa
       label: "Created",
       sortable: true,
       defaultVisible: true,
-      render: (p) => <span className="text-slate-500 text-xs">{formatDate(p.createdAt)}</span>,
+      render: (p) => <span className="text-muted text-xs">{formatDate(p.createdAt)}</span>,
     },
     {
       id: "openingBalance",
@@ -351,7 +351,7 @@ const CashflowPlansList = forwardRef(function CashflowPlansList({ ownerMode = fa
       sortable: false,
       defaultVisible: false,
       render: (p) => (
-        <span className="text-slate-600">
+        <span className="text-muted-text">
           {typeof p.openingBalanceChf === "number"
             ? `CHF ${p.openingBalanceChf.toLocaleString()}`
             : "—"}
@@ -439,16 +439,16 @@ const CashflowPlansList = forwardRef(function CashflowPlansList({ ownerMode = fa
               return (
                 <div className="table-card">
                   <div className="flex items-start justify-between gap-2">
-                    <span className="font-medium text-slate-900 text-sm">{p.name}</span>
+                    <span className="font-medium text-foreground text-sm">{p.name}</span>
                     <Badge variant={planVariant(p.status)}>{p.status}</Badge>
                   </div>
-                  <p className="text-xs text-slate-500 mt-1">
+                  <p className="text-xs text-muted mt-1">
                     {p.buildingId ? (buildingMap[p.buildingId] || t("cashflowPlan.building")) : t("cashflowPlan.portfolio")}
                     {" · "}{p.horizonMonths} mo
                     {p.incomeGrowthRatePct != null && ` · ${p.incomeGrowthRatePct}% growth`}
                   </p>
                   {p.lastComputedAt && (
-                    <p className={cn("text-xs mt-0.5", stale ? "text-amber-600 font-medium" : "text-slate-400")}>
+                    <p className={cn("text-xs mt-0.5", stale ? "text-amber-600 font-medium" : "text-foreground-dim")}>
                       Computed {formatDate(p.lastComputedAt)}{stale ? " (stale)" : ""}
                     </p>
                   )}
@@ -456,7 +456,7 @@ const CashflowPlansList = forwardRef(function CashflowPlansList({ ownerMode = fa
               );
             }}
           />
-          <div className="px-3 py-2 text-xs text-slate-400 border-t border-slate-100">
+          <div className="px-3 py-2 text-xs text-foreground-dim border-t border-surface-divider">
             {filtered.length !== plans.length
               ? `${filtered.length} of ${plans.length} plan${plans.length !== 1 ? "s" : ""}`
               : `${plans.length} plan${plans.length !== 1 ? "s" : ""}`}

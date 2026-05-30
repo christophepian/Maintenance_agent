@@ -42,7 +42,7 @@ function StarRow({ value, onChange, disabled }) {
           disabled={disabled}
           onClick={() => onChange(n)}
           aria-label={`Rate ${n} of 5`}
-          className={cn("text-2xl leading-none focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 rounded disabled:cursor-default", n <= (value || 0) ? "text-yellow-400" : "text-slate-300")}
+          className={cn("text-2xl leading-none focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 rounded disabled:cursor-default", n <= (value || 0) ? "text-yellow-400" : "text-foreground-dim")}
         >
           ★
         </button>
@@ -82,10 +82,10 @@ function RatingModal({ jobId, contractorId, onClose, onDone }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-md rounded-2xl bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
-          <h2 className="text-base font-semibold text-slate-900">{t("contractor:jobsId.heading.rateTheTenant")}</h2>
-          <button onClick={onClose} className="rounded-full p-1 text-slate-400 hover:bg-slate-100" aria-label={t("contractor:jobsId.ariaLabel.close")}>
+      <div className="w-full max-w-md rounded-2xl bg-surface shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between border-b border-surface-divider px-6 py-4">
+          <h2 className="text-base font-semibold text-foreground">{t("contractor:jobsId.heading.rateTheTenant")}</h2>
+          <button onClick={onClose} className="rounded-full p-1 text-foreground-dim hover:bg-surface-hover" aria-label={t("contractor:jobsId.ariaLabel.close")}>
             <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
               <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
             </svg>
@@ -95,21 +95,21 @@ function RatingModal({ jobId, contractorId, onClose, onDone }) {
           <ErrorBanner error={error} className="text-sm" />
           {CRITERIA.map((c) => (
             <div key={c.key}>
-              <p className="mb-1 text-sm font-medium text-slate-700">{c.label}</p>
+              <p className="mb-1 text-sm font-medium text-muted-dark">{c.label}</p>
               <StarRow value={scores[c.key]} onChange={(v) => setScores((p) => ({ ...p, [c.key]: v }))} disabled={submitting} />
             </div>
           ))}
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Comment (optional)</label>
+            <label className="mb-1 block text-sm font-medium text-muted-dark">Comment (optional)</label>
             <textarea
               value={comment}
               onChange={(e) => setComment(e.target.value)}
               rows={3}
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400"
+              className="w-full rounded-lg border border-surface-border px-3 py-2 text-sm focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400"
             />
           </div>
           <div className="flex justify-end gap-3 pt-1">
-            <button type="button" onClick={onClose} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">
+            <button type="button" onClick={onClose} className="rounded-lg border border-surface-border px-4 py-2 text-sm font-medium text-muted-text hover:bg-surface-subtle">
               Skip for now
             </button>
             <button type="submit" disabled={submitting} className="button-primary text-sm disabled:opacity-50">
@@ -214,7 +214,7 @@ function SlotPanel({ jobId, contractorId, jobStatus, onRefresh }) {
       )}
 
       {slots.length === 0 && !showForm && canPropose && (
-        <p className="text-sm text-slate-500 mb-3">{t("contractor:jobsId.text.noSlotsProposedYetProposeTimesForTheTenantToChooseFrom")}</p>
+        <p className="text-sm text-muted mb-3">{t("contractor:jobsId.text.noSlotsProposedYetProposeTimesForTheTenantToChooseFrom")}</p>
       )}
 
       {hasAccepted && (
@@ -235,14 +235,14 @@ function SlotPanel({ jobId, contractorId, jobStatus, onRefresh }) {
               <ErrorBanner error={error} className="text-xs" />
               {rows.map((r, i) => (
                 <div key={i} className="flex flex-wrap items-center gap-2">
-                  <span className="text-xs text-slate-500 w-4">{i + 1}.</span>
+                  <span className="text-xs text-muted w-4">{i + 1}.</span>
                   <input
                     type="date"
                     value={r.date}
                     onChange={(e) => updateRow(i, "date", e.target.value)}
                     min={new Date().toISOString().slice(0, 10)}
                     required
-                    className="rounded border border-slate-200 px-2 py-1 text-xs focus:border-blue-400 focus:outline-none"
+                    className="rounded border border-surface-border px-2 py-1 text-xs focus:border-blue-400 focus:outline-none"
                   />
                   <select value={r.startHour} onChange={(e) => updateRow(i, "startHour", e.target.value)} className="filter-select text-xs px-2 py-1">
                     {Array.from({ length: 13 }, (_, h) => h + 7).map((h) => (
@@ -264,7 +264,7 @@ function SlotPanel({ jobId, contractorId, jobStatus, onRefresh }) {
                 <button type="button" onClick={addRow} className="cell-link text-xs">{t("contractor:jobsId.text.addAnotherSlot")}</button>
               )}
               <div className="flex gap-2 pt-1">
-                <button type="button" onClick={() => setShowForm(false)} className="rounded border border-slate-200 px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-50">{t("contractor:jobsId.text.cancel")}</button>
+                <button type="button" onClick={() => setShowForm(false)} className="rounded border border-surface-border px-3 py-1.5 text-xs text-muted-text hover:bg-surface-subtle">{t("contractor:jobsId.text.cancel")}</button>
                 <button type="submit" disabled={submitting} className="button-primary text-xs px-3 py-1.5 disabled:opacity-50">
                   {submitting ? "Sending…" : "Send to tenant"}
                 </button>
@@ -352,17 +352,17 @@ export default function ContractorJobDetail() {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {req?.unit && (
               <Panel title={t("contractor:jobsId.prop.location")}>
-                <p className="text-sm text-slate-800 font-medium">{req.unit.building.name}</p>
-                <p className="text-xs text-slate-600">{req.unit.building.address}</p>
-                <p className="text-xs text-slate-600 mt-0.5 font-medium">Unit {req.unit.unitNumber}</p>
+                <p className="text-sm text-foreground font-medium">{req.unit.building.name}</p>
+                <p className="text-xs text-muted-text">{req.unit.building.address}</p>
+                <p className="text-xs text-muted-text mt-0.5 font-medium">Unit {req.unit.unitNumber}</p>
               </Panel>
             )}
 
             <Panel title={t("contractor:jobsId.prop.dates")}>
               <div className="space-y-1 text-sm">
-                <p><span className="text-slate-500">{t("contractor:jobsId.text.created")}</span> <span className="text-slate-800">{formatDate(job.createdAt)}</span></p>
-                {job.startedAt && <p><span className="text-slate-500">{t("contractor:jobsId.text.started")}</span> <span className="text-slate-800">{formatDate(job.startedAt)}</span></p>}
-                {job.completedAt && <p><span className="text-slate-500">{t("contractor:jobsId.text.completed")}</span> <span className="text-green-700 font-medium">{formatDate(job.completedAt)}</span></p>}
+                <p><span className="text-muted">{t("contractor:jobsId.text.created")}</span> <span className="text-foreground">{formatDate(job.createdAt)}</span></p>
+                {job.startedAt && <p><span className="text-muted">{t("contractor:jobsId.text.started")}</span> <span className="text-foreground">{formatDate(job.startedAt)}</span></p>}
+                {job.completedAt && <p><span className="text-muted">{t("contractor:jobsId.text.completed")}</span> <span className="text-green-700 font-medium">{formatDate(job.completedAt)}</span></p>}
               </div>
             </Panel>
 
@@ -382,18 +382,18 @@ export default function ContractorJobDetail() {
 
           {req && (
             <Panel title={t("contractor:jobsId.prop.scopeOfWork")}>
-              <p className="text-sm text-slate-800 whitespace-pre-wrap">{req.description}</p>
-              {req.category && <p className="text-xs text-slate-600 mt-2"><span className="font-medium">{t("contractor:jobsId.text.category")}</span> {req.category}</p>}
-              {req.asset && <p className="text-xs text-slate-600 mt-1"><span className="font-medium">{t("contractor:jobsId.text.asset")}</span> {req.asset.name || req.asset.category || "—"}{req.asset.serialNumber ? ` (S/N: ${req.asset.serialNumber})` : ""}</p>}
+              <p className="text-sm text-foreground whitespace-pre-wrap">{req.description}</p>
+              {req.category && <p className="text-xs text-muted-text mt-2"><span className="font-medium">{t("contractor:jobsId.text.category")}</span> {req.category}</p>}
+              {req.asset && <p className="text-xs text-muted-text mt-1"><span className="font-medium">{t("contractor:jobsId.text.asset")}</span> {req.asset.name || req.asset.category || "—"}{req.asset.serialNumber ? ` (S/N: ${req.asset.serialNumber})` : ""}</p>}
             </Panel>
           )}
 
           {req?.tenant && (
             <Panel title={t("contractor:jobsId.prop.tenantContact")}>
               <div className="text-sm space-y-1">
-                {req.tenant.name && <p className="text-slate-800 font-medium">{req.tenant.name}</p>}
-                <p className="text-slate-600">📞 {req.tenant.phone}</p>
-                {req.tenant.email && <p className="text-slate-600">✉️ {req.tenant.email}</p>}
+                {req.tenant.name && <p className="text-foreground font-medium">{req.tenant.name}</p>}
+                <p className="text-muted-text">📞 {req.tenant.phone}</p>
+                {req.tenant.email && <p className="text-muted-text">✉️ {req.tenant.email}</p>}
               </div>
             </Panel>
           )}
@@ -411,7 +411,7 @@ export default function ContractorJobDetail() {
           {/* Mark as complete */}
           {isActive && (
             <Panel bodyClassName="text-center py-6">
-              <p className="text-slate-700 mb-3 font-medium">Work done? Mark the job as complete.</p>
+              <p className="text-muted-dark mb-3 font-medium">Work done? Mark the job as complete.</p>
               <button
                 onClick={handleMarkComplete}
                 disabled={completing}

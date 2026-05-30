@@ -40,12 +40,12 @@ function StatusPipeline({ status }) {
             <div
               className={
                 "h-2 w-2 rounded-full " +
-                (reached ? "bg-green-500" : "bg-slate-200")
+                (reached ? "bg-green-500" : "bg-track")
               }
               title={step}
             />
             {i < STATUS_PIPELINE.length - 1 && (
-              <div className={"h-0.5 w-3 " + (reached && i < idx ? "bg-green-400" : "bg-slate-200")} />
+              <div className={"h-0.5 w-3 " + (reached && i < idx ? "bg-green-400" : "bg-track")} />
             )}
           </div>
         );
@@ -78,7 +78,7 @@ const SOURCE_LABEL = {
   BROWSER_UPLOAD: { text: "Upload", cls: "bg-sky-50 text-sky-700 border-sky-200" },
   EMAIL_PDF: { text: "Email", cls: "bg-violet-50 text-violet-700 border-violet-200" },
   MOBILE_CAPTURE: { text: "Mobile", cls: "bg-teal-50 text-teal-700 border-teal-200" },
-  MANUAL: { text: "Manual", cls: "bg-slate-50 text-slate-600 border-slate-200" },
+  MANUAL: { text: "Manual", cls: "bg-surface-subtle text-muted-text border-surface-border" },
 };
 function SourceChannelIcon({ channel }) {
   if (!channel || !SOURCE_LABEL[channel]) return null;
@@ -271,7 +271,7 @@ export default function ContractorInvoices() {
                 <>
                   <button
                     onClick={() => setShowUpload(true)}
-                    className="rounded-lg border border-indigo-200 bg-white px-4 py-2 text-sm font-medium text-indigo-600 transition-colors hover:bg-indigo-50"
+                    className="rounded-lg border border-indigo-200 bg-surface px-4 py-2 text-sm font-medium text-indigo-600 transition-colors hover:bg-indigo-50"
                   >
                     📤 Upload Invoice
                   </button>
@@ -290,17 +290,17 @@ export default function ContractorInvoices() {
 
         {/* Upload invoice panel */}
         {showUpload && (
-          <div className="mb-6 rounded-lg border-2 border-indigo-200 bg-white p-5">
+          <div className="mb-6 rounded-lg border-2 border-indigo-200 bg-surface p-5">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-slate-900">{t("contractor:invoices.text.uploadInvoice")}</h3>
+              <h3 className="text-lg font-semibold text-foreground">{t("contractor:invoices.text.uploadInvoice")}</h3>
               <button
                 onClick={() => { setShowUpload(false); setUploadFile(null); setUploadError(""); }}
-                className="text-sm text-slate-400 hover:text-slate-600"
+                className="text-sm text-foreground-dim hover:text-muted-text"
               >
                 ✕ Close
               </button>
             </div>
-            <p className="mb-3 text-sm text-slate-600">
+            <p className="mb-3 text-sm text-muted-text">
               Upload a scanned invoice or PDF. It will be processed with OCR and matched to jobs automatically.
             </p>
             <ErrorBanner error={uploadError} className="mb-3 text-sm" />
@@ -309,7 +309,7 @@ export default function ContractorInvoices() {
                 type="file"
                 accept="image/*,.pdf"
                 onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
-                className="block w-full text-sm text-slate-500 file:mr-4 file:rounded-lg file:border-0 file:bg-indigo-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-indigo-700 hover:file:bg-indigo-100"
+                className="block w-full text-sm text-muted file:mr-4 file:rounded-lg file:border-0 file:bg-indigo-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-indigo-700 hover:file:bg-indigo-100"
               />
               <button
                 onClick={handleUpload}
@@ -320,18 +320,18 @@ export default function ContractorInvoices() {
               </button>
             </div>
             {uploadFile && (
-              <p className="mt-2 text-xs text-slate-500">Selected: {uploadFile.name} ({(uploadFile.size / 1024).toFixed(0)} KB)</p>
+              <p className="mt-2 text-xs text-muted">Selected: {uploadFile.name} ({(uploadFile.size / 1024).toFixed(0)} KB)</p>
             )}
           </div>
         )}
 
         {showCreateForm && (
-          <div className="mb-6 rounded-lg border-2 border-indigo-200 bg-white p-5">
+          <div className="mb-6 rounded-lg border-2 border-indigo-200 bg-surface p-5">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-slate-900">{t("contractor:invoices.heading.createInvoice")}</h3>
+              <h3 className="text-lg font-semibold text-foreground">{t("contractor:invoices.heading.createInvoice")}</h3>
               <button
                 onClick={() => { setShowCreateForm(false); setFormError(""); setFormSuccess(""); }}
-                className="text-sm text-slate-400 hover:text-slate-600"
+                className="text-sm text-foreground-dim hover:text-muted-text"
               >
                 ✕ Close
               </button>
@@ -339,19 +339,19 @@ export default function ContractorInvoices() {
             <ErrorBanner error={formError} className="mb-3 text-sm" />
             <form onSubmit={submitInvoice} className="space-y-4">
               <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">{t("contractor:invoices.text.job")}</label>
+                <label className="mb-1 block text-sm font-medium text-muted-dark">{t("contractor:invoices.text.job")}</label>
                 {router.query.jobId ? (
                   <input
                     type="text"
                     value={formJobId}
                     readOnly
-                    className="w-full rounded-lg border border-slate-300 bg-slate-100 px-3 py-2 text-sm cursor-not-allowed"
+                    className="w-full rounded-lg border border-muted-ring bg-surface-hover px-3 py-2 text-sm cursor-not-allowed"
                   />
                 ) : (
                   <select
                     value={formJobId}
                     onChange={(e) => setFormJobId(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full rounded-lg border border-muted-ring px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     required
                   >
                     <option value="">
@@ -365,11 +365,11 @@ export default function ContractorInvoices() {
                   </select>
                 )}
                 {router.query.jobId && (
-                  <p className="mt-1 text-xs text-slate-500">{t("contractor:invoices.text.prefilledFromJobDetailPage")}</p>
+                  <p className="mt-1 text-xs text-muted">{t("contractor:invoices.text.prefilledFromJobDetailPage")}</p>
                 )}
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">Amount (CHF)</label>
+                <label className="mb-1 block text-sm font-medium text-muted-dark">Amount (CHF)</label>
                 <input
                   type="number"
                   value={formAmount}
@@ -378,19 +378,19 @@ export default function ContractorInvoices() {
                   min="0"
                   max="100000"
                   step="0.01"
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full rounded-lg border border-muted-ring px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">Description (optional)</label>
+                <label className="mb-1 block text-sm font-medium text-muted-dark">Description (optional)</label>
                 <input
                   type="text"
                   value={formDescription}
                   onChange={(e) => setFormDescription(e.target.value)}
                   placeholder={t("contractor:invoices.placeholder.briefDescriptionOfWorkPerformed")}
                   maxLength={500}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full rounded-lg border border-muted-ring px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <button
@@ -433,9 +433,9 @@ export default function ContractorInvoices() {
           </ScrollableTabs>
 
           {loading ? (
-            <p className="p-4 text-sm text-slate-600">{t("contractor:invoices.text.loadingInvoices")}</p>
+            <p className="p-4 text-sm text-muted-text">{t("contractor:invoices.text.loadingInvoices")}</p>
           ) : filteredInvoices.length === 0 ? (
-            <div className="p-6 text-center text-slate-500">
+            <div className="p-6 text-center text-muted">
               <p className="text-sm">{t("contractor:invoices.text.noInvoicesMatchThisFilter")}</p>
             </div>
           ) : (
@@ -443,13 +443,13 @@ export default function ContractorInvoices() {
             {filteredInvoices.map((invoice) => (
               <div
                 key={invoice.id}
-                className="flex items-center justify-between px-5 py-3.5 hover:bg-slate-50 cursor-pointer transition-colors"
+                className="flex items-center justify-between px-5 py-3.5 hover:bg-surface-subtle cursor-pointer transition-colors"
                 onClick={() => router.push(`/manager/finance/invoices/${invoice.id}`)}
               >
                 {/* Left side */}
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <p className="text-sm font-semibold text-slate-900 truncate">
+                    <p className="text-sm font-semibold text-foreground truncate">
                       {invoice.invoiceNumber ? `#${invoice.invoiceNumber}` : `#${invoice.id.slice(0, 8)}`}
                     </p>
                     <Badge variant={invoiceVariant(invoice.status)} size="sm">
@@ -460,12 +460,12 @@ export default function ContractorInvoices() {
                   </div>
                   <div className="mt-1 flex items-center gap-3">
                     <StatusPipeline status={invoice.status} />
-                    <span className="text-xs text-slate-400">·</span>
-                    <span className="text-xs text-slate-500">{formatDate(invoice.createdAt)}</span>
+                    <span className="text-xs text-foreground-dim">·</span>
+                    <span className="text-xs text-muted">{formatDate(invoice.createdAt)}</span>
                     {invoice.jobId && (
                       <>
-                        <span className="text-xs text-slate-400">·</span>
-                        <span className="text-xs text-slate-500">
+                        <span className="text-xs text-foreground-dim">·</span>
+                        <span className="text-xs text-muted">
                           Job {invoice.jobId.slice(0, 8)}
                         </span>
                       </>
@@ -475,7 +475,7 @@ export default function ContractorInvoices() {
 
                 {/* Right side */}
                 <div className="flex items-center gap-3 flex-shrink-0">
-                  <p className="text-base font-bold text-slate-900">
+                  <p className="text-base font-bold text-foreground">
                     {formatCurrency(getInvoiceTotal(invoice))}
                   </p>
                   <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
@@ -483,12 +483,12 @@ export default function ContractorInvoices() {
                       href={`/api/invoices/${invoice.id}/pdf`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="rounded border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600 hover:bg-slate-50"
+                      className="rounded border border-surface-border bg-surface px-2 py-1 text-xs text-muted-text hover:bg-surface-subtle"
                     >
                       📄
                     </a>
                   </div>
-                  <svg className="h-4 w-4 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="h-4 w-4 text-foreground-dim" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
                 </div>
@@ -500,7 +500,7 @@ export default function ContractorInvoices() {
 
         {/* Summary */}
         {!loading && filteredInvoices.length > 0 && (
-          <div className="mt-3 flex items-center justify-between text-xs text-slate-500 px-1">
+          <div className="mt-3 flex items-center justify-between text-xs text-muted px-1">
             <span>{filteredInvoices.length} invoice{filteredInvoices.length !== 1 ? "s" : ""}</span>
             <span>
               Total: {formatCurrency(filteredInvoices.reduce((sum, inv) => sum + getInvoiceTotal(inv), 0))}

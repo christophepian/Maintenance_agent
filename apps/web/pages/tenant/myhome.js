@@ -112,7 +112,7 @@ export default function MyHomePage() {
       <div className="main-container">
 <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold">{t("tenant:nav.myHome")}</h1>
-          <span className="text-sm text-slate-500">
+          <span className="text-sm text-muted">
             {session.unit?.unitNumber ? `Unit ${session.unit.unitNumber}` : ""}
             {session.building?.address ? ` · ${session.building.address}` : ""}
           </span>
@@ -120,20 +120,20 @@ export default function MyHomePage() {
 
         {/* ── Lease section ── */}
         <div className="mb-2 flex items-center gap-3">
-          <span className="text-xs font-semibold uppercase tracking-widest text-slate-400">
+          <span className="text-xs font-semibold uppercase tracking-widest text-foreground-dim">
             {t("tenant:nav.leases")}
           </span>
-          <div className="flex-1 border-t border-slate-200" />
+          <div className="flex-1 border-t border-surface-border" />
         </div>
 
         {leasesError && <div className="notice notice-err mb-4">{leasesError}</div>}
 
         {leasesLoading ? (
-          <div className="text-center py-6 text-slate-500 mb-6">{t("tenant:leasesIndex.text.loadingLeases")}</div>
+          <div className="text-center py-6 text-muted mb-6">{t("tenant:leasesIndex.text.loadingLeases")}</div>
         ) : leases.length === 0 ? (
           <div className="card p-8 text-center mb-6">
-            <p className="text-slate-500">{t("tenant:leasesIndex.text.noLeasesFound")}</p>
-            <p className="text-slate-400 text-sm mt-1">
+            <p className="text-muted">{t("tenant:leasesIndex.text.noLeasesFound")}</p>
+            <p className="text-foreground-dim text-sm mt-1">
               Your property manager has not yet assigned any leases to your unit.
             </p>
           </div>
@@ -151,7 +151,7 @@ export default function MyHomePage() {
                       {lease.unit?.building?.name || "Property"} — Unit{" "}
                       {lease.unit?.unitNumber || "?"}
                     </div>
-                    <div className="text-sm text-slate-500 mt-1">
+                    <div className="text-sm text-muted mt-1">
                       {lease.objectType === "APPARTEMENT"
                         ? "Apartment"
                         : lease.objectType === "MAISON"
@@ -159,7 +159,7 @@ export default function MyHomePage() {
                         : lease.objectType}
                       {lease.roomsCount ? ` · ${lease.roomsCount} rooms` : ""}
                     </div>
-                    <div className="text-sm text-slate-500">
+                    <div className="text-sm text-muted">
                       From {formatDate(lease.startDate)}
                       {lease.endDate ? ` to ${formatDate(lease.endDate)}` : " (indefinite)"}
                     </div>
@@ -169,7 +169,7 @@ export default function MyHomePage() {
                       {LEASE_STATUS_LABELS[lease.status] || lease.status}
                     </Badge>
                     <div className="text-sm font-medium mt-2">
-                      {formatChf(lease.rentTotalChf)}<span className="text-slate-400">{t("tenant:leasesIndex.text.mo")}</span>
+                      {formatChf(lease.rentTotalChf)}<span className="text-foreground-dim">{t("tenant:leasesIndex.text.mo")}</span>
                     </div>
                   </div>
                 </div>
@@ -188,10 +188,10 @@ export default function MyHomePage() {
 
         {/* ── Invoices section ── */}
         <div className="mb-2 flex items-center gap-3">
-          <span className="text-xs font-semibold uppercase tracking-widest text-slate-400">
+          <span className="text-xs font-semibold uppercase tracking-widest text-foreground-dim">
             {t("tenant:nav.invoices")}
           </span>
-          <div className="flex-1 border-t border-slate-200" />
+          <div className="flex-1 border-t border-surface-border" />
         </div>
 
         {invoicesError && <div className="notice notice-err mb-4">{invoicesError}</div>}
@@ -199,27 +199,27 @@ export default function MyHomePage() {
         {invoices.length > 0 && (
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
             <div className="card p-4 text-center">
-              <p className="text-xs text-slate-500 uppercase tracking-wide">{t("tenant:invoices.text.totalInvoices")}</p>
+              <p className="text-xs text-muted uppercase tracking-wide">{t("tenant:invoices.text.totalInvoices")}</p>
               <p className="text-2xl font-bold mt-1">{invoices.length}</p>
             </div>
             <div className="card p-4 text-center">
-              <p className="text-xs text-slate-500 uppercase tracking-wide">{t("tenant:invoices.text.outstanding")}</p>
+              <p className="text-xs text-muted uppercase tracking-wide">{t("tenant:invoices.text.outstanding")}</p>
               <p className="text-2xl font-bold mt-1 text-blue-700">{formatChf(totalDue)}</p>
             </div>
             <div className="card p-4 text-center">
-              <p className="text-xs text-slate-500 uppercase tracking-wide">{t("tenant:invoices.text.paid")}</p>
+              <p className="text-xs text-muted uppercase tracking-wide">{t("tenant:invoices.text.paid")}</p>
               <p className="text-2xl font-bold mt-1 text-green-700">{formatChf(totalPaid)}</p>
             </div>
           </div>
         )}
 
         {invoicesLoading ? (
-          <div className="text-center py-6 text-slate-500">{t("tenant:invoices.text.loadingInvoices")}</div>
+          <div className="text-center py-6 text-muted">{t("tenant:invoices.text.loadingInvoices")}</div>
         ) : invoices.length === 0 ? (
           <div className="card p-8 text-center">
-            <p className="text-slate-400 text-lg mb-2">🧾</p>
-            <p className="text-slate-500">{t("tenant:invoices.text.noInvoicesYet")}</p>
-            <p className="text-slate-400 text-sm mt-1">
+            <p className="text-foreground-dim text-lg mb-2">🧾</p>
+            <p className="text-muted">{t("tenant:invoices.text.noInvoicesYet")}</p>
+            <p className="text-foreground-dim text-sm mt-1">
               Invoices for rent and other charges will appear here once your lease is active.
             </p>
           </div>
@@ -233,14 +233,14 @@ export default function MyHomePage() {
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-slate-900 truncate">
+                    <p className="font-semibold text-foreground truncate">
                       {inv.description}
                     </p>
-                    <p className="text-sm text-slate-500 mt-1">
+                    <p className="text-sm text-muted mt-1">
                       {inv.unit?.building?.name || "Property"}
                       {inv.unit?.unitNumber ? ` — Unit ${inv.unit.unitNumber}` : ""}
                     </p>
-                    <div className="flex items-center gap-3 mt-2 text-xs text-slate-400">
+                    <div className="flex items-center gap-3 mt-2 text-xs text-foreground-dim">
                       {inv.invoiceNumber && <span>#{inv.invoiceNumber}</span>}
                       <span>Created {formatDate(inv.createdAt)}</span>
                       {inv.dueDate && <span>Due {formatDate(inv.dueDate)}</span>}

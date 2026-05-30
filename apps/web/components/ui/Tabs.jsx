@@ -31,7 +31,7 @@ export function TabsTrigger({ value, children, className, unstyled = false }) {
         : cn(
             "px-5 py-2.5 text-sm font-medium bg-transparent",
             "border-0 border-b-2 -mb-px cursor-pointer whitespace-nowrap transition-colors",
-            "text-slate-500 border-transparent hover:text-slate-700",
+            "text-muted border-transparent hover:text-muted-dark",
             "data-[state=active]:text-brand data-[state=active]:border-brand",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50",
             className

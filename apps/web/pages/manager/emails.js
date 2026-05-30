@@ -77,7 +77,7 @@ export default function DevEmailsPage() {
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                className="rounded-lg border border-surface-border px-3 py-2 text-sm"
               >
                 <option value="">{t("manager:emails.text.all")}</option>
                 <option value="PENDING">{t("manager:emails.text.pending")}</option>
@@ -86,7 +86,7 @@ export default function DevEmailsPage() {
               </select>
               <button
                 onClick={loadEmails}
-                className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                className="rounded-lg border border-surface-border bg-surface px-3 py-2 text-sm font-medium text-muted-dark hover:bg-surface-subtle"
               >
                 Refresh
               </button>
@@ -101,7 +101,7 @@ export default function DevEmailsPage() {
             {/* Email list */}
             <div className="lg:col-span-2">
               <Panel title={`${emails.length} Email${emails.length !== 1 ? "s" : ""}`}>
-                {loading && <p className="text-sm text-slate-500">{t("manager:emails.text.loading")}</p>}
+                {loading && <p className="text-sm text-muted">{t("manager:emails.text.loading")}</p>}
 
                 {!loading && emails.length === 0 && (
                   <div className="empty-state"><p className="empty-state-text">{t("manager:emails.text.noEmailsInOutbox")}</p></div>
@@ -116,23 +116,23 @@ export default function DevEmailsPage() {
                         <button
                           key={email.id}
                           onClick={() => loadEmailDetail(email.id)}
-                          className={cn("w-full text-left px-4 py-3 hover:bg-slate-50 transition-colors", isActive ? "bg-indigo-50 border-l-2 border-indigo-500" : "")}
+                          className={cn("w-full text-left px-4 py-3 hover:bg-surface-subtle transition-colors", isActive ? "bg-indigo-50 border-l-2 border-indigo-500" : "")}
                         >
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                               <Badge variant={badge.variant} size="sm">
                                 {badge.label}
                               </Badge>
-                              <span className="text-xs font-mono text-slate-400">
+                              <span className="text-xs font-mono text-foreground-dim">
                                 {(email.template || "").replace(/_/g, " ")}
                               </span>
                             </div>
-                            <span className="text-xs text-slate-400">{formatDate(email.createdAt)}</span>
+                            <span className="text-xs text-foreground-dim">{formatDate(email.createdAt)}</span>
                           </div>
-                          <p className="mt-1 text-sm font-medium text-slate-900 truncate">
+                          <p className="mt-1 text-sm font-medium text-foreground truncate">
                             To: {email.toAddress || "—"}
                           </p>
-                          <p className="text-xs text-slate-500 truncate">{email.subject || "—"}</p>
+                          <p className="text-xs text-muted truncate">{email.subject || "—"}</p>
                         </button>
                       );
                     })}
@@ -145,7 +145,7 @@ export default function DevEmailsPage() {
             <div>
               <Panel title={t("manager:emails.title.emailDetail")}>
                 {!selectedEmail && (
-                  <p className="py-8 text-center text-sm text-slate-400">
+                  <p className="py-8 text-center text-sm text-foreground-dim">
                     Select an email to view details
                   </p>
                 )}
@@ -153,7 +153,7 @@ export default function DevEmailsPage() {
                 {selectedEmail && (
                   <div className="space-y-4 text-sm">
                     <div>
-                      <label className="text-xs font-semibold uppercase text-slate-400">{t("manager:emails.text.status")}</label>
+                      <label className="text-xs font-semibold uppercase text-foreground-dim">{t("manager:emails.text.status")}</label>
                       <p>
                         <Badge variant={statusBadge(selectedEmail.status).variant} size="sm">
                           {statusBadge(selectedEmail.status).label}
@@ -162,33 +162,33 @@ export default function DevEmailsPage() {
                     </div>
 
                     <div>
-                      <label className="text-xs font-semibold uppercase text-slate-400">{t("manager:emails.text.template")}</label>
-                      <p className="font-mono text-slate-700">
+                      <label className="text-xs font-semibold uppercase text-foreground-dim">{t("manager:emails.text.template")}</label>
+                      <p className="font-mono text-muted-dark">
                         {(selectedEmail.template || "—").replace(/_/g, " ")}
                       </p>
                     </div>
 
                     <div>
-                      <label className="text-xs font-semibold uppercase text-slate-400">{t("manager:emails.text.to")}</label>
-                      <p className="text-slate-700">{selectedEmail.toAddress || "—"}</p>
+                      <label className="text-xs font-semibold uppercase text-foreground-dim">{t("manager:emails.text.to")}</label>
+                      <p className="text-muted-dark">{selectedEmail.toAddress || "—"}</p>
                     </div>
 
                     <div>
-                      <label className="text-xs font-semibold uppercase text-slate-400">{t("manager:emails.text.subject")}</label>
-                      <p className="text-slate-700">{selectedEmail.subject || "—"}</p>
+                      <label className="text-xs font-semibold uppercase text-foreground-dim">{t("manager:emails.text.subject")}</label>
+                      <p className="text-muted-dark">{selectedEmail.subject || "—"}</p>
                     </div>
 
                     <div>
-                      <label className="text-xs font-semibold uppercase text-slate-400">{t("manager:emails.text.body")}</label>
-                      <div className="mt-1 rounded-lg bg-slate-50 p-3 text-xs text-slate-600 whitespace-pre-wrap max-h-80 overflow-y-auto">
+                      <label className="text-xs font-semibold uppercase text-foreground-dim">{t("manager:emails.text.body")}</label>
+                      <div className="mt-1 rounded-lg bg-surface-subtle p-3 text-xs text-muted-text whitespace-pre-wrap max-h-80 overflow-y-auto">
                         {selectedEmail.bodyText || selectedEmail.bodyHtml || "—"}
                       </div>
                     </div>
 
                     {selectedEmail.payloadJson && (
                       <div>
-                        <label className="text-xs font-semibold uppercase text-slate-400">{t("manager:emails.text.payload")}</label>
-                        <pre className="mt-1 rounded-lg bg-slate-50 p-3 text-xs text-slate-600 overflow-x-auto max-h-60">
+                        <label className="text-xs font-semibold uppercase text-foreground-dim">{t("manager:emails.text.payload")}</label>
+                        <pre className="mt-1 rounded-lg bg-surface-subtle p-3 text-xs text-muted-text overflow-x-auto max-h-60">
                           {typeof selectedEmail.payloadJson === "string"
                             ? selectedEmail.payloadJson
                             : JSON.stringify(selectedEmail.payloadJson, null, 2)}
@@ -198,25 +198,25 @@ export default function DevEmailsPage() {
 
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <label className="text-xs font-semibold uppercase text-slate-400">{t("manager:emails.text.created")}</label>
-                        <p className="text-xs text-slate-600">{formatDate(selectedEmail.createdAt)}</p>
+                        <label className="text-xs font-semibold uppercase text-foreground-dim">{t("manager:emails.text.created")}</label>
+                        <p className="text-xs text-muted-text">{formatDate(selectedEmail.createdAt)}</p>
                       </div>
                       <div>
-                        <label className="text-xs font-semibold uppercase text-slate-400">{t("manager:emails.text.sentAt")}</label>
-                        <p className="text-xs text-slate-600">{formatDate(selectedEmail.sentAt)}</p>
+                        <label className="text-xs font-semibold uppercase text-foreground-dim">{t("manager:emails.text.sentAt")}</label>
+                        <p className="text-xs text-muted-text">{formatDate(selectedEmail.sentAt)}</p>
                       </div>
                     </div>
 
                     {selectedEmail.errorMessage && (
                       <div>
-                        <label className="text-xs font-semibold uppercase text-slate-400">{t("manager:emails.text.error")}</label>
+                        <label className="text-xs font-semibold uppercase text-foreground-dim">{t("manager:emails.text.error")}</label>
                         <p className="text-sm text-red-700">{selectedEmail.errorMessage}</p>
                       </div>
                     )}
 
                     <div>
-                      <label className="text-xs font-semibold uppercase text-slate-400">ID</label>
-                      <p className="text-xs font-mono text-slate-400">{selectedEmail.id}</p>
+                      <label className="text-xs font-semibold uppercase text-foreground-dim">ID</label>
+                      <p className="text-xs font-mono text-foreground-dim">{selectedEmail.id}</p>
                     </div>
                   </div>
                 )}

@@ -24,9 +24,9 @@ const TYPE_CLS = {
 
 function DetailRow({ label, value, mono }) {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-baseline gap-1 py-2.5 border-b border-slate-100 last:border-0">
-      <span className="text-sm font-medium text-slate-500 sm:w-44 shrink-0">{label}</span>
-      <span className={cn("text-sm text-slate-900", mono ? "font-mono" : "")}>{value || "—"}</span>
+    <div className="flex flex-col sm:flex-row sm:items-baseline gap-1 py-2.5 border-b border-surface-divider last:border-0">
+      <span className="text-sm font-medium text-muted sm:w-44 shrink-0">{label}</span>
+      <span className={cn("text-sm text-foreground", mono ? "font-mono" : "")}>{value || "—"}</span>
     </div>
   );
 }
@@ -148,7 +148,7 @@ export default function BillingEntityDetailPage() {
         <div className="mb-3">
           <button
             type="button"
-            className="text-sm font-medium text-slate-600 hover:text-slate-900"
+            className="text-sm font-medium text-muted-text hover:text-foreground"
             onClick={() => router.push("/manager/finance?tab=billing-entities")}
           >
             ← Back to Billing Entities
@@ -164,13 +164,13 @@ export default function BillingEntityDetailPage() {
                 <>
                   <button
                     onClick={() => setIsEditing(true)}
-                    className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                    className="rounded-lg border border-surface-border bg-surface px-4 py-2 text-sm font-medium text-muted-dark hover:bg-surface-subtle"
                   >
                     Edit
                   </button>
                   <button
                     onClick={handleDelete}
-                    className="rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
+                    className="rounded-lg border border-red-200 bg-surface px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
                   >
                     Delete
                   </button>
@@ -179,7 +179,7 @@ export default function BillingEntityDetailPage() {
                 <>
                   <button
                     onClick={handleCancel}
-                    className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
+                    className="rounded-lg border border-surface-border bg-surface px-4 py-2 text-sm font-medium text-muted-text hover:bg-surface-subtle"
                   >
                     Cancel
                   </button>
@@ -218,14 +218,14 @@ export default function BillingEntityDetailPage() {
                 <Section title={t("manager:financeBillingEntitiesId.title.general")}>
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:financeBilling_EntitiesId.text.type")}</label>
+                      <label className="block text-sm font-medium text-muted-dark mb-1">{t("manager:financeBilling_EntitiesId.text.type")}</label>
                       <input value={TYPE_LABEL[entity.type] || entity.type} disabled
-                        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 text-slate-500" />
+                        className="w-full border border-surface-border rounded-lg px-3 py-2 text-sm bg-surface-subtle text-muted" />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:financeBilling_EntitiesId.text.name")}</label>
+                      <label className="block text-sm font-medium text-muted-dark mb-1">{t("manager:financeBilling_EntitiesId.text.name")}</label>
                       <input value={form.name} onChange={(e) => setField("name", e.target.value)}
-                        className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" required />
+                        className="w-full border border-muted-ring rounded-lg px-3 py-2 text-sm" required />
                     </div>
                   </div>
                 </Section>
@@ -235,30 +235,30 @@ export default function BillingEntityDetailPage() {
                 <Section title={t("manager:financeBillingEntitiesId.title.address")}>
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:financeBilling_EntitiesId.text.addressLine1")}</label>
+                      <label className="block text-sm font-medium text-muted-dark mb-1">{t("manager:financeBilling_EntitiesId.text.addressLine1")}</label>
                       <input value={form.addressLine1} onChange={(e) => setField("addressLine1", e.target.value)}
-                        className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" required />
+                        className="w-full border border-muted-ring rounded-lg px-3 py-2 text-sm" required />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:financeBilling_EntitiesId.text.addressLine2")}</label>
+                      <label className="block text-sm font-medium text-muted-dark mb-1">{t("manager:financeBilling_EntitiesId.text.addressLine2")}</label>
                       <input value={form.addressLine2} onChange={(e) => setField("addressLine2", e.target.value)}
-                        className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" />
+                        className="w-full border border-muted-ring rounded-lg px-3 py-2 text-sm" />
                     </div>
                     <div className="grid grid-cols-3 gap-3">
                       <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:financeBilling_EntitiesId.text.postalCode")}</label>
+                        <label className="block text-sm font-medium text-muted-dark mb-1">{t("manager:financeBilling_EntitiesId.text.postalCode")}</label>
                         <input value={form.postalCode} onChange={(e) => setField("postalCode", e.target.value)}
-                          className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" required />
+                          className="w-full border border-muted-ring rounded-lg px-3 py-2 text-sm" required />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:financeBilling_EntitiesId.text.city")}</label>
+                        <label className="block text-sm font-medium text-muted-dark mb-1">{t("manager:financeBilling_EntitiesId.text.city")}</label>
                         <input value={form.city} onChange={(e) => setField("city", e.target.value)}
-                          className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" required />
+                          className="w-full border border-muted-ring rounded-lg px-3 py-2 text-sm" required />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:financeBilling_EntitiesId.text.country")}</label>
+                        <label className="block text-sm font-medium text-muted-dark mb-1">{t("manager:financeBilling_EntitiesId.text.country")}</label>
                         <input value={form.country} onChange={(e) => setField("country", e.target.value)}
-                          className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" />
+                          className="w-full border border-muted-ring rounded-lg px-3 py-2 text-sm" />
                       </div>
                     </div>
                   </div>
@@ -269,21 +269,21 @@ export default function BillingEntityDetailPage() {
                 <Section title={t("manager:financeBillingEntitiesId.title.banking")}>
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">IBAN</label>
+                      <label className="block text-sm font-medium text-muted-dark mb-1">IBAN</label>
                       <input value={form.iban} onChange={(e) => setField("iban", e.target.value)}
-                        className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm font-mono" required />
+                        className="w-full border border-muted-ring rounded-lg px-3 py-2 text-sm font-mono" required />
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:financeBilling_EntitiesId.text.vATNumber")}</label>
+                        <label className="block text-sm font-medium text-muted-dark mb-1">{t("manager:financeBilling_EntitiesId.text.vATNumber")}</label>
                         <input value={form.vatNumber} onChange={(e) => setField("vatNumber", e.target.value)}
-                          className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" />
+                          className="w-full border border-muted-ring rounded-lg px-3 py-2 text-sm" />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Default VAT rate (%)</label>
+                        <label className="block text-sm font-medium text-muted-dark mb-1">Default VAT rate (%)</label>
                         <input type="number" step="0.1" value={form.defaultVatRate}
                           onChange={(e) => setField("defaultVatRate", e.target.value)}
-                          className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" />
+                          className="w-full border border-muted-ring rounded-lg px-3 py-2 text-sm" />
                       </div>
                     </div>
                   </div>

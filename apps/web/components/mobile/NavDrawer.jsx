@@ -43,13 +43,13 @@ export default function NavDrawer({ open, onClose, items = [] }) {
                 'text-sm font-medium transition-colors min-h-[44px]',
                 active
                   ? 'bg-brand-light text-brand-dark'
-                  : 'text-slate-700 hover:bg-slate-50',
+                  : 'text-muted-dark hover:bg-surface-subtle',
               )}
               aria-current={active ? 'page' : undefined}
             >
               <Icon
                 size={20}
-                className={cn('shrink-0', active ? 'text-brand' : 'text-slate-400')}
+                className={cn('shrink-0', active ? 'text-brand' : 'text-foreground-dim')}
                 aria-hidden="true"
               />
               <span>{item.label}</span>

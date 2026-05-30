@@ -107,14 +107,14 @@ function QuoteForm({ rfpId, onSubmitted }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white border border-slate-200 rounded-lg p-6 mb-4">
-      <h2 className="text-base font-semibold text-slate-900 mb-4">{t("contractor:rfpsId.heading.submitYourQuote")}</h2>
+    <form onSubmit={handleSubmit} className="bg-surface border border-surface-border rounded-lg p-6 mb-4">
+      <h2 className="text-base font-semibold text-foreground mb-4">{t("contractor:rfpsId.heading.submitYourQuote")}</h2>
 
       <ErrorBanner error={error} className="mb-4 text-sm" />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 mb-4">
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">
+          <label className="block text-sm font-medium text-muted-dark mb-1">
             Total Amount (CHF) <span className="text-red-500">*</span>
           </label>
           <input
@@ -125,24 +125,24 @@ function QuoteForm({ rfpId, onSubmitted }) {
             value={form.amountCents}
             onChange={handleChange}
             required
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            className="w-full rounded-lg border border-muted-ring px-3 py-2 text-sm"
             placeholder={t("contractor:rfpsId.placeholder.eG150000")}
           />
         </div>
         <div className="flex items-end gap-4">
-          <label className="flex items-center gap-2 text-sm text-slate-700">
+          <label className="flex items-center gap-2 text-sm text-muted-dark">
             <input
               type="checkbox"
               name="vatIncluded"
               checked={form.vatIncluded}
               onChange={handleChange}
-              className="rounded border-slate-300"
+              className="rounded border-muted-ring"
             />
             VAT included
           </label>
         </div>
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">
+          <label className="block text-sm font-medium text-muted-dark mb-1">
             Estimated Duration (days)
           </label>
           <input
@@ -151,12 +151,12 @@ function QuoteForm({ rfpId, onSubmitted }) {
             min="1"
             value={form.estimatedDurationDays}
             onChange={handleChange}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            className="w-full rounded-lg border border-muted-ring px-3 py-2 text-sm"
             placeholder={t("contractor:rfpsId.placeholder.eG5")}
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">
+          <label className="block text-sm font-medium text-muted-dark mb-1">
             Earliest Availability
           </label>
           <input
@@ -164,11 +164,11 @@ function QuoteForm({ rfpId, onSubmitted }) {
             name="earliestAvailability"
             value={form.earliestAvailability}
             onChange={handleChange}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            className="w-full rounded-lg border border-muted-ring px-3 py-2 text-sm"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">
+          <label className="block text-sm font-medium text-muted-dark mb-1">
             Quote Valid Until
           </label>
           <input
@@ -176,13 +176,13 @@ function QuoteForm({ rfpId, onSubmitted }) {
             name="validUntil"
             value={form.validUntil}
             onChange={handleChange}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            className="w-full rounded-lg border border-muted-ring px-3 py-2 text-sm"
           />
         </div>
       </div>
 
       <div className="mb-4">
-        <label className="block text-sm font-medium text-slate-700 mb-1">
+        <label className="block text-sm font-medium text-muted-dark mb-1">
           Work Plan <span className="text-red-500">*</span>
         </label>
         <textarea
@@ -191,13 +191,13 @@ function QuoteForm({ rfpId, onSubmitted }) {
           onChange={handleChange}
           required
           rows={4}
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          className="w-full rounded-lg border border-muted-ring px-3 py-2 text-sm"
           placeholder={t("contractor:rfpsId.placeholder.describeTheProposedWorkPlanMethodsAndTimeline")}
         />
       </div>
 
       <div className="mb-4">
-        <label className="block text-sm font-medium text-slate-700 mb-1">
+        <label className="block text-sm font-medium text-muted-dark mb-1">
           Assumptions / Exclusions
         </label>
         <textarea
@@ -205,13 +205,13 @@ function QuoteForm({ rfpId, onSubmitted }) {
           value={form.assumptions}
           onChange={handleChange}
           rows={2}
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          className="w-full rounded-lg border border-muted-ring px-3 py-2 text-sm"
           placeholder={t("contractor:rfpsId.placeholder.anyAssumptionsExclusionsOrConditions")}
         />
       </div>
 
       <div className="mb-4">
-        <label className="block text-sm font-medium text-slate-700 mb-1">
+        <label className="block text-sm font-medium text-muted-dark mb-1">
           Additional Notes
         </label>
         <textarea
@@ -219,7 +219,7 @@ function QuoteForm({ rfpId, onSubmitted }) {
           value={form.notes}
           onChange={handleChange}
           rows={2}
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          className="w-full rounded-lg border border-muted-ring px-3 py-2 text-sm"
           placeholder={t("contractor:rfpsId.placeholder.anyOtherInformationForTheManager")}
         />
       </div>
@@ -227,7 +227,7 @@ function QuoteForm({ rfpId, onSubmitted }) {
       {/* Line Items */}
       <div className="mb-4">
         <div className="flex items-center justify-between mb-2">
-          <label className="block text-sm font-medium text-slate-700">
+          <label className="block text-sm font-medium text-muted-dark">
             Line Items (optional)
           </label>
           <button
@@ -244,7 +244,7 @@ function QuoteForm({ rfpId, onSubmitted }) {
               type="text"
               value={item.description}
               onChange={(e) => updateLineItem(idx, "description", e.target.value)}
-              className="flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
+              className="flex-1 rounded-lg border border-muted-ring px-3 py-1.5 text-sm"
               placeholder={t("contractor:rfpsId.placeholder.description")}
             />
             <input
@@ -253,7 +253,7 @@ function QuoteForm({ rfpId, onSubmitted }) {
               min="0"
               value={item.amountCents}
               onChange={(e) => updateLineItem(idx, "amountCents", e.target.value)}
-              className="w-32 rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
+              className="w-32 rounded-lg border border-muted-ring px-3 py-1.5 text-sm"
               placeholder="CHF"
             />
             <button
@@ -359,33 +359,33 @@ function SlotProposalForm({ jobId, onProposed }) {
       {slots.map((slot, idx) => (
         <div key={idx} className="flex items-end gap-2 flex-wrap">
           <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1">{t("contractor:rfpsId.text.date")}</label>
+            <label className="block text-xs font-medium text-muted mb-1">{t("contractor:rfpsId.text.date")}</label>
             <input
               type="date"
               value={slot.date}
               onChange={(e) => updateSlot(idx, "date", e.target.value)}
               required
-              className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              className="rounded-lg border border-muted-ring px-3 py-2 text-sm"
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1">{t("contractor:rfpsId.text.from")}</label>
+            <label className="block text-xs font-medium text-muted mb-1">{t("contractor:rfpsId.text.from")}</label>
             <input
               type="time"
               value={slot.startTime}
               onChange={(e) => updateSlot(idx, "startTime", e.target.value)}
               required
-              className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              className="rounded-lg border border-muted-ring px-3 py-2 text-sm"
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1">{t("contractor:rfpsId.text.to")}</label>
+            <label className="block text-xs font-medium text-muted mb-1">{t("contractor:rfpsId.text.to")}</label>
             <input
               type="time"
               value={slot.endTime}
               onChange={(e) => updateSlot(idx, "endTime", e.target.value)}
               required
-              className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              className="rounded-lg border border-muted-ring px-3 py-2 text-sm"
             />
           </div>
           {slots.length > 1 && (
@@ -410,7 +410,7 @@ function SlotProposalForm({ jobId, onProposed }) {
             + Add another time slot
           </button>
         )}
-        <span className="text-xs text-slate-400">{slots.length}/5 slots</span>
+        <span className="text-xs text-foreground-dim">{slots.length}/5 slots</span>
       </div>
 
       <button
@@ -519,11 +519,11 @@ function SchedulingSection({ jobId }) {
   const hasProposed = slots.some((s) => s.status === "PROPOSED");
 
   return (
-    <div className="bg-white border border-slate-200 rounded-lg p-6 mb-4">
-      <h2 className="text-base font-semibold text-slate-900 mb-1">
+    <div className="bg-surface border border-surface-border rounded-lg p-6 mb-4">
+      <h2 className="text-base font-semibold text-foreground mb-1">
         📅 Appointment Scheduling
       </h2>
-      <p className="text-sm text-slate-500 mb-4">
+      <p className="text-sm text-muted mb-4">
         Propose up to 5 time slots for the tenant to choose from.
         The tenant has 72 hours to respond before the manager is notified.
       </p>
@@ -531,7 +531,7 @@ function SchedulingSection({ jobId }) {
       <ErrorBanner error={error} className="mb-4 text-sm" />
 
       {loading ? (
-        <p className="text-sm text-slate-400">{t("contractor:rfpsId.text.loadingSlots")}</p>
+        <p className="text-sm text-foreground-dim">{t("contractor:rfpsId.text.loadingSlots")}</p>
       ) : (
         <>
           <ExistingSlotsPanel slots={slots} />
@@ -699,13 +699,13 @@ export default function ContractorRfpDetailPage() {
         <div className="flex justify-between items-start mb-6">
           <div>
             <h1 className="mt-0 mb-1">{title}</h1>
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-muted">
               {rfp ? `Category: ${rfp.category || "—"}` : "Loading…"}
             </p>
           </div>
           <Link
             href="/contractor/rfps"
-            className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            className="rounded-lg border border-surface-border bg-surface px-4 py-2 text-sm font-medium text-muted-dark hover:bg-surface-subtle"
           >
             ← Back to RFPs
           </Link>
@@ -716,15 +716,15 @@ export default function ContractorRfpDetailPage() {
         <ErrorBanner error={noContractor ? "No contractor selected. Please select a contractor first." : error} className="mb-4" />
 
         {loading ? (
-          <p className="text-sm text-slate-500">{t("contractor:rfpsId.text.loading")}</p>
+          <p className="text-sm text-muted">{t("contractor:rfpsId.text.loading")}</p>
         ) : rfp ? (
           <>
             {/* RFP Metadata */}
-            <div className="bg-white border border-slate-200 rounded-lg p-6 mb-4">
-              <h2 className="text-base font-semibold text-slate-900 mb-4">{t("contractor:rfpsId.heading.rFPDetails")}</h2>
+            <div className="bg-surface border border-surface-border rounded-lg p-6 mb-4">
+              <h2 className="text-base font-semibold text-foreground mb-4">{t("contractor:rfpsId.heading.rFPDetails")}</h2>
               <dl className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
                 <div>
-                  <dt className="text-sm font-medium text-slate-500">{t("contractor:rfpsId.text.status")}</dt>
+                  <dt className="text-sm font-medium text-muted">{t("contractor:rfpsId.text.status")}</dt>
                   <dd className="mt-1">
                     <Badge variant={rfpVariant(rfp.status)}>{rfp.status}</Badge>
                     {rfp.isInvited && (
@@ -735,72 +735,72 @@ export default function ContractorRfpDetailPage() {
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-sm font-medium text-slate-500">{t("contractor:rfpsId.text.category")}</dt>
-                  <dd className="mt-1 text-sm text-slate-900">{rfp.category || "—"}</dd>
+                  <dt className="text-sm font-medium text-muted">{t("contractor:rfpsId.text.category")}</dt>
+                  <dd className="mt-1 text-sm text-foreground">{rfp.category || "—"}</dd>
                 </div>
                 <div>
-                  <dt className="text-sm font-medium text-slate-500">{t("contractor:rfpsId.text.legalObligation")}</dt>
-                  <dd className="mt-1 text-sm text-slate-900">{rfp.legalObligation || "—"}</dd>
+                  <dt className="text-sm font-medium text-muted">{t("contractor:rfpsId.text.legalObligation")}</dt>
+                  <dd className="mt-1 text-sm text-foreground">{rfp.legalObligation || "—"}</dd>
                 </div>
                 <div>
-                  <dt className="text-sm font-medium text-slate-500">{t("contractor:rfpsId.text.location")}</dt>
-                  <dd className="mt-1 text-sm text-slate-900">
+                  <dt className="text-sm font-medium text-muted">{t("contractor:rfpsId.text.location")}</dt>
+                  <dd className="mt-1 text-sm text-foreground">
                     {rfp.buildingName || "—"}
                     {rfp.postalCode && (
-                      <span className="text-slate-500"> · {rfp.postalCode}</span>
+                      <span className="text-muted"> · {rfp.postalCode}</span>
                     )}
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-sm font-medium text-slate-500">{t("contractor:rfpsId.text.unit")}</dt>
-                  <dd className="mt-1 text-sm text-slate-900">{rfp.unitNumber || "—"}</dd>
+                  <dt className="text-sm font-medium text-muted">{t("contractor:rfpsId.text.unit")}</dt>
+                  <dd className="mt-1 text-sm text-foreground">{rfp.unitNumber || "—"}</dd>
                 </div>
                 <div>
-                  <dt className="text-sm font-medium text-slate-500">{t("contractor:rfpsId.text.quoteDeadline")}</dt>
-                  <dd className="mt-1 text-sm text-slate-900">{formatDate(rfp.deadlineAt)}</dd>
+                  <dt className="text-sm font-medium text-muted">{t("contractor:rfpsId.text.quoteDeadline")}</dt>
+                  <dd className="mt-1 text-sm text-foreground">{formatDate(rfp.deadlineAt)}</dd>
                 </div>
                 <div>
-                  <dt className="text-sm font-medium text-slate-500">{t("contractor:rfpsId.text.created")}</dt>
-                  <dd className="mt-1 text-sm text-slate-900">{formatDate(rfp.createdAt)}</dd>
+                  <dt className="text-sm font-medium text-muted">{t("contractor:rfpsId.text.created")}</dt>
+                  <dd className="mt-1 text-sm text-foreground">{formatDate(rfp.createdAt)}</dd>
                 </div>
                 <div>
-                  <dt className="text-sm font-medium text-slate-500">{t("contractor:rfpsId.text.quotesSubmitted")}</dt>
-                  <dd className="mt-1 text-sm text-slate-900">{rfp.quoteCount}</dd>
+                  <dt className="text-sm font-medium text-muted">{t("contractor:rfpsId.text.quotesSubmitted")}</dt>
+                  <dd className="mt-1 text-sm text-foreground">{rfp.quoteCount}</dd>
                 </div>
               </dl>
             </div>
 
             {/* Linked Request — contractor-safe (no tenant identity, no full address) */}
             {rfp.request && (
-              <div className="bg-white border border-slate-200 rounded-lg p-6 mb-4">
-                <h2 className="text-base font-semibold text-slate-900 mb-4">{t("contractor:rfpsId.heading.workDescription")}</h2>
+              <div className="bg-surface border border-surface-border rounded-lg p-6 mb-4">
+                <h2 className="text-base font-semibold text-foreground mb-4">{t("contractor:rfpsId.heading.workDescription")}</h2>
                 <dl className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
                   <div>
-                    <dt className="text-sm font-medium text-slate-500">{t("contractor:rfpsId.text.request")}</dt>
-                    <dd className="mt-1 text-sm font-medium text-slate-900">
+                    <dt className="text-sm font-medium text-muted">{t("contractor:rfpsId.text.request")}</dt>
+                    <dd className="mt-1 text-sm font-medium text-foreground">
                       #{rfp.request.requestNumber}
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-sm font-medium text-slate-500">{t("contractor:rfpsId.text.category")}</dt>
-                    <dd className="mt-1 text-sm text-slate-900">{rfp.request.category || "—"}</dd>
+                    <dt className="text-sm font-medium text-muted">{t("contractor:rfpsId.text.category")}</dt>
+                    <dd className="mt-1 text-sm text-foreground">{rfp.request.category || "—"}</dd>
                   </div>
                   <div>
-                    <dt className="text-sm font-medium text-slate-500">{t("contractor:rfpsId.text.requestDate")}</dt>
-                    <dd className="mt-1 text-sm text-slate-900">{formatDate(rfp.request.createdAt)}</dd>
+                    <dt className="text-sm font-medium text-muted">{t("contractor:rfpsId.text.requestDate")}</dt>
+                    <dd className="mt-1 text-sm text-foreground">{formatDate(rfp.request.createdAt)}</dd>
                   </div>
                   <div className="sm:col-span-2 lg:col-span-3">
-                    <dt className="text-sm font-medium text-slate-500">{t("contractor:rfpsId.placeholder.description")}</dt>
-                    <dd className="mt-1 text-sm text-slate-900 whitespace-pre-line">
+                    <dt className="text-sm font-medium text-muted">{t("contractor:rfpsId.placeholder.description")}</dt>
+                    <dd className="mt-1 text-sm text-foreground whitespace-pre-line">
                       {rfp.request.description || "—"}
                     </dd>
                   </div>
                   {rfp.request.attachmentCount > 0 && (
                     <div>
-                      <dt className="text-sm font-medium text-slate-500">{t("contractor:rfpsId.text.photosAttachments")}</dt>
-                      <dd className="mt-1 text-sm text-slate-900">
+                      <dt className="text-sm font-medium text-muted">{t("contractor:rfpsId.text.photosAttachments")}</dt>
+                      <dd className="mt-1 text-sm text-foreground">
                         {rfp.request.attachmentCount} file{rfp.request.attachmentCount !== 1 ? "s" : ""}
-                        <span className="text-xs text-slate-400 ml-1">(available after award)</span>
+                        <span className="text-xs text-foreground-dim ml-1">(available after award)</span>
                       </dd>
                     </div>
                   )}
@@ -814,8 +814,8 @@ export default function ContractorRfpDetailPage() {
             ) : rfp.status === "OPEN" ? (
               <QuoteForm rfpId={rfp.id} onSubmitted={() => loadData()} />
             ) : (
-              <div className="bg-slate-50 border border-slate-200 rounded-lg p-6 text-center">
-                <p className="text-sm text-slate-600">
+              <div className="bg-surface-subtle border border-surface-border rounded-lg p-6 text-center">
+                <p className="text-sm text-muted-text">
                   This RFP is no longer accepting quotes.
                 </p>
               </div>
@@ -827,8 +827,8 @@ export default function ContractorRfpDetailPage() {
             )}
           </>
         ) : (
-          <div className="bg-slate-50 border border-slate-200 rounded p-8 text-center">
-            <p className="text-slate-600">{t("contractor:rfpsId.text.rFPNotFoundOrNotAccessible")}</p>
+          <div className="bg-surface-subtle border border-surface-border rounded p-8 text-center">
+            <p className="text-muted-text">{t("contractor:rfpsId.text.rFPNotFoundOrNotAccessible")}</p>
           </div>
         )}
       </div>

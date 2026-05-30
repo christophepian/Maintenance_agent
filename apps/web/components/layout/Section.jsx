@@ -5,8 +5,8 @@ export default function Section({ title, subtitle, children, className }) {
     <section className={cn("space-y-5", className)}>
       {(title || subtitle) ? (
         <div>
-          {title ? <h2 className="text-lg font-semibold text-slate-900">{title}</h2> : null}
-          {subtitle ? <p className="text-sm text-slate-400">{subtitle}</p> : null}
+          {title ? <h2 className="text-lg font-semibold text-foreground">{title}</h2> : null}
+          {subtitle ? <p className="text-sm text-foreground-dim">{subtitle}</p> : null}
         </div>
       ) : null}
       {children}

@@ -137,7 +137,7 @@ export default function DocumentsPanel({ applicationId, title, compact }) {
   return (
     <>
       <Panel title={title || `${t("documents.title")}${totalDocs > 0 ? ` (${totalDocs})` : ""}`}>
-        {loading && <p className="text-sm text-slate-500">{t("documents.loading")}</p>}
+        {loading && <p className="text-sm text-muted">{t("documents.loading")}</p>}
 
         {error && (
           <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
@@ -146,7 +146,7 @@ export default function DocumentsPanel({ applicationId, title, compact }) {
         )}
 
         {!loading && !error && totalDocs === 0 && (
-          <div className="text-sm text-slate-500 py-2">
+          <div className="text-sm text-muted py-2">
             {t("documents.empty")}
           </div>
         )}
@@ -155,9 +155,9 @@ export default function DocumentsPanel({ applicationId, title, compact }) {
           if (!applicant.attachments?.length) return null;
           return (
             <div key={applicant.id} className={compact ? "mb-3" : "mb-4"}>
-              <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">
+              <div className="text-xs font-semibold uppercase tracking-wide text-muted mb-2">
                 {applicant.firstName} {applicant.lastName}
-                <span className="ml-2 text-slate-400 normal-case font-normal">({applicant.role})</span>
+                <span className="ml-2 text-foreground-dim normal-case font-normal">({applicant.role})</span>
               </div>
               <div className="space-y-1.5">
                 {applicant.attachments.map((att) => {
@@ -166,15 +166,15 @@ export default function DocumentsPanel({ applicationId, title, compact }) {
                   return (
                     <div
                       key={att.id}
-                      className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 hover:bg-slate-100 transition-colors group min-w-0"
+                      className="flex items-center justify-between rounded-lg border border-surface-border bg-surface-subtle px-3 py-2 hover:bg-surface-hover transition-colors group min-w-0"
                     >
                       <div className="flex items-center gap-2 min-w-0">
                         <span className="text-base flex-shrink-0">{icon}</span>
                         <div className="min-w-0">
-                          <div className="text-sm font-medium text-slate-800 truncate">
+                          <div className="text-sm font-medium text-foreground truncate">
                             {label}
                           </div>
-                          <div className="text-xs text-slate-500 truncate">
+                          <div className="text-xs text-muted truncate">
                             {att.fileName} · {formatBytes(att.fileSizeBytes)} · {formatDate(att.uploadedAt)}
                           </div>
                         </div>
@@ -183,7 +183,7 @@ export default function DocumentsPanel({ applicationId, title, compact }) {
                         {(att.mimeType?.includes("pdf") || att.mimeType?.includes("image")) && (
                           <button
                             onClick={() => openPreview(att.id, att.mimeType, att.fileName)}
-                            className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors"
+                            className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-muted-text bg-surface-hover hover:bg-surface-border transition-colors"
                             title={t("action.view")}
                           >
                             <Eye size={14} className="shrink-0" />
@@ -192,7 +192,7 @@ export default function DocumentsPanel({ applicationId, title, compact }) {
                         )}
                         <button
                           onClick={() => handleDownload(att.id, att.fileName)}
-                          className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors"
+                          className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-muted-text bg-surface-hover hover:bg-surface-border transition-colors"
                           title={t("action.download")}
                           aria-label={`Download ${att.fileName}`}
                         >
@@ -211,8 +211,8 @@ export default function DocumentsPanel({ applicationId, title, compact }) {
       {/* Document preview dialog */}
       <Dialog open={!!previewUrl} onOpenChange={(open) => { if (!open) closePreview(); }}>
         <DialogContent maxWidth="max-w-4xl" className="rounded-2xl overflow-hidden p-0">
-          <div className="flex items-center justify-between px-4 py-3 border-b bg-slate-50">
-            <div className="text-sm font-medium text-slate-800 truncate">{previewName}</div>
+          <div className="flex items-center justify-between px-4 py-3 border-b bg-surface-subtle">
+            <div className="text-sm font-medium text-foreground truncate">{previewName}</div>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => {
@@ -221,14 +221,14 @@ export default function DocumentsPanel({ applicationId, title, compact }) {
                   a.download = previewName;
                   a.click();
                 }}
-                className="inline-flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-100 hover:bg-slate-200"
+                className="inline-flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-medium text-muted-text bg-surface-hover hover:bg-surface-border"
               >
                 <Download size={14} className="shrink-0" />
                 {t("action.download")}
               </button>
               <button
                 onClick={closePreview}
-                className="inline-flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-100 hover:bg-slate-200"
+                className="inline-flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-medium text-muted-text bg-surface-hover hover:bg-surface-border"
                 aria-label={t("action.close")}
               >
                 ✕ {t("action.close")}
@@ -243,7 +243,7 @@ export default function DocumentsPanel({ applicationId, title, compact }) {
                 title="Document preview"
               />
             ) : previewMime?.includes("image") ? (
-              <div className="flex items-center justify-center p-4 bg-slate-100">
+              <div className="flex items-center justify-center p-4 bg-surface-hover">
                 <img
                   src={previewUrl}
                   alt={previewName}
@@ -251,7 +251,7 @@ export default function DocumentsPanel({ applicationId, title, compact }) {
                 />
               </div>
             ) : (
-              <div className="p-8 text-center text-slate-500">
+              <div className="p-8 text-center text-muted">
                 <p>{t("documents.previewUnavailable")}</p>
                 <a href={previewUrl} download={previewName} className="text-indigo-600 hover:underline mt-2 inline-block">
                   {t("documents.downloadInstead")}

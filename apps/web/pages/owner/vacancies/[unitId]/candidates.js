@@ -231,7 +231,7 @@ export default function OwnerCandidatesPage() {
           actions={
             <Link
               href="/owner/vacancies"
-              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              className="rounded-lg border border-surface-border bg-surface px-3 py-2 text-sm font-medium text-muted-dark hover:bg-surface-subtle"
             >
               ← Back to Vacancies
             </Link>
@@ -264,15 +264,15 @@ export default function OwnerCandidatesPage() {
                     key={s.key}
                     className={cn("rounded-lg border-2 p-4 text-center", s.candidate
                         ? "border-indigo-200 bg-indigo-50"
-                        : "border-dashed border-slate-200 bg-slate-50")}
+                        : "border-dashed border-surface-border bg-surface-subtle")}
                   >
                     <Badge variant={s.variant} size="lg">
                       {s.label}
                     </Badge>
                     {s.candidate ? (
                       <div className="mt-3">
-                        <p className="text-sm font-semibold text-slate-900">{s.candidate.name}</p>
-                        <p className="text-xs text-slate-500">
+                        <p className="text-sm font-semibold text-foreground">{s.candidate.name}</p>
+                        <p className="text-xs text-muted">
                           Score: {s.candidate.score} · Income: CHF{" "}
                           {s.candidate.income != null ? formatNumber(s.candidate.income) : "—"}
                         </p>
@@ -286,7 +286,7 @@ export default function OwnerCandidatesPage() {
                         </Button>
                       </div>
                     ) : (
-                      <p className="mt-3 text-xs text-slate-400">
+                      <p className="mt-3 text-xs text-foreground-dim">
                         {s.key === "primary" ? "Required" : "Optional"} — click a candidate below
                       </p>
                     )}
@@ -329,8 +329,8 @@ export default function OwnerCandidatesPage() {
                       <Badge variant={s.variant} size="sm">
                         {s.label}
                       </Badge>
-                      <span className="font-medium text-slate-900">{s.candidate.name}</span>
-                      <span className="text-slate-400">Score: {s.candidate.score}</span>
+                      <span className="font-medium text-foreground">{s.candidate.name}</span>
+                      <span className="text-foreground-dim">Score: {s.candidate.score}</span>
                     </li>
                   ))}
               </ul>
@@ -348,10 +348,10 @@ export default function OwnerCandidatesPage() {
           {/* Candidates table */}
           {!success && (
             <Panel title={`${rows.length} Candidate${rows.length !== 1 ? "s" : ""}`}>
-              {loading && <p className="text-sm text-slate-500">{t("owner:vacanciesUnitidCandidates.text.loadingCandidates")}</p>}
+              {loading && <p className="text-sm text-muted">{t("owner:vacanciesUnitidCandidates.text.loadingCandidates")}</p>}
 
               {!loading && rows.length === 0 && (
-                <p className="text-sm text-slate-500 py-4 text-center">{t("owner:vacanciesUnitidCandidates.text.noApplicationsSubmittedForThisUnit")}</p>
+                <p className="text-sm text-muted py-4 text-center">{t("owner:vacanciesUnitidCandidates.text.noApplicationsSubmittedForThisUnit")}</p>
               )}
 
               {!loading && rows.length > 0 && (
@@ -372,10 +372,10 @@ export default function OwnerCandidatesPage() {
                         <div key={row.applicationUnitId || row.id} className={cn("table-card", row.disqualified ? "bg-red-50/40" : "", currentRole ? "ring-2 ring-blue-200 ring-inset" : "")}>
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <span className="font-mono text-xs text-slate-400">#{idx + 1}</span>
+                              <span className="font-mono text-xs text-foreground-dim">#{idx + 1}</span>
                               <button
                                 onClick={() => setExpandedDocApp(isDocExpanded ? null : row.id)}
-                                className={cn("table-card-head underline decoration-dotted underline-offset-2", isDocExpanded ? "text-indigo-700" : "text-slate-900")}
+                                className={cn("table-card-head underline decoration-dotted underline-offset-2", isDocExpanded ? "text-indigo-700" : "text-foreground")}
                               >{row.name}</button>
                               {row.disqualified && <span className="rounded bg-red-100 px-1.5 py-0.5 text-xs text-red-700">{t("owner:vacanciesUnitidCandidates.text.disqualified")}</span>}
                               {row.overrideReason && !row.disqualified && <span className="rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-700">{t("owner:vacanciesUnitidCandidates.text.override")}</span>}
@@ -401,14 +401,14 @@ export default function OwnerCandidatesPage() {
                                     key={r.key}
                                     onClick={() => toggleSelection(r.key, row.applicationUnitId)}
                                     title={`Set as ${r.label}`}
-                                    className={cn("rounded px-2 py-1 text-xs font-semibold transition-colors", isThis ? `${r.color} text-white` : "border border-slate-200 text-slate-500 hover:bg-slate-100")}
+                                    className={cn("rounded px-2 py-1 text-xs font-semibold transition-colors", isThis ? `${r.color} text-white` : "border border-surface-border text-muted hover:bg-surface-hover")}
                                   >{r.label}</button>
                                 );
                               })
                             )}
                           </div>
                           {isDocExpanded && (
-                            <div className="mt-3 space-y-3 border-t border-slate-100 pt-3">
+                            <div className="mt-3 space-y-3 border-t border-surface-divider pt-3">
                               {row.disqualified && reasons.length > 0 && (
                                 <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3">
                                   <h4 className="text-sm font-semibold text-red-700 mb-2">{t("owner:vacanciesUnitidCandidates.text.disqualificationReasons")}</h4>
@@ -440,7 +440,7 @@ export default function OwnerCandidatesPage() {
                           <th className="px-4 py-3 text-right">{t("owner:vacancies[unitid]Candidates.col.assign")}</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-100 bg-white">
+                      <tbody className="divide-y divide-slate-100 bg-surface">
                         {sortedRows.map((row, idx) => {
                           const conf = confidenceBadge(row.confidence || 0);
                           const currentRole = roleOf(row.applicationUnitId);
@@ -455,12 +455,12 @@ export default function OwnerCandidatesPage() {
                           return (
                             <React.Fragment key={row.applicationUnitId || row.id}>
                             <tr className={cn(row.disqualified ? "bg-red-50/40" : "", currentRole ? "ring-2 ring-blue-200 ring-inset" : "")}>
-                              <td className="px-4 py-3 text-slate-600 font-mono">{idx + 1}</td>
+                              <td className="px-4 py-3 text-muted-text font-mono">{idx + 1}</td>
                               <td className="px-4 py-3">
                                 <div className="flex items-center flex-wrap gap-x-2">
                                   <button
                                     onClick={() => setExpandedDocApp(isDocExpanded ? null : row.id)}
-                                    className={cn("font-medium underline decoration-dotted underline-offset-2 transition-colors", isDocExpanded ? "text-indigo-700" : "text-slate-900 hover:text-indigo-600")}
+                                    className={cn("font-medium underline decoration-dotted underline-offset-2 transition-colors", isDocExpanded ? "text-indigo-700" : "text-foreground hover:text-indigo-600")}
                                     title={t("owner:vacancies[unitid]Candidates.title.clickToViewCorroborativeDocuments")}
                                   >{row.name}</button>
                                   {row.disqualified && <span className="rounded bg-red-100 px-1.5 py-0.5 text-xs text-red-700">{t("owner:vacanciesUnitidCandidates.text.disqualified")}</span>}
@@ -469,7 +469,7 @@ export default function OwnerCandidatesPage() {
                                   {isDocExpanded && <span className="text-xs text-indigo-500">{t("owner:vacanciesUnitidCandidates.text.docs")}</span>}
                                 </div>
                               </td>
-                              <td className="px-4 py-3 text-slate-700">{row.income != null ? formatNumber(row.income) : "—"}</td>
+                              <td className="px-4 py-3 text-muted-dark">{row.income != null ? formatNumber(row.income) : "—"}</td>
                               <td className="px-4 py-3"><Badge variant={scoreVariant(row.score || 0)} size="sm">{row.score ?? "—"}</Badge></td>
                               <td className="px-4 py-3"><Badge variant={conf.variant} size="sm">{row.confidence ?? 0}% {conf.label}</Badge></td>
                               <td className="px-4 py-3 text-right">
@@ -488,7 +488,7 @@ export default function OwnerCandidatesPage() {
                                           key={r.key}
                                           onClick={() => toggleSelection(r.key, row.applicationUnitId)}
                                           title={`Set as ${r.label}`}
-                                          className={cn("rounded px-2 py-1 text-xs font-semibold transition-colors", isThis ? `${r.color} text-white` : "border border-slate-200 text-slate-500 hover:bg-slate-100")}
+                                          className={cn("rounded px-2 py-1 text-xs font-semibold transition-colors", isThis ? `${r.color} text-white` : "border border-surface-border text-muted hover:bg-surface-hover")}
                                         >
                                           {r.label.charAt(0)}{r.key !== "primary" ? r.key.slice(-1) : ""}
                                         </button>
@@ -500,7 +500,7 @@ export default function OwnerCandidatesPage() {
                             </tr>
                             {isDocExpanded && (
                               <tr>
-                                <td colSpan={6} className="px-4 py-3 bg-slate-50/50">
+                                <td colSpan={6} className="px-4 py-3 bg-surface-subtle/50">
                                   <div className="space-y-4">
                                     {row.disqualified && reasons.length > 0 && (
                                       <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3">
@@ -539,17 +539,17 @@ export default function OwnerCandidatesPage() {
                 This candidate will become eligible for selection.
               </p>
               <div className="mt-4">
-                <label className="block text-xs font-medium uppercase tracking-wide text-slate-400 mb-1.5">
+                <label className="block text-xs font-medium uppercase tracking-wide text-foreground-dim mb-1.5">
                   Reason for override *
                 </label>
                 <textarea
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  className="w-full rounded-lg border border-muted-ring px-3 py-2 text-sm text-foreground focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                   rows={3}
                   placeholder={t("owner:vacancies[unitid]Candidates.placeholder.eGVerifiedIncomeDirectlyWithEmployerDebtEnforcementExtractIsClear")}
                   value={overrideReason}
                   onChange={(e) => setOverrideReason(e.target.value)}
                 />
-                <p className="mt-1 text-xs text-slate-400">{t("owner:vacanciesUnitidCandidates.text.minimum3CharactersThisWillBeRecordedForAudit")}</p>
+                <p className="mt-1 text-xs text-foreground-dim">{t("owner:vacanciesUnitidCandidates.text.minimum3CharactersThisWillBeRecordedForAudit")}</p>
               </div>
               <ModalFooter className="mt-5">
                 <Button variant="secondary" size="sm" onClick={() => setOverrideTarget(null)}>

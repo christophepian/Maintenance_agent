@@ -17,7 +17,7 @@ export function DialogContent({ children, className, maxWidth = "max-w-lg" }) {
         className={cn(
           "fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2",
           "w-full mx-4 max-h-[90vh] overflow-y-auto",
-          "bg-white rounded-xl shadow-xl focus:outline-none",
+          "bg-surface rounded-xl shadow-xl focus:outline-none",
           maxWidth,
           className
         )}
@@ -30,10 +30,10 @@ export function DialogContent({ children, className, maxWidth = "max-w-lg" }) {
 
 export function DialogHeader({ title }) {
   return (
-    <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
-      <RDialog.Title className="text-lg font-semibold text-slate-900">{title}</RDialog.Title>
+    <div className="flex items-center justify-between px-6 py-4 border-b border-surface-border">
+      <RDialog.Title className="text-lg font-semibold text-foreground">{title}</RDialog.Title>
       <RDialog.Close
-        className="text-slate-400 hover:text-slate-600 text-xl leading-none focus:outline-none"
+        className="text-foreground-dim hover:text-muted-text text-xl leading-none focus:outline-none"
         aria-label="Close"
       >
         &times;

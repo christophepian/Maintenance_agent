@@ -110,7 +110,7 @@ export default function BottomNav({ role }) {
         aria-label="Mobile navigation"
         className={cn(
           'md:hidden fixed bottom-0 left-0 right-0 z-40',
-          'h-20 bg-white border-t border-slate-200',
+          'h-20 bg-surface border-t border-surface-border',
           'flex items-stretch',
         )}
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
@@ -125,13 +125,13 @@ export default function BottomNav({ role }) {
               className={cn(
                 'flex-1 flex flex-col items-center justify-center gap-1 min-h-[44px]',
                 'text-xs font-medium transition-colors no-underline',
-                active ? 'text-brand' : 'text-slate-500',
+                active ? 'text-brand' : 'text-muted',
               )}
               aria-current={active ? 'page' : undefined}
             >
               <Icon
                 size={22}
-                className={cn('shrink-0', active ? 'text-brand' : 'text-slate-400')}
+                className={cn('shrink-0', active ? 'text-brand' : 'text-foreground-dim')}
                 aria-hidden="true"
               />
               <span>{item.label}</span>
@@ -145,14 +145,14 @@ export default function BottomNav({ role }) {
             onClick={() => setDrawerOpen(true)}
             className={cn(
               'flex-1 flex flex-col items-center justify-center gap-1 min-h-[44px]',
-              'text-xs font-medium text-slate-500 bg-transparent border-0 cursor-pointer',
+              'text-xs font-medium text-muted bg-transparent border-0 cursor-pointer',
               drawerOpen && 'text-brand',
             )}
             aria-label="More navigation options"
           >
             <MoreHorizontal
               size={22}
-              className={cn('shrink-0', drawerOpen ? 'text-brand' : 'text-slate-400')}
+              className={cn('shrink-0', drawerOpen ? 'text-brand' : 'text-foreground-dim')}
               aria-hidden="true"
             />
             <span>More</span>

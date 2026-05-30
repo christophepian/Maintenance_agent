@@ -176,7 +176,7 @@ export default function RfpDetailPage() {
           actions={
             <Link
               href="/manager/rfps"
-              className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              className="rounded-lg border border-surface-border bg-surface px-4 py-2 text-sm font-medium text-muted-dark hover:bg-surface-subtle"
             >
               ← Back to RFPs
             </Link>
@@ -186,54 +186,54 @@ export default function RfpDetailPage() {
           <ErrorBanner error={error} className="text-sm" />
 
           {loading ? (
-            <p className="text-sm text-slate-500">{t("manager:rfpsId.text.loading")}</p>
+            <p className="text-sm text-muted">{t("manager:rfpsId.text.loading")}</p>
           ) : rfp ? (
             <>
               {/* RFP Metadata */}
               <Panel title={t("manager:rfpsId.title.rFPDetails")}>
                 <dl className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
                   <div>
-                    <dt className="text-sm font-medium text-slate-500">{t("manager:rfpsId.text.status")}</dt>
+                    <dt className="text-sm font-medium text-muted">{t("manager:rfpsId.text.status")}</dt>
                     <dd className="mt-1">
                       <Badge variant={rfpVariant(rfp.status)}>{rfp.status}</Badge>
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-sm font-medium text-slate-500">{t("manager:rfpsId.text.category")}</dt>
-                    <dd className="mt-1 text-sm text-slate-900">{rfp.category || "—"}</dd>
+                    <dt className="text-sm font-medium text-muted">{t("manager:rfpsId.text.category")}</dt>
+                    <dd className="mt-1 text-sm text-foreground">{rfp.category || "—"}</dd>
                   </div>
                   <div>
-                    <dt className="text-sm font-medium text-slate-500">{t("manager:rfpsId.text.legalObligation")}</dt>
-                    <dd className="mt-1 text-sm text-slate-900">{rfp.legalObligation || "—"}</dd>
+                    <dt className="text-sm font-medium text-muted">{t("manager:rfpsId.text.legalObligation")}</dt>
+                    <dd className="mt-1 text-sm text-foreground">{rfp.legalObligation || "—"}</dd>
                   </div>
                   <div>
-                    <dt className="text-sm font-medium text-slate-500">{t("manager:rfpsId.text.building")}</dt>
-                    <dd className="mt-1 text-sm text-slate-900">
+                    <dt className="text-sm font-medium text-muted">{t("manager:rfpsId.text.building")}</dt>
+                    <dd className="mt-1 text-sm text-foreground">
                       {rfp.building?.name || "—"}
                       {rfp.building?.address && (
-                        <span className="text-slate-500"> · {rfp.building.address}</span>
+                        <span className="text-muted"> · {rfp.building.address}</span>
                       )}
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-sm font-medium text-slate-500">{t("manager:rfpsId.text.unit")}</dt>
-                    <dd className="mt-1 text-sm text-slate-900">{rfp.unit?.unitNumber || "—"}</dd>
+                    <dt className="text-sm font-medium text-muted">{t("manager:rfpsId.text.unit")}</dt>
+                    <dd className="mt-1 text-sm text-foreground">{rfp.unit?.unitNumber || "—"}</dd>
                   </div>
                   <div>
-                    <dt className="text-sm font-medium text-slate-500">{t("manager:rfpsId.text.targetInvites")}</dt>
-                    <dd className="mt-1 text-sm text-slate-900">{rfp.inviteCount ?? "—"}</dd>
+                    <dt className="text-sm font-medium text-muted">{t("manager:rfpsId.text.targetInvites")}</dt>
+                    <dd className="mt-1 text-sm text-foreground">{rfp.inviteCount ?? "—"}</dd>
                   </div>
                   <div>
-                    <dt className="text-sm font-medium text-slate-500">{t("manager:rfpsId.text.quoteDeadline")}</dt>
-                    <dd className="mt-1 text-sm text-slate-900">{formatDate(rfp.deadlineAt)}</dd>
+                    <dt className="text-sm font-medium text-muted">{t("manager:rfpsId.text.quoteDeadline")}</dt>
+                    <dd className="mt-1 text-sm text-foreground">{formatDate(rfp.deadlineAt)}</dd>
                   </div>
                   <div>
-                    <dt className="text-sm font-medium text-slate-500">{t("manager:rfpsId.text.created")}</dt>
-                    <dd className="mt-1 text-sm text-slate-900">{formatDate(rfp.createdAt)}</dd>
+                    <dt className="text-sm font-medium text-muted">{t("manager:rfpsId.text.created")}</dt>
+                    <dd className="mt-1 text-sm text-foreground">{formatDate(rfp.createdAt)}</dd>
                   </div>
                   {rfp.awardedContractor && (
                     <div>
-                      <dt className="text-sm font-medium text-slate-500">{t("manager:rfpsId.text.awardedTo")}</dt>
+                      <dt className="text-sm font-medium text-muted">{t("manager:rfpsId.text.awardedTo")}</dt>
                       <dd className="mt-1 text-sm text-green-700 font-medium">
                         {rfp.awardedContractor.name}
                       </dd>
@@ -247,7 +247,7 @@ export default function RfpDetailPage() {
                 <Panel title={t("manager:rfpsId.title.linkedMaintenanceRequest")}>
                   <dl className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
                     <div>
-                      <dt className="text-sm font-medium text-slate-500">{t("manager:rfpsId.text.request")}</dt>
+                      <dt className="text-sm font-medium text-muted">{t("manager:rfpsId.text.request")}</dt>
                       <dd className="mt-1 text-sm">
                         <Link
                           href={`/manager/requests?highlight=${rfp.request.id}`}
@@ -258,30 +258,30 @@ export default function RfpDetailPage() {
                       </dd>
                     </div>
                     <div>
-                      <dt className="text-sm font-medium text-slate-500">{t("manager:rfpsId.text.requestStatus")}</dt>
-                      <dd className="mt-1 text-sm text-slate-900">{rfp.request.status}</dd>
+                      <dt className="text-sm font-medium text-muted">{t("manager:rfpsId.text.requestStatus")}</dt>
+                      <dd className="mt-1 text-sm text-foreground">{rfp.request.status}</dd>
                     </div>
                     <div>
-                      <dt className="text-sm font-medium text-slate-500">{t("manager:rfpsId.text.requestCategory")}</dt>
-                      <dd className="mt-1 text-sm text-slate-900">{rfp.request.category || "—"}</dd>
+                      <dt className="text-sm font-medium text-muted">{t("manager:rfpsId.text.requestCategory")}</dt>
+                      <dd className="mt-1 text-sm text-foreground">{rfp.request.category || "—"}</dd>
                     </div>
                     <div className="sm:col-span-2 lg:col-span-3">
-                      <dt className="text-sm font-medium text-slate-500">{t("manager:rfpsId.text.description")}</dt>
-                      <dd className="mt-1 text-sm text-slate-900 whitespace-pre-line">
+                      <dt className="text-sm font-medium text-muted">{t("manager:rfpsId.text.description")}</dt>
+                      <dd className="mt-1 text-sm text-foreground whitespace-pre-line">
                         {rfp.request.description || "—"}
                       </dd>
                     </div>
                     {rfp.request.attachmentCount > 0 && (
                       <div>
-                        <dt className="text-sm font-medium text-slate-500">{t("manager:rfpsId.text.attachments")}</dt>
-                        <dd className="mt-1 text-sm text-slate-900">
+                        <dt className="text-sm font-medium text-muted">{t("manager:rfpsId.text.attachments")}</dt>
+                        <dd className="mt-1 text-sm text-foreground">
                           {rfp.request.attachmentCount} file{rfp.request.attachmentCount !== 1 ? "s" : ""}
                         </dd>
                       </div>
                     )}
                     <div>
-                      <dt className="text-sm font-medium text-slate-500">{t("manager:rfpsId.text.requestCreated")}</dt>
-                      <dd className="mt-1 text-sm text-slate-900">{formatDate(rfp.request.createdAt)}</dd>
+                      <dt className="text-sm font-medium text-muted">{t("manager:rfpsId.text.requestCreated")}</dt>
+                      <dd className="mt-1 text-sm text-foreground">{formatDate(rfp.request.createdAt)}</dd>
                     </div>
                   </dl>
                 </Panel>
@@ -304,9 +304,9 @@ export default function RfpDetailPage() {
                                 {inv.contractor.name}
                               </Link>
                             ) : (
-                              <span className="text-sm text-slate-700">{inv.contractorId?.slice(0, 8)}</span>
+                              <span className="text-sm text-muted-dark">{inv.contractorId?.slice(0, 8)}</span>
                             )}
-                            <p className="text-xs text-slate-500 mt-0.5">{formatDate(inv.createdAt)}</p>
+                            <p className="text-xs text-muted mt-0.5">{formatDate(inv.createdAt)}</p>
                           </div>
                           <Badge variant={inviteVariant(inv.status)}>{inv.status}</Badge>
                         </div>
@@ -339,8 +339,8 @@ export default function RfpDetailPage() {
                                   inv.contractorId?.slice(0, 8)
                                 )}
                               </td>
-                              <td className="text-slate-500">{inv.contractor?.email || "—"}</td>
-                              <td className="text-slate-500">{inv.contractor?.phone || "—"}</td>
+                              <td className="text-muted">{inv.contractor?.email || "—"}</td>
+                              <td className="text-muted">{inv.contractor?.phone || "—"}</td>
                               <td>
                                 <Badge variant={inviteVariant(inv.status)}>{inv.status}</Badge>
                               </td>
@@ -352,7 +352,7 @@ export default function RfpDetailPage() {
                     </div>
                   </>
                 ) : (
-                  <p className="px-4 py-8 text-center text-sm text-slate-400">
+                  <p className="px-4 py-8 text-center text-sm text-foreground-dim">
                     No contractors invited yet.
                   </p>
                 )}
@@ -375,7 +375,7 @@ export default function RfpDetailPage() {
                       <div
                         key={q.id}
                         className={cn("p-4", q.status === "AWARDED" ? "bg-green-50/40" :
-                          q.status === "REJECTED" ? "bg-slate-50/60 opacity-75" : "")}
+                          q.status === "REJECTED" ? "bg-surface-subtle/60 opacity-75" : "")}
                       >
                         <div className="flex flex-wrap items-start justify-between gap-2 mb-3">
                           <div className="flex flex-wrap items-center gap-2 min-w-0">
@@ -387,15 +387,15 @@ export default function RfpDetailPage() {
                                 {q.contractor.name}
                               </Link>
                             ) : (
-                              <span className="text-sm font-medium text-slate-700">{q.contractorId?.slice(0, 8)}</span>
+                              <span className="text-sm font-medium text-muted-dark">{q.contractorId?.slice(0, 8)}</span>
                             )}
                             <Badge variant={quoteVariant(q.status || "SUBMITTED")}>{q.status || "SUBMITTED"}</Badge>
                           </div>
                           <div className="flex flex-wrap items-center gap-3 shrink-0">
-                            <span className="text-base font-semibold text-slate-900 font-mono">
+                            <span className="text-base font-semibold text-foreground font-mono">
                               {formatChfCents(q.amountCents)}
                               {q.vatIncluded === false && (
-                                <span className="text-xs text-slate-400 ml-1">{t("manager:rfpsId.text.exclVat")}</span>
+                                <span className="text-xs text-foreground-dim ml-1">{t("manager:rfpsId.text.exclVat")}</span>
                               )}
                             </span>
                             {(rfp.status === "OPEN" || rfp.status === "PENDING_OWNER_APPROVAL") &&
@@ -413,55 +413,55 @@ export default function RfpDetailPage() {
                         <dl className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-4 text-sm mb-2">
                           {q.estimatedDurationDays && (
                             <div>
-                              <dt className="text-xs text-slate-500">{t("manager:rfpsId.text.duration")}</dt>
-                              <dd className="text-slate-900">{q.estimatedDurationDays} day{q.estimatedDurationDays !== 1 ? "s" : ""}</dd>
+                              <dt className="text-xs text-muted">{t("manager:rfpsId.text.duration")}</dt>
+                              <dd className="text-foreground">{q.estimatedDurationDays} day{q.estimatedDurationDays !== 1 ? "s" : ""}</dd>
                             </div>
                           )}
                           {q.earliestAvailability && (
                             <div>
-                              <dt className="text-xs text-slate-500">{t("manager:rfpsId.text.available")}</dt>
-                              <dd className="text-slate-900">{formatDate(q.earliestAvailability)}</dd>
+                              <dt className="text-xs text-muted">{t("manager:rfpsId.text.available")}</dt>
+                              <dd className="text-foreground">{formatDate(q.earliestAvailability)}</dd>
                             </div>
                           )}
                           {q.validUntil && (
                             <div>
-                              <dt className="text-xs text-slate-500">{t("manager:rfpsId.text.validUntil")}</dt>
-                              <dd className="text-slate-900">{formatDate(q.validUntil)}</dd>
+                              <dt className="text-xs text-muted">{t("manager:rfpsId.text.validUntil")}</dt>
+                              <dd className="text-foreground">{formatDate(q.validUntil)}</dd>
                             </div>
                           )}
                           <div>
-                            <dt className="text-xs text-slate-500">{t("manager:rfpsId.text.submitted")}</dt>
-                            <dd className="text-slate-900">{formatDate(q.submittedAt)}</dd>
+                            <dt className="text-xs text-muted">{t("manager:rfpsId.text.submitted")}</dt>
+                            <dd className="text-foreground">{formatDate(q.submittedAt)}</dd>
                           </div>
                         </dl>
                         {q.workPlan && (
                           <div className="mt-2">
-                            <dt className="text-xs font-medium text-slate-500">{t("manager:rfpsId.text.workPlan")}</dt>
-                            <dd className="mt-0.5 text-sm text-slate-700 whitespace-pre-line">{q.workPlan}</dd>
+                            <dt className="text-xs font-medium text-muted">{t("manager:rfpsId.text.workPlan")}</dt>
+                            <dd className="mt-0.5 text-sm text-muted-dark whitespace-pre-line">{q.workPlan}</dd>
                           </div>
                         )}
                         {q.assumptions && (
                           <div className="mt-2">
-                            <dt className="text-xs font-medium text-slate-500">{t("manager:rfpsId.text.assumptions")}</dt>
-                            <dd className="mt-0.5 text-sm text-slate-500 whitespace-pre-line">{q.assumptions}</dd>
+                            <dt className="text-xs font-medium text-muted">{t("manager:rfpsId.text.assumptions")}</dt>
+                            <dd className="mt-0.5 text-sm text-muted whitespace-pre-line">{q.assumptions}</dd>
                           </div>
                         )}
                         {q.notes && (
                           <div className="mt-2">
-                            <dt className="text-xs font-medium text-slate-500">{t("manager:rfpsId.text.notes")}</dt>
-                            <dd className="mt-0.5 text-sm text-slate-500">{q.notes}</dd>
+                            <dt className="text-xs font-medium text-muted">{t("manager:rfpsId.text.notes")}</dt>
+                            <dd className="mt-0.5 text-sm text-muted">{q.notes}</dd>
                           </div>
                         )}
                         {q.lineItems && q.lineItems.length > 0 && (
                           <div className="mt-2">
-                            <dt className="text-xs font-medium text-slate-500 mb-1">{t("manager:rfpsId.text.lineItems")}</dt>
+                            <dt className="text-xs font-medium text-muted mb-1">{t("manager:rfpsId.text.lineItems")}</dt>
                             <dd>
                               {/* Mobile list */}
                               <div className="sm:hidden divide-y divide-slate-100">
                                 {q.lineItems.map((li, idx) => (
                                   <div key={idx} className="py-1 flex items-center justify-between gap-2 text-sm">
-                                    <span className="text-slate-700">{li.description}</span>
-                                    <span className="font-mono text-slate-700 shrink-0">{formatChfCents(li.amountCents)}</span>
+                                    <span className="text-muted-dark">{li.description}</span>
+                                    <span className="font-mono text-muted-dark shrink-0">{formatChfCents(li.amountCents)}</span>
                                   </div>
                                 ))}
                               </div>
@@ -470,9 +470,9 @@ export default function RfpDetailPage() {
                                 <table className="data-table">
                                   <tbody>
                                     {q.lineItems.map((li, idx) => (
-                                      <tr key={idx} className="border-b border-slate-100 last:border-0">
-                                        <td className="py-1 text-slate-700">{li.description}</td>
-                                        <td className="py-1 text-right font-mono text-slate-700">{formatChfCents(li.amountCents)}</td>
+                                      <tr key={idx} className="border-b border-surface-divider last:border-0">
+                                        <td className="py-1 text-muted-dark">{li.description}</td>
+                                        <td className="py-1 text-right font-mono text-muted-dark">{formatChfCents(li.amountCents)}</td>
                                       </tr>
                                     ))}
                                   </tbody>
@@ -485,7 +485,7 @@ export default function RfpDetailPage() {
                     ))}
                   </div>
                 ) : (
-                  <p className="px-4 py-8 text-center text-sm text-slate-400">
+                  <p className="px-4 py-8 text-center text-sm text-foreground-dim">
                     No quotes submitted yet.
                   </p>
                 )}
@@ -494,17 +494,17 @@ export default function RfpDetailPage() {
               {/* Fallback Actions — only for OPEN RFPs */}
               {rfp.status === "OPEN" && (
                 <Panel title={t("manager:rfpsId.title.fallbackActions")}>
-                  <p className="text-sm text-slate-500 mb-4">
+                  <p className="text-sm text-muted mb-4">
                     If submitted quotes are insufficient, you can re-invite more contractors or bypass
                     quote collection entirely and directly assign a contractor.
                   </p>
 
                   {/* ── Re-invite contractors ──────────────────────── */}
                   <div className="mb-6">
-                    <h4 className="text-sm font-semibold text-slate-700 mb-2">{t("manager:rfpsId.text.reinviteContractors")}</h4>
+                    <h4 className="text-sm font-semibold text-muted-dark mb-2">{t("manager:rfpsId.text.reinviteContractors")}</h4>
                     <div className="flex flex-wrap items-end gap-3">
                       <div className="flex-1 min-w-[200px]">
-                        <label className="block text-xs text-slate-500 mb-1">{t("manager:rfpsId.text.selectContractorsToInvite")}</label>
+                        <label className="block text-xs text-muted mb-1">{t("manager:rfpsId.text.selectContractorsToInvite")}</label>
                         <select
                           multiple
                           value={selectedReinviteIds}
@@ -513,7 +513,7 @@ export default function RfpDetailPage() {
                               Array.from(e.target.selectedOptions, (o) => o.value),
                             )
                           }
-                          className="min-h-[80px] w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:border-blue-400 focus:ring-1 focus:ring-blue-300"
+                          className="min-h-[80px] w-full rounded-lg border border-surface-border bg-surface px-3 py-2 text-sm text-muted-dark focus:border-blue-400 focus:ring-1 focus:ring-blue-300"
                         >
                           {contractors
                             .filter(
@@ -544,22 +544,22 @@ export default function RfpDetailPage() {
                     )}
                   </div>
 
-                  <hr className="border-slate-100 mb-4" />
+                  <hr className="border-surface-divider mb-4" />
 
                   {/* ── Direct-assign contractor ──────────────────── */}
                   <div>
-                    <h4 className="text-sm font-semibold text-slate-700 mb-2">{t("manager:rfpsId.text.directAssignContractor")}</h4>
-                    <p className="text-xs text-slate-400 mb-2">
+                    <h4 className="text-sm font-semibold text-muted-dark mb-2">{t("manager:rfpsId.text.directAssignContractor")}</h4>
+                    <p className="text-xs text-foreground-dim mb-2">
                       This will close the RFP, reject all submitted quotes, and assign the selected
                       contractor to the linked maintenance request.
                     </p>
                     <div className="flex flex-wrap items-end gap-3">
                       <div className="flex-1 min-w-[200px]">
-                        <label className="block text-xs text-slate-500 mb-1">{t("manager:rfpsId.text.selectContractor")}</label>
+                        <label className="block text-xs text-muted mb-1">{t("manager:rfpsId.text.selectContractor")}</label>
                         <select
                           value={directAssignId}
                           onChange={(e) => setDirectAssignId(e.target.value)}
-                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:border-blue-400 focus:ring-1 focus:ring-blue-300"
+                          className="w-full rounded-lg border border-surface-border bg-surface px-3 py-2 text-sm text-muted-dark focus:border-blue-400 focus:ring-1 focus:ring-blue-300"
                         >
                           <option value="">{t("manager:rfpsId.text.chooseContractor")}</option>
                           {contractors.map((c) => (
@@ -587,7 +587,7 @@ export default function RfpDetailPage() {
               )}
             </>
           ) : (
-            <p className="text-sm text-slate-500">{t("manager:rfpsId.text.rFPNotFound")}</p>
+            <p className="text-sm text-muted">{t("manager:rfpsId.text.rFPNotFound")}</p>
           )}
         </PageContent>
       </PageShell>

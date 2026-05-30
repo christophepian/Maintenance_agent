@@ -41,27 +41,27 @@ function buildCrfpColumns(t) {
     alwaysVisible: true,
     render: (rfp) => rfp.request ? (
       <span className="text-sm">
-        <span className="font-medium text-slate-900">#{rfp.request.requestNumber}</span>
-        <span className="block text-xs text-slate-500 max-w-[200px] truncate">{rfp.request.description}</span>
+        <span className="font-medium text-foreground">#{rfp.request.requestNumber}</span>
+        <span className="block text-xs text-muted max-w-[200px] truncate">{rfp.request.description}</span>
       </span>
-    ) : <span className="text-xs text-slate-400">\u2014</span>,
+    ) : <span className="text-xs text-foreground-dim">\u2014</span>,
   },
   {
     id: "category",
     label: t("contractor:rfps.col.category"),
     sortable: true,
     defaultVisible: true,
-    render: (rfp) => <span className="text-sm text-slate-700">{rfp.category || "\u2014"}</span>,
+    render: (rfp) => <span className="text-sm text-muted-dark">{rfp.category || "\u2014"}</span>,
   },
   {
     id: "location",
     label: t("contractor:rfps.col.location"),
     defaultVisible: true,
     render: (rfp) => (
-      <span className="text-sm text-slate-700">
+      <span className="text-sm text-muted-dark">
         {rfp.buildingName || "\u2014"}
-        {rfp.postalCode && <span className="text-slate-400 text-xs ml-1">({rfp.postalCode})</span>}
-        {rfp.unitNumber && <span className="text-slate-400"> / {rfp.unitNumber}</span>}
+        {rfp.postalCode && <span className="text-foreground-dim text-xs ml-1">({rfp.postalCode})</span>}
+        {rfp.unitNumber && <span className="text-foreground-dim"> / {rfp.unitNumber}</span>}
       </span>
     ),
   },
@@ -85,7 +85,7 @@ function buildCrfpColumns(t) {
       <Badge variant={quoteVariant(rfp.myQuote.status)} size="sm">
         {rfp.myQuote.status === "AWARDED" ? "Won" : rfp.myQuote.status === "REJECTED" ? "Not selected" : "Submitted"}
       </Badge>
-    ) : <span className="text-xs text-slate-400">\u2014</span>,
+    ) : <span className="text-xs text-foreground-dim">\u2014</span>,
   },
   {
     id: "invites",
@@ -93,7 +93,7 @@ function buildCrfpColumns(t) {
     sortable: true,
     defaultVisible: true,
     className: "text-center",
-    render: (rfp) => <span className="text-sm text-slate-700">{rfp.inviteCount}</span>,
+    render: (rfp) => <span className="text-sm text-muted-dark">{rfp.inviteCount}</span>,
   },
   {
     id: "quotes",
@@ -101,14 +101,14 @@ function buildCrfpColumns(t) {
     sortable: true,
     defaultVisible: true,
     className: "text-center",
-    render: (rfp) => <span className={rfp.quoteCount > 0 ? "font-medium text-green-700 text-sm" : "text-sm text-slate-700"}>{rfp.quoteCount}</span>,
+    render: (rfp) => <span className={rfp.quoteCount > 0 ? "font-medium text-green-700 text-sm" : "text-sm text-muted-dark"}>{rfp.quoteCount}</span>,
   },
   {
     id: "createdAt",
     label: t("contractor:rfps.col.created"),
     sortable: true,
     defaultVisible: true,
-    render: (rfp) => <span className="text-sm text-slate-500">{formatDate(rfp.createdAt)}</span>,
+    render: (rfp) => <span className="text-sm text-muted">{formatDate(rfp.createdAt)}</span>,
   },
   {
     id: "view",
@@ -195,7 +195,7 @@ export default function ContractorRfpsPage() {
         </div>
 
         {loading ? (
-          <p className="text-slate-600">{t("contractor:rfps.text.loadingRfps")}</p>
+          <p className="text-muted-text">{t("contractor:rfps.text.loadingRfps")}</p>
         ) : (
           <ConfigurableTable
             tableId="contractor-rfps"
@@ -207,15 +207,15 @@ export default function ContractorRfpsPage() {
             onSort={handleSort}
             onRowClick={(rfp) => router.push(`/contractor/rfps/${rfp.id}`)}
             emptyState={
-              <div className="bg-slate-50 border border-slate-200 rounded p-8 text-center">
-                <p className="text-slate-600">No RFPs available{activeTab !== "ALL" ? ` with status ${activeTab}` : ""}.</p>
-                <p className="text-slate-400 text-sm mt-2">{t("contractor:rfps.text.rFPsMatchingYourServiceCategoriesWillAppearHere")}</p>
+              <div className="bg-surface-subtle border border-surface-border rounded p-8 text-center">
+                <p className="text-muted-text">No RFPs available{activeTab !== "ALL" ? ` with status ${activeTab}` : ""}.</p>
+                <p className="text-foreground-dim text-sm mt-2">{t("contractor:rfps.text.rFPsMatchingYourServiceCategoriesWillAppearHere")}</p>
               </div>
             }
             mobileCard={(rfp) => (
               <div className="table-card cursor-pointer" onClick={() => router.push(`/contractor/rfps/${rfp.id}`)}>
                 <div className="flex items-start justify-between gap-2">
-                  <span className="font-medium text-slate-900 text-sm">#{rfp.request?.requestNumber}</span>
+                  <span className="font-medium text-foreground text-sm">#{rfp.request?.requestNumber}</span>
                   <div className="flex gap-1">
                     <Badge variant={rfpVariant(rfp.status)} size="sm">{rfp.status}</Badge>
                     {rfp.isInvited && <Badge variant="brand" size="sm">{t("contractor:rfps.text.invited")}</Badge>}
@@ -232,7 +232,7 @@ export default function ContractorRfpsPage() {
           />
         )}
 
-        <p className="text-xs text-slate-400 mt-4">Showing {rfps.length} of {total} RFPs</p>
+        <p className="text-xs text-foreground-dim mt-4">Showing {rfps.length} of {total} RFPs</p>
       </div>
     </AppShell>
   );

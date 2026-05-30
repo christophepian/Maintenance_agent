@@ -26,7 +26,7 @@ function MessageBubble({ role, content }) {
           "max-w-[85%] rounded-2xl px-3 py-2 text-sm leading-relaxed",
           isTenant
             ? "rounded-br-sm bg-indigo-600 text-white"
-            : "rounded-bl-sm bg-slate-100 text-slate-800"
+            : "rounded-bl-sm bg-surface-hover text-foreground"
         )}
       >
         {content}
@@ -40,7 +40,7 @@ function MessageBubble({ role, content }) {
 function TypingIndicator() {
   return (
     <div className="flex justify-start">
-      <div className="rounded-2xl rounded-bl-sm bg-slate-100 px-4 py-3">
+      <div className="rounded-2xl rounded-bl-sm bg-surface-hover px-4 py-3">
         <div className="flex gap-1 items-center">
           <span className="h-1.5 w-1.5 rounded-full bg-slate-400 animate-bounce [animation-delay:-0.3s]" />
           <span className="h-1.5 w-1.5 rounded-full bg-slate-400 animate-bounce [animation-delay:-0.15s]" />
@@ -218,7 +218,7 @@ export default function ChatWidget() {
             role="dialog"
             aria-label={t("chatWidget.dialogLabel")}
             className={cn(
-              "fixed z-50 flex flex-col overflow-hidden bg-white shadow-2xl",
+              "fixed z-50 flex flex-col overflow-hidden bg-surface shadow-2xl",
               // Mobile: full-width sheet from bottom
               "inset-x-0 bottom-0 rounded-t-2xl h-[80dvh]",
               // Desktop: fixed bottom-right panel
@@ -226,20 +226,20 @@ export default function ChatWidget() {
             )}
           >
             {/* Header */}
-            <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3 bg-white">
+            <div className="flex items-center justify-between border-b border-surface-divider px-4 py-3 bg-surface">
               <div className="flex items-center gap-2">
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100">
                   <ChatIcon className="h-4 w-4 text-indigo-600" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-slate-900 leading-tight">{t("chatWidget.assistantName")}</p>
-                  <p className="text-xs text-slate-400 leading-tight">{t("chatWidget.assistantTagline")}</p>
+                  <p className="text-sm font-semibold text-foreground leading-tight">{t("chatWidget.assistantName")}</p>
+                  <p className="text-xs text-foreground-dim leading-tight">{t("chatWidget.assistantTagline")}</p>
                 </div>
               </div>
               <button
                 onClick={handleClose}
                 aria-label={t("chatWidget.closeLabel")}
-                className="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600 focus-visible:ring-2 focus-visible:ring-slate-300"
+                className="flex h-8 w-8 items-center justify-center rounded-full text-foreground-dim hover:bg-surface-hover hover:text-muted-text focus-visible:ring-2 focus-visible:ring-slate-300"
               >
                 <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                   <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
@@ -250,14 +250,14 @@ export default function ChatWidget() {
             {/* Message list */}
             <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
               {messages === null ? (
-                <p className="text-xs text-slate-400 text-center pt-8">{t("chatWidget.loading")}</p>
+                <p className="text-xs text-foreground-dim text-center pt-8">{t("chatWidget.loading")}</p>
               ) : messages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full gap-3 text-center px-4">
                   <div className="flex h-12 w-12 items-center justify-center rounded-full bg-indigo-50">
                     <ChatIcon className="h-6 w-6 text-indigo-400" />
                   </div>
-                  <p className="text-sm font-medium text-slate-700">{t("chatWidget.greeting")}</p>
-                  <p className="text-xs text-slate-400">
+                  <p className="text-sm font-medium text-muted-dark">{t("chatWidget.greeting")}</p>
+                  <p className="text-xs text-foreground-dim">
                     {t("chatWidget.greetingHint")}
                   </p>
                   <div className="flex flex-wrap justify-center gap-2 mt-1">
@@ -287,7 +287,7 @@ export default function ChatWidget() {
             </div>
 
             {/* Input area */}
-            <div className="border-t border-slate-100 px-4 py-3 bg-white">
+            <div className="border-t border-surface-divider px-4 py-3 bg-surface">
               <form onSubmit={handleSend} className="flex items-end gap-2">
                 <textarea
                   ref={inputRef}
@@ -298,7 +298,7 @@ export default function ChatWidget() {
                   placeholder={t("chatWidget.placeholder")}
                   rows={1}
                   aria-label={t("chatWidget.inputLabel")}
-                  className="flex-1 resize-none rounded-xl border border-slate-200 px-3 py-2 text-sm placeholder-slate-400 focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-400 disabled:opacity-60 max-h-24 overflow-y-auto"
+                  className="flex-1 resize-none rounded-xl border border-surface-border px-3 py-2 text-sm placeholder-slate-400 focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-400 disabled:opacity-60 max-h-24 overflow-y-auto"
                   style={{ fieldSizing: "content" }}
                 />
                 <button
@@ -312,7 +312,7 @@ export default function ChatWidget() {
                   </svg>
                 </button>
               </form>
-              <p className="mt-1.5 text-xs text-slate-400 text-center">
+              <p className="mt-1.5 text-xs text-foreground-dim text-center">
                 Press Enter to send · Shift+Enter for new line
               </p>
             </div>

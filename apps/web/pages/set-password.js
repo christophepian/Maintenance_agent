@@ -111,7 +111,7 @@ export default function SetPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
+    <div className="min-h-screen bg-surface-subtle flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-sm">
 
         {/* Logo */}
@@ -122,12 +122,12 @@ export default function SetPasswordPage() {
                 d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
             </svg>
           </div>
-          <h1 className="text-2xl font-semibold text-slate-900 tracking-tight">
+          <h1 className="text-2xl font-semibold text-foreground tracking-tight">
             Maintenance Agent
           </h1>
         </div>
 
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm px-8 py-7">
+        <div className="bg-surface rounded-2xl border border-surface-border shadow-sm px-8 py-7">
 
           {done ? (
             /* ── Success ───────────────────────────────────── */
@@ -138,14 +138,14 @@ export default function SetPasswordPage() {
                     d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
-              <h2 className="text-xl font-semibold text-slate-900 mb-2">You're all set!</h2>
-              <p className="text-sm text-slate-500">Taking you to your account…</p>
+              <h2 className="text-xl font-semibold text-foreground mb-2">You're all set!</h2>
+              <p className="text-sm text-muted">Taking you to your account…</p>
             </div>
           ) : (
             /* ── Form ──────────────────────────────────────── */
             <>
               {/* Welcome header */}
-              <div className="flex items-center gap-3 mb-6 pb-5 border-b border-slate-100">
+              <div className="flex items-center gap-3 mb-6 pb-5 border-b border-surface-divider">
                 <div className="w-9 h-9 bg-brand-light rounded-full flex items-center justify-center shrink-0">
                   <svg className="w-4.5 h-4.5 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75}
@@ -153,15 +153,15 @@ export default function SetPasswordPage() {
                   </svg>
                 </div>
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-slate-900 truncate">Welcome!</p>
+                  <p className="text-sm font-medium text-foreground truncate">Welcome!</p>
                   {userEmail && (
-                    <p className="text-xs text-slate-500 truncate">{userEmail}</p>
+                    <p className="text-xs text-muted truncate">{userEmail}</p>
                   )}
                 </div>
               </div>
 
-              <h2 className="text-lg font-semibold text-slate-900 mb-1">Create your password</h2>
-              <p className="text-sm text-slate-500 mb-6">
+              <h2 className="text-lg font-semibold text-foreground mb-1">Create your password</h2>
+              <p className="text-sm text-muted mb-6">
                 Secure your account with a password so you can sign in directly next time.
               </p>
 
@@ -177,7 +177,7 @@ export default function SetPasswordPage() {
 
               <form onSubmit={handleSubmit}>
                 <div className="mb-4">
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                  <label className="block text-sm font-medium text-muted-dark mb-1.5">
                     Password
                   </label>
                   <input
@@ -193,7 +193,7 @@ export default function SetPasswordPage() {
                 </div>
 
                 <div className="mb-6">
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                  <label className="block text-sm font-medium text-muted-dark mb-1.5">
                     Confirm password
                   </label>
                   <input
@@ -220,7 +220,7 @@ export default function SetPasswordPage() {
                 <button
                   type="button"
                   onClick={skipForNow}
-                  className="text-xs text-slate-400 hover:text-slate-600"
+                  className="text-xs text-foreground-dim hover:text-muted-text"
                 >
                   Skip for now — I'll use magic link
                 </button>

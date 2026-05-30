@@ -31,7 +31,7 @@ const CATEGORY_VARIANT = {
 
 function CategoryBadge({ category }) {
   const { t } = useTranslation("manager");
-  if (!category) return <span className="text-sm text-slate-400">{t("manager:financeExpenses.text.uncategorised")}</span>;
+  if (!category) return <span className="text-sm text-foreground-dim">{t("manager:financeExpenses.text.uncategorised")}</span>;
   return (
     <Badge variant={CATEGORY_VARIANT[category] || "default"} size="sm">
       {category}
@@ -259,7 +259,7 @@ export default function ManagerExpensesPage() {
                     render: (inv) => {
                       const isJobLinked = inv.jobId && inv.expenseCategory === "MAINTENANCE";
                       return isJobLinked ? (
-                        <span className="text-xs text-slate-400">Auto (job-linked)</span>
+                        <span className="text-xs text-foreground-dim">Auto (job-linked)</span>
                       ) : (
                         <select
                           value={inv.expenseCategory || ""}
@@ -283,12 +283,12 @@ export default function ManagerExpensesPage() {
                 sortDir={sortDir}
                 onSort={handleSort}
                 emptyState={
-                  <p className="px-4 py-8 text-center text-sm text-slate-400">{t("manager:financeExpenses.text.noExpensesFoundTagInvoicesWithAnExpenseCategoryToTrackThemHere")}</p>
+                  <p className="px-4 py-8 text-center text-sm text-foreground-dim">{t("manager:financeExpenses.text.noExpensesFoundTagInvoicesWithAnExpenseCategoryToTrackThemHere")}</p>
                 }
                 mobileCard={(inv) => (
                   <div className="table-card">
                     <div className="flex items-start justify-between gap-2">
-                      <span className="font-mono text-xs text-slate-500">{inv.invoiceNumber || inv.id?.slice(0, 8)}</span>
+                      <span className="font-mono text-xs text-muted">{inv.invoiceNumber || inv.id?.slice(0, 8)}</span>
                       <CategoryBadge category={inv.expenseCategory} />
                     </div>
                     <p className="table-card-head mt-1">{inv.description || "—"}</p>

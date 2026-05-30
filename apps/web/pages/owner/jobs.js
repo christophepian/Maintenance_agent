@@ -135,9 +135,9 @@ export default function OwnerJobs() {
 
           <Panel>
             {loading ? (
-              <p className="text-sm text-slate-600">{t("owner:jobs.text.loadingJobs")}</p>
+              <p className="text-sm text-muted-text">{t("owner:jobs.text.loadingJobs")}</p>
             ) : filteredJobs.length === 0 ? (
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-6 text-center text-slate-600">
+              <div className="rounded-lg border border-surface-border bg-surface-subtle p-6 text-center text-muted-text">
                 {filter === "ALL" ? "No jobs yet" : `No ${filter.toLowerCase()} jobs`}
               </div>
             ) : (
@@ -145,14 +145,14 @@ export default function OwnerJobs() {
                 {filteredJobs.map((job) => {
                   const isExpanded = expandedId === job.id;
                   return (
-                    <div key={job.id} className="rounded-lg border border-slate-200 bg-white">
+                    <div key={job.id} className="rounded-lg border border-surface-border bg-surface">
                       {/* Clickable header */}
                       <div
-                        className="flex cursor-pointer flex-col gap-2 px-4 py-3 hover:bg-slate-50 sm:flex-row sm:items-center sm:justify-between"
+                        className="flex cursor-pointer flex-col gap-2 px-4 py-3 hover:bg-surface-subtle sm:flex-row sm:items-center sm:justify-between"
                         onClick={() => toggleAccordion(job.id)}
                       >
                         <div className="flex items-center gap-3 min-w-0">
-                          <p className="text-sm font-semibold text-slate-900 truncate">
+                          <p className="text-sm font-semibold text-foreground truncate">
                             {job.request?.category || `Job #${job.id.slice(0, 8)}`}
                           </p>
                           <Badge variant={jobVariant(job.status)} size="sm">
@@ -162,11 +162,11 @@ export default function OwnerJobs() {
                         <div className="flex items-center gap-3 flex-wrap">
                           <UrgencyPill urgency={job.request?.urgency} />
                           {job.actualCost && (
-                            <span className="text-sm font-semibold text-slate-700">CHF {job.actualCost}</span>
+                            <span className="text-sm font-semibold text-muted-dark">CHF {job.actualCost}</span>
                           )}
-                          <span className="text-xs text-slate-400">{formatDate(job.createdAt)}</span>
+                          <span className="text-xs text-foreground-dim">{formatDate(job.createdAt)}</span>
                           <svg
-                            className={cn("h-4 w-4 text-slate-400 transition-transform", isExpanded ? "rotate-90" : "")}
+                            className={cn("h-4 w-4 text-foreground-dim transition-transform", isExpanded ? "rotate-90" : "")}
                             fill="none" viewBox="0 0 24 24" stroke="currentColor"
                           >
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -176,13 +176,13 @@ export default function OwnerJobs() {
 
                       {/* Expanded detail */}
                       {isExpanded && (
-                        <div className="border-t border-slate-100 px-4 py-4">
+                        <div className="border-t border-surface-divider px-4 py-4">
                           {job.request && (
-                            <div className="mb-3 rounded-lg border border-slate-100 bg-slate-50 p-3">
-                              <p className="text-xs font-semibold text-slate-600 mb-1">{t("owner:jobs.text.requestDetails")}</p>
-                              <p className="text-sm text-slate-800">{job.request.description}</p>
+                            <div className="mb-3 rounded-lg border border-surface-divider bg-surface-subtle p-3">
+                              <p className="text-xs font-semibold text-muted-text mb-1">{t("owner:jobs.text.requestDetails")}</p>
+                              <p className="text-sm text-foreground">{job.request.description}</p>
                               {job.request.category && (
-                                <p className="text-xs text-slate-500 mt-1">Category: {job.request.category}</p>
+                                <p className="text-xs text-muted mt-1">Category: {job.request.category}</p>
                               )}
                             </div>
                           )}
@@ -224,7 +224,7 @@ export default function OwnerJobs() {
                             </div>
                           )}
 
-                          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
+                          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
                             <span>Created: {formatDate(job.createdAt)}</span>
                             {job.startedAt && <span>Started: {formatDate(job.startedAt)}</span>}
                             {job.completedAt && <span>Completed: {formatDate(job.completedAt)}</span>}

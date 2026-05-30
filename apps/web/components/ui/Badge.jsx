@@ -13,9 +13,9 @@ const badge = cva("inline-flex items-center rounded-full font-semibold", {
       destructive:
         "bg-destructive-light text-destructive-dark border border-destructive-ring",
       warning:
-        "bg-amber-50 text-amber-800 border border-amber-300",
+        "bg-warning-light text-warning-dark border border-warning-ring",
       info:
-        "bg-sky-50 text-sky-700 border border-sky-300",
+        "bg-info-light text-info-dark border border-info-ring",
       muted:
         "bg-surface-raised text-muted border border-muted-ring",
     },

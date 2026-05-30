@@ -74,7 +74,7 @@ const SOURCE_LABEL = {
   BROWSER_UPLOAD: { text: "Upload", cls: "bg-sky-50 text-sky-700 border-sky-200" },
   EMAIL_PDF: { text: "Email", cls: "bg-violet-50 text-violet-700 border-violet-200" },
   MOBILE_CAPTURE: { text: "Mobile", cls: "bg-teal-50 text-teal-700 border-teal-200" },
-  MANUAL: { text: "Manual", cls: "bg-slate-50 text-slate-600 border-slate-200" },
+  MANUAL: { text: "Manual", cls: "bg-surface-subtle text-muted-text border-surface-border" },
 };
 function SourceChannelIcon({ channel }) {
   if (!channel || !SOURCE_LABEL[channel]) return null;
@@ -104,12 +104,12 @@ function ActionDropdown({ actions }) {
       <button
         type="button"
         onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}
-        className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition"
+        className="rounded-lg border border-surface-border bg-surface px-3 py-1.5 text-xs font-semibold text-muted-dark hover:bg-surface-subtle transition"
       >
         Actions ▾
       </button>
       {open && (
-        <div className="absolute right-0 z-20 mt-1 w-48 origin-top-right rounded-lg border border-slate-200 bg-white shadow-lg ring-1 ring-black/5">
+        <div className="absolute right-0 z-20 mt-1 w-48 origin-top-right rounded-lg border border-surface-border bg-surface shadow-lg ring-1 ring-black/5">
           <div className="py-1">
             {actions.map((a, i) => (
               <button
@@ -117,7 +117,7 @@ function ActionDropdown({ actions }) {
                 type="button"
                 disabled={a.disabled}
                 onClick={(e) => { e.stopPropagation(); setOpen(false); a.onClick(); }}
-                className={"w-full text-left px-4 py-2 text-sm hover:bg-slate-50 transition disabled:opacity-40 " + (a.className || "text-slate-700")}
+                className={"w-full text-left px-4 py-2 text-sm hover:bg-surface-subtle transition disabled:opacity-40 " + (a.className || "text-muted-dark")}
               >
                 {a.label}
               </button>
@@ -145,12 +145,12 @@ function PdfDownloadModal({ invoice, onClose }) {
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" role="dialog" aria-modal="true" aria-label={t("owner:invoices.heading.downloadPdf")}>
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative w-full max-w-sm rounded-t-2xl sm:rounded-2xl bg-white p-6 shadow-xl">
-        <h2 className="text-base font-semibold text-slate-800 mb-1">{t("owner:invoices.heading.downloadPdf")}</h2>
-        <p className="text-xs text-slate-500 mb-4">
+      <div className="relative w-full max-w-sm rounded-t-2xl sm:rounded-2xl bg-surface p-6 shadow-xl">
+        <h2 className="text-base font-semibold text-foreground mb-1">{t("owner:invoices.heading.downloadPdf")}</h2>
+        <p className="text-xs text-muted mb-4">
           {invoice.reference || invoice.invoiceNumber || invoice.id?.slice(0, 8)}
         </p>
-        <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 cursor-pointer">
+        <label className="flex items-center gap-3 rounded-xl border border-surface-border bg-surface-subtle px-4 py-3 cursor-pointer">
           <input
             type="checkbox"
             checked={includeQr}
@@ -158,15 +158,15 @@ function PdfDownloadModal({ invoice, onClose }) {
             className="h-4 w-4 accent-blue-600"
           />
           <div>
-            <p className="text-sm font-medium text-slate-700">{t("owner:invoices.text.includeQrBill")}</p>
-            <p className="text-xs text-slate-400">{t("owner:invoices.text.appendsTheSwissQrPaymentSlip")}</p>
+            <p className="text-sm font-medium text-muted-dark">{t("owner:invoices.text.includeQrBill")}</p>
+            <p className="text-xs text-foreground-dim">{t("owner:invoices.text.appendsTheSwissQrPaymentSlip")}</p>
           </div>
         </label>
         <div className="mt-4 flex gap-3">
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 rounded-xl border border-slate-200 bg-white py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition"
+            className="flex-1 rounded-xl border border-surface-border bg-surface py-2.5 text-sm font-medium text-muted-dark hover:bg-surface-subtle transition"
           >
             Cancel
           </button>
@@ -258,16 +258,16 @@ function InvoiceSlideOver({ invoiceId, onClose, onAction }) {
         role="dialog"
         aria-modal="true"
         aria-label="Invoice details"
-        className="fixed inset-y-0 right-0 z-50 flex w-full max-w-lg flex-col bg-white shadow-2xl"
+        className="fixed inset-y-0 right-0 z-50 flex w-full max-w-lg flex-col bg-surface shadow-2xl"
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+        <div className="flex items-center justify-between border-b border-surface-border px-5 py-4">
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-slate-900 truncate">
+            <p className="text-sm font-semibold text-foreground truncate">
               {inv?.invoiceNumber || invoiceId?.slice(0, 8) || "Invoice"}
             </p>
             {inv && (
-              <p className="text-xs text-slate-400 mt-0.5">
+              <p className="text-xs text-foreground-dim mt-0.5">
                 {inv.direction === "INCOMING" ? "↓ Incoming" : "↑ Outgoing"}
                 {inv.createdAt ? ` · ${formatDate(inv.createdAt)}` : ""}
               </p>
@@ -277,7 +277,7 @@ function InvoiceSlideOver({ invoiceId, onClose, onAction }) {
             {inv && (
               <a
                 href={`/owner/finance/invoices/${invoiceId}`}
-                className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 transition"
+                className="rounded-lg border border-surface-border bg-surface px-3 py-1.5 text-xs font-medium text-muted-text hover:bg-surface-subtle transition"
               >
                 Full page →
               </a>
@@ -286,7 +286,7 @@ function InvoiceSlideOver({ invoiceId, onClose, onAction }) {
               type="button"
               aria-label="Close invoice panel"
               onClick={onClose}
-              className="rounded-lg p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition"
+              className="rounded-lg p-1.5 text-foreground-dim hover:text-muted-text hover:bg-surface-hover transition"
             >
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -329,8 +329,8 @@ function InvoiceSlideOver({ invoiceId, onClose, onAction }) {
                   { label: "Currency", value: inv.currency || "CHF" },
                 ].map(({ label, value }) => (
                   <div key={label}>
-                    <dt className="text-xs font-medium text-slate-500 uppercase tracking-wide">{label}</dt>
-                    <dd className="mt-0.5 text-sm text-slate-900">{value ?? "—"}</dd>
+                    <dt className="text-xs font-medium text-muted uppercase tracking-wide">{label}</dt>
+                    <dd className="mt-0.5 text-sm text-foreground">{value ?? "—"}</dd>
                   </div>
                 ))}
               </dl>
@@ -338,12 +338,12 @@ function InvoiceSlideOver({ invoiceId, onClose, onAction }) {
               {/* Line items summary */}
               {inv.lineItems?.length > 0 && (
                 <div>
-                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">Line items</p>
-                  <div className="divide-y divide-slate-100 rounded-lg border border-slate-200">
+                  <p className="text-xs font-medium text-muted uppercase tracking-wide mb-2">Line items</p>
+                  <div className="divide-y divide-slate-100 rounded-lg border border-surface-border">
                     {inv.lineItems.map((li, i) => (
                       <div key={i} className="flex items-center justify-between px-3 py-2 text-sm">
-                        <span className="text-slate-700 truncate flex-1 mr-2">{li.description || "—"}</span>
-                        <span className="font-mono text-slate-900 shrink-0">{formatCurrency(li.lineTotal)}</span>
+                        <span className="text-muted-dark truncate flex-1 mr-2">{li.description || "—"}</span>
+                        <span className="font-mono text-foreground shrink-0">{formatCurrency(li.lineTotal)}</span>
                       </div>
                     ))}
                   </div>
@@ -352,13 +352,13 @@ function InvoiceSlideOver({ invoiceId, onClose, onAction }) {
 
               {/* Timeline */}
               <div>
-                <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">Timeline</p>
-                <div className="space-y-1.5 text-xs text-slate-600">
+                <p className="text-xs font-medium text-muted uppercase tracking-wide mb-2">Timeline</p>
+                <div className="space-y-1.5 text-xs text-muted-text">
                   {[{label:"Created",value:inv.createdAt},{label:"Submitted",value:inv.submittedAt},{label:"Approved",value:inv.approvedAt},{label:"Paid",value:inv.paidAt}]
                     .filter(e => e.value)
                     .map(({label,value}) => (
                       <div key={label} className="flex justify-between">
-                        <span className="text-slate-500">{label}</span>
+                        <span className="text-muted">{label}</span>
                         <span>{formatDate(value)}</span>
                       </div>
                     ))}
@@ -370,7 +370,7 @@ function InvoiceSlideOver({ invoiceId, onClose, onAction }) {
 
         {/* Footer actions */}
         {inv && (
-          <div className="border-t border-slate-200 px-5 py-4 flex flex-wrap gap-2">
+          <div className="border-t border-surface-border px-5 py-4 flex flex-wrap gap-2">
             {isIncoming && inv.status === "ISSUED" && (
               <button
                 type="button"
@@ -397,7 +397,7 @@ function InvoiceSlideOver({ invoiceId, onClose, onAction }) {
             <a
               href={`/api/invoices/${invoiceId}/pdf`}
               download
-              className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition"
+              className="rounded-lg border border-surface-border bg-surface px-4 py-2 text-sm font-medium text-muted-dark hover:bg-surface-subtle transition"
             >
               ↓ PDF
             </a>
@@ -555,7 +555,7 @@ export default function OwnerInvoices() {
       label: isOutgoing ? t("owner:invoices.col.tenant") : t("owner:invoices.col.issuer"),
       sortable: false,
       defaultVisible: true,
-      render: (inv) => inv.recipientName || <span className="text-slate-400">—</span>,
+      render: (inv) => inv.recipientName || <span className="text-foreground-dim">—</span>,
     },
     {
       id: "createdAt",
@@ -621,7 +621,7 @@ export default function OwnerInvoices() {
           )}
 
           {/* Direction toggle */}
-          <div className="mb-4 flex gap-1 rounded-lg bg-slate-100 p-1 w-fit">
+          <div className="mb-4 flex gap-1 rounded-lg bg-surface-hover p-1 w-fit">
             {DIRECTION_TABS.map((tab) => (
               <button
                 key={tab.key}
@@ -629,8 +629,8 @@ export default function OwnerInvoices() {
                 className={
                   "rounded-lg px-4 py-2 text-sm font-medium transition-colors " +
                   (direction === tab.key
-                    ? "bg-white text-slate-900 shadow-sm"
-                    : "text-slate-500 hover:text-slate-700")
+                    ? "bg-surface text-foreground shadow-sm"
+                    : "text-muted hover:text-muted-dark")
                 }
               >
                 {tab.icon} {t(`owner:invoices.tabs.${tab.key.toLowerCase()}`)}
@@ -685,7 +685,7 @@ export default function OwnerInvoices() {
                   className="table-card w-full text-left cursor-pointer"
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <span className="font-mono text-xs text-slate-500">{inv.invoiceNumber || inv.id?.slice(0, 8)}</span>
+                    <span className="font-mono text-xs text-muted">{inv.invoiceNumber || inv.id?.slice(0, 8)}</span>
                     <Badge variant={invoiceVariant(inv.status)} size="sm">{inv.status}</Badge>
                   </div>
                   <p className="table-card-head mt-1">{inv.recipientName || "—"}</p>
@@ -700,7 +700,7 @@ export default function OwnerInvoices() {
 
           {/* Summary */}
           {!loading && sortedInvoices.length > 0 && (
-            <div className="mt-3 flex items-center justify-between text-xs text-slate-500 px-1">
+            <div className="mt-3 flex items-center justify-between text-xs text-muted px-1">
               <span>{sortedInvoices.length} invoice{sortedInvoices.length !== 1 ? "s" : ""}</span>
               <span>
                 Total: {formatCurrency(sortedInvoices.reduce((sum, inv) => sum + getInvoiceTotal(inv), 0))}

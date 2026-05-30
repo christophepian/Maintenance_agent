@@ -24,8 +24,8 @@ export default function LocaleSwitcher() {
       aria-label={`Switch language, current: ${current.toUpperCase()}`}
       className={cn(
         'flex items-center gap-1 rounded-full px-2 py-1',
-        'text-xs font-semibold text-slate-500 hover:text-slate-800',
-        'hover:bg-slate-100 transition-colors focus-visible:ring focus-visible:ring-blue-500'
+        'text-xs font-semibold text-muted hover:text-foreground',
+        'hover:bg-surface-hover transition-colors focus-visible:ring focus-visible:ring-blue-500'
       )}
     >
       {/* Globe icon */}

@@ -141,10 +141,10 @@ export default function TenantLeaseDetailPage() {
         )}
 
         {loading ? (
-          <div className="text-center py-8 text-slate-500">{t("tenant:leasesId.text.loadingLeaseDetails")}</div>
+          <div className="text-center py-8 text-muted">{t("tenant:leasesId.text.loadingLeaseDetails")}</div>
         ) : !lease ? (
           <div className="card p-8 text-center">
-            <p className="text-slate-500">{t("tenant:leasesId.text.leaseNotFoundOrNotAccessible")}</p>
+            <p className="text-muted">{t("tenant:leasesId.text.leaseNotFoundOrNotAccessible")}</p>
           </div>
         ) : (
           <>
@@ -152,7 +152,7 @@ export default function TenantLeaseDetailPage() {
             <div className="flex items-start justify-between mb-6">
               <div>
                 <h1 className="text-2xl font-bold">{t("tenant:leasesId.heading.leaseAgreement")}</h1>
-                <p className="text-slate-500 text-sm mt-1">
+                <p className="text-muted text-sm mt-1">
                   {lease.unit?.building?.name} — Unit {lease.unit?.unitNumber}
                 </p>
               </div>
@@ -183,14 +183,14 @@ export default function TenantLeaseDetailPage() {
               <h2 className="text-lg font-semibold mb-3 border-b pb-2">{t("tenant:leasesId.text.1Parties")}</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs text-slate-500 uppercase tracking-wide">{t("tenant:leasesId.text.landlord")}</label>
+                  <label className="block text-xs text-muted uppercase tracking-wide">{t("tenant:leasesId.text.landlord")}</label>
                   <p className="font-medium">{lease.landlordName}</p>
                 </div>
                 <div>
-                  <label className="block text-xs text-slate-500 uppercase tracking-wide">{t("tenant:leasesId.text.tenant")}</label>
+                  <label className="block text-xs text-muted uppercase tracking-wide">{t("tenant:leasesId.text.tenant")}</label>
                   <p className="font-medium">{lease.tenantName}</p>
                   {lease.coTenantName && (
-                    <p className="text-sm text-slate-500">Co-tenant: {lease.coTenantName}</p>
+                    <p className="text-sm text-muted">Co-tenant: {lease.coTenantName}</p>
                   )}
                 </div>
               </div>
@@ -201,7 +201,7 @@ export default function TenantLeaseDetailPage() {
               <h2 className="text-lg font-semibold mb-3 border-b pb-2">{t("tenant:leasesId.text.2Object")}</h2>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-xs text-slate-500 uppercase tracking-wide">{t("tenant:leasesId.text.type")}</label>
+                  <label className="block text-xs text-muted uppercase tracking-wide">{t("tenant:leasesId.text.type")}</label>
                   <p>
                     {lease.objectType === "APPARTEMENT"
                       ? "Apartment"
@@ -212,20 +212,20 @@ export default function TenantLeaseDetailPage() {
                 </div>
                 {lease.roomsCount && (
                   <div>
-                    <label className="block text-xs text-slate-500 uppercase tracking-wide">{t("tenant:leasesId.text.rooms")}</label>
+                    <label className="block text-xs text-muted uppercase tracking-wide">{t("tenant:leasesId.text.rooms")}</label>
                     <p>{lease.roomsCount}</p>
                   </div>
                 )}
                 {lease.floor && (
                   <div>
-                    <label className="block text-xs text-slate-500 uppercase tracking-wide">{t("tenant:leasesId.text.floor")}</label>
+                    <label className="block text-xs text-muted uppercase tracking-wide">{t("tenant:leasesId.text.floor")}</label>
                     <p>{lease.floor}</p>
                   </div>
                 )}
               </div>
               {lease.unit?.building?.address && (
                 <div className="mt-3">
-                  <label className="block text-xs text-slate-500 uppercase tracking-wide">{t("tenant:leasesId.text.address")}</label>
+                  <label className="block text-xs text-muted uppercase tracking-wide">{t("tenant:leasesId.text.address")}</label>
                   <p>{lease.unit.building.address}</p>
                 </div>
               )}
@@ -236,21 +236,21 @@ export default function TenantLeaseDetailPage() {
               <h2 className="text-lg font-semibold mb-3 border-b pb-2">§ 3–4 — Duration & Termination</h2>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs text-slate-500 uppercase tracking-wide">{t("tenant:leasesId.text.startDate")}</label>
+                  <label className="block text-xs text-muted uppercase tracking-wide">{t("tenant:leasesId.text.startDate")}</label>
                   <p>{formatDate(lease.startDate)}</p>
                 </div>
                 <div>
-                  <label className="block text-xs text-slate-500 uppercase tracking-wide">{t("tenant:leasesId.text.term")}</label>
+                  <label className="block text-xs text-muted uppercase tracking-wide">{t("tenant:leasesId.text.term")}</label>
                   <p>{lease.isFixedTerm ? "Fixed term" : "Indefinite"}</p>
                 </div>
                 {lease.endDate && (
                   <div>
-                    <label className="block text-xs text-slate-500 uppercase tracking-wide">{t("tenant:leasesId.text.endDate")}</label>
+                    <label className="block text-xs text-muted uppercase tracking-wide">{t("tenant:leasesId.text.endDate")}</label>
                     <p>{formatDate(lease.endDate)}</p>
                   </div>
                 )}
                 <div>
-                  <label className="block text-xs text-slate-500 uppercase tracking-wide">{t("tenant:leasesId.text.noticePeriod")}</label>
+                  <label className="block text-xs text-muted uppercase tracking-wide">{t("tenant:leasesId.text.noticePeriod")}</label>
                   <p>{NOTICE_RULES[lease.noticeRule] || lease.noticeRule}</p>
                 </div>
               </div>
@@ -261,24 +261,24 @@ export default function TenantLeaseDetailPage() {
               <h2 className="text-lg font-semibold mb-3 border-b pb-2">§ 5–6 — Rent & Charges</h2>
               <div className="space-y-2">
                 <div className="flex justify-between">
-                  <span className="text-slate-600">{t("tenant:leasesId.text.netRent")}</span>
+                  <span className="text-muted-text">{t("tenant:leasesId.text.netRent")}</span>
                   <span className="font-medium">{formatChf(lease.netRentChf)}</span>
                 </div>
                 {lease.garageRentChf != null && (
                   <div className="flex justify-between">
-                    <span className="text-slate-600">{t("tenant:leasesId.text.garageParking")}</span>
+                    <span className="text-muted-text">{t("tenant:leasesId.text.garageParking")}</span>
                     <span>{formatChf(lease.garageRentChf)}</span>
                   </div>
                 )}
                 {lease.otherServiceRentChf != null && (
                   <div className="flex justify-between">
-                    <span className="text-slate-600">{t("tenant:leasesId.text.otherServices")}</span>
+                    <span className="text-muted-text">{t("tenant:leasesId.text.otherServices")}</span>
                     <span>{formatChf(lease.otherServiceRentChf)}</span>
                   </div>
                 )}
                 {lease.chargesTotalChf != null && (
                   <div className="flex justify-between">
-                    <span className="text-slate-600">Charges (acompte)</span>
+                    <span className="text-muted-text">Charges (acompte)</span>
                     <span>{formatChf(lease.chargesTotalChf)}</span>
                   </div>
                 )}
@@ -294,10 +294,10 @@ export default function TenantLeaseDetailPage() {
               <section className="card p-5 mb-4">
                 <h2 className="text-lg font-semibold mb-3 border-b pb-2">{t("tenant:leasesId.text.7Deposit")}</h2>
                 <div className="flex justify-between">
-                  <span className="text-slate-600">{t("tenant:leasesId.text.securityDeposit")}</span>
+                  <span className="text-muted-text">{t("tenant:leasesId.text.securityDeposit")}</span>
                   <span className="font-medium">{formatChf(lease.depositChf)}</span>
                 </div>
-                <div className="text-sm text-slate-500 mt-1">
+                <div className="text-sm text-muted mt-1">
                   Due:{" "}
                   {lease.depositDueRule === "AT_SIGNATURE"
                     ? "At signature"
@@ -318,13 +318,13 @@ export default function TenantLeaseDetailPage() {
             {lease.otherStipulations && (
               <section className="card p-5 mb-4">
                 <h2 className="text-lg font-semibold mb-3 border-b pb-2">{t("tenant:leasesId.text.15OtherStipulations")}</h2>
-                <p className="whitespace-pre-wrap text-slate-700">{lease.otherStipulations}</p>
+                <p className="whitespace-pre-wrap text-muted-dark">{lease.otherStipulations}</p>
               </section>
             )}
 
             {/* House rules */}
             {lease.includesHouseRules && (
-              <div className="text-sm text-slate-500 mb-4">
+              <div className="text-sm text-muted mb-4">
                 📋 House rules are included as an annex to this lease.
               </div>
             )}
@@ -338,7 +338,7 @@ export default function TenantLeaseDetailPage() {
                     {lease.signatureStatus.toLowerCase().replace(/_/g, " ")}
                   </Badge>
                   {lease.tenantAcceptedAt && (
-                    <span className="text-sm text-slate-500 ml-2">
+                    <span className="text-sm text-muted ml-2">
                       · Signed on {formatDate(lease.tenantAcceptedAt)}
                     </span>
                   )}
@@ -361,7 +361,7 @@ export default function TenantLeaseDetailPage() {
                     <p className="font-semibold text-yellow-700 mb-3">
                       Are you sure you want to sign this lease?
                     </p>
-                    <p className="text-sm text-slate-600 mb-4">
+                    <p className="text-sm text-muted-text mb-4">
                       By clicking "Confirm", you agree to the terms of this lease agreement.
                       This is a binding action.
                     </p>
@@ -374,7 +374,7 @@ export default function TenantLeaseDetailPage() {
                         {accepting ? "Signing…" : "✅ Confirm Signature"}
                       </button>
                       <button
-                        className="border border-slate-300 rounded px-4 py-2 text-slate-600 hover:bg-slate-50"
+                        className="border border-muted-ring rounded px-4 py-2 text-muted-text hover:bg-surface-subtle"
                         onClick={() => setAcceptConfirm(false)}
                         disabled={accepting}
                       >
@@ -407,21 +407,21 @@ export default function TenantLeaseDetailPage() {
               <section className="card p-5 mb-4 mt-6 border-orange-200 bg-orange-50">
                 <h2 className="text-lg font-semibold mb-3 text-orange-700">{t("tenant:leasesId.text.leaseTerminated")}</h2>
                 <div className="space-y-1 text-sm">
-                  <p><span className="text-slate-600">{t("tenant:leasesId.text.terminatedOn")}</span> {formatDate(lease.terminatedAt)}</p>
-                  {lease.terminationReason && <p><span className="text-slate-600">{t("tenant:leasesId.text.reason")}</span> {lease.terminationReason}</p>}
-                  {lease.terminationNotice && <p><span className="text-slate-600">{t("tenant:leasesId.text.notice")}</span> {lease.terminationNotice}</p>}
+                  <p><span className="text-muted-text">{t("tenant:leasesId.text.terminatedOn")}</span> {formatDate(lease.terminatedAt)}</p>
+                  {lease.terminationReason && <p><span className="text-muted-text">{t("tenant:leasesId.text.reason")}</span> {lease.terminationReason}</p>}
+                  {lease.terminationNotice && <p><span className="text-muted-text">{t("tenant:leasesId.text.notice")}</span> {lease.terminationNotice}</p>}
                 </div>
               </section>
             )}
 
             {lease.archivedAt && (
-              <div className="text-xs text-slate-400 mt-2">
+              <div className="text-xs text-foreground-dim mt-2">
                 📦 Archived on {formatDate(lease.archivedAt)}
               </div>
             )}
 
             {/* Metadata */}
-            <div className="text-xs text-slate-400 mt-6">
+            <div className="text-xs text-foreground-dim mt-6">
               Lease ID: {lease.id} · Created {formatDate(lease.createdAt)}
             </div>
           </>

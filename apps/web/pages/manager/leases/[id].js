@@ -22,7 +22,7 @@ import { useTranslation } from "next-i18next";
 function Field({ label, children, span }) {
   return (
     <div className={span === 2 ? "col-span-2" : ""}>
-      <label className="block text-xs font-medium text-slate-500 mb-1">{label}</label>
+      <label className="block text-xs font-medium text-muted mb-1">{label}</label>
       {children}
     </div>
   );
@@ -36,21 +36,21 @@ function Input({ value, onChange, type = "text", placeholder, disabled }) {
       onChange={e => onChange(type === "number" ? (e.target.value === "" ? "" : Number(e.target.value)) : e.target.value)}
       placeholder={placeholder}
       disabled={disabled}
-      className="w-full border rounded-lg px-3 py-1.5 text-sm disabled:bg-slate-100 disabled:text-slate-500"
+      className="w-full border rounded-lg px-3 py-1.5 text-sm disabled:bg-surface-hover disabled:text-muted"
     />
   );
 }
 
 function AccordionSection({ title, open, onToggle, children }) {
   return (
-    <div className="bg-white rounded-lg border overflow-hidden">
+    <div className="bg-surface rounded-lg border overflow-hidden">
       <button
         type="button"
         onClick={onToggle}
-        className="w-full flex items-center justify-between px-5 py-3 text-left hover:bg-slate-50 transition-colors"
+        className="w-full flex items-center justify-between px-5 py-3 text-left hover:bg-surface-subtle transition-colors"
       >
-        <h3 className="text-sm font-semibold text-slate-800">{title}</h3>
-        <span className="text-slate-400">{open ? "▲" : "▼"}</span>
+        <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+        <span className="text-foreground-dim">{open ? "▲" : "▼"}</span>
       </button>
       {open && <div className="px-5 pb-5 pt-2 border-t">{children}</div>}
     </div>
@@ -162,21 +162,21 @@ function LeaseActions({
           onClick={() => setOpen(v => !v)}
           aria-label={t("manager:leasesId.ariaLabel.leaseActionsMenu")}
           aria-expanded={open}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-white border border-slate-200 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 active:bg-slate-100"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-surface border border-surface-border text-sm font-medium text-muted-dark shadow-sm hover:bg-surface-subtle active:bg-surface-hover"
         >
-          Actions <span className="text-xs text-slate-400">{open ? "▲" : "▼"}</span>
+          Actions <span className="text-xs text-foreground-dim">{open ? "▲" : "▼"}</span>
         </button>
         {open && (
           <div
             style={{ position: "fixed", top: dropPos.top, left: dropPos.left, zIndex: 9999, maxHeight: `calc(100dvh - ${dropPos.top + 8}px)` }}
-            className="w-52 rounded-md bg-white shadow-lg ring-1 ring-black/5 py-1 overflow-y-auto"
+            className="w-52 rounded-md bg-surface shadow-lg ring-1 ring-black/5 py-1 overflow-y-auto"
           >
             {items.map((item, i) => (
               <button
                 key={i}
                 disabled={item.disabled}
                 onClick={() => { setOpen(false); item.action(); }}
-                className={cn("w-full text-left px-4 py-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed", item.danger ? "text-red-600 hover:bg-red-50" : "text-slate-700 hover:bg-slate-50")}
+                className={cn("w-full text-left px-4 py-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed", item.danger ? "text-red-600 hover:bg-red-50" : "text-muted-dark hover:bg-surface-subtle")}
               >
                 {item.label}
               </button>
@@ -648,7 +648,7 @@ export default function LeaseEditorPage() {
   if (loading) {
     return (
       <AppShell role="MANAGER">
-        <PageShell><p className="text-sm text-slate-500 p-6">{t("manager:leasesId.text.loadingLease")}</p></PageShell>
+        <PageShell><p className="text-sm text-muted p-6">{t("manager:leasesId.text.loadingLease")}</p></PageShell>
       </AppShell>
     );
   }
@@ -682,7 +682,7 @@ export default function LeaseEditorPage() {
               {lease.unit && (
                 <>
                   <span>·</span>
-                  <span className="text-slate-500">{lease.unit.building?.name} — Unit {lease.unit.unitNumber}</span>
+                  <span className="text-muted">{lease.unit.building?.name} — Unit {lease.unit.unitNumber}</span>
                 </>
               )}
             </span>
@@ -715,7 +715,7 @@ export default function LeaseEditorPage() {
           {/* §1 — Parties */}
           <AccordionSection title={t("manager:leasesId.prop.1PartiesBailleurLocataire")} open={openSections.parties} onToggle={() => toggle("parties")}>
             <div className="space-y-4">
-              <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{t("manager:leasesId.text.11BailleresseBailleur")}</h4>
+              <h4 className="text-xs font-semibold text-muted uppercase tracking-wide">{t("manager:leasesId.text.11BailleresseBailleur")}</h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Field label={t("manager:leasesId.prop.nomRaisonSociale")}><Input value={lease.landlordName} onChange={v => updateField("landlordName", v)} disabled={!editMode} /></Field>
                 <Field label={t("manager:leasesId.prop.adresse")}><Input value={lease.landlordAddress} onChange={v => updateField("landlordAddress", v)} disabled={!editMode} /></Field>
@@ -725,7 +725,7 @@ export default function LeaseEditorPage() {
                 <Field label={t("manager:leasesId.prop.representePar")}><Input value={lease.landlordRepresentedBy} onChange={v => updateField("landlordRepresentedBy", v)} disabled={!editMode} /></Field>
               </div>
 
-              <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mt-6">{t("manager:leasesId.text.12Locataire")}</h4>
+              <h4 className="text-xs font-semibold text-muted uppercase tracking-wide mt-6">{t("manager:leasesId.text.12Locataire")}</h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Field label={t("manager:leasesId.prop.nom")}><Input value={lease.tenantName} onChange={v => updateField("tenantName", v)} disabled={!editMode} /></Field>
                 <Field label={t("manager:leasesId.prop.adresse")}><Input value={lease.tenantAddress} onChange={v => updateField("tenantAddress", v)} disabled={!editMode} /></Field>
@@ -742,7 +742,7 @@ export default function LeaseEditorPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Field label={t("manager:leasesId.prop.typeDobjet")}>
                 <select value={lease.objectType || "APPARTEMENT"} onChange={e => updateField("objectType", e.target.value)} disabled={!editMode}
-                  className="w-full border rounded-lg px-3 py-1.5 text-sm disabled:bg-slate-100">
+                  className="w-full border rounded-lg px-3 py-1.5 text-sm disabled:bg-surface-hover">
                   <option value="APPARTEMENT">{t("manager:leasesId.text.appartement")}</option>
                   <option value="MAISON">{t("manager:leasesId.text.maison")}</option>
                   <option value="CHAMBRE_MEUBLEE">{t("manager:leasesId.text.chambreMeuble")}</option>
@@ -762,7 +762,7 @@ export default function LeaseEditorPage() {
               <Field label={t("manager:leasesId.prop.dbutDuBail")}><Input type="date" value={lease.startDate?.split("T")[0]} onChange={v => updateField("startDate", v)} disabled={!editMode} /></Field>
               <Field label={t("manager:leasesId.prop.dureDtermine")}>
                 <select value={lease.isFixedTerm ? "true" : "false"} onChange={e => updateField("isFixedTerm", e.target.value === "true")} disabled={!editMode}
-                  className="w-full border rounded-lg px-3 py-1.5 text-sm disabled:bg-slate-100">
+                  className="w-full border rounded-lg px-3 py-1.5 text-sm disabled:bg-surface-hover">
                   <option value="false">{t("manager:leasesId.text.indtermine")}</option>
                   <option value="true">{t("manager:leasesId.text.dtermine")}</option>
                 </select>
@@ -773,7 +773,7 @@ export default function LeaseEditorPage() {
               <Field label={t("manager:leasesId.prop.premierTermeDeRsiliation")}><Input type="date" value={lease.firstTerminationDate?.split("T")[0]} onChange={v => updateField("firstTerminationDate", v)} disabled={!editMode} /></Field>
               <Field label={t("manager:leasesId.prop.dlaiDeRsiliation")}>
                 <select value={lease.noticeRule || "3_MONTHS"} onChange={e => updateField("noticeRule", e.target.value)} disabled={!editMode}
-                  className="w-full border rounded-lg px-3 py-1.5 text-sm disabled:bg-slate-100">
+                  className="w-full border rounded-lg px-3 py-1.5 text-sm disabled:bg-surface-hover">
                   <option value="3_MONTHS">{t("manager:leasesId.text.3Mois")}</option>
                   <option value="EXTENDED">{t("manager:leasesId.text.prolong")}</option>
                   <option value="2_WEEKS">{t("manager:leasesId.text.2Semaines")}</option>
@@ -781,7 +781,7 @@ export default function LeaseEditorPage() {
               </Field>
               <Field label={t("manager:leasesId.prop.termesDeRsiliation")}>
                 <select value={lease.terminationDatesRule || "END_OF_MONTH_EXCEPT_31_12"} onChange={e => updateField("terminationDatesRule", e.target.value)} disabled={!editMode}
-                  className="w-full border rounded-lg px-3 py-1.5 text-sm disabled:bg-slate-100">
+                  className="w-full border rounded-lg px-3 py-1.5 text-sm disabled:bg-surface-hover">
                   <option value="END_OF_MONTH_EXCEPT_31_12">{t("manager:leasesId.text.finDeMoisSauf3112")}</option>
                   <option value="CUSTOM">{t("manager:leasesId.text.datesLocales")}</option>
                 </select>
@@ -797,8 +797,8 @@ export default function LeaseEditorPage() {
               <Field label={t("manager:leasesId.prop.autresPrestations")}><Input type="number" value={lease.otherServiceRentChf} onChange={v => updateField("otherServiceRentChf", v)} disabled={!editMode} /></Field>
               <Field label={t("manager:leasesId.prop.totalCharges")}><Input type="number" value={lease.chargesTotalChf} onChange={v => updateField("chargesTotalChf", v)} disabled={!editMode} /></Field>
             </div>
-            <div className="mt-3 p-3 bg-slate-50 rounded-lg">
-              <p className="text-sm font-medium text-slate-700">
+            <div className="mt-3 p-3 bg-surface-subtle rounded-lg">
+              <p className="text-sm font-medium text-muted-dark">
                 {t("manager:leasesId.text.loyerTotal")} <span className="text-lg font-bold">CHF {lease.rentTotalChf ?? "—"}.-/mo</span>
               </p>
             </div>
@@ -822,7 +822,7 @@ export default function LeaseEditorPage() {
               <Field label={t("manager:leasesId.prop.montantGarantie")}><Input type="number" value={lease.depositChf} onChange={v => updateField("depositChf", v)} disabled={!editMode} /></Field>
               <Field label={t("manager:leasesId.prop.exigibilit")}>
                 <select value={lease.depositDueRule || "AT_SIGNATURE"} onChange={e => updateField("depositDueRule", e.target.value)} disabled={!editMode}
-                  className="w-full border rounded-lg px-3 py-1.5 text-sm disabled:bg-slate-100">
+                  className="w-full border rounded-lg px-3 py-1.5 text-sm disabled:bg-surface-hover">
                   <option value="AT_SIGNATURE">{t("manager:leasesId.text.laSignature")}</option>
                   <option value="BY_START">{t("manager:leasesId.text.auDbutDuBail")}</option>
                   <option value="BY_DATE">{t("manager:leasesId.text.uneDatePrcise")}</option>
@@ -850,7 +850,7 @@ export default function LeaseEditorPage() {
                   onChange={e => updateField("otherStipulations", e.target.value)}
                   disabled={!editMode}
                   rows={4}
-                  className="w-full border rounded-lg px-3 py-1.5 text-sm disabled:bg-slate-100"
+                  className="w-full border rounded-lg px-3 py-1.5 text-sm disabled:bg-surface-hover"
                 />
               </Field>
             </div>
@@ -860,7 +860,7 @@ export default function LeaseEditorPage() {
           {/* Signature Requests */}
           {sigRequests.length > 0 && (
             <div>
-              <h2 className="mb-3 text-sm font-semibold text-slate-700">{t("manager:leasesId.heading.signatureRequests")}</h2>
+              <h2 className="mb-3 text-sm font-semibold text-muted-dark">{t("manager:leasesId.heading.signatureRequests")}</h2>
               <div className="overflow-x-auto rounded-lg border border-table-border">
                 <table className="data-table">
                   <thead>
@@ -910,7 +910,7 @@ export default function LeaseEditorPage() {
               <div className="space-y-3">
                 {lease.draftPdfStorageKey && (
                   <div>
-                    <p className="text-sm font-medium text-slate-700">{t("manager:leasesId.text.draftPdf")}</p>
+                    <p className="text-sm font-medium text-muted-dark">{t("manager:leasesId.text.draftPdf")}</p>
                     <a
                       href={`/api/leases/${id}/generate-pdf`}
                       target="_blank"
@@ -919,7 +919,7 @@ export default function LeaseEditorPage() {
                     >
                       Download draft PDF
                     </a>
-                    <p className="text-xs text-slate-400">SHA-256: {lease.draftPdfSha256 || "—"}</p>
+                    <p className="text-xs text-foreground-dim">SHA-256: {lease.draftPdfSha256 || "—"}</p>
                   </div>
                 )}
                 {lease.signedPdfStorageKey && (
@@ -933,7 +933,7 @@ export default function LeaseEditorPage() {
                     >
                       Download signed PDF
                     </a>
-                    <p className="text-xs text-slate-400">SHA-256: {lease.signedPdfSha256 || "—"}</p>
+                    <p className="text-xs text-foreground-dim">SHA-256: {lease.signedPdfSha256 || "—"}</p>
                   </div>
                 )}
               </div>
@@ -945,15 +945,15 @@ export default function LeaseEditorPage() {
             <Panel title={t("manager:leasesId.prop.depositTracking")}>
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-slate-600">{t("manager:leasesId.text.deposit")} <span className="font-semibold">CHF {lease.depositChf}.-</span></p>
-                    <p className="text-xs text-slate-400">Due: {lease.depositDueRule === "AT_SIGNATURE" ? "At signature" : lease.depositDueRule === "BY_START" ? "By lease start" : lease.depositDueDate?.split("T")[0] || "—"}</p>
+                    <p className="text-sm text-muted-text">{t("manager:leasesId.text.deposit")} <span className="font-semibold">CHF {lease.depositChf}.-</span></p>
+                    <p className="text-xs text-foreground-dim">Due: {lease.depositDueRule === "AT_SIGNATURE" ? "At signature" : lease.depositDueRule === "BY_START" ? "By lease start" : lease.depositDueDate?.split("T")[0] || "—"}</p>
                   </div>
                   {lease.depositPaidAt ? (
                     <div className="text-right">
                       <Badge variant="success" size="sm">{t("manager:leasesId.text.pAID")}</Badge>
-                      <p className="text-xs text-slate-400 mt-1">{fmtD(lease.depositPaidAt)}</p>
-                      {lease.depositConfirmedBy && <p className="text-xs text-slate-400">By: {lease.depositConfirmedBy}</p>}
-                      {lease.depositBankRef && <p className="text-xs text-slate-400">Ref: {lease.depositBankRef}</p>}
+                      <p className="text-xs text-foreground-dim mt-1">{fmtD(lease.depositPaidAt)}</p>
+                      {lease.depositConfirmedBy && <p className="text-xs text-foreground-dim">By: {lease.depositConfirmedBy}</p>}
+                      {lease.depositBankRef && <p className="text-xs text-foreground-dim">Ref: {lease.depositBankRef}</p>}
                     </div>
                   ) : (
                     <Button variant="success" size="xs" onClick={handleConfirmDeposit} disabled={!!actionLoading}>
@@ -974,12 +974,12 @@ export default function LeaseEditorPage() {
                 {lease.terminatedAt && (
                   <div>
                     <p className="text-sm"><span className="text-orange-600 font-medium">{t("manager:leasesId.text.terminated")}</span> {fmtD(lease.terminatedAt)}</p>
-                    {lease.terminationReason && <p className="text-xs text-slate-500 ml-6">Reason: {lease.terminationReason}</p>}
-                    {lease.terminationNotice && <p className="text-xs text-slate-500 ml-6">Notice: {lease.terminationNotice}</p>}
+                    {lease.terminationReason && <p className="text-xs text-muted ml-6">Reason: {lease.terminationReason}</p>}
+                    {lease.terminationNotice && <p className="text-xs text-muted ml-6">Notice: {lease.terminationNotice}</p>}
                   </div>
                 )}
                 {lease.archivedAt && (
-                  <p className="text-sm"><span className="text-slate-600 font-medium">{t("manager:leasesId.text.archived")}</span> {fmtD(lease.archivedAt)}</p>
+                  <p className="text-sm"><span className="text-muted-text font-medium">{t("manager:leasesId.text.archived")}</span> {fmtD(lease.archivedAt)}</p>
                 )}
               </div>
             </Panel>
@@ -989,15 +989,15 @@ export default function LeaseEditorPage() {
           {(billingSchedule || (isActive && !billingScheduleLoading)) && (
             <Panel title={t("manager:leasesId.prop.recurringBilling")}>
               {billingScheduleLoading ? (
-                <p className="text-sm text-slate-500">{t("manager:leasesId.text.loading")}</p>
+                <p className="text-sm text-muted">{t("manager:leasesId.text.loading")}</p>
               ) : !billingSchedule ? (
-                <p className="text-sm text-slate-500">{t("manager:leasesId.text.noRecurringBillingScheduleForThisLease")}</p>
+                <p className="text-sm text-muted">{t("manager:leasesId.text.noRecurringBillingScheduleForThisLease")}</p>
               ) : (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Badge variant={billingScheduleVariant(billingSchedule.status)} size="sm">{billingSchedule.status}</Badge>
-                      <span className="text-sm text-slate-600">Anchor day: {billingSchedule.anchorDay}</span>
+                      <span className="text-sm text-muted-text">Anchor day: {billingSchedule.anchorDay}</span>
                     </div>
                     <div className="flex gap-2">
                       {billingSchedule.status === "ACTIVE" && (
@@ -1014,24 +1014,24 @@ export default function LeaseEditorPage() {
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
                     <div>
-                      <p className="text-xs text-slate-500">{t("manager:leasesId.text.baseRent")}</p>
+                      <p className="text-xs text-muted">{t("manager:leasesId.text.baseRent")}</p>
                       <p className="font-medium">{formatChfCents(billingSchedule.baseRentCents)}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-slate-500">{t("manager:leasesId.text.charges")}</p>
+                      <p className="text-xs text-muted">{t("manager:leasesId.text.charges")}</p>
                       <p className="font-medium">{formatChfCents(billingSchedule.totalChargesCents)}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-slate-500">{t("manager:leasesId.text.nextPeriod")}</p>
+                      <p className="text-xs text-muted">{t("manager:leasesId.text.nextPeriod")}</p>
                       <p className="font-medium">{fmtD(billingSchedule.nextPeriodStart)}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-slate-500">{t("manager:leasesId.text.lastGenerated")}</p>
+                      <p className="text-xs text-muted">{t("manager:leasesId.text.lastGenerated")}</p>
                       <p className="font-medium">{fmtD(billingSchedule.lastGeneratedPeriod)}</p>
                     </div>
                   </div>
                   {billingSchedule.completedAt && (
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-muted">
                       Completed: {fmtD(billingSchedule.completedAt)}
                       {billingSchedule.completionReason ? ` (${billingSchedule.completionReason})` : ""}
                     </p>
@@ -1045,7 +1045,7 @@ export default function LeaseEditorPage() {
           {(lease.status === "ACTIVE" || lease.status === "TERMINATED" || reconciliations.length > 0) && (
             <Panel title={t("manager:leasesId.prop.chargeReconciliations")}>
               {reconLoading ? (
-                <p className="text-sm text-slate-500">{t("manager:leasesId.text.loading")}</p>
+                <p className="text-sm text-muted">{t("manager:leasesId.text.loading")}</p>
               ) : (
                 <div>
                   {reconciliations.length > 0 && (
@@ -1084,7 +1084,7 @@ export default function LeaseEditorPage() {
                     </div>
                   )}
                   {reconciliations.length === 0 && !showCreateRecon && (
-                    <p className="text-sm text-slate-500 mb-3">{t("manager:leasesId.text.noChargeReconciliationsForThisLeaseYet")}</p>
+                    <p className="text-sm text-muted mb-3">{t("manager:leasesId.text.noChargeReconciliationsForThisLeaseYet")}</p>
                   )}
                   {showCreateRecon ? (
                     <div className="flex items-center gap-3">
@@ -1137,7 +1137,7 @@ export default function LeaseEditorPage() {
                       <tbody className="divide-y divide-slate-100">
                         {sortedRentAdjustments.map((a) => {
                           return (
-                            <tr key={a.id} className="hover:bg-slate-50">
+                            <tr key={a.id} className="hover:bg-surface-subtle">
                               <td>{a.adjustmentType === "CPI_INDEXATION" ? "CPI" : a.adjustmentType === "MANUAL" ? "Manual" : a.adjustmentType}</td>
                               <td>{fmtD(a.effectiveDate)}</td>
                               <td>
@@ -1162,7 +1162,7 @@ export default function LeaseEditorPage() {
                 )}
 
                 {rentAdjustments.length === 0 && !showComputeAdj && (
-                  <p className="text-sm text-slate-500 mb-3">{t("manager:leasesId.text.noRentAdjustmentsForThisLeaseYet")}</p>
+                  <p className="text-sm text-muted mb-3">{t("manager:leasesId.text.noRentAdjustmentsForThisLeaseYet")}</p>
                 )}
 
                 {/* Compute CPI Indexation form */}
@@ -1170,7 +1170,7 @@ export default function LeaseEditorPage() {
                   showComputeAdj ? (
                     <div className="flex gap-2 items-end flex-wrap">
                       <div>
-                        <label className="text-xs text-slate-500 block">{t("manager:leasesId.text.currentCpi")}</label>
+                        <label className="text-xs text-muted block">{t("manager:leasesId.text.currentCpi")}</label>
                         <input
                           type="number"
                           step="0.1"
@@ -1181,7 +1181,7 @@ export default function LeaseEditorPage() {
                         />
                       </div>
                       <div>
-                        <label className="text-xs text-slate-500 block">{t("manager:leasesId.text.effectiveDate")}</label>
+                        <label className="text-xs text-muted block">{t("manager:leasesId.text.effectiveDate")}</label>
                         <input
                           type="date"
                           value={adjEffective}
@@ -1208,7 +1208,7 @@ export default function LeaseEditorPage() {
                     >{t("manager:leasesId.text.computeCpiIndexation")}</Button>
                   )
                 ) : (
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-foreground-dim">
                     Index clause: NONE — set the lease index clause type and CPI base to enable automatic indexation.
                   </p>
                 )}
@@ -1219,9 +1219,9 @@ export default function LeaseEditorPage() {
           {/* Invoices */}
           {(invoices.length > 0 || lease.status !== "DRAFT") && (
             <div>
-              <h2 className="mb-3 text-sm font-semibold text-slate-700">{`💰 Invoices (${invoices.length})`}</h2>
+              <h2 className="mb-3 text-sm font-semibold text-muted-dark">{`💰 Invoices (${invoices.length})`}</h2>
               {invoices.length === 0 ? (
-                <p className="text-sm text-slate-500">{t("manager:leasesId.text.noInvoicesLinkedToThisLeaseYet")}</p>
+                <p className="text-sm text-muted">{t("manager:leasesId.text.noInvoicesLinkedToThisLeaseYet")}</p>
               ) : (
                   <div className="overflow-x-auto rounded-lg border border-table-border">
                   <table className="data-table">
@@ -1260,7 +1260,7 @@ export default function LeaseEditorPage() {
         {showSignModal && (
           <Modal title={t("manager:leasesId.title.sendForSignature")} description={t("manager:leasesId.prop.thisWillSendTheLeaseForSignatureAndCreateASignatureRequestTheLeaseWillNoLongerBeEditable")} onClose={() => setShowSignModal(false)}>
               <div className="mb-4">
-                <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:leasesId.text.signatureLevel")}</label>
+                <label className="block text-sm font-medium text-muted-dark mb-1">{t("manager:leasesId.text.signatureLevel")}</label>
                 <select value={signLevel} onChange={e => setSignLevel(e.target.value)}
                   className="w-full border rounded-lg px-3 py-2 text-sm">
                   <option value="SES">{t("manager:leasesId.text.sESSimpleElectronicSignature")}</option>
@@ -1283,7 +1283,7 @@ export default function LeaseEditorPage() {
         {showTerminateModal && (
           <Modal title={t("manager:leasesId.title.terminateLease")} description={t("manager:leasesId.prop.thisWillTerminateTheActiveLeasePleaseProvideAReason")} onClose={() => setShowTerminateModal(false)}>
               <div className="mb-4">
-                <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:leasesId.text.reason")}</label>
+                <label className="block text-sm font-medium text-muted-dark mb-1">{t("manager:leasesId.text.reason")}</label>
                 <select value={terminateReason} onChange={e => setTerminateReason(e.target.value)}
                   className="w-full border rounded-lg px-3 py-2 text-sm">
                   <option value="MUTUAL">{t("manager:leasesId.text.mutualAgreement")}</option>
@@ -1295,7 +1295,7 @@ export default function LeaseEditorPage() {
                 </select>
               </div>
               <div className="mb-4">
-                <label className="block text-sm font-medium text-slate-700 mb-1">Notice period / notes (optional)</label>
+                <label className="block text-sm font-medium text-muted-dark mb-1">Notice period / notes (optional)</label>
                 <textarea value={terminateNotice} onChange={e => setTerminateNotice(e.target.value)}
                   rows={3} placeholder={t("manager:leasesId.placeholder.eG3MonthsNoticeFrom01042026")}
                   className="w-full border rounded-lg px-3 py-2 text-sm" />
@@ -1315,7 +1315,7 @@ export default function LeaseEditorPage() {
         {showInvoiceModal && (
           <Modal title={t("manager:leasesId.title.createLeaseInvoice")} onClose={() => setShowInvoiceModal(false)}>
               <div className="mb-4">
-                <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:leasesId.text.invoiceType")}</label>
+                <label className="block text-sm font-medium text-muted-dark mb-1">{t("manager:leasesId.text.invoiceType")}</label>
                 <select value={invoiceType} onChange={e => setInvoiceType(e.target.value)}
                   className="w-full border rounded-lg px-3 py-2 text-sm">
                   <option value="DEPOSIT">{t("manager:leasesId.text.deposit2")}</option>
@@ -1326,13 +1326,13 @@ export default function LeaseEditorPage() {
                 </select>
               </div>
               <div className="mb-4">
-                <label className="block text-sm font-medium text-slate-700 mb-1">Amount (CHF) *</label>
+                <label className="block text-sm font-medium text-muted-dark mb-1">Amount (CHF) *</label>
                 <input type="number" value={invoiceAmount} onChange={e => setInvoiceAmount(e.target.value)}
                   min="0.01" step="0.01" placeholder="0.00"
                   className="w-full border rounded-lg px-3 py-2 text-sm" />
               </div>
               <div className="mb-4">
-                <label className="block text-sm font-medium text-slate-700 mb-1">Description (optional)</label>
+                <label className="block text-sm font-medium text-muted-dark mb-1">Description (optional)</label>
                 <input type="text" value={invoiceDesc} onChange={e => setInvoiceDesc(e.target.value)}
                   placeholder={t("manager:leasesId.placeholder.eGDepositForLeaseStarting01042026")}
                   className="w-full border rounded-lg px-3 py-2 text-sm" />

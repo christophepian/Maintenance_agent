@@ -84,8 +84,8 @@ export default function CapexSchedulePanel({ buildingId }) {
         {/* Subtitle */}
         {subtitle && (
           <div>
-            <p className="text-xs font-medium text-slate-600">{subtitle}</p>
-            {subtitleDetail && <p className="text-xs text-slate-400">{subtitleDetail}</p>}
+            <p className="text-xs font-medium text-muted-text">{subtitle}</p>
+            {subtitleDetail && <p className="text-xs text-foreground-dim">{subtitleDetail}</p>}
           </div>
         )}
 
@@ -97,14 +97,14 @@ export default function CapexSchedulePanel({ buildingId }) {
 
         {/* Empty — no building selected */}
         {!buildingId && !loading && (
-          <p className="text-sm text-slate-400">{t("manager:capexSchedule.text.selectBuilding")}</p>
+          <p className="text-sm text-foreground-dim">{t("manager:capexSchedule.text.selectBuilding")}</p>
         )}
 
         {/* Empty — building has assets but none with replacement timelines */}
         {!loading && buildingId && schedule !== null && !hasData && (
           <div className="empty-state">
             <p className="empty-state-text">{t("manager:capexSchedule.text.noAssets")}</p>
-            <p className="text-xs text-slate-400 mt-1">{t("manager:capexSchedule.text.noAssetsHint")}</p>
+            <p className="text-xs text-foreground-dim mt-1">{t("manager:capexSchedule.text.noAssetsHint")}</p>
           </div>
         )}
 
@@ -145,10 +145,10 @@ export default function CapexSchedulePanel({ buildingId }) {
 
                     {/* Year · bar · total */}
                     <div className="flex items-center gap-3">
-                      <span className="w-10 shrink-0 text-right font-mono text-xs text-slate-500">
+                      <span className="w-10 shrink-0 text-right font-mono text-xs text-muted">
                         {bucket.year}
                       </span>
-                      <div className="flex-1 min-w-0 relative h-4 bg-slate-100 rounded overflow-hidden">
+                      <div className="flex-1 min-w-0 relative h-4 bg-surface-hover rounded overflow-hidden">
                         {bucket.totalChf > 0 && (
                           <>
                             <div
@@ -167,7 +167,7 @@ export default function CapexSchedulePanel({ buildingId }) {
                       <span
                         className={cn(
                           "w-24 shrink-0 text-right font-mono text-xs font-semibold",
-                          bucket.totalChf > 0 ? "text-amber-800" : "text-slate-300",
+                          bucket.totalChf > 0 ? "text-amber-800" : "text-foreground-dim",
                         )}
                       >
                         {bucket.totalChf > 0 ? formatChf(bucket.totalChf) : "—"}
@@ -189,10 +189,10 @@ export default function CapexSchedulePanel({ buildingId }) {
                                   item.deductiblePct > 0 ? "bg-amber-500" : "bg-amber-200",
                                 )}
                               />
-                              <span className="text-slate-600 truncate">{item.assetName}</span>
+                              <span className="text-muted-text truncate">{item.assetName}</span>
                             </span>
                             {item.estimatedCostChf > 0 && (
-                              <span className="shrink-0 font-mono text-slate-400">
+                              <span className="shrink-0 font-mono text-foreground-dim">
                                 {formatChf(item.estimatedCostChf)}
                               </span>
                             )}
@@ -206,7 +206,7 @@ export default function CapexSchedulePanel({ buildingId }) {
             </div>
 
             {/* Legend + note */}
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
               <span className="flex items-center gap-1.5">
                 <span className="inline-block w-3 h-3 rounded bg-amber-500 shrink-0" />
                 {t("manager:capexSchedule.legend.deductible")}
@@ -215,7 +215,7 @@ export default function CapexSchedulePanel({ buildingId }) {
                 <span className="inline-block w-3 h-3 rounded bg-amber-200 shrink-0" />
                 {t("manager:capexSchedule.legend.capitalized")}
               </span>
-              <span className="text-slate-400 italic ml-auto">
+              <span className="text-foreground-dim italic ml-auto">
                 {t("manager:capexSchedule.text.chartNote")}
               </span>
             </div>
@@ -224,14 +224,14 @@ export default function CapexSchedulePanel({ buildingId }) {
 
         {/* ── Nearing EOL beyond horizon ── */}
         {!loading && nearingEolAssets.length > 0 && (
-          <div className="rounded-md border border-slate-200 bg-slate-50 divide-y divide-slate-200">
+          <div className="rounded-md border border-surface-border bg-surface-subtle divide-y divide-slate-200">
 
             {/* Section header */}
             <div className="px-3 py-2">
-              <p className="text-xs font-medium text-slate-700">
+              <p className="text-xs font-medium text-muted-dark">
                 {t("manager:capexSchedule.text.nearingEolTitle", { toYear: meta?.toYear })}
               </p>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <p className="text-xs text-foreground-dim mt-0.5">
                 {t("manager:capexSchedule.text.nearingEolHint")}
               </p>
             </div>
@@ -241,20 +241,20 @@ export default function CapexSchedulePanel({ buildingId }) {
               {nearingEolAssets.map((a) => (
                 <div key={a.assetId} className="flex items-center gap-3 px-3 py-2 text-xs">
                   {/* Depreciation badge */}
-                  <span className="shrink-0 w-10 text-right font-mono text-slate-400">
+                  <span className="shrink-0 w-10 text-right font-mono text-foreground-dim">
                     {Math.round(a.depreciationPct)}%
                   </span>
                   {/* Asset name */}
-                  <span className="flex-1 min-w-0 font-medium text-slate-700 truncate">
+                  <span className="flex-1 min-w-0 font-medium text-muted-dark truncate">
                     {a.assetName}
                   </span>
                   {/* Due year */}
-                  <span className="shrink-0 text-slate-500">
+                  <span className="shrink-0 text-muted">
                     {t("manager:capexSchedule.text.nearingEolYear", { year: a.estimatedReplacementYear })}
                   </span>
                   {/* Cost */}
                   {a.estimatedCostChf > 0 && (
-                    <span className="shrink-0 w-24 text-right font-mono text-slate-400">
+                    <span className="shrink-0 w-24 text-right font-mono text-foreground-dim">
                       {formatChf(a.estimatedCostChf)}
                     </span>
                   )}

@@ -194,11 +194,11 @@ export default function ManagerPaymentsPage() {
                 sortDir={sortDir}
                 onSort={handleSort}
                 emptyState={
-                  <p className="px-4 py-8 text-center text-sm text-slate-400">{t("manager:financePayments.text.noPaymentsFoundForTheSelectedFilters")}</p>
+                  <p className="px-4 py-8 text-center text-sm text-foreground-dim">{t("manager:financePayments.text.noPaymentsFoundForTheSelectedFilters")}</p>
                 }
                 mobileCard={(p) => (
                   <div className="table-card">
-                    <span className="font-mono text-xs text-slate-500">{p.invoiceNumber || p.id?.slice(0, 8)}</span>
+                    <span className="font-mono text-xs text-muted">{p.invoiceNumber || p.id?.slice(0, 8)}</span>
                     <p className="table-card-head mt-1">{p.description || "—"}</p>
                     <div className="table-card-footer">
                       <span className="font-medium">{formatChf(p.totalAmount)}</span>

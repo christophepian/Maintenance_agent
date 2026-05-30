@@ -24,14 +24,14 @@ export default class ErrorBoundary extends React.Component {
       return (
         <div
           role="alert"
-          className="min-h-screen flex items-center justify-center bg-slate-50 p-8"
+          className="min-h-screen flex items-center justify-center bg-surface-subtle p-8"
         >
           <div className="max-w-md w-full text-center space-y-4">
             <div className="text-4xl">⚠️</div>
-            <h1 className="text-xl font-semibold text-slate-900">
+            <h1 className="text-xl font-semibold text-foreground">
               Something went wrong
             </h1>
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-muted">
               An unexpected error occurred. Please try reloading the page.
             </p>
             {this.state.error && (

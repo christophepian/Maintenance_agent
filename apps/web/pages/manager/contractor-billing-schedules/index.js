@@ -239,10 +239,10 @@ export default function ContractorBillingSchedulesList() {
           {/* Create form */}
           {showCreate && (
             <Panel className="mb-4">
-              <h3 className="font-semibold text-slate-800 mb-3">{t("manager:contractorBillingSchedulesIndex.heading.createBillingSchedule")}</h3>
+              <h3 className="font-semibold text-foreground mb-3">{t("manager:contractorBillingSchedulesIndex.heading.createBillingSchedule")}</h3>
               <form onSubmit={handleCreate} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:contractor_Billing_SchedulesIndex.text.contractor")}</label>
+                  <label className="block text-sm font-medium text-muted-dark mb-1">{t("manager:contractor_Billing_SchedulesIndex.text.contractor")}</label>
                   <select
                     value={form.contractorId}
                     onChange={(e) => setForm({ ...form, contractorId: e.target.value })}
@@ -258,7 +258,7 @@ export default function ContractorBillingSchedulesList() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:contractor_Billing_SchedulesIndex.text.description")}</label>
+                  <label className="block text-sm font-medium text-muted-dark mb-1">{t("manager:contractor_Billing_SchedulesIndex.text.description")}</label>
                   <input
                     type="text"
                     value={form.description}
@@ -269,7 +269,7 @@ export default function ContractorBillingSchedulesList() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:contractor_Billing_SchedulesIndex.text.frequency")}</label>
+                  <label className="block text-sm font-medium text-muted-dark mb-1">{t("manager:contractor_Billing_SchedulesIndex.text.frequency")}</label>
                   <select
                     value={form.frequency}
                     onChange={(e) => setForm({ ...form, frequency: e.target.value })}
@@ -281,7 +281,7 @@ export default function ContractorBillingSchedulesList() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Anchor Day (1-28) *</label>
+                  <label className="block text-sm font-medium text-muted-dark mb-1">Anchor Day (1-28) *</label>
                   <input
                     type="number"
                     min={1}
@@ -293,7 +293,7 @@ export default function ContractorBillingSchedulesList() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:contractor_Billing_SchedulesIndex.text.startDate")}</label>
+                  <label className="block text-sm font-medium text-muted-dark mb-1">{t("manager:contractor_Billing_SchedulesIndex.text.startDate")}</label>
                   <input
                     type="date"
                     value={form.nextPeriodStart}
@@ -303,7 +303,7 @@ export default function ContractorBillingSchedulesList() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Amount (CHF) *</label>
+                  <label className="block text-sm font-medium text-muted-dark mb-1">Amount (CHF) *</label>
                   <input
                     type="number"
                     step="0.01"
@@ -316,7 +316,7 @@ export default function ContractorBillingSchedulesList() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">VAT Rate (%)</label>
+                  <label className="block text-sm font-medium text-muted-dark mb-1">VAT Rate (%)</label>
                   <input
                     type="number"
                     step="0.1"

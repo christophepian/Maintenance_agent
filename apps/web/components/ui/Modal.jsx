@@ -26,7 +26,7 @@ export function Modal({ title, description, maxWidth, onClose, children }) {
       className="fixed inset-0 bg-black/30 flex items-center justify-center z-50"
       onClick={(e) => { if (e.target === e.currentTarget && onClose) onClose(); }}
     >
-      <div className={cn("bg-white rounded-xl shadow-lg p-6 w-full mx-4", maxWidth || "max-w-md")}>
+      <div className={cn("bg-surface rounded-xl shadow-lg p-6 w-full mx-4", maxWidth || "max-w-md")}>
         <h3 className="text-lg font-semibold mb-4">{title}</h3>
         {description && <p className="text-sm text-muted-text mb-4">{description}</p>}
         {children}

@@ -2230,7 +2230,15 @@
       "integrations": "Intégrations",
       "legal": "Sources légales",
       "depreciation": "Normes",
-      "categorymappings": "Correspondances de catégories"
+      "categorymappings": "Correspondances de catégories",
+      "appearance": "Apparence"
+    },
+    "appearance": {
+      "colorScheme": "Thème de couleur",
+      "light": "Clair",
+      "lightDescription": "Par défaut — optimisé pour les environnements lumineux.",
+      "dark": "Sombre",
+      "darkDescription": "Plus reposant pour les yeux dans les conditions de faible luminosité."
     },
     "notifications": {
       "loading": "Chargement des preferences...",

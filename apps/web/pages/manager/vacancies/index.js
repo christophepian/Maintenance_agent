@@ -57,7 +57,7 @@ function ActionDropdown({ actions }) {
         ref={btnRef}
         type="button"
         onClick={handleOpen}
-        className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition"
+        className="rounded-lg border border-surface-border bg-surface px-3 py-1.5 text-xs font-semibold text-muted-dark hover:bg-surface-subtle transition"
       >
         Actions ▾
       </button>
@@ -65,7 +65,7 @@ function ActionDropdown({ actions }) {
         <div
           ref={menuRef}
           style={{ position: "fixed", top: coordsRef.current.top, right: coordsRef.current.right, zIndex: 9999 }}
-          className="w-48 rounded-lg border border-slate-200 bg-white shadow-xl ring-1 ring-black/5"
+          className="w-48 rounded-lg border border-surface-border bg-surface shadow-xl ring-1 ring-black/5"
         >
           <div className="py-1">
             {actions.map((a, i) => (
@@ -74,7 +74,7 @@ function ActionDropdown({ actions }) {
                 type="button"
                 onClick={() => { if (!a.onClick) return; setOpen(false); a.onClick(); }}
                 title={a.title}
-                className={"w-full text-left px-4 py-2 text-sm hover:bg-slate-50 transition " + (a.className || "text-slate-700")}
+                className={"w-full text-left px-4 py-2 text-sm hover:bg-surface-subtle transition " + (a.className || "text-muted-dark")}
               >
                 {a.label}
               </button>
@@ -139,7 +139,7 @@ function VacantGroupTable({ units, onTogglePublish, publishingId }) {
             <tr key={u.id}>
               <td className="cell-bold">
                 {u.unitNumber || "—"}
-                <div className="text-xs text-slate-400 font-normal mt-0.5">
+                <div className="text-xs text-foreground-dim font-normal mt-0.5">
                   Empty since: {u.vacantSince ? formatDate(u.vacantSince) : "unknown"}
                 </div>
               </td>
@@ -151,7 +151,7 @@ function VacantGroupTable({ units, onTogglePublish, publishingId }) {
                   {
                     label: u.applicationCount > 0 ? "📋 View Applications" : "📋 View Applications (none yet)",
                     onClick: u.applicationCount > 0 ? () => router.push("/manager/vacancies/" + u.id + "/applications") : undefined,
-                    className: u.applicationCount === 0 ? "opacity-50 cursor-not-allowed text-slate-400" : "text-slate-700",
+                    className: u.applicationCount === 0 ? "opacity-50 cursor-not-allowed text-foreground-dim" : "text-muted-dark",
                     title: u.applicationCount === 0 ? "No applications yet" : undefined,
                   },
                   {
@@ -161,7 +161,7 @@ function VacantGroupTable({ units, onTogglePublish, publishingId }) {
                         ? "🔕 Unpublish from Listings"
                         : "📢 Publish to Listings",
                     onClick: publishingId === u.id ? undefined : () => onTogglePublish(u),
-                    className: publishingId === u.id ? "opacity-50 cursor-not-allowed text-slate-400" : u.isListedPublicly ? "text-amber-700" : "text-green-700",
+                    className: publishingId === u.id ? "opacity-50 cursor-not-allowed text-foreground-dim" : u.isListedPublicly ? "text-amber-700" : "text-green-700",
                   },
                   ...(u.building?.id ? [
                     { label: "🏢 View Building", onClick: () => router.push("/admin-inventory/buildings/" + u.building.id) },
@@ -320,7 +320,7 @@ export default function ManagerVacanciesPage() {
           actions={
             <button
               onClick={() => { loadVacantUnits(); loadSelections(); }}
-              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              className="rounded-lg border border-surface-border bg-surface px-3 py-2 text-sm font-medium text-muted-dark hover:bg-surface-subtle"
             >
               Refresh
             </button>
@@ -340,8 +340,8 @@ export default function ManagerVacanciesPage() {
 
           {/* ── Tenant Selections Pipeline ─────────────────── */}
           <div>
-          <h2 className="mb-3 text-sm font-semibold text-slate-700">{"Tenant Selections" + (selections.length > 0 ? ` (${selections.length})` : "")}</h2>
-            {selectionsLoading && <p className="text-sm text-slate-500">{t("manager:vacanciesIndex.text.loadingSelections")}</p>}
+          <h2 className="mb-3 text-sm font-semibold text-muted-dark">{"Tenant Selections" + (selections.length > 0 ? ` (${selections.length})` : "")}</h2>
+            {selectionsLoading && <p className="text-sm text-muted">{t("manager:vacanciesIndex.text.loadingSelections")}</p>}
 
             {!selectionsLoading && selections.length === 0 && (
               <div className="empty-state"><p className="empty-state-text">{t("manager:vacanciesIndex.text.noActiveTenantSelections")}</p></div>
@@ -361,7 +361,7 @@ export default function ManagerVacanciesPage() {
                         {selectionStatusBadge(sel.status)}
                       </div>
                       {sel.primaryCandidate && (
-                        <p className="mt-2 text-[0.8125rem] text-slate-700">{sel.primaryCandidate.name}</p>
+                        <p className="mt-2 text-[0.8125rem] text-muted-dark">{sel.primaryCandidate.name}</p>
                       )}
                       <div className="table-card-footer">
                         {sel.lease ? (
@@ -411,10 +411,10 @@ export default function ManagerVacanciesPage() {
                             {sel.primaryCandidate ? (
                               <div>
                                 <span className="cell-bold">{sel.primaryCandidate.name}</span>
-                                <span className="ml-2 text-xs text-slate-400">{sel.primaryCandidate.email}</span>
+                                <span className="ml-2 text-xs text-foreground-dim">{sel.primaryCandidate.email}</span>
                               </div>
                             ) : (
-                              <span className="text-slate-400">—</span>
+                              <span className="text-foreground-dim">—</span>
                             )}
                           </td>
                           <td>{selectionStatusBadge(sel.status)}</td>
@@ -459,8 +459,8 @@ export default function ManagerVacanciesPage() {
 
           {/* ── Vacant Units ─────────────────────────────────── */}
           <div>
-          <h2 className="mb-3 text-sm font-semibold text-slate-700">{t("manager:vacanciesIndex.heading.vacantUnitsOpenForApplications")}</h2>
-            {loading && <p className="text-sm text-slate-500">{t("manager:vacanciesIndex.text.loading")}</p>}
+          <h2 className="mb-3 text-sm font-semibold text-muted-dark">{t("manager:vacanciesIndex.heading.vacantUnitsOpenForApplications")}</h2>
+            {loading && <p className="text-sm text-muted">{t("manager:vacanciesIndex.text.loading")}</p>}
 
             {!loading && units.length === 0 && (
               <div className="empty-state"><p className="empty-state-text">{t("manager:vacanciesIndex.text.noVacantUnitsAtThisTime")}</p></div>
@@ -468,7 +468,7 @@ export default function ManagerVacanciesPage() {
 
             {unitsByBuilding.map((group) => (
               <div key={group.building?.id || "unknown"} className="mb-6 last:mb-0">
-                <h3 className="text-sm font-semibold text-slate-700 mb-2">
+                <h3 className="text-sm font-semibold text-muted-dark mb-2">
                   {group.building?.name || "Unknown"} — {group.building?.address || ""}
                 </h3>
 
@@ -492,7 +492,7 @@ export default function ManagerVacanciesPage() {
                           {
                             label: u.applicationCount > 0 ? "📋 View Applications" : "📋 View Applications (none yet)",
                             onClick: u.applicationCount > 0 ? () => router.push("/manager/vacancies/" + u.id + "/applications") : undefined,
-                            className: u.applicationCount === 0 ? "opacity-50 cursor-not-allowed text-slate-400" : "text-slate-700",
+                            className: u.applicationCount === 0 ? "opacity-50 cursor-not-allowed text-foreground-dim" : "text-muted-dark",
                             title: u.applicationCount === 0 ? "No applications yet" : undefined,
                           },
                           {
@@ -502,7 +502,7 @@ export default function ManagerVacanciesPage() {
                                 ? "🔕 Unpublish from Listings"
                                 : "📢 Publish to Listings",
                             onClick: publishingId === u.id ? undefined : () => togglePublish(u),
-                            className: publishingId === u.id ? "opacity-50 cursor-not-allowed text-slate-400" : u.isListedPublicly ? "text-amber-700" : "text-green-700",
+                            className: publishingId === u.id ? "opacity-50 cursor-not-allowed text-foreground-dim" : u.isListedPublicly ? "text-amber-700" : "text-green-700",
                           },
                           ...(u.building?.id ? [
                             { label: "🏢 View Building", onClick: () => router.push("/admin-inventory/buildings/" + u.building.id) },

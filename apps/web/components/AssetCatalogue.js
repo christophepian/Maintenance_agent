@@ -13,10 +13,10 @@ import { authHeaders } from "../lib/api";
 
 function StatCard({ label, value, sublabel }) {
   return (
-    <div className="rounded-lg border border-slate-100 bg-white px-4 py-3 shadow-sm">
-      <p className="text-2xl font-bold text-slate-800">{value}</p>
-      <p className="text-xs font-medium text-slate-500">{label}</p>
-      {sublabel && <p className="mt-0.5 text-xs text-slate-400">{sublabel}</p>}
+    <div className="rounded-lg border border-surface-divider bg-surface px-4 py-3 shadow-sm">
+      <p className="text-2xl font-bold text-foreground">{value}</p>
+      <p className="text-xs font-medium text-muted">{label}</p>
+      {sublabel && <p className="mt-0.5 text-xs text-foreground-dim">{sublabel}</p>}
     </div>
   );
 }
@@ -24,19 +24,19 @@ function StatCard({ label, value, sublabel }) {
 function CategorySection({ category, items, collapsed, onToggle }) {
   const { t } = useTranslation("manager");
   return (
-    <div className="rounded-lg border border-slate-100 bg-white shadow-sm">
+    <div className="rounded-lg border border-surface-divider bg-surface shadow-sm">
       <button
         type="button"
         onClick={onToggle}
-        className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-slate-50"
+        className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-surface-subtle"
       >
-        <span className="text-sm font-semibold text-slate-800 capitalize">{category || t("assetCatalogue.uncategorised")}</span>
+        <span className="text-sm font-semibold text-foreground capitalize">{category || t("assetCatalogue.uncategorised")}</span>
         <div className="flex items-center gap-2">
-          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500">
+          <span className="rounded-full bg-surface-hover px-2 py-0.5 text-xs font-medium text-muted">
             {t(items.length === 1 ? "assetCatalogue.model_one" : "assetCatalogue.model_other", { count: items.length })}
           </span>
           <svg
-            className={cn("h-4 w-4 text-slate-400 transition-transform", collapsed ? "" : "rotate-180")}
+            className={cn("h-4 w-4 text-foreground-dim transition-transform", collapsed ? "" : "rotate-180")}
             fill="none" viewBox="0 0 24 24" stroke="currentColor"
           >
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -45,7 +45,7 @@ function CategorySection({ category, items, collapsed, onToggle }) {
       </button>
 
       {!collapsed && (
-        <div className="border-t border-slate-100">
+        <div className="border-t border-surface-divider">
           <table className="data-table">
             <thead>
               <tr>
@@ -196,19 +196,19 @@ export default function AssetCatalogue({ models = [], loading = false, onRefresh
       <Panel>
         <div className="flex flex-wrap items-center gap-3">
           <div className="relative min-w-[200px] flex-1">
-            <svg className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground-dim" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
             <input
               type="text"
               placeholder={t("assetCatalogue.searchPlaceholder")}
-              className="w-full rounded-lg border border-slate-200 py-2 pl-10 pr-3 text-sm focus:border-brand-ring focus:outline-none focus:ring-1 focus:ring-brand-ring"
+              className="w-full rounded-lg border border-surface-border py-2 pl-10 pr-3 text-sm focus:border-brand-ring focus:outline-none focus:ring-1 focus:ring-brand-ring"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
           <select
-            className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
+            className="rounded-lg border border-surface-border px-3 py-2 text-sm"
             value={scopeFilter}
             onChange={(e) => setScopeFilter(e.target.value)}
           >
@@ -217,11 +217,11 @@ export default function AssetCatalogue({ models = [], loading = false, onRefresh
             <option value="GLOBAL">{t("assetCatalogue.globalFilter")}</option>
           </select>
           <div className="flex gap-1">
-            <button type="button" onClick={expandAll} className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs text-slate-600 hover:bg-slate-50">{t("assetCatalogue.expandAll")}</button>
-            <button type="button" onClick={collapseAll} className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs text-slate-600 hover:bg-slate-50">{t("assetCatalogue.collapseAll")}</button>
+            <button type="button" onClick={expandAll} className="rounded-lg border border-surface-border px-2.5 py-1.5 text-xs text-muted-text hover:bg-surface-subtle">{t("assetCatalogue.expandAll")}</button>
+            <button type="button" onClick={collapseAll} className="rounded-lg border border-surface-border px-2.5 py-1.5 text-xs text-muted-text hover:bg-surface-subtle">{t("assetCatalogue.collapseAll")}</button>
           </div>
           {(search || scopeFilter !== "ALL") && (
-            <span className="text-xs text-slate-400">{t("assetCatalogue.showingOf", { count: filtered.length, total: models.length })}</span>
+            <span className="text-xs text-foreground-dim">{t("assetCatalogue.showingOf", { count: filtered.length, total: models.length })}</span>
           )}
           <button
             type="button"
@@ -260,7 +260,7 @@ export default function AssetCatalogue({ models = [], loading = false, onRefresh
                 </select>
               </div>
               <div>
-                <label className="filter-label">{t("assetCatalogue.manufacturerLabel")} <span className="font-normal text-slate-400">{t("assetCatalogue.optional")}</span></label>
+                <label className="filter-label">{t("assetCatalogue.manufacturerLabel")} <span className="font-normal text-foreground-dim">{t("assetCatalogue.optional")}</span></label>
                 <input
                   className="filter-input w-full"
                   value={createManufacturer}
@@ -269,7 +269,7 @@ export default function AssetCatalogue({ models = [], loading = false, onRefresh
                 />
               </div>
               <div>
-                <label className="filter-label">{t("assetCatalogue.modelRef")} <span className="font-normal text-slate-400">{t("assetCatalogue.optional")}</span></label>
+                <label className="filter-label">{t("assetCatalogue.modelRef")} <span className="font-normal text-foreground-dim">{t("assetCatalogue.optional")}</span></label>
                 <input
                   className="filter-input w-full"
                   value={createModel}

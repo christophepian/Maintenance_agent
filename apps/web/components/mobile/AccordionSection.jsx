@@ -27,14 +27,14 @@ export default function AccordionSection({
   const isOpen = forceOpen || open;
 
   return (
-    <div className="border border-slate-200 rounded-xl mb-3 overflow-hidden bg-white">
+    <div className="border border-surface-border rounded-xl mb-3 overflow-hidden bg-surface">
       <button
         type="button"
         onClick={() => { if (!forceOpen) setOpen((o) => !o); }}
         className={cn(
           'w-full flex items-center justify-between px-4 py-3',
-          'text-sm font-semibold text-slate-800 bg-white transition-colors text-left',
-          !forceOpen && 'hover:bg-slate-50 cursor-pointer',
+          'text-sm font-semibold text-foreground bg-surface transition-colors text-left',
+          !forceOpen && 'hover:bg-surface-subtle cursor-pointer',
           forceOpen && 'cursor-default',
         )}
         aria-expanded={isOpen}
@@ -43,12 +43,12 @@ export default function AccordionSection({
         <span>{title}</span>
         <div className="flex items-center gap-2 shrink-0 ml-2">
           {badge && !isOpen && (
-            <span className="text-xs font-medium text-slate-500">{badge}</span>
+            <span className="text-xs font-medium text-muted">{badge}</span>
           )}
           {!forceOpen && (
             <ChevronRight
               size={16}
-              className={cn('text-slate-400 transition-transform duration-200', isOpen && 'rotate-90')}
+              className={cn('text-foreground-dim transition-transform duration-200', isOpen && 'rotate-90')}
               aria-hidden="true"
             />
           )}
@@ -56,7 +56,7 @@ export default function AccordionSection({
       </button>
 
       {isOpen && (
-        <div className="px-4 pb-4 pt-2 border-t border-slate-100">
+        <div className="px-4 pb-4 pt-2 border-t border-surface-divider">
           {children}
         </div>
       )}

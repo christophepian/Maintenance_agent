@@ -75,7 +75,7 @@ export default function ContractorPicker({ onSelect }) {
         ))}
       </select>
       {selected && (
-        <span className="text-slate-500 text-xs">
+        <span className="text-muted text-xs">
           ID: {selected.slice(0, 8)}…
         </span>
       )}

@@ -120,7 +120,7 @@ function BillingEntityModal({ isOpen, onClose, editEntity, contractors, onSaved 
 
         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Type</label>
+            <label className="block text-sm font-medium text-muted-dark mb-1">Type</label>
             <select
               value={form.type}
               onChange={(e) => {
@@ -128,7 +128,7 @@ function BillingEntityModal({ isOpen, onClose, editEntity, contractors, onSaved 
                 if (e.target.value !== "CONTRACTOR") setField("contractorId", "");
               }}
               disabled={isEditing}
-              className="w-full border border-slate-300 rounded-lg px-3 py-2 bg-white text-sm"
+              className="w-full border border-muted-ring rounded-lg px-3 py-2 bg-surface text-sm"
             >
               <option value="ORG">{t("billingEntity.typeLabel.ORG")}</option>
               <option value="CONTRACTOR">{t("billingEntity.typeLabel.CONTRACTOR")}</option>
@@ -138,7 +138,7 @@ function BillingEntityModal({ isOpen, onClose, editEntity, contractors, onSaved 
 
           {form.type === "CONTRACTOR" && (
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Link contractor</label>
+              <label className="block text-sm font-medium text-muted-dark mb-1">Link contractor</label>
               <select
                 value={form.contractorId}
                 onChange={(e) => {
@@ -158,76 +158,76 @@ function BillingEntityModal({ isOpen, onClose, editEntity, contractors, onSaved 
                     defaultVatRate: contractor?.defaultVatRate ? String(contractor.defaultVatRate) : prev.defaultVatRate,
                   }));
                 }}
-                className="w-full border border-slate-300 rounded-lg px-3 py-2 bg-white text-sm"
+                className="w-full border border-muted-ring rounded-lg px-3 py-2 bg-surface text-sm"
               >
                 <option value="">{t("billingEntity.selectContractor")}</option>
                 {contractors.map((c) => (
                   <option key={c.id} value={c.id}>{c.name} ({c.phone})</option>
                 ))}
               </select>
-              <p className="text-xs text-slate-500 mt-1">Selecting a contractor will auto-fill fields.</p>
+              <p className="text-xs text-muted mt-1">Selecting a contractor will auto-fill fields.</p>
             </div>
           )}
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Name</label>
+            <label className="block text-sm font-medium text-muted-dark mb-1">Name</label>
             <input value={form.name} onChange={(e) => setField("name", e.target.value)}
-              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" required />
+              className="w-full border border-muted-ring rounded-lg px-3 py-2 text-sm" required />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Address line 1</label>
+            <label className="block text-sm font-medium text-muted-dark mb-1">Address line 1</label>
             <input value={form.addressLine1} onChange={(e) => setField("addressLine1", e.target.value)}
-              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" required />
+              className="w-full border border-muted-ring rounded-lg px-3 py-2 text-sm" required />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Address line 2</label>
+            <label className="block text-sm font-medium text-muted-dark mb-1">Address line 2</label>
             <input value={form.addressLine2} onChange={(e) => setField("addressLine2", e.target.value)}
-              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" />
+              className="w-full border border-muted-ring rounded-lg px-3 py-2 text-sm" />
           </div>
 
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Postal code</label>
+              <label className="block text-sm font-medium text-muted-dark mb-1">Postal code</label>
               <input value={form.postalCode} onChange={(e) => setField("postalCode", e.target.value)}
-                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" required />
+                className="w-full border border-muted-ring rounded-lg px-3 py-2 text-sm" required />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">City</label>
+              <label className="block text-sm font-medium text-muted-dark mb-1">City</label>
               <input value={form.city} onChange={(e) => setField("city", e.target.value)}
-                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" required />
+                className="w-full border border-muted-ring rounded-lg px-3 py-2 text-sm" required />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Country</label>
+              <label className="block text-sm font-medium text-muted-dark mb-1">Country</label>
               <input value={form.country} onChange={(e) => setField("country", e.target.value)}
-                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" />
+                className="w-full border border-muted-ring rounded-lg px-3 py-2 text-sm" />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">IBAN</label>
+            <label className="block text-sm font-medium text-muted-dark mb-1">IBAN</label>
             <input value={form.iban} onChange={(e) => setField("iban", e.target.value)}
-              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm font-mono" required />
+              className="w-full border border-muted-ring rounded-lg px-3 py-2 text-sm font-mono" required />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">VAT number</label>
+              <label className="block text-sm font-medium text-muted-dark mb-1">VAT number</label>
               <input value={form.vatNumber} onChange={(e) => setField("vatNumber", e.target.value)}
-                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" />
+                className="w-full border border-muted-ring rounded-lg px-3 py-2 text-sm" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Default VAT rate (%)</label>
+              <label className="block text-sm font-medium text-muted-dark mb-1">Default VAT rate (%)</label>
               <input type="number" step="0.1" value={form.defaultVatRate}
                 onChange={(e) => setField("defaultVatRate", e.target.value)}
-                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" />
+                className="w-full border border-muted-ring rounded-lg px-3 py-2 text-sm" />
             </div>
           </div>
 
-          <div className="flex justify-end gap-3 pt-2 border-t border-slate-100">
+          <div className="flex justify-end gap-3 pt-2 border-t border-surface-divider">
             <button type="button" onClick={onClose}
-              className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">
+              className="rounded-lg border border-surface-border bg-surface px-4 py-2 text-sm font-medium text-muted-text hover:bg-surface-subtle">
               Cancel
             </button>
             <button type="submit" disabled={submitting}
@@ -370,20 +370,20 @@ export default function BillingEntityManager() {
                         {t(`billingEntity.typeLabel.${entity.type}`) || entity.type}
                       </Badge>
                     </td>
-                    <td className="text-slate-500">{entity.city ? `${entity.postalCode} ${entity.city}` : "—"}</td>
-                    <td className="text-slate-500 font-mono text-xs">{entity.iban || "—"}</td>
-                    <td className="text-slate-500">{entity.defaultVatRate != null ? `${entity.defaultVatRate}%` : "—"}</td>
+                    <td className="text-muted">{entity.city ? `${entity.postalCode} ${entity.city}` : "—"}</td>
+                    <td className="text-muted font-mono text-xs">{entity.iban || "—"}</td>
+                    <td className="text-muted">{entity.defaultVatRate != null ? `${entity.defaultVatRate}%` : "—"}</td>
                     <td className="text-right">
                       <div className="flex items-center justify-end gap-2">
                         <button
                           onClick={(e) => openEdit(entity, e)}
-                          className="rounded border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50"
+                          className="rounded border border-surface-border bg-surface px-2.5 py-1 text-xs font-medium text-muted-text hover:bg-surface-subtle"
                         >
                           Edit
                         </button>
                         <button
                           onClick={(e) => handleDelete(entity.id, e)}
-                          className="rounded border border-red-200 bg-white px-2.5 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
+                          className="rounded border border-red-200 bg-surface px-2.5 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
                         >
                           Delete
                         </button>

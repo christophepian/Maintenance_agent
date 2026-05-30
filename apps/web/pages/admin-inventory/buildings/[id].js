@@ -636,7 +636,7 @@ export default function BuildingDetail() {
         <PageShell variant="embedded">
           <PageContent>
             <Panel>
-              <p className="text-sm text-slate-600">Loading building...</p>
+              <p className="text-sm text-muted-text">Loading building...</p>
             </Panel>
           </PageContent>
         </PageShell>
@@ -650,7 +650,7 @@ export default function BuildingDetail() {
         <PageShell variant="embedded">
           <PageContent>
             <Panel>
-              <p className="text-sm text-slate-600">Building not found.</p>
+              <p className="text-sm text-muted-text">Building not found.</p>
             </Panel>
           </PageContent>
         </PageShell>
@@ -683,7 +683,7 @@ export default function BuildingDetail() {
           backButton={
             <button
               onClick={() => router.push(backHref)}
-              className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-900 hover:bg-slate-100"
+              className="flex h-9 w-9 items-center justify-center rounded-lg text-foreground hover:bg-surface-hover"
               aria-label={t("manager:buildingsId.ariaLabel.backToInventory")}
             >
               <ChevronLeft className="h-5 w-5" />
@@ -745,67 +745,67 @@ export default function BuildingDetail() {
               {/* KPIs — desktop: card grid */}
               <div className="hidden sm:grid kpi-grid gap-4 xl:grid-cols-4 mb-4">
                 {/* Open Requests */}
-                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                  <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:buildingsId.kpi.openRequests")}</div>
+                <div className="rounded-2xl border border-surface-border bg-surface p-5 shadow-sm">
+                  <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:buildingsId.kpi.openRequests")}</div>
                   {kpisLoading ? (
-                    <div className="mt-3 text-sm text-slate-400">{t("common:loading")}</div>
+                    <div className="mt-3 text-sm text-foreground-dim">{t("common:loading")}</div>
                   ) : (
                     <>
-                      <div className={cn("mt-3 text-2xl font-semibold tracking-tight", buildingKpis?.openRequests > 20 ? "text-amber-700" : "text-slate-900")}>
+                      <div className={cn("mt-3 text-2xl font-semibold tracking-tight", buildingKpis?.openRequests > 20 ? "text-amber-700" : "text-foreground")}>
                         {buildingKpis?.openRequests ?? "—"}
                       </div>
-                      <div className="text-sm text-slate-600">{t("manager:buildingsId.kpi.pendingApprovedAssigned")}</div>
+                      <div className="text-sm text-muted-text">{t("manager:buildingsId.kpi.pendingApprovedAssigned")}</div>
                     </>
                   )}
                 </div>
                 {/* Open Jobs */}
-                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                  <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:buildingsId.kpi.openJobs")}</div>
+                <div className="rounded-2xl border border-surface-border bg-surface p-5 shadow-sm">
+                  <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:buildingsId.kpi.openJobs")}</div>
                   {kpisLoading ? (
-                    <div className="mt-3 text-sm text-slate-400">{t("common:loading")}</div>
+                    <div className="mt-3 text-sm text-foreground-dim">{t("common:loading")}</div>
                   ) : (
                     <>
-                      <div className={cn("mt-3 text-2xl font-semibold tracking-tight", buildingKpis?.openJobs > 15 ? "text-amber-700" : "text-slate-900")}>
+                      <div className={cn("mt-3 text-2xl font-semibold tracking-tight", buildingKpis?.openJobs > 15 ? "text-amber-700" : "text-foreground")}>
                         {buildingKpis?.openJobs ?? "—"}
                       </div>
-                      <div className="text-sm text-slate-600">{t("manager:buildingsId.kpi.pendingPlusInProgress")}</div>
+                      <div className="text-sm text-muted-text">{t("manager:buildingsId.kpi.pendingPlusInProgress")}</div>
                     </>
                   )}
                 </div>
                 {/* Building NOI */}
-                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                  <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:buildingsId.kpi.buildingNoiYtd")}</div>
+                <div className="rounded-2xl border border-surface-border bg-surface p-5 shadow-sm">
+                  <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:buildingsId.kpi.buildingNoiYtd")}</div>
                   {kpisLoading ? (
-                    <div className="mt-3 text-sm text-slate-400">{t("common:loading")}</div>
+                    <div className="mt-3 text-sm text-foreground-dim">{t("common:loading")}</div>
                   ) : (
                     <>
-                      <div className={cn("mt-3 text-2xl font-semibold tracking-tight", !buildingKpis?.financials ? "text-slate-400" : buildingKpis.financials.netIncomeCents >= 0 ? "text-green-700" : "text-red-700")}>
+                      <div className={cn("mt-3 text-2xl font-semibold tracking-tight", !buildingKpis?.financials ? "text-foreground-dim" : buildingKpis.financials.netIncomeCents >= 0 ? "text-green-700" : "text-red-700")}>
                         {buildingKpis?.financials ? formatChfCents(buildingKpis.financials.netIncomeCents) : "—"}
                       </div>
-                      <div className="text-sm text-slate-600">
+                      <div className="text-sm text-muted-text">
                         {buildingKpis?.financials ? `${formatPercent(buildingKpis.financials.collectionRate)} ${t("manager:buildingsId.kpi.collectionRate")}` : t("manager:buildingsId.kpi.noFinancialData")}
                       </div>
                     </>
                   )}
                 </div>
                 {/* Portfolio Comparison */}
-                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                  <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:buildingsId.kpi.vsPortfolioLong")}</div>
+                <div className="rounded-2xl border border-surface-border bg-surface p-5 shadow-sm">
+                  <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:buildingsId.kpi.vsPortfolioLong")}</div>
                   {kpisLoading ? (
-                    <div className="mt-3 text-sm text-slate-400">{t("common:loading")}</div>
+                    <div className="mt-3 text-sm text-foreground-dim">{t("common:loading")}</div>
                   ) : buildingKpis?.portfolioComparison ? (
                     <>
                       <div className={cn("mt-3 text-2xl font-semibold tracking-tight", buildingKpis.portfolioComparison.better ? "text-green-700" : "text-red-700")}>
                         {buildingKpis.portfolioComparison.better ? "+" : ""}{buildingKpis.portfolioComparison.pct}%
                       </div>
-                      <div className="text-sm text-slate-600">
+                      <div className="text-sm text-muted-text">
                         {buildingKpis.portfolioComparison.better ? t("manager:buildingsId.kpi.betterThanOtherAssets") : t("manager:buildingsId.kpi.worseThanOtherAssets")}
                       </div>
                     </>
                   ) : (
                     <>
-                      <div className="mt-3 text-2xl font-semibold tracking-tight text-slate-400">—</div>
-                      <div className="text-sm text-slate-600">{t("manager:buildingsId.kpi.notEnoughPortfolioData")}</div>
+                      <div className="mt-3 text-2xl font-semibold tracking-tight text-foreground-dim">—</div>
+                      <div className="text-sm text-muted-text">{t("manager:buildingsId.kpi.notEnoughPortfolioData")}</div>
                     </>
                   )}
                 </div>
@@ -862,9 +862,9 @@ export default function BuildingDetail() {
                 <form onSubmit={onUpdateBuilding}>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <label className="grid gap-2">
-                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:buildingsId.label.name")}</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:buildingsId.label.name")}</span>
                       <input
-                        className="input text-sm text-slate-700"
+                        className="input text-sm text-muted-dark"
                         type="text"
                         value={editName}
                         onChange={(e) => setEditName(e.target.value)}
@@ -872,9 +872,9 @@ export default function BuildingDetail() {
                       />
                     </label>
                     <label className="grid gap-2">
-                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:buildingsId.placeholder.address")}</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:buildingsId.placeholder.address")}</span>
                       <input
-                        className="input text-sm text-slate-700"
+                        className="input text-sm text-muted-dark"
                         type="text"
                         value={editAddress}
                         onChange={(e) => setEditAddress(e.target.value)}
@@ -882,9 +882,9 @@ export default function BuildingDetail() {
                       />
                     </label>
                     <label className="grid gap-2">
-                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:buildingsId.label.yearBuilt")}</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:buildingsId.label.yearBuilt")}</span>
                       <input
-                        className="input text-sm text-slate-700"
+                        className="input text-sm text-muted-dark"
                         type="number"
                         min="1800"
                         max={new Date().getFullYear()}
@@ -894,9 +894,9 @@ export default function BuildingDetail() {
                       />
                     </label>
                     <label className="grid gap-2">
-                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:buildingsId.label.managedSince")}</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:buildingsId.label.managedSince")}</span>
                       <input
-                        className="input text-sm text-slate-700"
+                        className="input text-sm text-muted-dark"
                         type="date"
                         value={editManagedSince}
                         onChange={(e) => setEditManagedSince(e.target.value)}
@@ -909,7 +909,7 @@ export default function BuildingDetail() {
                           checked={editElevator}
                           onChange={(e) => setEditElevator(e.target.checked)}
                         />
-                        <span className="text-sm text-slate-700">{t("manager:buildingsId.label.elevator")}</span>
+                        <span className="text-sm text-muted-dark">{t("manager:buildingsId.label.elevator")}</span>
                       </label>
                       <label className="flex items-center gap-2 cursor-pointer">
                         <input
@@ -917,7 +917,7 @@ export default function BuildingDetail() {
                           checked={editConcierge}
                           onChange={(e) => setEditConcierge(e.target.checked)}
                         />
-                        <span className="text-sm text-slate-700">{t("manager:buildingsId.label.concierge")}</span>
+                        <span className="text-sm text-muted-dark">{t("manager:buildingsId.label.concierge")}</span>
                       </label>
                     </div>
                   </div>
@@ -926,20 +926,20 @@ export default function BuildingDetail() {
                 <>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div>
-                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:buildingsId.label.name")}</div>
-                      <div className="text-sm text-slate-700 mt-1">{building?.name}</div>
+                      <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:buildingsId.label.name")}</div>
+                      <div className="text-sm text-muted-dark mt-1">{building?.name}</div>
                     </div>
                     <div>
-                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:buildingsId.placeholder.address")}</div>
-                      <div className="text-sm text-slate-700 mt-1">{building?.address || "—"}</div>
+                      <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:buildingsId.placeholder.address")}</div>
+                      <div className="text-sm text-muted-dark mt-1">{building?.address || "—"}</div>
                     </div>
                     <div>
-                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:buildingsId.label.yearBuilt")}</div>
-                      <div className="text-sm text-slate-700 mt-1">{building?.yearBuilt ?? "—"}</div>
+                      <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:buildingsId.label.yearBuilt")}</div>
+                      <div className="text-sm text-muted-dark mt-1">{building?.yearBuilt ?? "—"}</div>
                     </div>
                     <div>
-                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:buildingsId.label.amenities")}</div>
-                      <div className="text-sm text-slate-700 mt-1 flex gap-3">
+                      <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:buildingsId.label.amenities")}</div>
+                      <div className="text-sm text-muted-dark mt-1 flex gap-3">
                         {building?.hasElevator && <Badge variant="info" size="sm">{t("manager:buildingsId.label.elevator")}</Badge>}
                         {building?.hasConcierge && <Badge variant="info" size="sm">{t("manager:buildingsId.label.concierge")}</Badge>}
                         {!building?.hasElevator && !building?.hasConcierge && "—"}
@@ -950,20 +950,20 @@ export default function BuildingDetail() {
               )}
 
               {/* Ownership & Management — always visible regardless of edit mode */}
-              <div className="mt-6 pt-4 border-t border-slate-200">
+              <div className="mt-6 pt-4 border-t border-surface-border">
                     <div className="flex items-center justify-between mb-3">
-                      <h3 className="text-sm font-semibold text-slate-900">{t("manager:buildingsId.heading.ownershipManagement")}</h3>
+                      <h3 className="text-sm font-semibold text-foreground">{t("manager:buildingsId.heading.ownershipManagement")}</h3>
                     </div>
 
                     {/* Managed Since — inline date input when editing */}
                     <div className="grid gap-4 sm:grid-cols-2 mb-3">
                       <div>
-                        <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:buildingsId.label.managedSince")}</div>
+                        <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:buildingsId.label.managedSince")}</div>
                         {editMode ? (
                           <div className="flex items-center gap-2 mt-1">
                             <input
                               type="date"
-                              className="input text-sm text-slate-700"
+                              className="input text-sm text-muted-dark"
                               value={editManagedSince}
                               onChange={(e) => setEditManagedSince(e.target.value)}
                             />
@@ -993,7 +993,7 @@ export default function BuildingDetail() {
                             </button>
                           </div>
                         ) : (
-                          <div className="text-sm text-slate-700 mt-1">
+                          <div className="text-sm text-muted-dark mt-1">
                             {building?.managedSince ? displayDate(building.managedSince) : "—"}
                           </div>
                         )}
@@ -1003,7 +1003,7 @@ export default function BuildingDetail() {
                     {/* Owners list */}
                     {building?.owners && building.owners.length > 0 ? (
                       <div>
-                        <div className="text-xs font-medium uppercase tracking-wide text-slate-400 mb-2">{t("manager:buildingsId.label.owners")}</div>
+                        <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim mb-2">{t("manager:buildingsId.label.owners")}</div>
                         <div className="grid gap-3 sm:grid-cols-2">
                           {building.owners.map((owner) => {
                             const profile = ownerStrategyProfiles[owner.id];
@@ -1011,11 +1011,11 @@ export default function BuildingDetail() {
                             const copy = archetype ? ARCHETYPE_EXPLANATION_COPY[archetype] : null;
                             const label = archetype ? ARCHETYPE_LABELS[archetype] : null;
                             return (
-                              <div key={owner.id} className="border border-slate-200 rounded-lg p-3 bg-slate-50">
+                              <div key={owner.id} className="border border-surface-border rounded-lg p-3 bg-surface-subtle">
                                 <div className="flex items-center justify-between">
                                   <div>
-                                    <div className="font-semibold text-sm text-slate-900">{owner.name}</div>
-                                    {owner.email && <div className="text-xs text-slate-500 mt-0.5">{owner.email}</div>}
+                                    <div className="font-semibold text-sm text-foreground">{owner.name}</div>
+                                    {owner.email && <div className="text-xs text-muted mt-0.5">{owner.email}</div>}
                                   </div>
                                   {editMode && (
                                     <button
@@ -1029,9 +1029,9 @@ export default function BuildingDetail() {
                                   )}
                                 </div>
                                 {profile && (
-                                  <div className="mt-2.5 pt-2.5 border-t border-slate-200">
+                                  <div className="mt-2.5 pt-2.5 border-t border-surface-border">
                                     <div className="flex items-center gap-2 mb-1.5">
-                                      <span className="text-xs font-semibold text-slate-700">{t("manager:buildingsId.label.strategy")}</span>
+                                      <span className="text-xs font-semibold text-muted-dark">{t("manager:buildingsId.label.strategy")}</span>
                                       {label && (
                                         <Badge variant="brand" size="sm">{label}</Badge>
                                       )}
@@ -1040,17 +1040,17 @@ export default function BuildingDetail() {
                                       )}
                                     </div>
                                     {profile.userFacingGoalLabel && (
-                                      <p className="text-xs text-slate-500 italic mb-1.5">"{profile.userFacingGoalLabel}"</p>
+                                      <p className="text-xs text-muted italic mb-1.5">"{profile.userFacingGoalLabel}"</p>
                                     )}
                                     {copy && (
                                       <ul className="space-y-0.5">
                                         {copy.bullets.map((b, i) => (
-                                          <li key={i} className="text-xs text-slate-600 flex gap-1.5">
-                                            <span className="text-slate-400 flex-shrink-0">·</span>
+                                          <li key={i} className="text-xs text-muted-text flex gap-1.5">
+                                            <span className="text-foreground-dim flex-shrink-0">·</span>
                                             <span>{b}</span>
                                           </li>
                                         ))}
-                                        <li className="text-xs text-slate-400 flex gap-1.5 mt-1">
+                                        <li className="text-xs text-foreground-dim flex gap-1.5 mt-1">
                                           <span className="flex-shrink-0">↓</span>
                                           <span>{copy.deprioritize}</span>
                                         </li>
@@ -1064,16 +1064,16 @@ export default function BuildingDetail() {
                         </div>
                       </div>
                     ) : (
-                      <div className="text-sm text-slate-500 italic">{t("manager:buildingsId.label.noOwnersAssigned")}</div>
+                      <div className="text-sm text-muted italic">{t("manager:buildingsId.label.noOwnersAssigned")}</div>
                     )}
 
                     {/* Add owner picker (visible when editing) */}
                     {editMode && (
                       <div className="mt-3 flex items-end gap-2">
                         <div className="flex-1">
-                          <div className="text-xs font-medium uppercase tracking-wide text-slate-400 mb-1">{t("manager:buildingsId.label.owners")}</div>
+                          <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim mb-1">{t("manager:buildingsId.label.owners")}</div>
                           <select
-                            className="input text-sm text-slate-700 w-full"
+                            className="input text-sm text-muted-dark w-full"
                             value={selectedCandidateId}
                             onChange={(e) => setSelectedCandidateId(e.target.value)}
                           >
@@ -1106,9 +1106,9 @@ export default function BuildingDetail() {
                 const copy = bp.primaryArchetype ? ARCHETYPE_EXPLANATION_COPY[bp.primaryArchetype] : null;
                 const secLabel = bp.secondaryArchetype ? ARCHETYPE_LABELS[bp.secondaryArchetype] : null;
                 return (
-                  <div className="mt-6 pt-4 border-t border-slate-200">
+                  <div className="mt-6 pt-4 border-t border-surface-border">
                     <div className="flex items-center justify-between mb-3">
-                      <h3 className="text-sm font-semibold text-slate-900">{t("manager:buildingsId.heading.managementGuidelines")}</h3>
+                      <h3 className="text-sm font-semibold text-foreground">{t("manager:buildingsId.heading.managementGuidelines")}</h3>
                       <div className="flex items-center gap-1.5">
                         {archLabel && <Badge variant="brand" size="sm">{archLabel}</Badge>}
                         {secLabel && <Badge variant="info" size="sm">{secLabel}</Badge>}
@@ -1124,16 +1124,16 @@ export default function BuildingDetail() {
                     />
                     {copy && (
                       <div className="mt-3">
-                        <div className="text-xs font-medium uppercase tracking-wide text-slate-400 mb-1.5">{t("manager:buildingsId.label.guidelines")}</div>
+                        <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim mb-1.5">{t("manager:buildingsId.label.guidelines")}</div>
                         <ul className="space-y-1">
                           {copy.bullets.map((b, i) => (
-                            <li key={i} className="text-xs text-slate-600 flex gap-1.5">
-                              <span className="text-slate-400 flex-shrink-0">·</span>
+                            <li key={i} className="text-xs text-muted-text flex gap-1.5">
+                              <span className="text-foreground-dim flex-shrink-0">·</span>
                               <span>{b}</span>
                             </li>
                           ))}
                           {copy.deprioritize && (
-                            <li className="text-xs text-slate-400 flex gap-1.5 mt-1">
+                            <li className="text-xs text-foreground-dim flex gap-1.5 mt-1">
                               <span className="flex-shrink-0">↓ {t("manager:buildingsId.label.guidelines")}:</span>
                               <span>{copy.deprioritize}</span>
                             </li>
@@ -1163,21 +1163,21 @@ export default function BuildingDetail() {
               )}
             >
               {unitAction === "create" && (
-                <form onSubmit={onCreateUnit} className="bg-slate-50 border border-slate-200 rounded-lg p-4 mb-4">
+                <form onSubmit={onCreateUnit} className="bg-surface-subtle border border-surface-border rounded-lg p-4 mb-4">
                   <div className="grid gap-4 sm:grid-cols-2 mb-4">
                     <label className="grid gap-2">
-                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Unit number/label</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Unit number/label</span>
                       <input
-                        className="input text-sm text-slate-700"
+                        className="input text-sm text-muted-dark"
                         value={createUnitName}
                         onChange={(e) => setCreateUnitName(e.target.value)}
                         placeholder={t("manager:buildingsId.placeholder.eG1013bCommonArea1")}
                       />
                     </label>
                     <label className="grid gap-2">
-                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:buildingsId.label.type")}</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:buildingsId.label.type")}</span>
                       <select
-                        className="input text-sm text-slate-700"
+                        className="input text-sm text-muted-dark"
                         value={createUnitType}
                         onChange={(e) => setCreateUnitType(e.target.value)}
                       >
@@ -1195,7 +1195,7 @@ export default function BuildingDetail() {
               {residentialUnits.length > 0 && (
                 <>
                   {/* ─── Occupancy summary row ─── */}
-                  <div className="text-sm text-slate-600 mt-4 mb-2">
+                  <div className="text-sm text-muted-text mt-4 mb-2">
                     {units.length} {units.length !== 1 ? t("manager:buildingsId.text.units") : t("manager:buildingsId.text.unit")} — {occupiedCount} {t("manager:buildingsId.text.occupied").toLowerCase()}, {vacantCount} {t("manager:buildingsId.text.vacant").toLowerCase()}, {listedCount} {t("manager:buildingsId.text.listed").toLowerCase()}
                   </div>
 
@@ -1212,7 +1212,7 @@ export default function BuildingDetail() {
                         onClick={() => setUnitFilter(tab.key)}
                         className={cn("px-3 py-1 text-xs font-medium rounded-full border transition", unitFilter === tab.key
                             ? "bg-slate-900 text-white border-slate-900"
-                            : "bg-white text-slate-600 border-slate-300 hover:bg-slate-50")}
+                            : "bg-surface text-muted-text border-muted-ring hover:bg-surface-subtle")}
                       >
                         {tab.label}
                       </button>
@@ -1223,17 +1223,17 @@ export default function BuildingDetail() {
 
               {filteredResidential.length > 0 && (
                 <>
-                  <h3 className="font-semibold text-slate-900 mt-4 mb-3">{t("manager:buildingsId.heading.residentialUnits")}</h3>
+                  <h3 className="font-semibold text-foreground mt-4 mb-3">{t("manager:buildingsId.heading.residentialUnits")}</h3>
                   <div className="space-y-2 mb-4">
                     {filteredResidential.map((u) => (
-                      <Link key={u.id} href={`/admin-inventory/units/${u.id}${isOwner ? "?role=owner" : ""}`} className="block border border-slate-200 rounded-lg p-3 hover:bg-slate-50 transition">
+                      <Link key={u.id} href={`/admin-inventory/units/${u.id}${isOwner ? "?role=owner" : ""}`} className="block border border-surface-border rounded-lg p-3 hover:bg-surface-subtle transition">
                         <div className="flex justify-between items-center">
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <span className="font-semibold text-slate-900">{u.unitNumber || u.name || "Unit"}</span>
-                              {u.floor && <span className="text-xs text-slate-400">Floor {u.floor}</span>}
-                              {u.rooms != null && <span className="text-xs text-slate-400">{u.rooms} rooms</span>}
-                              {u.livingAreaSqm != null && <span className="text-xs text-slate-400">{u.livingAreaSqm} m²</span>}
+                              <span className="font-semibold text-foreground">{u.unitNumber || u.name || "Unit"}</span>
+                              {u.floor && <span className="text-xs text-foreground-dim">Floor {u.floor}</span>}
+                              {u.rooms != null && <span className="text-xs text-foreground-dim">{u.rooms} rooms</span>}
+                              {u.livingAreaSqm != null && <span className="text-xs text-foreground-dim">{u.livingAreaSqm} m²</span>}
                               {/* ─── Occupancy badge ─── */}
                               {u.occupancyStatus === "OCCUPIED" && (
                                 <Badge variant="success" size="sm">{t("manager:buildingsId.text.occupied")}</Badge>
@@ -1247,10 +1247,10 @@ export default function BuildingDetail() {
                             </div>
                             {/* ─── Tenant info for occupied units ─── */}
                             {u.occupancyStatus === "OCCUPIED" && u.tenantName && (
-                              <div className="text-xs text-slate-500 mt-1">
-                                <span className="text-slate-700">{u.tenantName}</span>
+                              <div className="text-xs text-muted mt-1">
+                                <span className="text-muted-dark">{u.tenantName}</span>
                                 {u.moveInDate && (
-                                  <span className="ml-2 text-slate-400">
+                                  <span className="ml-2 text-foreground-dim">
                                     {t("manager:buildingsId.text.since")}{formatDate(u.moveInDate)}
                                   </span>
                                 )}
@@ -1261,11 +1261,11 @@ export default function BuildingDetail() {
                               <div className="text-xs text-yellow-600 mt-1">{t("manager:buildingsId.text.acceptingApplications")}</div>
                             )}
                             {(u.monthlyRentChf != null || u.monthlyChargesChf != null) && (
-                              <div className="text-xs text-slate-500 mt-1">
-                                {u.monthlyRentChf != null && <span className="font-medium text-slate-700">CHF {u.monthlyRentChf}.-</span>}
-                                {u.monthlyChargesChf != null && <span className="ml-1 text-slate-400">+ {u.monthlyChargesChf} charges</span>}
+                              <div className="text-xs text-muted mt-1">
+                                {u.monthlyRentChf != null && <span className="font-medium text-muted-dark">CHF {u.monthlyRentChf}.-</span>}
+                                {u.monthlyChargesChf != null && <span className="ml-1 text-foreground-dim">+ {u.monthlyChargesChf} charges</span>}
                                 {(u.monthlyRentChf != null || u.monthlyChargesChf != null) && (
-                                  <span className="ml-1 text-slate-600 font-medium">= CHF {(u.monthlyRentChf || 0) + (u.monthlyChargesChf || 0)}.- total</span>
+                                  <span className="ml-1 text-muted-text font-medium">= CHF {(u.monthlyRentChf || 0) + (u.monthlyChargesChf || 0)}.- total</span>
                                 )}
                               </div>
                             )}
@@ -1280,16 +1280,16 @@ export default function BuildingDetail() {
 
               {filteredCommon.length > 0 && (
                 <>
-                  <h3 className="font-semibold text-slate-900 mt-4 mb-3">{t("manager:buildingsId.heading.commonAreas")}</h3>
+                  <h3 className="font-semibold text-foreground mt-4 mb-3">{t("manager:buildingsId.heading.commonAreas")}</h3>
                   <div className="space-y-2 mb-4">
                     {filteredCommon.map((u) => (
-                      <Link key={u.id} href={`/admin-inventory/units/${u.id}${isOwner ? "?role=owner" : ""}`} className="block border border-slate-200 rounded-lg p-3 hover:bg-slate-50 transition">
+                      <Link key={u.id} href={`/admin-inventory/units/${u.id}${isOwner ? "?role=owner" : ""}`} className="block border border-surface-border rounded-lg p-3 hover:bg-surface-subtle transition">
                         <div className="flex justify-between items-center">
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <span className="font-semibold text-slate-900">{u.unitNumber || u.name || t("manager:buildingsId.text.commonArea")}</span>
-                              {u.floor && <span className="text-xs text-slate-400">{u.floor}</span>}
-                              {u.livingAreaSqm != null && <span className="text-xs text-slate-400">{u.livingAreaSqm} m²</span>}
+                              <span className="font-semibold text-foreground">{u.unitNumber || u.name || t("manager:buildingsId.text.commonArea")}</span>
+                              {u.floor && <span className="text-xs text-foreground-dim">{u.floor}</span>}
+                              {u.livingAreaSqm != null && <span className="text-xs text-foreground-dim">{u.livingAreaSqm} m²</span>}
                               {/* ─── Occupancy badge ─── */}
                               {u.occupancyStatus === "OCCUPIED" && (
                                 <Badge variant="success" size="sm">{t("manager:buildingsId.text.occupied")}</Badge>
@@ -1310,7 +1310,7 @@ export default function BuildingDetail() {
                 </>
               )}
 
-              {units.length === 0 && <div className="text-center text-slate-500 italic text-sm py-6">{t("manager:buildingsId.text.noUnitsYet")}</div>}
+              {units.length === 0 && <div className="text-center text-muted italic text-sm py-6">{t("manager:buildingsId.text.noUnitsYet")}</div>}
             </Panel>
           )}
 
@@ -1322,9 +1322,9 @@ export default function BuildingDetail() {
                 {/* Mobile: card list */}
                 <div className="sm:hidden space-y-2">
                   {sortedBuildingTenants.map((ten, idx) => (
-                    <div key={ten.tenantId || idx} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
-                      <p className="text-sm font-medium text-slate-900">{ten.name}</p>
-                      <p className="text-xs text-slate-500 mt-0.5">Unit {ten.unitNumber}{ten.phone ? ` · ${ten.phone}` : ""}</p>
+                    <div key={ten.tenantId || idx} className="rounded-lg border border-surface-border bg-surface-subtle px-3 py-2.5">
+                      <p className="text-sm font-medium text-foreground">{ten.name}</p>
+                      <p className="text-xs text-muted mt-0.5">Unit {ten.unitNumber}{ten.phone ? ` · ${ten.phone}` : ""}</p>
                     </div>
                   ))}
                 </div>
@@ -1349,12 +1349,12 @@ export default function BuildingDetail() {
                           ? "info"
                           : "muted";
                       return (
-                        <tr key={ten.tenantId || idx} className="border-b border-slate-100">
-                          <td className="text-slate-900 font-medium">{ten.name}</td>
-                          <td className="text-slate-700">{ten.unitNumber}</td>
-                          <td className="text-slate-700">{ten.phone || "—"}</td>
-                          <td className="text-slate-700">{ten.email || "—"}</td>
-                          <td className="text-slate-700">{ten.moveInDate ? displayDate(ten.moveInDate) : "—"}</td>
+                        <tr key={ten.tenantId || idx} className="border-b border-surface-divider">
+                          <td className="text-foreground font-medium">{ten.name}</td>
+                          <td className="text-muted-dark">{ten.unitNumber}</td>
+                          <td className="text-muted-dark">{ten.phone || "—"}</td>
+                          <td className="text-muted-dark">{ten.email || "—"}</td>
+                          <td className="text-muted-dark">{ten.moveInDate ? displayDate(ten.moveInDate) : "—"}</td>
                           <td>
                             <Badge variant={badgeVariant} size="sm">
                               {ten.source === "BOTH" ? t("manager:buildingsId.text.both") : ten.source === "LEASE" ? t("manager:buildingsId.text.lease") : t("manager:buildingsId.text.directory")}
@@ -1367,7 +1367,7 @@ export default function BuildingDetail() {
                 </table>
                 </>
               ) : (
-                <div className="text-center text-slate-500 italic text-sm py-6">{t("manager:buildingsId.text.noTenantsYet")}</div>
+                <div className="text-center text-muted italic text-sm py-6">{t("manager:buildingsId.text.noTenantsYet")}</div>
               )}
             </Panel>
           )}
@@ -1397,7 +1397,7 @@ export default function BuildingDetail() {
               )}
             >
               {assetInventoryLoading ? (
-                <p className="text-center text-slate-500 py-6">Loading assets…</p>
+                <p className="text-center text-muted py-6">Loading assets…</p>
               ) : (
                 <AssetInventoryPanel
                   assets={assetInventory}
@@ -1416,23 +1416,23 @@ export default function BuildingDetail() {
           {activeTab === "Documents" && (
             <>
             <Panel title={t("manager:buildingsId.title.documents")}>
-              <h3 className="font-semibold text-slate-900 mb-3">{t("manager:buildingsId.heading.leaseTemplate")}</h3>
+              <h3 className="font-semibold text-foreground mb-3">{t("manager:buildingsId.heading.leaseTemplate")}</h3>
               {leaseTemplates.length > 0 ? (
                 <div className="space-y-2">
                   {leaseTemplates.map((tpl) => (
                     <div
                       key={tpl.id}
-                      className="border border-slate-200 rounded-lg p-4 hover:bg-slate-50 transition"
+                      className="border border-surface-border rounded-lg p-4 hover:bg-surface-subtle transition"
                     >
                       <div className="flex justify-between items-center">
                         <Link href={`/manager/leases/${tpl.id}`} className="flex-1 min-w-0">
-                          <span className="font-semibold text-slate-900">{tpl.templateName || "Lease Template"}</span>
+                          <span className="font-semibold text-foreground">{tpl.templateName || "Lease Template"}</span>
                           <Badge variant="brand" size="sm" className="ml-2">{t("manager:buildingsId.text.template")}</Badge>
                           {tpl.landlordName && (
-                            <p className="text-xs text-slate-500 mt-1">{t("manager:buildingsId.text.landlordPrefix")}{tpl.landlordName}</p>
+                            <p className="text-xs text-muted mt-1">{t("manager:buildingsId.text.landlordPrefix")}{tpl.landlordName}</p>
                           )}
                           {tpl.netRentChf != null && (
-                            <p className="text-xs text-slate-500">{t("manager:buildingsId.text.defaultRentPrefix")}{tpl.netRentChf}{t("manager:buildingsId.text.defaultRentSuffix")}</p>
+                            <p className="text-xs text-muted">{t("manager:buildingsId.text.defaultRentPrefix")}{tpl.netRentChf}{t("manager:buildingsId.text.defaultRentSuffix")}</p>
                           )}
                         </Link>
                         <div className="flex items-center gap-2 ml-4 flex-shrink-0">
@@ -1508,22 +1508,22 @@ export default function BuildingDetail() {
                   value={houseRulesText}
                   onChange={(e) => setHouseRulesText(e.target.value)}
                   rows={16}
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-mono leading-relaxed focus:outline-none focus:ring-2 focus:ring-brand/40 resize-y"
+                  className="w-full rounded-lg border border-surface-border px-3 py-2 text-sm font-mono leading-relaxed focus:outline-none focus:ring-2 focus:ring-brand/40 resize-y"
                   placeholder="Enter house rules text. This will be attached to lease PDFs when 'Include house rules' is checked, and made available to tenants via the chatbot."
                 />
               ) : building?.houseRulesText ? (
                 <div className="space-y-2">
-                  <pre className="whitespace-pre-wrap text-sm text-slate-700 font-sans leading-relaxed bg-slate-50 rounded-lg border border-slate-200 p-4 max-h-80 overflow-y-auto">{building.houseRulesText}</pre>
+                  <pre className="whitespace-pre-wrap text-sm text-muted-dark font-sans leading-relaxed bg-surface-subtle rounded-lg border border-surface-border p-4 max-h-80 overflow-y-auto">{building.houseRulesText}</pre>
                   {houseRulesPreviewUrl && (
-                    <div className="mt-3 rounded-lg overflow-hidden border border-slate-200 h-[600px]">
+                    <div className="mt-3 rounded-lg overflow-hidden border border-surface-border h-[600px]">
                       <iframe src={houseRulesPreviewUrl} className="w-full h-full" title="House Rules PDF Preview" />
                     </div>
                   )}
                 </div>
               ) : (
-                <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
-                  <p className="text-sm text-slate-500 mb-1">No house rules defined yet.</p>
-                  <p className="text-xs text-slate-400">House rules will be attached to lease PDFs and accessible to tenants via the chatbot.</p>
+                <div className="rounded-lg border border-dashed border-muted-ring bg-surface-subtle p-6 text-center">
+                  <p className="text-sm text-muted mb-1">No house rules defined yet.</p>
+                  <p className="text-xs text-foreground-dim">House rules will be attached to lease PDFs and accessible to tenants via the chatbot.</p>
                 </div>
               )}
             </Panel>
@@ -1553,31 +1553,31 @@ export default function BuildingDetail() {
                   </button>
                 )}
               >
-                <div className="text-sm text-slate-600 mb-4">{t("manager:buildingsId.text.autoApproveDesc")}</div>
+                <div className="text-sm text-muted-text mb-4">{t("manager:buildingsId.text.autoApproveDesc")}</div>
                 {configMode === "edit" ? (
                   <form onSubmit={onSaveBuildingConfig} className="mt-4">
                     <div className="grid gap-4 sm:grid-cols-2">
                       <label className="grid gap-2">
-                        <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:buildingsId.label.autoApproveLimit")}</span>
+                        <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:buildingsId.label.autoApproveLimit")}</span>
                         <input
                           type="number"
-                          className="input text-sm text-slate-700"
+                          className="input text-sm text-muted-dark"
                           value={configAutoApprove}
                           onChange={(e) => setConfigAutoApprove(e.target.value)}
                           placeholder={t("manager:buildingsId.placeholder.leaveBlankForOrgDefault")}
                         />
-                        <span className="text-xs text-slate-500">{t("manager:buildingsId.label.blankOrgDefault")}</span>
+                        <span className="text-xs text-muted">{t("manager:buildingsId.label.blankOrgDefault")}</span>
                       </label>
                       <label className="grid gap-2">
-                        <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:buildingsId.label.ownerThreshold")}</span>
+                        <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:buildingsId.label.ownerThreshold")}</span>
                         <input
                           type="number"
-                          className="input text-sm text-slate-700"
+                          className="input text-sm text-muted-dark"
                           value={configOwnerThreshold}
                           onChange={(e) => setConfigOwnerThreshold(e.target.value)}
                           placeholder={t("manager:buildingsId.placeholder.leaveBlankForOrgDefault")}
                         />
-                        <span className="text-xs text-slate-500">{t("manager:buildingsId.label.blankOrgDefault")}</span>
+                        <span className="text-xs text-muted">{t("manager:buildingsId.label.blankOrgDefault")}</span>
                       </label>
                     </div>
                     <label className="flex items-center gap-2 my-4 cursor-pointer">
@@ -1587,7 +1587,7 @@ export default function BuildingDetail() {
                         onChange={(e) => setConfigEmergency(e.target.checked)}
                         className="rounded"
                       />
-                      <span className="text-sm font-semibold text-slate-700">{t("manager:buildingsId.label.emergencyAutoDispatch")}</span>
+                      <span className="text-sm font-semibold text-muted-dark">{t("manager:buildingsId.label.emergencyAutoDispatch")}</span>
                     </label>
                     <button type="submit" className="button-primary" disabled={loading}>
                       {loading ? t("manager:buildingsId.btn.saving") : t("manager:buildingsId.btn.savePolicies")}
@@ -1597,20 +1597,20 @@ export default function BuildingDetail() {
                   <>
                     <div className="grid gap-4 sm:grid-cols-2 mt-4">
                       <div>
-                        <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:buildingsId.label.autoApproveLimitView")}</div>
-                        <div className="text-sm text-slate-700 mt-1">
+                        <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:buildingsId.label.autoApproveLimitView")}</div>
+                        <div className="text-sm text-muted-dark mt-1">
                           {buildingConfig?.autoApproveLimit != null ? `${buildingConfig.autoApproveLimit} CHF` : t("manager:buildingsId.label.usingOrgDefault")}
                         </div>
                       </div>
                       <div>
-                        <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:buildingsId.label.ownerThresholdView")}</div>
-                        <div className="text-sm text-slate-700 mt-1">
+                        <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:buildingsId.label.ownerThresholdView")}</div>
+                        <div className="text-sm text-muted-dark mt-1">
                           {buildingConfig?.requireOwnerApprovalAbove != null ? `${buildingConfig.requireOwnerApprovalAbove} CHF` : t("manager:buildingsId.label.usingOrgDefault")}
                         </div>
                       </div>
                       <div>
-                        <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:buildingsId.label.emergencyAutoDispatch")}</div>
-                        <div className="text-sm text-slate-700 mt-1">
+                        <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:buildingsId.label.emergencyAutoDispatch")}</div>
+                        <div className="text-sm text-muted-dark mt-1">
                           {buildingConfig?.emergencyAutoDispatch ? t("manager:buildingsId.label.enabled") : t("manager:buildingsId.label.disabled")}
                         </div>
                       </div>
@@ -1645,14 +1645,14 @@ export default function BuildingDetail() {
                   </button>
                 )}
               >
-                <div className="text-sm text-slate-600 mb-4">{t("manager:buildingsId.text.overrideDesc")}</div>
+                <div className="text-sm text-muted-text mb-4">{t("manager:buildingsId.text.overrideDesc")}</div>
 
               {createRuleMode ? (
                 <form onSubmit={onCreateRule} className="mt-4">
                   <div className="mb-4">
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">{t("manager:buildingsId.label.ruleName")}</label>
+                    <label className="block text-sm font-semibold text-muted-dark mb-2">{t("manager:buildingsId.label.ruleName")}</label>
                     <input
-                      className="input text-sm text-slate-700 w-full"
+                      className="input text-sm text-muted-dark w-full"
                       value={newRuleName}
                       onChange={(e) => setNewRuleName(e.target.value)}
                       placeholder={t("manager:buildingsId.placeholder.eGAutoApproveOvensChf500")}
@@ -1660,10 +1660,10 @@ export default function BuildingDetail() {
                   </div>
 
                   <div className="mb-4">
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">{t("manager:buildingsId.label.priorityLabel")}</label>
+                    <label className="block text-sm font-semibold text-muted-dark mb-2">{t("manager:buildingsId.label.priorityLabel")}</label>
                     <input
                       type="number"
-                      className="input text-sm text-slate-700"
+                      className="input text-sm text-muted-dark"
                       value={newRulePriority}
                       onChange={(e) => setNewRulePriority(e.target.value)}
                       min="0"
@@ -1672,12 +1672,12 @@ export default function BuildingDetail() {
                   </div>
 
                   <div className="mb-4">
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">{t("manager:buildingsId.label.conditions")}</label>
+                    <label className="block text-sm font-semibold text-muted-dark mb-2">{t("manager:buildingsId.label.conditions")}</label>
                     <div className="space-y-2 mb-3">
                       {newRuleConditions.map((cond, idx) => (
                         <div key={idx} className="flex gap-2 items-end">
                           <select
-                            className="input text-sm text-slate-700 flex-1"
+                            className="input text-sm text-muted-dark flex-1"
                             value={cond.field}
                             onChange={(e) => updateCondition(idx, "field", e.target.value)}
                           >
@@ -1687,7 +1687,7 @@ export default function BuildingDetail() {
                             <option value="UNIT_NUMBER">Unit Number</option>
                           </select>
                           <select
-                            className="input text-sm text-slate-700 flex-1"
+                            className="input text-sm text-muted-dark flex-1"
                             value={cond.operator}
                             onChange={(e) => updateCondition(idx, "operator", e.target.value)}
                           >
@@ -1710,7 +1710,7 @@ export default function BuildingDetail() {
                             )}
                           </select>
                           <input
-                            className="input text-sm text-slate-700 flex-1"
+                            className="input text-sm text-muted-dark flex-1"
                             type={cond.field === "ESTIMATED_COST" ? "number" : "text"}
                             value={cond.value}
                             onChange={(e) =>
@@ -1744,8 +1744,8 @@ export default function BuildingDetail() {
                   </div>
 
                   <div className="mb-4">
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">{t("manager:buildingsId.label.action")}</label>
-                    <select className="input text-sm text-slate-700 w-full" value={newRuleAction} onChange={(e) => setNewRuleAction(e.target.value)}>
+                    <label className="block text-sm font-semibold text-muted-dark mb-2">{t("manager:buildingsId.label.action")}</label>
+                    <select className="input text-sm text-muted-dark w-full" value={newRuleAction} onChange={(e) => setNewRuleAction(e.target.value)}>
                       <option value="AUTO_APPROVE">{t("manager:buildingsId.select.autoApprove")}</option>
                       <option value="REQUIRE_MANAGER_REVIEW">{t("manager:buildingsId.select.requireManagerReview")}</option>
                       <option value="REQUIRE_OWNER_APPROVAL">{t("manager:buildingsId.select.requireOwnerApproval")}</option>
@@ -1761,15 +1761,15 @@ export default function BuildingDetail() {
                   {rules.length > 0 && (
                     <div className="space-y-3 mt-4 mb-4">
                       {rules.map((rule) => (
-                        <div key={rule.id} className="border border-slate-200 rounded-lg p-3 bg-slate-50">
+                        <div key={rule.id} className="border border-surface-border rounded-lg p-3 bg-surface-subtle">
                           <div className="flex justify-between items-start">
                             <div className="flex-1">
-                              <div className="font-semibold text-slate-900">
+                              <div className="font-semibold text-foreground">
                                 {rule.name}
                                 {!rule.isActive && <Badge variant="warning" size="sm" className="ml-2">{t("manager:buildingsId.label.inactive")}</Badge>}
                                 <Badge variant="info" size="sm" className="ml-2">{t("manager:buildingsId.label.priorityPrefix")}{rule.priority}</Badge>
                               </div>
-                              <div className="text-xs text-slate-600 mt-1">
+                              <div className="text-xs text-muted-text mt-1">
                                 {rule.conditions.map((c, i) => (
                                   <span key={i}>
                                     {i > 0 && " AND "}
@@ -1803,7 +1803,7 @@ export default function BuildingDetail() {
                       ))}
                     </div>
                   )}
-                  {rules.length === 0 && <div className="text-center text-slate-500 italic text-sm py-6">{t("manager:buildingsId.text.noApprovalRulesYet")}</div>}
+                  {rules.length === 0 && <div className="text-center text-muted italic text-sm py-6">{t("manager:buildingsId.text.noApprovalRulesYet")}</div>}
                 </>
               )}
               </Panel>
@@ -1814,9 +1814,9 @@ export default function BuildingDetail() {
           {activeTab === "Requests" && (
             <Panel title={t("manager:buildingsId.title.requests")}>
               {requestsLoading ? (
-                <p className="text-sm text-slate-500 py-4">{t("manager:buildingsId.text.loadingRequests")}</p>
+                <p className="text-sm text-muted py-4">{t("manager:buildingsId.text.loadingRequests")}</p>
               ) : buildingRequests.length === 0 ? (
-                <p className="text-sm text-slate-500 italic py-4">{t("manager:buildingsId.text.noRequestsYet")}</p>
+                <p className="text-sm text-muted italic py-4">{t("manager:buildingsId.text.noRequestsYet")}</p>
               ) : (
                 <>
                   {/* Mobile cards */}
@@ -1824,11 +1824,11 @@ export default function BuildingDetail() {
                     {sortedBuildingRequests.map((r) => (
                       <div
                         key={r.id}
-                        className="py-3 flex flex-col gap-1 cursor-pointer hover:bg-slate-50"
+                        className="py-3 flex flex-col gap-1 cursor-pointer hover:bg-surface-subtle"
                         onClick={() => router.push(`/manager/requests?id=${r.id}`)}
                       >
                         <div className="flex items-center justify-between gap-2">
-                          <span className="text-sm font-medium text-slate-700">
+                          <span className="text-sm font-medium text-muted-dark">
                             #{r.requestNumber}{r.category ? ` · ${r.category}` : ""}
                           </span>
                           <Badge variant={
@@ -1840,12 +1840,12 @@ export default function BuildingDetail() {
                             {r.status.replace(/_/g, " ")}
                           </Badge>
                         </div>
-                        <div className="text-xs text-slate-500 flex items-center gap-2">
+                        <div className="text-xs text-muted flex items-center gap-2">
                           {r.unit?.unitNumber && <span>Unit {r.unit.unitNumber}</span>}
                           {r.urgency && <span>· {r.urgency}</span>}
                           {r.assignedContractor?.name && <span>· {r.assignedContractor.name}</span>}
                         </div>
-                        <span className="text-xs text-slate-400">
+                        <span className="text-xs text-foreground-dim">
                           {r.createdAt ? new Date(r.createdAt).toLocaleDateString("de-CH") : "—"}
                         </span>
                       </div>
@@ -1869,10 +1869,10 @@ export default function BuildingDetail() {
                         {sortedBuildingRequests.map((r) => (
                           <tr
                             key={r.id}
-                            className="cursor-pointer hover:bg-slate-50"
+                            className="cursor-pointer hover:bg-surface-subtle"
                             onClick={() => router.push(`/manager/requests?id=${r.id}`)}
                           >
-                            <td className="font-mono text-slate-600">#{r.requestNumber}</td>
+                            <td className="font-mono text-muted-text">#{r.requestNumber}</td>
                             <td>
                               <Badge variant={
                                 r.status === "COMPLETED" ? "success" :
@@ -1883,11 +1883,11 @@ export default function BuildingDetail() {
                                 {r.status.replace(/_/g, " ")}
                               </Badge>
                             </td>
-                            <td className="text-slate-700">{r.category || "—"}</td>
-                            <td className="text-slate-600">{r.unit?.unitNumber || "—"}</td>
-                            <td className="text-slate-600">{r.urgency || "—"}</td>
-                            <td className="text-slate-600">{r.assignedContractor?.name || "—"}</td>
-                            <td className="text-slate-400">
+                            <td className="text-muted-dark">{r.category || "—"}</td>
+                            <td className="text-muted-text">{r.unit?.unitNumber || "—"}</td>
+                            <td className="text-muted-text">{r.urgency || "—"}</td>
+                            <td className="text-muted-text">{r.assignedContractor?.name || "—"}</td>
+                            <td className="text-foreground-dim">
                               {r.createdAt ? new Date(r.createdAt).toLocaleDateString("de-CH") : "—"}
                             </td>
                           </tr>

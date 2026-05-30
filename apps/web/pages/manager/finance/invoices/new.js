@@ -174,61 +174,61 @@ export default function NewInvoicePage() {
             <Panel title={t("manager:financeInvoicesNew.title.recipient")}>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="sm:col-span-2">
-                  <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:financeInvoicesNew.text.recipientName")}</label>
+                  <label className="block text-sm font-medium text-muted-dark mb-1">{t("manager:financeInvoicesNew.text.recipientName")}</label>
                   <input
                     type="text"
                     value={recipientName}
                     onChange={(e) => setRecipientName(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full rounded-lg border border-muted-ring px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:financeInvoicesNew.text.addressLine1")}</label>
+                  <label className="block text-sm font-medium text-muted-dark mb-1">{t("manager:financeInvoicesNew.text.addressLine1")}</label>
                   <input
                     type="text"
                     value={recipientAddressLine1}
                     onChange={(e) => setRecipientAddressLine1(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full rounded-lg border border-muted-ring px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:financeInvoicesNew.text.addressLine2")}</label>
+                  <label className="block text-sm font-medium text-muted-dark mb-1">{t("manager:financeInvoicesNew.text.addressLine2")}</label>
                   <input
                     type="text"
                     value={recipientAddressLine2}
                     onChange={(e) => setRecipientAddressLine2(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full rounded-lg border border-muted-ring px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:financeInvoicesNew.text.postalCode")}</label>
+                  <label className="block text-sm font-medium text-muted-dark mb-1">{t("manager:financeInvoicesNew.text.postalCode")}</label>
                   <input
                     type="text"
                     value={recipientPostalCode}
                     onChange={(e) => setRecipientPostalCode(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full rounded-lg border border-muted-ring px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:financeInvoicesNew.text.city")}</label>
+                  <label className="block text-sm font-medium text-muted-dark mb-1">{t("manager:financeInvoicesNew.text.city")}</label>
                   <input
                     type="text"
                     value={recipientCity}
                     onChange={(e) => setRecipientCity(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full rounded-lg border border-muted-ring px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:financeInvoicesNew.text.country")}</label>
+                  <label className="block text-sm font-medium text-muted-dark mb-1">{t("manager:financeInvoicesNew.text.country")}</label>
                   <input
                     type="text"
                     value={recipientCountry}
                     onChange={(e) => setRecipientCountry(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full rounded-lg border border-muted-ring px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
               </div>
@@ -238,25 +238,25 @@ export default function NewInvoicePage() {
             <Panel title={t("manager:financeInvoicesNew.title.invoiceDetails")}>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:financeInvoicesNew.text.issueDate")}</label>
+                  <label className="block text-sm font-medium text-muted-dark mb-1">{t("manager:financeInvoicesNew.text.issueDate")}</label>
                   <input
                     type="date"
                     value={issueDate}
                     onChange={(e) => setIssueDate(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full rounded-lg border border-muted-ring px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:financeInvoicesNew.text.dueDate")}</label>
+                  <label className="block text-sm font-medium text-muted-dark mb-1">{t("manager:financeInvoicesNew.text.dueDate")}</label>
                   <input
                     type="date"
                     value={dueDate}
                     onChange={(e) => setDueDate(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full rounded-lg border border-muted-ring px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">VAT Rate (%)</label>
+                  <label className="block text-sm font-medium text-muted-dark mb-1">VAT Rate (%)</label>
                   <input
                     type="number"
                     step="0.1"
@@ -264,16 +264,16 @@ export default function NewInvoicePage() {
                     max="100"
                     value={vatRate}
                     onChange={(e) => setVatRate(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full rounded-lg border border-muted-ring px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
                 <div className="sm:col-span-3">
-                  <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:financeInvoicesNew.text.description")}</label>
+                  <label className="block text-sm font-medium text-muted-dark mb-1">{t("manager:financeInvoicesNew.text.description")}</label>
                   <textarea
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     rows={2}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                    className="w-full rounded-lg border border-muted-ring px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
                   />
                 </div>
               </div>
@@ -283,11 +283,11 @@ export default function NewInvoicePage() {
             <Panel title={t("manager:financeInvoicesNew.title.linkToRecordOptional")}>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:financeInvoicesNew.text.job")}</label>
+                  <label className="block text-sm font-medium text-muted-dark mb-1">{t("manager:financeInvoicesNew.text.job")}</label>
                   <select
                     value={selectedJobId}
                     onChange={(e) => setSelectedJobId(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full rounded-lg border border-muted-ring px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
                     <option value="">{t("manager:financeInvoicesNew.text.none")}</option>
                     {jobs.map((j) => (
@@ -298,11 +298,11 @@ export default function NewInvoicePage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:financeInvoicesNew.text.billingEntity")}</label>
+                  <label className="block text-sm font-medium text-muted-dark mb-1">{t("manager:financeInvoicesNew.text.billingEntity")}</label>
                   <select
                     value={selectedBillingEntityId}
                     onChange={(e) => setSelectedBillingEntityId(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full rounded-lg border border-muted-ring px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
                     <option value="">{t("manager:financeInvoicesNew.text.none")}</option>
                     {billingEntities.map((be) => (
@@ -321,28 +321,28 @@ export default function NewInvoicePage() {
                 {lineItems.map((li, idx) => (
                   <div key={idx} className="grid grid-cols-12 gap-2 items-end">
                     <div className="col-span-5">
-                      {idx === 0 && <label className="block text-xs font-medium text-slate-500 mb-1">{t("manager:financeInvoicesNew.text.description")}</label>}
+                      {idx === 0 && <label className="block text-xs font-medium text-muted mb-1">{t("manager:financeInvoicesNew.text.description")}</label>}
                       <input
                         type="text"
                         placeholder={t("manager:financeInvoicesNew.placeholder.itemDescription")}
                         value={li.description}
                         onChange={(e) => updateLineItem(idx, "description", e.target.value)}
-                        className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full rounded-lg border border-muted-ring px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         required
                       />
                     </div>
                     <div className="col-span-2">
-                      {idx === 0 && <label className="block text-xs font-medium text-slate-500 mb-1">{t("manager:financeInvoicesNew.text.qty")}</label>}
+                      {idx === 0 && <label className="block text-xs font-medium text-muted mb-1">{t("manager:financeInvoicesNew.text.qty")}</label>}
                       <input
                         type="number"
                         min="1"
                         value={li.quantity}
                         onChange={(e) => updateLineItem(idx, "quantity", e.target.value)}
-                        className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full rounded-lg border border-muted-ring px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       />
                     </div>
                     <div className="col-span-3">
-                      {idx === 0 && <label className="block text-xs font-medium text-slate-500 mb-1">Unit Price (CHF)</label>}
+                      {idx === 0 && <label className="block text-xs font-medium text-muted mb-1">Unit Price (CHF)</label>}
                       <input
                         type="number"
                         step="0.01"
@@ -350,7 +350,7 @@ export default function NewInvoicePage() {
                         placeholder="0.00"
                         value={li.unitPrice}
                         onChange={(e) => updateLineItem(idx, "unitPrice", e.target.value)}
-                        className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full rounded-lg border border-muted-ring px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         required
                       />
                     </div>
@@ -370,27 +370,27 @@ export default function NewInvoicePage() {
                 <button
                   type="button"
                   onClick={addLineItem}
-                  className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 transition"
+                  className="rounded-lg border border-surface-border bg-surface-subtle px-4 py-2 text-sm font-medium text-muted-text hover:bg-surface-hover transition"
                 >
                   + Add Line Item
                 </button>
               </div>
 
               {/* Totals */}
-              <div className="mt-4 border-t border-slate-200 pt-4">
+              <div className="mt-4 border-t border-surface-border pt-4">
                 <div className="flex justify-end">
                   <div className="w-64 space-y-1 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-slate-500">{t("manager:financeInvoicesNew.text.subtotal")}</span>
-                      <span className="font-medium text-slate-900">{formatChf(computedTotal)}</span>
+                      <span className="text-muted">{t("manager:financeInvoicesNew.text.subtotal")}</span>
+                      <span className="font-medium text-foreground">{formatChf(computedTotal)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-slate-500">VAT ({vatRate || 0}%)</span>
-                      <span className="font-medium text-slate-900">{formatChf(computedVat)}</span>
+                      <span className="text-muted">VAT ({vatRate || 0}%)</span>
+                      <span className="font-medium text-foreground">{formatChf(computedVat)}</span>
                     </div>
-                    <div className="flex justify-between border-t border-slate-200 pt-1">
-                      <span className="font-semibold text-slate-900">{t("manager:financeInvoicesNew.text.total")}</span>
-                      <span className="font-bold text-slate-900">{formatChf(computedTotal + computedVat)}</span>
+                    <div className="flex justify-between border-t border-surface-border pt-1">
+                      <span className="font-semibold text-foreground">{t("manager:financeInvoicesNew.text.total")}</span>
+                      <span className="font-bold text-foreground">{formatChf(computedTotal + computedVat)}</span>
                     </div>
                   </div>
                 </div>
@@ -402,7 +402,7 @@ export default function NewInvoicePage() {
               <button
                 type="button"
                 onClick={() => router.push("/manager/finance/invoices")}
-                className="rounded-lg border border-slate-200 bg-white px-6 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition"
+                className="rounded-lg border border-surface-border bg-surface px-6 py-2.5 text-sm font-medium text-muted-dark hover:bg-surface-subtle transition"
               >
                 Cancel
               </button>

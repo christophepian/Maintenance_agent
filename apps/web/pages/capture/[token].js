@@ -188,7 +188,7 @@ export default function MobileCapturePage() {
         <meta name="theme-color" content="#1e40af" />
       </Head>
 
-      <div className="min-h-screen bg-slate-50 flex flex-col">
+      <div className="min-h-screen bg-surface-subtle flex flex-col">
         {/* Header */}
         <header className="bg-blue-700 text-white px-4 py-3 flex items-center gap-3 shadow-md">
           <span className="text-xl">📷</span>
@@ -201,7 +201,7 @@ export default function MobileCapturePage() {
           {state === "LOADING" && (
             <div className="text-center">
               <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4" />
-              <p className="text-sm text-slate-500">Validating session…</p>
+              <p className="text-sm text-muted">Validating session…</p>
             </div>
           )}
 
@@ -209,8 +209,8 @@ export default function MobileCapturePage() {
           {state === "EXPIRED" && (
             <div className="text-center max-w-xs">
               <div className="text-4xl mb-3">⏰</div>
-              <h2 className="text-lg font-semibold text-slate-800 mt-0 mb-2">{t("tenant:token.heading.thisLinkHasExpired")}</h2>
-              <p className="text-sm text-slate-500 m-0">
+              <h2 className="text-lg font-semibold text-foreground mt-0 mb-2">{t("tenant:token.heading.thisLinkHasExpired")}</h2>
+              <p className="text-sm text-muted m-0">
                 Capture sessions are valid for 15 minutes. Please scan a new QR code from the invoice hub.
               </p>
             </div>
@@ -220,7 +220,7 @@ export default function MobileCapturePage() {
           {state === "ERROR" && (
             <div className="text-center max-w-xs">
               <div className="text-4xl mb-3">❌</div>
-              <h2 className="text-lg font-semibold text-slate-800 mt-0 mb-2">{t("tenant:token.heading.somethingWentWrong")}</h2>
+              <h2 className="text-lg font-semibold text-foreground mt-0 mb-2">{t("tenant:token.heading.somethingWentWrong")}</h2>
               <p className="text-sm text-red-600 m-0">{errorMsg}</p>
             </div>
           )}
@@ -228,9 +228,9 @@ export default function MobileCapturePage() {
           {/* ─── READY (capture UI) ───── */}
           {state === "READY" && (
             <div className="w-full max-w-md">
-              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-4">
-                <h2 className="text-base font-semibold text-slate-800 mt-0 mb-1">{t("tenant:token.heading.takePhotosOfYourInvoice")}</h2>
-                <p className="text-xs text-slate-500 mt-0 mb-4">
+              <div className="bg-surface rounded-xl shadow-sm border border-surface-border p-4 mb-4">
+                <h2 className="text-base font-semibold text-foreground mt-0 mb-1">{t("tenant:token.heading.takePhotosOfYourInvoice")}</h2>
+                <p className="text-xs text-muted mt-0 mb-4">
                   Capture up to {MAX_PHOTOS} photos. Make sure the text is clear and well-lit.
                 </p>
 
@@ -238,7 +238,7 @@ export default function MobileCapturePage() {
                 {photos.length > 0 && (
                   <div className="grid grid-cols-3 gap-2 mb-4">
                     {photos.map((photo, idx) => (
-                      <div key={idx} className="relative aspect-square rounded-lg overflow-hidden bg-slate-100 border border-slate-200">
+                      <div key={idx} className="relative aspect-square rounded-lg overflow-hidden bg-surface-hover border border-surface-border">
                         <img
                           src={photo.preview}
                           alt={`Photo ${idx + 1}`}
@@ -275,7 +275,7 @@ export default function MobileCapturePage() {
                     </label>
 
                     {/* Gallery fallback */}
-                    <label className="flex items-center justify-center gap-2 w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50 transition cursor-pointer">
+                    <label className="flex items-center justify-center gap-2 w-full rounded-lg border border-surface-border bg-surface px-4 py-3 text-sm font-medium text-muted-dark hover:bg-surface-subtle transition cursor-pointer">
                       <span className="text-lg">🖼</span>
                       Choose from Gallery
                       <input
@@ -313,12 +313,12 @@ export default function MobileCapturePage() {
           {state === "UPLOADING" && (
             <div className="w-full max-w-xs text-center">
               <div className="w-10 h-10 border-4 border-green-200 border-t-green-600 rounded-full animate-spin mx-auto mb-4" />
-              <h2 className="text-base font-semibold text-slate-800 mt-0 mb-2">{t("tenant:token.heading.uploading")}</h2>
-              <p className="text-sm text-slate-500 mb-3">
+              <h2 className="text-base font-semibold text-foreground mt-0 mb-2">{t("tenant:token.heading.uploading")}</h2>
+              <p className="text-sm text-muted mb-3">
                 {uploadProgress} of {photos.length} {photos.length === 1 ? "photo" : "photos"}
               </p>
               {/* Progress bar */}
-              <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+              <div className="w-full bg-track rounded-full h-2 overflow-hidden">
                 <div
                   className="bg-green-500 h-2 rounded-full transition-all duration-300"
                   style={{ width: `${photos.length > 0 ? (uploadProgress / photos.length) * 100 : 0}%` }}
@@ -332,7 +332,7 @@ export default function MobileCapturePage() {
             <div className="text-center max-w-xs">
               <div className="text-5xl mb-3">✅</div>
               <h2 className="text-lg font-semibold text-green-700 mt-0 mb-2">{t("tenant:token.heading.photosSubmitted")}</h2>
-              <p className="text-sm text-slate-500 m-0">
+              <p className="text-sm text-muted m-0">
                 Your invoice is being processed. You can close this page now.
               </p>
             </div>
@@ -341,7 +341,7 @@ export default function MobileCapturePage() {
 
         {/* Footer */}
         <footer className="px-4 py-3 text-center">
-          <p className="text-xs text-slate-400 m-0">Secure invoice capture session</p>
+          <p className="text-xs text-foreground-dim m-0">Secure invoice capture session</p>
         </footer>
       </div>
     </>

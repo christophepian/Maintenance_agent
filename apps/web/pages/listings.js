@@ -31,7 +31,7 @@ function PhotoPlaceholder({ seed }) {
         viewBox="0 0 64 64"
         fill="none"
         stroke="currentColor"
-        className="w-16 h-16 text-slate-400"
+        className="w-16 h-16 text-foreground-dim"
         strokeWidth={2}
       >
         <path d="M8 32 L32 12 L56 32" strokeLinecap="round" strokeLinejoin="round" />
@@ -40,7 +40,7 @@ function PhotoPlaceholder({ seed }) {
         <rect x="20" y="36" width="6" height="6" rx="0.5" />
         <rect x="38" y="36" width="6" height="6" rx="0.5" />
       </svg>
-      <span className="text-xs text-slate-400 mt-2 tracking-wide">Photo coming soon</span>
+      <span className="text-xs text-foreground-dim mt-2 tracking-wide">Photo coming soon</span>
     </div>
   );
 }
@@ -89,11 +89,11 @@ export default function ListingsPage() {
       </Head>
 
       {/* Minimal standalone header */}
-      <header className="bg-white border-b sticky top-0 z-30">
+      <header className="bg-surface border-b sticky top-0 z-30">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <span className="text-2xl">🏠</span>
-            <h1 className="text-xl font-bold text-slate-800 tracking-tight">{t("tenant:index.heading.rentalListings")}</h1>
+            <h1 className="text-xl font-bold text-foreground tracking-tight">{t("tenant:index.heading.rentalListings")}</h1>
           </div>
           <Link
             href="/apply"
@@ -104,12 +104,12 @@ export default function ListingsPage() {
         </div>
       </header>
 
-      <main className="min-h-screen bg-slate-50">
+      <main className="min-h-screen bg-surface-subtle">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
           {/* Hero / intro */}
           <div className="mb-8">
-            <h2 className="text-3xl font-bold text-slate-900 mb-2">{t("tenant:index.heading.findYourNextHome")}</h2>
-            <p className="text-slate-500 text-lg">
+            <h2 className="text-3xl font-bold text-foreground mb-2">{t("tenant:index.heading.findYourNextHome")}</h2>
+            <p className="text-muted text-lg">
               Browse available apartments and apply online in minutes.
             </p>
           </div>
@@ -121,7 +121,7 @@ export default function ListingsPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={t("tenant:index.placeholder.searchByAddressBuildingNameOrUnit")}
-              className="w-full max-w-md border border-slate-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+              className="w-full max-w-md border border-muted-ring rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-surface"
             />
           </div>
 
@@ -134,8 +134,8 @@ export default function ListingsPage() {
 
           {/* Loading */}
           {loading && (
-            <div className="text-center py-16 text-slate-400">
-              <div className="inline-block w-8 h-8 border-2 border-slate-300 border-t-blue-500 rounded-full animate-spin mb-3" />
+            <div className="text-center py-16 text-foreground-dim">
+              <div className="inline-block w-8 h-8 border-2 border-muted-ring border-t-blue-500 rounded-full animate-spin mb-3" />
               <p>Loading listings…</p>
             </div>
           )}
@@ -144,10 +144,10 @@ export default function ListingsPage() {
           {!loading && filtered.length === 0 && (
             <div className="text-center py-16">
               <span className="text-5xl mb-4 block">🏗️</span>
-              <h3 className="text-lg font-semibold text-slate-700 mb-1">
+              <h3 className="text-lg font-semibold text-muted-dark mb-1">
                 {search ? "No listings match your search" : "No listings available right now"}
               </h3>
-              <p className="text-slate-400 text-sm">
+              <p className="text-foreground-dim text-sm">
                 {search
                   ? "Try a different search term."
                   : "Check back soon — new apartments are added regularly."}
@@ -158,7 +158,7 @@ export default function ListingsPage() {
           {/* Listing grid */}
           {!loading && filtered.length > 0 && (
             <>
-              <p className="text-sm text-slate-500 mb-4">
+              <p className="text-sm text-muted mb-4">
                 {filtered.length} {filtered.length === 1 ? "listing" : "listings"} available
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -191,17 +191,17 @@ function ListingCard({ unit }) {
   })();
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow overflow-hidden flex flex-col">
+    <div className="bg-surface rounded-xl border border-surface-border shadow-sm hover:shadow-md transition-shadow overflow-hidden flex flex-col">
       {/* Photo placeholder */}
       <PhotoPlaceholder seed={unit.id} />
 
       {/* Content */}
       <div className="p-5 flex-1 flex flex-col">
         {/* Address */}
-        <h3 className="font-semibold text-slate-900 text-lg leading-tight mb-1">
+        <h3 className="font-semibold text-foreground text-lg leading-tight mb-1">
           {building.address || "Address TBD"}
         </h3>
-        <p className="text-sm text-slate-500 mb-3">
+        <p className="text-sm text-muted mb-3">
           {building.name} · {unit.unitNumber}
           {unit.floor ? ` · ${unit.floor}` : ""}
         </p>
@@ -209,18 +209,18 @@ function ListingCard({ unit }) {
         {/* Key facts */}
         <div className="space-y-2 text-sm mb-4">
           <div className="flex items-center gap-2">
-            <span className="text-slate-400 w-5 text-center">💰</span>
-            <span className="text-slate-700">
+            <span className="text-foreground-dim w-5 text-center">💰</span>
+            <span className="text-muted-dark">
               <span className="font-semibold">{formatChf(unit.monthlyRentChf)}</span>
-              <span className="text-slate-400"> /month net</span>
+              <span className="text-foreground-dim"> /month net</span>
             </span>
           </div>
           {unit.monthlyChargesChf != null && (
             <div className="flex items-center gap-2">
-              <span className="text-slate-400 w-5 text-center">📋</span>
-              <span className="text-slate-500">
+              <span className="text-foreground-dim w-5 text-center">📋</span>
+              <span className="text-muted">
                 + {formatChf(unit.monthlyChargesChf)} charges
-                <span className="text-slate-400">
+                <span className="text-foreground-dim">
                   {" "}
                   ({formatChf(totalRent)} total)
                 </span>
@@ -228,13 +228,13 @@ function ListingCard({ unit }) {
             </div>
           )}
           <div className="flex items-center gap-2">
-            <span className="text-slate-400 w-5 text-center">📅</span>
-            <span className="text-slate-600">Available from {availableFrom}</span>
+            <span className="text-foreground-dim w-5 text-center">📅</span>
+            <span className="text-muted-text">Available from {availableFrom}</span>
           </div>
         </div>
 
         {/* Spacer + CTA */}
-        <div className="mt-auto pt-3 border-t border-slate-100">
+        <div className="mt-auto pt-3 border-t border-surface-divider">
           <Link
             href={`/apply?unitId=${unit.id}`}
             className="block w-full text-center bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm rounded-lg py-2.5 transition-colors"

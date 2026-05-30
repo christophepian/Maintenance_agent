@@ -95,7 +95,7 @@ export default function NotificationPreferencesTab({ authHeaders, eventGroups, t
 
       {eventGroups.map((group) => (
         <div key={group.groupKey} className="card grid gap-3">
-          <div className="font-semibold text-sm text-slate-800">
+          <div className="font-semibold text-sm text-foreground">
             {t(`${ns}:settings.notifications.group.${group.groupKey}`)}
           </div>
           <div className="grid gap-2">
@@ -106,7 +106,7 @@ export default function NotificationPreferencesTab({ authHeaders, eventGroups, t
                   key={eventType}
                   className="flex items-center justify-between gap-3 cursor-pointer"
                 >
-                  <span className="text-sm text-slate-700">
+                  <span className="text-sm text-muted-dark">
                     {t(`${ns}:settings.notifications.event.${eventType}`)}
                   </span>
                   {/* Toggle switch */}
@@ -119,12 +119,12 @@ export default function NotificationPreferencesTab({ authHeaders, eventGroups, t
                     className={cn(
                       "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent",
                       "transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2",
-                      enabled ? "bg-blue-600" : "bg-slate-200",
+                      enabled ? "bg-blue-600" : "bg-surface-border",
                     )}
                   >
                     <span
                       className={cn(
-                        "pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition duration-200 ease-in-out",
+                        "pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition duration-200 ease-in-out", /* no-token: toggle thumb is always white */
                         enabled ? "translate-x-5" : "translate-x-0",
                       )}
                     />

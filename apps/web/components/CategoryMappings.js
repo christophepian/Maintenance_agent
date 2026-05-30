@@ -130,7 +130,7 @@ export default function CategoryMappings() {
       {loading ? (
         <div className="flex items-center justify-center py-12">
           <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
-          <span className="ml-3 text-sm text-slate-500">{t("categoryMappings.loading")}</span>
+          <span className="ml-3 text-sm text-muted">{t("categoryMappings.loading")}</span>
         </div>
       ) : coverage.length === 0 ? (
         <Panel>
@@ -213,26 +213,26 @@ function StatusBanner({ allMapped, mappedCount, totalCount }) {
 function HowItWorks() {
   const { t } = useTranslation("manager");
   return (
-    <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-5">
-      <h3 className="mb-3 text-sm font-semibold text-slate-700">{t("categoryMappings.howItWorks.title")}</h3>
-      <p className="mb-4 text-xs leading-relaxed text-slate-600">
+    <div className="rounded-xl border border-surface-border bg-gradient-to-br from-slate-50 to-white p-5">
+      <h3 className="mb-3 text-sm font-semibold text-muted-dark">{t("categoryMappings.howItWorks.title")}</h3>
+      <p className="mb-4 text-xs leading-relaxed text-muted-text">
         {t("categoryMappings.howItWorks.description")}
       </p>
       <div className="grid gap-3 sm:grid-cols-2">
-        <div className="flex gap-3 rounded-lg border border-slate-100 bg-white p-3">
+        <div className="flex gap-3 rounded-lg border border-surface-divider bg-surface p-3">
           <span className="text-lg">&#x1F4CA;</span>
           <div>
-            <p className="text-xs font-semibold text-slate-700">{t("categoryMappings.howItWorks.deprecTitle")}</p>
-            <p className="text-xs leading-relaxed text-slate-500">
+            <p className="text-xs font-semibold text-muted-dark">{t("categoryMappings.howItWorks.deprecTitle")}</p>
+            <p className="text-xs leading-relaxed text-muted">
               {t("categoryMappings.howItWorks.deprecDesc")}
             </p>
           </div>
         </div>
-        <div className="flex gap-3 rounded-lg border border-slate-100 bg-white p-3">
+        <div className="flex gap-3 rounded-lg border border-surface-divider bg-surface p-3">
           <span className="text-lg">&#x2696;&#xFE0F;</span>
           <div>
-            <p className="text-xs font-semibold text-slate-700">{t("categoryMappings.howItWorks.rentTitle")}</p>
-            <p className="text-xs leading-relaxed text-slate-500">
+            <p className="text-xs font-semibold text-muted-dark">{t("categoryMappings.howItWorks.rentTitle")}</p>
+            <p className="text-xs leading-relaxed text-muted">
               {t("categoryMappings.howItWorks.rentDesc")}
             </p>
           </div>
@@ -259,12 +259,12 @@ function CategoryCard({
 
   if (!c.mapped) {
     return (
-      <div className="rounded-xl border-2 border-dashed border-slate-200 bg-slate-50/50 p-5">
+      <div className="rounded-xl border-2 border-dashed border-surface-border bg-surface-subtle/50 p-5">
         <div className="flex items-center gap-3">
           <span className="text-2xl">{icon}</span>
           <div>
-            <p className="text-sm font-semibold text-slate-700">{label}</p>
-            <p className="text-xs text-slate-500">
+            <p className="text-sm font-semibold text-muted-dark">{label}</p>
+            <p className="text-xs text-muted">
               {t("categoryMappings.card.notConnected")}
             </p>
           </div>
@@ -278,38 +278,38 @@ function CategoryCard({
   const isDisabled = c.isActive === false;
 
   return (
-    <div className={cn("rounded-xl border bg-white shadow-sm transition-all hover:shadow-md", isDisabled ? "border-slate-200 opacity-60" : "border-slate-200")}>
+    <div className={cn("rounded-xl border bg-surface shadow-sm transition-all hover:shadow-md", isDisabled ? "border-surface-border opacity-60" : "border-surface-border")}>
       <div className="flex items-start justify-between p-5 pb-0">
         <div className="flex items-center gap-3">
           <span className="text-2xl">{icon}</span>
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="text-sm font-bold text-slate-800">{label}</h3>
+              <h3 className="text-sm font-bold text-foreground">{label}</h3>
               {isOrgOverride && (
                 <span className="rounded-full bg-violet-100 px-2 py-0.5 text-xs font-semibold text-violet-600">
                   {t("categoryMappings.card.customOverride")}
                 </span>
               )}
               {isDisabled && (
-                <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs font-semibold text-slate-500">
+                <span className="rounded-full bg-surface-border px-2 py-0.5 text-xs font-semibold text-muted">
                   {t("categoryMappings.card.disabled")}
                 </span>
               )}
             </div>
-            <p className="mt-0.5 text-xs text-slate-500">
-              {t("categoryMappings.card.connectedTo")} <span className="font-medium text-slate-700">{friendlyTopic(c.legalTopic)}</span>
+            <p className="mt-0.5 text-xs text-muted">
+              {t("categoryMappings.card.connectedTo")} <span className="font-medium text-muted-dark">{friendlyTopic(c.legalTopic)}</span>
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-1">
           {isOrgOverride && (
-            <button onClick={onReset} className="rounded-lg px-2 py-1 text-xs font-medium text-slate-400 hover:bg-slate-50 hover:text-slate-600" title={t("categoryMappings.card.resetTitle")}>{t("categoryMappings.card.reset")}</button>
+            <button onClick={onReset} className="rounded-lg px-2 py-1 text-xs font-medium text-foreground-dim hover:bg-surface-subtle hover:text-muted-text" title={t("categoryMappings.card.resetTitle")}>{t("categoryMappings.card.reset")}</button>
           )}
-          <button onClick={onStartEdit} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600" title={t("categoryMappings.card.editTitle")}><PencilIcon /></button>
+          <button onClick={onStartEdit} className="rounded-lg p-1.5 text-foreground-dim hover:bg-surface-hover hover:text-muted-text" title={t("categoryMappings.card.editTitle")}><PencilIcon /></button>
           <button
             onClick={onToggle}
-            className={cn("rounded-lg p-1.5 transition-colors", c.isActive ? "text-green-500 hover:bg-green-50 hover:text-green-700" : "text-slate-300 hover:bg-slate-100 hover:text-slate-500")}
+            className={cn("rounded-lg p-1.5 transition-colors", c.isActive ? "text-green-500 hover:bg-green-50 hover:text-green-700" : "text-foreground-dim hover:bg-surface-hover hover:text-muted")}
             title={c.isActive ? t("categoryMappings.card.activeTitle") : t("categoryMappings.card.inactiveTitle")}
           >
             <ToggleIcon active={c.isActive} />
@@ -327,13 +327,13 @@ function CategoryCard({
               {TOPIC_KEYS.map(key => (<option key={key} value={key}>{t(`categoryMappings.topic.${key}`)}</option>))}
             </select>
             <button onClick={onSaveEdit} disabled={saving} className="button-primary text-xs px-3 py-1.5 disabled:opacity-50">{saving ? t("categoryMappings.card.saving") : t("categoryMappings.card.save")}</button>
-            <button onClick={onCancelEdit} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-500 hover:bg-slate-50">{t("categoryMappings.card.cancel")}</button>
+            <button onClick={onCancelEdit} className="rounded-lg border border-surface-border bg-surface px-3 py-1.5 text-xs font-medium text-muted hover:bg-surface-subtle">{t("categoryMappings.card.cancel")}</button>
           </div>
         </div>
       )}
 
       <div className="p-5 pt-3">
-        <p className="mb-3 text-xs leading-relaxed text-slate-500">
+        <p className="mb-3 text-xs leading-relaxed text-muted">
           {t("categoryMappings.card.checkHint", { label: label.toLowerCase() })}
         </p>
 
@@ -343,7 +343,7 @@ function CategoryCard({
         </div>
 
         {(c.depreciationSamples?.length > 0 || c.ruleSamples?.length > 0) && (
-          <button onClick={() => setExpanded(!expanded)} className="mt-3 text-xs font-medium text-slate-400 hover:text-slate-600">
+          <button onClick={() => setExpanded(!expanded)} className="mt-3 text-xs font-medium text-foreground-dim hover:text-muted-text">
             {expanded ? "\u25BE Hide technical details" : "\u25B8 Show technical details"}
           </button>
         )}
@@ -356,11 +356,11 @@ function CategoryCard({
 function DepreciationBox({ c, hasDepreciation }) {
   const { t } = useTranslation("manager");
   return (
-    <div className={cn("rounded-lg border p-3", hasDepreciation ? "border-green-100 bg-green-50/50" : "border-slate-100 bg-slate-50/50")}>
+    <div className={cn("rounded-lg border p-3", hasDepreciation ? "border-green-100 bg-green-50/50" : "border-surface-divider bg-surface-subtle/50")}>
       <div className="flex items-center gap-2">
         <span className="text-sm">&#x1F4CA;</span>
-        <span className={cn("text-xs font-semibold", hasDepreciation ? "text-green-700" : "text-slate-500")}>{t("categoryMappings.deprecBox.title")}</span>
-        <span className={cn("ml-auto rounded-full px-2 py-0.5 text-xs font-bold", hasDepreciation ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-400")}>
+        <span className={cn("text-xs font-semibold", hasDepreciation ? "text-green-700" : "text-muted")}>{t("categoryMappings.deprecBox.title")}</span>
+        <span className={cn("ml-auto rounded-full px-2 py-0.5 text-xs font-bold", hasDepreciation ? "bg-green-100 text-green-700" : "bg-surface-hover text-foreground-dim")}>
           {t("categoryMappings.deprecBox.item", { count: c.depreciationCount })}
         </span>
       </div>
@@ -374,7 +374,7 @@ function DepreciationBox({ c, hasDepreciation }) {
           <p className="mt-1 text-xs text-green-600">{t("categoryMappings.deprecBox.whoPaysSub")}</p>
         </div>
       ) : (
-        <p className="mt-2 text-xs text-slate-400">{t("categoryMappings.deprecBox.noData")}</p>
+        <p className="mt-2 text-xs text-foreground-dim">{t("categoryMappings.deprecBox.noData")}</p>
       )}
     </div>
   );
@@ -383,11 +383,11 @@ function DepreciationBox({ c, hasDepreciation }) {
 function RentReductionBox({ c, hasRules }) {
   const { t } = useTranslation("manager");
   return (
-    <div className={cn("rounded-lg border p-3", hasRules ? "border-blue-100 bg-blue-50/50" : "border-slate-100 bg-slate-50/50")}>
+    <div className={cn("rounded-lg border p-3", hasRules ? "border-blue-100 bg-blue-50/50" : "border-surface-divider bg-surface-subtle/50")}>
       <div className="flex items-center gap-2">
         <span className="text-sm">&#x2696;&#xFE0F;</span>
-        <span className={cn("text-xs font-semibold", hasRules ? "text-blue-700" : "text-slate-500")}>{t("categoryMappings.rentBox.title")}</span>
-        <span className={cn("ml-auto rounded-full px-2 py-0.5 text-xs font-bold", hasRules ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-400")}>
+        <span className={cn("text-xs font-semibold", hasRules ? "text-blue-700" : "text-muted")}>{t("categoryMappings.rentBox.title")}</span>
+        <span className={cn("ml-auto rounded-full px-2 py-0.5 text-xs font-bold", hasRules ? "bg-blue-100 text-blue-700" : "bg-surface-hover text-foreground-dim")}>
           {t("categoryMappings.rentBox.rule", { count: c.ruleCount })}
         </span>
       </div>
@@ -400,7 +400,7 @@ function RentReductionBox({ c, hasRules }) {
           <p className="mt-1 text-xs text-blue-600">{t("categoryMappings.rentBox.claimSub")}</p>
         </div>
       ) : (
-        <p className="mt-2 text-xs text-slate-400">{t("categoryMappings.rentBox.noRules")}</p>
+        <p className="mt-2 text-xs text-foreground-dim">{t("categoryMappings.rentBox.noRules")}</p>
       )}
     </div>
   );
@@ -409,36 +409,36 @@ function RentReductionBox({ c, hasRules }) {
 function TechnicalDetails({ c }) {
   const { t } = useTranslation("manager");
   return (
-    <div className="mt-2 rounded-lg border border-slate-100 bg-slate-50 p-3">
+    <div className="mt-2 rounded-lg border border-surface-divider bg-surface-subtle p-3">
       <div className="grid gap-4 sm:grid-cols-2">
         {c.depreciationSamples?.length > 0 && (
           <div>
-            <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-slate-400">
+            <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-foreground-dim">
               {t("categoryMappings.technical.deprecStandards", { count: c.depreciationCount })}
             </p>
             {c.depreciationSamples.map((d, i) => (
-              <div key={i} className="flex items-center justify-between py-0.5 text-xs text-slate-600">
+              <div key={i} className="flex items-center justify-between py-0.5 text-xs text-muted-text">
                 <span>{d.topic.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, ch => ch.toUpperCase())}</span>
-                <span className="text-slate-400">{Math.round(d.usefulLifeMonths / 12)} yr</span>
+                <span className="text-foreground-dim">{Math.round(d.usefulLifeMonths / 12)} yr</span>
               </div>
             ))}
             {c.depreciationCount > c.depreciationSamples.length && (
-              <p className="mt-1 text-xs text-slate-400">{t("categoryMappings.technical.moreItems", { count: c.depreciationCount - c.depreciationSamples.length })}</p>
+              <p className="mt-1 text-xs text-foreground-dim">{t("categoryMappings.technical.moreItems", { count: c.depreciationCount - c.depreciationSamples.length })}</p>
             )}
           </div>
         )}
         {c.ruleSamples?.length > 0 && (
           <div>
-            <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-slate-400">
+            <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-foreground-dim">
               {t("categoryMappings.technical.rentRules", { count: c.ruleCount })}
             </p>
             {c.ruleSamples.map((key, i) => (
-              <div key={i} className="py-0.5 text-xs text-slate-600">
+              <div key={i} className="py-0.5 text-xs text-muted-text">
                 {key.replace(/^CH_RENT_RED_/, "").replace(/_/g, " ").toLowerCase().replace(/\b\w/g, ch => ch.toUpperCase())}
               </div>
             ))}
             {c.ruleCount > c.ruleSamples.length && (
-              <p className="mt-1 text-xs text-slate-400">{t("categoryMappings.technical.moreItems", { count: c.ruleCount - c.ruleSamples.length })}</p>
+              <p className="mt-1 text-xs text-foreground-dim">{t("categoryMappings.technical.moreItems", { count: c.ruleCount - c.ruleSamples.length })}</p>
             )}
           </div>
         )}
@@ -493,7 +493,7 @@ function AddCategorySection({ unmapped, showForm, onToggleForm, onCreate, onErro
       {showForm && (
         <form onSubmit={handleCreate} className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
           <label className="flex-1">
-            <span className="text-xs font-medium text-slate-600">{t("categoryMappings.addSection.categoryLabel")}</span>
+            <span className="text-xs font-medium text-muted-text">{t("categoryMappings.addSection.categoryLabel")}</span>
             <select className="filter-select mt-1 block" value={selectedCat} onChange={e => setSelectedCat(e.target.value)} required>
               <option value="">{t("categoryMappings.addSection.select")}</option>
               {unmapped.map(u => (
@@ -504,7 +504,7 @@ function AddCategorySection({ unmapped, showForm, onToggleForm, onCreate, onErro
             </select>
           </label>
           <label className="flex-1">
-            <span className="text-xs font-medium text-slate-600">{t("categoryMappings.addSection.connectTo")}</span>
+            <span className="text-xs font-medium text-muted-text">{t("categoryMappings.addSection.connectTo")}</span>
             <select className="filter-select mt-1 block" value={selectedTopic} onChange={e => setSelectedTopic(e.target.value)} required>
               <option value="">{t("categoryMappings.addSection.select")}</option>
               {TOPIC_KEYS.map(key => (<option key={key} value={key}>{t(`categoryMappings.topic.${key}`)}</option>))}

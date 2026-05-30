@@ -120,10 +120,10 @@ function LifespanBar({ months }) {
           : "bg-green-400";
   return (
     <div className="flex items-center gap-2">
-      <div className="h-2 w-24 rounded-full bg-slate-100 sm:w-32">
+      <div className="h-2 w-24 rounded-full bg-surface-hover sm:w-32">
         <div className={cn("h-2 rounded-full", color)} style={{ width: `${pct}%` }} />
       </div>
-      <span className="whitespace-nowrap text-xs font-semibold text-slate-700">
+      <span className="whitespace-nowrap text-xs font-semibold text-muted-dark">
         {Number.isInteger(years) ? years : years.toFixed(1)} yr
       </span>
     </div>
@@ -132,10 +132,10 @@ function LifespanBar({ months }) {
 
 function StatCard({ label, value, sublabel }) {
   return (
-    <div className="rounded-lg border border-slate-100 bg-white px-4 py-3 shadow-sm">
-      <p className="text-2xl font-bold text-slate-800">{value}</p>
-      <p className="text-xs font-medium text-slate-500">{label}</p>
-      {sublabel && <p className="mt-0.5 text-xs text-slate-400">{sublabel}</p>}
+    <div className="rounded-lg border border-surface-divider bg-surface px-4 py-3 shadow-sm">
+      <p className="text-2xl font-bold text-foreground">{value}</p>
+      <p className="text-xs font-medium text-muted">{label}</p>
+      {sublabel && <p className="mt-0.5 text-xs text-foreground-dim">{sublabel}</p>}
     </div>
   );
 }
@@ -145,26 +145,26 @@ function CategorySection({ category, items, collapsed, onToggle }) {
   const num = CATEGORY_NUMBERS[category] || "–";
   const subtitle = CATEGORY_SUBTITLES[category] || "";
   return (
-    <div className="rounded-lg border border-slate-100 bg-white shadow-sm">
+    <div className="rounded-lg border border-surface-divider bg-surface shadow-sm">
       <button
         onClick={onToggle}
-        className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-slate-50"
+        className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-surface-subtle"
       >
         <div className="flex items-center gap-3">
           <span className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-50 text-xs font-bold text-blue-600">
             {num}
           </span>
           <div>
-            <span className="text-sm font-semibold text-slate-800">{CATEGORY_EN[category] || category}</span>
-            {subtitle && <span className="ml-2 text-xs text-slate-400">{subtitle}</span>}
+            <span className="text-sm font-semibold text-foreground">{CATEGORY_EN[category] || category}</span>
+            {subtitle && <span className="ml-2 text-xs text-foreground-dim">{subtitle}</span>}
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500">
+          <span className="rounded-full bg-surface-hover px-2 py-0.5 text-xs font-medium text-muted">
             {t(items.length === 1 ? "depreciationStandards.items_one" : "depreciationStandards.items_other", { count: items.length })}
           </span>
           <svg
-            className={cn("h-4 w-4 text-slate-400 transition-transform", collapsed ? "" : "rotate-180")}
+            className={cn("h-4 w-4 text-foreground-dim transition-transform", collapsed ? "" : "rotate-180")}
             fill="none" viewBox="0 0 24 24" stroke="currentColor"
           >
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -173,7 +173,7 @@ function CategorySection({ category, items, collapsed, onToggle }) {
       </button>
 
       {!collapsed && (
-        <div className="border-t border-slate-100">
+        <div className="border-t border-surface-divider">
           <table className="data-table">
             <thead>
               <tr>
@@ -242,8 +242,8 @@ function CreateStandardForm({ onCreated, onError }) {
     <Panel title="New Depreciation Standard">
       <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <label className="block">
-          <span className="text-xs font-medium text-slate-600">Asset Type</span>
-          <select className="mt-1 block w-full rounded border border-slate-300 px-3 py-2 text-sm" value={form.assetType} onChange={(e) => setForm({ ...form, assetType: e.target.value })}>
+          <span className="text-xs font-medium text-muted-text">Asset Type</span>
+          <select className="mt-1 block w-full rounded border border-muted-ring px-3 py-2 text-sm" value={form.assetType} onChange={(e) => setForm({ ...form, assetType: e.target.value })}>
               <option value="APPLIANCE">{t("assetType.APPLIANCE")}</option>
             <option value="FIXTURE">{t("assetType.FIXTURE")}</option>
             <option value="FINISH">{t("assetType.FINISH")}</option>
@@ -253,11 +253,11 @@ function CreateStandardForm({ onCreated, onError }) {
           </select>
         </label>
         <label className="block">
-          <span className="text-xs font-medium text-slate-600">Topic Key <span className="font-normal text-slate-400">(primary lookup)</span></span>
+          <span className="text-xs font-medium text-muted-text">Topic Key <span className="font-normal text-foreground-dim">(primary lookup)</span></span>
           <input className="filter-input mt-1 block" value={form.topic} onChange={(e) => setForm({ ...form, topic: e.target.value })} placeholder="e.g. DISHWASHER, PARQUET_MOSAIC" required />
         </label>
         <label className="block">
-          <span className="text-xs font-medium text-slate-600">Useful Life (months)</span>
+          <span className="text-xs font-medium text-muted-text">Useful Life (months)</span>
           <input type="number" className="filter-input mt-1 block" value={form.usefulLifeMonths} onChange={(e) => setForm({ ...form, usefulLifeMonths: e.target.value })} min={1} required />
         </label>
         <div className="flex items-end">
@@ -281,14 +281,14 @@ export default function DepreciationStandards() {
   return (
     <div className="space-y-4">
       {/* ── Segmented control ── */}
-      <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1">
+      <div className="inline-flex rounded-lg border border-surface-border bg-surface-subtle p-1">
         <button
           onClick={() => setSegment("depreciation")}
           className={cn(
             "rounded-md px-4 py-1.5 text-sm font-medium transition-colors",
             segment === "depreciation"
-              ? "bg-white text-slate-800 shadow-sm"
-              : "text-slate-500 hover:text-slate-700"
+              ? "bg-surface text-foreground shadow-sm"
+              : "text-muted hover:text-muted-dark"
           )}
         >
           Depreciation Standards
@@ -298,8 +298,8 @@ export default function DepreciationStandards() {
           className={cn(
             "rounded-md px-4 py-1.5 text-sm font-medium transition-colors",
             segment === "renovation"
-              ? "bg-white text-slate-800 shadow-sm"
-              : "text-slate-500 hover:text-slate-700"
+              ? "bg-surface text-foreground shadow-sm"
+              : "text-muted hover:text-muted-dark"
           )}
         >
           Renovation Classification
@@ -309,7 +309,7 @@ export default function DepreciationStandards() {
       {segment === "depreciation" && <DepreciationContent />}
       {segment === "renovation" && (
         <div className="space-y-3">
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-muted">
             Standard Swiss tax classifications for renovation work on privately owned rental buildings.
             Each job type is tagged with its usual tax treatment (value-preserving vs value-enhancing)
             and timing sensitivity — used by cashflow plans to surface tax optimisation opportunities.
@@ -454,19 +454,19 @@ function DepreciationContent() {
         <Panel>
           <div className="flex flex-wrap items-center gap-3">
             <div className="relative min-w-[200px] flex-1">
-              <svg className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground-dim" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
               <input
                 type="text"
                 placeholder={t("depreciationStandards.searchPlaceholder")}
-                className="w-full rounded-lg border border-slate-200 py-2 pl-10 pr-3 text-sm focus:border-blue-300 focus:outline-none focus:ring-1 focus:ring-blue-300"
+                className="w-full rounded-lg border border-surface-border py-2 pl-10 pr-3 text-sm focus:border-blue-300 focus:outline-none focus:ring-1 focus:ring-blue-300"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
             <select
-              className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              className="rounded-lg border border-surface-border px-3 py-2 text-sm"
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value)}
             >
@@ -476,11 +476,11 @@ function DepreciationContent() {
               ))}
             </select>
             <div className="flex gap-1">
-              <button onClick={expandAll} className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs text-slate-600 hover:bg-slate-50">{t("depreciationStandards.expandAll")}</button>
-              <button onClick={collapseAll} className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs text-slate-600 hover:bg-slate-50">{t("depreciationStandards.collapseAll")}</button>
+              <button onClick={expandAll} className="rounded-lg border border-surface-border px-2.5 py-1.5 text-xs text-muted-text hover:bg-surface-subtle">{t("depreciationStandards.expandAll")}</button>
+              <button onClick={collapseAll} className="rounded-lg border border-surface-border px-2.5 py-1.5 text-xs text-muted-text hover:bg-surface-subtle">{t("depreciationStandards.collapseAll")}</button>
             </div>
             {(search || typeFilter !== "ALL") && (
-              <span className="text-xs text-slate-400">{t("depreciationStandards.showingOf", { count: filtered.length, total: enriched.length })}</span>
+              <span className="text-xs text-foreground-dim">{t("depreciationStandards.showingOf", { count: filtered.length, total: enriched.length })}</span>
             )}
           </div>
         </Panel>
@@ -488,7 +488,7 @@ function DepreciationContent() {
 
       {/* ── Main content ── */}
       {loading ? (
-        <Panel><p className="text-sm text-slate-500">{t("depreciationStandards.loading")}</p></Panel>
+        <Panel><p className="text-sm text-muted">{t("depreciationStandards.loading")}</p></Panel>
       ) : standards.length === 0 ? (
         <Panel>
           <p className="empty-state-text">
@@ -513,15 +513,15 @@ function DepreciationContent() {
 
       {/* ── Legend ── */}
       {!loading && standards.length > 0 && (
-        <div className="rounded-lg border border-slate-100 bg-slate-50 px-4 py-3">
-          <p className="mb-2 text-xs font-semibold text-slate-500">{t("depreciationStandards.lifespanLegend")}</p>
-          <div className="flex flex-wrap gap-4 text-xs text-slate-500">
+        <div className="rounded-lg border border-surface-divider bg-surface-subtle px-4 py-3">
+          <p className="mb-2 text-xs font-semibold text-muted">{t("depreciationStandards.lifespanLegend")}</p>
+          <div className="flex flex-wrap gap-4 text-xs text-muted">
             <span className="flex items-center gap-1"><span className="inline-block h-2 w-4 rounded-full bg-red-400" /> ≤ 10 years</span>
             <span className="flex items-center gap-1"><span className="inline-block h-2 w-4 rounded-full bg-amber-400" /> 11–20 years</span>
             <span className="flex items-center gap-1"><span className="inline-block h-2 w-4 rounded-full bg-blue-400" /> 21–30 years</span>
             <span className="flex items-center gap-1"><span className="inline-block h-2 w-4 rounded-full bg-green-400" /> &gt; 30 years</span>
           </div>
-          <p className="mt-2 text-xs text-slate-400">
+          <p className="mt-2 text-xs text-foreground-dim">
             Source: <em>Joint Depreciation Table (Tableau paritaire des amortissements)</em> — ASLOCA Fédération romande &amp; FRI, effective 1 March 2007.
             Section 14 commercial reductions: Offices −20%, Retail (low) −25%, Retail (high) −50%.
             {" "}
@@ -529,7 +529,7 @@ function DepreciationContent() {
               View original PDF ↗
             </a>
           </p>
-          <p className="mt-1 text-xs text-slate-400">
+          <p className="mt-1 text-xs text-foreground-dim">
             Resolution priority: asset override → asset model → canton standard → national standard. Topic is the primary matching key.
           </p>
         </div>

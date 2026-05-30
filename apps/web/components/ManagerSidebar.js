@@ -53,10 +53,10 @@ export default function ManagerSidebar() {
             href={item.href}
             className={[
               "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-              "hover:bg-white hover:text-slate-900",
+              "hover:bg-surface hover:text-foreground",
               isActive
-                ? "bg-white text-slate-900 font-semibold"
-                : "text-slate-600",
+                ? "bg-surface text-foreground font-semibold"
+                : "text-muted-text",
             ].join(" ")}
           >
             <Icon size={18} className="shrink-0" />

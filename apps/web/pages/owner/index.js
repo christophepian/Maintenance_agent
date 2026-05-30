@@ -19,20 +19,20 @@ import { withTranslations } from "../../lib/i18n";
 import { useTranslation } from "next-i18next";
 
 function ActionStat({ label, value, href, tone }) {
-  const valueColor = { warn: "text-amber-700", bad: "text-red-600", good: "text-green-700" }[tone] ?? "text-slate-900";
+  const valueColor = { warn: "text-amber-700", bad: "text-red-600", good: "text-green-700" }[tone] ?? "text-foreground";
   return (
     <Link href={href} className="no-underline group flex flex-col justify-between">
-      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{label}</span>
+      <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{label}</span>
       <span className={cn("mt-2 text-xl font-semibold tabular-nums leading-none underline-offset-2 group-hover:underline", valueColor)}>{value}</span>
     </Link>
   );
 }
 
 function InfoStat({ label, value, tone }) {
-  const valueColor = { good: "text-green-700", warn: "text-amber-700", bad: "text-red-600" }[tone] ?? "text-slate-900";
+  const valueColor = { good: "text-green-700", warn: "text-amber-700", bad: "text-red-600" }[tone] ?? "text-foreground";
   return (
     <div className="flex flex-col justify-between">
-      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{label}</span>
+      <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{label}</span>
       <span className={cn("mt-2 text-xl font-semibold tabular-nums leading-none", valueColor)}>{value}</span>
     </div>
   );
@@ -60,16 +60,16 @@ function ActionRow({ category, title, sub, building, date, href }) {
       <div className={cn("flex items-center gap-3 rounded-xl border px-4 py-3 transition-colors", CARD_STYLE[category])}>
         <span className={cn("shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold", chip.cls)}>{t(`owner:dashboard.chip.${category}`)}</span>
         <div className="min-w-0 flex-1">
-          <div className="truncate text-sm font-semibold text-slate-900">{title}</div>
+          <div className="truncate text-sm font-semibold text-foreground">{title}</div>
           <div className="mt-0.5 flex min-w-0 items-center gap-1.5">
-            {building && <span className="truncate text-xs text-slate-500">{building}</span>}
-            {building && (date || sub) && <span className="shrink-0 text-xs text-slate-300" aria-hidden>·</span>}
-            {date && <span className="shrink-0 text-xs text-slate-400">{formatDate(date)}</span>}
-            {!building && sub && <span className="truncate text-xs text-slate-500">{sub}</span>}
-            {building && sub && !date && <span className="truncate text-xs text-slate-400">{sub}</span>}
+            {building && <span className="truncate text-xs text-muted">{building}</span>}
+            {building && (date || sub) && <span className="shrink-0 text-xs text-foreground-dim" aria-hidden>·</span>}
+            {date && <span className="shrink-0 text-xs text-foreground-dim">{formatDate(date)}</span>}
+            {!building && sub && <span className="truncate text-xs text-muted">{sub}</span>}
+            {building && sub && !date && <span className="truncate text-xs text-foreground-dim">{sub}</span>}
           </div>
         </div>
-        <svg className="h-4 w-4 shrink-0 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+        <svg className="h-4 w-4 shrink-0 text-foreground-dim" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
           <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
         </svg>
       </div>
@@ -209,7 +209,7 @@ export default function OwnerDashboard() {
     return (
       <AppShell role="OWNER">
         <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-          <div className="h-52 animate-pulse rounded-3xl bg-slate-100" />
+          <div className="h-52 animate-pulse rounded-3xl bg-surface-hover" />
         </div>
       </AppShell>
     );
@@ -224,9 +224,9 @@ export default function OwnerDashboard() {
         <div className="mb-8">
           {/* Portfolio snapshot */}
           <div className="mb-5 flex items-center gap-3">
-            <span className="text-xs font-semibold uppercase tracking-widest text-slate-400">{t("owner:index.text.portfolioSnapshot")}</span>
-            <div className="flex-1 border-t border-slate-300" />
-            <button onClick={loadDashboard} className="shrink-0 rounded-lg border border-slate-300 bg-transparent p-2 text-slate-400 hover:bg-slate-50 hover:text-slate-700 transition-colors" aria-label={t("owner:index.ariaLabel.refreshDashboard")}>
+            <span className="text-xs font-semibold uppercase tracking-widest text-foreground-dim">{t("owner:index.text.portfolioSnapshot")}</span>
+            <div className="flex-1 border-t border-muted-ring" />
+            <button onClick={loadDashboard} className="shrink-0 rounded-lg border border-muted-ring bg-transparent p-2 text-foreground-dim hover:bg-surface-subtle hover:text-muted-dark transition-colors" aria-label={t("owner:index.ariaLabel.refreshDashboard")}>
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
@@ -254,9 +254,9 @@ export default function OwnerDashboard() {
             <ActionStat label={t("owner:index.prop.vacantUnits")} value={vacantUnits.length} href="/owner/vacancies" tone={vacantUnits.length > 0 ? "bad" : "good"} />
           </div>
 
-          <div className="mt-6 mb-5 border-t border-slate-200" />
+          <div className="mt-6 mb-5 border-t border-surface-border" />
 
-          <h1 className="mb-5 text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">{heroHeadline(t, totalActions)}</h1>
+          <h1 className="mb-5 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">{heroHeadline(t, totalActions)}</h1>
 
         </div>
 
@@ -283,7 +283,7 @@ export default function OwnerDashboard() {
                         "rounded-full px-3 py-1 text-xs font-medium transition-colors",
                         filterBy === key
                           ? "bg-slate-800 text-white"
-                          : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                          : "border border-surface-border bg-surface text-muted-text hover:bg-surface-subtle"
                       )}
                     >
                       {lbl}
@@ -310,14 +310,14 @@ export default function OwnerDashboard() {
               <div className="mt-1 text-xs text-green-600">{t("owner:index.text.checkBackAfterNewApprovalsOrInvoicesArrive")}</div>
             </div>
           ) : displayFeed.length === 0 ? (
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-5 py-8 text-center">
-              <div className="text-sm text-slate-500">{t("owner:dashboard.feed.noMatch")}</div>
+            <div className="rounded-2xl border border-surface-border bg-surface-subtle px-5 py-8 text-center">
+              <div className="text-sm text-muted">{t("owner:dashboard.feed.noMatch")}</div>
             </div>
           ) : (
             <div className="space-y-2">
               {visibleFeed.map((item, i) => <ActionRow key={i} {...item} />)}
               {displayFeed.length > FEED_PREVIEW && (
-                <button onClick={() => setFeedExpanded((x) => !x)} className="mt-1 w-full rounded-xl border border-slate-100 py-2 text-xs font-medium text-slate-500 hover:bg-slate-50 transition-colors">
+                <button onClick={() => setFeedExpanded((x) => !x)} className="mt-1 w-full rounded-xl border border-surface-divider py-2 text-xs font-medium text-muted hover:bg-surface-subtle transition-colors">
                   {feedExpanded ? t("owner:dashboard.feed.showLess") : `Show ${displayFeed.length - FEED_PREVIEW} more items ↓`}
                 </button>
               )}
@@ -326,16 +326,16 @@ export default function OwnerDashboard() {
         </section>
 
         {/* Footer cross-links */}
-        <section className="rounded-3xl border border-slate-200 bg-white p-5">
+        <section className="rounded-3xl border border-surface-border bg-surface p-5">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="text-base font-semibold text-slate-900">{t("owner:index.heading.moreViews")}</h2>
-              <p className="mt-1 text-sm text-slate-500">{t("owner:index.text.financeReportingStrategyAndLeaseManagement")}</p>
+              <h2 className="text-base font-semibold text-foreground">{t("owner:index.heading.moreViews")}</h2>
+              <p className="mt-1 text-sm text-muted">{t("owner:index.text.financeReportingStrategyAndLeaseManagement")}</p>
             </div>
             <div className="flex flex-wrap gap-2 shrink-0">
-              <Link href="/owner/reporting" className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors no-underline">{t("owner:index.text.reporting")}</Link>
-              <Link href="/owner/finance" className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors no-underline">{t("owner:dashboard.moreTools.finance")}</Link>
-              <Link href="/owner/leases" className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors no-underline">{t("owner:index.text.leases")}</Link>
+              <Link href="/owner/reporting" className="rounded-xl border border-surface-border bg-surface px-4 py-2 text-sm font-medium text-muted-dark hover:bg-surface-subtle transition-colors no-underline">{t("owner:index.text.reporting")}</Link>
+              <Link href="/owner/finance" className="rounded-xl border border-surface-border bg-surface px-4 py-2 text-sm font-medium text-muted-dark hover:bg-surface-subtle transition-colors no-underline">{t("owner:dashboard.moreTools.finance")}</Link>
+              <Link href="/owner/leases" className="rounded-xl border border-surface-border bg-surface px-4 py-2 text-sm font-medium text-muted-dark hover:bg-surface-subtle transition-colors no-underline">{t("owner:index.text.leases")}</Link>
               <Link href="/owner/approvals" className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-colors no-underline">{t("owner:index.text.allApprovals")}</Link>
             </div>
           </div>

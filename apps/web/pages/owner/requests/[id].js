@@ -103,8 +103,8 @@ function buildApprovalReason(r, rfpData) {
 function Field({ label, children }) {
   return (
     <div>
-      <dt className="text-xs font-medium text-slate-500 uppercase tracking-wide">{label}</dt>
-      <dd className="mt-0.5 text-sm text-slate-900">{children || "\u2014"}</dd>
+      <dt className="text-xs font-medium text-muted uppercase tracking-wide">{label}</dt>
+      <dd className="mt-0.5 text-sm text-foreground">{children || "\u2014"}</dd>
     </div>
   );
 }
@@ -119,7 +119,7 @@ function StatusPipeline({ status, payingParty }) {
   const isTenantFunded = payingParty === "TENANT";
 
   function connectorColor(i) {
-    if (i >= idx) return "bg-slate-200";
+    if (i >= idx) return "bg-surface-border";
     if (isRejected && !isTenantFunded) return "bg-red-300";
     if (isTenantFunded && isRejected) return "bg-orange-300";
     return "bg-green-400";
@@ -134,7 +134,7 @@ function StatusPipeline({ status, payingParty }) {
     if (tenantFundedHere) return "bg-orange-500 border-orange-600";
     if (isCurrent)        return "bg-indigo-500 border-indigo-600 ring-4 ring-indigo-100";
     if (reached)          return "bg-green-500 border-green-600";
-    return "bg-slate-200 border-slate-300";
+    return "bg-surface-border border-muted-ring";
   }
 
   function getLabelText(stage, i) {
@@ -159,7 +159,7 @@ function StatusPipeline({ status, payingParty }) {
     if (tenantFundedHere) return "text-orange-600 font-semibold";
     if (isCurrent)        return "text-indigo-700 font-semibold";
     if (reached)          return "text-green-700";
-    return "text-slate-400";
+    return "text-foreground-dim";
   }
 
   const currentStage = stages[idx];
@@ -180,11 +180,11 @@ function StatusPipeline({ status, payingParty }) {
             <span className={cn("text-sm truncate", getLabelCls(idx))}>{getLabelText(currentStage, idx)}</span>
             {nextStage && (
               <>
-                <svg className="h-3.5 w-3.5 text-slate-300 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <svg className="h-3.5 w-3.5 text-foreground-dim shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                 </svg>
                 <div className={cn("h-3 w-3 rounded-full border-2 shrink-0", getDotCls(idx + 1))} />
-                <span className={cn("text-sm truncate text-slate-400", getLabelCls(idx + 1))}>{getLabelText(nextStage, idx + 1)}</span>
+                <span className={cn("text-sm truncate text-foreground-dim", getLabelCls(idx + 1))}>{getLabelText(nextStage, idx + 1)}</span>
               </>
             )}
           </div>
@@ -193,14 +193,14 @@ function StatusPipeline({ status, payingParty }) {
             viewBox="0 0 20 20"
             fill="currentColor"
             aria-hidden="true"
-            className={cn("h-4 w-4 shrink-0 text-slate-400 transition-transform duration-200", expanded && "rotate-180")}
+            className={cn("h-4 w-4 shrink-0 text-foreground-dim transition-transform duration-200", expanded && "rotate-180")}
           >
             <path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
           </svg>
         </button>
 
         {expanded && (
-          <div className="mt-3 space-y-2 border-t border-slate-100 pt-3">
+          <div className="mt-3 space-y-2 border-t border-surface-divider pt-3">
             {stages.map((stage, i) => (
               <div key={stage.key} className="flex items-start gap-3">
                 <div className="flex flex-col items-center pt-0.5">
@@ -247,10 +247,10 @@ function DepreciationBar({ pct }) {
                  "bg-green-500";
   return (
     <div className="flex items-center gap-2">
-      <div className="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden">
+      <div className="flex-1 h-2 rounded-full bg-surface-hover overflow-hidden">
         <div className={cn("h-full rounded-full transition-all", c)} style={{ width: `${Math.min(pct, 100)}%` }} />
       </div>
-      <span className="text-xs font-medium text-slate-600 tabular-nums w-10 text-right">{pct}%</span>
+      <span className="text-xs font-medium text-muted-text tabular-nums w-10 text-right">{pct}%</span>
     </div>
   );
 }
@@ -262,26 +262,26 @@ function AssetRecommendationContent({ assetId, repairReplaceData, requestEstimat
   if (!assetId) {
     return (
       <div className="py-6 text-center">
-        <p className="text-sm text-slate-400 m-0">{t("owner:requestsId.text.noAssetLinkedToThisRequest")}</p>
-        <p className="text-xs text-slate-400 mt-1 m-0">{t("owner:requestsId.text.linkAnAssetToGetRepairReplaceRecommendations")}</p>
+        <p className="text-sm text-foreground-dim m-0">{t("owner:requestsId.text.noAssetLinkedToThisRequest")}</p>
+        <p className="text-xs text-foreground-dim mt-1 m-0">{t("owner:requestsId.text.linkAnAssetToGetRepairReplaceRecommendations")}</p>
       </div>
     );
   }
 
   if (!repairReplaceData || repairReplaceData.loading) {
-    return <p className="text-sm text-slate-400 animate-pulse m-0">Loading asset analysis&hellip;</p>;
+    return <p className="text-sm text-foreground-dim animate-pulse m-0">Loading asset analysis&hellip;</p>;
   }
 
   if (repairReplaceData.error) {
     return (
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">{t("owner:requestsId.text.recommendation")}</span>
-          <p className="mt-1 text-sm text-slate-400 m-0">{t("owner:requestsId.text.notAvailable")}</p>
+          <span className="text-xs font-medium text-muted uppercase tracking-wide block">{t("owner:requestsId.text.recommendation")}</span>
+          <p className="mt-1 text-sm text-foreground-dim m-0">{t("owner:requestsId.text.notAvailable")}</p>
         </div>
         <div>
-          <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">{t("owner:requestsId.text.estimatedPrice")}</span>
-          <p className="mt-1 text-sm text-slate-400 m-0">{t("owner:requestsId.text.notAvailable")}</p>
+          <span className="text-xs font-medium text-muted uppercase tracking-wide block">{t("owner:requestsId.text.estimatedPrice")}</span>
+          <p className="mt-1 text-sm text-foreground-dim m-0">{t("owner:requestsId.text.notAvailable")}</p>
         </div>
       </div>
     );
@@ -293,7 +293,7 @@ function AssetRecommendationContent({ assetId, repairReplaceData, requestEstimat
   if (!item) {
     return (
       <div className="py-4 text-center">
-        <p className="text-sm text-slate-400 m-0">{t("owner:requestsId.text.noRepairvsreplaceDataAvailableForThisAsset")}</p>
+        <p className="text-sm text-foreground-dim m-0">{t("owner:requestsId.text.noRepairvsreplaceDataAvailableForThisAsset")}</p>
       </div>
     );
   }
@@ -305,12 +305,12 @@ function AssetRecommendationContent({ assetId, repairReplaceData, requestEstimat
       <div className="flex items-start gap-3">
         <Badge variant={rec.variant} size="lg" className="shrink-0">{rec.label}</Badge>
         {item.explanation && (
-          <p className="text-xs text-slate-500 leading-relaxed m-0">{item.explanation}</p>
+          <p className="text-xs text-muted leading-relaxed m-0">{item.explanation}</p>
         )}
       </div>
 
       <div>
-        <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
+        <div className="flex items-center justify-between text-xs text-muted mb-1">
           <span className="font-medium">{item.applianceName || "Asset"}</span>
           {item.ageMonths != null && item.usefulLifeMonths != null && (
             <span>{Math.round(item.ageMonths / 12)}y / {Math.round(item.usefulLifeMonths / 12)}y useful life</span>
@@ -319,33 +319,33 @@ function AssetRecommendationContent({ assetId, repairReplaceData, requestEstimat
         <DepreciationBar pct={item.depreciationPct ?? 0} />
       </div>
 
-      <div className="grid grid-cols-2 gap-4 pt-3 border-t border-slate-100">
+      <div className="grid grid-cols-2 gap-4 pt-3 border-t border-surface-divider">
         <div>
-          <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">{t("owner:requestsId.text.estRepair")}</span>
-          <p className="mt-0.5 text-sm font-semibold text-slate-900 m-0">
+          <span className="text-xs font-medium text-muted uppercase tracking-wide block">{t("owner:requestsId.text.estRepair")}</span>
+          <p className="mt-0.5 text-sm font-semibold text-foreground m-0">
             {requestEstimate > 0
               ? formatCurrency(requestEstimate)
               : item.cumulativeRepairCostChf > 0
-                ? <>{formatCurrency(item.cumulativeRepairCostChf)} <span className="font-normal text-xs text-slate-400">(cumulative)</span></>
+                ? <>{formatCurrency(item.cumulativeRepairCostChf)} <span className="font-normal text-xs text-foreground-dim">(cumulative)</span></>
                 : "\u2014"}
           </p>
         </div>
         <div>
-          <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">{t("owner:requestsId.text.estReplacement")}</span>
-          <p className="mt-0.5 text-sm font-semibold text-slate-900 m-0">
+          <span className="text-xs font-medium text-muted uppercase tracking-wide block">{t("owner:requestsId.text.estReplacement")}</span>
+          <p className="mt-0.5 text-sm font-semibold text-foreground m-0">
             {item.estimatedReplacementCostChf > 0 ? formatCurrency(item.estimatedReplacementCostChf) : "\u2014"}
           </p>
         </div>
       </div>
 
       {item.repairReplaceRatio != null && item.repairReplaceRatio > 0 && (
-        <div className="flex items-center gap-4 text-xs text-slate-500">
+        <div className="flex items-center gap-4 text-xs text-muted">
           <span>
             Ratio:{" "}
             <strong className={
               item.repairReplaceRatio >= 0.6 ? "text-red-600"    :
               item.repairReplaceRatio >= 0.4 ? "text-orange-600" :
-              "text-slate-700"
+              "text-muted-dark"
             }>
               {Math.round(item.repairReplaceRatio * 100)}%
             </strong>
@@ -357,7 +357,7 @@ function AssetRecommendationContent({ assetId, repairReplaceData, requestEstimat
                 item.breakEvenMonths === 0 ? "text-red-600"    :
                 item.breakEvenMonths < 12  ? "text-red-600"    :
                 item.breakEvenMonths < 36  ? "text-amber-600"  :
-                "text-slate-700"
+                "text-muted-dark"
               }>
                 {item.breakEvenMonths === 0 ? "Exceeded" : `${item.breakEvenMonths}mo`}
               </strong>
@@ -506,12 +506,12 @@ export default function OwnerRequestDetailPage() {
           <div className="mb-6 flex flex-wrap items-center gap-3">
             <button
               onClick={() => router.push("/owner/approvals")}
-              className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-500 hover:bg-slate-50 transition mr-1"
+              className="rounded-lg border border-surface-border bg-surface px-3 py-1.5 text-sm font-medium text-muted hover:bg-surface-subtle transition mr-1"
               aria-label={t("owner:requestsId.ariaLabel.backToApprovals")}
             >
               &larr;
             </button>
-            <h1 className="text-xl font-bold text-slate-900 m-0">
+            <h1 className="text-xl font-bold text-foreground m-0">
               {loading ? "Request" : `Request #${r?.requestNumber || id?.slice(0, 8) || ""}`}
             </h1>
             {!loading && r && (
@@ -550,13 +550,13 @@ export default function OwnerRequestDetailPage() {
                         {contractorName && (
                           <div>
                             <span className="text-xs font-medium text-amber-700 uppercase tracking-wide block">{t("owner:requestsId.text.selectedContractor")}</span>
-                            <span className="text-sm font-semibold text-slate-900">{contractorName}</span>
+                            <span className="text-sm font-semibold text-foreground">{contractorName}</span>
                           </div>
                         )}
                         {amountChf && (
                           <div>
                             <span className="text-xs font-medium text-amber-700 uppercase tracking-wide block">{t("owner:requestsId.text.quoteAmount")}</span>
-                            <span className="text-sm font-semibold text-slate-900">{amountChf}</span>
+                            <span className="text-sm font-semibold text-foreground">{amountChf}</span>
                           </div>
                         )}
                         {rfpId && (
@@ -623,31 +623,31 @@ export default function OwnerRequestDetailPage() {
                   <div className="flex flex-wrap items-baseline gap-x-6 gap-y-2 mb-4">
                     {building && (
                       <div>
-                        <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">{t("owner:requestsId.text.building")}</span>
-                        <span className="text-sm font-medium text-slate-900">{building.name}</span>
-                        {building.address && <p className="text-xs text-slate-400 mt-0.5 m-0">{building.address}</p>}
+                        <span className="text-xs font-medium text-muted uppercase tracking-wide block">{t("owner:requestsId.text.building")}</span>
+                        <span className="text-sm font-medium text-foreground">{building.name}</span>
+                        {building.address && <p className="text-xs text-foreground-dim mt-0.5 m-0">{building.address}</p>}
                       </div>
                     )}
                     {unit && (
                       <div>
-                        <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">{t("owner:requestsId.text.unit")}</span>
-                        <span className="text-sm font-medium text-slate-900">{unit.unitNumber}</span>
-                        {unit.floor != null && <span className="text-xs text-slate-400 ml-1.5">Floor {unit.floor}</span>}
+                        <span className="text-xs font-medium text-muted uppercase tracking-wide block">{t("owner:requestsId.text.unit")}</span>
+                        <span className="text-sm font-medium text-foreground">{unit.unitNumber}</span>
+                        {unit.floor != null && <span className="text-xs text-foreground-dim ml-1.5">Floor {unit.floor}</span>}
                       </div>
                     )}
                     {tenant && (
                       <div>
-                        <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">{t("owner:requestsId.text.tenant")}</span>
-                        <span className="text-sm font-medium text-slate-900">{tenant.name}</span>
-                        {tenant.phone && <p className="text-xs text-slate-400 mt-0.5 m-0">{tenant.phone}</p>}
+                        <span className="text-xs font-medium text-muted uppercase tracking-wide block">{t("owner:requestsId.text.tenant")}</span>
+                        <span className="text-sm font-medium text-foreground">{tenant.name}</span>
+                        {tenant.phone && <p className="text-xs text-foreground-dim mt-0.5 m-0">{tenant.phone}</p>}
                       </div>
                     )}
                   </div>
 
                   <div className="mb-4">
-                    <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">{t("owner:requestsId.text.description")}</span>
-                    <p className="mt-1 text-sm text-slate-700 leading-relaxed whitespace-pre-wrap m-0">
-                      {r.description || <span className="text-slate-400">&mdash;</span>}
+                    <span className="text-xs font-medium text-muted uppercase tracking-wide block">{t("owner:requestsId.text.description")}</span>
+                    <p className="mt-1 text-sm text-muted-dark leading-relaxed whitespace-pre-wrap m-0">
+                      {r.description || <span className="text-foreground-dim">&mdash;</span>}
                     </p>
                   </div>
 
@@ -683,7 +683,7 @@ export default function OwnerRequestDetailPage() {
 
                   {r.assignedContractor && (
                     <div className="card-section">
-                      <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">{t("owner:requestsId.text.contractor")}</h4>
+                      <h4 className="text-xs font-semibold uppercase tracking-wider text-foreground-dim mb-3">{t("owner:requestsId.text.contractor")}</h4>
                       <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3">
                         <Field label={t("owner:requestsId.prop.name")}>
                           <span className="text-sm font-medium">
@@ -698,7 +698,7 @@ export default function OwnerRequestDetailPage() {
 
                   {asset && (
                     <div className="card-section">
-                      <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">{t("owner:requestsId.text.asset")}</h4>
+                      <h4 className="text-xs font-semibold uppercase tracking-wider text-foreground-dim mb-3">{t("owner:requestsId.text.asset")}</h4>
                       <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3">
                         <Field label={t("owner:requestsId.prop.name")}>{asset.name || "\u2014"}</Field>
                         {asset.brand       && <Field label={t("owner:requestsId.prop.brand")}>{asset.brand}</Field>}
@@ -729,7 +729,7 @@ export default function OwnerRequestDetailPage() {
                     />
                     {!legalState.loading && !legalState.data && !legalState.error && (
                       <div className="px-6 py-8 text-center">
-                        <p className="text-sm text-slate-400 m-0">{t("owner:requestsId.text.noLegalAnalysisAvailableForThisRequest")}</p>
+                        <p className="text-sm text-foreground-dim m-0">{t("owner:requestsId.text.noLegalAnalysisAvailableForThisRequest")}</p>
                       </div>
                     )}
                   </Panel>
@@ -739,24 +739,24 @@ export default function OwnerRequestDetailPage() {
                       <div className="space-y-4">
                         <div className="flex flex-wrap items-baseline gap-x-5 gap-y-1">
                           <div>
-                            <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">{t("owner:requestsId.text.asset")}</span>
-                            <span className="text-sm font-medium text-slate-900">{asset.name || "\u2014"}</span>
+                            <span className="text-xs font-medium text-muted uppercase tracking-wide block">{t("owner:requestsId.text.asset")}</span>
+                            <span className="text-sm font-medium text-foreground">{asset.name || "\u2014"}</span>
                           </div>
                           {asset.brand && (
                             <div>
-                              <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">{t("owner:requestsId.text.brand")}</span>
-                              <span className="text-sm text-slate-700">{asset.brand}</span>
+                              <span className="text-xs font-medium text-muted uppercase tracking-wide block">{t("owner:requestsId.text.brand")}</span>
+                              <span className="text-sm text-muted-dark">{asset.brand}</span>
                             </div>
                           )}
                           {asset.installedAt && (
                             <div>
-                              <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">{t("owner:requestsId.text.installed")}</span>
-                              <span className="text-sm text-slate-700">{formatDate(asset.installedAt)}</span>
+                              <span className="text-xs font-medium text-muted uppercase tracking-wide block">{t("owner:requestsId.text.installed")}</span>
+                              <span className="text-sm text-muted-dark">{formatDate(asset.installedAt)}</span>
                             </div>
                           )}
                         </div>
                         {r.assetId && (
-                          <div className="border-t border-slate-100 pt-4">
+                          <div className="border-t border-surface-divider pt-4">
                             <AssetRecommendationContent
                               assetId={r.assetId}
                               repairReplaceData={repairReplace}
@@ -767,7 +767,7 @@ export default function OwnerRequestDetailPage() {
                       </div>
                     ) : (
                       <div className="py-6 text-center">
-                        <p className="text-sm text-slate-400 m-0">{t("owner:requestsId.text.noAssetLinkedToThisRequest")}</p>
+                        <p className="text-sm text-foreground-dim m-0">{t("owner:requestsId.text.noAssetLinkedToThisRequest")}</p>
                       </div>
                     )}
                   </Panel>

@@ -18,6 +18,7 @@ import { useLocalSort } from "../../lib/tableUtils";
 import { withTranslations } from "../../lib/i18n";
 import { useTranslation } from "next-i18next";
 import NotificationPreferencesTab from "../../components/NotificationPreferencesTab";
+import AppearanceTab from "../../components/AppearanceTab";
 
 const SETTINGS_TABS = [
   { key: "ACCOUNT" },
@@ -26,8 +27,9 @@ const SETTINGS_TABS = [
   { key: "INTEGRATIONS" },
   { key: "LEGAL" },
   { key: "STANDARDS" },
+  { key: "APPEARANCE" },
 ];
-const TAB_KEYS = ["account", "risk-profile", "notifications", "integrations", "legal", "standards"];
+const TAB_KEYS = ["account", "risk-profile", "notifications", "integrations", "legal", "standards", "appearance"];
 
 const OWNER_EVENT_GROUPS = [
   { groupKey: "requests", events: ["REQUEST_PENDING_OWNER_APPROVAL"] },
@@ -227,7 +229,7 @@ export default function OwnerSettingsPage() {
                     ) : (
                       <div className="grid gap-3 sm:grid-cols-2">
                         <label className="flex flex-col gap-1">
-                          <span className="text-xs font-medium text-slate-600">{t("owner:settings.text.displayName")}</span>
+                          <span className="text-xs font-medium text-muted-text">{t("owner:settings.text.displayName")}</span>
                           <input
                             type="text"
                             value={nameDraft}
@@ -237,7 +239,7 @@ export default function OwnerSettingsPage() {
                           />
                         </label>
                         <label className="flex flex-col gap-1">
-                          <span className="text-xs font-medium text-slate-600">{t("owner:settings.text.emailAddress")}</span>
+                          <span className="text-xs font-medium text-muted-text">{t("owner:settings.text.emailAddress")}</span>
                           <input
                             type="email"
                             value={emailDraft}
@@ -245,7 +247,7 @@ export default function OwnerSettingsPage() {
                             className="input"
                             placeholder={t("owner:settings.placeholder.youExampleCom")}
                           />
-                          <span className="text-xs text-slate-400">{t("owner:settings.text.changingYourEmailAlsoChangesYourLoginCredential")}</span>
+                          <span className="text-xs text-foreground-dim">{t("owner:settings.text.changingYourEmailAlsoChangesYourLoginCredential")}</span>
                         </label>
                       </div>
                     )}
@@ -265,7 +267,7 @@ export default function OwnerSettingsPage() {
                     <div className="font-bold">{t("owner:settings.text.changePassword")}</div>
                     <div className="grid gap-3 sm:grid-cols-3">
                       <label className="flex flex-col gap-1">
-                        <span className="text-xs font-medium text-slate-600">{t("owner:settings.text.currentPassword")}</span>
+                        <span className="text-xs font-medium text-muted-text">{t("owner:settings.text.currentPassword")}</span>
                         <input
                           type="password"
                           value={currentPwd}
@@ -275,7 +277,7 @@ export default function OwnerSettingsPage() {
                         />
                       </label>
                       <label className="flex flex-col gap-1">
-                        <span className="text-xs font-medium text-slate-600">{t("owner:settings.text.newPassword")}</span>
+                        <span className="text-xs font-medium text-muted-text">{t("owner:settings.text.newPassword")}</span>
                         <input
                           type="password"
                           value={newPwd}
@@ -285,7 +287,7 @@ export default function OwnerSettingsPage() {
                         />
                       </label>
                       <label className="flex flex-col gap-1">
-                        <span className="text-xs font-medium text-slate-600">{t("owner:settings.text.confirmNewPassword")}</span>
+                        <span className="text-xs font-medium text-muted-text">{t("owner:settings.text.confirmNewPassword")}</span>
                         <input
                           type="password"
                           value={confirmPwd}
@@ -328,26 +330,26 @@ export default function OwnerSettingsPage() {
                   ) : (
                     <div className="card space-y-4">
                       <div>
-                        <p className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("owner:settings.text.primaryArchetype")}</p>
-                        <h2 className="mt-1 text-xl font-bold text-slate-900">
+                        <p className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("owner:settings.text.primaryArchetype")}</p>
+                        <h2 className="mt-1 text-xl font-bold text-foreground">
                           {USER_LABELS[stratProfile.primaryArchetype] || stratProfile.primaryArchetype}
                         </h2>
                         {stratProfile.secondaryArchetype && stratProfile.secondaryArchetype !== stratProfile.primaryArchetype && (
-                          <p className="mt-1 text-sm text-slate-600">
+                          <p className="mt-1 text-sm text-muted-text">
                             Secondary: {USER_LABELS[stratProfile.secondaryArchetype] || stratProfile.secondaryArchetype}
                           </p>
                         )}
                       </div>
                       {stratProfile.riskTolerance && (
                         <div>
-                          <p className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("owner:settings.text.riskTolerance")}</p>
-                          <p className="mt-1 text-sm text-slate-800 capitalize">{stratProfile.riskTolerance.toLowerCase()}</p>
+                          <p className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("owner:settings.text.riskTolerance")}</p>
+                          <p className="mt-1 text-sm text-foreground capitalize">{stratProfile.riskTolerance.toLowerCase()}</p>
                         </div>
                       )}
                       {stratProfile.investmentHorizonYears && (
                         <div>
-                          <p className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("owner:settings.text.investmentHorizon")}</p>
-                          <p className="mt-1 text-sm text-slate-800">{stratProfile.investmentHorizonYears} years</p>
+                          <p className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("owner:settings.text.investmentHorizon")}</p>
+                          <p className="mt-1 text-sm text-foreground">{stratProfile.investmentHorizonYears} years</p>
                         </div>
                       )}
                       <div>
@@ -387,8 +389,8 @@ export default function OwnerSettingsPage() {
               <div className={activeTab === 4 ? "tab-panel-active" : "tab-panel"}>
                 <div className="px-4 py-4">
                   <div>
-                    <h3 className="text-sm font-semibold text-slate-800">{t("owner:settings.heading.legalSources")}</h3>
-                    <p className="text-xs text-slate-500 mt-0.5">
+                    <h3 className="text-sm font-semibold text-foreground">{t("owner:settings.heading.legalSources")}</h3>
+                    <p className="text-xs text-muted mt-0.5">
                       Swiss tenancy law data sources — reference rates, CPI, ASLOCA depreciation, and legislation.
                     </p>
                   </div>
@@ -481,9 +483,9 @@ export default function OwnerSettingsPage() {
 
                 {!legalLoading && legalVariables.length > 0 && (
                   <>
-                    <div className="px-4 py-3 border-t border-slate-100">
-                      <h3 className="text-sm font-semibold text-slate-800">{t("owner:settings.heading.legalVariables")}</h3>
-                      <p className="text-xs text-slate-500 mt-0.5">{legalVariables.length} variable{legalVariables.length !== 1 ? "s" : ""} tracked</p>
+                    <div className="px-4 py-3 border-t border-surface-divider">
+                      <h3 className="text-sm font-semibold text-foreground">{t("owner:settings.heading.legalVariables")}</h3>
+                      <p className="text-xs text-muted mt-0.5">{legalVariables.length} variable{legalVariables.length !== 1 ? "s" : ""} tracked</p>
                     </div>
                     <div className="hidden sm:block data-table-wrap">
                       <table className="data-table">
@@ -513,7 +515,7 @@ export default function OwnerSettingsPage() {
                     <div className="sm:hidden overflow-hidden rounded-lg border border-table-border divide-y divide-table-divider">
                       {legalVariables.map((v) => (
                         <div key={v.id} className="table-card">
-                          <span className="font-mono text-xs text-slate-700">{v.key}</span>
+                          <span className="font-mono text-xs text-muted-dark">{v.key}</span>
                           <p className="table-card-head mt-0.5">{v.description || "—"}</p>
                           <div className="table-card-footer">
                             <span>{v.versions?.length || 0} version{(v.versions?.length || 0) !== 1 ? "s" : ""}</span>
@@ -529,6 +531,9 @@ export default function OwnerSettingsPage() {
 
           {/* Standards tab — renders its own panels */}
           {activeTab === 5 && <DepreciationStandards />}
+
+          {/* Appearance tab — dark / light mode toggle */}
+          {activeTab === 6 && <AppearanceTab t={t} ns="owner" />}
 
         </PageContent>
       </PageShell>
@@ -556,7 +561,7 @@ function LegalScopeFilterBar({ sources, activeFilter, onFilter }) {
             "rounded-full px-3 py-1 text-xs font-medium transition-colors",
             activeFilter === tab.value
               ? "bg-blue-600 text-white"
-              : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+              : "bg-surface-hover text-muted-text hover:bg-surface-border"
           )}
         >
           {t(`owner:settings.tabs.${tab.key.toLowerCase()}`)}

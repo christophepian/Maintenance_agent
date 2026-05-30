@@ -99,21 +99,21 @@ export default function RentAdjustmentDetail() {
           <Panel title={t("manager:rentAdjustmentsId.title.rentChange")} className="mt-4">
             <div className="grid grid-cols-3 gap-6 text-center">
               <div>
-                <span className="text-slate-500 text-sm block">{t("manager:rent_AdjustmentsId.text.previousRent")}</span>
+                <span className="text-muted text-sm block">{t("manager:rent_AdjustmentsId.text.previousRent")}</span>
                 <span className="text-xl font-semibold">{formatChfCents(adj.previousRentCents)}</span>
-                <span className="text-xs text-slate-400 block">{t("manager:rent_AdjustmentsId.text.month")}</span>
+                <span className="text-xs text-foreground-dim block">{t("manager:rent_AdjustmentsId.text.month")}</span>
               </div>
               <div>
-                <span className="text-slate-500 text-sm block">{t("manager:rent_AdjustmentsId.text.newRent")}</span>
+                <span className="text-muted text-sm block">{t("manager:rent_AdjustmentsId.text.newRent")}</span>
                 <span className="text-xl font-bold text-indigo-700">{formatChfCents(adj.newRentCents)}</span>
-                <span className="text-xs text-slate-400 block">{t("manager:rent_AdjustmentsId.text.month")}</span>
+                <span className="text-xs text-foreground-dim block">{t("manager:rent_AdjustmentsId.text.month")}</span>
               </div>
               <div>
-                <span className="text-slate-500 text-sm block">{t("manager:rent_AdjustmentsId.text.change")}</span>
+                <span className="text-muted text-sm block">{t("manager:rent_AdjustmentsId.text.change")}</span>
                 <span className={cn("text-xl font-semibold", adj.adjustmentCents > 0 ? "text-red-600" : adj.adjustmentCents < 0 ? "text-green-600" : "")}>
                   {adj.adjustmentCents > 0 ? "+" : ""}{formatChfCents(adj.adjustmentCents)}
                 </span>
-                <span className="text-xs text-slate-400 block">({changePct}%)</span>
+                <span className="text-xs text-foreground-dim block">({changePct}%)</span>
               </div>
             </div>
           </Panel>
@@ -135,8 +135,8 @@ export default function RentAdjustmentDetail() {
               </DetailGrid>
               {adj.calculationDetails && (
                 <details className="mt-3">
-                  <summary className="text-xs text-slate-400 cursor-pointer">{t("manager:rent_AdjustmentsId.text.calculationBreakdown")}</summary>
-                  <pre className="mt-1 text-xs bg-slate-50 rounded p-2 overflow-x-auto">
+                  <summary className="text-xs text-foreground-dim cursor-pointer">{t("manager:rent_AdjustmentsId.text.calculationBreakdown")}</summary>
+                  <pre className="mt-1 text-xs bg-surface-subtle rounded p-2 overflow-x-auto">
                     {JSON.stringify(adj.calculationDetails, null, 2)}
                   </pre>
                 </details>

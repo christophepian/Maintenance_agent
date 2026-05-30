@@ -103,7 +103,7 @@ export default function TenantInvoiceDetailPage() {
         {/* Back link */}
         <Link
           href="/tenant/myhome"
-          className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 mb-4"
+          className="inline-flex items-center gap-1 text-sm text-muted hover:text-muted-dark mb-4"
         >
           ← Back to My Home
         </Link>
@@ -111,18 +111,18 @@ export default function TenantInvoiceDetailPage() {
         {error && <div className="notice notice-err mb-4">{error}</div>}
 
         {loading ? (
-          <div className="text-center py-12 text-slate-500">{t("tenant:invoicesId.text.loadingInvoice")}</div>
+          <div className="text-center py-12 text-muted">{t("tenant:invoicesId.text.loadingInvoice")}</div>
         ) : !invoice ? null : (
           <>
             {/* Invoice header */}
             <div className="card p-6 mb-6">
               <div className="flex items-start justify-between mb-4">
                 <div>
-                  <h1 className="text-xl font-bold text-slate-900">
+                  <h1 className="text-xl font-bold text-foreground">
                     {invoice.description}
                   </h1>
                   {invoice.invoiceNumber && (
-                    <p className="text-sm text-slate-500 mt-1">
+                    <p className="text-sm text-muted mt-1">
                       Invoice #{invoice.invoiceNumber}
                     </p>
                   )}
@@ -135,24 +135,24 @@ export default function TenantInvoiceDetailPage() {
               {/* Details grid */}
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <p className="text-slate-500">{t("tenant:invoicesId.text.amount")}</p>
+                  <p className="text-muted">{t("tenant:invoicesId.text.amount")}</p>
                   <p className="font-semibold text-lg">
                     {formatChf(invoice.totalAmountChf)}
                   </p>
                 </div>
                 <div>
-                  <p className="text-slate-500">{t("tenant:invoicesId.text.currency")}</p>
+                  <p className="text-muted">{t("tenant:invoicesId.text.currency")}</p>
                   <p className="font-medium">{invoice.currency || "CHF"}</p>
                 </div>
                 {invoice.issueDate && (
                   <div>
-                    <p className="text-slate-500">{t("tenant:invoicesId.text.issueDate")}</p>
+                    <p className="text-muted">{t("tenant:invoicesId.text.issueDate")}</p>
                     <p className="font-medium">{formatDate(invoice.issueDate)}</p>
                   </div>
                 )}
                 {invoice.dueDate && (
                   <div>
-                    <p className="text-slate-500">{t("tenant:invoicesId.text.dueDate")}</p>
+                    <p className="text-muted">{t("tenant:invoicesId.text.dueDate")}</p>
                     <p className={cn(
                       "font-medium",
                       new Date(invoice.dueDate) < new Date() && invoice.status !== "PAID" && "text-red-600"
@@ -163,7 +163,7 @@ export default function TenantInvoiceDetailPage() {
                 )}
                 {invoice.paidAt && (
                   <div>
-                    <p className="text-slate-500">{t("tenant:invoicesId.text.paid")}</p>
+                    <p className="text-muted">{t("tenant:invoicesId.text.paid")}</p>
                     <p className="font-medium text-green-600">
                       {formatDate(invoice.paidAt)}
                     </p>
@@ -171,7 +171,7 @@ export default function TenantInvoiceDetailPage() {
                 )}
                 {invoice.unit && (
                   <div>
-                    <p className="text-slate-500">{t("tenant:invoicesId.text.property")}</p>
+                    <p className="text-muted">{t("tenant:invoicesId.text.property")}</p>
                     <p className="font-medium">
                       {invoice.unit.building?.name || "Property"}
                       {invoice.unit.unitNumber ? ` — Unit ${invoice.unit.unitNumber}` : ""}
@@ -186,51 +186,51 @@ export default function TenantInvoiceDetailPage() {
               <h2 className="text-lg font-semibold mb-4">{t("tenant:invoicesId.heading.paymentQrCode")}</h2>
 
               {qrLoading ? (
-                <div className="text-center py-8 text-slate-500">
+                <div className="text-center py-8 text-muted">
                   Generating QR code…
                 </div>
               ) : qrError ? (
                 <div className="text-center py-8">
-                  <p className="text-slate-400 text-3xl mb-2">📄</p>
-                  <p className="text-sm text-slate-500">{qrError}</p>
+                  <p className="text-foreground-dim text-3xl mb-2">📄</p>
+                  <p className="text-sm text-muted">{qrError}</p>
                 </div>
               ) : qrBill ? (
                 <div className="space-y-4">
                   {/* QR Code + caption */}
                   <div className="flex flex-col items-center gap-2">
                     <div
-                      className="border border-slate-200 rounded-lg p-4 bg-white"
+                      className="border border-surface-border rounded-lg p-4 bg-surface"
                       dangerouslySetInnerHTML={{ __html: qrBill.qrCodeSVG }}
                     />
-                    <p className="text-xs text-slate-700 text-center">
+                    <p className="text-xs text-muted-dark text-center">
                       Scan with your e-banking app to pay this invoice or set up a standing order.
                     </p>
                   </div>
 
                   {/* Payment details */}
-                  <div className="bg-slate-50 rounded-lg p-4 text-sm space-y-2">
+                  <div className="bg-surface-subtle rounded-lg p-4 text-sm space-y-2">
                     <div className="flex justify-between">
-                      <span className="text-slate-500">{t("tenant:invoicesId.text.payableTo")}</span>
+                      <span className="text-muted">{t("tenant:invoicesId.text.payableTo")}</span>
                       <span className="font-medium text-right">{qrBill.creditorName}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-slate-500">IBAN</span>
+                      <span className="text-muted">IBAN</span>
                       <span className="font-mono text-xs">
                         {qrBill.creditorIban?.replace(/(.{4})/g, "$1 ").trim()}
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-slate-500">{t("tenant:invoicesId.text.reference")}</span>
+                      <span className="text-muted">{t("tenant:invoicesId.text.reference")}</span>
                       <span className="font-mono text-xs break-all">{qrBill.reference}</span>
                     </div>
                     {qrBill.referenceType && (
                       <div className="flex justify-between">
-                        <span className="text-slate-500">{t("tenant:invoicesId.text.referenceType")}</span>
+                        <span className="text-muted">{t("tenant:invoicesId.text.referenceType")}</span>
                         <span className="font-medium">{qrBill.referenceType}</span>
                       </div>
                     )}
                     <div className="flex justify-between">
-                      <span className="text-slate-500">{t("tenant:invoicesId.text.amount")}</span>
+                      <span className="text-muted">{t("tenant:invoicesId.text.amount")}</span>
                       <span className="font-semibold">CHF {qrBill.amount}</span>
                     </div>
                   </div>

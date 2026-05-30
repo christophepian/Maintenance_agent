@@ -112,9 +112,9 @@ function UploadModal({ onClose, onUploaded }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 p-6 space-y-4">
+      <div className="bg-surface rounded-xl shadow-2xl w-full max-w-md mx-4 p-6 space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-base font-semibold text-slate-900">
+          <h2 className="text-base font-semibold text-foreground">
             {t("manager:financeImports.action.upload")}
           </h2>
           <button onClick={onClose} className="icon-btn" aria-label="Close">
@@ -129,7 +129,7 @@ function UploadModal({ onClose, onUploaded }) {
           <div
             className={cn(
               "border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors",
-              file ? "border-brand-ring bg-brand-light" : "border-slate-300 hover:border-slate-400",
+              file ? "border-brand-ring bg-brand-light" : "border-muted-ring hover:border-slate-400",
             )}
             onClick={() => fileInputRef.current?.click()}
             onDragOver={(e) => e.preventDefault()}
@@ -149,7 +149,7 @@ function UploadModal({ onClose, onUploaded }) {
             {file ? (
               <p className="text-sm text-brand-dark font-medium">{file.name}</p>
             ) : (
-              <p className="text-sm text-slate-500">Drop a PDF or image here, or click to select</p>
+              <p className="text-sm text-muted">Drop a PDF or image here, or click to select</p>
             )}
           </div>
 
@@ -227,14 +227,14 @@ function BatchRow({ batch, onDeleted, deletingId, onDelete, onDeleteBatch, delet
     <div className="border border-table-border rounded-lg overflow-hidden">
       {/* Batch header */}
       <div
-        className="flex items-center gap-2 px-4 py-3 bg-slate-50 cursor-pointer hover:bg-slate-100 transition-colors"
+        className="flex items-center gap-2 px-4 py-3 bg-surface-subtle cursor-pointer hover:bg-surface-hover transition-colors"
         onClick={() => setExpanded((v) => !v)}
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 20 20"
           fill="currentColor"
-          className={cn("w-4 h-4 text-slate-400 shrink-0 transition-transform duration-150", expanded ? "rotate-90" : "")}
+          className={cn("w-4 h-4 text-foreground-dim shrink-0 transition-transform duration-150", expanded ? "rotate-90" : "")}
         >
           <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
         </svg>
@@ -245,8 +245,8 @@ function BatchRow({ batch, onDeleted, deletingId, onDelete, onDeleteBatch, delet
         </svg>
 
         <div className="flex-1 min-w-0">
-          <span className="text-sm font-medium text-slate-800 truncate block">{fileName}</span>
-          <span className="text-xs text-slate-500">
+          <span className="text-sm font-medium text-foreground truncate block">{fileName}</span>
+          <span className="text-xs text-muted">
             {formatDate(batch.createdAt)}
             {buildingName ? ` · ${buildingName}` : ""}
             {" · "}{batch.statements?.length ?? 0} section{batch.statements?.length !== 1 ? "s" : ""}
@@ -258,7 +258,7 @@ function BatchRow({ batch, onDeleted, deletingId, onDelete, onDeleteBatch, delet
         </Badge>
         <button
           aria-label="Delete batch"
-          className="icon-btn text-slate-300 hover:text-destructive-text shrink-0"
+          className="icon-btn text-foreground-dim hover:text-destructive-text shrink-0"
           disabled={deletingBatchId === batch.id}
           title={hasApproved ? "Batch contains approved sections — only non-approved sections will be deleted" : "Delete this batch"}
           onClick={(e) => { e.stopPropagation(); onDeleteBatch(batch.id); }}
@@ -281,13 +281,13 @@ function BatchRow({ batch, onDeleted, deletingId, onDelete, onDeleteBatch, delet
           {batch.statements?.map((s) => (
             <div
               key={s.id}
-              className="flex items-center gap-3 px-4 py-3 pl-10 hover:bg-slate-50/80 cursor-pointer transition-colors"
+              className="flex items-center gap-3 px-4 py-3 pl-10 hover:bg-surface-subtle/80 cursor-pointer transition-colors"
               onClick={() => router.push(`/manager/finance/imports/${s.id}`)}
             >
-              <span className="text-xs font-medium text-slate-500 w-32 shrink-0">
+              <span className="text-xs font-medium text-muted w-32 shrink-0">
                 {SECTION_LABEL[s.sectionType] ?? s.sectionType}
               </span>
-              <span className="text-xs text-slate-400">
+              <span className="text-xs text-foreground-dim">
                 FY {s.fiscalYear}
                 {s.accountBalances?.length > 0 ? ` · ${s.accountBalances.length} rows` : ""}
               </span>
@@ -297,7 +297,7 @@ function BatchRow({ batch, onDeleted, deletingId, onDelete, onDeleteBatch, delet
               </Badge>
               <button
                 aria-label="Delete section"
-                className="icon-btn text-slate-300 hover:text-destructive-text shrink-0"
+                className="icon-btn text-foreground-dim hover:text-destructive-text shrink-0"
                 disabled={deletingId === s.id || s.status === "APPROVED"}
                 title={s.status === "APPROVED" ? "Approved sections cannot be deleted" : "Delete section"}
                 onClick={(e) => { e.stopPropagation(); onDelete(s.id, e); }}
@@ -352,7 +352,7 @@ function BatchCard({ batch, onDelete, deletingId, onDeleteBatch, deletingBatchId
           </Badge>
           <button
             aria-label="Delete batch"
-            className="icon-btn text-slate-300 hover:text-destructive-text shrink-0"
+            className="icon-btn text-foreground-dim hover:text-destructive-text shrink-0"
             disabled={deletingBatchId === batch.id}
             onClick={(e) => { e.stopPropagation(); onDeleteBatch(batch.id); }}
           >
@@ -372,10 +372,10 @@ function BatchCard({ batch, onDelete, deletingId, onDeleteBatch, deletingBatchId
       {expanded && batch.statements?.map((s) => (
         <div
           key={s.id}
-          className="flex items-center gap-2 px-4 py-2.5 pl-8 bg-slate-50/60 border-t border-table-divider cursor-pointer hover:bg-slate-100/60 transition-colors"
+          className="flex items-center gap-2 px-4 py-2.5 pl-8 bg-surface-subtle/60 border-t border-table-divider cursor-pointer hover:bg-surface-hover/60 transition-colors"
           onClick={() => router.push(`/manager/finance/imports/${s.id}`)}
         >
-          <span className="flex-1 text-xs font-medium text-slate-600">
+          <span className="flex-1 text-xs font-medium text-muted-text">
             {SECTION_LABEL[s.sectionType] ?? s.sectionType}
           </span>
           <Badge variant={statusVariant(s.status)}>
@@ -383,7 +383,7 @@ function BatchCard({ batch, onDelete, deletingId, onDeleteBatch, deletingBatchId
           </Badge>
           <button
             aria-label="Delete"
-            className="icon-btn text-slate-300 hover:text-destructive-text"
+            className="icon-btn text-foreground-dim hover:text-destructive-text"
             disabled={deletingId === s.id || s.status === "APPROVED"}
             onClick={(e) => { e.stopPropagation(); onDelete(s.id, e); }}
           >

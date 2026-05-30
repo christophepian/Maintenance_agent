@@ -85,7 +85,7 @@ export default function TenantDevLoginPage() {
     : null;
 
   return (
-    <div className="min-h-screen bg-slate-50 px-4 py-10">
+    <div className="min-h-screen bg-surface-subtle px-4 py-10">
       <div className="mx-auto max-w-lg">
         {/* Header */}
         <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
@@ -97,8 +97,8 @@ export default function TenantDevLoginPage() {
           </p>
         </div>
 
-        <h1 className="text-xl font-bold text-slate-900 mb-2">Log in as Tenant</h1>
-        <p className="text-sm text-slate-500 mb-6">
+        <h1 className="text-xl font-bold text-foreground mb-2">Log in as Tenant</h1>
+        <p className="text-sm text-muted mb-6">
           Click a tenant below to start a session and navigate the full tenant portal.
         </p>
 
@@ -124,7 +124,7 @@ export default function TenantDevLoginPage() {
               </button>
               <button
                 onClick={logout}
-                className="rounded-lg border border-green-300 bg-white px-3 py-1.5 text-xs font-medium text-green-700 hover:bg-green-50 transition"
+                className="rounded-lg border border-green-300 bg-surface px-3 py-1.5 text-xs font-medium text-green-700 hover:bg-green-50 transition"
               >
                 Clear
               </button>
@@ -139,11 +139,11 @@ export default function TenantDevLoginPage() {
         )}
 
         {loading ? (
-          <p className="text-sm text-slate-500">Loading tenants…</p>
+          <p className="text-sm text-muted">Loading tenants…</p>
         ) : tenants.length === 0 ? (
-          <div className="rounded-xl border border-slate-200 bg-white px-6 py-8 text-center">
-            <p className="text-sm text-slate-500">No tenants with active occupancies found.</p>
-            <p className="text-xs text-slate-400 mt-1">
+          <div className="rounded-xl border border-surface-border bg-surface px-6 py-8 text-center">
+            <p className="text-sm text-muted">No tenants with active occupancies found.</p>
+            <p className="text-xs text-foreground-dim mt-1">
               Create a tenant and assign them to a unit first.
             </p>
           </div>
@@ -160,20 +160,20 @@ export default function TenantDevLoginPage() {
                   type="button"
                   disabled={!!loggingIn}
                   onClick={() => loginAs(tenant)}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-left hover:bg-slate-50 hover:border-indigo-300 transition disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-indigo-400"
+                  className="w-full rounded-xl border border-surface-border bg-surface px-4 py-3 text-left hover:bg-surface-subtle hover:border-indigo-300 transition disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-indigo-400"
                 >
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="text-sm font-semibold text-slate-900 truncate">
+                      <p className="text-sm font-semibold text-foreground truncate">
                         {tenant.name || "(no name)"}
                       </p>
-                      <p className="text-xs text-slate-500 mt-0.5">
+                      <p className="text-xs text-muted mt-0.5">
                         {building?.name ? `${building.name} · ` : ""}
                         {unit ? `Unit ${unit.unitNumber}` : "No active unit"}
                         {unit?.floor ? ` · Floor ${unit.floor}` : ""}
                       </p>
                       {tenant.phone && (
-                        <p className="text-xs text-slate-400 mt-0.5 font-mono">{tenant.phone}</p>
+                        <p className="text-xs text-foreground-dim mt-0.5 font-mono">{tenant.phone}</p>
                       )}
                     </div>
                     <span className="shrink-0 text-xs font-medium text-indigo-600">

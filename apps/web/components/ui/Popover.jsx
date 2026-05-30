@@ -16,7 +16,7 @@ export function PopoverContent({ children, className, align = "end", sideOffset 
         sideOffset={sideOffset}
         onOpenAutoFocus={(e) => e.preventDefault()}
         className={cn(
-          "z-50 rounded-lg border border-slate-200 bg-white shadow-lg",
+          "z-50 rounded-lg border border-surface-border bg-surface shadow-lg",
           "focus:outline-none",
           className
         )}

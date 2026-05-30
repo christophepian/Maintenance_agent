@@ -18,6 +18,7 @@ import { useLocalSort, clientSort } from "../../lib/tableUtils";
 import { withTranslations } from "../../lib/i18n";
 import { useTranslation } from "next-i18next";
 import NotificationPreferencesTab from "../../components/NotificationPreferencesTab";
+import AppearanceTab from "../../components/AppearanceTab";
 
 const SETTINGS_TABS = [
   { key: "ORG" },
@@ -27,9 +28,10 @@ const SETTINGS_TABS = [
   { key: "LEGAL" },
   { key: "DEPRECIATION" },
   { key: "CATEGORYMAPPINGS" },
+  { key: "APPEARANCE" },
 ];
 
-const TAB_KEYS = ['organisation', 'buildings', 'notifications', 'integrations', 'legal', 'depreciation', 'categorymappings'];
+const TAB_KEYS = ['organisation', 'buildings', 'notifications', 'integrations', 'legal', 'depreciation', 'categorymappings', 'appearance'];
 
 const MANAGER_EVENT_GROUPS = [
   { groupKey: "requests", events: ["REQUEST_PENDING_REVIEW", "REQUEST_PENDING_OWNER_APPROVAL", "CONTRACTOR_REJECTED", "REJECTED"] },
@@ -450,7 +452,7 @@ export default function ManagerSettingsPage() {
               </div>
               <div className="flex gap-2 flex-wrap">
                 <label className="flex gap-2 items-center">
-                  <span className="text-slate-600">{t("manager:settings.text.setTo")}</span>
+                  <span className="text-muted-text">{t("manager:settings.text.setTo")}</span>
                   <input
                     type="number"
                     step="1"
@@ -461,7 +463,7 @@ export default function ManagerSettingsPage() {
                     className="input w-[140px] mb-0"
                     disabled={loading}
                   />
-                  <span className="text-slate-600">CHF</span>
+                  <span className="text-muted-text">CHF</span>
                 </label>
                 <button
                   className="button-primary"
@@ -487,7 +489,7 @@ export default function ManagerSettingsPage() {
               </div>
               <div className="flex gap-2 flex-wrap">
                 <label className="flex gap-2 items-center">
-                  <span className="text-slate-600">{t("manager:settings.text.generate")}</span>
+                  <span className="text-muted-text">{t("manager:settings.text.generate")}</span>
                   <input
                     type="number"
                     step="1"
@@ -498,7 +500,7 @@ export default function ManagerSettingsPage() {
                     className="input w-[100px] mb-0"
                     disabled={loading}
                   />
-                  <span className="text-slate-600">{t("manager:settings.text.daysBeforeBillingPeriod")}</span>
+                  <span className="text-muted-text">{t("manager:settings.text.daysBeforeBillingPeriod")}</span>
                 </label>
                 <button
                   className="button-primary"
@@ -534,7 +536,7 @@ export default function ManagerSettingsPage() {
                   {buildings.map((b) => (
                     <div
                       key={b.id}
-                      className="table-card cursor-pointer hover:bg-slate-50/80 transition-colors"
+                      className="table-card cursor-pointer hover:bg-surface-subtle/80 transition-colors"
                       onClick={() => router.push(`/admin-inventory/buildings/${b.id}`)}
                     >
                       <p className="table-card-head">{b.name || "Unnamed"}</p>
@@ -559,7 +561,7 @@ export default function ManagerSettingsPage() {
                     </thead>
                     <tbody>
                       {sortedBuildings.map((b) => (
-                        <tr key={b.id} className="cursor-pointer hover:bg-slate-50/80" onClick={() => router.push(`/admin-inventory/buildings/${b.id}`)}>
+                        <tr key={b.id} className="cursor-pointer hover:bg-surface-subtle/80" onClick={() => router.push(`/admin-inventory/buildings/${b.id}`)}>
                           <td className="cell-bold">{b.name || "Unnamed"}</td>
                           <td>{b.address || "—"}</td>
                           <td>{b.canton || "—"}</td>
@@ -567,7 +569,7 @@ export default function ManagerSettingsPage() {
                             <button
                               aria-label={t("manager:settings.ariaLabel.configureBuilding")}
                               onClick={(e) => { e.stopPropagation(); router.push(`/admin-inventory/buildings/${b.id}`); }}
-                              className="inline-flex items-center justify-center rounded p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                              className="inline-flex items-center justify-center rounded p-1 text-foreground-dim hover:text-muted-dark hover:bg-surface-hover transition-colors"
                             >
                               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                                 <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
@@ -611,14 +613,14 @@ export default function ManagerSettingsPage() {
             <div className="px-4 py-4">
               <div className="flex items-center justify-between mb-3">
                 <div>
-                  <h3 className="text-sm font-semibold text-slate-800">{t("manager:settings.heading.legalSources")}</h3>
-                  <p className="text-xs text-slate-500 mt-0.5">
+                  <h3 className="text-sm font-semibold text-foreground">{t("manager:settings.heading.legalSources")}</h3>
+                  <p className="text-xs text-muted mt-0.5">
                     Swiss tenancy law data sources — reference rates, CPI, ASLOCA depreciation, and legislation.
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
                   {syncResult && !error && (
-                    <span className="text-xs text-slate-500">
+                    <span className="text-xs text-muted">
                       ✓ {syncResult.filter((r) => r.status === "success").length} synced
                     </span>
                   )}
@@ -761,16 +763,16 @@ export default function ManagerSettingsPage() {
 
             {!legalLoading && legalVariables.length > 0 && (
               <>
-                <div className="px-4 py-3 border-t border-slate-100">
-                  <h3 className="text-sm font-semibold text-slate-800">{t("manager:settings.heading.legalVariables")}</h3>
-                  <p className="text-xs text-slate-500 mt-0.5">{legalVariables.length} variable{legalVariables.length !== 1 ? "s" : ""} tracked</p>
+                <div className="px-4 py-3 border-t border-surface-divider">
+                  <h3 className="text-sm font-semibold text-foreground">{t("manager:settings.heading.legalVariables")}</h3>
+                  <p className="text-xs text-muted mt-0.5">{legalVariables.length} variable{legalVariables.length !== 1 ? "s" : ""} tracked</p>
                 </div>
                 <>
                   {/* Mobile card list — sm:hidden */}
                   <div className="sm:hidden overflow-hidden rounded-lg border border-table-border divide-y divide-table-divider">
                     {legalVariables.map((v) => (
                       <div key={v.id} className="table-card">
-                        <span className="font-mono text-xs text-slate-700">{v.key}</span>
+                        <span className="font-mono text-xs text-muted-dark">{v.key}</span>
                         <p className="table-card-head mt-0.5">{v.description || "—"}</p>
                         <div className="table-card-footer">
                           <span>{v.versions?.length || 0} version{(v.versions?.length || 0) !== 1 ? "s" : ""}</span>
@@ -818,6 +820,9 @@ export default function ManagerSettingsPage() {
 
           {/* Category Mappings tab — maps expense categories to legal topics */}
           {activeTab === 6 && <CategoryMappings />}
+
+          {/* Appearance tab — dark / light mode toggle */}
+          {activeTab === 7 && <AppearanceTab t={t} ns="manager" />}
 
         </PageContent>
       </PageShell>
@@ -886,7 +891,7 @@ function LegalScopeFilterBar({ sources, activeFilter, onFilter }) {
           onClick={() => onFilter(tab.value)}
           className={cn("rounded-full px-3 py-1 text-xs font-medium transition-colors", activeFilter === tab.value
               ? "bg-blue-600 text-white"
-              : "bg-slate-100 text-slate-600 hover:bg-slate-200")}
+              : "bg-surface-hover text-muted-text hover:bg-surface-border")}
         >
           {t(`manager:settings.tabs.${tab.key.toLowerCase()}`)}
         </button>
@@ -921,12 +926,12 @@ function LegalSourceForm({ source, saving, formError, onSubmit, onCancel }) {
     });
   }
 
-  const inputClass = "w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
-  const labelClass = "block text-xs font-medium text-slate-600 mb-1";
+  const inputClass = "w-full rounded-lg border border-muted-ring px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
+  const labelClass = "block text-xs font-medium text-muted-text mb-1";
 
   return (
-    <form onSubmit={handleSubmit} className="mb-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
-      <h3 className="mb-3 text-sm font-semibold text-slate-900">
+    <form onSubmit={handleSubmit} className="mb-4 rounded-lg border border-surface-border bg-surface-subtle p-4">
+      <h3 className="mb-3 text-sm font-semibold text-foreground">
         {isEdit ? "Edit Source" : "Add Source"}
       </h3>
       {formError && (
@@ -987,7 +992,7 @@ function LegalSourceForm({ source, saving, formError, onSubmit, onCancel }) {
         <button
           type="button"
           onClick={onCancel}
-          className="rounded-lg border border-slate-300 px-4 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+          className="rounded-lg border border-muted-ring px-4 py-1.5 text-sm font-medium text-muted-dark hover:bg-surface-subtle"
         >
           Cancel
         </button>

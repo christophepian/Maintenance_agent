@@ -34,7 +34,7 @@ const SOURCE_LABEL = {
   BROWSER_UPLOAD: { text: "Upload", cls: "bg-sky-50 text-sky-700 border-sky-200" },
   EMAIL_PDF:      { text: "Email",  cls: "bg-violet-50 text-violet-700 border-violet-200" },
   MOBILE_CAPTURE: { text: "Mobile", cls: "bg-teal-50 text-teal-700 border-teal-200" },
-  MANUAL:         { text: "Manual", cls: "bg-slate-50 text-slate-600 border-slate-200" },
+  MANUAL:         { text: "Manual", cls: "bg-surface-subtle text-muted-text border-surface-border" },
 };
 
 /* ─── Detail field ─────────────────────────────────────────── */
@@ -42,8 +42,8 @@ const SOURCE_LABEL = {
 function Field({ label, value }) {
   return (
     <div>
-      <dt className="text-xs font-medium text-slate-500 uppercase tracking-wide">{label}</dt>
-      <dd className="mt-0.5 text-sm text-slate-900">{value ?? "—"}</dd>
+      <dt className="text-xs font-medium text-muted uppercase tracking-wide">{label}</dt>
+      <dd className="mt-0.5 text-sm text-foreground">{value ?? "—"}</dd>
     </div>
   );
 }
@@ -56,11 +56,11 @@ function DisputeModal({ onConfirm, onCancel }) {
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" role="dialog" aria-modal="true" aria-label={t("owner:financeInvoicesId.ariaLabel.disputeInvoice")}>
       <div className="absolute inset-0 bg-black/40" onClick={onCancel} />
-      <div className="relative w-full max-w-sm rounded-t-2xl sm:rounded-2xl bg-white p-6 shadow-xl space-y-4">
-        <h2 className="text-base font-semibold text-slate-800">{t("owner:financeInvoicesId.heading.disputeThisInvoice")}</h2>
+      <div className="relative w-full max-w-sm rounded-t-2xl sm:rounded-2xl bg-surface p-6 shadow-xl space-y-4">
+        <h2 className="text-base font-semibold text-foreground">{t("owner:financeInvoicesId.heading.disputeThisInvoice")}</h2>
         <div>
-          <label htmlFor="dispute-reason" className="block text-sm font-medium text-slate-700 mb-1">
-            Reason <span className="text-slate-400 font-normal">(required)</span>
+          <label htmlFor="dispute-reason" className="block text-sm font-medium text-muted-dark mb-1">
+            Reason <span className="text-foreground-dim font-normal">(required)</span>
           </label>
           <textarea
             id="dispute-reason"
@@ -72,7 +72,7 @@ function DisputeModal({ onConfirm, onCancel }) {
           />
         </div>
         <div className="flex gap-3">
-          <button onClick={onCancel} className="flex-1 rounded-lg border border-slate-200 bg-white py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition">
+          <button onClick={onCancel} className="flex-1 rounded-lg border border-surface-border bg-surface py-2.5 text-sm font-medium text-muted-dark hover:bg-surface-subtle transition">
             Cancel
           </button>
           <button
@@ -160,7 +160,7 @@ export default function OwnerInvoiceDetailPage() {
           actions={
             <button
               onClick={() => router.push("/owner/finance?tab=invoices")}
-              className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 transition"
+              className="rounded-lg border border-surface-border bg-surface px-4 py-2 text-sm font-medium text-muted-text hover:bg-surface-subtle transition"
             >
               ← Back
             </button>
@@ -190,7 +190,7 @@ export default function OwnerInvoiceDetailPage() {
                       <Badge variant={invoiceVariant(inv.status)} size="sm">{inv.status}</Badge>
                       <IngestionBadge ingestionStatus={inv.ingestionStatus} />
                       {inv.direction && (
-                        <span className="inline-flex items-center rounded-full bg-slate-50 border border-slate-200 px-2 py-0.5 text-xs font-medium text-slate-500">
+                        <span className="inline-flex items-center rounded-full bg-surface-subtle border border-surface-border px-2 py-0.5 text-xs font-medium text-muted">
                           {inv.direction === "INCOMING" ? "↓ Incoming" : "↑ Outgoing"}
                         </span>
                       )}
@@ -224,7 +224,7 @@ export default function OwnerInvoiceDetailPage() {
                       <a
                         href={`/api/invoices/${id}/pdf`}
                         download
-                        className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition no-underline"
+                        className="rounded-lg border border-surface-border bg-surface px-4 py-2 text-sm font-medium text-muted-dark hover:bg-surface-subtle transition no-underline"
                       >
                         ↓ PDF
                       </a>
@@ -275,10 +275,10 @@ export default function OwnerInvoiceDetailPage() {
                       {inv.lineItems.map((li, i) => (
                         <div key={i} className="px-4 py-3 flex flex-col gap-0.5">
                           <div className="flex items-start justify-between gap-2">
-                            <span className="text-sm font-medium text-slate-800">{li.description || "—"}</span>
-                            <span className="text-sm font-mono text-slate-700 shrink-0">{formatChf(li.lineTotal)}</span>
+                            <span className="text-sm font-medium text-foreground">{li.description || "—"}</span>
+                            <span className="text-sm font-mono text-muted-dark shrink-0">{formatChf(li.lineTotal)}</span>
                           </div>
-                          <span className="text-xs text-slate-500">
+                          <span className="text-xs text-muted">
                             {li.quantity ?? "—"} × {formatChf(li.unitPrice)}
                             {li.vatRate != null && <span className="ml-1">· VAT {li.vatRate}%</span>}
                           </span>
@@ -332,7 +332,7 @@ export default function OwnerInvoiceDetailPage() {
                       <img
                         src={`/api/invoices/${id}/source-file`}
                         alt="Original captured document"
-                        className="w-full rounded-lg border border-slate-200"
+                        className="w-full rounded-lg border border-surface-border"
                       />
                       <a href={`/api/invoices/${id}/source-file`} download className="inline-flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-700">
                         ↓ Download original
@@ -352,7 +352,7 @@ export default function OwnerInvoiceDetailPage() {
 
                 {/* Timeline */}
                 <Panel title={t("owner:financeInvoicesId.title.timeline")}>
-                  <div className="space-y-2 text-xs text-slate-600">
+                  <div className="space-y-2 text-xs text-muted-text">
                     <div className="flex justify-between"><span>{t("owner:financeInvoicesId.text.created")}</span><span>{formatDate(inv.createdAt)}</span></div>
                     {inv.submittedAt && <div className="flex justify-between"><span>{t("owner:financeInvoicesId.text.submitted")}</span><span>{formatDate(inv.submittedAt)}</span></div>}
                     {inv.approvedAt && <div className="flex justify-between"><span>{t("owner:financeInvoicesId.text.approved")}</span><span>{formatDate(inv.approvedAt)}</span></div>}

@@ -210,7 +210,7 @@ export default function ContractorDetailPage() {
         <div className="mb-3">
           <button
             type="button"
-            className="text-sm font-medium text-slate-600 hover:text-slate-900"
+            className="text-sm font-medium text-muted-text hover:text-foreground"
             onClick={() => router.back()}
           >
             {t("manager:peopleVendorsId.text.back")}
@@ -259,176 +259,176 @@ export default function ContractorDetailPage() {
                 >
                   <div className="grid gap-4 sm:grid-cols-2">
                     <label className="grid gap-2">
-                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleVendorsId.text.name")}</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:peopleVendorsId.text.name")}</span>
                       {isEditing ? (
                         <input
-                          className="input text-sm text-slate-700"
+                          className="input text-sm text-muted-dark"
                           type="text"
                           value={formData.name}
                           onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
                           placeholder={t("manager:peopleVendorsId.placeholder.contractorName")}
                         />
                       ) : (
-                        <div className="text-sm text-slate-700">{formData.name || "—"}</div>
+                        <div className="text-sm text-muted-dark">{formData.name || "—"}</div>
                       )}
                     </label>
                     <label className="grid gap-2">
-                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleVendorsId.text.phone")}</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:peopleVendorsId.text.phone")}</span>
                       {isEditing ? (
                         <input
-                          className="input text-sm text-slate-700"
+                          className="input text-sm text-muted-dark"
                           type="tel"
                           value={formData.phone}
                           onChange={(e) => setFormData((prev) => ({ ...prev, phone: e.target.value }))}
                           placeholder={t("manager:peopleVendorsId.placeholder.41XxXxxXxxx")}
                         />
                       ) : (
-                        <div className="text-sm text-slate-700">{formData.phone || "—"}</div>
+                        <div className="text-sm text-muted-dark">{formData.phone || "—"}</div>
                       )}
                     </label>
                     <label className="grid gap-2 sm:col-span-2">
-                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleVendorsId.text.email")}</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:peopleVendorsId.text.email")}</span>
                       {isEditing ? (
                         <input
-                          className="input text-sm text-slate-700"
+                          className="input text-sm text-muted-dark"
                           type="email"
                           value={formData.email}
                           onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
                           placeholder={t("manager:peopleVendorsId.placeholder.contractorExampleCom")}
                         />
                       ) : (
-                        <div className="text-sm text-slate-700">{formData.email || "—"}</div>
+                        <div className="text-sm text-muted-dark">{formData.email || "—"}</div>
                       )}
                     </label>
                     <label className="grid gap-2 sm:col-span-2">
-                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleVendorsId.text.addressLine1")}</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:peopleVendorsId.text.addressLine1")}</span>
                       {isEditing ? (
                         <input
-                          className="input text-sm text-slate-700"
+                          className="input text-sm text-muted-dark"
                           type="text"
                           value={formData.addressLine1}
                           onChange={(e) => setFormData((prev) => ({ ...prev, addressLine1: e.target.value }))}
                           placeholder={t("manager:peopleVendorsId.placeholder.streetAndNumber")}
                         />
                       ) : (
-                        <div className="text-sm text-slate-700">{formData.addressLine1 || "—"}</div>
+                        <div className="text-sm text-muted-dark">{formData.addressLine1 || "—"}</div>
                       )}
                     </label>
                     <label className="grid gap-2 sm:col-span-2">
-                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleVendorsId.text.addressLine2")}</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:peopleVendorsId.text.addressLine2")}</span>
                       {isEditing ? (
                         <input
-                          className="input text-sm text-slate-700"
+                          className="input text-sm text-muted-dark"
                           type="text"
                           value={formData.addressLine2}
                           onChange={(e) => setFormData((prev) => ({ ...prev, addressLine2: e.target.value }))}
                           placeholder={t("manager:peopleVendorsId.placeholder.suiteFloorEtc")}
                         />
                       ) : (
-                        <div className="text-sm text-slate-700">{formData.addressLine2 || "—"}</div>
+                        <div className="text-sm text-muted-dark">{formData.addressLine2 || "—"}</div>
                       )}
                     </label>
                     <label className="grid gap-2">
-                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleVendorsId.text.postalCode")}</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:peopleVendorsId.text.postalCode")}</span>
                       {isEditing ? (
                         <input
-                          className="input text-sm text-slate-700"
+                          className="input text-sm text-muted-dark"
                           type="text"
                           value={formData.postalCode}
                           onChange={(e) => setFormData((prev) => ({ ...prev, postalCode: e.target.value }))}
                         />
                       ) : (
-                        <div className="text-sm text-slate-700">{formData.postalCode || "—"}</div>
+                        <div className="text-sm text-muted-dark">{formData.postalCode || "—"}</div>
                       )}
                     </label>
                     <label className="grid gap-2">
-                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleVendorsId.text.city")}</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:peopleVendorsId.text.city")}</span>
                       {isEditing ? (
                         <input
-                          className="input text-sm text-slate-700"
+                          className="input text-sm text-muted-dark"
                           type="text"
                           value={formData.city}
                           onChange={(e) => setFormData((prev) => ({ ...prev, city: e.target.value }))}
                         />
                       ) : (
-                        <div className="text-sm text-slate-700">{formData.city || "—"}</div>
+                        <div className="text-sm text-muted-dark">{formData.city || "—"}</div>
                       )}
                     </label>
                     <label className="grid gap-2">
-                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleVendorsId.text.country")}</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:peopleVendorsId.text.country")}</span>
                       {isEditing ? (
                         <input
-                          className="input text-sm text-slate-700"
+                          className="input text-sm text-muted-dark"
                           type="text"
                           value={formData.country}
                           onChange={(e) => setFormData((prev) => ({ ...prev, country: e.target.value }))}
                         />
                       ) : (
-                        <div className="text-sm text-slate-700">{formData.country || "—"}</div>
+                        <div className="text-sm text-muted-dark">{formData.country || "—"}</div>
                       )}
                     </label>
                     <label className="grid gap-2 sm:col-span-2">
-                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleVendorsId.text.iban")}</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:peopleVendorsId.text.iban")}</span>
                       {isEditing ? (
                         <input
-                          className="input text-sm text-slate-700"
+                          className="input text-sm text-muted-dark"
                           type="text"
                           value={formData.iban}
                           onChange={(e) => setFormData((prev) => ({ ...prev, iban: e.target.value }))}
                           placeholder={t("manager:peopleVendorsId.placeholder.cH9300762011623852957")}
                         />
                       ) : (
-                        <div className="text-sm text-slate-700">{formData.iban || "—"}</div>
+                        <div className="text-sm text-muted-dark">{formData.iban || "—"}</div>
                       )}
                     </label>
                     <label className="grid gap-2">
-                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleVendorsId.text.vATNumber")}</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:peopleVendorsId.text.vATNumber")}</span>
                       {isEditing ? (
                         <input
-                          className="input text-sm text-slate-700"
+                          className="input text-sm text-muted-dark"
                           type="text"
                           value={formData.vatNumber}
                           onChange={(e) => setFormData((prev) => ({ ...prev, vatNumber: e.target.value }))}
                           placeholder={t("manager:peopleVendorsId.placeholder.cHE123456789")}
                         />
                       ) : (
-                        <div className="text-sm text-slate-700">{formData.vatNumber || "—"}</div>
+                        <div className="text-sm text-muted-dark">{formData.vatNumber || "—"}</div>
                       )}
                     </label>
                     <label className="grid gap-2">
-                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleVendorsId.text.defaultVatRate")}</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:peopleVendorsId.text.defaultVatRate")}</span>
                       {isEditing ? (
                         <input
-                          className="input text-sm text-slate-700"
+                          className="input text-sm text-muted-dark"
                           type="number"
                           step="0.1"
                           value={formData.defaultVatRate}
                           onChange={(e) => setFormData((prev) => ({ ...prev, defaultVatRate: e.target.value }))}
                         />
                       ) : (
-                        <div className="text-sm text-slate-700">{formData.defaultVatRate || "—"}</div>
+                        <div className="text-sm text-muted-dark">{formData.defaultVatRate || "—"}</div>
                       )}
                     </label>
                   </div>
 
                   <div className="mt-6 grid gap-4 sm:grid-cols-2">
                     <div>
-                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleVendorsId.text.contractorId")}</div>
-                      <div className="text-sm text-slate-700 mt-1">{contractor?.id}</div>
+                      <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:peopleVendorsId.text.contractorId")}</div>
+                      <div className="text-sm text-muted-dark mt-1">{contractor?.id}</div>
                     </div>
                     <div>
-                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleVendorsId.text.orgId")}</div>
-                      <div className="text-sm text-slate-700 mt-1">{contractor?.orgId || "—"}</div>
+                      <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:peopleVendorsId.text.orgId")}</div>
+                      <div className="text-sm text-muted-dark mt-1">{contractor?.orgId || "—"}</div>
                     </div>
                     <div>
-                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleVendorsId.text.created")}</div>
-                      <div className="text-sm text-slate-700 mt-1">
+                      <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:peopleVendorsId.text.created")}</div>
+                      <div className="text-sm text-muted-dark mt-1">
                         {contractor?.createdAt ? formatDateTime(contractor.createdAt) : "—"}
                       </div>
                     </div>
                     <div>
-                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleVendorsId.text.updated")}</div>
-                      <div className="text-sm text-slate-700 mt-1">
+                      <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:peopleVendorsId.text.updated")}</div>
+                      <div className="text-sm text-muted-dark mt-1">
                         {contractor?.updatedAt ? formatDateTime(contractor.updatedAt) : "—"}
                       </div>
                     </div>
@@ -452,10 +452,10 @@ export default function ContractorDetailPage() {
                 >
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div>
-                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleVendorsId.text.hourlyRate")}</div>
+                      <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:peopleVendorsId.text.hourlyRate")}</div>
                       {isEditing ? (
                         <input
-                          className="input text-sm text-slate-700 mt-2"
+                          className="input text-sm text-muted-dark mt-2"
                           type="number"
                           min="10"
                           max="500"
@@ -468,19 +468,19 @@ export default function ContractorDetailPage() {
                           }
                         />
                       ) : (
-                        <div className="text-sm text-slate-700 mt-1">CHF {formData.hourlyRate}/hr</div>
+                        <div className="text-sm text-muted-dark mt-1">CHF {formData.hourlyRate}/hr</div>
                       )}
                     </div>
                     <div>
-                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleVendorsId.text.status")}</div>
-                      <div className="text-sm text-slate-700 mt-1">{statusLabel}</div>
+                      <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:peopleVendorsId.text.status")}</div>
+                      <div className="text-sm text-muted-dark mt-1">{statusLabel}</div>
                     </div>
                     <div className="sm:col-span-2">
-                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleVendorsId.text.serviceCategories")}</div>
+                      <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:peopleVendorsId.text.serviceCategories")}</div>
                       {isEditing ? (
                         <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
                           {ALLOWED_CATEGORIES.map((cat) => (
-                            <label key={cat} className="flex items-center gap-2 text-sm text-slate-700">
+                            <label key={cat} className="flex items-center gap-2 text-sm text-muted-dark">
                               <input
                                 type="checkbox"
                                 checked={formData.serviceCategories.includes(cat)}
@@ -491,7 +491,7 @@ export default function ContractorDetailPage() {
                           ))}
                         </div>
                       ) : (
-                        <div className="text-sm text-slate-700 mt-1">
+                        <div className="text-sm text-muted-dark mt-1">
                           {formData.serviceCategories.length
                             ? formData.serviceCategories.join(", ")
                             : "—"}
@@ -505,9 +505,9 @@ export default function ContractorDetailPage() {
               {activeTab === "contracts" && (
                 <Panel title={t("manager:peopleVendorsId.title.contracts")}>
                   {jobsLoading ? (
-                    <p className="text-sm text-slate-600">{t("manager:peopleVendorsId.text.loadingJobs")}</p>
+                    <p className="text-sm text-muted-text">{t("manager:peopleVendorsId.text.loadingJobs")}</p>
                   ) : jobs.length === 0 ? (
-                    <p className="text-sm text-slate-500">{t("manager:peopleVendorsId.text.noJobsFoundForThisContractor")}</p>
+                    <p className="text-sm text-muted">{t("manager:peopleVendorsId.text.noJobsFoundForThisContractor")}</p>
                   ) : (
                     <div className="overflow-x-auto rounded-lg border border-table-border">
                       <table className="data-table">
@@ -555,9 +555,9 @@ export default function ContractorDetailPage() {
               {activeTab === "invoices" && (
                 <Panel title={t("manager:peopleVendorsId.title.invoices")}>
                   {invoicesLoading ? (
-                    <p className="text-sm text-slate-600">{t("manager:peopleVendorsId.text.loadingInvoices")}</p>
+                    <p className="text-sm text-muted-text">{t("manager:peopleVendorsId.text.loadingInvoices")}</p>
                   ) : contractorInvoices.length === 0 ? (
-                    <p className="text-sm text-slate-500">{t("manager:peopleVendorsId.text.noInvoicesFoundForThisContractor")}</p>
+                    <p className="text-sm text-muted">{t("manager:peopleVendorsId.text.noInvoicesFoundForThisContractor")}</p>
                   ) : (
                     <div className="overflow-x-auto rounded-lg border border-table-border">
                       <table className="data-table">
@@ -607,7 +607,7 @@ export default function ContractorDetailPage() {
             </div>
           ) : (
             <Panel>
-              <p className="text-sm text-slate-600">{t("manager:peopleVendorsId.text.contractorNotFound")}</p>
+              <p className="text-sm text-muted-text">{t("manager:peopleVendorsId.text.contractorNotFound")}</p>
               <div className="mt-3">
                 <button type="button" className="button-secondary" onClick={() => router.back()}>
                   {t("manager:peopleVendorsId.text.goBack")}

@@ -158,12 +158,12 @@ export default function ContractorDashboard() {
           {/* Action Required Section */}
           <Section title={t("contractor:index.title.todayActionRequired")}>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("contractor:index.text.pendingJobs")}</div>
-                <div className={cn("mt-3 text-2xl font-semibold tracking-tight", pendingJobs.length > 0 ? "text-amber-700" : "text-slate-400")}>
+              <div className="rounded-2xl border border-surface-border bg-surface p-5 shadow-sm">
+                <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("contractor:index.text.pendingJobs")}</div>
+                <div className={cn("mt-3 text-2xl font-semibold tracking-tight", pendingJobs.length > 0 ? "text-amber-700" : "text-foreground-dim")}>
                   {pendingJobs.length}
                 </div>
-                <div className="text-sm text-slate-600">{t("contractor:index.text.needAcceptancestart")}</div>
+                <div className="text-sm text-muted-text">{t("contractor:index.text.needAcceptancestart")}</div>
                 {pendingJobs.length > 0 && (
                   <button className="mt-3 text-sm font-medium text-indigo-600 hover:text-indigo-700" onClick={() => router.push("/contractor/jobs?status=PENDING")}>
                     View Pending Jobs →
@@ -172,12 +172,12 @@ export default function ContractorDashboard() {
               </div>
 
               {staleInProgressJobs.length > 0 && (
-                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                  <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("contractor:index.text.staleInprogressJobs")}</div>
+                <div className="rounded-2xl border border-surface-border bg-surface p-5 shadow-sm">
+                  <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("contractor:index.text.staleInprogressJobs")}</div>
                   <div className="mt-3 text-2xl font-semibold tracking-tight text-amber-700">
                     {staleInProgressJobs.length}
                   </div>
-                  <div className="text-sm text-slate-600">Active &gt; 7 days</div>
+                  <div className="text-sm text-muted-text">Active &gt; 7 days</div>
                   <button className="mt-3 text-sm font-medium text-indigo-600 hover:text-indigo-700" onClick={() => router.push("/contractor/jobs?status=IN_PROGRESS")}>
                     Review Jobs →
                   </button>
@@ -185,12 +185,12 @@ export default function ContractorDashboard() {
               )}
 
               {completedNotInvoiced.length > 0 && (
-                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                  <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("contractor:index.text.completedNotInvoiced")}</div>
+                <div className="rounded-2xl border border-surface-border bg-surface p-5 shadow-sm">
+                  <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("contractor:index.text.completedNotInvoiced")}</div>
                   <div className="mt-3 text-2xl font-semibold tracking-tight text-blue-700">
                     {completedNotInvoiced.length}
                   </div>
-                  <div className="text-sm text-slate-600">{t("contractor:index.text.readyForBilling")}</div>
+                  <div className="text-sm text-muted-text">{t("contractor:index.text.readyForBilling")}</div>
                   <button className="mt-3 text-sm font-medium text-indigo-600 hover:text-indigo-700" onClick={() => router.push("/contractor/jobs?status=COMPLETED")}>
                     Create Invoices →
                   </button>
@@ -200,7 +200,7 @@ export default function ContractorDashboard() {
               {pendingJobs.length === 0 && 
                staleInProgressJobs.length === 0 && 
                completedNotInvoiced.length === 0 && (
-                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="rounded-2xl border border-surface-border bg-surface p-5 shadow-sm">
                   <p className="text-green-700 m-0">{t("contractor:index.text.noItemsRequireImmediateAction")}</p>
                 </div>
               )}
@@ -210,28 +210,28 @@ export default function ContractorDashboard() {
           {/* Pipeline KPIs Section */}
           <Section title={t("contractor:index.title.pipelineOverview")}>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("contractor:index.text.openJobs")}</div>
-                <div className={cn("mt-3 text-2xl font-semibold tracking-tight", openJobsCount > 0 ? "text-blue-700" : "text-slate-400")}>
+              <div className="rounded-2xl border border-surface-border bg-surface p-5 shadow-sm">
+                <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("contractor:index.text.openJobs")}</div>
+                <div className={cn("mt-3 text-2xl font-semibold tracking-tight", openJobsCount > 0 ? "text-blue-700" : "text-foreground-dim")}>
                   {openJobsCount}
                 </div>
-                <div className="text-sm text-slate-600">{t("contractor:index.text.pendingInProgress")}</div>
+                <div className="text-sm text-muted-text">{t("contractor:index.text.pendingInProgress")}</div>
               </div>
 
-              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("contractor:index.text.completedThisMonth")}</div>
+              <div className="rounded-2xl border border-surface-border bg-surface p-5 shadow-sm">
+                <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("contractor:index.text.completedThisMonth")}</div>
                 <div className="mt-3 text-2xl font-semibold tracking-tight text-green-700">
                   {completedThisMonth}
                 </div>
-                <div className="text-sm text-slate-600">{t("contractor:index.text.jobsFinished")}</div>
+                <div className="text-sm text-muted-text">{t("contractor:index.text.jobsFinished")}</div>
               </div>
 
-              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("contractor:index.text.invoicedThisMonth")}</div>
+              <div className="rounded-2xl border border-surface-border bg-surface p-5 shadow-sm">
+                <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("contractor:index.text.invoicedThisMonth")}</div>
                 <div className="mt-3 text-2xl font-semibold tracking-tight text-green-700">
                   {formatCurrency(invoicedThisMonth)}
                 </div>
-                <div className="text-sm text-slate-600">{t("contractor:index.text.totalBilled")}</div>
+                <div className="text-sm text-muted-text">{t("contractor:index.text.totalBilled")}</div>
               </div>
             </div>
           </Section>

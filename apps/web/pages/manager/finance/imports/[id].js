@@ -110,22 +110,22 @@ function SearchableAccountSelect({ accounts, value, onChange, placeholder = "Sea
         onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
       />
       {open && !loading && (
-        <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-56 overflow-y-auto">
+        <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-surface border border-surface-border rounded-lg shadow-lg max-h-56 overflow-y-auto">
           {filtered.length === 0 ? (
-            <p className="px-3 py-2 text-sm text-slate-400">No accounts match</p>
+            <p className="px-3 py-2 text-sm text-foreground-dim">No accounts match</p>
           ) : (
             filtered.map((a) => (
               <button
                 key={a.id}
                 type="button"
                 className={cn(
-                  "w-full text-left px-3 py-1.5 text-sm hover:bg-slate-50 transition-colors",
-                  value === a.id ? "bg-brand-50 text-brand-dark font-medium" : "text-slate-800",
+                  "w-full text-left px-3 py-1.5 text-sm hover:bg-surface-subtle transition-colors",
+                  value === a.id ? "bg-brand-50 text-brand-dark font-medium" : "text-foreground",
                 )}
                 onMouseDown={() => { onChange(a.id); setOpen(false); setQuery(""); }}
               >
                 {a.code && (
-                  <span className="font-mono text-xs text-slate-400 mr-2">{a.code}</span>
+                  <span className="font-mono text-xs text-foreground-dim mr-2">{a.code}</span>
                 )}
                 {a.name}
               </button>
@@ -206,7 +206,7 @@ function BalanceRowEditor({ balance, statementId, accounts, accountsLoading, onS
   }
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-3">
+    <div className="rounded-lg border border-surface-border bg-surface-subtle p-3 space-y-3">
       {isNew && (
         <div className="grid grid-cols-2 gap-2">
           <div>
@@ -396,10 +396,10 @@ function ExtractedDataPanel({ rawOcrText }) {
   }
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-slate-50">
+    <div className="rounded-lg border border-surface-border bg-surface-subtle">
       <button
         type="button"
-        className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-100 transition-colors rounded-lg"
+        className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-muted-dark hover:bg-surface-hover transition-colors rounded-lg"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
       >
@@ -418,21 +418,21 @@ function ExtractedDataPanel({ rawOcrText }) {
         <div className="px-4 pb-4 space-y-4">
           {summary && (
             <div>
-              <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">Summary</p>
-              <p className="text-sm text-slate-700 whitespace-pre-wrap">{summary}</p>
+              <p className="text-xs text-muted uppercase tracking-wide mb-1">Summary</p>
+              <p className="text-sm text-muted-dark whitespace-pre-wrap">{summary}</p>
             </div>
           )}
           {fields && (
             <div>
-              <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">Fields</p>
-              <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+              <p className="text-xs text-muted uppercase tracking-wide mb-1">Fields</p>
+              <div className="overflow-x-auto rounded-lg border border-surface-border bg-surface">
                 <table className="w-full text-sm">
                   <tbody>
                     {Object.entries(fields).map(([key, val]) =>
                       val != null && val !== "" ? (
-                        <tr key={key} className="border-b border-slate-100 last:border-0">
-                          <td className="px-3 py-1.5 text-xs text-slate-500 font-medium whitespace-nowrap w-40">{key}</td>
-                          <td className="px-3 py-1.5 text-slate-800 font-mono text-xs break-all">
+                        <tr key={key} className="border-b border-surface-divider last:border-0">
+                          <td className="px-3 py-1.5 text-xs text-muted font-medium whitespace-nowrap w-40">{key}</td>
+                          <td className="px-3 py-1.5 text-foreground font-mono text-xs break-all">
                             {typeof val === "object" ? JSON.stringify(val) : String(val)}
                           </td>
                         </tr>
@@ -445,8 +445,8 @@ function ExtractedDataPanel({ rawOcrText }) {
           )}
           {!fields && parts[1] && (
             <div>
-              <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">Raw</p>
-              <pre className="text-xs text-slate-700 overflow-x-auto whitespace-pre-wrap bg-white rounded-lg border border-slate-200 p-3">{parts[1]}</pre>
+              <p className="text-xs text-muted uppercase tracking-wide mb-1">Raw</p>
+              <pre className="text-xs text-muted-dark overflow-x-auto whitespace-pre-wrap bg-surface rounded-lg border border-surface-border p-3">{parts[1]}</pre>
             </div>
           )}
         </div>
@@ -494,7 +494,7 @@ function ReExtractPanel({ statementId, hasBalances, onStarted }) {
       <div className="flex justify-end">
         <button
           type="button"
-          className="text-xs text-slate-500 hover:text-slate-700 hover:underline"
+          className="text-xs text-muted hover:text-muted-dark hover:underline"
           onClick={() => setOpen(true)}
         >
           Re-extract document
@@ -506,14 +506,14 @@ function ReExtractPanel({ statementId, hasBalances, onStarted }) {
   return (
     <div className={cn(
       "rounded-lg border px-4 py-4",
-      hasBalances ? "border-slate-200 bg-slate-50" : "border-amber-300 bg-amber-50",
+      hasBalances ? "border-surface-border bg-surface-subtle" : "border-amber-300 bg-amber-50",
     )}>
       {hasBalances ? (
         <div className="flex items-center justify-between mb-3">
-          <p className="text-sm font-medium text-slate-700">Re-extract document</p>
+          <p className="text-sm font-medium text-muted-dark">Re-extract document</p>
           <button
             type="button"
-            className="text-xs text-slate-400 hover:text-slate-600"
+            className="text-xs text-foreground-dim hover:text-muted-text"
             onClick={() => setOpen(false)}
           >
             Cancel
@@ -523,7 +523,7 @@ function ReExtractPanel({ statementId, hasBalances, onStarted }) {
         <p className="text-sm font-medium text-amber-800 mb-3">No account balances extracted</p>
       )}
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-        <p className="text-sm text-slate-600">
+        <p className="text-sm text-muted-text">
           {hasBalances
             ? "Re-running extraction will replace all current account balances and linked invoices with a fresh extraction from the stored file."
             : "This usually means the wrong document type was detected. Choose the correct type and re-run extraction on the stored file."}
@@ -562,9 +562,9 @@ function ApproveModal({ preview, onConfirm, onClose, loading }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl mx-4 flex flex-col max-h-[90vh]">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 shrink-0">
-          <h2 className="text-base font-semibold text-slate-900">Confirm — post ledger entries</h2>
+      <div className="bg-surface rounded-xl shadow-2xl w-full max-w-2xl mx-4 flex flex-col max-h-[90vh]">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-surface-border shrink-0">
+          <h2 className="text-base font-semibold text-foreground">Confirm — post ledger entries</h2>
           <button onClick={onClose} className="icon-btn" aria-label="Close" disabled={loading}>
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
@@ -574,16 +574,16 @@ function ApproveModal({ preview, onConfirm, onClose, loading }) {
 
         <div className="overflow-y-auto flex-1 px-6 py-4 space-y-4">
           <div className="flex flex-wrap gap-4 text-sm">
-            <div className="bg-slate-50 rounded-lg px-4 py-2 text-center">
-              <p className="text-xs text-slate-500 uppercase tracking-wide">Entries</p>
-              <p className="font-semibold text-slate-900">{preview.entries.length}</p>
+            <div className="bg-surface-subtle rounded-lg px-4 py-2 text-center">
+              <p className="text-xs text-muted uppercase tracking-wide">Entries</p>
+              <p className="font-semibold text-foreground">{preview.entries.length}</p>
             </div>
-            <div className="bg-slate-50 rounded-lg px-4 py-2 text-center">
-              <p className="text-xs text-slate-500 uppercase tracking-wide">Total debits</p>
-              <p className="font-semibold text-slate-900 font-mono">{fmtChf(preview.totalDebitCents)}</p>
+            <div className="bg-surface-subtle rounded-lg px-4 py-2 text-center">
+              <p className="text-xs text-muted uppercase tracking-wide">Total debits</p>
+              <p className="font-semibold text-foreground font-mono">{fmtChf(preview.totalDebitCents)}</p>
             </div>
-            <div className="bg-slate-50 rounded-lg px-4 py-2 text-center">
-              <p className="text-xs text-slate-500 uppercase tracking-wide">Total credits</p>
+            <div className="bg-surface-subtle rounded-lg px-4 py-2 text-center">
+              <p className="text-xs text-muted uppercase tracking-wide">Total credits</p>
               <p className="font-semibold text-success-text font-mono">{fmtChf(preview.totalCreditCents)}</p>
             </div>
             {preview.autoCreateCount > 0 && (
@@ -631,7 +631,7 @@ function ApproveModal({ preview, onConfirm, onClose, loading }) {
           </div>
         </div>
 
-        <div className="flex gap-2 justify-end px-6 py-4 border-t border-slate-200 shrink-0">
+        <div className="flex gap-2 justify-end px-6 py-4 border-t border-surface-border shrink-0">
           <button className="button-secondary" onClick={onClose} disabled={loading}>Cancel</button>
           <button className="button-primary" onClick={onConfirm} disabled={loading}>
             {loading ? "Posting…" : `Post ${preview.entries.length} entries`}
@@ -986,7 +986,7 @@ export default function ImportedStatementReviewPage() {
               {/* ── Sibling section nav (other sections from the same PDF) ── */}
               {siblingNav.length > 0 && (
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-xs text-slate-500">Also in this PDF:</span>
+                  <span className="text-xs text-muted">Also in this PDF:</span>
                   {siblingNav.map((sec) => (
                     <Link
                       key={sec.id}
@@ -997,7 +997,7 @@ export default function ImportedStatementReviewPage() {
                           ? "border-success-border bg-success-subtle text-success-text"
                           : sec.status === "PENDING_REVIEW"
                             ? "border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100"
-                            : "border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100",
+                            : "border-surface-border bg-surface-subtle text-muted-text hover:bg-surface-hover",
                       )}
                     >
                       {SECTION_LABEL[sec.sectionType] ?? sec.sectionType}
@@ -1031,23 +1031,23 @@ export default function ImportedStatementReviewPage() {
                 )}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                   <div>
-                    <p className="text-xs text-slate-500 uppercase tracking-wide mb-0.5">Section</p>
+                    <p className="text-xs text-muted uppercase tracking-wide mb-0.5">Section</p>
                     <p className="font-medium">{SECTION_LABEL[s.sectionType] ?? s.sectionType}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-slate-500 uppercase tracking-wide mb-0.5">
+                    <p className="text-xs text-muted uppercase tracking-wide mb-0.5">
                       {t("manager:financeImports.prop.building")}
                     </p>
                     <p className="font-medium">{s.buildingName || "—"}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-slate-500 uppercase tracking-wide mb-0.5">
+                    <p className="text-xs text-muted uppercase tracking-wide mb-0.5">
                       {t("manager:financeImports.prop.fiscalYear")}
                     </p>
                     <p className="font-medium">{s.fiscalYear}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-slate-500 uppercase tracking-wide mb-0.5">
+                    <p className="text-xs text-muted uppercase tracking-wide mb-0.5">
                       {t("manager:financeImports.prop.period")}
                     </p>
                     <p className="font-medium">
@@ -1056,7 +1056,7 @@ export default function ImportedStatementReviewPage() {
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-slate-500 uppercase tracking-wide mb-0.5">
+                    <p className="text-xs text-muted uppercase tracking-wide mb-0.5">
                       {t("manager:financeImports.prop.status")}
                     </p>
                     <Badge variant={statusVariant(s.status)}>
@@ -1065,7 +1065,7 @@ export default function ImportedStatementReviewPage() {
                   </div>
                   {s.approvedBy && (
                     <div>
-                      <p className="text-xs text-slate-500 uppercase tracking-wide mb-0.5">
+                      <p className="text-xs text-muted uppercase tracking-wide mb-0.5">
                         {t("manager:financeImports.prop.approvedBy")}
                       </p>
                       <p className="font-medium">{s.approvedBy}</p>
@@ -1073,8 +1073,8 @@ export default function ImportedStatementReviewPage() {
                   )}
                   {s.notes && (
                     <div className="col-span-2 md:col-span-4">
-                      <p className="text-xs text-slate-500 uppercase tracking-wide mb-0.5">Notes</p>
-                      <p className="text-slate-700">{s.notes}</p>
+                      <p className="text-xs text-muted uppercase tracking-wide mb-0.5">Notes</p>
+                      <p className="text-muted-dark">{s.notes}</p>
                     </div>
                   )}
                 </div>
@@ -1131,9 +1131,9 @@ export default function ImportedStatementReviewPage() {
 
               {/* ── Ledger preview — balance sheet only ── */}
               {isPendingReview && isBalanceSheet && !hasNoBalances && (
-                <div className="rounded-lg border border-slate-200 bg-slate-50">
-                  <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
-                    <p className="text-sm font-medium text-slate-700">Ledger entries that will be posted</p>
+                <div className="rounded-lg border border-surface-border bg-surface-subtle">
+                  <div className="px-4 py-3 border-b border-surface-border flex items-center justify-between">
+                    <p className="text-sm font-medium text-muted-dark">Ledger entries that will be posted</p>
                     <button
                       className="text-xs text-brand-dark hover:underline"
                       onClick={fetchPreview}
@@ -1144,7 +1144,7 @@ export default function ImportedStatementReviewPage() {
                   </div>
                   <div className="px-4 py-4">
                     {previewLoading && (
-                      <p className="text-sm text-slate-500">Loading preview…</p>
+                      <p className="text-sm text-muted">Loading preview…</p>
                     )}
                     {previewError && (
                       <p className="text-sm text-destructive-text">{previewError}</p>
@@ -1158,10 +1158,10 @@ export default function ImportedStatementReviewPage() {
                         ) : (
                           <>
                             <div className="flex flex-wrap gap-3 mb-3 text-sm">
-                              <span className="text-slate-600">
+                              <span className="text-muted-text">
                                 <strong>{preview.entries.length}</strong> entries
                               </span>
-                              <span className="text-slate-600">
+                              <span className="text-muted-text">
                                 Debits: <strong className="font-mono">CHF {(preview.totalDebitCents / 100).toLocaleString("de-CH", { minimumFractionDigits: 2 })}</strong>
                               </span>
                               <span className="text-success-text">
@@ -1173,7 +1173,7 @@ export default function ImportedStatementReviewPage() {
                                 </span>
                               )}
                             </div>
-                            <div className="overflow-hidden rounded-lg border border-slate-200">
+                            <div className="overflow-hidden rounded-lg border border-surface-border">
                               <div className="overflow-x-auto">
                                 <table className="data-table text-sm">
                                   <thead>
@@ -1239,11 +1239,11 @@ export default function ImportedStatementReviewPage() {
                           {s.linkedInvoices.map((inv) => (
                             <tr key={inv.id}>
                               <td>{inv.recipientName || "—"}</td>
-                              <td className="text-slate-600 text-sm">{inv.description || "—"}</td>
+                              <td className="text-muted-text text-sm">{inv.description || "—"}</td>
                               <td className="text-right font-mono">
                                 {inv.totalCents != null ? formatChfCents(inv.totalCents) : "—"}
                               </td>
-                              <td className="text-slate-500 text-sm">
+                              <td className="text-muted text-sm">
                                 {inv.issueDate ? formatDate(inv.issueDate) : "—"}
                               </td>
                               <td>
@@ -1280,7 +1280,7 @@ export default function ImportedStatementReviewPage() {
                                     type="button"
                                     className={cn(
                                       "icon-btn",
-                                      editingBalanceId === ab.id ? "text-brand-dark" : "text-slate-400 hover:text-slate-600",
+                                      editingBalanceId === ab.id ? "text-brand-dark" : "text-foreground-dim hover:text-muted-text",
                                     )}
                                     onClick={() => setEditingBalanceId(editingBalanceId === ab.id ? null : ab.id)}
                                     title="Edit this row"
@@ -1289,7 +1289,7 @@ export default function ImportedStatementReviewPage() {
                                   </button>
                                   <button
                                     type="button"
-                                    className="icon-btn text-slate-300 hover:text-destructive-text"
+                                    className="icon-btn text-foreground-dim hover:text-destructive-text"
                                     onClick={() => handleBalanceDelete(ab.id)}
                                     disabled={deletingBalanceId === ab.id}
                                     title="Delete this row"
@@ -1312,12 +1312,12 @@ export default function ImportedStatementReviewPage() {
                                 : formatChfCents(ab.balanceCents)}
                             </span>
                             {ab.accountName && (
-                              <span className="text-slate-500 text-xs">{ab.accountCode ? `${ab.accountCode} ` : ""}{ab.accountName}</span>
+                              <span className="text-muted text-xs">{ab.accountCode ? `${ab.accountCode} ` : ""}{ab.accountName}</span>
                             )}
                           </div>
                         </div>
                         {editingBalanceId === ab.id && isPendingReview && (
-                          <div className="px-3 py-3 bg-slate-50">
+                          <div className="px-3 py-3 bg-surface-subtle">
                             <BalanceRowEditor
                               balance={ab}
                               statementId={s.id}
@@ -1354,7 +1354,7 @@ export default function ImportedStatementReviewPage() {
                         <tbody>
                           {s.accountBalances.map((ab) => (
                             <Fragment key={ab.id}>
-                              <tr className={editingBalanceId === ab.id ? "bg-slate-50" : ""}>
+                              <tr className={editingBalanceId === ab.id ? "bg-surface-subtle" : ""}>
                                 <td className="font-mono text-sm">{ab.rawAccountCode}</td>
                                 <td>{ab.rawAccountName}</td>
                                 <td className="text-right font-mono text-sm">
@@ -1368,7 +1368,7 @@ export default function ImportedStatementReviewPage() {
                                     {t(`manager:financeImports.confidence.${ab.matchConfidence}`)}
                                   </Badge>
                                 </td>
-                                <td className="text-sm text-slate-700">
+                                <td className="text-sm text-muted-dark">
                                   {ab.accountCode ? `${ab.accountCode} ` : ""}{ab.accountName ?? "—"}
                                 </td>
                                 {isPendingReview && (
@@ -1378,7 +1378,7 @@ export default function ImportedStatementReviewPage() {
                                         type="button"
                                         className={cn(
                                           "icon-btn",
-                                          editingBalanceId === ab.id ? "text-brand-dark" : "text-slate-300 hover:text-slate-600",
+                                          editingBalanceId === ab.id ? "text-brand-dark" : "text-foreground-dim hover:text-muted-text",
                                         )}
                                         onClick={() => setEditingBalanceId(editingBalanceId === ab.id ? null : ab.id)}
                                         title={editingBalanceId === ab.id ? "Close editor" : "Edit this row"}
@@ -1387,7 +1387,7 @@ export default function ImportedStatementReviewPage() {
                                       </button>
                                       <button
                                         type="button"
-                                        className="icon-btn text-slate-200 hover:text-destructive-text"
+                                        className="icon-btn text-foreground-dim hover:text-destructive-text"
                                         onClick={() => handleBalanceDelete(ab.id)}
                                         disabled={deletingBalanceId === ab.id}
                                         title="Delete this row"
@@ -1402,7 +1402,7 @@ export default function ImportedStatementReviewPage() {
                                 <tr>
                                   <td
                                     colSpan={isPendingReview ? 7 : 6}
-                                    className="p-0 bg-slate-50 border-t border-slate-200"
+                                    className="p-0 bg-surface-subtle border-t border-surface-border"
                                   >
                                     <div className="px-4 py-3">
                                       <BalanceRowEditor
@@ -1424,8 +1424,8 @@ export default function ImportedStatementReviewPage() {
                         {/* ── Balance sheet totals footer ── */}
                         {isBalanceSheet && (
                           <tfoot>
-                            <tr className="border-t-2 border-slate-200 bg-slate-50 text-sm font-medium">
-                              <td colSpan={2} className="px-3 py-2 text-xs text-slate-500 uppercase tracking-wide text-right">
+                            <tr className="border-t-2 border-surface-border bg-surface-subtle text-sm font-medium">
+                              <td colSpan={2} className="px-3 py-2 text-xs text-muted uppercase tracking-wide text-right">
                                 Total
                               </td>
                               <td className="px-3 py-2 text-right font-mono">
@@ -1454,31 +1454,31 @@ export default function ImportedStatementReviewPage() {
                         {/* ── Income statement totals footer ── */}
                         {isIncomeStatement && (
                           <tfoot>
-                            <tr className="border-t-2 border-slate-200 bg-slate-50 text-sm font-medium">
-                              <td colSpan={2} className="px-3 py-2 text-xs text-slate-500 uppercase tracking-wide text-right">
+                            <tr className="border-t-2 border-surface-border bg-surface-subtle text-sm font-medium">
+                              <td colSpan={2} className="px-3 py-2 text-xs text-muted uppercase tracking-wide text-right">
                                 Revenue
                               </td>
-                              <td className="px-3 py-2 text-right font-mono text-slate-400">—</td>
+                              <td className="px-3 py-2 text-right font-mono text-foreground-dim">—</td>
                               <td className="px-3 py-2 text-right font-mono text-success-text">
                                 {formatChfCents(isRevenueCents)}
                               </td>
                               <td colSpan={isPendingReview ? 3 : 2} />
                             </tr>
-                            <tr className="bg-slate-50 text-sm font-medium">
-                              <td colSpan={2} className="px-3 py-2 text-xs text-slate-500 uppercase tracking-wide text-right">
+                            <tr className="bg-surface-subtle text-sm font-medium">
+                              <td colSpan={2} className="px-3 py-2 text-xs text-muted uppercase tracking-wide text-right">
                                 Expenses
                               </td>
                               <td className="px-3 py-2 text-right font-mono">
                                 {formatChfCents(isExpensesCents)}
                               </td>
-                              <td className="px-3 py-2 text-right font-mono text-slate-400">—</td>
+                              <td className="px-3 py-2 text-right font-mono text-foreground-dim">—</td>
                               <td colSpan={isPendingReview ? 3 : 2} />
                             </tr>
-                            <tr className="border-t border-slate-300 bg-slate-100 text-sm font-semibold">
-                              <td colSpan={2} className="px-3 py-2 text-xs text-slate-600 uppercase tracking-wide text-right">
+                            <tr className="border-t border-muted-ring bg-surface-hover text-sm font-semibold">
+                              <td colSpan={2} className="px-3 py-2 text-xs text-muted-text uppercase tracking-wide text-right">
                                 Net income
                               </td>
-                              <td className="px-3 py-2 text-right font-mono text-slate-400">—</td>
+                              <td className="px-3 py-2 text-right font-mono text-foreground-dim">—</td>
                               <td className={cn(
                                 "px-3 py-2 text-right font-mono",
                                 isNetIncomeCents >= 0 ? "text-success-text" : "text-destructive-text",

@@ -124,7 +124,7 @@ export default function OwnerDetailPage() {
         <div className="mb-3">
           <button
             type="button"
-            className="text-sm font-medium text-slate-600 hover:text-slate-900"
+            className="text-sm font-medium text-muted-text hover:text-foreground"
             onClick={() => router.push("/manager/people?tab=owners")}
           >
             {t("manager:peopleOwnersId.text.back")}
@@ -142,7 +142,7 @@ export default function OwnerDetailPage() {
             <p className="loading-text">{t("manager:peopleOwnersId.text.loading")}</p>
           ) : !owner ? (
             <Panel>
-              <p className="text-sm text-slate-600">{t("manager:peopleOwnersId.text.notFound")}</p>
+              <p className="text-sm text-muted-text">{t("manager:peopleOwnersId.text.notFound")}</p>
               <button type="button" className="button-secondary mt-3" onClick={() => router.back()}>
                 {t("manager:peopleOwnersId.text.goBack")}
               </button>
@@ -185,30 +185,30 @@ export default function OwnerDetailPage() {
                 >
                   <div className="grid gap-4 sm:grid-cols-2">
                     <label className="grid gap-2">
-                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleOwnersId.prop.name")}</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:peopleOwnersId.prop.name")}</span>
                       {isEditing ? (
-                        <input className="input text-sm text-slate-700" type="text" value={editForm.name} onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))} />
+                        <input className="input text-sm text-muted-dark" type="text" value={editForm.name} onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))} />
                       ) : (
-                        <div className="text-sm text-slate-700">{owner.name || "—"}</div>
+                        <div className="text-sm text-muted-dark">{owner.name || "—"}</div>
                       )}
                     </label>
                     <label className="grid gap-2 sm:col-span-2">
-                      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleOwnersId.prop.email")}</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:peopleOwnersId.prop.email")}</span>
                       {isEditing ? (
-                        <input className="input text-sm text-slate-700" type="email" value={editForm.email} onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))} />
+                        <input className="input text-sm text-muted-dark" type="email" value={editForm.email} onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))} />
                       ) : (
-                        <div className="text-sm text-slate-700">{owner.email || "—"}</div>
+                        <div className="text-sm text-muted-dark">{owner.email || "—"}</div>
                       )}
                     </label>
                   </div>
                   <div className="mt-6 grid gap-4 sm:grid-cols-2">
                     <div className="min-w-0">
-                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleOwnersId.prop.id")}</div>
-                      <div className="text-sm text-slate-700 mt-1 break-all">{owner.id}</div>
+                      <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:peopleOwnersId.prop.id")}</div>
+                      <div className="text-sm text-muted-dark mt-1 break-all">{owner.id}</div>
                     </div>
                     <div>
-                      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("manager:peopleOwnersId.prop.created")}</div>
-                      <div className="text-sm text-slate-700 mt-1">{owner.createdAt ? formatDateTime(owner.createdAt) : "—"}</div>
+                      <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:peopleOwnersId.prop.created")}</div>
+                      <div className="text-sm text-muted-dark mt-1">{owner.createdAt ? formatDateTime(owner.createdAt) : "—"}</div>
                     </div>
                   </div>
                 </Panel>
@@ -229,52 +229,52 @@ export default function OwnerDetailPage() {
                   {owner.billingEntity ? (
                     <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-4">
                       <div>
-                        <dt className="text-xs font-medium text-slate-500 uppercase tracking-wide">{t("manager:peopleOwnersId.prop.name")}</dt>
-                        <dd className="mt-0.5 text-sm text-slate-900">{owner.billingEntity.name || "—"}</dd>
+                        <dt className="text-xs font-medium text-muted uppercase tracking-wide">{t("manager:peopleOwnersId.prop.name")}</dt>
+                        <dd className="mt-0.5 text-sm text-foreground">{owner.billingEntity.name || "—"}</dd>
                       </div>
                       <div>
-                        <dt className="text-xs font-medium text-slate-500 uppercase tracking-wide">{t("manager:peopleOwnersId.prop.address")}</dt>
-                        <dd className="mt-0.5 text-sm text-slate-900">{owner.billingEntity.addressLine1 || "—"}</dd>
+                        <dt className="text-xs font-medium text-muted uppercase tracking-wide">{t("manager:peopleOwnersId.prop.address")}</dt>
+                        <dd className="mt-0.5 text-sm text-foreground">{owner.billingEntity.addressLine1 || "—"}</dd>
                       </div>
                       <div>
-                        <dt className="text-xs font-medium text-slate-500 uppercase tracking-wide">{t("manager:peopleOwnersId.prop.city")}</dt>
-                        <dd className="mt-0.5 text-sm text-slate-900">{[owner.billingEntity.postalCode, owner.billingEntity.city].filter(Boolean).join(" ") || "—"}</dd>
+                        <dt className="text-xs font-medium text-muted uppercase tracking-wide">{t("manager:peopleOwnersId.prop.city")}</dt>
+                        <dd className="mt-0.5 text-sm text-foreground">{[owner.billingEntity.postalCode, owner.billingEntity.city].filter(Boolean).join(" ") || "—"}</dd>
                       </div>
                       <div>
-                        <dt className="text-xs font-medium text-slate-500 uppercase tracking-wide">IBAN</dt>
-                        <dd className="mt-0.5 text-sm text-slate-900 font-mono">{owner.billingEntity.iban || "—"}</dd>
+                        <dt className="text-xs font-medium text-muted uppercase tracking-wide">IBAN</dt>
+                        <dd className="mt-0.5 text-sm text-foreground font-mono">{owner.billingEntity.iban || "—"}</dd>
                       </div>
                       {owner.billingEntity.vatNumber && (
                         <div>
-                          <dt className="text-xs font-medium text-slate-500 uppercase tracking-wide">{t("manager:peopleOwnersId.prop.vatNumber")}</dt>
-                          <dd className="mt-0.5 text-sm text-slate-900">{owner.billingEntity.vatNumber}</dd>
+                          <dt className="text-xs font-medium text-muted uppercase tracking-wide">{t("manager:peopleOwnersId.prop.vatNumber")}</dt>
+                          <dd className="mt-0.5 text-sm text-foreground">{owner.billingEntity.vatNumber}</dd>
                         </div>
                       )}
                       <div>
-                        <dt className="text-xs font-medium text-slate-500 uppercase tracking-wide">{t("manager:peopleOwnersId.prop.type")}</dt>
+                        <dt className="text-xs font-medium text-muted uppercase tracking-wide">{t("manager:peopleOwnersId.prop.type")}</dt>
                         <dd className="mt-0.5"><Badge variant="info" size="sm">{owner.billingEntity.type}</Badge></dd>
                       </div>
                     </dl>
                   ) : showBillingForm ? (
                     <form onSubmit={handleCreateBillingEntity} className="grid grid-cols-2 gap-4 max-w-lg">
                       <div className="col-span-2">
-                        <label className="block text-xs font-medium text-slate-600 mb-1">{t("manager:peopleOwnersId.prop.address")}</label>
+                        <label className="block text-xs font-medium text-muted-text mb-1">{t("manager:peopleOwnersId.prop.address")}</label>
                         <input required value={billingForm.addressLine1} onChange={(e) => setBillingForm((f) => ({ ...f, addressLine1: e.target.value }))} className="input text-sm w-full" placeholder="Rue de la Paix 1" />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-slate-600 mb-1">{t("manager:peopleOwnersId.prop.postalCode")}</label>
+                        <label className="block text-xs font-medium text-muted-text mb-1">{t("manager:peopleOwnersId.prop.postalCode")}</label>
                         <input required value={billingForm.postalCode} onChange={(e) => setBillingForm((f) => ({ ...f, postalCode: e.target.value }))} className="input text-sm w-full" placeholder="1200" />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-slate-600 mb-1">{t("manager:peopleOwnersId.prop.city")}</label>
+                        <label className="block text-xs font-medium text-muted-text mb-1">{t("manager:peopleOwnersId.prop.city")}</label>
                         <input required value={billingForm.city} onChange={(e) => setBillingForm((f) => ({ ...f, city: e.target.value }))} className="input text-sm w-full" placeholder="Genève" />
                       </div>
                       <div className="col-span-2">
-                        <label className="block text-xs font-medium text-slate-600 mb-1">IBAN</label>
+                        <label className="block text-xs font-medium text-muted-text mb-1">IBAN</label>
                         <input required value={billingForm.iban} onChange={(e) => setBillingForm((f) => ({ ...f, iban: e.target.value }))} className="input text-sm w-full font-mono" placeholder="CH56 0483 5012 3456 7800 9" />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-slate-600 mb-1">{t("manager:peopleOwnersId.prop.vatNumber")}</label>
+                        <label className="block text-xs font-medium text-muted-text mb-1">{t("manager:peopleOwnersId.prop.vatNumber")}</label>
                         <input value={billingForm.vatNumber} onChange={(e) => setBillingForm((f) => ({ ...f, vatNumber: e.target.value }))} className="input text-sm w-full" placeholder="CHE-123.456.789" />
                       </div>
                       <div className="col-span-2 flex gap-2 pt-1">
@@ -289,7 +289,7 @@ export default function OwnerDetailPage() {
                   ) : (
                     <div className="py-4 flex flex-col items-start gap-3">
                       <Badge variant="warning" size="md">⚠ {t("manager:peopleOwnersId.text.noBillingEntity")}</Badge>
-                      <p className="text-sm text-slate-500">{t("manager:peopleOwnersId.text.noBillingEntityDescription")}</p>
+                      <p className="text-sm text-muted">{t("manager:peopleOwnersId.text.noBillingEntityDescription")}</p>
                     </div>
                   )}
                 </Panel>
@@ -299,7 +299,7 @@ export default function OwnerDetailPage() {
               {activeTab === "buildings" && (
                 <Panel title={t("manager:peopleOwnersId.title.buildings")}>
                   {owner.buildings?.length === 0 ? (
-                    <p className="text-sm text-slate-500 py-2">{t("manager:peopleOwnersId.text.noBuildings")}</p>
+                    <p className="text-sm text-muted py-2">{t("manager:peopleOwnersId.text.noBuildings")}</p>
                   ) : (
                     <>
                       {/* Mobile cards */}
@@ -307,7 +307,7 @@ export default function OwnerDetailPage() {
                         {owner.buildings.map((b) => (
                           <div key={b.id} className="px-4 py-3">
                             <Link href={`/manager/buildings/${b.id}`} className="cell-link font-medium">{b.name || "—"}</Link>
-                            <p className="text-xs text-slate-500 mt-0.5">{b.address || "—"}</p>
+                            <p className="text-xs text-muted mt-0.5">{b.address || "—"}</p>
                           </div>
                         ))}
                       </div>
@@ -328,7 +328,7 @@ export default function OwnerDetailPage() {
                                     {b.name || "—"}
                                   </Link>
                                 </td>
-                                <td className="text-slate-500">{b.address || "—"}</td>
+                                <td className="text-muted">{b.address || "—"}</td>
                               </tr>
                             ))}
                           </tbody>

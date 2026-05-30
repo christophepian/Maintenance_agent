@@ -67,7 +67,7 @@ export default function BottomSheet({ open, onClose, title, children, snapPoints
       {/* Sheet panel */}
       <div
         className={cn(
-          'absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-xl flex flex-col',
+          'absolute bottom-0 left-0 right-0 bg-surface rounded-t-2xl shadow-xl flex flex-col',
           snapPoints === 'full' ? 'max-h-[95vh]' : 'max-h-[60vh]',
         )}
         style={{ animation: 'mobileSheetSlideUp 0.25s ease-out' }}
@@ -77,12 +77,12 @@ export default function BottomSheet({ open, onClose, title, children, snapPoints
       >
         {/* Drag handle */}
         <div className="flex justify-center pt-3 pb-1 shrink-0">
-          <div className="w-10 h-1 rounded-full bg-slate-300" aria-hidden="true" />
+          <div className="w-10 h-1 rounded-full bg-muted-ring" aria-hidden="true" />
         </div>
 
         {title && (
-          <div className="px-5 pb-3 pt-1 border-b border-slate-100 shrink-0">
-            <h2 className="text-base font-semibold text-slate-800">{title}</h2>
+          <div className="px-5 pb-3 pt-1 border-b border-surface-divider shrink-0">
+            <h2 className="text-base font-semibold text-foreground">{title}</h2>
           </div>
         )}
 

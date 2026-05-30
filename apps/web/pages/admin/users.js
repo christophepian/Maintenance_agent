@@ -40,7 +40,7 @@ function Badge({ level }) {
     DOCS_INVESTOR: "bg-green-100 text-green-800",
   };
   return (
-    <span className={cn("px-2 py-0.5 rounded-full text-xs font-medium", colors[level] ?? "bg-slate-100 text-slate-600")}>
+    <span className={cn("px-2 py-0.5 rounded-full text-xs font-medium", colors[level] ?? "bg-surface-hover text-muted-text")}>
       {ACCESS_LABEL[level] ?? level ?? "—"}
     </span>
   );
@@ -173,16 +173,16 @@ export default function AdminUsersPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-surface-subtle">
       {/* Top bar */}
-      <header className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
+      <header className="bg-surface border-b border-surface-border px-6 py-4 flex items-center justify-between">
         <h1 className="font-bold text-lg">User Management</h1>
         <div className="flex items-center gap-3">
-          <span className="text-xs text-slate-400 uppercase tracking-wide font-medium">Admin</span>
+          <span className="text-xs text-foreground-dim uppercase tracking-wide font-medium">Admin</span>
           <button
             type="button"
             onClick={signOut}
-            className="text-sm text-slate-500 hover:text-slate-800 transition-colors"
+            className="text-sm text-muted hover:text-foreground transition-colors"
           >
             Sign out
           </button>
@@ -240,7 +240,7 @@ export default function AdminUsersPage() {
               </label>
             )}
 
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-muted">
               A single-use sign-in link will be emailed to this address. It expires in 24 hours.
             </p>
 
@@ -257,9 +257,9 @@ export default function AdminUsersPage() {
           </h2>
 
           {loading ? (
-            <div className="text-slate-500 text-sm py-6 text-center">Loading…</div>
+            <div className="text-muted text-sm py-6 text-center">Loading…</div>
           ) : users.length === 0 ? (
-            <div className="text-slate-500 text-sm py-6 text-center">No users yet.</div>
+            <div className="text-muted text-sm py-6 text-center">No users yet.</div>
           ) : (
             <div className="space-y-2">
               {users.map((u) => (
@@ -275,7 +275,7 @@ export default function AdminUsersPage() {
                     <div className="flex items-center gap-2 mt-1 flex-wrap">
                       <Badge level={u.accessLevel} />
                       {u.appRole && (
-                        <span className="text-xs text-slate-500">{ROLE_LABEL[u.appRole] ?? u.appRole}</span>
+                        <span className="text-xs text-muted">{ROLE_LABEL[u.appRole] ?? u.appRole}</span>
                       )}
                       {u.tenantId && (
                         <span className="text-xs text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded font-mono" title="Tenant preview ID">
@@ -291,7 +291,7 @@ export default function AdminUsersPage() {
                         <span className="text-xs text-red-600 font-medium">Revoked</span>
                       )}
                     </div>
-                    <div className="text-xs text-slate-400 mt-0.5">
+                    <div className="text-xs text-foreground-dim mt-0.5">
                       Invited {new Date(u.createdAt).toLocaleDateString()}
                       {u.lastSignIn ? ` · Last sign-in ${new Date(u.lastSignIn).toLocaleDateString()}` : " · Never signed in"}
                     </div>
@@ -374,7 +374,7 @@ export default function AdminUsersPage() {
                 onChange={(e) => setEditing((s) => ({ ...s, tenantId: e.target.value }))}
                 placeholder="UUID of the Tenant record (optional)"
               />
-              <span className="text-xs text-slate-400 mt-0.5 block">
+              <span className="text-xs text-foreground-dim mt-0.5 block">
                 Set this to let a non-TENANT account access the tenant portal for that tenant.
                 Clear to remove access.
               </span>
@@ -389,7 +389,7 @@ export default function AdminUsersPage() {
                 onChange={(e) => setEditing((s) => ({ ...s, ownerId: e.target.value }))}
                 placeholder="User.id of an OWNER account (optional)"
               />
-              <span className="text-xs text-slate-400 mt-0.5 block">
+              <span className="text-xs text-foreground-dim mt-0.5 block">
                 Set this to let a non-OWNER account access the owner portal for that owner.
                 Clear to remove access.
               </span>

@@ -41,14 +41,14 @@ function ActionStat({ label, value, href, tone }) {
     warn: "text-amber-700",
     bad:  "text-red-600",
     good: "text-green-700",
-  }[tone] ?? "text-slate-900";
+  }[tone] ?? "text-foreground";
   return (
     <Link href={href} className="no-underline group">
-      <div className="flex h-full flex-col justify-between rounded-xl bg-white px-4 py-3 ring-1 ring-slate-300 transition-all hover:shadow-sm hover:ring-indigo-300 active:scale-[0.98]">
-        <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{label}</span>
+      <div className="flex h-full flex-col justify-between rounded-xl bg-surface px-4 py-3 ring-1 ring-slate-300 transition-all hover:shadow-sm hover:ring-indigo-300 active:scale-[0.98]">
+        <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{label}</span>
         <div className="mt-2 flex items-end justify-between gap-1">
           <span className={cn("text-2xl font-semibold tabular-nums leading-none", countColor)}>{value}</span>
-          <svg className="mb-0.5 h-4 w-4 shrink-0 text-slate-300 transition-colors group-hover:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+          <svg className="mb-0.5 h-4 w-4 shrink-0 text-foreground-dim transition-colors group-hover:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
           </svg>
         </div>
@@ -63,10 +63,10 @@ function InfoStat({ label, value, tone }) {
     good: "text-green-700",
     warn: "text-amber-700",
     bad:  "text-red-600",
-  }[tone] ?? "text-slate-900";
+  }[tone] ?? "text-foreground";
   return (
     <div className="flex flex-col justify-between">
-      <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{label}</span>
+      <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{label}</span>
       <span className={cn("mt-2 text-xl font-semibold tabular-nums leading-none", valueColor)}>{value}</span>
     </div>
   );
@@ -74,7 +74,7 @@ function InfoStat({ label, value, tone }) {
 
 /* ─── Category chip used in the priority feed ─── */
 const CATEGORY_CHIP = {
-  review:    { label: "Pending review",    cls: "bg-slate-100 text-slate-600" },
+  review:    { label: "Pending review",    cls: "bg-surface-hover text-muted-text" },
   approval:  { label: "Owner approval",    cls: "bg-amber-100 text-amber-700" },
   disputed:  { label: "Disputed invoice",  cls: "bg-red-100 text-red-700" },
   stale:     { label: "Stale job",         cls: "bg-amber-100 text-amber-700" },
@@ -82,11 +82,11 @@ const CATEGORY_CHIP = {
 };
 
 const CARD_STYLE = {
-  review:   "border-slate-200 bg-white hover:bg-slate-50",
+  review:   "border-surface-border bg-surface hover:bg-surface-subtle",
   approval: "border-amber-200 bg-amber-50 hover:bg-amber-100",
   disputed: "border-red-200 bg-red-50 hover:bg-red-100",
   stale:    "border-amber-200 bg-amber-50 hover:bg-amber-100",
-  rfp:      "border-slate-200 bg-white hover:bg-slate-50",
+  rfp:      "border-surface-border bg-surface hover:bg-surface-subtle",
 };
 
 /* ─── Single action item row ─── */
@@ -102,26 +102,26 @@ function ActionRow({ category, title, sub, building, date, href }) {
         {chip.label}
       </span>
       <div className="min-w-0 flex-1">
-        <div className="truncate text-sm font-semibold text-slate-900">{title}</div>
+        <div className="truncate text-sm font-semibold text-foreground">{title}</div>
         <div className="mt-0.5 flex min-w-0 items-center gap-1.5">
           {building && (
-            <span className="truncate text-xs text-slate-500">{building}</span>
+            <span className="truncate text-xs text-muted">{building}</span>
           )}
           {building && (date || sub) && (
-            <span className="shrink-0 text-xs text-slate-300" aria-hidden>·</span>
+            <span className="shrink-0 text-xs text-foreground-dim" aria-hidden>·</span>
           )}
           {date && (
-            <span className="shrink-0 text-xs text-slate-400">{formatDate(date)}</span>
+            <span className="shrink-0 text-xs text-foreground-dim">{formatDate(date)}</span>
           )}
           {!building && sub && (
-            <span className="truncate text-xs text-slate-500">{sub}</span>
+            <span className="truncate text-xs text-muted">{sub}</span>
           )}
           {building && sub && !date && (
-            <span className="truncate text-xs text-slate-400">{sub}</span>
+            <span className="truncate text-xs text-foreground-dim">{sub}</span>
           )}
         </div>
       </div>
-      <svg className="h-4 w-4 shrink-0 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+      <svg className="h-4 w-4 shrink-0 text-foreground-dim" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
         <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
       </svg>
     </div>
@@ -325,7 +325,7 @@ export default function ManagerDashboardV2() {
     return (
       <AppShell role="MANAGER">
         <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-          <div className="h-52 animate-pulse rounded-3xl bg-slate-100" />
+          <div className="h-52 animate-pulse rounded-3xl bg-surface-hover" />
         </div>
       </AppShell>
     );
@@ -342,8 +342,8 @@ export default function ManagerDashboardV2() {
         <div className="mb-8">
           {/* ─ Portfolio overview ─ */}
           <div className="mb-5 flex items-center gap-3">
-            <span className="text-xs font-semibold uppercase tracking-widest text-slate-400">{t("manager:dashboard_V2.text.portfolioOverview")}</span>
-            <div className="flex-1 border-t border-slate-300" />
+            <span className="text-xs font-semibold uppercase tracking-widest text-foreground-dim">{t("manager:dashboard_V2.text.portfolioOverview")}</span>
+            <div className="flex-1 border-t border-muted-ring" />
           </div>
 
           {/* ─ Informational KPIs ─ */}
@@ -383,22 +383,22 @@ export default function ManagerDashboardV2() {
           </div>
 
           {/* ─ Divider ─ */}
-          <div className="mt-6 mb-5 border-t border-slate-200" />
+          <div className="mt-6 mb-5 border-t border-surface-border" />
 
           {/* Top row: eyebrow + refresh */}
           <div className="flex items-start justify-between gap-4 mb-5">
             <div>
               <div className="mb-1 flex items-center gap-2">
-                <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">{t("manager:dashboard_V2.text.managerDashboard")}</span>
-                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-500">{t("manager:dashboard_V2.text.v2Preview")}</span>
+                <span className="text-xs font-semibold uppercase tracking-wide text-foreground-dim">{t("manager:dashboard_V2.text.managerDashboard")}</span>
+                <span className="rounded-full bg-surface-hover px-2 py-0.5 text-xs font-semibold text-muted">{t("manager:dashboard_V2.text.v2Preview")}</span>
               </div>
-              <h1 className="text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
+              <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
                 {heroHeadline(totalActions, openRequestsCount)}
               </h1>
             </div>
             <button
               onClick={() => { loadDashboardData(); loadPortfolio(); }}
-              className="rounded-lg border border-slate-300 bg-transparent p-2 text-slate-400 hover:bg-slate-50 hover:text-slate-700 transition-colors"
+              className="rounded-lg border border-muted-ring bg-transparent p-2 text-foreground-dim hover:bg-surface-subtle hover:text-muted-dark transition-colors"
               aria-label={t("manager:dashboardV2.ariaLabel.refreshDashboard")}
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
@@ -434,11 +434,11 @@ export default function ManagerDashboardV2() {
         <section className="mb-6">
           <div className="mb-3 flex items-baseline justify-between">
             <div>
-              <h2 className="text-base font-semibold text-slate-900">{t("manager:dashboardV2.heading.priorityFeed")}</h2>
-              <p className="text-xs text-slate-400">{t("manager:dashboard_V2.text.allItemsRequiringActionSortedByUrgency")}</p>
+              <h2 className="text-base font-semibold text-foreground">{t("manager:dashboardV2.heading.priorityFeed")}</h2>
+              <p className="text-xs text-foreground-dim">{t("manager:dashboard_V2.text.allItemsRequiringActionSortedByUrgency")}</p>
             </div>
             {totalActions > 0 && (
-              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">
+              <span className="rounded-full bg-surface-hover px-2 py-0.5 text-xs font-semibold text-muted-text">
                 {totalActions} item{totalActions !== 1 ? "s" : ""}
               </span>
             )}
@@ -459,7 +459,7 @@ export default function ManagerDashboardV2() {
               {actionFeed.length > FEED_PREVIEW && (
                 <button
                   onClick={() => setFeedExpanded((x) => !x)}
-                  className="mt-1 w-full rounded-xl border border-slate-100 py-2 text-xs font-medium text-slate-500 hover:bg-slate-50 transition-colors"
+                  className="mt-1 w-full rounded-xl border border-surface-divider py-2 text-xs font-medium text-muted hover:bg-surface-subtle transition-colors"
                 >
                   {feedExpanded
                     ? "Show less ↑"
@@ -470,7 +470,7 @@ export default function ManagerDashboardV2() {
               {/* Category summary links */}
               <div className="mt-3 flex flex-wrap gap-2 pt-1">
                 {pendingReviewRequests.length > 0 && (
-                  <Link href="/manager/requests?tab=pending" className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-indigo-600 hover:bg-slate-50 no-underline">
+                  <Link href="/manager/requests?tab=pending" className="rounded-full border border-surface-border bg-surface px-3 py-1 text-xs font-medium text-indigo-600 hover:bg-surface-subtle no-underline">
                     {pendingReviewRequests.length} pending review →
                   </Link>
                 )}
@@ -495,20 +495,20 @@ export default function ManagerDashboardV2() {
         </section>
 
         {/* ── FOOTER / CROSS-LINKS ─────────────────────────────── */}
-        <section className="rounded-3xl border border-slate-200 bg-white p-5">
+        <section className="rounded-3xl border border-surface-border bg-surface p-5">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="text-base font-semibold text-slate-900">{t("manager:dashboardV2.heading.moreTools")}</h2>
-              <p className="mt-1 text-sm text-slate-500">{t("manager:dashboard_V2.text.deeperViewsForFinanceStrategyAndTenantPortal")}</p>
+              <h2 className="text-base font-semibold text-foreground">{t("manager:dashboardV2.heading.moreTools")}</h2>
+              <p className="mt-1 text-sm text-muted">{t("manager:dashboard_V2.text.deeperViewsForFinanceStrategyAndTenantPortal")}</p>
             </div>
             <div className="flex flex-wrap gap-2 shrink-0">
-              <Link href="/manager/finance" className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors no-underline">
+              <Link href="/manager/finance" className="rounded-xl border border-surface-border bg-surface px-4 py-2 text-sm font-medium text-muted-dark hover:bg-surface-subtle transition-colors no-underline">
                 Finance overview
               </Link>
-              <Link href="/manager/finance/ledger" className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors no-underline">
+              <Link href="/manager/finance/ledger" className="rounded-xl border border-surface-border bg-surface px-4 py-2 text-sm font-medium text-muted-dark hover:bg-surface-subtle transition-colors no-underline">
                 Ledger
               </Link>
-              <Link href="/manager/settings" className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors no-underline">
+              <Link href="/manager/settings" className="rounded-xl border border-surface-border bg-surface px-4 py-2 text-sm font-medium text-muted-dark hover:bg-surface-subtle transition-colors no-underline">
                 Settings
               </Link>
               <Link href="/manager/requests" className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-colors no-underline">

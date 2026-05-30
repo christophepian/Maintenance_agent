@@ -60,7 +60,7 @@ function ExpandToggle({ expanded, total, onToggle }) {
   return (
     <button
       onClick={onToggle}
-      className="mt-3 w-full rounded-xl border border-slate-100 py-1.5 text-xs font-medium text-slate-500 hover:bg-slate-50 transition-colors"
+      className="mt-3 w-full rounded-xl border border-surface-divider py-1.5 text-xs font-medium text-muted hover:bg-surface-subtle transition-colors"
     >
       {expanded ? "Show less ↑" : `Show ${total - PREVIEW} more ↓`}
     </button>
@@ -87,7 +87,7 @@ function TimelineHeader({ year, month, mode, onSelect, onYearNav, onModeToggle }
   }, [year]);
 
   return (
-    <div className="sticky top-0 z-10 bg-white border-b border-slate-200 shadow-sm">
+    <div className="sticky top-0 z-10 bg-surface border-b border-surface-border shadow-sm">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-3 py-3">
 
@@ -96,20 +96,20 @@ function TimelineHeader({ year, month, mode, onSelect, onYearNav, onModeToggle }
             <div className="flex items-center gap-1 shrink-0">
               <button
                 onClick={() => onYearNav(-1)}
-                className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-slate-100 text-slate-500 transition-colors text-sm"
+                className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-surface-hover text-muted transition-colors text-sm"
                 aria-label={t("owner:reporting.ariaLabel.previousYear")}
               >
                 ‹
               </button>
               <button
                 onClick={onModeToggle}
-                className="rounded-full px-3 py-1 text-sm font-semibold text-slate-700 hover:bg-slate-100 transition-colors tabular-nums"
+                className="rounded-full px-3 py-1 text-sm font-semibold text-muted-dark hover:bg-surface-hover transition-colors tabular-nums"
               >
                 {year}
               </button>
               <button
                 onClick={() => onYearNav(1)}
-                className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-slate-100 text-slate-500 transition-colors text-sm"
+                className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-surface-hover text-muted transition-colors text-sm"
                 aria-label={t("owner:reporting.ariaLabel.nextYear")}
               >
                 ›
@@ -118,13 +118,13 @@ function TimelineHeader({ year, month, mode, onSelect, onYearNav, onModeToggle }
           ) : (
             <button
               onClick={onModeToggle}
-              className="shrink-0 rounded-full px-3 py-1 text-sm font-medium text-slate-500 hover:bg-slate-100 transition-colors"
+              className="shrink-0 rounded-full px-3 py-1 text-sm font-medium text-muted hover:bg-surface-hover transition-colors"
             >
               ← Months
             </button>
           )}
 
-          <div className="w-px h-5 bg-slate-200 shrink-0" />
+          <div className="w-px h-5 bg-surface-border shrink-0" />
 
           {/* Month strip or year grid */}
           <div
@@ -146,8 +146,8 @@ function TimelineHeader({ year, month, mode, onSelect, onYearNav, onModeToggle }
                         isSelected
                           ? "bg-slate-900 text-white"
                           : isFuture
-                          ? "text-slate-300 cursor-not-allowed"
-                          : "text-slate-600 hover:bg-slate-100",
+                          ? "text-foreground-dim cursor-not-allowed"
+                          : "text-muted-text hover:bg-surface-hover",
                       ].join(" ")}
                     >
                       {m}
@@ -167,8 +167,8 @@ function TimelineHeader({ year, month, mode, onSelect, onYearNav, onModeToggle }
                         isSelected
                           ? "bg-slate-900 text-white"
                           : isFuture
-                          ? "text-slate-300 cursor-not-allowed"
-                          : "text-slate-600 hover:bg-slate-100",
+                          ? "text-foreground-dim cursor-not-allowed"
+                          : "text-muted-text hover:bg-surface-hover",
                       ].join(" ")}
                     >
                       {y}
@@ -186,12 +186,12 @@ function TimelineHeader({ year, month, mode, onSelect, onYearNav, onModeToggle }
 
 function KpiCard({ label, value, delta, isLoading }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      <div className="text-xs font-medium text-slate-400 uppercase tracking-wide">{label}</div>
+    <div className="rounded-2xl border border-surface-border bg-surface p-5 shadow-sm">
+      <div className="text-xs font-medium text-foreground-dim uppercase tracking-wide">{label}</div>
       {isLoading ? (
-        <div className="mt-3 h-8 w-24 animate-pulse rounded bg-slate-100" />
+        <div className="mt-3 h-8 w-24 animate-pulse rounded bg-surface-hover" />
       ) : (
-        <div className="mt-3 text-2xl font-semibold tracking-tight text-slate-900">{value}</div>
+        <div className="mt-3 text-2xl font-semibold tracking-tight text-foreground">{value}</div>
       )}
       {!isLoading && delta && (
         <div className={cn("mt-1.5 text-xs", delta.tone)}>{delta.label}</div>
@@ -202,16 +202,16 @@ function KpiCard({ label, value, delta, isLoading }) {
 
 function DriverCard({ number, title, body, impact }) {
   return (
-    <div className="flex gap-4 rounded-2xl border border-slate-200 bg-white p-5">
-      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-100 text-sm font-semibold text-slate-600">
+    <div className="flex gap-4 rounded-2xl border border-surface-border bg-surface p-5">
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface-hover text-sm font-semibold text-muted-text">
         {number}
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-3">
-          <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
-          <span className="shrink-0 text-xs text-slate-400">{impact}</span>
+          <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+          <span className="shrink-0 text-xs text-foreground-dim">{impact}</span>
         </div>
-        <p className="mt-1.5 text-sm text-slate-600 leading-relaxed">{body}</p>
+        <p className="mt-1.5 text-sm text-muted-text leading-relaxed">{body}</p>
       </div>
     </div>
   );
@@ -221,26 +221,26 @@ function BuildingRow({ name, earned, expenses, net, collectionRate }) {
   const { t } = useTranslation("owner");
   const netPositive = net >= 0;
   return (
-    <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-      <div className="text-sm font-medium text-slate-800 truncate mr-4">{name}</div>
+    <div className="flex items-center justify-between rounded-2xl border border-surface-border bg-surface-subtle px-4 py-3">
+      <div className="text-sm font-medium text-foreground truncate mr-4">{name}</div>
       <div className="flex items-center gap-6 shrink-0 text-right">
         <div className="hidden sm:block">
-          <div className="text-xs text-slate-400">{t("owner:reporting.text.income")}</div>
-          <div className="text-sm font-medium text-slate-700">{fmtChf(earned)}</div>
+          <div className="text-xs text-foreground-dim">{t("owner:reporting.text.income")}</div>
+          <div className="text-sm font-medium text-muted-dark">{fmtChf(earned)}</div>
         </div>
         <div className="hidden sm:block">
-          <div className="text-xs text-slate-400">{t("owner:reporting.text.expenses")}</div>
-          <div className="text-sm font-medium text-slate-700">{fmtChf(expenses)}</div>
+          <div className="text-xs text-foreground-dim">{t("owner:reporting.text.expenses")}</div>
+          <div className="text-sm font-medium text-muted-dark">{fmtChf(expenses)}</div>
         </div>
         <div>
-          <div className="text-xs text-slate-400">{t("owner:reporting.text.net")}</div>
+          <div className="text-xs text-foreground-dim">{t("owner:reporting.text.net")}</div>
           <div className={cn("text-sm font-semibold", netPositive ? "text-green-700" : "text-red-600")}>
             {fmtChf(net)}
           </div>
         </div>
         <div className="hidden md:block">
-          <div className="text-xs text-slate-400">{t("owner:reporting.text.collection")}</div>
-          <div className="text-sm text-slate-700">{fmtPct(collectionRate)}</div>
+          <div className="text-xs text-foreground-dim">{t("owner:reporting.text.collection")}</div>
+          <div className="text-sm text-muted-dark">{fmtPct(collectionRate)}</div>
         </div>
       </div>
     </div>
@@ -250,21 +250,21 @@ function BuildingRow({ name, earned, expenses, net, collectionRate }) {
 function OccupancyEvent({ type, tenantName, unitLabel, buildingName, date }) {
   const isMoveIn = type === "in";
   return (
-    <div className="flex items-start gap-3 py-3 border-b border-slate-100 last:border-0">
+    <div className="flex items-start gap-3 py-3 border-b border-surface-divider last:border-0">
       <div className={[
         "mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
-        isMoveIn ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-500",
+        isMoveIn ? "bg-green-100 text-green-700" : "bg-surface-hover text-muted",
       ].join(" ")}>
         {isMoveIn ? "↓" : "↑"}
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-baseline justify-between gap-2">
-          <span className="text-sm font-medium text-slate-900 truncate">{tenantName}</span>
-          <span className="shrink-0 text-xs text-slate-400">
+          <span className="text-sm font-medium text-foreground truncate">{tenantName}</span>
+          <span className="shrink-0 text-xs text-foreground-dim">
             {date ? new Date(date).toLocaleDateString("fr-CH", { day: "numeric", month: "short" }) : "—"}
           </span>
         </div>
-        <div className="text-xs text-slate-500 truncate">
+        <div className="text-xs text-muted truncate">
           {isMoveIn ? "Moving in" : "Moving out"} · {unitLabel}{buildingName ? ` · ${buildingName}` : ""}
         </div>
       </div>
@@ -274,12 +274,12 @@ function OccupancyEvent({ type, tenantName, unitLabel, buildingName, date }) {
 
 function RecommendationCard({ number, text }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+    <div className="rounded-2xl border border-surface-border bg-surface-subtle p-4">
       <div className="flex items-start gap-3">
         <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-violet-100 text-sm font-semibold text-violet-700">
           {number}
         </div>
-        <p className="text-sm leading-relaxed text-slate-700">{text}</p>
+        <p className="text-sm leading-relaxed text-muted-dark">{text}</p>
       </div>
     </div>
   );
@@ -522,24 +522,24 @@ export default function OwnerReportingPage() {
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
 
         {/* ── HERO ─────────────────────────────────────────────── */}
-        <header className="mb-6 rounded-3xl border border-slate-200 bg-gradient-to-br from-violet-50 via-sky-50 to-green-50 p-6 shadow-sm">
+        <header className="mb-6 rounded-3xl border border-surface-border bg-gradient-to-br from-violet-50 via-sky-50 to-green-50 p-6 shadow-sm">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-2xl">
               <Badge variant="default" size="lg" className="mb-3">
                 {periodLabel} · Monthly Owner Report
               </Badge>
-              <h1 className="text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
+              <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
                 {loading ? "Loading your report…" : netIncome > 0
                   ? `Your portfolio had a ${currData?.buildingsInRed === 0 ? "strong" : "mixed"} month.`
                   : "Here's your portfolio summary."}
               </h1>
               {!loading && currData && (
-                <p className="mt-3 text-sm leading-6 text-slate-600 sm:text-base">
+                <p className="mt-3 text-sm leading-6 text-muted-text sm:text-base">
                   {earned > 0
-                    ? <>{t("owner:reporting.text.rentCollected")} <span className="font-semibold text-slate-900">{fmtChf(earned)}</span>. </>
+                    ? <>{t("owner:reporting.text.rentCollected")} <span className="font-semibold text-foreground">{fmtChf(earned)}</span>. </>
                     : ""}
                   {expenses > 0
-                    ? <>{t("owner:reporting.text.operatingCosts")} <span className="font-semibold text-slate-900">{fmtChf(expenses)}</span>. </>
+                    ? <>{t("owner:reporting.text.operatingCosts")} <span className="font-semibold text-foreground">{fmtChf(expenses)}</span>. </>
                     : ""}
                   {totalUnits > 0
                     ? <>{totalUnits} unit{totalUnits !== 1 ? "s" : ""} leased this period across {currData.buildingCount} building{currData.buildingCount !== 1 ? "s" : ""}.</>
@@ -549,22 +549,22 @@ export default function OwnerReportingPage() {
             </div>
 
             <div className="grid min-w-[260px] grid-cols-2 gap-3">
-              <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                <div className="text-xs text-slate-400">{t("owner:reporting.text.netResult")}</div>
+              <div className="rounded-2xl border border-surface-border bg-surface p-4">
+                <div className="text-xs text-foreground-dim">{t("owner:reporting.text.netResult")}</div>
                 {loading
-                  ? <div className="mt-2 h-7 w-20 animate-pulse rounded bg-slate-100" />
-                  : <div className="mt-2 text-2xl font-semibold text-slate-900">{fmtChf(netIncome)}</div>}
+                  ? <div className="mt-2 h-7 w-20 animate-pulse rounded bg-surface-hover" />
+                  : <div className="mt-2 text-2xl font-semibold text-foreground">{fmtChf(netIncome)}</div>}
                 {!loading && netDelta && (
                   <div className={cn("mt-1 text-xs", netDelta.tone)}>{netDelta.label}</div>
                 )}
               </div>
-              <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                <div className="text-xs text-slate-400">{t("owner:reporting.text.accruedPayables")}</div>
+              <div className="rounded-2xl border border-surface-border bg-surface p-4">
+                <div className="text-xs text-foreground-dim">{t("owner:reporting.text.accruedPayables")}</div>
                 {loading
-                  ? <div className="mt-2 h-7 w-20 animate-pulse rounded bg-slate-100" />
-                  : <div className="mt-2 text-2xl font-semibold text-slate-900">{fmtChf(currData?.totalPayablesCents ?? 0)}</div>}
+                  ? <div className="mt-2 h-7 w-20 animate-pulse rounded bg-surface-hover" />
+                  : <div className="mt-2 text-2xl font-semibold text-foreground">{fmtChf(currData?.totalPayablesCents ?? 0)}</div>}
                 {!loading && (currData?.totalPayablesCents ?? 0) > 0 && (
-                  <div className="mt-1 text-xs text-slate-400">{t("owner:reporting.text.periodendBalance")}</div>
+                  <div className="mt-1 text-xs text-foreground-dim">{t("owner:reporting.text.periodendBalance")}</div>
                 )}
               </div>
             </div>
@@ -582,10 +582,10 @@ export default function OwnerReportingPage() {
         {/* ── HIGHLIGHT ────────────────────────────────────────── */}
         {!loading && highlight && (
           <section className="mb-8">
-            <div className="rounded-3xl border border-slate-200 bg-gradient-to-r from-green-50 via-white to-transparent p-6">
-              <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("owner:reporting.text.highlight")}</div>
-              <div className="mt-2 text-xl font-semibold text-slate-900">{highlight.title}</div>
-              <p className="mt-2 max-w-2xl text-sm text-slate-600">{highlight.body}</p>
+            <div className="rounded-3xl border border-surface-border bg-gradient-to-r from-green-50 via-white to-transparent p-6">
+              <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("owner:reporting.text.highlight")}</div>
+              <div className="mt-2 text-xl font-semibold text-foreground">{highlight.title}</div>
+              <p className="mt-2 max-w-2xl text-sm text-muted-text">{highlight.body}</p>
             </div>
           </section>
         )}
@@ -593,13 +593,13 @@ export default function OwnerReportingPage() {
         {/* ── PERFORMANCE DRIVERS ──────────────────────────────── */}
         <section className="mb-8">
           <div className="mb-4">
-            <h2 className="text-lg font-semibold text-slate-900">{t("owner:reporting.heading.whatDrovePerformance")}</h2>
-            <p className="text-sm text-slate-400">{t("owner:reporting.text.theMainForcesBehindThisMonthsNumbers")}</p>
+            <h2 className="text-lg font-semibold text-foreground">{t("owner:reporting.heading.whatDrovePerformance")}</h2>
+            <p className="text-sm text-foreground-dim">{t("owner:reporting.text.theMainForcesBehindThisMonthsNumbers")}</p>
           </div>
           {loading ? (
             <div className="space-y-3">
               {[1,2].map((i) => (
-                <div key={i} className="h-20 animate-pulse rounded-2xl bg-slate-100" />
+                <div key={i} className="h-20 animate-pulse rounded-2xl bg-surface-hover" />
               ))}
             </div>
           ) : (
@@ -620,8 +620,8 @@ export default function OwnerReportingPage() {
           return (
             <section className="mb-8">
               <div className="mb-4">
-                <h2 className="text-lg font-semibold text-slate-900">{t("owner:reporting.heading.byProperty")}</h2>
-                <p className="text-sm text-slate-400">Net result per building for {periodLabel}.</p>
+                <h2 className="text-lg font-semibold text-foreground">{t("owner:reporting.heading.byProperty")}</h2>
+                <p className="text-sm text-foreground-dim">Net result per building for {periodLabel}.</p>
               </div>
               <div className="space-y-2">
                 {visibleBuildings.map((b) => (
@@ -648,20 +648,20 @@ export default function OwnerReportingPage() {
         {!loading && (moveIns.length > 0 || moveOuts.length > 0) && (
           <section className="mb-8">
             <div className="mb-4">
-              <h2 className="text-lg font-semibold text-slate-900">{t("owner:reporting.heading.tenantMovements")}</h2>
-              <p className="text-sm text-slate-400">Move-ins and move-outs in {periodLabel}.</p>
+              <h2 className="text-lg font-semibold text-foreground">{t("owner:reporting.heading.tenantMovements")}</h2>
+              <p className="text-sm text-foreground-dim">Move-ins and move-outs in {periodLabel}.</p>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               {/* Move-ins */}
-              <div className="rounded-2xl border border-slate-200 bg-white p-4">
+              <div className="rounded-2xl border border-surface-border bg-surface p-4">
                 <div className="mb-3 flex items-center gap-2">
                   <span className="flex h-6 w-6 items-center justify-center rounded-full bg-green-100 text-xs font-semibold text-green-700">↓</span>
-                  <span className="text-sm font-semibold text-slate-800">
-                    Move-ins <span className="ml-1 text-slate-400 font-normal">({moveIns.length})</span>
+                  <span className="text-sm font-semibold text-foreground">
+                    Move-ins <span className="ml-1 text-foreground-dim font-normal">({moveIns.length})</span>
                   </span>
                 </div>
                 {moveIns.length === 0 ? (
-                  <p className="text-sm text-slate-400">{t("owner:reporting.text.noMoveinsThisPeriod")}</p>
+                  <p className="text-sm text-foreground-dim">{t("owner:reporting.text.noMoveinsThisPeriod")}</p>
                 ) : (
                   <>
                     {(insExpanded ? moveIns : moveIns.slice(0, PREVIEW)).map((l) => (
@@ -683,15 +683,15 @@ export default function OwnerReportingPage() {
                 )}
               </div>
               {/* Move-outs */}
-              <div className="rounded-2xl border border-slate-200 bg-white p-4">
+              <div className="rounded-2xl border border-surface-border bg-surface p-4">
                 <div className="mb-3 flex items-center gap-2">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-500">↑</span>
-                  <span className="text-sm font-semibold text-slate-800">
-                    Move-outs <span className="ml-1 text-slate-400 font-normal">({moveOuts.length})</span>
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-surface-hover text-xs font-semibold text-muted">↑</span>
+                  <span className="text-sm font-semibold text-foreground">
+                    Move-outs <span className="ml-1 text-foreground-dim font-normal">({moveOuts.length})</span>
                   </span>
                 </div>
                 {moveOuts.length === 0 ? (
-                  <p className="text-sm text-slate-400">{t("owner:reporting.text.noMoveoutsThisPeriod")}</p>
+                  <p className="text-sm text-foreground-dim">{t("owner:reporting.text.noMoveoutsThisPeriod")}</p>
                 ) : (
                   <>
                     {(outsExpanded ? moveOuts : moveOuts.slice(0, PREVIEW)).map((l) => (
@@ -718,14 +718,14 @@ export default function OwnerReportingPage() {
 
         {/* ── PERIOD INSIGHTS ──────────────────────────────────── */}
         <section className="mb-8">
-          <div className="rounded-3xl border border-slate-200 bg-white p-5">
+          <div className="rounded-3xl border border-surface-border bg-surface p-5">
             <div className="mb-4">
-              <h2 className="text-lg font-semibold text-slate-900">{t("owner:reporting.heading.periodInsights")}</h2>
-              <p className="text-sm text-slate-400">{t("owner:reporting.text.whatThisPeriodsDataSuggestsForFuturePlanning")}</p>
+              <h2 className="text-lg font-semibold text-foreground">{t("owner:reporting.heading.periodInsights")}</h2>
+              <p className="text-sm text-foreground-dim">{t("owner:reporting.text.whatThisPeriodsDataSuggestsForFuturePlanning")}</p>
             </div>
             {loading ? (
               <div className="space-y-3">
-                {[1,2].map((i) => <div key={i} className="h-14 animate-pulse rounded-2xl bg-slate-100" />)}
+                {[1,2].map((i) => <div key={i} className="h-14 animate-pulse rounded-2xl bg-surface-hover" />)}
               </div>
             ) : (
               <div className="space-y-3">
@@ -738,18 +738,18 @@ export default function OwnerReportingPage() {
         </section>
 
         {/* ── FOOTER ───────────────────────────────────────────── */}
-        <section className="rounded-3xl border border-slate-200 bg-white p-5">
+        <section className="rounded-3xl border border-surface-border bg-surface p-5">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="text-base font-semibold text-slate-900">{t("owner:reporting.heading.fullFinancialDetail")}</h2>
-              <p className="mt-1 text-sm text-slate-500">
+              <h2 className="text-base font-semibold text-foreground">{t("owner:reporting.heading.fullFinancialDetail")}</h2>
+              <p className="mt-1 text-sm text-muted">
                 Drill into ledger entries, trial balance, and per-building financials in the Finance section.
               </p>
             </div>
             <div className="flex gap-3 shrink-0">
               <a
                 href="/manager/finance"
-                className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors no-underline"
+                className="rounded-2xl border border-surface-border bg-surface px-4 py-2 text-sm font-medium text-muted-dark hover:bg-surface-subtle transition-colors no-underline"
               >
                 Finance overview
               </a>

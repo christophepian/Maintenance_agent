@@ -16,31 +16,31 @@ export default function Panel({
 
   if (collapsibleOnMobile && title) {
     return (
-      <section className={cn("rounded-2xl border border-slate-200 bg-surface-raised shadow-sm min-w-0 overflow-hidden", className)}>
+      <section className={cn("rounded-2xl border border-surface-border bg-surface-raised shadow-sm min-w-0 overflow-hidden", className)}>
         <button
           type="button"
           onClick={() => setMobileOpen((o) => !o)}
           aria-expanded={mobileOpen}
           className="sm:hidden w-full flex items-center justify-between gap-2 px-4 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-t-2xl"
         >
-          <h2 className="text-base font-semibold text-slate-900 m-0">{title}</h2>
+          <h2 className="text-base font-semibold text-foreground m-0">{title}</h2>
           <svg
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 20 20"
             fill="currentColor"
             aria-hidden="true"
-            className={cn("h-5 w-5 shrink-0 text-slate-400 transition-transform duration-200", mobileOpen && "rotate-180")}
+            className={cn("h-5 w-5 shrink-0 text-foreground-dim transition-transform duration-200", mobileOpen && "rotate-180")}
           >
             <path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
           </svg>
         </button>
         {/* Desktop: always-visible header */}
-        <div className="hidden sm:flex flex-row items-center justify-between gap-3 border-b border-slate-100 px-4 py-3">
-          <h2 className="text-lg font-semibold text-slate-900 min-w-0 truncate">{title}</h2>
+        <div className="hidden sm:flex flex-row items-center justify-between gap-3 border-b border-surface-divider px-4 py-3">
+          <h2 className="text-lg font-semibold text-foreground min-w-0 truncate">{title}</h2>
           {actions ? <div className="flex items-center gap-2 shrink-0">{actions}</div> : null}
         </div>
         {/* Mobile body: toggle */}
-        <div className={cn("sm:hidden border-t border-slate-100", !mobileOpen && "hidden")}>
+        <div className={cn("sm:hidden border-t border-surface-divider", !mobileOpen && "hidden")}>
           <div className={cn("px-4 py-4", bodyClassName)}>{children}</div>
         </div>
         {/* Desktop body: always shown */}
@@ -52,10 +52,10 @@ export default function Panel({
   }
 
   return (
-    <section className={cn("rounded-2xl border border-slate-200 bg-surface-raised shadow-sm min-w-0 overflow-hidden", className)}>
+    <section className={cn("rounded-2xl border border-surface-border bg-surface-raised shadow-sm min-w-0 overflow-hidden", className)}>
       {(title || actions) ? (
-        <div className="flex flex-row items-center justify-between gap-3 border-b border-slate-100 px-4 py-3">
-          {title ? <h2 className="text-lg font-semibold text-slate-900 min-w-0 truncate">{title}</h2> : <span />}
+        <div className="flex flex-row items-center justify-between gap-3 border-b border-surface-divider px-4 py-3">
+          {title ? <h2 className="text-lg font-semibold text-foreground min-w-0 truncate">{title}</h2> : <span />}
           {actions ? <div className="flex items-center gap-2 shrink-0">{actions}</div> : null}
         </div>
       ) : null}

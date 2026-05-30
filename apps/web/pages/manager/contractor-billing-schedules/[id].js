@@ -96,7 +96,7 @@ export default function ContractorBillingScheduleDetail() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Schedule Info */}
             <Panel>
-              <h3 className="font-semibold text-slate-800 mb-3">{t("manager:contractorBillingSchedulesId.heading.scheduleDetails")}</h3>
+              <h3 className="font-semibold text-foreground mb-3">{t("manager:contractorBillingSchedulesId.heading.scheduleDetails")}</h3>
               <DetailList>
                 <DetailRow label={t("manager:contractor_Billing_SchedulesId.prop.status")}>
                     <Badge variant={billingScheduleVariant(schedule.status)} size="sm">{schedule.status}</Badge>
@@ -139,7 +139,7 @@ export default function ContractorBillingScheduleDetail() {
 
             {/* Contractor Info */}
             <Panel>
-              <h3 className="font-semibold text-slate-800 mb-3">{t("manager:contractorBillingSchedulesId.heading.contractor")}</h3>
+              <h3 className="font-semibold text-foreground mb-3">{t("manager:contractorBillingSchedulesId.heading.contractor")}</h3>
               {schedule.contractor ? (
                 <DetailList>
                   <DetailRow label={t("manager:contractor_Billing_SchedulesId.prop.name")}>{schedule.contractor.name}</DetailRow>
@@ -160,7 +160,7 @@ export default function ContractorBillingScheduleDetail() {
                   </DetailRow>
                 </DetailList>
               ) : (
-                <p className="text-slate-500 text-sm">{t("manager:contractor_Billing_SchedulesId.text.contractorDataUnavailable")}</p>
+                <p className="text-muted text-sm">{t("manager:contractor_Billing_SchedulesId.text.contractorDataUnavailable")}</p>
               )}
             </Panel>
           </div>
@@ -168,7 +168,7 @@ export default function ContractorBillingScheduleDetail() {
           {/* Actions */}
           {schedule.status !== "COMPLETED" && (
             <Panel className="mt-6">
-              <h3 className="font-semibold text-slate-800 mb-3">{t("manager:contractorBillingSchedulesId.heading.actions")}</h3>
+              <h3 className="font-semibold text-foreground mb-3">{t("manager:contractorBillingSchedulesId.heading.actions")}</h3>
               <ActionBar className="mt-0">
                 {schedule.status === "ACTIVE" && (
                   <>
@@ -217,7 +217,7 @@ export default function ContractorBillingScheduleDetail() {
               {showStopForm && (
                 <form onSubmit={handleStop} className="mt-4 flex gap-3 items-end">
                   <div className="flex-1">
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                    <label className="block text-sm font-medium text-muted-dark mb-1">
                       Reason (optional)
                     </label>
                     <input

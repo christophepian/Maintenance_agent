@@ -7,7 +7,7 @@ import { cn } from "../../lib/utils";
  * Props:
  *   actions   — [{ label, onClick, variant, loading, disabled }]
  *               variant: "green" | "red" | "blue" | "indigo" | "slate"
- *   children  — card body content (rendered inside a bg-white sliding div)
+ *   children  — card body content (rendered inside a bg-surface sliding div)
  *   className — class on the outer overflow-hidden container
  *
  * Navigation note: this component does NOT call onCardClick itself.
@@ -21,7 +21,7 @@ const VARIANT_CLASS = {
   red:    "bg-red-600 text-white",
   blue:   "bg-blue-600 text-white",
   indigo: "bg-indigo-600 text-white",
-  slate:  "bg-slate-100 text-slate-700",
+  slate:  "bg-surface-hover text-muted-dark",
 };
 
 const BTN_WIDTH = 80; // px per action button
@@ -157,7 +157,7 @@ export default function SwipeableCard({ actions = [], children, className = "" }
       {/* Card body — slides left on swipe, sits above action panel */}
       <div
         ref={contentRef}
-        className="relative bg-white"
+        className="relative bg-surface"
         style={{
           transform: `translateX(${offset}px)`,
           transition: animating ? "transform 0.22s ease" : "none",

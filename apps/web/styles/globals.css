@@ -2,6 +2,9 @@
 @source "../pages/**/*.{js,jsx,ts,tsx}";
 @source "../components/**/*.{js,jsx,ts,tsx}";
 
+/* Dark mode uses .dark class on <html> (set by AppearanceTab / _app.js) */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* ═══════════════════════════════════════════════════════════════════
    Semantic Design Tokens — Tailwind v4 @theme
 
@@ -44,11 +47,27 @@
   --color-warning-ring:  #fcd34d;   /* amber-300 */
   --color-warning-text:  #b45309;   /* amber-700 */
 
+  /* ── Info (sky) ── */
+  --color-info:       #0284c7;   /* sky-600  */
+  --color-info-light: #f0f9ff;   /* sky-50   */
+  --color-info-dark:  #0369a1;   /* sky-700  */
+  --color-info-ring:  #7dd3fc;   /* sky-300  */
+  --color-info-text:  #0369a1;   /* sky-700  */
+
+  /* ── Track (progress bars, toggle tracks, step connectors) ── */
+  --color-track: #e2e8f0;   /* slate-200 — inactive fill */
+
+  /* ── Foreground (text hierarchy) ── */
+  --color-foreground:     #0f172a;   /* slate-900 — primary text */
+  --color-foreground-dim: #94a3b8;   /* slate-400 — placeholder / dim / icon text */
+
   /* ── Surface (white / slate) ── */
-  --color-surface:        #ffffff;   /* white     */
-  --color-surface-raised: #ffffff;   /* white — card/panel bg (matches manager dashboard KPI cards) */
-  --color-surface-border: #e2e8f0;   /* slate-200 */
-  --color-surface-hover:  #f1f5f9;   /* slate-100 */
+  --color-surface:         #ffffff;   /* white     */
+  --color-surface-raised:  #ffffff;   /* white — card/panel bg (matches manager dashboard KPI cards) */
+  --color-surface-subtle:  #f8fafc;   /* slate-50  — subtle bg within cards, table row hover */
+  --color-surface-border:  #e2e8f0;   /* slate-200 */
+  --color-surface-hover:   #f1f5f9;   /* slate-100 */
+  --color-surface-divider: #f1f5f9;   /* slate-100 — in-card / in-panel dividers */
 
   /* ── Table surface ────────────────────────────────────────────────────
      Tables are NEVER wrapped in a card/Panel. They self-border.
@@ -61,6 +80,75 @@
   --color-table-divider: #e2e8f0;   /* slate-200 — tbody row dividers */
 }
 
+/* ═══════════════════════════════════════════════════════════════════
+   Dark mode overrides — active when <html class="dark">
+   Palette based on invest.html (#05081a / #0d1226 / #141d38 + rgba borders).
+   All 35 @theme tokens redefined here; utilities update automatically.
+   ═══════════════════════════════════════════════════════════════════ */
+
+html.dark {
+  /* ── Foreground ── */
+  --color-foreground:     #ffffff;
+  --color-foreground-dim: rgba(255,255,255,.35);
+
+  /* ── Surface ── */
+  --color-surface:         #05081a;
+  --color-surface-raised:  #0d1226;
+  --color-surface-subtle:  #141d38;
+  --color-surface-border:  rgba(255,255,255,.1);
+  --color-surface-hover:   rgba(255,255,255,.06);
+  --color-surface-divider: rgba(255,255,255,.05);
+
+  /* ── Table ── */
+  --color-table-header:    rgba(255,255,255,.04);
+  --color-table-border:    rgba(255,255,255,.08);
+  --color-table-divider:   rgba(255,255,255,.05);
+
+  /* ── Muted ── */
+  --color-muted:       rgba(255,255,255,.6);
+  --color-muted-light: rgba(255,255,255,.05);
+  --color-muted-dark:  rgba(255,255,255,.8);
+  --color-muted-ring:  rgba(255,255,255,.15);
+  --color-muted-text:  rgba(255,255,255,.6);
+
+  /* ── Brand (indigo) — core stays, light/dark/ring adapt to dark bg ── */
+  --color-brand:       #4f46e5;
+  --color-brand-light: rgba(79,70,229,.18);
+  --color-brand-dark:  #818cf8;
+  --color-brand-ring:  rgba(129,140,248,.3);
+
+  /* ── Destructive ── */
+  --color-destructive:       #dc2626;
+  --color-destructive-light: rgba(220,38,38,.15);
+  --color-destructive-dark:  #fca5a5;
+  --color-destructive-ring:  rgba(252,165,165,.25);
+  --color-destructive-text:  #fca5a5;
+
+  /* ── Success ── */
+  --color-success:       #059669;
+  --color-success-light: rgba(5,150,105,.15);
+  --color-success-dark:  #34d399;
+  --color-success-ring:  rgba(52,211,153,.25);
+  --color-success-text:  #34d399;
+
+  /* ── Warning ── */
+  --color-warning:       #d97706;
+  --color-warning-light: rgba(217,119,6,.15);
+  --color-warning-dark:  #fbbf24;
+  --color-warning-ring:  rgba(251,191,36,.25);
+  --color-warning-text:  #fbbf24;
+
+  /* ── Info ── */
+  --color-info:       #0284c7;
+  --color-info-light: rgba(2,132,199,.15);
+  --color-info-dark:  #7dd3fc;
+  --color-info-ring:  rgba(125,211,252,.25);
+  --color-info-text:  #7dd3fc;
+
+  /* ── Track ── */
+  --color-track: rgba(255,255,255,.1);
+}
+
 /* ── Global resets ── */
 
 html, body {
@@ -69,7 +157,7 @@ html, body {
 
 body {
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-  @apply bg-white m-0 text-slate-800;
+  @apply bg-surface m-0 text-foreground;
 }
 
 h1, h2 {
@@ -118,7 +206,7 @@ h1, h2 {
 }
 
 .button-destructive {
-  @apply py-2.5 px-3.5 rounded-lg border-2 border-red-600 bg-white text-red-600 text-sm font-medium cursor-pointer hover:bg-red-50 transition-colors;
+  @apply py-2.5 px-3.5 rounded-lg border-2 border-red-600 bg-surface text-red-600 text-sm font-medium cursor-pointer hover:bg-red-50 transition-colors;
 }
 
 .notice {
@@ -132,10 +220,10 @@ h1, h2 {
 }
 
 .code {
-  @apply px-1.5 py-0.5 rounded-md bg-slate-100 border border-slate-200 font-mono;
+  @apply px-1.5 py-0.5 rounded-md bg-surface-hover border border-surface-border font-mono;
 }
 .code-small {
-  @apply px-1.5 py-px rounded-md bg-slate-100 border border-slate-200 text-xs font-mono;
+  @apply px-1.5 py-px rounded-md bg-surface-hover border border-surface-border text-xs font-mono;
 }
 
 .row {
@@ -143,11 +231,11 @@ h1, h2 {
 }
 
 .help {
-  @apply text-[0.8125rem] text-slate-600 mt-2;
+  @apply text-[0.8125rem] text-muted-text mt-2;
 }
 
 .subtle {
-  @apply text-[0.8125rem] text-slate-600 mb-4;
+  @apply text-[0.8125rem] text-muted-text mb-4;
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -196,13 +284,13 @@ h1, h2 {
 
   /* ── Day group header (job schedule) ── */
   .day-header {
-    @apply text-[0.8125rem] font-semibold text-slate-800 uppercase tracking-wide;
-    @apply pt-1.5 pb-2 border-b border-slate-200 mb-2;
+    @apply text-[0.8125rem] font-semibold text-foreground uppercase tracking-wide;
+    @apply pt-1.5 pb-2 border-b border-surface-border mb-2;
   }
 
   /* ── Job card (collapsed / expanded) ── */
   .job-card {
-    @apply border border-slate-200 rounded-xl bg-white overflow-hidden;
+    @apply border border-surface-border rounded-xl bg-surface overflow-hidden;
     transition: box-shadow 0.15s ease, border-color 0.15s ease;
   }
   .job-card:hover {
@@ -212,30 +300,30 @@ h1, h2 {
     @apply flex items-center gap-3 px-4 py-3 cursor-pointer select-none;
   }
   .job-card-header:hover {
-    @apply bg-slate-50;
+    @apply bg-surface-subtle;
   }
   .job-card-time {
-    @apply min-w-[56px] text-sm font-semibold text-slate-800;
+    @apply min-w-[56px] text-sm font-semibold text-foreground;
   }
   .job-card-meta {
-    @apply flex-1 min-w-0 text-[0.8125rem] text-slate-500;
+    @apply flex-1 min-w-0 text-[0.8125rem] text-muted;
   }
   .job-card-meta strong {
-    @apply text-slate-800 font-semibold;
+    @apply text-foreground font-semibold;
   }
   .job-card-chevron {
-    @apply text-sm text-slate-500 shrink-0 transition-transform duration-150;
+    @apply text-sm text-muted shrink-0 transition-transform duration-150;
   }
   .job-card-chevron-open {
     @apply rotate-90;
   }
   .job-card-body {
-    @apply px-4 pb-4 border-t border-slate-200;
+    @apply px-4 pb-4 border-t border-surface-border;
   }
 
   /* ── Tab strip ── */
   .tab-strip {
-    @apply flex border-b border-slate-200 mb-4;
+    @apply flex border-b border-surface-border mb-4;
     /* min-width:0 is required so CSS-grid/flex parents can constrain this
        container's width; without it, the strip expands to fit all children
        and the JS overflow-detection never fires. */
@@ -248,12 +336,12 @@ h1, h2 {
   .tab-strip::-webkit-scrollbar { display: none; }
 
   .tab-btn {
-    @apply px-5 py-2.5 text-sm font-medium text-slate-500 bg-transparent;
+    @apply px-5 py-2.5 text-sm font-medium text-muted bg-transparent;
     @apply border-0 border-b-2 border-transparent -mb-px cursor-pointer;
     @apply whitespace-nowrap transition-colors;
   }
   .tab-btn:hover {
-    @apply text-slate-700;
+    @apply text-muted-dark;
   }
 
   .tab-btn-active {
@@ -265,7 +353,7 @@ h1, h2 {
   /* ── Tab panels ── */
   .tab-panel        { @apply hidden; }
   .tab-panel-active { @apply block; }
-  .tab-panel-count  { @apply block text-xs text-slate-500 mb-1; }
+  .tab-panel-count  { @apply block text-xs text-muted mb-1; }
   .full-page-link   { @apply text-[0.8125rem] text-brand font-medium no-underline; }
 
   /* ── Inline data table ── */
@@ -281,16 +369,16 @@ h1, h2 {
   }
   .data-table th {
     @apply px-3 py-2.5 text-left font-medium text-xs uppercase tracking-wider;
-    @apply text-slate-400 bg-transparent border-b-2 border-slate-200;
+    @apply text-foreground-dim bg-transparent border-b-2 border-surface-border;
   }
   .data-table td {
-    @apply px-3 py-2.5 text-sm text-slate-500 border-b border-slate-50;
+    @apply px-3 py-2.5 text-sm text-muted border-b border-surface-divider;
   }
   .data-table td.cell-bold {
-    @apply font-medium text-slate-700;
+    @apply font-medium text-muted-dark;
   }
   .data-table tbody tr:hover {
-    @apply bg-slate-50;
+    @apply bg-surface-subtle;
   }
 
   /* ── Status pill ── */
@@ -300,20 +388,20 @@ h1, h2 {
 
   /* ── Empty state ── */
   .empty-state {
-    @apply flex flex-col items-center justify-center py-12 px-6 text-slate-500;
+    @apply flex flex-col items-center justify-center py-12 px-6 text-muted;
   }
   .empty-state-text {
-    @apply text-sm text-slate-500 m-0;
+    @apply text-sm text-muted m-0;
   }
 
   /* ── Section heading ── */
   .section-title {
-    @apply text-sm font-semibold text-slate-700;
+    @apply text-sm font-semibold text-muted-dark;
   }
 
   /* ── Loading / error ── */
   .loading-text {
-    @apply text-xs text-slate-400 py-6;
+    @apply text-xs text-foreground-dim py-6;
   }
   .error-banner {
     @apply bg-destructive-light border border-destructive-ring rounded-lg px-4 py-3 mb-4 text-sm text-destructive-text;
@@ -328,7 +416,7 @@ h1, h2 {
     @apply text-xs font-semibold uppercase tracking-wider mb-3;
   }
   .coming-soon-title {
-    @apply text-xl font-semibold text-slate-800;
+    @apply text-xl font-semibold text-foreground;
     margin: 0 0 8px 0;
   }
   .coming-soon-text {
@@ -402,7 +490,7 @@ h1, h2 {
   /* ── Icon button (small, borderless, circular hover) ── */
   .icon-btn {
     @apply inline-flex items-center justify-center rounded p-1;
-    @apply text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer;
+    @apply text-foreground-dim hover:text-muted-dark hover:bg-surface-hover transition-colors cursor-pointer;
   }
 
   /* ── Responsive table card list (Pattern A — narrow view) ─────────────
@@ -411,23 +499,23 @@ h1, h2 {
    * Each card is one .table-card div inside the container.
    * ─────────────────────────────────────────────────────────────────────── */
   .table-card {
-    @apply px-4 py-3.5 bg-white;
+    @apply px-4 py-3.5 bg-surface;
   }
   .table-card-head {
-    @apply font-medium text-slate-900 text-[0.8125rem];
+    @apply font-medium text-foreground text-[0.8125rem];
   }
   .table-card-sub {
-    @apply text-xs text-slate-500 mt-0.5;
+    @apply text-xs text-muted mt-0.5;
   }
   .table-card-footer {
-    @apply flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 pt-2 border-t border-slate-100 text-xs text-slate-500;
+    @apply flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 pt-2 border-t border-surface-divider text-xs text-muted;
   }
 
   /* ── Expand / collapse footer row ── */
   .expand-footer {
     @apply flex items-center justify-center gap-1.5 px-4 py-2.5;
-    @apply border-t border-slate-100 cursor-pointer select-none;
-    @apply hover:bg-slate-50 transition-colors text-sm text-slate-500;
+    @apply border-t border-surface-divider cursor-pointer select-none;
+    @apply hover:bg-surface-subtle transition-colors text-sm text-muted;
   }
 
   /* ── Dashboard link card (clickable panel) ── */
@@ -449,10 +537,10 @@ h1, h2 {
    * separator from the section above it.
    * Mobile:  pt-8  mt-6  (generous breathing room on small screens)
    * sm+:     pt-10 mt-8  (slightly more on wider viewports)
-   * Pair with `border-t border-slate-100` for the dividing line.
+   * Pair with `border-t border-surface-divider` for the dividing line.
    */
   .card-section {
-    @apply border-t border-slate-100 pt-8 mt-6 sm:pt-10 sm:mt-8;
+    @apply border-t border-surface-divider pt-8 mt-6 sm:pt-10 sm:mt-8;
   }
 
   /*
@@ -489,7 +577,7 @@ h1, h2 {
    *   2. Filters are HIDDEN by default (filterOpen starts false).
    *   3. All <select> elements must use <SelectField> (shows chevron arrow).
    *   4. All date inputs must use <DateField>.
-   *   5. Sections are separated by border-t border-slate-100 via <FilterSection>.
+   *   5. Sections are separated by border-t border-surface-divider via <FilterSection>.
    *      Section grid: grid grid-cols-2 gap-3, responsive to sm:grid-cols-4.
    *   6. "Clear all filters" is a text link in a footer row inside the panel,
    *      only visible when at least one filter is active.

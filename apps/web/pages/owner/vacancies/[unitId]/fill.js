@@ -203,23 +203,23 @@ export default function FillVacancyWizard() {
             </div>
           )}
 
-          {loading && <div className="text-sm text-slate-600">{t("owner:vacanciesUnitidFill.text.loadingVacancyData")}</div>}
+          {loading && <div className="text-sm text-muted-text">{t("owner:vacanciesUnitidFill.text.loadingVacancyData")}</div>}
 
           {!loading && (
             <div className="space-y-6">
               <Panel title={t("owner:vacancies[unitid]Fill.title.step1SelectOrCreateTenant")}>
                 <div className="grid gap-4 lg:grid-cols-2">
                   <div className="space-y-3">
-                    <label className="text-sm font-medium text-slate-700">{t("owner:vacanciesUnitidFill.text.searchTenants")}</label>
+                    <label className="text-sm font-medium text-muted-dark">{t("owner:vacanciesUnitidFill.text.searchTenants")}</label>
                     <input
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
-                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                      className="w-full rounded-lg border border-surface-border px-3 py-2 text-sm"
                       placeholder={t("owner:vacancies[unitid]Fill.placeholder.searchByNamePhoneOrEmail")}
                     />
-                    <div className="max-h-64 space-y-2 overflow-y-auto rounded-lg border border-slate-200 p-3">
+                    <div className="max-h-64 space-y-2 overflow-y-auto rounded-lg border border-surface-border p-3">
                       {filteredTenants.length === 0 && (
-                        <div className="text-sm text-slate-500">{t("owner:vacanciesUnitidFill.text.noTenantsFound")}</div>
+                        <div className="text-sm text-muted">{t("owner:vacanciesUnitidFill.text.noTenantsFound")}</div>
                       )}
                       {filteredTenants.map((tenant) => (
                         <button
@@ -227,12 +227,12 @@ export default function FillVacancyWizard() {
                           onClick={() => setSelectedTenant(tenant)}
                           className={cn("w-full rounded-lg border px-3 py-2 text-left text-sm", selectedTenant?.id === tenant.id
                               ? "border-indigo-500 bg-indigo-50"
-                              : "border-slate-200 hover:bg-slate-50")}
+                              : "border-surface-border hover:bg-surface-subtle")}
                         >
-                          <div className="font-medium text-slate-900">
+                          <div className="font-medium text-foreground">
                             {tenant.name || "Unnamed tenant"}
                           </div>
-                          <div className="text-xs text-slate-500">
+                          <div className="text-xs text-muted">
                             {tenant.phone || "—"} {tenant.email ? `· ${tenant.email}` : ""}
                           </div>
                         </button>
@@ -241,29 +241,29 @@ export default function FillVacancyWizard() {
                   </div>
 
                   <div className="space-y-3">
-                    <label className="text-sm font-medium text-slate-700">{t("owner:vacanciesUnitidFill.text.createNewTenant")}</label>
+                    <label className="text-sm font-medium text-muted-dark">{t("owner:vacanciesUnitidFill.text.createNewTenant")}</label>
                     <input
                       value={newTenant.name}
                       onChange={(e) => setNewTenant((prev) => ({ ...prev, name: e.target.value }))}
-                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                      className="w-full rounded-lg border border-surface-border px-3 py-2 text-sm"
                       placeholder={t("owner:vacancies[unitid]Fill.placeholder.tenantName")}
                     />
                     <input
                       value={newTenant.phone}
                       onChange={(e) => setNewTenant((prev) => ({ ...prev, phone: e.target.value }))}
-                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                      className="w-full rounded-lg border border-surface-border px-3 py-2 text-sm"
                       placeholder={t("owner:vacancies[unitid]Fill.placeholder.phone41")}
                     />
                     <input
                       value={newTenant.email}
                       onChange={(e) => setNewTenant((prev) => ({ ...prev, email: e.target.value }))}
-                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                      className="w-full rounded-lg border border-surface-border px-3 py-2 text-sm"
                       placeholder={t("owner:vacancies[unitid]Fill.placeholder.emailOptional")}
                     />
                     <button
                       onClick={handleCreateTenant}
                       disabled={actionLoading}
-                      className="w-full rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:bg-slate-300"
+                      className="w-full rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:bg-muted-ring"
                     >
                       {actionLoading ? "Creating..." : "Create tenant"}
                     </button>
@@ -273,13 +273,13 @@ export default function FillVacancyWizard() {
 
               <Panel title={t("owner:vacancies[unitid]Fill.title.step2AssignTenantToUnit")}>
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="text-sm text-slate-700">
+                  <div className="text-sm text-muted-dark">
                     Selected tenant: {selectedTenant?.name || "None"}
                   </div>
                   <button
                     onClick={handleAssignOccupancy}
                     disabled={actionLoading || occupancyAssigned}
-                    className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:bg-slate-300"
+                    className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:bg-muted-ring"
                   >
                     {occupancyAssigned ? "Assigned" : "Assign occupancy"}
                   </button>
@@ -289,21 +289,21 @@ export default function FillVacancyWizard() {
               <Panel title={t("owner:vacancies[unitid]Fill.title.step3CreateLeaseDraft")}>
                 <div className="grid gap-4 lg:grid-cols-2">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-slate-700">{t("owner:vacanciesUnitidFill.text.leaseStartDate")}</label>
+                    <label className="text-sm font-medium text-muted-dark">{t("owner:vacanciesUnitidFill.text.leaseStartDate")}</label>
                     <input
                       type="date"
                       value={leaseForm.startDate}
                       onChange={(e) => setLeaseForm((prev) => ({ ...prev, startDate: e.target.value }))}
-                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                      className="w-full rounded-lg border border-surface-border px-3 py-2 text-sm"
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-slate-700">Net rent (CHF)</label>
+                    <label className="text-sm font-medium text-muted-dark">Net rent (CHF)</label>
                     <input
                       type="number"
                       value={leaseForm.netRentChf}
                       onChange={(e) => setLeaseForm((prev) => ({ ...prev, netRentChf: e.target.value }))}
-                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                      className="w-full rounded-lg border border-surface-border px-3 py-2 text-sm"
                       placeholder={t("owner:vacancies[unitid]Fill.placeholder.eG1850")}
                     />
                   </div>
@@ -312,7 +312,7 @@ export default function FillVacancyWizard() {
                   <button
                     onClick={handleCreateLease}
                     disabled={actionLoading}
-                    className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:bg-slate-300"
+                    className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:bg-muted-ring"
                   >
                     {actionLoading ? "Creating..." : "Create lease"}
                   </button>
@@ -321,7 +321,7 @@ export default function FillVacancyWizard() {
                       <button
                         onClick={() => handleLeaseAction("ready-to-sign")}
                         disabled={actionLoading}
-                        className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                        className="rounded-lg border border-surface-border bg-surface px-4 py-2 text-sm font-semibold text-muted-dark hover:bg-surface-subtle"
                       >
                         Mark ready to sign
                       </button>
@@ -342,7 +342,7 @@ export default function FillVacancyWizard() {
                   title={t("owner:vacancies[unitid]Fill.title.nextSteps")}
                   subtitle={t("owner:vacanciesUnitidFill.prop.vacancyWillBeRemovedOnceTheLeaseIsActive")}
                 >
-                  <div className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">
+                  <div className="rounded-lg border border-surface-border bg-surface px-4 py-3 text-sm text-muted-dark">
                     Lease created: <span className="font-semibold">{leaseId}</span>
                   </div>
                 </Section>

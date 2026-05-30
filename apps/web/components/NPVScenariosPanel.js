@@ -53,7 +53,7 @@ function CumulativeBars({ flows, highlighted }) {
                 "rounded-sm",
                 positive
                   ? (highlighted ? "bg-slate-700" : "bg-slate-400")
-                  : "bg-slate-200",
+                  : "bg-track",
               )}
               style={{ height: `${Math.max(pct, 4)}%` }}
             />
@@ -73,10 +73,10 @@ function ScenarioCard({ label, hint, data, t, isHighlighted, isRecommended, summ
   return (
     <div
       className={cn(
-        "rounded-lg p-4 space-y-2 relative bg-white",
+        "rounded-lg p-4 space-y-2 relative bg-surface",
         isHighlighted
           ? "border-2 border-slate-800 shadow-sm"
-          : "border border-slate-200",
+          : "border border-surface-border",
       )}
     >
       {/* Strategy recommendation badge */}
@@ -93,37 +93,37 @@ function ScenarioCard({ label, hint, data, t, isHighlighted, isRecommended, summ
       )}
 
       <div>
-        <p className="text-sm font-semibold text-slate-800">{label}</p>
-        <p className="text-xs text-slate-500">{hint}</p>
+        <p className="text-sm font-semibold text-foreground">{label}</p>
+        <p className="text-xs text-muted">{hint}</p>
       </div>
 
       <div>
-        <p className="text-xs text-slate-500 uppercase tracking-wide flex items-center gap-1">
+        <p className="text-xs text-muted uppercase tracking-wide flex items-center gap-1">
           NPV
           <Tooltip content={t("manager:npvScenarios.tooltip.npv")} />
         </p>
-        <p className="text-xl font-bold font-mono text-slate-900">
+        <p className="text-xl font-bold font-mono text-foreground">
           {formatChf(npvChf)}
         </p>
       </div>
 
-      <div className="grid grid-cols-2 gap-1 text-xs text-slate-600">
+      <div className="grid grid-cols-2 gap-1 text-xs text-muted-text">
         <div>
-          <span className="text-slate-400 flex items-center gap-1">
+          <span className="text-foreground-dim flex items-center gap-1">
             NOI
             <Tooltip content={t("manager:npvScenarios.tooltip.noi")} />
           </span>
           <p className="font-mono font-medium">{formatChf(totalNoiChf)}</p>
         </div>
         <div>
-          <span className="text-slate-400">Capex</span>
+          <span className="text-foreground-dim">Capex</span>
           <p className="font-mono font-medium">{formatChf(totalCapexChf)}</p>
         </div>
       </div>
 
       {totalTaxShieldChf > 0 && (
-        <div className="text-xs text-slate-600 border-t border-slate-100 pt-1.5">
-          <span className="text-slate-400 flex items-center gap-1">
+        <div className="text-xs text-muted-text border-t border-surface-divider pt-1.5">
+          <span className="text-foreground-dim flex items-center gap-1">
             {t("manager:npvScenarios.text.taxShield")}
             <Tooltip content={t("manager:npvScenarios.tooltip.taxShield")} />
           </span>
@@ -135,14 +135,14 @@ function ScenarioCard({ label, hint, data, t, isHighlighted, isRecommended, summ
 
       <CumulativeBars flows={yearlyFlows} highlighted={isHighlighted} />
 
-      <div className="flex justify-between text-xs text-slate-400 pt-0.5">
+      <div className="flex justify-between text-xs text-foreground-dim pt-0.5">
         <span>{yearlyFlows?.[0]?.year}</span>
         <span>{yearlyFlows?.[yearlyFlows.length - 1]?.year}</span>
       </div>
 
       {/* Per-scenario plain-language summary */}
       {summary && (
-        <p className="text-xs border-t border-slate-100 pt-2 leading-relaxed text-slate-600">
+        <p className="text-xs border-t border-surface-divider pt-2 leading-relaxed text-muted-text">
           {summary}
         </p>
       )}
@@ -162,7 +162,7 @@ function ScenarioCard({ label, hint, data, t, isHighlighted, isRecommended, summ
 function SliderRow({ label, value, min, max, step, onChange, format, tooltip }) {
   return (
     <div className="flex items-center gap-3">
-      <label className="text-xs text-slate-600 w-32 shrink-0 flex items-center gap-1">
+      <label className="text-xs text-muted-text w-32 shrink-0 flex items-center gap-1">
         {label}
         {tooltip && <Tooltip content={tooltip} />}
       </label>
@@ -175,7 +175,7 @@ function SliderRow({ label, value, min, max, step, onChange, format, tooltip }) 
         onChange={(e) => onChange(Number(e.target.value))}
         className="flex-1 accent-slate-600"
       />
-      <span className="text-xs font-mono text-slate-700 w-10 text-right">{format(value)}</span>
+      <span className="text-xs font-mono text-muted-dark w-10 text-right">{format(value)}</span>
     </div>
   );
 }
@@ -316,10 +316,10 @@ export default function NPVScenariosPanel({ buildingId }) {
   return (
     <Panel title={t("manager:npvScenarios.title.npvScenarios")}>
       <div className="space-y-4">
-        {subtitle && <p className="text-xs text-slate-500">{subtitle}</p>}
+        {subtitle && <p className="text-xs text-muted">{subtitle}</p>}
 
         {/* Controls */}
-        <div className="space-y-2 p-3 bg-slate-50 rounded-md border border-slate-200">
+        <div className="space-y-2 p-3 bg-surface-subtle rounded-md border border-surface-border">
           <SliderRow
             label={t("manager:npvScenarios.controls.discountRate")}
             value={discountRatePct}
@@ -339,7 +339,7 @@ export default function NPVScenariosPanel({ buildingId }) {
 
           {/* Horizon */}
           <div className="flex items-center gap-3">
-            <label className="text-xs text-slate-600 w-32 shrink-0">
+            <label className="text-xs text-muted-text w-32 shrink-0">
               {t("manager:npvScenarios.controls.horizon")}
             </label>
             <div className="flex gap-2">
@@ -351,7 +351,7 @@ export default function NPVScenariosPanel({ buildingId }) {
                     "px-2 py-0.5 rounded text-xs font-medium border",
                     horizonYears === y
                       ? "bg-slate-700 text-white border-slate-700"
-                      : "bg-white text-slate-600 border-slate-300 hover:border-slate-500",
+                      : "bg-surface text-muted-text border-muted-ring hover:border-slate-500",
                   )}
                 >
                   {y}yr
@@ -362,7 +362,7 @@ export default function NPVScenariosPanel({ buildingId }) {
 
           {/* Defer window */}
           <div className="flex items-center gap-3">
-            <label className="text-xs text-slate-600 w-32 shrink-0 flex items-center gap-1">
+            <label className="text-xs text-muted-text w-32 shrink-0 flex items-center gap-1">
               {t("manager:npvScenarios.controls.deferWindow")}
               <Tooltip content={t("manager:npvScenarios.tooltip.deferWindow")} />
             </label>
@@ -375,7 +375,7 @@ export default function NPVScenariosPanel({ buildingId }) {
                     "px-2 py-0.5 rounded text-xs font-medium border",
                     deferYears === y
                       ? "bg-amber-600 text-white border-amber-600"
-                      : "bg-white text-slate-600 border-slate-300 hover:border-slate-500",
+                      : "bg-surface text-muted-text border-muted-ring hover:border-slate-500",
                   )}
                 >
                   {y}yr
@@ -386,11 +386,11 @@ export default function NPVScenariosPanel({ buildingId }) {
 
           {/* Property value */}
           <div className="flex items-center gap-3">
-            <label className="text-xs text-slate-600 w-32 shrink-0">
+            <label className="text-xs text-muted-text w-32 shrink-0">
               {t("manager:npvScenarios.controls.propertyValue")}
             </label>
             <div className="flex-1 flex items-center gap-1">
-              <span className="text-xs text-slate-400">CHF</span>
+              <span className="text-xs text-foreground-dim">CHF</span>
               <input
                 type="number"
                 min={0}
@@ -398,7 +398,7 @@ export default function NPVScenariosPanel({ buildingId }) {
                 value={propertyValueChf}
                 onChange={(e) => setPropertyValueChf(e.target.value)}
                 placeholder={t("manager:npvScenarios.controls.propertyValuePlaceholder")}
-                className="flex-1 text-xs border border-slate-300 rounded px-2 py-0.5 font-mono text-slate-700 focus:outline-none focus:border-slate-500"
+                className="flex-1 text-xs border border-muted-ring rounded px-2 py-0.5 font-mono text-muted-dark focus:outline-none focus:border-slate-500"
               />
             </div>
           </div>
@@ -423,26 +423,26 @@ export default function NPVScenariosPanel({ buildingId }) {
 
         {/* Empty — no building selected */}
         {!buildingId && !loading && (
-          <p className="text-sm text-slate-400">{t("manager:npvScenarios.text.selectBuilding")}</p>
+          <p className="text-sm text-foreground-dim">{t("manager:npvScenarios.text.selectBuilding")}</p>
         )}
 
         {/* FCI + tax rate context strip */}
         {!loading && data && (
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs">
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-md border border-surface-border bg-surface-subtle px-3 py-2 text-xs">
             <div className="flex items-center gap-3">
-              <span className="text-slate-500 font-medium shrink-0 flex items-center gap-1">
+              <span className="text-muted font-medium shrink-0 flex items-center gap-1">
                 {t("manager:npvScenarios.text.fciLabel")}
                 <Tooltip content={t("manager:npvScenarios.tooltip.fci")} />
               </span>
               <span className="flex items-center gap-1">
-                <span className="text-slate-400">{t("manager:npvScenarios.text.fciCurrent")}</span>
+                <span className="text-foreground-dim">{t("manager:npvScenarios.text.fciCurrent")}</span>
                 <span className={cn("font-mono font-semibold", fciColor(data.fciCurrentPct))}>
                   {data.fciCurrentPct.toFixed(1)}%
                 </span>
               </span>
-              <span className="text-slate-300">→</span>
+              <span className="text-foreground-dim">→</span>
               <span className="flex items-center gap-1">
-                <span className="text-slate-400">
+                <span className="text-foreground-dim">
                   {t("manager:npvScenarios.text.fciAtHorizon", { year: data.toYear })}
                 </span>
                 <span className={cn("font-mono font-semibold", fciColor(data.fciNeglectHorizonPct))}>
@@ -450,11 +450,11 @@ export default function NPVScenariosPanel({ buildingId }) {
                 </span>
               </span>
             </div>
-            <span className="text-slate-300 hidden sm:inline">·</span>
-            <span className="text-slate-400 italic">
+            <span className="text-foreground-dim hidden sm:inline">·</span>
+            <span className="text-foreground-dim italic">
               {t("manager:npvScenarios.text.fciThresholds")}
             </span>
-            <span className="ml-auto text-slate-400 shrink-0">
+            <span className="ml-auto text-foreground-dim shrink-0">
               {data.ownerTaxRateIsDefault
                 ? t("manager:npvScenarios.text.taxShieldDefaultNote", { rate: data.ownerMarginalTaxRatePct })
                 : t("manager:npvScenarios.text.taxShieldNote", { rate: data.ownerMarginalTaxRatePct })}
@@ -515,17 +515,17 @@ export default function NPVScenariosPanel({ buildingId }) {
 
             {/* Strategy recommendation strip */}
             {strategyContext?.hasProfile && strategyContext.rationale && (
-              <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700 flex items-start gap-2">
-                <span className="shrink-0 mt-px text-slate-400">★</span>
+              <div className="rounded-md border border-surface-border bg-surface-subtle px-3 py-2 text-xs text-muted-dark flex items-start gap-2">
+                <span className="shrink-0 mt-px text-foreground-dim">★</span>
                 <span>{strategyContext.rationale}</span>
               </div>
             )}
             {!strategyContext?.hasProfile && (
-              <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500 flex items-center justify-between gap-2">
+              <div className="rounded-md border border-surface-border bg-surface-subtle px-3 py-2 text-xs text-muted flex items-center justify-between gap-2">
                 <span>{t("manager:npvScenarios.strategy.noProfileHint")}</span>
                 <a
                   href="/owner/strategy"
-                  className="shrink-0 text-slate-700 font-medium underline hover:text-slate-900"
+                  className="shrink-0 text-muted-dark font-medium underline hover:text-foreground"
                 >
                   {t("manager:npvScenarios.strategy.noProfileLink")}
                 </a>
@@ -566,14 +566,14 @@ export default function NPVScenariosPanel({ buildingId }) {
                   summary={buildSummary("neglect")}
                 />
                 {!data.terminalValueModeled && (
-                  <p className="text-xs text-slate-400 italic px-1">
+                  <p className="text-xs text-foreground-dim italic px-1">
                     {t("manager:npvScenarios.text.terminalValueMissing")}
                   </p>
                 )}
               </div>
             </div>
 
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-foreground-dim">
               {t("manager:npvScenarios.text.footnote", {
                 discount: data.discountRatePct,
                 growth: data.incomeGrowthRatePct,

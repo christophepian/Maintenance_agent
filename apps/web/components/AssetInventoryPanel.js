@@ -54,7 +54,7 @@ const TYPE_COLORS = {
   FINISH: "bg-amber-100 text-amber-700",
   STRUCTURAL: "bg-red-100 text-red-700",
   SYSTEM: "bg-teal-100 text-teal-700",
-  OTHER: "bg-slate-100 text-slate-600",
+  OTHER: "bg-surface-hover text-muted-text",
 };
 
 /**
@@ -69,10 +69,10 @@ function isModelEligible(type) {
 function DepreciationBar({ depreciation, installedAt }) {
   const { t } = useTranslation("common");
   if (!depreciation && !installedAt) {
-    return <span className="text-xs text-slate-400 italic">{t("assetInventory.installUnknown")}</span>;
+    return <span className="text-xs text-foreground-dim italic">{t("assetInventory.installUnknown")}</span>;
   }
   if (!depreciation) {
-    return <span className="text-xs text-slate-400 italic">{t("assetInventory.noStandard")}</span>;
+    return <span className="text-xs text-foreground-dim italic">{t("assetInventory.noStandard")}</span>;
   }
   const { residualPct, ageMonths, usefulLifeMonths, depreciationPct } = depreciation;
   const isFullyDepreciated = depreciationPct >= 100;
@@ -93,14 +93,14 @@ function DepreciationBar({ depreciation, installedAt }) {
           {t("assetInventory.fullyDepreciated")}
         </span>
       )}
-      <div className="flex-1 h-2.5 bg-slate-200 rounded-full overflow-hidden" title={`${ageYears} / ${lifeYears} years used — ${residualPct}% residual value`}>
+      <div className="flex-1 h-2.5 bg-track rounded-full overflow-hidden" title={`${ageYears} / ${lifeYears} years used — ${residualPct}% residual value`}>
         <div className={cn("h-full rounded-full transition-all", color)} style={{ width: `${Math.min(depreciationPct, 100)}%` }} />
       </div>
-      <span className="text-xs text-slate-600 whitespace-nowrap font-medium">
+      <span className="text-xs text-muted-text whitespace-nowrap font-medium">
         {ageYears} / {lifeYears}y
       </span>
       {!isFullyDepreciated && (
-        <span className="text-xs text-slate-400 whitespace-nowrap">
+        <span className="text-xs text-foreground-dim whitespace-nowrap">
           ({remainingYears}y left)
         </span>
       )}
@@ -111,19 +111,19 @@ function DepreciationBar({ depreciation, installedAt }) {
 function DepreciationDetail({ depreciation, installedAt }) {
   if (!depreciation && !installedAt) {
     return (
-      <div className="rounded-lg border border-slate-100 bg-slate-50 px-4 py-3">
-        <p className="text-xs text-slate-400 italic">Install date unknown — depreciation cannot be computed.</p>
+      <div className="rounded-lg border border-surface-divider bg-surface-subtle px-4 py-3">
+        <p className="text-xs text-foreground-dim italic">Install date unknown — depreciation cannot be computed.</p>
       </div>
     );
   }
   if (!depreciation) {
     return (
-      <div className="rounded-lg border border-slate-100 bg-slate-50 px-4 py-3">
+      <div className="rounded-lg border border-surface-divider bg-surface-subtle px-4 py-3">
         <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-500">Installed:</span>
+          <span className="text-xs text-muted">Installed:</span>
           <span className="text-xs font-medium">{formatDate(installedAt)}</span>
         </div>
-        <p className="mt-1 text-xs text-slate-400 italic">No depreciation standard found. Standards are matched by topic first, then asset type.</p>
+        <p className="mt-1 text-xs text-foreground-dim italic">No depreciation standard found. Standards are matched by topic first, then asset type.</p>
       </div>
     );
   }
@@ -141,9 +141,9 @@ function DepreciationDetail({ depreciation, installedAt }) {
     "bg-red-500";
 
   return (
-    <div className="rounded-lg border border-slate-100 bg-slate-50 px-4 py-3 space-y-2">
+    <div className="rounded-lg border border-surface-divider bg-surface-subtle px-4 py-3 space-y-2">
       <div className="flex items-center justify-between">
-        <h5 className="text-xs font-semibold text-slate-600">Useful Life / Depreciation</h5>
+        <h5 className="text-xs font-semibold text-muted-text">Useful Life / Depreciation</h5>
         {isFullyDepreciated && (
           <span className="text-xs font-semibold uppercase tracking-wide bg-red-100 text-red-700 border border-red-200 px-2 py-0.5 rounded-full">
             Fully depreciated
@@ -153,10 +153,10 @@ function DepreciationDetail({ depreciation, installedAt }) {
 
       {/* Progress bar */}
       <div className="flex items-center gap-3">
-        <div className="flex-1 h-3 bg-slate-200 rounded-full overflow-hidden" title={`${depreciationPct}% depreciated`}>
+        <div className="flex-1 h-3 bg-track rounded-full overflow-hidden" title={`${depreciationPct}% depreciated`}>
           <div className={cn("h-full rounded-full transition-all", barColor)} style={{ width: `${Math.min(depreciationPct, 100)}%` }} />
         </div>
-        <span className="text-xs font-semibold text-slate-700 whitespace-nowrap w-10 text-right">
+        <span className="text-xs font-semibold text-muted-dark whitespace-nowrap w-10 text-right">
           {depreciationPct}%
         </span>
       </div>
@@ -164,18 +164,18 @@ function DepreciationDetail({ depreciation, installedAt }) {
       {/* Summary stats */}
       <div className="grid grid-cols-3 gap-3 text-xs">
         <div>
-          <span className="text-slate-500">Time in service</span>
-          <div className="font-semibold text-slate-800">{ageYears} / {lifeYears} years</div>
+          <span className="text-muted">Time in service</span>
+          <div className="font-semibold text-foreground">{ageYears} / {lifeYears} years</div>
         </div>
         <div>
-          <span className="text-slate-500">Remaining life</span>
-          <div className={cn("font-semibold", isFullyDepreciated ? "text-red-600" : "text-slate-800")}>
+          <span className="text-muted">Remaining life</span>
+          <div className={cn("font-semibold", isFullyDepreciated ? "text-red-600" : "text-foreground")}>
             {isFullyDepreciated ? "0 years" : `${remainingYears} years`}
           </div>
         </div>
         <div>
-          <span className="text-slate-500">Residual value</span>
-          <div className="font-semibold text-slate-800">{residualPct}%</div>
+          <span className="text-muted">Residual value</span>
+          <div className="font-semibold text-foreground">{residualPct}%</div>
         </div>
       </div>
     </div>
@@ -184,7 +184,7 @@ function DepreciationDetail({ depreciation, installedAt }) {
 
 function InterventionList({ interventions }) {
   if (!interventions || interventions.length === 0) {
-    return <p className="text-xs text-slate-400 italic">No interventions recorded</p>;
+    return <p className="text-xs text-foreground-dim italic">No interventions recorded</p>;
   }
   return (
     <div className="space-y-1.5">
@@ -193,11 +193,11 @@ function InterventionList({ interventions }) {
           <span className={cn("px-1.5 py-0.5 rounded text-xs font-semibold uppercase", iv.type === "REPLACEMENT" ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-700")}>
             {iv.type}
           </span>
-          <span className="text-slate-600">{formatDate(iv.interventionDate)}</span>
+          <span className="text-muted-text">{formatDate(iv.interventionDate)}</span>
           {iv.costChf != null && (
-            <span className="text-slate-500">CHF {iv.costChf.toLocaleString("de-CH")}</span>
+            <span className="text-muted">CHF {iv.costChf.toLocaleString("de-CH")}</span>
           )}
-          {iv.notes && <span className="text-slate-400 truncate max-w-[200px]">{iv.notes}</span>}
+          {iv.notes && <span className="text-foreground-dim truncate max-w-[200px]">{iv.notes}</span>}
         </div>
       ))}
     </div>
@@ -336,15 +336,15 @@ function AddAssetForm({ scope, parentId, unitId, units, onDone }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="border border-slate-200 rounded-lg p-4 bg-slate-50 space-y-3">
-      <h4 className="text-sm font-semibold text-slate-700">Add Asset</h4>
+    <form onSubmit={handleSubmit} className="border border-surface-border rounded-lg p-4 bg-surface-subtle space-y-3">
+      <h4 className="text-sm font-semibold text-muted-dark">Add Asset</h4>
       {error && <p className="text-xs text-red-600 bg-red-50 p-2 rounded">{error}</p>}
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
 
         {/* ── Topic picker ── */}
         <div className="col-span-2 md:col-span-1">
-          <label className="block text-xs font-medium text-slate-600 mb-1">Item *</label>
+          <label className="block text-xs font-medium text-muted-text mb-1">Item *</label>
           {isCustomTopic ? (
             <div className="space-y-1">
               <div className="flex gap-1">
@@ -358,7 +358,7 @@ function AddAssetForm({ scope, parentId, unitId, units, onDone }) {
                 <button
                   type="button"
                   onClick={() => { setIsCustomTopic(false); setForm((p) => ({ ...p, topic: "" })); setTopicSearch(""); }}
-                  className="px-2 py-1 text-xs text-slate-500 border border-slate-300 rounded-lg hover:bg-slate-100 whitespace-nowrap"
+                  className="px-2 py-1 text-xs text-muted border border-muted-ring rounded-lg hover:bg-surface-hover whitespace-nowrap"
                 >
                   ← Back
                 </button>
@@ -375,27 +375,27 @@ function AddAssetForm({ scope, parentId, unitId, units, onDone }) {
                 onChange={(e) => { setTopicSearch(e.target.value); setTopicDropdownOpen(true); }}
                 onFocus={() => setTopicDropdownOpen(true)}
                 placeholder={t("assetInventory.searchPlaceholder")}
-                className="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-lg"
+                className="w-full px-2 py-1.5 text-sm border border-muted-ring rounded-lg"
                 autoComplete="off"
                 required={!form.topic}
               />
               {/* Hidden input carries the actual topic key value for form validation */}
               <input type="hidden" value={form.topic} required />
               {topicDropdownOpen && (
-                <div className="absolute z-20 mt-1 w-full max-h-56 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg">
+                <div className="absolute z-20 mt-1 w-full max-h-56 overflow-y-auto rounded-lg border border-surface-border bg-surface shadow-lg">
                   {filteredSuggestions.length === 0 && (
-                    <div className="px-3 py-2 text-xs text-slate-400 italic">No matches</div>
+                    <div className="px-3 py-2 text-xs text-foreground-dim italic">No matches</div>
                   )}
                   {filteredSuggestions.map((s) => (
                     <button
                       key={s.topicKey}
                       type="button"
                       onMouseDown={() => selectTopic(s)}
-                      className="flex w-full items-center justify-between px-3 py-2 text-left hover:bg-slate-50"
+                      className="flex w-full items-center justify-between px-3 py-2 text-left hover:bg-surface-subtle"
                     >
-                      <span className="text-sm text-slate-800">{topicLabel(s.topicKey)}</span>
+                      <span className="text-sm text-foreground">{topicLabel(s.topicKey)}</span>
                       {s.usefulLifeMonths != null && (
-                        <span className="ml-2 shrink-0 text-xs font-medium text-slate-400">
+                        <span className="ml-2 shrink-0 text-xs font-medium text-foreground-dim">
                           {Math.round(s.usefulLifeMonths / 12)} yr
                         </span>
                       )}
@@ -404,7 +404,7 @@ function AddAssetForm({ scope, parentId, unitId, units, onDone }) {
                   <button
                     type="button"
                     onMouseDown={activateCustomTopic}
-                    className="flex w-full items-center gap-1.5 border-t border-slate-100 px-3 py-2 text-left text-xs text-amber-600 hover:bg-amber-50"
+                    className="flex w-full items-center gap-1.5 border-t border-surface-divider px-3 py-2 text-left text-xs text-amber-600 hover:bg-amber-50"
                   >
                     + Enter custom topic key…
                   </button>
@@ -416,10 +416,10 @@ function AddAssetForm({ scope, parentId, unitId, units, onDone }) {
 
         {/* ── Type (auto-set from topic, still editable) ── */}
         <div>
-          <label className="block text-xs font-medium text-slate-600 mb-1">
+          <label className="block text-xs font-medium text-muted-text mb-1">
             Type *
             {form.topic && !isCustomTopic && (
-              <span className="ml-1 font-normal text-slate-400">(auto-set)</span>
+              <span className="ml-1 font-normal text-foreground-dim">(auto-set)</span>
             )}
           </label>
           <select
@@ -432,7 +432,7 @@ function AddAssetForm({ scope, parentId, unitId, units, onDone }) {
                 setForm({ ...form, type: newType });
               }
             }}
-            className="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-lg"
+            className="w-full px-2 py-1.5 text-sm border border-muted-ring rounded-lg"
           >
             {ASSET_TYPES.map((t) => (
               <option key={t} value={t}>{TYPE_LABELS[t] || t}</option>
@@ -442,12 +442,12 @@ function AddAssetForm({ scope, parentId, unitId, units, onDone }) {
 
         {/* ── Name ── */}
         <div>
-          <label className="block text-xs font-medium text-slate-600 mb-1">Name *</label>
+          <label className="block text-xs font-medium text-muted-text mb-1">Name *</label>
           <input
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
             placeholder="e.g. Kitchen dishwasher"
-            className="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-lg"
+            className="w-full px-2 py-1.5 text-sm border border-muted-ring rounded-lg"
             required
           />
         </div>
@@ -455,11 +455,11 @@ function AddAssetForm({ scope, parentId, unitId, units, onDone }) {
         {/* ── Unit picker (building scope) ── */}
         {scope === "building" && units && units.length > 0 && (
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">Unit *</label>
+            <label className="block text-xs font-medium text-muted-text mb-1">Unit *</label>
             <select
               value={form.unitId}
               onChange={(e) => setForm({ ...form, unitId: e.target.value })}
-              className="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-lg"
+              className="w-full px-2 py-1.5 text-sm border border-muted-ring rounded-lg"
               required
             >
               <option value="">Select unit…</option>
@@ -474,44 +474,44 @@ function AddAssetForm({ scope, parentId, unitId, units, onDone }) {
         {isModelEligible(form.type) ? (
           <>
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Brand</label>
+              <label className="block text-xs font-medium text-muted-text mb-1">Brand</label>
               <input
                 value={form.brand}
                 onChange={(e) => setForm({ ...form, brand: e.target.value })}
-                className="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-lg"
+                className="w-full px-2 py-1.5 text-sm border border-muted-ring rounded-lg"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Model #</label>
+              <label className="block text-xs font-medium text-muted-text mb-1">Model #</label>
               <input
                 value={form.modelNumber}
                 onChange={(e) => setForm({ ...form, modelNumber: e.target.value })}
-                className="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-lg"
+                className="w-full px-2 py-1.5 text-sm border border-muted-ring rounded-lg"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Serial #</label>
+              <label className="block text-xs font-medium text-muted-text mb-1">Serial #</label>
               <input
                 value={form.serialNumber}
                 onChange={(e) => setForm({ ...form, serialNumber: e.target.value })}
-                className="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-lg"
+                className="w-full px-2 py-1.5 text-sm border border-muted-ring rounded-lg"
               />
             </div>
           </>
         ) : (
           <div className="col-span-2 md:col-span-3">
-            <p className="text-xs text-slate-400 italic">Brand, model, and serial fields are not applicable for this asset type.</p>
+            <p className="text-xs text-foreground-dim italic">Brand, model, and serial fields are not applicable for this asset type.</p>
           </div>
         )}
 
         {/* ── Install date ── */}
         <div>
-          <label className="block text-xs font-medium text-slate-600 mb-1">Installed</label>
+          <label className="block text-xs font-medium text-muted-text mb-1">Installed</label>
           <input
             type="date"
             value={form.installedAt}
             onChange={(e) => setForm({ ...form, installedAt: e.target.value })}
-            className="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-lg"
+            className="w-full px-2 py-1.5 text-sm border border-muted-ring rounded-lg"
           />
           {!form.installedAt && (
             <p className="text-xs text-amber-600 mt-0.5">
@@ -522,11 +522,11 @@ function AddAssetForm({ scope, parentId, unitId, units, onDone }) {
 
         {/* ── Notes ── */}
         <div className="col-span-2">
-          <label className="block text-xs font-medium text-slate-600 mb-1">Notes</label>
+          <label className="block text-xs font-medium text-muted-text mb-1">Notes</label>
           <input
             value={form.notes}
             onChange={(e) => setForm({ ...form, notes: e.target.value })}
-            className="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-lg"
+            className="w-full px-2 py-1.5 text-sm border border-muted-ring rounded-lg"
           />
         </div>
       </div>
@@ -582,12 +582,12 @@ function AddInterventionForm({ assetId, onDone }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex items-end gap-2 mt-2 bg-white p-2 rounded border border-slate-100">
+    <form onSubmit={handleSubmit} className="flex items-end gap-2 mt-2 bg-surface p-2 rounded border border-surface-divider">
       {error && <p className="text-xs text-red-600">{error}</p>}
       <select
         value={form.type}
         onChange={(e) => setForm({ ...form, type: e.target.value })}
-        className="px-2 py-1 text-xs border border-slate-300 rounded-lg"
+        className="px-2 py-1 text-xs border border-muted-ring rounded-lg"
       >
         {INTERVENTION_TYPES.map((t) => (
           <option key={t} value={t}>{t}</option>
@@ -597,7 +597,7 @@ function AddInterventionForm({ assetId, onDone }) {
         type="date"
         value={form.interventionDate}
         onChange={(e) => setForm({ ...form, interventionDate: e.target.value })}
-        className="px-2 py-1 text-xs border border-slate-300 rounded-lg"
+        className="px-2 py-1 text-xs border border-muted-ring rounded-lg"
         required
       />
       <input
@@ -605,7 +605,7 @@ function AddInterventionForm({ assetId, onDone }) {
         placeholder="Cost CHF"
         value={form.costChf}
         onChange={(e) => setForm({ ...form, costChf: e.target.value })}
-        className="w-24 px-2 py-1 text-xs border border-slate-300 rounded-lg"
+        className="w-24 px-2 py-1 text-xs border border-muted-ring rounded-lg"
         min="0"
         step="0.01"
       />
@@ -613,7 +613,7 @@ function AddInterventionForm({ assetId, onDone }) {
         placeholder="Notes"
         value={form.notes}
         onChange={(e) => setForm({ ...form, notes: e.target.value })}
-        className="flex-1 px-2 py-1 text-xs border border-slate-300 rounded-lg"
+        className="flex-1 px-2 py-1 text-xs border border-muted-ring rounded-lg"
       />
       <button
         type="submit"
@@ -676,9 +676,9 @@ function EditAssetForm({ asset, onDone, onRefresh }) {
     <form onSubmit={handleSubmit} className="border border-brand rounded-xl p-3 bg-brand-light space-y-3">
       <div className="flex items-center justify-between mb-1">
         <span className="text-xs font-semibold text-brand-dark">Edit asset</span>
-        <div className="flex items-center gap-1.5 text-xs text-slate-400">
-          <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded">{topicLabel(asset.topic)}</span>
-          <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-xs font-mono">{asset.type}</span>
+        <div className="flex items-center gap-1.5 text-xs text-foreground-dim">
+          <span className="bg-surface-hover text-muted-text px-2 py-0.5 rounded">{topicLabel(asset.topic)}</span>
+          <span className="bg-surface-hover text-muted-text px-2 py-0.5 rounded text-xs font-mono">{asset.type}</span>
           <span className="italic">(locked)</span>
         </div>
       </div>
@@ -686,60 +686,60 @@ function EditAssetForm({ asset, onDone, onRefresh }) {
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
         <div className="col-span-2 md:col-span-3">
-          <label className="block text-xs font-medium text-slate-600 mb-1">Name *</label>
+          <label className="block text-xs font-medium text-muted-text mb-1">Name *</label>
           <input
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
-            className="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-lg"
+            className="w-full px-2 py-1.5 text-sm border border-muted-ring rounded-lg"
             required
           />
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-slate-600 mb-1">Installed</label>
+          <label className="block text-xs font-medium text-muted-text mb-1">Installed</label>
           <input
             type="date"
             value={form.installedAt}
             onChange={(e) => setForm({ ...form, installedAt: e.target.value })}
-            className="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-lg"
+            className="w-full px-2 py-1.5 text-sm border border-muted-ring rounded-lg"
           />
         </div>
 
         {showModelFields && (
           <>
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Brand</label>
+              <label className="block text-xs font-medium text-muted-text mb-1">Brand</label>
               <input
                 value={form.brand}
                 onChange={(e) => setForm({ ...form, brand: e.target.value })}
-                className="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-lg"
+                className="w-full px-2 py-1.5 text-sm border border-muted-ring rounded-lg"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Model #</label>
+              <label className="block text-xs font-medium text-muted-text mb-1">Model #</label>
               <input
                 value={form.modelNumber}
                 onChange={(e) => setForm({ ...form, modelNumber: e.target.value })}
-                className="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-lg"
+                className="w-full px-2 py-1.5 text-sm border border-muted-ring rounded-lg"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Serial #</label>
+              <label className="block text-xs font-medium text-muted-text mb-1">Serial #</label>
               <input
                 value={form.serialNumber}
                 onChange={(e) => setForm({ ...form, serialNumber: e.target.value })}
-                className="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-lg"
+                className="w-full px-2 py-1.5 text-sm border border-muted-ring rounded-lg"
               />
             </div>
           </>
         )}
 
         <div className="col-span-2 md:col-span-3">
-          <label className="block text-xs font-medium text-slate-600 mb-1">Notes</label>
+          <label className="block text-xs font-medium text-muted-text mb-1">Notes</label>
           <input
             value={form.notes}
             onChange={(e) => setForm({ ...form, notes: e.target.value })}
-            className="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-lg"
+            className="w-full px-2 py-1.5 text-sm border border-muted-ring rounded-lg"
           />
         </div>
       </div>
@@ -801,10 +801,10 @@ export default function AssetInventoryPanel({ assets, onRefresh, scope, parentId
     <div className="space-y-4">
       {/* Summary row */}
       <div className="flex flex-wrap items-center gap-4 text-sm">
-        <span className="font-semibold text-slate-700">{totalAssets} assets</span>
+        <span className="font-semibold text-muted-dark">{totalAssets} assets</span>
         {totalAssets > 0 && (
           <>
-            <span className="text-slate-500">Avg residual: <strong>{Math.round(avgResidual)}%</strong></span>
+            <span className="text-muted">Avg residual: <strong>{Math.round(avgResidual)}%</strong></span>
             {fullyDepreciated > 0 && (
               <span className="text-red-600 font-medium">{fullyDepreciated} fully depreciated</span>
             )}
@@ -815,7 +815,7 @@ export default function AssetInventoryPanel({ assets, onRefresh, scope, parentId
         <select
           value={filterType}
           onChange={(e) => setFilterType(e.target.value)}
-          className="ml-auto px-2 py-1 text-xs border border-slate-300 rounded-lg"
+          className="ml-auto px-2 py-1 text-xs border border-muted-ring rounded-lg"
         >
           <option value="">All types</option>
           {ASSET_TYPES.map((tk) => {
@@ -877,14 +877,14 @@ export default function AssetInventoryPanel({ assets, onRefresh, scope, parentId
 
       {/* Asset list by type group */}
       {totalAssets === 0 && !showAddForm && (
-        <p className="text-sm text-slate-400 italic text-center py-8">{t("assetInventory.empty")}</p>
+        <p className="text-sm text-foreground-dim italic text-center py-8">{t("assetInventory.empty")}</p>
       )}
 
       {Object.entries(grouped).map(([type, items]) => {
         const category = items[0]?.category || ASSET_TYPE_TO_CATEGORY[type] || "EQUIPMENT";
         return (
         <div key={type} className="space-y-1">
-          <h4 className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider pt-2">
+          <h4 className="flex items-center gap-2 text-xs font-semibold text-muted uppercase tracking-wider pt-2">
             <span className={cn("px-2 py-0.5 rounded-full text-xs", TYPE_COLORS[type] || TYPE_COLORS.OTHER)}>{typeLabel(type)}</span>
             <span className={cn("px-1.5 py-0.5 rounded border text-[9px] font-medium", CATEGORY_COLORS[category] || CATEGORY_COLORS.EQUIPMENT)}>{category}</span>
             <span>({items.length})</span>
@@ -894,30 +894,30 @@ export default function AssetInventoryPanel({ assets, onRefresh, scope, parentId
             {items.map((asset) => {
               const isExpanded = expandedAsset === asset.id;
               return (
-                <div key={asset.id} className="border border-slate-200 rounded-lg overflow-hidden">
+                <div key={asset.id} className="border border-surface-border rounded-lg overflow-hidden">
                   {/* Row header */}
                   <button
                     type="button"
-                    className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-slate-50 transition-colors"
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-surface-subtle transition-colors"
                     onClick={() => setExpandedAsset(isExpanded ? null : asset.id)}
                   >
-                    <span className="text-sm font-medium text-slate-800 min-w-[120px]">{asset.name}</span>
-                    <span className="text-xs text-slate-500">{topicLabel(asset.topic)}</span>
+                    <span className="text-sm font-medium text-foreground min-w-[120px]">{asset.name}</span>
+                    <span className="text-xs text-muted">{topicLabel(asset.topic)}</span>
                     {scope === "building" && asset.unit && (
-                      <span className="text-xs bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">{asset.unit.unitNumber}</span>
+                      <span className="text-xs bg-surface-hover text-muted-text px-1.5 py-0.5 rounded">{asset.unit.unitNumber}</span>
                     )}
-                    {asset.brand && <span className="text-xs text-slate-400">{asset.brand}</span>}
+                    {asset.brand && <span className="text-xs text-foreground-dim">{asset.brand}</span>}
                     <div className="flex-1" />
                     <DepreciationBar depreciation={asset.depreciation} installedAt={asset.installedAt} />
                     {!asset.isPresent && (
                       <span className="text-xs bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-semibold">ABSENT</span>
                     )}
-                    <span className="text-slate-400 text-xs">{isExpanded ? "▲" : "▼"}</span>
+                    <span className="text-foreground-dim text-xs">{isExpanded ? "▲" : "▼"}</span>
                   </button>
 
                   {/* Expanded detail */}
                   {isExpanded && (
-                    <div className="px-4 py-3 bg-white border-t border-slate-100 space-y-3">
+                    <div className="px-4 py-3 bg-surface border-t border-surface-divider space-y-3">
 
                       {/* ── Edit form or metadata grid ── */}
                       {editingAsset === asset.id ? (
@@ -930,24 +930,24 @@ export default function AssetInventoryPanel({ assets, onRefresh, scope, parentId
                         <>
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
                             {asset.installedAt ? (
-                              <div><span className="text-slate-500">Installed:</span> <span className="font-medium">{formatDate(asset.installedAt)}</span></div>
+                              <div><span className="text-muted">Installed:</span> <span className="font-medium">{formatDate(asset.installedAt)}</span></div>
                             ) : (
-                              <div><span className="text-slate-500 italic">Install date unknown</span></div>
+                              <div><span className="text-muted italic">Install date unknown</span></div>
                             )}
                             {asset.replacedAt && (
-                              <div><span className="text-slate-500">Replaced:</span> <span className="font-medium">{formatDate(asset.replacedAt)}</span></div>
+                              <div><span className="text-muted">Replaced:</span> <span className="font-medium">{formatDate(asset.replacedAt)}</span></div>
                             )}
                             {asset.lastRenovatedAt && (
-                              <div><span className="text-slate-500">Renovated:</span> <span className="font-medium">{formatDate(asset.lastRenovatedAt)}</span></div>
+                              <div><span className="text-muted">Renovated:</span> <span className="font-medium">{formatDate(asset.lastRenovatedAt)}</span></div>
                             )}
                             {asset.modelNumber && (
-                              <div><span className="text-slate-500">Model:</span> <span className="font-mono font-medium">{asset.modelNumber}</span></div>
+                              <div><span className="text-muted">Model:</span> <span className="font-mono font-medium">{asset.modelNumber}</span></div>
                             )}
                             {asset.serialNumber && (
-                              <div><span className="text-slate-500">Serial:</span> <span className="font-mono font-medium">{asset.serialNumber}</span></div>
+                              <div><span className="text-muted">Serial:</span> <span className="font-mono font-medium">{asset.serialNumber}</span></div>
                             )}
                             {asset.notes && (
-                              <div className="col-span-2"><span className="text-slate-500">Notes:</span> <span>{asset.notes}</span></div>
+                              <div className="col-span-2"><span className="text-muted">Notes:</span> <span>{asset.notes}</span></div>
                             )}
                           </div>
 
@@ -962,7 +962,7 @@ export default function AssetInventoryPanel({ assets, onRefresh, scope, parentId
                             </button>
                             {deletingAsset === asset.id ? (
                               <span className="flex items-center gap-2 text-xs">
-                                <span className="text-slate-500">Remove this asset?</span>
+                                <span className="text-muted">Remove this asset?</span>
                                 <button
                                   type="button"
                                   disabled={deleteSubmitting}
@@ -1011,7 +1011,7 @@ export default function AssetInventoryPanel({ assets, onRefresh, scope, parentId
                       {/* Intervention history */}
                       <div>
                         <div className="flex items-center justify-between mb-1">
-                          <h5 className="text-xs font-semibold text-slate-600">Interventions</h5>
+                          <h5 className="text-xs font-semibold text-muted-text">Interventions</h5>
                           {editingAsset !== asset.id && (
                             <button
                               type="button"

@@ -28,7 +28,7 @@ function BarChart({ snapshots }) {
         const positive = noi >= 0;
         return (
           <div key={s.periodStart} role="listitem" className="flex items-center gap-3 text-sm">
-            <span className="w-10 shrink-0 text-right font-mono text-slate-500">{year}</span>
+            <span className="w-10 shrink-0 text-right font-mono text-muted">{year}</span>
             <div className="flex-1 min-w-0">
               <div
                 className={cn(
@@ -60,7 +60,7 @@ function BuildingSelect({ buildings, value, onChange }) {
   const { t } = useTranslation("manager");
   return (
     <div className="flex items-center gap-2">
-      <label htmlFor="noi-building-select" className="text-sm text-slate-600 shrink-0">
+      <label htmlFor="noi-building-select" className="text-sm text-muted-text shrink-0">
         {t("manager:noiTrend.label.building")}
       </label>
       <select
@@ -189,7 +189,7 @@ export default function NOITrendPanel({ onBuildingChange } = {}) {
         {/* Controls row */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           {buildingsLoading ? (
-            <p className="text-sm text-slate-400">{t("manager:noiTrend.text.loading")}</p>
+            <p className="text-sm text-foreground-dim">{t("manager:noiTrend.text.loading")}</p>
           ) : buildings.length > 0 ? (
             <BuildingSelect
               buildings={buildings}
@@ -197,7 +197,7 @@ export default function NOITrendPanel({ onBuildingChange } = {}) {
               onChange={handleBuildingChange}
             />
           ) : (
-            <p className="text-sm text-slate-500">{t("manager:noiTrend.text.noBuildings")}</p>
+            <p className="text-sm text-muted">{t("manager:noiTrend.text.noBuildings")}</p>
           )}
           {selectedId && (
             <button
@@ -225,7 +225,7 @@ export default function NOITrendPanel({ onBuildingChange } = {}) {
         {!loading && snapshots !== null && annualSnapshots.length === 0 && (
           <div className="empty-state">
             <p className="empty-state-text">{t("manager:noiTrend.text.noSnapshots")}</p>
-            <p className="text-xs text-slate-400 mt-1">
+            <p className="text-xs text-foreground-dim mt-1">
               {t("manager:noiTrend.text.noSnapshotsHint")}
             </p>
           </div>
@@ -234,7 +234,7 @@ export default function NOITrendPanel({ onBuildingChange } = {}) {
         {!loading && annualSnapshots.length > 0 && (
           <>
             <BarChart snapshots={annualSnapshots} />
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-foreground-dim">
               {t("manager:noiTrend.text.chartNote")}
             </p>
           </>

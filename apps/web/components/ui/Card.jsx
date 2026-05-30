@@ -28,7 +28,7 @@ Card.Header = function CardHeader({ title, actions, className, children }) {
       )}
     >
       {title ? (
-        <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
+        <h2 className="text-lg font-semibold text-foreground">{title}</h2>
       ) : (
         children
       )}

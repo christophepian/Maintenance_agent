@@ -63,8 +63,8 @@ function ColumnConfigPopover({ orderedColumns, visibility, density, onToggle, on
   return (
     <div>
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2">
-        <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">{t("configurableTable.columns")}</span>
+      <div className="flex items-center justify-between border-b border-surface-divider px-3 py-2">
+        <span className="text-xs font-semibold uppercase tracking-wider text-muted">{t("configurableTable.columns")}</span>
       </div>
 
       {/* Column list — draggable */}
@@ -77,27 +77,27 @@ function ColumnConfigPopover({ orderedColumns, visibility, density, onToggle, on
             onDragEnter={() => handleDragEnter(i)}
             onDragEnd={handleDragEnd}
             onDragOver={(e) => e.preventDefault()}
-            className="flex items-center gap-2 px-3 py-1.5 hover:bg-slate-50 cursor-grab active:cursor-grabbing select-none"
+            className="flex items-center gap-2 px-3 py-1.5 hover:bg-surface-subtle cursor-grab active:cursor-grabbing select-none"
           >
             {/* Drag handle */}
-            <span className="text-slate-300 text-xs leading-none" title={t("configurableTable.dragToReorder")}>⠿</span>
+            <span className="text-foreground-dim text-xs leading-none" title={t("configurableTable.dragToReorder")}>⠿</span>
             {/* Checkbox */}
             <label className="flex items-center gap-2 flex-1 cursor-pointer">
               <input
                 type="checkbox"
                 checked={!!visibility[col.id]}
                 onChange={() => onToggle(col.id)}
-                className="h-3.5 w-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                className="h-3.5 w-3.5 rounded border-muted-ring text-blue-600 focus:ring-blue-500"
               />
-              <span className="text-xs text-slate-700">{col.label}</span>
+              <span className="text-xs text-muted-dark">{col.label}</span>
             </label>
           </div>
         ))}
       </div>
 
       {/* Density toggle */}
-      <div className="border-t border-slate-100 px-3 py-2">
-        <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">{t("configurableTable.density")}</p>
+      <div className="border-t border-surface-divider px-3 py-2">
+        <p className="text-xs font-semibold uppercase tracking-wider text-foreground-dim mb-1.5">{t("configurableTable.density")}</p>
         <div className="flex gap-1">
           {["comfortable", "compact"].map((d) => (
             <button
@@ -105,7 +105,7 @@ function ColumnConfigPopover({ orderedColumns, visibility, density, onToggle, on
               onClick={() => onDensityChange(d)}
               className={cn("flex-1 rounded-lg px-2 py-1 text-xs font-medium transition-colors", density === d
                   ? "bg-blue-50 text-blue-700 border border-blue-200"
-                  : "bg-white text-slate-500 border border-slate-200 hover:bg-slate-50")}
+                  : "bg-surface text-muted border border-surface-border hover:bg-surface-subtle")}
             >
               {t(`configurableTable.${d}`)}
             </button>
@@ -114,10 +114,10 @@ function ColumnConfigPopover({ orderedColumns, visibility, density, onToggle, on
       </div>
 
       {/* Reset */}
-      <div className="border-t border-slate-100 px-3 py-2">
+      <div className="border-t border-surface-divider px-3 py-2">
         <button
           onClick={onReset}
-          className="text-xs text-slate-400 hover:text-red-500 transition-colors"
+          className="text-xs text-foreground-dim hover:text-red-500 transition-colors"
         >
           {t("configurableTable.reset")}
         </button>
@@ -213,7 +213,7 @@ export default function ConfigurableTable({
                   key={key}
                   onClick={onRowClick ? () => onRowClick(row) : undefined}
                   className={cn(
-                    onRowClick ? "cursor-pointer hover:bg-slate-50/80 transition-colors" : "",
+                    onRowClick ? "cursor-pointer hover:bg-surface-subtle/80 transition-colors" : "",
                     rowClassName?.(row) || ""
                   )}
                 >
@@ -229,7 +229,7 @@ export default function ConfigurableTable({
       <div className={cn("overflow-x-auto rounded-lg border border-table-border", mobileCard && "hidden sm:block")}>
         <table className={cn("w-full text-sm", ds.text)}>
           <thead>
-            <tr className="border-b-2 border-table-border bg-transparent text-left text-xs font-medium uppercase tracking-wider text-slate-400">
+            <tr className="border-b-2 border-table-border bg-transparent text-left text-xs font-medium uppercase tracking-wider text-foreground-dim">
               {leadingHeader}
               {visibleColumns.map((col) =>
                 col.sortable ? (
@@ -258,7 +258,7 @@ export default function ConfigurableTable({
                         "inline-flex items-center justify-center rounded p-1 transition-colors",
                         popoverOpen
                           ? "text-brand bg-brand-light"
-                          : "text-slate-300 hover:text-slate-500 hover:bg-slate-100"
+                          : "text-foreground-dim hover:text-muted hover:bg-surface-hover"
                       )}
                       title="Configure columns"
                       aria-label="Configure columns"
@@ -304,8 +304,8 @@ export default function ConfigurableTable({
                       onClick={onRowClick ? () => onRowClick(row) : undefined}
                       className={[
                         "transition-colors",
-                        onRowClick ? "cursor-pointer hover:bg-slate-50/80" : "",
-                        expanded ? "bg-slate-50" : "",
+                        onRowClick ? "cursor-pointer hover:bg-surface-subtle/80" : "",
+                        expanded ? "bg-surface-subtle" : "",
                         rowClassName?.(row) || "",
                       ].join(" ")}
                     >

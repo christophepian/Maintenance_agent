@@ -259,7 +259,15 @@
     "title": "Settings",
     "subtitle": "Manage your notification preferences.",
     "tabs": {
-      "notifications": "Notifications"
+      "notifications": "Notifications",
+      "appearance": "Appearance"
+    },
+    "appearance": {
+      "colorScheme": "Color scheme",
+      "light": "Light",
+      "lightDescription": "Default — optimised for bright environments.",
+      "dark": "Dark",
+      "darkDescription": "Easier on the eyes in low-light conditions."
     }
   }
 }

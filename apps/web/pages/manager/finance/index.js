@@ -40,13 +40,13 @@ function SummaryCard({ label, value, sub, accent }) {
     accent === "green" ? "text-success-text" :
     accent === "red"   ? "text-destructive-text" :
     accent === "amber" ? "text-amber-700" :
-    "text-slate-900";
+    "text-foreground";
   return (
     // mb-0 cancels the built-in mb-4 from .card so it plays nice inside grid gap
     <div className="card mb-0 flex flex-col gap-1">
-      <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">{label}</span>
+      <span className="text-xs font-medium text-muted uppercase tracking-wide">{label}</span>
       <span className={cn("text-xl font-bold", accentClass)}>{value}</span>
-      {sub && <span className="text-xs text-slate-400">{sub}</span>}
+      {sub && <span className="text-xs text-foreground-dim">{sub}</span>}
     </div>
   );
 }
@@ -219,7 +219,7 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
 
                   <Section title={t("manager:financeIndex.title.buildings")}>
                     {/* Stats row */}
-                    <div className="flex gap-4 text-xs text-slate-500">
+                    <div className="flex gap-4 text-xs text-muted">
                       <span>{t("manager:financeIndex.text.avgCollectionRate")} <strong>{formatPercent(p.avgCollectionRate)}</strong></span>
                       {p.buildingsInRed > 0 && (
                         <span className="text-destructive-text font-medium">
@@ -239,7 +239,7 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
                             {(buildingsExpanded ? sortedBuildings : sortedBuildings.slice(0, 5)).map((b) => (
                               <div
                                 key={b.buildingId}
-                                className="table-card cursor-pointer hover:bg-slate-50/80 transition-colors"
+                                className="table-card cursor-pointer hover:bg-surface-subtle/80 transition-colors"
                                 onClick={() => router.push(`/manager/buildings/${b.buildingId}/financials`)}
                               >
                                 <div className="flex items-center gap-2">
@@ -276,7 +276,7 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
                               </thead>
                               <tbody>
                                 {(buildingsExpanded ? sortedBuildings : sortedBuildings.slice(0, 5)).map((b) => (
-                                  <tr key={b.buildingId} className="cursor-pointer hover:bg-slate-50/80" onClick={() => router.push(`/manager/buildings/${b.buildingId}/financials`)}>
+                                  <tr key={b.buildingId} className="cursor-pointer hover:bg-surface-subtle/80" onClick={() => router.push(`/manager/buildings/${b.buildingId}/financials`)}>
                                     <td>
                                       <span className="flex items-center gap-2">
                                         <HealthDot health={b.health} />
@@ -292,7 +292,7 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
                                     <td className="text-right font-mono">
                                       {b.receivablesCents > 0
                                         ? <span className="text-amber-700">{formatChfCents(b.receivablesCents)}</span>
-                                        : <span className="text-slate-400">—</span>}
+                                        : <span className="text-foreground-dim">—</span>}
                                     </td>
                                     <td className="text-right">
                                       <button
@@ -343,7 +343,7 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
           {activeTabKey === "accounting" && (
             <Panel>
               <div className="flex flex-col gap-4">
-                <p className="text-sm text-slate-600">
+                <p className="text-sm text-muted-text">
                   Double-entry ledger and account structure for your portfolio.
                 </p>
                 <div className="flex flex-wrap gap-3">
@@ -375,10 +375,10 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
           {activeTabKey === "setup" && (
             <Panel>
               <div className="flex flex-col gap-2">
-                <p className="text-sm text-slate-600">
+                <p className="text-sm text-muted-text">
                   Finance configuration options will appear here as they become available.
                 </p>
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-foreground-dim">
                   Coming soon: default payment terms, VAT presets, currency settings, and invoice templates.
                 </p>
               </div>

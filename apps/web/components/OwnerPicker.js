@@ -104,7 +104,7 @@ export default function OwnerPicker({ onSelect }) {
       </select>
       {switching && <span className="text-indigo-700 text-sm">Switching…</span>}
       {current && !switching && (
-        <span className="text-slate-600 text-xs">
+        <span className="text-muted-text text-xs">
           ID: {current.id.slice(0, 8)}…
         </span>
       )}

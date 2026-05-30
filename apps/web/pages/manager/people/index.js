@@ -152,33 +152,33 @@ function OwnersTab({ showAddForm, onAddFormClose }) {
 
       {/* Add owner form */}
       {showAddForm && (
-        <div className="mb-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
-          <p className="text-sm font-semibold text-slate-700 mb-3">{t("manager:peopleIndex.text.newOwner")}</p>
+        <div className="mb-4 rounded-lg border border-surface-border bg-surface-subtle p-4">
+          <p className="text-sm font-semibold text-muted-dark mb-3">{t("manager:peopleIndex.text.newOwner")}</p>
           <form onSubmit={handleCreateOwner} className="flex flex-wrap gap-3 items-end">
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">{t("manager:peopleIndex.text.name")}</label>
+              <label className="block text-xs font-medium text-muted-text mb-1">{t("manager:peopleIndex.text.name")}</label>
               <input
                 required value={ownerForm.name}
                 onChange={(e) => setOwnerForm((f) => ({ ...f, name: e.target.value }))}
-                className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-44"
+                className="rounded-lg border border-surface-border px-3 py-2 text-sm w-44"
                 placeholder={t("manager:peopleIndex.placeholder.jeanDupont")}
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">{t("manager:peopleIndex.text.email")}</label>
+              <label className="block text-xs font-medium text-muted-text mb-1">{t("manager:peopleIndex.text.email")}</label>
               <input
                 required type="email" value={ownerForm.email}
                 onChange={(e) => setOwnerForm((f) => ({ ...f, email: e.target.value }))}
-                className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-52"
+                className="rounded-lg border border-surface-border px-3 py-2 text-sm w-52"
                 placeholder={t("manager:peopleIndex.placeholder.jeanExampleCom")}
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">{t("manager:peopleIndex.text.password")}</label>
+              <label className="block text-xs font-medium text-muted-text mb-1">{t("manager:peopleIndex.text.password")}</label>
               <input
                 required type="password" value={ownerForm.password}
                 onChange={(e) => setOwnerForm((f) => ({ ...f, password: e.target.value }))}
-                className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-40"
+                className="rounded-lg border border-surface-border px-3 py-2 text-sm w-40"
                 placeholder={t("manager:peopleIndex.placeholder.temporaryPassword")}
               />
             </div>
@@ -187,7 +187,7 @@ function OwnersTab({ showAddForm, onAddFormClose }) {
               {ownerSubmitting ? "Creating…" : "Create"}
             </button>
             <button type="button" onClick={onAddFormClose}
-              className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">
+              className="rounded-lg border border-surface-border bg-surface px-4 py-2 text-sm font-medium text-muted-text hover:bg-surface-subtle">
               Cancel
             </button>
           </form>
@@ -207,7 +207,7 @@ function OwnersTab({ showAddForm, onAddFormClose }) {
             {sortedOwners.map((owner) => (
               <div key={owner.id}>
                 <div
-                  className="table-card cursor-pointer hover:bg-slate-50/80 transition-colors"
+                  className="table-card cursor-pointer hover:bg-surface-subtle/80 transition-colors"
                   onClick={() => window.location.href = `/manager/people/owners/${owner.id}`}
                 >
                   <div className="flex items-start justify-between gap-2">
@@ -220,7 +220,7 @@ function OwnersTab({ showAddForm, onAddFormClose }) {
                   <div className="mt-2 flex gap-2">
                     <button
                       onClick={(e) => { e.stopPropagation(); editingOwner === owner.id ? setEditingOwner(null) : openEdit(owner); }}
-                      className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                      className="rounded-lg border border-surface-border bg-surface px-3 py-1.5 text-xs font-semibold text-muted-dark hover:bg-surface-subtle"
                     >
                       {editingOwner === owner.id ? t("manager:peopleIndex.text.cancel") : t("manager:peopleIndex.text.edit")}
                     </button>
@@ -235,57 +235,57 @@ function OwnersTab({ showAddForm, onAddFormClose }) {
                   </div>
                 </div>
                 {editingOwner === owner.id && (
-                  <div className="bg-slate-50 px-4 py-4 border-t border-slate-100">
-                    <p className="text-xs font-semibold text-slate-600 mb-3">{t("manager:peopleIndex.text.editOwner")}</p>
+                  <div className="bg-surface-subtle px-4 py-4 border-t border-surface-divider">
+                    <p className="text-xs font-semibold text-muted-text mb-3">{t("manager:peopleIndex.text.editOwner")}</p>
                     <div className="flex flex-wrap gap-3 items-end">
                       <div className="flex-1 min-w-[160px]">
-                        <label className="block text-xs font-medium text-slate-600 mb-1">{t("manager:peopleIndex.text.name")}</label>
-                        <input value={editForm.name} onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))} className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-full" />
+                        <label className="block text-xs font-medium text-muted-text mb-1">{t("manager:peopleIndex.text.name")}</label>
+                        <input value={editForm.name} onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))} className="rounded-lg border border-surface-border px-3 py-2 text-sm w-full" />
                       </div>
                       <div className="flex-1 min-w-[180px]">
-                        <label className="block text-xs font-medium text-slate-600 mb-1">{t("manager:peopleIndex.text.email")}</label>
-                        <input type="email" value={editForm.email} onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))} className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-full" />
+                        <label className="block text-xs font-medium text-muted-text mb-1">{t("manager:peopleIndex.text.email")}</label>
+                        <input type="email" value={editForm.email} onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))} className="rounded-lg border border-surface-border px-3 py-2 text-sm w-full" />
                       </div>
                       <button onClick={() => handleSaveOwner(owner.id)} disabled={editSubmitting || (!editForm.name && !editForm.email)} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">
                         {editSubmitting ? t("manager:peopleIndex.text.saving") : t("manager:peopleIndex.text.save")}
                       </button>
-                      <button onClick={() => setEditingOwner(null)} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">{t("manager:peopleIndex.text.cancel")}</button>
+                      <button onClick={() => setEditingOwner(null)} className="rounded-lg border border-surface-border bg-surface px-4 py-2 text-sm font-medium text-muted-text hover:bg-surface-subtle">{t("manager:peopleIndex.text.cancel")}</button>
                     </div>
                   </div>
                 )}
                 {expandedBilling === owner.id && (
-                  <div className="bg-slate-50 px-4 py-4 border-t border-slate-100">
-                    <p className="text-xs font-semibold text-slate-600 mb-3">Billing entity for {owner.name}</p>
+                  <div className="bg-surface-subtle px-4 py-4 border-t border-surface-divider">
+                    <p className="text-xs font-semibold text-muted-text mb-3">Billing entity for {owner.name}</p>
                     <form onSubmit={(e) => handleCreateBillingEntity(e, owner.id)} className="flex flex-wrap gap-3 items-end">
                       <div className="w-full">
-                        <label className="block text-xs font-medium text-slate-600 mb-1">{t("manager:peopleIndex.text.address")}</label>
+                        <label className="block text-xs font-medium text-muted-text mb-1">{t("manager:peopleIndex.text.address")}</label>
                         <input required value={billingForm.addressLine1}
                           onChange={(e) => setBillingForm((f) => ({ ...f, addressLine1: e.target.value }))}
-                          className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-full" placeholder={t("manager:peopleIndex.placeholder.rueDeLaPaix1")} />
+                          className="rounded-lg border border-surface-border px-3 py-2 text-sm w-full" placeholder={t("manager:peopleIndex.placeholder.rueDeLaPaix1")} />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-slate-600 mb-1">{t("manager:peopleIndex.text.postalCode")}</label>
+                        <label className="block text-xs font-medium text-muted-text mb-1">{t("manager:peopleIndex.text.postalCode")}</label>
                         <input required value={billingForm.postalCode}
                           onChange={(e) => setBillingForm((f) => ({ ...f, postalCode: e.target.value }))}
-                          className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-24" placeholder="1200" />
+                          className="rounded-lg border border-surface-border px-3 py-2 text-sm w-24" placeholder="1200" />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-slate-600 mb-1">{t("manager:peopleIndex.text.city")}</label>
+                        <label className="block text-xs font-medium text-muted-text mb-1">{t("manager:peopleIndex.text.city")}</label>
                         <input required value={billingForm.city}
                           onChange={(e) => setBillingForm((f) => ({ ...f, city: e.target.value }))}
-                          className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-32" placeholder={t("manager:peopleIndex.placeholder.genVe")} />
+                          className="rounded-lg border border-surface-border px-3 py-2 text-sm w-32" placeholder={t("manager:peopleIndex.placeholder.genVe")} />
                       </div>
                       <div className="w-full">
-                        <label className="block text-xs font-medium text-slate-600 mb-1">IBAN</label>
+                        <label className="block text-xs font-medium text-muted-text mb-1">IBAN</label>
                         <input required value={billingForm.iban}
                           onChange={(e) => setBillingForm((f) => ({ ...f, iban: e.target.value }))}
-                          className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-full font-mono" placeholder={t("manager:peopleIndex.placeholder.cH5604835012345678009")} />
+                          className="rounded-lg border border-surface-border px-3 py-2 text-sm w-full font-mono" placeholder={t("manager:peopleIndex.placeholder.cH5604835012345678009")} />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-slate-600 mb-1">{t("manager:peopleIndex.text.vATNumber")}</label>
+                        <label className="block text-xs font-medium text-muted-text mb-1">{t("manager:peopleIndex.text.vATNumber")}</label>
                         <input value={billingForm.vatNumber}
                           onChange={(e) => setBillingForm((f) => ({ ...f, vatNumber: e.target.value }))}
-                          className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-36" placeholder={t("manager:peopleIndex.placeholder.cHE123456789")} />
+                          className="rounded-lg border border-surface-border px-3 py-2 text-sm w-36" placeholder={t("manager:peopleIndex.placeholder.cHE123456789")} />
                       </div>
                       <button type="submit" disabled={billingSubmitting}
                         className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">
@@ -312,9 +312,9 @@ function OwnersTab({ showAddForm, onAddFormClose }) {
               <tbody>
                 {sortedOwners.map((owner) => (
                   <>
-                    <tr key={owner.id} className="cursor-pointer hover:bg-slate-50/80" onClick={() => window.location.href = `/manager/people/owners/${owner.id}`}>
+                    <tr key={owner.id} className="cursor-pointer hover:bg-surface-subtle/80" onClick={() => window.location.href = `/manager/people/owners/${owner.id}`}>
                       <td className="cell-bold">{owner.name}</td>
-                      <td className="text-slate-500">{owner.email || "—"}</td>
+                      <td className="text-muted">{owner.email || "—"}</td>
                       <td>
                         {owner.billingEntity ? (
                           <Badge variant="success" size="md">
@@ -330,7 +330,7 @@ function OwnersTab({ showAddForm, onAddFormClose }) {
                         <div className="flex justify-end gap-2">
                           <button
                             onClick={(e) => { e.stopPropagation(); editingOwner === owner.id ? setEditingOwner(null) : openEdit(owner); }}
-                            className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                            className="rounded-lg border border-surface-border bg-surface px-3 py-1.5 text-xs font-semibold text-muted-dark hover:bg-surface-subtle"
                           >
                             {editingOwner === owner.id ? t("manager:peopleIndex.text.cancel") : t("manager:peopleIndex.text.edit")}
                           </button>
@@ -347,59 +347,59 @@ function OwnersTab({ showAddForm, onAddFormClose }) {
                     </tr>
                     {editingOwner === owner.id && (
                       <tr key={`${owner.id}-edit`}>
-                        <td colSpan={4} className="bg-slate-50 px-4 py-4">
-                          <p className="text-xs font-semibold text-slate-600 mb-3">{t("manager:peopleIndex.text.editOwner")}</p>
+                        <td colSpan={4} className="bg-surface-subtle px-4 py-4">
+                          <p className="text-xs font-semibold text-muted-text mb-3">{t("manager:peopleIndex.text.editOwner")}</p>
                           <div className="flex flex-wrap gap-3 items-end">
                             <div>
-                              <label className="block text-xs font-medium text-slate-600 mb-1">{t("manager:peopleIndex.text.name")}</label>
-                              <input value={editForm.name} onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))} className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-44" />
+                              <label className="block text-xs font-medium text-muted-text mb-1">{t("manager:peopleIndex.text.name")}</label>
+                              <input value={editForm.name} onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))} className="rounded-lg border border-surface-border px-3 py-2 text-sm w-44" />
                             </div>
                             <div>
-                              <label className="block text-xs font-medium text-slate-600 mb-1">{t("manager:peopleIndex.text.email")}</label>
-                              <input type="email" value={editForm.email} onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))} className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-52" />
+                              <label className="block text-xs font-medium text-muted-text mb-1">{t("manager:peopleIndex.text.email")}</label>
+                              <input type="email" value={editForm.email} onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))} className="rounded-lg border border-surface-border px-3 py-2 text-sm w-52" />
                             </div>
                             <button onClick={() => handleSaveOwner(owner.id)} disabled={editSubmitting || (!editForm.name && !editForm.email)} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">
                               {editSubmitting ? t("manager:peopleIndex.text.saving") : t("manager:peopleIndex.text.save")}
                             </button>
-                            <button onClick={() => setEditingOwner(null)} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">{t("manager:peopleIndex.text.cancel")}</button>
+                            <button onClick={() => setEditingOwner(null)} className="rounded-lg border border-surface-border bg-surface px-4 py-2 text-sm font-medium text-muted-text hover:bg-surface-subtle">{t("manager:peopleIndex.text.cancel")}</button>
                           </div>
                         </td>
                       </tr>
                     )}
                     {expandedBilling === owner.id && (
                       <tr key={`${owner.id}-billing`}>
-                        <td colSpan={4} className="bg-slate-50 px-4 py-4">
-                          <p className="text-xs font-semibold text-slate-600 mb-3">Billing entity for {owner.name}</p>
+                        <td colSpan={4} className="bg-surface-subtle px-4 py-4">
+                          <p className="text-xs font-semibold text-muted-text mb-3">Billing entity for {owner.name}</p>
                           <form onSubmit={(e) => handleCreateBillingEntity(e, owner.id)} className="flex flex-wrap gap-3 items-end">
                             <div>
-                              <label className="block text-xs font-medium text-slate-600 mb-1">{t("manager:peopleIndex.text.address")}</label>
+                              <label className="block text-xs font-medium text-muted-text mb-1">{t("manager:peopleIndex.text.address")}</label>
                               <input required value={billingForm.addressLine1}
                                 onChange={(e) => setBillingForm((f) => ({ ...f, addressLine1: e.target.value }))}
-                                className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-52" placeholder={t("manager:peopleIndex.placeholder.rueDeLaPaix1")} />
+                                className="rounded-lg border border-surface-border px-3 py-2 text-sm w-52" placeholder={t("manager:peopleIndex.placeholder.rueDeLaPaix1")} />
                             </div>
                             <div>
-                              <label className="block text-xs font-medium text-slate-600 mb-1">{t("manager:peopleIndex.text.postalCode")}</label>
+                              <label className="block text-xs font-medium text-muted-text mb-1">{t("manager:peopleIndex.text.postalCode")}</label>
                               <input required value={billingForm.postalCode}
                                 onChange={(e) => setBillingForm((f) => ({ ...f, postalCode: e.target.value }))}
-                                className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-24" placeholder="1200" />
+                                className="rounded-lg border border-surface-border px-3 py-2 text-sm w-24" placeholder="1200" />
                             </div>
                             <div>
-                              <label className="block text-xs font-medium text-slate-600 mb-1">{t("manager:peopleIndex.text.city")}</label>
+                              <label className="block text-xs font-medium text-muted-text mb-1">{t("manager:peopleIndex.text.city")}</label>
                               <input required value={billingForm.city}
                                 onChange={(e) => setBillingForm((f) => ({ ...f, city: e.target.value }))}
-                                className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-32" placeholder={t("manager:peopleIndex.placeholder.genVe")} />
+                                className="rounded-lg border border-surface-border px-3 py-2 text-sm w-32" placeholder={t("manager:peopleIndex.placeholder.genVe")} />
                             </div>
                             <div>
-                              <label className="block text-xs font-medium text-slate-600 mb-1">IBAN</label>
+                              <label className="block text-xs font-medium text-muted-text mb-1">IBAN</label>
                               <input required value={billingForm.iban}
                                 onChange={(e) => setBillingForm((f) => ({ ...f, iban: e.target.value }))}
-                                className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-52 font-mono" placeholder={t("manager:peopleIndex.placeholder.cH5604835012345678009")} />
+                                className="rounded-lg border border-surface-border px-3 py-2 text-sm w-52 font-mono" placeholder={t("manager:peopleIndex.placeholder.cH5604835012345678009")} />
                             </div>
                             <div>
-                              <label className="block text-xs font-medium text-slate-600 mb-1">{t("manager:peopleIndex.text.vATNumber")}</label>
+                              <label className="block text-xs font-medium text-muted-text mb-1">{t("manager:peopleIndex.text.vATNumber")}</label>
                               <input value={billingForm.vatNumber}
                                 onChange={(e) => setBillingForm((f) => ({ ...f, vatNumber: e.target.value }))}
-                                className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-36" placeholder={t("manager:peopleIndex.placeholder.cHE123456789")} />
+                                className="rounded-lg border border-surface-border px-3 py-2 text-sm w-36" placeholder={t("manager:peopleIndex.placeholder.cHE123456789")} />
                             </div>
                             <button type="submit" disabled={billingSubmitting}
                               className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">
@@ -545,7 +545,7 @@ export default function ManagerPeoplePage() {
                   {tenants.slice(0, 200).map((tenant) => (
                     <div
                       key={tenant.id}
-                      className="table-card cursor-pointer hover:bg-slate-50/80 transition-colors"
+                      className="table-card cursor-pointer hover:bg-surface-subtle/80 transition-colors"
                       onClick={() => router.push(`/manager/people/tenants/${tenant.id}`)}
                     >
                       <p className="table-card-head">{tenant.name || "—"}</p>
@@ -576,7 +576,7 @@ export default function ManagerPeoplePage() {
                     </thead>
                     <tbody>
                       {sortedTenants.slice(0, 200).map((tenant) => (
-                        <tr key={tenant.id} className="cursor-pointer hover:bg-slate-50/80" onClick={() => router.push(`/manager/people/tenants/${tenant.id}`)}>
+                        <tr key={tenant.id} className="cursor-pointer hover:bg-surface-subtle/80" onClick={() => router.push(`/manager/people/tenants/${tenant.id}`)}>
                           <td className="cell-bold">{tenant.name || "—"}</td>
                           <td>{tenant.phone || "—"}</td>
                           <td>{tenant.email || "—"}</td>
@@ -587,7 +587,7 @@ export default function ManagerPeoplePage() {
                             <button
                               aria-label={t("manager:peopleIndex.ariaLabel.viewTenant")}
                               onClick={(e) => { e.stopPropagation(); router.push(`/manager/people/tenants/${tenant.id}`); }}
-                              className="inline-flex items-center justify-center rounded p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                              className="inline-flex items-center justify-center rounded p-1 text-foreground-dim hover:text-muted-dark hover:bg-surface-hover transition-colors"
                             >
                               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                                 <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
@@ -619,7 +619,7 @@ export default function ManagerPeoplePage() {
                   {contractors.slice(0, 200).map((c) => (
                     <div
                       key={c.id}
-                      className="table-card cursor-pointer hover:bg-slate-50/80 transition-colors"
+                      className="table-card cursor-pointer hover:bg-surface-subtle/80 transition-colors"
                       onClick={() => router.push(`/manager/people/vendors/${c.id}`)}
                     >
                       <p className="table-card-head">{c.name || "—"}</p>
@@ -648,7 +648,7 @@ export default function ManagerPeoplePage() {
                     </thead>
                     <tbody>
                       {sortedVendors.slice(0, 200).map((c) => (
-                        <tr key={c.id} className="cursor-pointer hover:bg-slate-50/80" onClick={() => router.push(`/manager/people/vendors/${c.id}`)}>
+                        <tr key={c.id} className="cursor-pointer hover:bg-surface-subtle/80" onClick={() => router.push(`/manager/people/vendors/${c.id}`)}>
                           <td className="cell-bold">{c.name || "—"}</td>
                           <td>{c.phone || "—"}</td>
                           <td>{c.email || "—"}</td>
@@ -657,7 +657,7 @@ export default function ManagerPeoplePage() {
                             <button
                               aria-label={t("manager:peopleIndex.ariaLabel.viewVendor")}
                               onClick={(e) => { e.stopPropagation(); router.push(`/manager/people/vendors/${c.id}`); }}
-                              className="inline-flex items-center justify-center rounded p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                              className="inline-flex items-center justify-center rounded p-1 text-foreground-dim hover:text-muted-dark hover:bg-surface-hover transition-colors"
                             >
                               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                                 <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />

@@ -99,7 +99,7 @@ const SOURCE_LABEL = {
   BROWSER_UPLOAD: { text: "Upload", cls: "bg-sky-50 text-sky-700 border-sky-200" },
   EMAIL_PDF: { text: "Email", cls: "bg-violet-50 text-violet-700 border-violet-200" },
   MOBILE_CAPTURE: { text: "Mobile", cls: "bg-teal-50 text-teal-700 border-teal-200" },
-  MANUAL: { text: "Manual", cls: "bg-slate-50 text-slate-600 border-slate-200" },
+  MANUAL: { text: "Manual", cls: "bg-surface-subtle text-muted-text border-surface-border" },
 };
 
 function SourceChannelIcon({ channel }) {
@@ -130,12 +130,12 @@ function ActionDropdown({ actions }) {
       <button
         type="button"
         onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}
-        className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition"
+        className="rounded-lg border border-surface-border bg-surface px-3 py-1.5 text-xs font-semibold text-muted-dark hover:bg-surface-subtle transition"
       >
         Actions ▾
       </button>
       {open && (
-        <div className="absolute right-0 z-20 mt-1 w-48 origin-top-right rounded-lg border border-slate-200 bg-white shadow-lg ring-1 ring-black/5">
+        <div className="absolute right-0 z-20 mt-1 w-48 origin-top-right rounded-lg border border-surface-border bg-surface shadow-lg ring-1 ring-black/5">
           <div className="py-1">
             {actions.map((a, i) => (
               <button
@@ -143,7 +143,7 @@ function ActionDropdown({ actions }) {
                 type="button"
                 disabled={a.disabled}
                 onClick={(e) => { e.stopPropagation(); setOpen(false); a.onClick(); }}
-                className={"w-full text-left px-4 py-2 text-sm hover:bg-slate-50 transition disabled:opacity-40 " + (a.className || "text-slate-700")}
+                className={"w-full text-left px-4 py-2 text-sm hover:bg-surface-subtle transition disabled:opacity-40 " + (a.className || "text-muted-dark")}
               >
                 {a.label}
               </button>
@@ -218,17 +218,17 @@ function InvoiceOverlay({ invoiceId, onClose }) {
       onClick={onClose}
     >
       <div
-        className="relative flex flex-col bg-white rounded-xl shadow-2xl w-full max-w-4xl mx-4 h-[85vh]"
+        className="relative flex flex-col bg-surface rounded-xl shadow-2xl w-full max-w-4xl mx-4 h-[85vh]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header bar */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-surface-border">
           <div>
-            <h2 className="text-lg font-semibold text-slate-900 m-0">
+            <h2 className="text-lg font-semibold text-foreground m-0">
               Invoice {detail?.invoiceNumber || invoiceId.slice(0, 8)}
             </h2>
             {detail && (
-              <p className="text-sm text-slate-500 mt-0.5 mb-0">
+              <p className="text-sm text-muted mt-0.5 mb-0">
                 {detail.recipientName} · {formatChf(detail.totalAmount)} · {detail.status}
               </p>
             )}
@@ -246,14 +246,14 @@ function InvoiceOverlay({ invoiceId, onClose }) {
                 }
               }}
               disabled={!pdfUrl}
-              className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition disabled:opacity-40"
+              className="rounded-lg border border-surface-border bg-surface px-3 py-1.5 text-xs font-semibold text-muted-dark hover:bg-surface-subtle transition disabled:opacity-40"
             >
               ↓ Download PDF
             </button>
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition"
+              className="rounded-lg border border-surface-border bg-surface px-3 py-1.5 text-xs font-semibold text-muted-dark hover:bg-surface-subtle transition"
             >
               ✕ Close
             </button>
@@ -269,11 +269,11 @@ function InvoiceOverlay({ invoiceId, onClose }) {
             />
           ) : pdfError ? (
             <div className="flex items-center justify-center h-full">
-              <p className="text-slate-400 text-sm">Could not load PDF.</p>
+              <p className="text-foreground-dim text-sm">Could not load PDF.</p>
             </div>
           ) : (
             <div className="flex items-center justify-center h-full">
-              <p className="text-slate-400">{t("manager:financeInvoices.text.loadingPdf")}</p>
+              <p className="text-foreground-dim">{t("manager:financeInvoices.text.loadingPdf")}</p>
             </div>
           )}
         </div>
@@ -311,14 +311,14 @@ function DisputeModal({ invoiceId, onConfirm, onCancel }) {
       <form
         onSubmit={handleSubmit}
         onClick={(e) => e.stopPropagation()}
-        className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 p-6"
+        className="bg-surface rounded-xl shadow-2xl w-full max-w-md mx-4 p-6"
       >
-        <h3 className="text-lg font-semibold text-slate-900 mt-0 mb-1">{t("manager:financeInvoices.heading.disputeInvoice")}</h3>
-        <p className="text-sm text-slate-500 mt-0 mb-4">
+        <h3 className="text-lg font-semibold text-foreground mt-0 mb-1">{t("manager:financeInvoices.heading.disputeInvoice")}</h3>
+        <p className="text-sm text-muted mt-0 mb-4">
           Provide a justification for disputing this invoice. The contractor will be notified.
         </p>
         <textarea
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+          className="w-full rounded-lg border border-muted-ring px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
           rows={4}
           placeholder={t("manager:financeInvoices.placeholder.reasonForDispute")}
           value={reason}
@@ -330,7 +330,7 @@ function DisputeModal({ invoiceId, onConfirm, onCancel }) {
           <button
             type="button"
             onClick={onCancel}
-            className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition"
+            className="rounded-lg border border-surface-border bg-surface px-4 py-2 text-sm font-medium text-muted-dark hover:bg-surface-subtle transition"
           >
             Cancel
           </button>
@@ -394,23 +394,23 @@ function UploadInvoiceModal({ onClose, onSuccess }) {
       <form
         onSubmit={handleUpload}
         onClick={(e) => e.stopPropagation()}
-        className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 p-6"
+        className="bg-surface rounded-xl shadow-2xl w-full max-w-md mx-4 p-6"
       >
-        <h3 className="text-lg font-semibold text-slate-900 mt-0 mb-1">{t("manager:financeInvoices.heading.uploadInvoice")}</h3>
-        <p className="text-sm text-slate-500 mt-0 mb-4">
+        <h3 className="text-lg font-semibold text-foreground mt-0 mb-1">{t("manager:financeInvoices.heading.uploadInvoice")}</h3>
+        <p className="text-sm text-muted mt-0 mb-4">
           Upload a PDF or image of an invoice. It will be scanned and pre-filled automatically.
         </p>
         <input
           type="file"
           accept=".pdf,image/*"
           onChange={(e) => setFile(e.target.files?.[0] || null)}
-          className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+          className="block w-full text-sm text-muted file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
         />
         {uploadError && (
           <p className="text-sm text-red-600 mt-2">{uploadError}</p>
         )}
         <div className="flex justify-end gap-2 mt-4">
-          <button type="button" onClick={onClose} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition">{t("manager:financeInvoices.text.cancel")}</button>
+          <button type="button" onClick={onClose} className="rounded-lg border border-surface-border bg-surface px-4 py-2 text-sm font-medium text-muted-dark hover:bg-surface-subtle transition">{t("manager:financeInvoices.text.cancel")}</button>
           <button type="submit" disabled={!file || uploading} className="button-primary text-sm disabled:opacity-50">
             {uploading ? "Scanning…" : "Upload & Scan"}
           </button>
@@ -489,39 +489,39 @@ function CaptureSessionModal({ onClose, onComplete }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-xl shadow-2xl w-full max-w-sm mx-4 p-6">
-        <h3 className="text-lg font-semibold text-slate-900 mt-0 mb-1">{t("manager:financeInvoices.text.captureWithPhone")}</h3>
+      <div onClick={(e) => e.stopPropagation()} className="bg-surface rounded-xl shadow-2xl w-full max-w-sm mx-4 p-6">
+        <h3 className="text-lg font-semibold text-foreground mt-0 mb-1">{t("manager:financeInvoices.text.captureWithPhone")}</h3>
         {creating ? (
-          <p className="text-sm text-slate-500">{t("manager:financeInvoices.text.creatingCaptureSession")}</p>
+          <p className="text-sm text-muted">{t("manager:financeInvoices.text.creatingCaptureSession")}</p>
         ) : createError ? (
           <div>
             <p className="text-sm text-red-600 mb-3">{createError}</p>
-            <button onClick={onClose} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition">{t("manager:financeInvoices.text.close")}</button>
+            <button onClick={onClose} className="rounded-lg border border-surface-border bg-surface px-4 py-2 text-sm font-medium text-muted-dark hover:bg-surface-subtle transition">{t("manager:financeInvoices.text.close")}</button>
           </div>
         ) : completed ? (
           <div className="text-center py-4">
             <p className="text-2xl mb-2">✅</p>
             <p className="text-sm font-medium text-green-700 mb-1">{t("manager:financeInvoices.text.photosReceived")}</p>
-            <p className="text-xs text-slate-500 mb-4">{t("manager:financeInvoices.text.theInvoiceIsBeingProcessed")}</p>
+            <p className="text-xs text-muted mb-4">{t("manager:financeInvoices.text.theInvoiceIsBeingProcessed")}</p>
             <button onClick={onClose} className="button-primary text-sm">{t("manager:financeInvoices.text.done")}</button>
           </div>
         ) : (
           <div>
-            <p className="text-sm text-slate-500 mt-0 mb-4">
+            <p className="text-sm text-muted mt-0 mb-4">
               Scan this QR code with your phone to capture a paper invoice.
             </p>
             <div className="flex justify-center mb-4">
               <QRCodeSVG value={mobileUrl} size={300} level="L" />
             </div>
-            <div className="bg-slate-50 rounded-lg p-2 mb-3">
-              <p className="text-xs text-slate-400 uppercase tracking-wide mb-0.5">{t("manager:financeInvoices.text.mobileLink")}</p>
-              <p className="text-xs text-slate-600 break-all font-mono select-all m-0">{mobileUrl}</p>
+            <div className="bg-surface-subtle rounded-lg p-2 mb-3">
+              <p className="text-xs text-foreground-dim uppercase tracking-wide mb-0.5">{t("manager:financeInvoices.text.mobileLink")}</p>
+              <p className="text-xs text-muted-text break-all font-mono select-all m-0">{mobileUrl}</p>
             </div>
-            <p className="text-xs text-slate-400 text-center mb-3">
+            <p className="text-xs text-foreground-dim text-center mb-3">
               Session expires in 15 minutes. Waiting for photos…
             </p>
             <div className="flex justify-end">
-              <button onClick={onClose} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition">{t("manager:financeInvoices.text.cancel")}</button>
+              <button onClick={onClose} className="rounded-lg border border-surface-border bg-surface px-4 py-2 text-sm font-medium text-muted-dark hover:bg-surface-subtle transition">{t("manager:financeInvoices.text.cancel")}</button>
             </div>
           </div>
         )}
@@ -795,7 +795,7 @@ export function InvoicesContent() {
       defaultVisible: true,
       render: (inv) =>
         inv.buildingName || inv.unitNumber
-          ? <span>{inv.buildingName || "\u2014"}{inv.unitNumber ? <span className="text-slate-400"> \u00b7 {inv.unitNumber}</span> : null}</span>
+          ? <span>{inv.buildingName || "\u2014"}{inv.unitNumber ? <span className="text-foreground-dim"> \u00b7 {inv.unitNumber}</span> : null}</span>
           : "\u2014",
     },
     {
@@ -818,7 +818,7 @@ export function InvoicesContent() {
         const time = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
         return (
           <span>
-            {date} <span className="text-slate-400 text-xs">{time}</span>
+            {date} <span className="text-foreground-dim text-xs">{time}</span>
           </span>
         );
       },
@@ -832,7 +832,7 @@ export function InvoicesContent() {
         const isRecurring = !!(inv.billingScheduleId || inv.contractorBillingScheduleId);
         return isRecurring
           ? <span className="inline-flex items-center rounded-full bg-indigo-50 text-indigo-700 px-2 py-0.5 text-xs font-semibold">{t("manager:financeInvoices.text.recurring")}</span>
-          : <span className="text-slate-300 text-xs">\u2014</span>;
+          : <span className="text-foreground-dim text-xs">\u2014</span>;
       },
     },
     {
@@ -842,8 +842,8 @@ export function InvoicesContent() {
       defaultVisible: true,
       render: (inv) =>
         inv.expenseCategory
-          ? <span className="text-xs text-slate-600">{inv.expenseCategory.charAt(0) + inv.expenseCategory.slice(1).toLowerCase()}</span>
-          : <span className="text-slate-300 text-xs">\u2014</span>,
+          ? <span className="text-xs text-muted-text">{inv.expenseCategory.charAt(0) + inv.expenseCategory.slice(1).toLowerCase()}</span>
+          : <span className="text-foreground-dim text-xs">\u2014</span>,
     },
     {
       id: "actions",
@@ -879,7 +879,7 @@ export function InvoicesContent() {
         {/* Sort cycle button */}
         <button
           onClick={cycleSort}
-          className="flex shrink-0 items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+          className="flex shrink-0 items-center gap-1 rounded-lg border border-surface-border bg-surface px-3 py-2 text-sm font-medium text-muted-text hover:bg-surface-subtle transition-colors"
           title={t("manager:financeInvoices.title.cycleSortField")}
         >
           {INV_SORT_CYCLE[sortCycleIdx].label}
@@ -902,12 +902,12 @@ export function InvoicesContent() {
           {actionsOpen && (
             <>
               <div className="fixed inset-0 z-10" onClick={() => setActionsOpen(false)} aria-hidden="true" />
-              <div className="absolute right-0 z-20 mt-1 w-44 rounded-lg border border-slate-200 bg-white shadow-lg py-1">
+              <div className="absolute right-0 z-20 mt-1 w-44 rounded-lg border border-surface-border bg-surface shadow-lg py-1">
                 {direction === "outgoing" && (
                   <Link
                     href="/manager/finance/invoices/new"
                     onClick={() => setActionsOpen(false)}
-                    className="flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 no-underline"
+                    className="flex items-center gap-2 px-3 py-2 text-sm text-muted-dark hover:bg-surface-subtle no-underline"
                   >
                     + New Invoice
                   </Link>
@@ -916,16 +916,16 @@ export function InvoicesContent() {
                   <>
                     <button
                       onClick={() => { setActionsOpen(false); setShowUploadModal(true); }}
-                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 text-left"
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-muted-dark hover:bg-surface-subtle text-left"
                     >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75} aria-hidden="true">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-foreground-dim" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75} aria-hidden="true">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
                       </svg>{t("manager:financeInvoices.heading.uploadInvoice")}</button>
                     <button
                       onClick={() => { setActionsOpen(false); setShowCaptureModal(true); }}
-                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 text-left"
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-muted-dark hover:bg-surface-subtle text-left"
                     >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75} aria-hidden="true">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-foreground-dim" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75} aria-hidden="true">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
                         <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
                       </svg>
@@ -955,7 +955,7 @@ export function InvoicesContent() {
                     "rounded-lg px-3 py-1.5 text-sm font-medium border transition-colors",
                     direction === key
                       ? "bg-brand text-white border-brand"
-                      : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+                      : "bg-surface text-muted-text border-surface-border hover:bg-surface-subtle"
                   )}
                 >
                   {label}
@@ -973,7 +973,7 @@ export function InvoicesContent() {
                     "rounded-lg px-3 py-1.5 text-sm font-medium border transition-colors",
                     statusFilter === key
                       ? "bg-brand text-white border-brand"
-                      : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+                      : "bg-surface text-muted-text border-surface-border hover:bg-surface-subtle"
                   )}
                 >
                   {label}
@@ -990,7 +990,7 @@ export function InvoicesContent() {
                     "rounded-lg px-3 py-1.5 text-sm font-medium border transition-colors",
                     !categoryFilter
                       ? "bg-brand text-white border-brand"
-                      : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+                      : "bg-surface text-muted-text border-surface-border hover:bg-surface-subtle"
                   )}
                 >{t("manager:financeInvoices.text.all")}</button>
                 {availableCategories.map((cat) => (
@@ -1001,7 +1001,7 @@ export function InvoicesContent() {
                       "rounded-lg px-3 py-1.5 text-sm font-medium border transition-colors",
                       categoryFilter === cat
                         ? "bg-brand text-white border-brand"
-                        : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+                        : "bg-surface text-muted-text border-surface-border hover:bg-surface-subtle"
                     )}
                   >
                     {cat.charAt(0) + cat.slice(1).toLowerCase()}
@@ -1028,11 +1028,11 @@ export function InvoicesContent() {
             {visibleInvoices.map((inv) => (
               <div
                 key={inv.id}
-                className="table-card cursor-pointer hover:bg-slate-50/80 transition-colors"
+                className="table-card cursor-pointer hover:bg-surface-subtle/80 transition-colors"
                 onClick={() => router.push(`/manager/finance/invoices/${inv.id}`)}
               >
                 <div className="flex items-start justify-between gap-2">
-                  <span className="font-mono text-xs text-slate-500">{inv.invoiceNumber || inv.id?.slice(0, 8)}</span>
+                  <span className="font-mono text-xs text-muted">{inv.invoiceNumber || inv.id?.slice(0, 8)}</span>
                   <StatusBadge status={inv.status} />
                 </div>
                 <p className="table-card-head mt-1">{inv.buildingName || "—"}{inv.unitNumber ? ` / ${inv.unitNumber}` : ""}</p>

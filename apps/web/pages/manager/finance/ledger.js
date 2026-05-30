@@ -37,7 +37,7 @@ const ACCOUNT_TYPE_LABELS = {
 const ACCOUNT_TYPE_ORDER = ["ASSET", "LIABILITY", "REVENUE", "EXPENSE"];
 
 const ACCOUNT_TYPE_CLASSES = {
-  ASSET:     "bg-slate-100 text-slate-600",
+  ASSET:     "bg-surface-hover text-muted-text",
   LIABILITY: "bg-red-100 text-red-700",
   REVENUE:   "bg-blue-100 text-blue-700",
   EXPENSE:   "bg-amber-100 text-amber-700",
@@ -378,7 +378,7 @@ export default function LedgerPage() {
               <FilterSectionClear hasFilter={activeCount > 0} onClear={clearFilters} />
             </FilterPanelBody>
           )}
-          <p className="text-xs text-slate-400 mb-4">
+          <p className="text-xs text-foreground-dim mb-4">
             Showing entries for {from || "all time"}{to ? ` – ${to}` : ""}
           </p>
 
@@ -387,11 +387,11 @@ export default function LedgerPage() {
             <Panel>
               {error && <p className="text-red-600 text-sm mb-3">{error}</p>}
               {loading ? (
-                <p className="text-slate-400 text-sm">{t("manager:financeLedger.text.loading")}</p>
+                <p className="text-foreground-dim text-sm">{t("manager:financeLedger.text.loading")}</p>
               ) : entries.length === 0 ? (
                 <div className="py-12 text-center">
-                  <p className="text-slate-500 font-medium text-sm">{t("manager:financeLedger.text.noJournalEntriesFound")}</p>
-                  <p className="text-slate-400 text-xs mt-2 max-w-md mx-auto">
+                  <p className="text-muted font-medium text-sm">{t("manager:financeLedger.text.noJournalEntriesFound")}</p>
+                  <p className="text-foreground-dim text-xs mt-2 max-w-md mx-auto">
                     Ledger entries are posted automatically when invoices are issued or paid.
                     {from && " Try widening the date range."}
                   </p>
@@ -415,11 +415,11 @@ export default function LedgerPage() {
                     {entries.map((e) => (
                       <div key={e.id} className="table-card">
                         <div className="flex items-start justify-between gap-2">
-                          <span className="text-xs text-slate-500">{formatDate(e.date)}</span>
-                          <span className="text-xs text-slate-500">{SOURCE_TYPE_LABELS[e.sourceType] || e.sourceType || "—"}</span>
+                          <span className="text-xs text-muted">{formatDate(e.date)}</span>
+                          <span className="text-xs text-muted">{SOURCE_TYPE_LABELS[e.sourceType] || e.sourceType || "—"}</span>
                         </div>
                         <p className="table-card-head mt-1">
-                          <span className="font-mono text-xs text-slate-400 mr-1">{e.accountCode}</span>
+                          <span className="font-mono text-xs text-foreground-dim mr-1">{e.accountCode}</span>
                           {e.accountName}
                         </p>
                         <p className="table-card-sub">{e.description}</p>
@@ -447,22 +447,22 @@ export default function LedgerPage() {
                       </thead>
                       <tbody>
                         {entries.map((e) => (
-                          <tr key={e.id} className="hover:bg-slate-50 transition-colors">
-                            <td className="whitespace-nowrap text-slate-600">{formatDate(e.date)}</td>
+                          <tr key={e.id} className="hover:bg-surface-subtle transition-colors">
+                            <td className="whitespace-nowrap text-muted-text">{formatDate(e.date)}</td>
                             <td>
-                              <span className="font-mono text-xs text-slate-400 mr-1">{e.accountCode}</span>
-                              <span className="text-slate-800">{e.accountName}</span>
+                              <span className="font-mono text-xs text-foreground-dim mr-1">{e.accountCode}</span>
+                              <span className="text-foreground">{e.accountName}</span>
                             </td>
-                            <td className="text-xs text-slate-500 whitespace-nowrap">
+                            <td className="text-xs text-muted whitespace-nowrap">
                               {SOURCE_TYPE_LABELS[e.sourceType] || e.sourceType || "—"}
                             </td>
-                            <td className="text-slate-700 max-w-xs truncate">{e.description}</td>
-                            <td className="font-mono text-xs text-slate-400">{e.reference || "—"}</td>
+                            <td className="text-muted-dark max-w-xs truncate">{e.description}</td>
+                            <td className="font-mono text-xs text-foreground-dim">{e.reference || "—"}</td>
                             <td className="text-right font-mono">
-                              {e.debitCents > 0 ? <span className="text-slate-900">{formatChfCents(e.debitCents)}</span> : <span className="text-slate-200">—</span>}
+                              {e.debitCents > 0 ? <span className="text-foreground">{formatChfCents(e.debitCents)}</span> : <span className="text-foreground-dim">—</span>}
                             </td>
                             <td className="text-right font-mono">
-                              {e.creditCents > 0 ? <span className="text-slate-900">{formatChfCents(e.creditCents)}</span> : <span className="text-slate-200">—</span>}
+                              {e.creditCents > 0 ? <span className="text-foreground">{formatChfCents(e.creditCents)}</span> : <span className="text-foreground-dim">—</span>}
                             </td>
                           </tr>
                         ))}
@@ -471,7 +471,7 @@ export default function LedgerPage() {
                   </div>
 
                   {/* Pagination */}
-                  <div className="flex items-center justify-between mt-4 text-sm text-slate-500">
+                  <div className="flex items-center justify-between mt-4 text-sm text-muted">
                     <span>{offset + 1}–{Math.min(offset + PAGE_SIZE, total)} of {total} entries</span>
                     <div className="flex gap-2">
                       <button
@@ -500,11 +500,11 @@ export default function LedgerPage() {
             <Panel>
               {tbError && <p className="text-red-600 text-sm mb-3">{tbError}</p>}
               {tbLoading ? (
-                <p className="text-slate-400 text-sm">{t("manager:financeLedger.text.loading")}</p>
+                <p className="text-foreground-dim text-sm">{t("manager:financeLedger.text.loading")}</p>
               ) : balances.length === 0 ? (
                 <div className="py-12 text-center">
-                  <p className="text-slate-500 font-medium text-sm">{t("manager:financeLedger.text.noEntriesForThisPeriod")}</p>
-                  <p className="text-slate-400 text-xs mt-1">{t("manager:financeLedger.text.adjustTheDateRangeAndApplyFiltersAbove")}</p>
+                  <p className="text-muted font-medium text-sm">{t("manager:financeLedger.text.noEntriesForThisPeriod")}</p>
+                  <p className="text-foreground-dim text-xs mt-1">{t("manager:financeLedger.text.adjustTheDateRangeAndApplyFiltersAbove")}</p>
                 </div>
               ) : (
                 <>
@@ -529,14 +529,14 @@ export default function LedgerPage() {
                         </div>
                         <>
                           {/* Mobile card list — sm:hidden */}
-                          <div className="sm:hidden overflow-hidden border border-slate-200 rounded-b divide-y divide-slate-100">
+                          <div className="sm:hidden overflow-hidden border border-surface-border rounded-b divide-y divide-slate-100">
                             {rows.map((b) => {
                               const isDebitBal = b.balanceCents >= 0;
                               return (
                                 <div key={b.accountId} className="table-card">
                                   <div className="flex items-start justify-between gap-2">
-                                    <span className="font-mono text-xs text-slate-400">{b.accountCode || "—"}</span>
-                                    <span className={cn("font-mono text-xs font-semibold", isDebitBal ? "text-slate-900" : "text-blue-700")}>
+                                    <span className="font-mono text-xs text-foreground-dim">{b.accountCode || "—"}</span>
+                                    <span className={cn("font-mono text-xs font-semibold", isDebitBal ? "text-foreground" : "text-blue-700")}>
                                       {isDebitBal ? "" : "("}{formatChfCents(Math.abs(b.balanceCents))}{isDebitBal ? "" : ")"}
                                     </span>
                                   </div>
@@ -547,10 +547,10 @@ export default function LedgerPage() {
                           </div>
 
                           {/* Wide table — hidden sm:block */}
-                          <div className="hidden sm:block overflow-x-auto border border-slate-200 rounded-b">
+                          <div className="hidden sm:block overflow-x-auto border border-surface-border rounded-b">
                             <table className="data-table w-full">
                               <thead>
-                                <tr className="bg-slate-50">
+                                <tr className="bg-surface-subtle">
                                   <th>{t("manager:financeLedger.col.code")}</th>
                                   <th>{t("manager:financeLedger.col.account")}</th>
                                   <th className="text-right">{t("manager:financeLedger.col.debitChf")}</th>
@@ -562,12 +562,12 @@ export default function LedgerPage() {
                                 {rows.map((b) => {
                                   const isDebitBal = b.balanceCents >= 0;
                                   return (
-                                    <tr key={b.accountId} className="hover:bg-slate-50">
-                                      <td className="font-mono text-xs text-slate-400">{b.accountCode || "—"}</td>
-                                      <td className="text-slate-800">{b.accountName}</td>
-                                      <td className="text-right font-mono text-slate-700">{formatChfCents(b.debitCents)}</td>
-                                      <td className="text-right font-mono text-slate-700">{formatChfCents(b.creditCents)}</td>
-                                      <td className={cn("text-right font-mono font-semibold", isDebitBal ? "text-slate-900" : "text-blue-700")}>
+                                    <tr key={b.accountId} className="hover:bg-surface-subtle">
+                                      <td className="font-mono text-xs text-foreground-dim">{b.accountCode || "—"}</td>
+                                      <td className="text-foreground">{b.accountName}</td>
+                                      <td className="text-right font-mono text-muted-dark">{formatChfCents(b.debitCents)}</td>
+                                      <td className="text-right font-mono text-muted-dark">{formatChfCents(b.creditCents)}</td>
+                                      <td className={cn("text-right font-mono font-semibold", isDebitBal ? "text-foreground" : "text-blue-700")}>
                                         {isDebitBal ? "" : "("}
                                         {formatChfCents(Math.abs(b.balanceCents))}
                                         {isDebitBal ? "" : ")"}
@@ -577,8 +577,8 @@ export default function LedgerPage() {
                                 })}
                               </tbody>
                               <tfoot>
-                                <tr className="border-t border-slate-300 bg-slate-50 text-xs font-semibold">
-                                  <td colSpan={2} className="text-slate-600">{t("manager:financeLedger.text.subtotal")}</td>
+                                <tr className="border-t border-muted-ring bg-surface-subtle text-xs font-semibold">
+                                  <td colSpan={2} className="text-muted-text">{t("manager:financeLedger.text.subtotal")}</td>
                                   <td className="text-right font-mono">{formatChfCents(typeDebit)}</td>
                                   <td className="text-right font-mono">{formatChfCents(typeCredit)}</td>
                                   <td />
@@ -592,7 +592,7 @@ export default function LedgerPage() {
                   })}
 
                   {/* Grand total */}
-                  <div className="flex justify-end gap-8 text-sm font-semibold border-t-2 border-slate-300 pt-3 mt-2">
+                  <div className="flex justify-end gap-8 text-sm font-semibold border-t-2 border-muted-ring pt-3 mt-2">
                     <span>{t("manager:financeLedger.text.grandTotalDebit")} <span className="font-mono">{formatChfCents(tbTotals.debit)}</span></span>
                     <span>{t("manager:financeLedger.text.grandTotalCredit")} <span className="font-mono">{formatChfCents(tbTotals.credit)}</span></span>
                     <span className={tbBalanced ? "text-green-700" : "text-red-600"}>
@@ -610,7 +610,7 @@ export default function LedgerPage() {
               {/* Controls */}
               <div className="flex flex-wrap items-end gap-3">
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs font-medium text-slate-600">Building</label>
+                  <label className="text-xs font-medium text-muted-text">Building</label>
                   <select
                     className="form-select text-sm"
                     value={bsBuildingId}
@@ -623,7 +623,7 @@ export default function LedgerPage() {
                   </select>
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs font-medium text-slate-600">As of</label>
+                  <label className="text-xs font-medium text-muted-text">As of</label>
                   <input
                     type="date"
                     className="form-input text-sm"
@@ -641,7 +641,7 @@ export default function LedgerPage() {
               </div>
 
               {!bsBuildingId && (
-                <div className="py-12 text-center text-slate-400 text-sm">
+                <div className="py-12 text-center text-foreground-dim text-sm">
                   Select a building to view its balance sheet.
                 </div>
               )}
@@ -653,7 +653,7 @@ export default function LedgerPage() {
                 const hasData = assets.length > 0 || liabilities.length > 0;
 
                 if (!hasData) return (
-                  <div className="py-12 text-center text-slate-400 text-sm">
+                  <div className="py-12 text-center text-foreground-dim text-sm">
                     No ledger entries for this building up to {bsAsOf}.
                     Approve a balance sheet import to establish the opening position.
                   </div>
@@ -662,10 +662,10 @@ export default function LedgerPage() {
                 const renderLine = (line) => {
                   const isDeduction = line.displayCents < 0;
                   return (
-                    <tr key={line.accountId} className={cn("hover:bg-slate-50", isDeduction && "text-slate-500")}>
-                      <td className="font-mono text-xs text-slate-400">{line.accountCode || "—"}</td>
-                      <td className={isDeduction ? "italic" : "text-slate-800"}>{line.accountName}</td>
-                      <td className={cn("text-right font-mono", isDeduction ? "text-slate-500" : "text-slate-900")}>
+                    <tr key={line.accountId} className={cn("hover:bg-surface-subtle", isDeduction && "text-muted")}>
+                      <td className="font-mono text-xs text-foreground-dim">{line.accountCode || "—"}</td>
+                      <td className={isDeduction ? "italic" : "text-foreground"}>{line.accountName}</td>
+                      <td className={cn("text-right font-mono", isDeduction ? "text-muted" : "text-foreground")}>
                         {isDeduction
                           ? `(${formatChfCents(Math.abs(line.displayCents))})`
                           : formatChfCents(line.displayCents)}
@@ -687,13 +687,13 @@ export default function LedgerPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {/* Actifs */}
                       <div>
-                        <div className="bg-slate-100 text-slate-700 text-xs font-semibold uppercase tracking-wide px-3 py-1.5 rounded-t">
+                        <div className="bg-surface-hover text-muted-dark text-xs font-semibold uppercase tracking-wide px-3 py-1.5 rounded-t">
                           Actifs
                         </div>
-                        <div className="border border-slate-200 rounded-b overflow-x-auto">
+                        <div className="border border-surface-border rounded-b overflow-x-auto">
                           <table className="data-table w-full">
                             <thead>
-                              <tr className="bg-slate-50">
+                              <tr className="bg-surface-subtle">
                                 <th>Code</th>
                                 <th>Account</th>
                                 <th className="text-right">CHF</th>
@@ -702,12 +702,12 @@ export default function LedgerPage() {
                             <tbody>
                               {assets.map(renderLine)}
                               {assets.length === 0 && (
-                                <tr><td colSpan={3} className="text-center text-slate-400 text-xs py-4">No asset accounts</td></tr>
+                                <tr><td colSpan={3} className="text-center text-foreground-dim text-xs py-4">No asset accounts</td></tr>
                               )}
                             </tbody>
                             <tfoot>
-                              <tr className="border-t-2 border-slate-300 bg-slate-50 font-semibold text-sm">
-                                <td colSpan={2} className="text-slate-700">Total Actifs</td>
+                              <tr className="border-t-2 border-muted-ring bg-surface-subtle font-semibold text-sm">
+                                <td colSpan={2} className="text-muted-dark">Total Actifs</td>
                                 <td className="text-right font-mono">{formatChfCents(totalAssetsCents)}</td>
                               </tr>
                             </tfoot>
@@ -717,13 +717,13 @@ export default function LedgerPage() {
 
                       {/* Passifs */}
                       <div>
-                        <div className="bg-slate-100 text-slate-700 text-xs font-semibold uppercase tracking-wide px-3 py-1.5 rounded-t">
+                        <div className="bg-surface-hover text-muted-dark text-xs font-semibold uppercase tracking-wide px-3 py-1.5 rounded-t">
                           Passifs
                         </div>
-                        <div className="border border-slate-200 rounded-b overflow-x-auto">
+                        <div className="border border-surface-border rounded-b overflow-x-auto">
                           <table className="data-table w-full">
                             <thead>
-                              <tr className="bg-slate-50">
+                              <tr className="bg-surface-subtle">
                                 <th>Code</th>
                                 <th>Account</th>
                                 <th className="text-right">CHF</th>
@@ -732,12 +732,12 @@ export default function LedgerPage() {
                             <tbody>
                               {liabilities.map(renderLine)}
                               {liabilities.length === 0 && (
-                                <tr><td colSpan={3} className="text-center text-slate-400 text-xs py-4">No liability accounts</td></tr>
+                                <tr><td colSpan={3} className="text-center text-foreground-dim text-xs py-4">No liability accounts</td></tr>
                               )}
                             </tbody>
                             <tfoot>
-                              <tr className="border-t-2 border-slate-300 bg-slate-50 font-semibold text-sm">
-                                <td colSpan={2} className="text-slate-700">Total Passifs</td>
+                              <tr className="border-t-2 border-muted-ring bg-surface-subtle font-semibold text-sm">
+                                <td colSpan={2} className="text-muted-dark">Total Passifs</td>
                                 <td className="text-right font-mono">{formatChfCents(totalLiabilitiesCents)}</td>
                               </tr>
                             </tfoot>
@@ -748,7 +748,7 @@ export default function LedgerPage() {
 
                     {/* Note on deduction lines */}
                     {(assets.some((l) => l.displayCents < 0) || liabilities.some((l) => l.displayCents < 0)) && (
-                      <p className="text-xs text-slate-400">
+                      <p className="text-xs text-foreground-dim">
                         Amounts shown in parentheses are deductions (contra-assets or debit-balance equity accounts).
                       </p>
                     )}

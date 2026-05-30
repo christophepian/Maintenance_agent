@@ -521,12 +521,12 @@ export default function ApplyPage() {
       <Head>
         <title>Apply for a Rental Unit</title>
       </Head>
-      <div className="min-h-screen bg-slate-50">
+      <div className="min-h-screen bg-surface-subtle">
         {/* Header */}
-        <header className="border-b border-slate-200 bg-white px-4 py-4 sm:px-6">
+        <header className="border-b border-surface-border bg-surface px-4 py-4 sm:px-6">
           <div className="mx-auto max-w-3xl">
-            <h1 className="text-xl font-semibold text-slate-900">{t("tenant:index.heading.rentalApplication")}</h1>
-            <p className="text-sm text-slate-500 mt-1">
+            <h1 className="text-xl font-semibold text-foreground">{t("tenant:index.heading.rentalApplication")}</h1>
+            <p className="text-sm text-muted mt-1">
               {step <= TOTAL_STEPS ? `Step ${step} of ${TOTAL_STEPS}` : "Complete"}
             </p>
             {/* Progress bar */}
@@ -534,7 +534,7 @@ export default function ApplyPage() {
               {Array.from({ length: TOTAL_STEPS }, (_, i) => i + 1).map((s) => (
                 <div
                   key={s}
-                  className={cn("h-1.5 flex-1 rounded-full", s <= step ? "bg-indigo-600" : "bg-slate-200")}
+                  className={cn("h-1.5 flex-1 rounded-full", s <= step ? "bg-indigo-600" : "bg-track")}
                 />
               ))}
             </div>
@@ -549,16 +549,16 @@ export default function ApplyPage() {
             <div className="space-y-8">
               {/* Unit selection */}
               <section>
-                <h2 className="text-lg font-semibold text-slate-900">{t("tenant:index.heading.selectUnitsToApplyFor")}</h2>
-                <p className="text-sm text-slate-600 mt-1">
+                <h2 className="text-lg font-semibold text-foreground">{t("tenant:index.heading.selectUnitsToApplyFor")}</h2>
+                <p className="text-sm text-muted-text mt-1">
                   You can apply to multiple units with a single dossier.
                 </p>
 
                 {/* Filters (INT-009) */}
                 {!linkedUnitId && vacantUnits.length > 0 && (
-                  <div className="mt-3 flex flex-wrap items-end gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3">
+                  <div className="mt-3 flex flex-wrap items-end gap-3 rounded-lg border border-surface-border bg-surface px-4 py-3">
                     {availableCities.length > 0 && (
-                      <label className="flex flex-col text-xs text-slate-600">
+                      <label className="flex flex-col text-xs text-muted-text">
                         City
                         <select value={filterCity} onChange={(e) => setFilterCity(e.target.value)} className="filter-select mt-1">
                           <option value="">All cities</option>
@@ -567,7 +567,7 @@ export default function ApplyPage() {
                       </label>
                     )}
                     {availablePostalCodes.length > 0 && (
-                      <label className="flex flex-col text-xs text-slate-600">
+                      <label className="flex flex-col text-xs text-muted-text">
                         Postal code
                         <select value={filterPostalCode} onChange={(e) => setFilterPostalCode(e.target.value)} className="filter-select mt-1">
                           <option value="">All codes</option>
@@ -575,7 +575,7 @@ export default function ApplyPage() {
                         </select>
                       </label>
                     )}
-                    <label className="flex flex-col text-xs text-slate-600">
+                    <label className="flex flex-col text-xs text-muted-text">
                       Min. rooms
                       <select value={filterMinRooms} onChange={(e) => setFilterMinRooms(e.target.value)} className="filter-select mt-1">
                         <option value="">Any</option>
@@ -590,7 +590,7 @@ export default function ApplyPage() {
                         <option value="5">5+</option>
                       </select>
                     </label>
-                    <label className="flex flex-col text-xs text-slate-600">
+                    <label className="flex flex-col text-xs text-muted-text">
                       Sort by price
                       <select value={sortPrice} onChange={(e) => setSortPrice(e.target.value)} className="filter-select mt-1">
                         <option value="">Default</option>
@@ -610,25 +610,25 @@ export default function ApplyPage() {
                 )}
 
                 <div className="mt-4 space-y-3">
-                  {unitsLoading && <p className="text-sm text-slate-500">Loading available units…</p>}
+                  {unitsLoading && <p className="text-sm text-muted">Loading available units…</p>}
 
                   {!unitsLoading && vacantUnits.length === 0 && (
-                    <div className="rounded-lg border border-slate-200 bg-white p-6 text-center text-slate-600">
+                    <div className="rounded-lg border border-surface-border bg-surface p-6 text-center text-muted-text">
                       No vacant units available at this time.
                     </div>
                   )}
 
                   {!unitsLoading && vacantUnits.length > 0 && filteredUnits.length === 0 && (
-                    <div className="rounded-lg border border-slate-200 bg-white p-6 text-center text-slate-600">
+                    <div className="rounded-lg border border-surface-border bg-surface p-6 text-center text-muted-text">
                       No units match the selected filters. Try adjusting your criteria.
                     </div>
                   )}
 
                   {!unitsLoading && Array.from(unitsByBuilding.entries()).map(([bName, units]) => (
-                    <div key={bName} className="rounded-xl border border-slate-200 bg-white">
-                      <div className="border-b border-slate-100 px-4 py-3">
-                        <h3 className="text-sm font-semibold text-slate-900">{bName}</h3>
-                        <p className="text-xs text-slate-500">
+                    <div key={bName} className="rounded-xl border border-surface-border bg-surface">
+                      <div className="border-b border-surface-divider px-4 py-3">
+                        <h3 className="text-sm font-semibold text-foreground">{bName}</h3>
+                        <p className="text-xs text-muted">
                           {[units[0]?.building?.address, units[0]?.building?.postalCode, units[0]?.building?.city].filter(Boolean).join(", ")}
                         </p>
                       </div>
@@ -636,25 +636,25 @@ export default function ApplyPage() {
                         {units.map((u) => (
                           <label
                             key={u.id}
-                            className={cn("flex cursor-pointer items-center gap-3 px-4 py-3 transition-colors", selectedUnitIds.includes(u.id) ? "bg-indigo-50 ring-1 ring-inset ring-blue-200" : "hover:bg-slate-50")}
+                            className={cn("flex cursor-pointer items-center gap-3 px-4 py-3 transition-colors", selectedUnitIds.includes(u.id) ? "bg-indigo-50 ring-1 ring-inset ring-blue-200" : "hover:bg-surface-subtle")}
                           >
                             <input
                               type="checkbox"
                               checked={selectedUnitIds.includes(u.id)}
                               onChange={() => toggleUnit(u.id)}
-                              className="h-4 w-4 rounded border-slate-300 text-indigo-600"
+                              className="h-4 w-4 rounded border-muted-ring text-indigo-600"
                             />
                             <div className="flex-1">
-                              <span className="text-sm font-medium text-slate-900">
+                              <span className="text-sm font-medium text-foreground">
                                 Unit {u.unitNumber}
                               </span>
-                              {u.floor && <span className="text-xs text-slate-500 ml-2">Floor {u.floor}</span>}
-                              {u.rooms != null && <span className="text-xs text-slate-500 ml-2">{u.rooms} rooms</span>}
+                              {u.floor && <span className="text-xs text-muted ml-2">Floor {u.floor}</span>}
+                              {u.rooms != null && <span className="text-xs text-muted ml-2">{u.rooms} rooms</span>}
                             </div>
-                            <div className="text-right text-xs text-slate-600">
+                            <div className="text-right text-xs text-muted-text">
                               {u.monthlyRentChf != null && <div>CHF {u.monthlyRentChf}/mo</div>}
                               {u.monthlyChargesChf != null && (
-                                <div className="text-slate-400">+ CHF {u.monthlyChargesChf} charges</div>
+                                <div className="text-foreground-dim">+ CHF {u.monthlyChargesChf} charges</div>
                               )}
                             </div>
                           </label>
@@ -673,8 +673,8 @@ export default function ApplyPage() {
 
               {/* Document upload zone */}
               <section>
-                <h2 className="text-lg font-semibold text-slate-900">{t("tenant:index.heading.uploadYourDocuments")}</h2>
-                <p className="text-sm text-slate-600 mt-1">
+                <h2 className="text-lg font-semibold text-foreground">{t("tenant:index.heading.uploadYourDocuments")}</h2>
+                <p className="text-sm text-muted-text mt-1">
                   Drop your files here — we'll scan them automatically and pre-fill your application.
                   You can also upload them one-by-one to a specific category.
                 </p>
@@ -729,7 +729,7 @@ export default function ApplyPage() {
                 {/* Uploaded files list */}
                 {docUploads.length > 0 && (
                   <div className="mt-4 space-y-2">
-                    <h3 className="text-sm font-medium text-slate-700">
+                    <h3 className="text-sm font-medium text-muted-dark">
                       Uploaded files ({docUploads.length})
                     </h3>
                     {docUploads.map((doc) => (
@@ -754,7 +754,7 @@ export default function ApplyPage() {
               <button
                 onClick={goToStep2}
                 disabled={selectedUnitIds.length === 0}
-                className="w-full rounded-lg bg-indigo-600 py-3 text-sm font-semibold text-white hover:bg-indigo-700 disabled:bg-slate-300 disabled:cursor-not-allowed"
+                className="w-full rounded-lg bg-indigo-600 py-3 text-sm font-semibold text-white hover:bg-indigo-700 disabled:bg-muted-ring disabled:cursor-not-allowed"
               >
                 Continue to applicant details
               </button>
@@ -765,8 +765,8 @@ export default function ApplyPage() {
           {step === 2 && (
             <div className="space-y-6">
               <div>
-                <h2 className="text-lg font-semibold text-slate-900">{t("tenant:index.heading.applicantDetails")}</h2>
-                <p className="text-sm text-slate-600 mt-1">
+                <h2 className="text-lg font-semibold text-foreground">{t("tenant:index.heading.applicantDetails")}</h2>
+                <p className="text-sm text-muted-text mt-1">
                   {extractedFieldCount > 0
                     ? "We've pre-filled some fields from your documents. Please review and complete the rest."
                     : "All fields marked with * are mandatory."}
@@ -774,9 +774,9 @@ export default function ApplyPage() {
               </div>
 
               {applicants.map((applicant, idx) => (
-                <div key={idx} className="rounded-xl border border-slate-200 bg-white">
-                  <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
-                    <h3 className="text-sm font-semibold text-slate-900">
+                <div key={idx} className="rounded-xl border border-surface-border bg-surface">
+                  <div className="flex items-center justify-between border-b border-surface-divider px-4 py-3">
+                    <h3 className="text-sm font-semibold text-foreground">
                       {idx === 0 ? "Primary Applicant" : `Co-Applicant ${idx}`}
                     </h3>
                     {idx > 0 && (
@@ -807,9 +807,9 @@ export default function ApplyPage() {
                         type="checkbox"
                         checked={applicant.hasDebtEnforcement}
                         onChange={(e) => updateApplicant(idx, "hasDebtEnforcement", e.target.checked)}
-                        className="h-4 w-4 rounded border-slate-300 text-indigo-600"
+                        className="h-4 w-4 rounded border-muted-ring text-indigo-600"
                       />
-                      <label className="text-sm text-slate-700">Has debt enforcement proceedings</label>
+                      <label className="text-sm text-muted-dark">Has debt enforcement proceedings</label>
                       {idx === 0 && scanResults.DEBT_ENFORCEMENT_EXTRACT?.fields?.hasDebtEnforcement === false && (
                         <span className="text-xs text-green-600 ml-1">✓ Clean record detected</span>
                       )}
@@ -823,15 +823,15 @@ export default function ApplyPage() {
 
               <button
                 onClick={addCoApplicant}
-                className="w-full rounded-lg border border-dashed border-slate-300 py-3 text-sm font-medium text-slate-600 hover:bg-slate-50"
+                className="w-full rounded-lg border border-dashed border-muted-ring py-3 text-sm font-medium text-muted-text hover:bg-surface-subtle"
               >
                 + Add Co-Applicant
               </button>
 
               {/* Household & current housing */}
-              <div className="rounded-xl border border-slate-200 bg-white">
-                <div className="border-b border-slate-100 px-4 py-3">
-                  <h3 className="text-sm font-semibold text-slate-900">{t("tenant:index.heading.currentHousingHousehold")}</h3>
+              <div className="rounded-xl border border-surface-border bg-surface">
+                <div className="border-b border-surface-divider px-4 py-3">
+                  <h3 className="text-sm font-semibold text-foreground">{t("tenant:index.heading.currentHousingHousehold")}</h3>
                 </div>
                 <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2">
                   <Field label="Current landlord name *" value={household.currentLandlordName} onChange={(v) => setHousehold((h) => ({ ...h, currentLandlordName: v }))} showMissing={validationAttempted} />
@@ -841,15 +841,15 @@ export default function ApplyPage() {
                   <Field label="Desired move-in date *" type="date" value={household.desiredMoveInDate} onChange={(v) => setHousehold((h) => ({ ...h, desiredMoveInDate: v }))} showMissing={validationAttempted} />
                   <Field label="Household size" type="number" value={household.householdSize} onChange={(v) => setHousehold((h) => ({ ...h, householdSize: v }))} />
                   <div className="flex items-center gap-2">
-                    <input type="checkbox" checked={household.hasPets} onChange={(e) => setHousehold((h) => ({ ...h, hasPets: e.target.checked }))} className="h-4 w-4 rounded border-slate-300 text-indigo-600" />
-                    <label className="text-sm text-slate-700">Pets</label>
+                    <input type="checkbox" checked={household.hasPets} onChange={(e) => setHousehold((h) => ({ ...h, hasPets: e.target.checked }))} className="h-4 w-4 rounded border-muted-ring text-indigo-600" />
+                    <label className="text-sm text-muted-dark">Pets</label>
                   </div>
                   {household.hasPets && (
                     <Field label="Pets description" value={household.petsDescription} onChange={(v) => setHousehold((h) => ({ ...h, petsDescription: v }))} />
                   )}
                   <div className="flex items-center gap-2">
-                    <input type="checkbox" checked={household.hasRcInsurance} onChange={(e) => setHousehold((h) => ({ ...h, hasRcInsurance: e.target.checked }))} className="h-4 w-4 rounded border-slate-300 text-indigo-600" />
-                    <label className="text-sm text-slate-700">RC insurance (liability)</label>
+                    <input type="checkbox" checked={household.hasRcInsurance} onChange={(e) => setHousehold((h) => ({ ...h, hasRcInsurance: e.target.checked }))} className="h-4 w-4 rounded border-muted-ring text-indigo-600" />
+                    <label className="text-sm text-muted-dark">RC insurance (liability)</label>
                     {scanResults.HOUSEHOLD_INSURANCE?.fields?.hasRcInsurance && (
                       <span className="text-xs text-green-600 ml-1">✓ Detected from document</span>
                     )}
@@ -858,35 +858,35 @@ export default function ApplyPage() {
                     <AutoField label="Insurance company" value={household.rcInsuranceCompany} onChange={(v) => setHousehold((h) => ({ ...h, rcInsuranceCompany: v }))} autoFilled={!!scanResults.HOUSEHOLD_INSURANCE?.fields?.rcInsuranceCompany} />
                   )}
                   <div className="flex items-center gap-2">
-                    <input type="checkbox" checked={household.hasVehicle} onChange={(e) => setHousehold((h) => ({ ...h, hasVehicle: e.target.checked }))} className="h-4 w-4 rounded border-slate-300 text-indigo-600" />
-                    <label className="text-sm text-slate-700">Vehicle</label>
+                    <input type="checkbox" checked={household.hasVehicle} onChange={(e) => setHousehold((h) => ({ ...h, hasVehicle: e.target.checked }))} className="h-4 w-4 rounded border-muted-ring text-indigo-600" />
+                    <label className="text-sm text-muted-dark">Vehicle</label>
                   </div>
                   {household.hasVehicle && (
                     <>
                       <Field label="Vehicle description" value={household.vehicleDescription} onChange={(v) => setHousehold((h) => ({ ...h, vehicleDescription: v }))} />
                       <div className="flex items-center gap-2">
-                        <input type="checkbox" checked={household.needsParking} onChange={(e) => setHousehold((h) => ({ ...h, needsParking: e.target.checked }))} className="h-4 w-4 rounded border-slate-300 text-indigo-600" />
-                        <label className="text-sm text-slate-700">Needs parking</label>
+                        <input type="checkbox" checked={household.needsParking} onChange={(e) => setHousehold((h) => ({ ...h, needsParking: e.target.checked }))} className="h-4 w-4 rounded border-muted-ring text-indigo-600" />
+                        <label className="text-sm text-muted-dark">Needs parking</label>
                       </div>
                     </>
                   )}
                   <div className="sm:col-span-2">
-                    <label className="mb-1 block text-xs font-medium text-slate-700">Remarks</label>
+                    <label className="mb-1 block text-xs font-medium text-muted-dark">Remarks</label>
                     <textarea
                       value={household.remarks}
                       onChange={(e) => setHousehold((h) => ({ ...h, remarks: e.target.value }))}
                       rows={3}
-                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                      className="w-full rounded-lg border border-surface-border px-3 py-2 text-sm"
                     />
                   </div>
                 </div>
               </div>
 
               <div className="flex gap-3">
-                <button onClick={() => setStep(1)} className="flex-1 rounded-lg border border-slate-200 bg-white py-3 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                <button onClick={() => setStep(1)} className="flex-1 rounded-lg border border-surface-border bg-surface py-3 text-sm font-medium text-muted-dark hover:bg-surface-subtle">
                   Back
                 </button>
-                <button onClick={goToStep3} disabled={loading} className="button-primary flex-1 py-3 text-sm font-semibold disabled:bg-slate-300">
+                <button onClick={goToStep3} disabled={loading} className="button-primary flex-1 py-3 text-sm font-semibold disabled:bg-muted-ring">
                   {loading ? "Saving…" : "Continue to review"}
                 </button>
               </div>
@@ -897,21 +897,21 @@ export default function ApplyPage() {
           {step === 3 && (
             <div className="space-y-6">
               <div>
-                <h2 className="text-lg font-semibold text-slate-900">{t("tenant:index.heading.reviewSubmit")}</h2>
-                <p className="text-sm text-slate-600 mt-1">
+                <h2 className="text-lg font-semibold text-foreground">{t("tenant:index.heading.reviewSubmit")}</h2>
+                <p className="text-sm text-muted-text mt-1">
                   Please review your application and sign below.
                 </p>
               </div>
 
               {/* Summary */}
-              <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-4">
+              <div className="rounded-xl border border-surface-border bg-surface p-4 space-y-4">
                 <div>
-                  <h3 className="text-sm font-semibold text-slate-900">{t("tenant:index.heading.unitsAppliedFor")}</h3>
+                  <h3 className="text-sm font-semibold text-foreground">{t("tenant:index.heading.unitsAppliedFor")}</h3>
                   <ul className="mt-1 space-y-1">
                     {selectedUnitIds.map((id) => {
                       const u = vacantUnits.find((u) => u.id === id);
                       return (
-                        <li key={id} className="text-sm text-slate-600">
+                        <li key={id} className="text-sm text-muted-text">
                           {u?.building?.name} — Unit {u?.unitNumber} (CHF {u?.monthlyRentChf}/mo)
                         </li>
                       );
@@ -920,10 +920,10 @@ export default function ApplyPage() {
                 </div>
 
                 <div>
-                  <h3 className="text-sm font-semibold text-slate-900">{t("tenant:index.heading.applicants")}</h3>
+                  <h3 className="text-sm font-semibold text-foreground">{t("tenant:index.heading.applicants")}</h3>
                   <ul className="mt-1 space-y-1">
                     {applicants.map((a, i) => (
-                      <li key={i} className="text-sm text-slate-600">
+                      <li key={i} className="text-sm text-muted-text">
                         {a.firstName} {a.lastName} — {a.role === "PRIMARY" ? "Primary" : "Co-applicant"}
                         {a.netMonthlyIncome && ` — CHF ${a.netMonthlyIncome}/mo`}
                       </li>
@@ -932,8 +932,8 @@ export default function ApplyPage() {
                 </div>
 
                 <div>
-                  <h3 className="text-sm font-semibold text-slate-900">{t("tenant:index.heading.documents")}</h3>
-                  <p className="text-sm text-slate-600 mt-1">
+                  <h3 className="text-sm font-semibold text-foreground">{t("tenant:index.heading.documents")}</h3>
+                  <p className="text-sm text-muted-text mt-1">
                     {docUploads.filter((d) => d.status === "scanned").length} document(s) uploaded & scanned
                   </p>
                   {extractedFieldCount > 0 && (
@@ -945,10 +945,10 @@ export default function ApplyPage() {
               </div>
 
               {/* Signature */}
-              <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-4">
-                <h3 className="text-sm font-semibold text-slate-900">{t("tenant:index.heading.electronicSignature")}</h3>
+              <div className="rounded-xl border border-surface-border bg-surface p-4 space-y-4">
+                <h3 className="text-sm font-semibold text-foreground">{t("tenant:index.heading.electronicSignature")}</h3>
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-slate-700">
+                  <label className="mb-1 block text-xs font-medium text-muted-dark">
                     Type your full legal name *
                   </label>
                   <input
@@ -956,7 +956,7 @@ export default function ApplyPage() {
                     value={signedName}
                     onChange={(e) => setSignedName(e.target.value)}
                     placeholder={t("tenant:index.placeholder.eGJeanDupont")}
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-serif italic"
+                    className="w-full rounded-lg border border-surface-border px-3 py-2 text-sm font-serif italic"
                   />
                 </div>
                 <label className="flex items-start gap-2">
@@ -964,9 +964,9 @@ export default function ApplyPage() {
                     type="checkbox"
                     checked={consentChecked}
                     onChange={(e) => setConsentChecked(e.target.checked)}
-                    className="mt-0.5 h-4 w-4 rounded border-slate-300 text-indigo-600"
+                    className="mt-0.5 h-4 w-4 rounded border-muted-ring text-indigo-600"
                   />
-                  <span className="text-xs text-slate-600">
+                  <span className="text-xs text-muted-text">
                     I certify that all information provided is accurate and complete. I consent
                     to the processing of my personal data for the purpose of this rental application.
                   </span>
@@ -974,13 +974,13 @@ export default function ApplyPage() {
               </div>
 
               <div className="flex gap-3">
-                <button onClick={() => setStep(2)} className="flex-1 rounded-lg border border-slate-200 bg-white py-3 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                <button onClick={() => setStep(2)} className="flex-1 rounded-lg border border-surface-border bg-surface py-3 text-sm font-medium text-muted-dark hover:bg-surface-subtle">
                   Back
                 </button>
                 <button
                   onClick={handleSubmit}
                   disabled={loading || !signedName.trim() || !consentChecked}
-                  className="flex-1 rounded-lg bg-green-600 py-3 text-sm font-semibold text-white hover:bg-green-700 disabled:bg-slate-300 disabled:cursor-not-allowed"
+                  className="flex-1 rounded-lg bg-green-600 py-3 text-sm font-semibold text-white hover:bg-green-700 disabled:bg-muted-ring disabled:cursor-not-allowed"
                 >
                   {loading ? "Submitting…" : "Submit Application"}
                 </button>
@@ -992,8 +992,8 @@ export default function ApplyPage() {
           {step === 4 && (
             <div className="text-center space-y-4 py-12">
               <div className="text-5xl">✅</div>
-              <h2 className="text-xl font-semibold text-slate-900">{t("tenant:index.heading.applicationSubmitted")}</h2>
-              <p className="text-sm text-slate-600 max-w-md mx-auto">{success}</p>
+              <h2 className="text-xl font-semibold text-foreground">{t("tenant:index.heading.applicationSubmitted")}</h2>
+              <p className="text-sm text-muted-text max-w-md mx-auto">{success}</p>
               <button
                 onClick={() => router.push("/listings")}
                 className="rounded-lg bg-indigo-600 px-6 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
@@ -1060,13 +1060,13 @@ function DropZone({ onFiles }) {
       onDragOver={handleDragOver}
       onDrop={handleDrop}
       onClick={() => inputRef.current?.click()}
-      className={cn("mt-4 flex flex-col items-center justify-center rounded-xl border-2 border-dashed cursor-pointer transition-all py-10 px-6", dragging ? "border-indigo-400 bg-indigo-50 scale-[1.01]" : "border-slate-300 bg-white hover:border-slate-400 hover:bg-slate-50")}
+      className={cn("mt-4 flex flex-col items-center justify-center rounded-xl border-2 border-dashed cursor-pointer transition-all py-10 px-6", dragging ? "border-indigo-400 bg-indigo-50 scale-[1.01]" : "border-muted-ring bg-surface hover:border-slate-400 hover:bg-surface-subtle")}
     >
       <div className="text-4xl mb-3">{dragging ? "📥" : "📄"}</div>
-      <p className="text-sm font-medium text-slate-700">
+      <p className="text-sm font-medium text-muted-dark">
         {dragging ? "Drop files here…" : "Drag & drop your documents here"}
       </p>
-      <p className="text-xs text-slate-400 mt-1">
+      <p className="text-xs text-foreground-dim mt-1">
         or click to browse · PDF, JPG, PNG · max 5MB each
       </p>
       <input
@@ -1094,11 +1094,11 @@ function DocTypeSlot({ docType, upload, onUpload, onRemove }) {
 
   return (
     <div
-      className={cn("flex items-center gap-3 rounded-lg border px-3 py-2.5 text-left transition-colors", isUploaded ? "border-green-200 bg-green-50" : isScanning ? "border-amber-200 bg-amber-50" : "border-slate-200 bg-white hover:bg-slate-50")}
+      className={cn("flex items-center gap-3 rounded-lg border px-3 py-2.5 text-left transition-colors", isUploaded ? "border-green-200 bg-green-50" : isScanning ? "border-amber-200 bg-amber-50" : "border-surface-border bg-surface hover:bg-surface-subtle")}
     >
       <span className="text-lg flex-shrink-0">{docType.icon}</span>
       <div className="flex-1 min-w-0">
-        <div className="text-sm font-medium text-slate-800 truncate">
+        <div className="text-sm font-medium text-foreground truncate">
           <span>{docType.label}{docType.required ? <span className="text-red-500 ml-0.5"> *</span> : null}</span>
         </div>
         {isUploaded && (
@@ -1112,7 +1112,7 @@ function DocTypeSlot({ docType, upload, onUpload, onRemove }) {
           </div>
         )}
         {!isUploaded && !isScanning && docType.hint && (
-          <div className="text-xs text-slate-400 truncate">{docType.hint}</div>
+          <div className="text-xs text-foreground-dim truncate">{docType.hint}</div>
         )}
       </div>
       <div className="flex-shrink-0 flex items-center gap-1">
@@ -1120,7 +1120,7 @@ function DocTypeSlot({ docType, upload, onUpload, onRemove }) {
           <button onClick={onRemove} className="text-xs text-red-500 hover:text-red-700 px-1" aria-label={t("tenant:index.ariaLabel.removeDocument")}>✕</button>
         )}
         {!isScanning && (
-          <label className="cursor-pointer rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100">
+          <label className="cursor-pointer rounded-lg border border-surface-border bg-surface px-3 py-1.5 text-xs font-medium text-muted-text hover:bg-surface-hover">
             {isUploaded ? "Replace" : "Upload"}
             <input
               type="file"
@@ -1174,8 +1174,8 @@ function UploadedDocRow({ doc, onRemove }) {
           {doc.status === "error" && <span className="text-red-500">✗</span>}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="font-medium text-slate-800 truncate">{doc.fileName}</div>
-          <div className="text-xs text-slate-500 truncate">
+          <div className="font-medium text-foreground truncate">{doc.fileName}</div>
+          <div className="text-xs text-muted truncate">
             {doc.status === "scanning" && "Analysing document…"}
             {doc.status === "scanned" && (
               <>
@@ -1191,7 +1191,7 @@ function UploadedDocRow({ doc, onRemove }) {
                   </span>
                 )}
                 {doc.scanResult?.confidence && (
-                  <span className="text-slate-400 ml-1">
+                  <span className="text-foreground-dim ml-1">
                     · {doc.scanResult.confidence}% confidence
                   </span>
                 )}
@@ -1211,28 +1211,28 @@ function UploadedDocRow({ doc, onRemove }) {
             {showDebug ? "▼ Debug" : "► Debug"}
           </button>
         )}
-        <button onClick={onRemove} className="text-xs text-slate-400 hover:text-red-600 flex-shrink-0 px-1">
+        <button onClick={onRemove} className="text-xs text-foreground-dim hover:text-red-600 flex-shrink-0 px-1">
           ✕
         </button>
       </div>
 
       {/* ── Debug / diagnostic panel ── */}
       {showDebug && doc.status === "scanned" && (
-        <div className="border-t border-slate-200 bg-white px-3 py-3 space-y-3 rounded-b-lg">
+        <div className="border-t border-surface-border bg-surface px-3 py-3 space-y-3 rounded-b-lg">
           {/* Extracted fields */}
           <div>
-            <div className="text-xs font-semibold text-slate-700 mb-1">✅ Extracted fields</div>
+            <div className="text-xs font-semibold text-muted-dark mb-1">✅ Extracted fields</div>
             {fieldEntries.length > 0 ? (
               <div className="grid grid-cols-2 gap-x-4 gap-y-0.5">
                 {fieldEntries.map(([k, v]) => (
                   <div key={k} className="text-xs">
-                    <span className="text-slate-500">{k}:</span>{" "}
-                    <span className="font-medium text-slate-800">{String(v)}</span>
+                    <span className="text-muted">{k}:</span>{" "}
+                    <span className="font-medium text-foreground">{String(v)}</span>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="text-xs text-slate-400 italic">No fields extracted</div>
+              <div className="text-xs text-foreground-dim italic">No fields extracted</div>
             )}
           </div>
 
@@ -1249,15 +1249,15 @@ function UploadedDocRow({ doc, onRemove }) {
           {/* Raw text preview */}
           {rawText && (
             <div>
-              <div className="text-xs font-semibold text-slate-700 mb-1">📄 Raw extracted text</div>
-              <pre className="text-xs leading-relaxed text-slate-600 bg-slate-50 border border-slate-200 rounded p-2 max-h-48 overflow-auto whitespace-pre-wrap font-mono">
+              <div className="text-xs font-semibold text-muted-dark mb-1">📄 Raw extracted text</div>
+              <pre className="text-xs leading-relaxed text-muted-text bg-surface-subtle border border-surface-border rounded p-2 max-h-48 overflow-auto whitespace-pre-wrap font-mono">
                 {rawText}
               </pre>
             </div>
           )}
 
           {/* Confidence */}
-          <div className="text-xs text-slate-400">
+          <div className="text-xs text-foreground-dim">
             docType: {doc.detectedDocType} · confidence: {doc.scanResult?.confidence}%
             {doc.scanResult?.summary && ` · ${doc.scanResult.summary}`}
           </div>
@@ -1279,7 +1279,7 @@ function AutoField({ label, type = "text", value, onChange, className = "", auto
 
   return (
     <div className={className}>
-      <label className="mb-1 flex items-center gap-1 text-xs font-medium text-slate-700">
+      <label className="mb-1 flex items-center gap-1 text-xs font-medium text-muted-dark">
         <span>{labelText}{isRequired ? <span className="text-red-500"> *</span> : null}</span>
         {autoFilled && value ? (
           <span className="inline-flex items-center gap-0.5 rounded-full bg-green-100 text-green-700 px-1.5 py-0 text-xs font-medium">
@@ -1295,8 +1295,8 @@ function AutoField({ label, type = "text", value, onChange, className = "", auto
         className={cn("w-full rounded-lg border px-3 py-2 text-sm", highlightMissing
             ? "border-red-400 bg-red-50 ring-1 ring-red-300"
             : autoFilled && value
-              ? "border-green-300 bg-green-50 focus:border-blue-500 focus:bg-white"
-              : "border-slate-200")}
+              ? "border-green-300 bg-green-50 focus:border-blue-500 focus:bg-surface"
+              : "border-surface-border")}
       />
       {highlightMissing && <p className="mt-0.5 text-xs text-red-500">This field is required</p>}
     </div>
@@ -1315,7 +1315,7 @@ function Field({ label, type = "text", value, onChange, className = "", showMiss
 
   return (
     <div className={className}>
-      <label className="mb-1 block text-xs font-medium text-slate-700">
+      <label className="mb-1 block text-xs font-medium text-muted-dark">
         <span>{labelText}{isRequired ? <span className="text-red-500"> *</span> : null}</span>
       </label>
       <input
@@ -1324,7 +1324,7 @@ function Field({ label, type = "text", value, onChange, className = "", showMiss
         onChange={(e) => onChange(e.target.value)}
         className={cn("w-full rounded-lg border px-3 py-2 text-sm", highlightMissing
             ? "border-red-400 bg-red-50 ring-1 ring-red-300"
-            : "border-slate-200")}
+            : "border-surface-border")}
       />
       {highlightMissing && <p className="mt-0.5 text-xs text-red-500">This field is required</p>}
     </div>
@@ -1334,11 +1334,11 @@ function Field({ label, type = "text", value, onChange, className = "", showMiss
 function SelectField({ label, value, options, onChange, className = "" }) {
   return (
     <div className={className}>
-      <label className="mb-1 block text-xs font-medium text-slate-700">{label}</label>
+      <label className="mb-1 block text-xs font-medium text-muted-dark">{label}</label>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+        className="w-full rounded-lg border border-surface-border px-3 py-2 text-sm"
       >
         {options.map((opt) => (
           <option key={opt} value={opt}>

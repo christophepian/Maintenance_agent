@@ -162,12 +162,12 @@ export default function ChargeReconciliationDetailPage() {
               {sortedLineItems.map((line) => (
                 <div key={line.id} className="py-3 flex flex-col gap-1">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-medium text-slate-800">{line.description}</span>
+                    <span className="text-sm font-medium text-foreground">{line.description}</span>
                     <Badge variant={line.chargeMode === "ACOMPTE" ? "info" : "muted"} size="sm">
                       {line.chargeMode}
                     </Badge>
                   </div>
-                  <div className="flex items-center justify-between text-xs text-slate-500">
+                  <div className="flex items-center justify-between text-xs text-muted">
                     <span>ACOMPTE: {formatChfCents(line.acomptePaidCents)}</span>
                     <span>
                       Actual:{" "}
@@ -187,7 +187,7 @@ export default function ChargeReconciliationDetailPage() {
                     </span>
                   </div>
                   <div className="flex items-center justify-between text-xs">
-                    <span className={cn("tabular-nums", line.balanceCents > 0 ? "text-red-600" : line.balanceCents < 0 ? "text-green-600" : "text-slate-500")}>
+                    <span className={cn("tabular-nums", line.balanceCents > 0 ? "text-red-600" : line.balanceCents < 0 ? "text-green-600" : "text-muted")}>
                       Balance:{" "}
                       {line.chargeMode === "ACOMPTE"
                         ? <>{line.balanceCents > 0 ? "+" : ""}{formatChfCents(line.balanceCents)}</>

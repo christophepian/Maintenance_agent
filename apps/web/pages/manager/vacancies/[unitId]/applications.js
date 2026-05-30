@@ -198,14 +198,14 @@ export default function UnitApplicationsPage() {
               <select
                 value={view}
                 onChange={(e) => { setView(e.target.value); }}
-                className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                className="rounded-lg border border-surface-border px-3 py-2 text-sm"
               >
                 <option value="summary">{t("manager:vacanciesUnitidApplications.text.summary")}</option>
                 <option value="full">{t("manager:vacanciesUnitidApplications.text.fullDetail")}</option>
               </select>
               <button
                 onClick={loadData}
-                className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                className="rounded-lg border border-surface-border bg-surface px-3 py-2 text-sm font-medium text-muted-dark hover:bg-surface-subtle"
               >
                 Refresh
               </button>
@@ -217,11 +217,11 @@ export default function UnitApplicationsPage() {
           <ErrorBanner error={error} className="text-sm" />
 
           <div>
-          <h2 className="mb-3 text-sm font-semibold text-slate-700">{`${sorted.length} Application${sorted.length !== 1 ? "s" : ""}`}</h2>
-            {loading && <p className="text-sm text-slate-500">{t("manager:vacanciesUnitidApplications.text.loading")}</p>}
+          <h2 className="mb-3 text-sm font-semibold text-muted-dark">{`${sorted.length} Application${sorted.length !== 1 ? "s" : ""}`}</h2>
+            {loading && <p className="text-sm text-muted">{t("manager:vacanciesUnitidApplications.text.loading")}</p>}
 
             {!loading && sorted.length === 0 && (
-              <p className="text-sm text-slate-500">{t("manager:vacanciesUnitidApplications.text.noApplicationsForThisUnitYet")}</p>
+              <p className="text-sm text-muted">{t("manager:vacanciesUnitidApplications.text.noApplicationsForThisUnitYet")}</p>
             )}
 
             {!loading && sorted.length > 0 && (
@@ -240,10 +240,10 @@ export default function UnitApplicationsPage() {
                       <div key={row.id} className={cn("table-card", row.disqualified ? "bg-red-50/40" : "")}>
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-mono text-xs text-slate-400">#{idx + 1}</span>
+                            <span className="font-mono text-xs text-foreground-dim">#{idx + 1}</span>
                             <button
                               onClick={() => setExpandedDocApp(isDocExpanded ? null : row.id)}
-                              className={cn("table-card-head underline decoration-dotted underline-offset-2", isDocExpanded ? "text-indigo-700" : "text-slate-900")}
+                              className={cn("table-card-head underline decoration-dotted underline-offset-2", isDocExpanded ? "text-indigo-700" : "text-foreground")}
                             >
                               {row.name}
                             </button>
@@ -274,7 +274,7 @@ export default function UnitApplicationsPage() {
                           )}
                         </div>
                         {isDocExpanded && (
-                          <div className="mt-3 space-y-3 border-t border-slate-100 pt-3">
+                          <div className="mt-3 space-y-3 border-t border-surface-divider pt-3">
                             {row.disqualified && reasons.length > 0 && (
                               <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3">
                                 <h4 className="text-sm font-semibold text-red-700 mb-2">{t("manager:vacanciesUnitidApplications.text.disqualificationReasons")}</h4>
@@ -326,7 +326,7 @@ export default function UnitApplicationsPage() {
                                   onClick={() => setExpandedDocApp(isDocExpanded ? null : row.id)}
                                   className={cn("font-medium underline decoration-dotted underline-offset-2 transition-colors", isDocExpanded
                                       ? "text-indigo-700"
-                                      : "text-slate-900 hover:text-indigo-600")}
+                                      : "text-foreground hover:text-indigo-600")}
                                   title={t("manager:vacancies[unitid]Applications.title.clickToViewCorroborativeDocuments")}
                                 >
                                   {row.name}
@@ -392,7 +392,7 @@ export default function UnitApplicationsPage() {
                           </tr>
                           {isDocExpanded && (
                             <tr>
-                              <td colSpan={7} className="bg-slate-50/50">
+                              <td colSpan={7} className="bg-surface-subtle/50">
                                 <div className="space-y-4">
                                   {row.disqualified && reasons.length > 0 && (
                                     <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3">
@@ -423,29 +423,29 @@ export default function UnitApplicationsPage() {
         {/* Override disqualification modal */}
         {overrideTarget && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setOverrideTarget(null)}>
-            <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
-              <h3 className="text-lg font-bold text-slate-900">{t("manager:vacancies[unitid]Applications.heading.overrideDisqualification")}</h3>
-              <p className="mt-2 text-sm text-slate-600">
+            <div className="w-full max-w-md rounded-2xl bg-surface p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+              <h3 className="text-lg font-bold text-foreground">{t("manager:vacancies[unitid]Applications.heading.overrideDisqualification")}</h3>
+              <p className="mt-2 text-sm text-muted-text">
                 You are about to override the automatic disqualification for <strong>{overrideTarget.name}</strong>.
                 This candidate will become eligible for selection.
               </p>
               <div className="mt-4">
-                <label className="block text-xs font-medium uppercase tracking-wide text-slate-400 mb-1.5">
+                <label className="block text-xs font-medium uppercase tracking-wide text-foreground-dim mb-1.5">
                   Reason for override *
                 </label>
                 <textarea
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  className="w-full rounded-lg border border-muted-ring px-3 py-2 text-sm text-foreground focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                   rows={3}
                   placeholder={t("manager:vacancies[unitid]Applications.placeholder.eGVerifiedIncomeDirectlyWithEmployerDebtEnforcementExtractIsClear")}
                   value={overrideReason}
                   onChange={(e) => setOverrideReason(e.target.value)}
                 />
-                <p className="mt-1 text-xs text-slate-400">{t("manager:vacanciesUnitidApplications.text.minimum3CharactersThisWillBeRecordedForAudit")}</p>
+                <p className="mt-1 text-xs text-foreground-dim">{t("manager:vacanciesUnitidApplications.text.minimum3CharactersThisWillBeRecordedForAudit")}</p>
               </div>
               <div className="mt-5 flex justify-end gap-3">
                 <button
                   onClick={() => setOverrideTarget(null)}
-                  className="rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50"
+                  className="rounded-lg border border-surface-border px-4 py-2 text-sm text-muted-text hover:bg-surface-subtle"
                 >
                   Cancel
                 </button>
@@ -464,27 +464,27 @@ export default function UnitApplicationsPage() {
         {/* Adjust Score Modal */}
         {adjustTarget && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-            <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
-              <h3 className="text-lg font-semibold text-slate-900">{t("manager:vacancies[unitid]Applications.heading.adjustScore")}</h3>
-              <p className="text-sm text-slate-600 mt-1">{t("manager:vacanciesUnitidApplications.text.addOrSubtractPointsWithAReason")}</p>
+            <div className="w-full max-w-md rounded-xl bg-surface p-6 shadow-xl">
+              <h3 className="text-lg font-semibold text-foreground">{t("manager:vacancies[unitid]Applications.heading.adjustScore")}</h3>
+              <p className="text-sm text-muted-text mt-1">{t("manager:vacanciesUnitidApplications.text.addOrSubtractPointsWithAReason")}</p>
               <div className="mt-4 space-y-3">
                 <div>
-                  <label className="block text-xs font-medium text-slate-700 mb-1">{t("manager:vacanciesUnitidApplications.text.scoreAdjustment")}</label>
+                  <label className="block text-xs font-medium text-muted-dark mb-1">{t("manager:vacanciesUnitidApplications.text.scoreAdjustment")}</label>
                   <input
                     type="number"
                     value={scoreDelta}
                     onChange={(e) => setScoreDelta(e.target.value)}
                     min={-100} max={100}
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                    className="w-full rounded-lg border border-surface-border px-3 py-2 text-sm"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-700 mb-1">{t("manager:vacanciesUnitidApplications.text.reason")}</label>
+                  <label className="block text-xs font-medium text-muted-dark mb-1">{t("manager:vacanciesUnitidApplications.text.reason")}</label>
                   <textarea
                     value={adjustReason}
                     onChange={(e) => setAdjustReason(e.target.value)}
                     rows={3}
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                    className="w-full rounded-lg border border-surface-border px-3 py-2 text-sm"
                     placeholder={t("manager:vacancies[unitid]Applications.placeholder.reasonForAdjustmentMin3Chars")}
                   />
                 </div>
@@ -492,14 +492,14 @@ export default function UnitApplicationsPage() {
               <div className="mt-4 flex gap-3">
                 <button
                   onClick={() => { setAdjustTarget(null); setScoreDelta(0); setAdjustReason(""); }}
-                  className="flex-1 rounded-lg border border-slate-200 bg-white py-2 text-sm font-medium text-slate-700"
+                  className="flex-1 rounded-lg border border-surface-border bg-surface py-2 text-sm font-medium text-muted-dark"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleAdjustScore}
                   disabled={adjustLoading || !adjustReason.trim() || adjustReason.trim().length < 3}
-                  className="flex-1 rounded-lg bg-indigo-600 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:bg-slate-300"
+                  className="flex-1 rounded-lg bg-indigo-600 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:bg-muted-ring"
                 >
                   {adjustLoading ? "Saving…" : "Apply"}
                 </button>

@@ -59,8 +59,8 @@ function MethodTab({ active, onClick, children }) {
       className={[
         "flex-1 py-2 text-sm font-medium rounded-lg transition-all duration-150",
         active
-          ? "bg-white text-slate-900 shadow-sm border border-slate-200"
-          : "text-slate-500 hover:text-slate-700",
+          ? "bg-surface text-foreground shadow-sm border border-surface-border"
+          : "text-muted hover:text-muted-dark",
       ].join(" ")}
     >
       {children}
@@ -99,7 +99,7 @@ function Notice({ type, msg }) {
 
 function AuthShell({ children, footer }) {
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
+    <div className="min-h-screen bg-surface-subtle flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
@@ -109,19 +109,19 @@ function AuthShell({ children, footer }) {
                 d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
             </svg>
           </div>
-          <h1 className="text-2xl font-semibold text-slate-900 tracking-tight">
+          <h1 className="text-2xl font-semibold text-foreground tracking-tight">
             Maintenance Agent
           </h1>
         </div>
 
         {/* Card */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm px-8 py-7">
+        <div className="bg-surface rounded-2xl border border-surface-border shadow-sm px-8 py-7">
           {children}
         </div>
 
         {/* Footer */}
         {footer && (
-          <p className="text-center text-xs text-slate-400 mt-5">{footer}</p>
+          <p className="text-center text-xs text-foreground-dim mt-5">{footer}</p>
         )}
       </div>
     </div>
@@ -140,10 +140,10 @@ function MagicLinkSentScreen({ email, onBack }) {
               d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
           </svg>
         </div>
-        <h2 className="text-xl font-semibold text-slate-900 mb-2">Check your inbox</h2>
-        <p className="text-sm text-slate-500 leading-relaxed mb-6">
+        <h2 className="text-xl font-semibold text-foreground mb-2">Check your inbox</h2>
+        <p className="text-sm text-muted leading-relaxed mb-6">
           We sent a sign-in link to{" "}
-          <span className="font-medium text-slate-700">{email}</span>.
+          <span className="font-medium text-muted-dark">{email}</span>.
           <br />
           The link expires in 1 hour.
         </p>
@@ -172,10 +172,10 @@ function ResetSentScreen({ email, onBack }) {
               d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         </div>
-        <h2 className="text-xl font-semibold text-slate-900 mb-2">Reset link sent</h2>
-        <p className="text-sm text-slate-500 leading-relaxed mb-6">
+        <h2 className="text-xl font-semibold text-foreground mb-2">Reset link sent</h2>
+        <p className="text-sm text-muted leading-relaxed mb-6">
           Check your inbox at{" "}
-          <span className="font-medium text-slate-700">{email}</span>
+          <span className="font-medium text-muted-dark">{email}</span>
           <br />
           for a password reset link.
         </p>
@@ -358,13 +358,13 @@ export default function LoginPage() {
   /* ── Main form ──────────────────────────────────────────────── */
   return (
     <AuthShell footer="Access is by invitation only. Contact your administrator.">
-      <h2 className="text-lg font-semibold text-slate-900 mb-1">Sign in</h2>
-      <p className="text-sm text-slate-500 mb-6">to your account</p>
+      <h2 className="text-lg font-semibold text-foreground mb-1">Sign in</h2>
+      <p className="text-sm text-muted mb-6">to your account</p>
 
       {notice && <Notice type={notice.type} msg={notice.msg} />}
 
       {/* Method tabs */}
-      <div className="flex gap-1 p-1 bg-slate-100 rounded-xl mb-6">
+      <div className="flex gap-1 p-1 bg-surface-hover rounded-xl mb-6">
         <MethodTab
           active={method === "magic"}
           onClick={() => { setMethod("magic"); setNotice(null); }}
@@ -383,7 +383,7 @@ export default function LoginPage() {
       {method === "magic" && (
         <form onSubmit={sendMagicLink}>
           <div className="mb-5">
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">
+            <label className="block text-sm font-medium text-muted-dark mb-1.5">
               Email address
             </label>
             <input
@@ -404,7 +404,7 @@ export default function LoginPage() {
             {loading && <Spinner />}
             {loading ? "Sending…" : "Send sign-in link"}
           </button>
-          <p className="text-xs text-center text-slate-400 mt-4">
+          <p className="text-xs text-center text-foreground-dim mt-4">
             A one-click link will be sent to your inbox.
           </p>
         </form>
@@ -414,7 +414,7 @@ export default function LoginPage() {
       {method === "password" && (
         <form onSubmit={signInWithPassword}>
           <div className="mb-4">
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">
+            <label className="block text-sm font-medium text-muted-dark mb-1.5">
               Email address
             </label>
             <input
@@ -430,7 +430,7 @@ export default function LoginPage() {
 
           <div className="mb-5">
             <div className="flex items-center justify-between mb-1.5">
-              <label className="block text-sm font-medium text-slate-700">
+              <label className="block text-sm font-medium text-muted-dark">
                 Password
               </label>
               <button

@@ -89,7 +89,7 @@ function buildRequestColumns({ t, assigningId, setAssigningId, selectedContracto
       alwaysVisible: true,
       className: "w-16",
       render: (r) => (
-        <span className="font-mono text-slate-500">
+        <span className="font-mono text-muted">
           {r.requestNumber ? `#${r.requestNumber}` : "\u2014"}
         </span>
       ),
@@ -116,7 +116,7 @@ function buildRequestColumns({ t, assigningId, setAssigningId, selectedContracto
       sortable: true,
       defaultVisible: true,
       render: (r) => (
-        <span className="text-slate-700">
+        <span className="text-muted-dark">
           {r.buildingId ? (
             <Link href={`/admin-inventory/buildings/${r.buildingId}?from=/manager/requests`} className="cell-link" onClick={(e) => e.stopPropagation()}>
               {r.buildingName || "\u2014"}
@@ -124,9 +124,9 @@ function buildRequestColumns({ t, assigningId, setAssigningId, selectedContracto
           ) : (r.buildingName || "\u2014")}
           {r.unitNumber ? (
             r.unitId ? (
-              <span className="text-slate-400"> / <Link href={`/admin-inventory/units/${r.unitId}`} className="cell-link" onClick={(e) => e.stopPropagation()}>{r.unitNumber}</Link></span>
+              <span className="text-foreground-dim"> / <Link href={`/admin-inventory/units/${r.unitId}`} className="cell-link" onClick={(e) => e.stopPropagation()}>{r.unitNumber}</Link></span>
             ) : (
-              <span className="text-slate-400"> / {r.unitNumber}</span>
+              <span className="text-foreground-dim"> / {r.unitNumber}</span>
             )
           ) : ""}
         </span>
@@ -138,7 +138,7 @@ function buildRequestColumns({ t, assigningId, setAssigningId, selectedContracto
       sortable: true,
       defaultVisible: true,
       render: (r) => (
-        <span className="inline-block rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+        <span className="inline-block rounded-full bg-surface-hover px-2 py-0.5 text-xs font-medium text-muted-text">
           {r.category || "\u2014"}
         </span>
       ),
@@ -149,7 +149,7 @@ function buildRequestColumns({ t, assigningId, setAssigningId, selectedContracto
       defaultVisible: true,
       className: "max-w-[260px]",
       render: (r) => (
-        <span className="block truncate text-slate-600">{r.description || "\u2014"}</span>
+        <span className="block truncate text-muted-text">{r.description || "\u2014"}</span>
       ),
     },
     {
@@ -167,7 +167,7 @@ function buildRequestColumns({ t, assigningId, setAssigningId, selectedContracto
             {r.urgency === "EMERGENCY" ? "Emergency" : "High"}
           </span>
         ) : (
-          <span className="text-slate-300">\u2014</span>
+          <span className="text-foreground-dim">\u2014</span>
         )
       ),
     },
@@ -177,8 +177,8 @@ function buildRequestColumns({ t, assigningId, setAssigningId, selectedContracto
       sortable: true,
       defaultVisible: false,
       render: (r) => (
-        <span className="text-slate-600 text-xs">
-          {r.assignedContractorName || <span className="text-slate-300">\u2014</span>}
+        <span className="text-muted-text text-xs">
+          {r.assignedContractorName || <span className="text-foreground-dim">\u2014</span>}
         </span>
       ),
     },
@@ -190,7 +190,7 @@ function buildRequestColumns({ t, assigningId, setAssigningId, selectedContracto
       defaultVisible: false,
       className: "text-right",
       render: (r) => (
-        <span className="font-mono text-xs text-slate-600">{formatCurrency(r.estimatedCost)}</span>
+        <span className="font-mono text-xs text-muted-text">{formatCurrency(r.estimatedCost)}</span>
       ),
     },
     {
@@ -199,7 +199,7 @@ function buildRequestColumns({ t, assigningId, setAssigningId, selectedContracto
       sortable: true,
       defaultVisible: false,
       render: (r) => (
-        <span className="text-xs text-slate-600">{nextApproverLabel(r.status)}</span>
+        <span className="text-xs text-muted-text">{nextApproverLabel(r.status)}</span>
       ),
     },
     {
@@ -210,7 +210,7 @@ function buildRequestColumns({ t, assigningId, setAssigningId, selectedContracto
       render: (r) => (
         <span className={cn("inline-block rounded-full px-2 py-0.5 text-xs font-medium", r.payingParty === "TENANT"
             ? "bg-orange-50 text-orange-700 border border-orange-200"
-            : "bg-slate-50 text-slate-600 border border-slate-200")}>
+            : "bg-surface-subtle text-muted-text border border-surface-border")}>
           {r.payingParty === "TENANT" ? "Tenant" : "Landlord"}
         </span>
       ),
@@ -221,8 +221,8 @@ function buildRequestColumns({ t, assigningId, setAssigningId, selectedContracto
       sortable: true,
       defaultVisible: false,
       render: (r) => (
-        <span className="text-xs text-slate-500">
-          {r.approvalSource ? r.approvalSource.replace("_", " ").toLowerCase().replace(/\b\w/g, c => c.toUpperCase()) : <span className="text-slate-300">\u2014</span>}
+        <span className="text-xs text-muted">
+          {r.approvalSource ? r.approvalSource.replace("_", " ").toLowerCase().replace(/\b\w/g, c => c.toUpperCase()) : <span className="text-foreground-dim">\u2014</span>}
         </span>
       ),
     },
@@ -234,7 +234,7 @@ function buildRequestColumns({ t, assigningId, setAssigningId, selectedContracto
       defaultVisible: true,
       className: "hidden sm:table-cell",
       render: (r) => (
-        <span className="text-slate-400 text-xs">{formatDate(r.createdAt)}</span>
+        <span className="text-foreground-dim text-xs">{formatDate(r.createdAt)}</span>
       ),
     },
     {
@@ -257,7 +257,7 @@ function buildRequestColumns({ t, assigningId, setAssigningId, selectedContracto
                 case 'reject':
                   return (
                     <button key="reject" onClick={() => rejectRequest(r.id)} disabled={actionLoading === r.id}
-                      className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50">
+                      className="rounded-lg border border-muted-ring bg-surface px-3 py-1.5 text-xs font-medium text-muted-dark hover:bg-surface-subtle disabled:opacity-50">
                       {actionLoading === r.id ? "\u2026" : t("manager:requests.btn.reject")}
                     </button>
                   );
@@ -271,7 +271,7 @@ function buildRequestColumns({ t, assigningId, setAssigningId, selectedContracto
                   return assigningId === r.id ? (
                     <div key="assign-modal" className="flex items-center gap-1.5">
                       <select value={selectedContractorId} onChange={(e) => setSelectedContractorId(e.target.value)}
-                        className="rounded border border-slate-300 px-2 py-1 text-xs">
+                        className="rounded border border-muted-ring px-2 py-1 text-xs">
                         <option value="">Select&hellip;</option>
                         {contractors.map((c) => (
                           <option key={c.id} value={c.id}>{c.name || c.companyName || c.id.slice(0, 8)}</option>
@@ -282,7 +282,7 @@ function buildRequestColumns({ t, assigningId, setAssigningId, selectedContracto
                         {actionLoading === r.id ? "\u2026" : t("manager:requests.btn.ok")}
                       </button>
                       <button onClick={() => { setAssigningId(null); setSelectedContractorId(""); }}
-                        className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-500 hover:bg-slate-50">
+                        className="rounded-lg border border-surface-border bg-surface px-2 py-1 text-xs text-muted hover:bg-surface-subtle">
                         &times;
                       </button>
                     </div>
@@ -381,7 +381,7 @@ const OBLIGATION_META = {
     description: "Based on Swiss law and the asset\u2019s condition, this repair falls on the tenant. You may still choose to cover it.",
   },
   UNKNOWN: {
-    cls: "bg-slate-100 text-slate-700 border-slate-200",
+    cls: "bg-surface-hover text-muted-dark border-surface-border",
     heading: "Needs your judgement",
     description: "The legal engine couldn\u2019t determine obligation automatically. Review the details below and decide.",
   },
@@ -534,7 +534,7 @@ function getNextStep(r, legalDecision) {
 function Chevron({ expanded, className = "" }) {
   return (
     <svg
-      className={cn("h-4 w-4 text-slate-400 transition-transform", expanded ? "rotate-90" : "", className)}
+      className={cn("h-4 w-4 text-foreground-dim transition-transform", expanded ? "rotate-90" : "", className)}
       fill="none" viewBox="0 0 24 24" stroke="currentColor"
     >
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -556,17 +556,17 @@ function DepreciationBar({ signal }) {
 
   return (
     <div className="mt-2">
-      <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
+      <div className="flex items-center justify-between text-xs text-muted mb-1">
         <span>Age: {ageYears} yrs of {lifespanYears}-yr lifespan</span>
-        <span className={cn("font-semibold", signal.fullyDepreciated ? "text-red-600" : "text-slate-700")}>
+        <span className={cn("font-semibold", signal.fullyDepreciated ? "text-red-600" : "text-muted-dark")}>
           {signal.fullyDepreciated ? "Fully depreciated" : `${pct}% remaining life`}
         </span>
       </div>
-      <div className="h-2 w-full rounded-full bg-slate-100">
+      <div className="h-2 w-full rounded-full bg-surface-hover">
         <div className={cn("h-2 rounded-full", barColor, "transition-all duration-500")} style={{ width: `${usedPct}%` }} />
       </div>
       {signal.notes && (
-        <p className="mt-1 text-xs text-slate-400">Source: {signal.notes}</p>
+        <p className="mt-1 text-xs text-foreground-dim">Source: {signal.notes}</p>
       )}
     </div>
   );
@@ -580,9 +580,9 @@ function LegalRecommendationPanel({ decision, loading: isLoading, error: loadErr
   const { t } = useTranslation("manager");
   if (isLoading) {
     return (
-      <div className="flex items-center gap-3 border-t border-slate-100 bg-slate-50 px-6 py-4">
+      <div className="flex items-center gap-3 border-t border-surface-divider bg-surface-subtle px-6 py-4">
         <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
-        <span className="text-sm text-slate-500">Evaluating legal obligations&hellip;</span>
+        <span className="text-sm text-muted">Evaluating legal obligations&hellip;</span>
       </div>
     );
   }
@@ -616,7 +616,7 @@ function LegalRecommendationPanel({ decision, loading: isLoading, error: loadErr
             <h4 className="text-sm font-bold">{ob.heading}</h4>
             <p className="mt-1 text-[0.8125rem] leading-snug opacity-90">{ob.description}</p>
           </div>
-          <span className="shrink-0 rounded-full bg-white/60 px-2.5 py-0.5 text-xs font-semibold">
+          <span className="shrink-0 rounded-full bg-white/60 px-2.5 py-0.5 text-xs font-semibold"> {/* no-token: semi-transparent white on colored card */}
             {decision.confidence}% confidence
           </span>
         </div>
@@ -627,13 +627,13 @@ function LegalRecommendationPanel({ decision, loading: isLoading, error: loadErr
         <div className="mt-3">
           <div className="flex flex-col gap-1.5">
             {uniqueCitations.slice(0, 4).map((c, i) => (
-              <div key={i} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs">
+              <div key={i} className="rounded-lg border border-surface-border bg-surface px-3 py-2 text-xs">
                 <span className="font-semibold text-blue-700">{c.article}</span>
-                <span className="ml-2 text-slate-500">{c.text}</span>
+                <span className="ml-2 text-muted">{c.text}</span>
               </div>
             ))}
             {uniqueCitations.length > 4 && (
-              <span className="text-xs text-slate-400">
+              <span className="text-xs text-foreground-dim">
                 + {uniqueCitations.length - 4} more citation{uniqueCitations.length - 4 > 1 ? "s" : ""}
               </span>
             )}
@@ -643,8 +643,8 @@ function LegalRecommendationPanel({ decision, loading: isLoading, error: loadErr
 
       {/* Depreciation sub-card */}
       {decision.depreciationSignal && (
-        <div className="mt-3 rounded-lg border border-slate-200 bg-white p-3">
-          <p className="text-xs font-semibold text-slate-600 mb-1">{t("manager:requests.text.assetDepreciation")}</p>
+        <div className="mt-3 rounded-lg border border-surface-border bg-surface p-3">
+          <p className="text-xs font-semibold text-muted-text mb-1">{t("manager:requests.text.assetDepreciation")}</p>
           <DepreciationBar signal={decision.depreciationSignal} />
           {decision.depreciationSignal.fullyDepreciated && (
             <div className="mt-2 rounded-lg bg-red-50 border border-red-200 px-3 py-1.5 text-xs text-red-700 font-medium">
@@ -657,29 +657,29 @@ function LegalRecommendationPanel({ decision, loading: isLoading, error: loadErr
       {/* Defect matches (Phase B) — show best match prominently */}
       {decision.defectMatches?.length > 0 && (
         <div className="mt-3">
-          <p className="text-xs font-semibold text-slate-600 mb-1.5">
+          <p className="text-xs font-semibold text-muted-text mb-1.5">
             Best matching legal rule
           </p>
           {/* Primary match — always the first (highest-scored) */}
           {(() => {
             const dm = decision.defectMatches[0];
             return (
-              <div className="rounded-lg border border-slate-200 bg-white px-3 py-2">
+              <div className="rounded-lg border border-surface-border bg-surface px-3 py-2">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-slate-800 truncate">
+                    <p className="text-xs font-medium text-foreground truncate">
                       {dm.defectEn || dm.defect}
                     </p>
-                    <p className="text-xs text-slate-500 mt-0.5">
+                    <p className="text-xs text-muted mt-0.5">
                       {dm.categoryEn || dm.category} &bull; {dm.reductionPercent}% reduction
                     </p>
                   </div>
-                  <span className="shrink-0 text-xs text-slate-400">
+                  <span className="shrink-0 text-xs text-foreground-dim">
                     {Math.round(dm.matchConfidence)}% match
                   </span>
                 </div>
                 {dm.matchReasons?.length > 0 && (
-                  <p className="text-xs text-slate-400 mt-1 truncate">
+                  <p className="text-xs text-foreground-dim mt-1 truncate">
                     {dm.matchReasons.join(", ")}
                   </p>
                 )}
@@ -688,7 +688,7 @@ function LegalRecommendationPanel({ decision, loading: isLoading, error: loadErr
           })()}
           {/* Additional precedents collapsed — only show count */}
           {decision.defectMatches.length > 1 && (
-            <p className="text-xs text-slate-400 mt-1.5">
+            <p className="text-xs text-foreground-dim mt-1.5">
               + {decision.defectMatches.length - 1} additional precedent{decision.defectMatches.length > 2 ? "s" : ""} identified
             </p>
           )}
@@ -698,25 +698,25 @@ function LegalRecommendationPanel({ decision, loading: isLoading, error: loadErr
       {/* Rent reduction precedents from ASLOCA jurisprudence (always shown if available) */}
       {decision.matchedReductions?.length > 0 && (
         <div className="mt-3">
-          <p className="text-xs font-semibold text-slate-600 mb-1.5">{t("manager:requests.text.rentReductionPrecedents")}</p>
+          <p className="text-xs font-semibold text-muted-text mb-1.5">{t("manager:requests.text.rentReductionPrecedents")}</p>
           <div className="flex flex-col gap-1.5">
             {decision.matchedReductions.slice(0, 3).map((r, i) => (
-              <div key={i} className="rounded-lg border border-slate-200 bg-white px-3 py-2">
+              <div key={i} className="rounded-lg border border-surface-border bg-surface px-3 py-2">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-slate-800 truncate">
+                    <p className="text-xs font-medium text-foreground truncate">
                       {r.defectEn || r.defect}
                     </p>
-                    <p className="text-xs text-slate-500 mt-0.5">
+                    <p className="text-xs text-muted mt-0.5">
                       {r.categoryEn || r.category} &bull; {r.reductionPercent}% rent reduction
                     </p>
                   </div>
-                  <span className="shrink-0 text-xs text-slate-400">{r.basis}</span>
+                  <span className="shrink-0 text-xs text-foreground-dim">{r.basis}</span>
                 </div>
               </div>
             ))}
             {decision.matchedReductions.length > 3 && (
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-foreground-dim">
                 + {decision.matchedReductions.length - 3} more precedent{decision.matchedReductions.length - 3 > 1 ? "s" : ""}
               </p>
             )}
@@ -770,7 +770,7 @@ function LegalRecommendationPanel({ decision, loading: isLoading, error: loadErr
 
         return (
           <div className="mt-3">
-            <p className="text-xs font-semibold text-slate-600 mb-1.5">{t("manager:requests.text.recommendedActions")}</p>
+            <p className="text-xs font-semibold text-muted-text mb-1.5">{t("manager:requests.text.recommendedActions")}</p>
             <div className="flex flex-wrap gap-1.5">
               {contextActions.map((a, i) => (
                 <span
@@ -789,21 +789,21 @@ function LegalRecommendationPanel({ decision, loading: isLoading, error: loadErr
 
       {/* Defect signals summary */}
       {decision.defectSignals && (decision.defectSignals.severity || decision.defectSignals.affectedArea) && (
-        <div className="mt-3 rounded-lg border border-slate-200 bg-white p-3">
-          <p className="text-xs font-semibold text-slate-600 mb-1">{t("manager:requests.text.defectSignals")}</p>
-          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
+        <div className="mt-3 rounded-lg border border-surface-border bg-surface p-3">
+          <p className="text-xs font-semibold text-muted-text mb-1">{t("manager:requests.text.defectSignals")}</p>
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
             {decision.defectSignals.severity && (
-              <span>{t("manager:requests.text.severity")} <span className="font-medium text-slate-700">{decision.defectSignals.severity}</span></span>
+              <span>{t("manager:requests.text.severity")} <span className="font-medium text-muted-dark">{decision.defectSignals.severity}</span></span>
             )}
             {decision.defectSignals.affectedArea && (
-              <span>{t("manager:requests.text.area")} <span className="font-medium text-slate-700">
+              <span>{t("manager:requests.text.area")} <span className="font-medium text-muted-dark">
                 {typeof decision.defectSignals.affectedArea === "string"
                   ? decision.defectSignals.affectedArea
                   : (decision.defectSignals.affectedArea.rooms || []).join(", ") || "—"}
               </span></span>
             )}
             {decision.defectSignals.duration && (
-              <span>{t("manager:requests.text.duration")} <span className="font-medium text-slate-700">
+              <span>{t("manager:requests.text.duration")} <span className="font-medium text-muted-dark">
                 {typeof decision.defectSignals.duration === "string"
                   ? decision.defectSignals.duration
                   : [
@@ -816,7 +816,7 @@ function LegalRecommendationPanel({ decision, loading: isLoading, error: loadErr
           {decision.defectSignals.keywords?.length > 0 && (
             <div className="flex flex-wrap gap-1 mt-1.5">
               {decision.defectSignals.keywords.map((kw, i) => (
-                <span key={i} className="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-500">
+                <span key={i} className="rounded bg-surface-hover px-1.5 py-0.5 text-xs text-muted">
                   {typeof kw === "string" ? kw : kw.term || JSON.stringify(kw)}
                 </span>
               ))}
@@ -845,9 +845,9 @@ function RepairReplacePanel({ state, requestCategory }) {
 
   if (state.loading) {
     return (
-      <div className="flex items-center gap-3 border-t border-slate-100 bg-slate-50 px-6 py-4">
+      <div className="flex items-center gap-3 border-t border-surface-divider bg-surface-subtle px-6 py-4">
         <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
-        <span className="text-sm text-slate-500">Analysing repair vs replace&hellip;</span>
+        <span className="text-sm text-muted">Analysing repair vs replace&hellip;</span>
       </div>
     );
   }
@@ -874,7 +874,7 @@ function RepairReplacePanel({ state, requestCategory }) {
 
   return (
     <div className="px-6 py-4">
-      <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">{t("manager:requests.text.repairVsReplaceAnalysis")}</p>
+      <p className="text-xs font-semibold uppercase tracking-wider text-foreground-dim mb-3">{t("manager:requests.text.repairVsReplaceAnalysis")}</p>
 
       <div className="space-y-2">
         {sorted.map((item) => {
@@ -899,20 +899,20 @@ function RepairReplacePanel({ state, requestCategory }) {
               key={item.assetId}
               className={cn("rounded-lg border p-3", isRelevant
                   ? "border-indigo-200 bg-indigo-50/40"
-                  : "border-slate-200 bg-white")}
+                  : "border-surface-border bg-surface")}
               title={item.recommendationReason}
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <p className="text-sm font-medium text-slate-800 truncate">{item.assetName}</p>
+                    <p className="text-sm font-medium text-foreground truncate">{item.assetName}</p>
                     {isRelevant && (
                       <span className="shrink-0 rounded-full bg-indigo-100 border border-indigo-200 px-2 py-0.5 text-xs font-semibold text-indigo-700">
                         Related
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-slate-500 mt-0.5">
+                  <p className="text-xs text-muted mt-0.5">
                     {item.topic || "\u2014"}
                     {ageYears && lifeYears ? ` \u00B7 ${ageYears} yr of ${lifeYears}-yr life` : ""}
                   </p>
@@ -923,25 +923,25 @@ function RepairReplacePanel({ state, requestCategory }) {
               </div>
 
               {/* Metrics row */}
-              <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-slate-500">
+              <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-muted">
                 {depPct != null && (
                   <span>
                     Depreciation:{" "}
-                    <span className={cn("font-semibold", depPct >= 100 ? "text-red-600" : depPct >= 85 ? "text-orange-600" : depPct >= 65 ? "text-amber-600" : "text-slate-700")}>
+                    <span className={cn("font-semibold", depPct >= 100 ? "text-red-600" : depPct >= 85 ? "text-orange-600" : depPct >= 65 ? "text-amber-600" : "text-muted-dark")}>
                       {depPct}%
                     </span>
                   </span>
                 )}
                 {item.cumulativeRepairCostChf > 0 && (
-                  <span>{t("manager:requests.text.repairs")} <span className="font-medium text-slate-700">CHF {item.cumulativeRepairCostChf.toLocaleString("de-CH")}</span></span>
+                  <span>{t("manager:requests.text.repairs")} <span className="font-medium text-muted-dark">CHF {item.cumulativeRepairCostChf.toLocaleString("de-CH")}</span></span>
                 )}
                 {item.estimatedReplacementCostChf != null && (
-                  <span>{t("manager:requests.text.replaceEst")} <span className="font-medium text-slate-700">CHF {item.estimatedReplacementCostChf.toLocaleString("de-CH")}</span></span>
+                  <span>{t("manager:requests.text.replaceEst")} <span className="font-medium text-muted-dark">CHF {item.estimatedReplacementCostChf.toLocaleString("de-CH")}</span></span>
                 )}
                 {ratioDisplay && (
                   <span>
                     Ratio:{" "}
-                    <span className={cn("font-semibold", item.repairToReplacementRatio >= 0.6 ? "text-red-600" : item.repairToReplacementRatio >= 0.4 ? "text-orange-600" : "text-slate-700")}>
+                    <span className={cn("font-semibold", item.repairToReplacementRatio >= 0.6 ? "text-red-600" : item.repairToReplacementRatio >= 0.4 ? "text-orange-600" : "text-muted-dark")}>
                       {ratioDisplay}
                     </span>
                   </span>
@@ -949,7 +949,7 @@ function RepairReplacePanel({ state, requestCategory }) {
                 {breakEvenDisplay && (
                   <span>
                     Break-even:{" "}
-                    <span className={cn("font-semibold", item.breakEvenMonths <= 12 ? "text-red-600" : item.breakEvenMonths <= 36 ? "text-amber-600" : "text-slate-700")}>
+                    <span className={cn("font-semibold", item.breakEvenMonths <= 12 ? "text-red-600" : item.breakEvenMonths <= 36 ? "text-amber-600" : "text-muted-dark")}>
                       {breakEvenDisplay}
                     </span>
                   </span>
@@ -960,7 +960,7 @@ function RepairReplacePanel({ state, requestCategory }) {
         })}
       </div>
 
-      <p className="mt-2 text-xs text-slate-400">
+      <p className="mt-2 text-xs text-foreground-dim">
         Ratio = cumulative repair cost \u00F7 replacement est. Hover a card for the recommendation reason.
       </p>
     </div>
@@ -970,7 +970,7 @@ function RepairReplacePanel({ state, requestCategory }) {
 /** Consistent section label used inside the accordion */
 function SectionLabel({ children }) {
   return (
-    <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+    <p className="text-xs font-semibold uppercase tracking-wider text-foreground-dim">
       {children}
     </p>
   );
@@ -1043,7 +1043,7 @@ function RequestPhotosPanel({ requestId }) {
     return (
       <div className="px-6 py-4">
         <SectionLabel>{t("manager:requests.text.photosAttachments")}</SectionLabel>
-        <p className="mt-2 text-xs text-slate-400">Loading&hellip;</p>
+        <p className="mt-2 text-xs text-foreground-dim">Loading&hellip;</p>
       </div>
     );
   }
@@ -1062,12 +1062,12 @@ function RequestPhotosPanel({ requestId }) {
 
       {attachments.length === 0 ? (
         /* Empty state */
-        <div className="mt-2 flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-center">
-          <svg className="h-8 w-8 text-slate-300 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div className="mt-2 flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-surface-border bg-surface-subtle px-4 py-6 text-center">
+          <svg className="h-8 w-8 text-foreground-dim mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
-          <p className="text-sm text-slate-500">{t("manager:requests.text.noPhotosYetUploadToDocumentTheIssue")}</p>
+          <p className="text-sm text-muted">{t("manager:requests.text.noPhotosYetUploadToDocumentTheIssue")}</p>
           <label className="mt-3 cursor-pointer rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700">
             Upload photo
             <input type="file" multiple accept="image/*,.pdf" className="hidden" onChange={handleUpload} />
@@ -1079,7 +1079,7 @@ function RequestPhotosPanel({ requestId }) {
           {images.length > 0 && (
             <div className="mt-2 grid grid-cols-4 gap-2">
               {images.map((a, i) => (
-                <button key={i} onClick={() => setPreviewUrl(downloadUrl(a))} className="group relative aspect-square overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
+                <button key={i} onClick={() => setPreviewUrl(downloadUrl(a))} className="group relative aspect-square overflow-hidden rounded-lg border border-surface-border bg-surface-subtle">
                   <img src={downloadUrl(a)} alt={a.filename} className="h-full w-full object-cover transition-transform group-hover:scale-105" />
                 </button>
               ))}
@@ -1090,19 +1090,19 @@ function RequestPhotosPanel({ requestId }) {
           {files.length > 0 && (
             <div className="mt-2 flex flex-col gap-1.5">
               {files.map((a, i) => (
-                <a key={i} href={downloadUrl(a)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs hover:bg-slate-50">
-                  <svg className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <a key={i} href={downloadUrl(a)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-lg border border-surface-border bg-surface px-3 py-2 text-xs hover:bg-surface-subtle">
+                  <svg className="h-4 w-4 text-foreground-dim" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                   </svg>
-                  <span className="font-medium text-slate-700">{a.filename}</span>
-                  {a.size && <span className="text-slate-400">{formatSize(a.size)}</span>}
+                  <span className="font-medium text-muted-dark">{a.filename}</span>
+                  {a.size && <span className="text-foreground-dim">{formatSize(a.size)}</span>}
                 </a>
               ))}
             </div>
           )}
 
           {/* Upload more */}
-          <label className="mt-2 inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50">
+          <label className="mt-2 inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-surface-border bg-surface px-3 py-1.5 text-xs font-medium text-muted-text hover:bg-surface-subtle">
             <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
@@ -1117,7 +1117,7 @@ function RequestPhotosPanel({ requestId }) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80" onClick={() => setPreviewUrl(null)}>
           <div className="relative max-h-[90vh] max-w-[90vw]" onClick={(e) => e.stopPropagation()}>
             <img src={previewUrl} alt="Preview" className="max-h-[85vh] max-w-[85vw] rounded-lg object-contain" />
-            <button onClick={() => setPreviewUrl(null)} className="absolute -top-3 -right-3 flex h-8 w-8 items-center justify-center rounded-full bg-white text-slate-700 shadow-lg hover:bg-slate-100">
+            <button onClick={() => setPreviewUrl(null)} className="absolute -top-3 -right-3 flex h-8 w-8 items-center justify-center rounded-full bg-surface text-muted-dark shadow-lg hover:bg-surface-hover">
               &times;
             </button>
           </div>
@@ -1492,7 +1492,7 @@ export default function ManagerRequestsPage() {
 
           {/* Content */}
           {loading ? (
-            <div className="px-4"><p className="text-sm text-slate-500">Loading requests&hellip;</p></div>
+            <div className="px-4"><p className="text-sm text-muted">Loading requests&hellip;</p></div>
           ) : searchFilteredRequests.length === 0 ? (
             <div className="px-4 py-6 text-center">
               <p className="empty-state-text">{hasActiveFilters ? "No requests match your search or filters." : "No requests match this filter."}</p>
@@ -1511,7 +1511,7 @@ export default function ManagerRequestsPage() {
                 sortDir={sortDir}
                 onSort={handleSort}
                 onRowClick={(r) => router.push(r.rfpId ? `/manager/rfps/${r.rfpId}` : `/manager/requests/${r.id}`)}
-                emptyState={<p className="text-sm text-slate-500">{t("manager:requests.text.noRequestsMatchThisFilter")}</p>}
+                emptyState={<p className="text-sm text-muted">{t("manager:requests.text.noRequestsMatchThisFilter")}</p>}
                 mobileCard={(r) => {
                   const ctaList = getAvailableCTAs(r, assigningId);
                   const isAssigning = assigningId === r.id;
@@ -1545,28 +1545,28 @@ export default function ManagerRequestsPage() {
                       )}>
                         {/* Row 1 — number (muted) + date (right-aligned) */}
                         <div className="flex items-center justify-between mb-1">
-                          <span className="font-mono text-[0.7rem] text-slate-400 leading-none">
+                          <span className="font-mono text-[0.7rem] text-foreground-dim leading-none">
                             {r.requestNumber ? `#${r.requestNumber}` : "—"}
                           </span>
-                          <span className="text-[0.7rem] text-slate-400 leading-none">
+                          <span className="text-[0.7rem] text-foreground-dim leading-none">
                             {formatDate(r.createdAt)}
                           </span>
                         </div>
                         {/* Row 2 — building / unit (primary headline) */}
-                        <p className="text-sm font-semibold text-slate-900 leading-snug truncate">
+                        <p className="text-sm font-semibold text-foreground leading-snug truncate">
                           {r.buildingName || "—"}{r.unitNumber ? ` · ${r.unitNumber}` : ""}
                         </p>
                         {/* Row 3 — description (secondary, two lines max) */}
                         {r.description && (
-                          <p className="text-sm text-slate-600 mt-0.5 line-clamp-2 leading-snug">
+                          <p className="text-sm text-muted-text mt-0.5 line-clamp-2 leading-snug">
                             {r.description}
                           </p>
                         )}
                         {/* Footer — status badge + category text + optional tenant flag */}
-                        <div className="flex items-center gap-2 flex-wrap mt-2 pt-2 border-t border-slate-100">
+                        <div className="flex items-center gap-2 flex-wrap mt-2 pt-2 border-t border-surface-divider">
                           <StatusBadge request={r} />
                           {r.category && (
-                            <span className="text-xs text-slate-500">{r.category}</span>
+                            <span className="text-xs text-muted">{r.category}</span>
                           )}
                           {r.payingParty === "TENANT" && (
                             <span className="text-xs text-orange-600 font-medium ml-auto">Tenant-funded</span>
@@ -1578,7 +1578,7 @@ export default function ManagerRequestsPage() {
                             <select
                               value={selectedContractorId}
                               onChange={(e) => setSelectedContractorId(e.target.value)}
-                              className="rounded border border-slate-300 px-2 py-1 text-xs flex-1 min-w-0"
+                              className="rounded border border-muted-ring px-2 py-1 text-xs flex-1 min-w-0"
                             >
                               <option value="">{t("manager:requests.text.selectContractor")}</option>
                               {contractors.map((c) => (
@@ -1594,7 +1594,7 @@ export default function ManagerRequestsPage() {
                             </button>
                             <button
                               onClick={() => { setAssigningId(null); setSelectedContractorId(""); }}
-                              className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-500"
+                              className="rounded-lg border border-surface-border bg-surface px-2 py-1.5 text-xs text-muted"
                             >
                               ×
                             </button>

@@ -57,7 +57,7 @@ const SOURCE_LABEL = {
   BROWSER_UPLOAD: { text: "Upload", cls: "bg-sky-50 text-sky-700 border-sky-200" },
   EMAIL_PDF: { text: "Email", cls: "bg-violet-50 text-violet-700 border-violet-200" },
   MOBILE_CAPTURE: { text: "Mobile", cls: "bg-teal-50 text-teal-700 border-teal-200" },
-  MANUAL: { text: "Manual", cls: "bg-slate-50 text-slate-600 border-slate-200" },
+  MANUAL: { text: "Manual", cls: "bg-surface-subtle text-muted-text border-surface-border" },
 };
 
 /* ─── Detail field row ────────────────────────────────────── */
@@ -65,8 +65,8 @@ const SOURCE_LABEL = {
 function Field({ label, value, className }) {
   return (
     <div className={className || ""}>
-      <dt className="text-xs font-medium text-slate-500 uppercase tracking-wide">{label}</dt>
-      <dd className="mt-0.5 text-sm text-slate-900">{value || "—"}</dd>
+      <dt className="text-xs font-medium text-muted uppercase tracking-wide">{label}</dt>
+      <dd className="mt-0.5 text-sm text-foreground">{value || "—"}</dd>
     </div>
   );
 }
@@ -245,7 +245,7 @@ export default function InvoiceDetailPage() {
           actions={
             <button
               onClick={() => router.push("/manager/finance/invoices")}
-              className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 transition"
+              className="rounded-lg border border-surface-border bg-surface px-4 py-2 text-sm font-medium text-muted-text hover:bg-surface-subtle transition"
             >
               ← Back
             </button>
@@ -279,7 +279,7 @@ export default function InvoiceDetailPage() {
                       </span>
                     )}
                       {inv.direction && (
-                        <span className="inline-flex items-center rounded-full bg-slate-50 border border-slate-200 px-2 py-0.5 text-xs font-medium text-slate-500">
+                        <span className="inline-flex items-center rounded-full bg-surface-subtle border border-surface-border px-2 py-0.5 text-xs font-medium text-muted">
                           {inv.direction === "INCOMING" ? "↓ Incoming" : "↑ Outgoing"}
                         </span>
                       )}
@@ -335,7 +335,7 @@ export default function InvoiceDetailPage() {
                         type="button"
                         disabled={!pdfBlobUrl}
                         onClick={() => { if (pdfBlobUrl) { const a = document.createElement("a"); a.href = pdfBlobUrl; a.download = `invoice-${id.slice(0, 8)}.pdf`; a.click(); } }}
-                        className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition disabled:opacity-40"
+                        className="rounded-lg border border-surface-border bg-surface px-4 py-2 text-sm font-medium text-muted-dark hover:bg-surface-subtle transition disabled:opacity-40"
                       >
                         ↓ PDF
                       </button>
@@ -397,7 +397,7 @@ export default function InvoiceDetailPage() {
                           <Field label={t("manager:financeInvoicesId.prop.type")} value={linked.type} />
                         </dl>
                       ) : (
-                        <p className="text-sm text-slate-500">Billing entity linked (ID: {inv.issuerBillingEntityId.slice(0, 8)}…)</p>
+                        <p className="text-sm text-muted">Billing entity linked (ID: {inv.issuerBillingEntityId.slice(0, 8)}…)</p>
                       );
                     })()
                   ) : inv.status === "DRAFT" ? (
@@ -407,11 +407,11 @@ export default function InvoiceDetailPage() {
                       </p>
                       <div className="flex items-end gap-2">
                         <div className="flex-1">
-                          <label className="block text-xs font-medium text-slate-500 mb-1">{t("manager:financeInvoicesId.text.selectBillingEntity")}</label>
+                          <label className="block text-xs font-medium text-muted mb-1">{t("manager:financeInvoicesId.text.selectBillingEntity")}</label>
                           <select
                             value={selectedBillingEntityId}
                             onChange={(e) => setSelectedBillingEntityId(e.target.value)}
-                            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            className="w-full rounded-lg border border-muted-ring bg-surface px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                           >
                             <option value="">{t("manager:financeInvoicesId.text.choose")}</option>
                             {["ORG", "OWNER", "CONTRACTOR"].map((type) => {
@@ -445,31 +445,31 @@ export default function InvoiceDetailPage() {
                           + Create new billing entity
                         </button>
                       ) : (
-                        <div className="border border-slate-200 rounded-lg p-4 space-y-3 bg-slate-50">
-                          <p className="text-sm font-medium text-slate-700 m-0">{t("manager:financeInvoicesId.text.newBillingEntity")}</p>
+                        <div className="border border-surface-border rounded-lg p-4 space-y-3 bg-surface-subtle">
+                          <p className="text-sm font-medium text-muted-dark m-0">{t("manager:financeInvoicesId.text.newBillingEntity")}</p>
                           <div className="grid grid-cols-2 gap-3">
                             <div>
-                              <label className="block text-xs text-slate-500 mb-0.5">{t("manager:financeInvoicesId.text.name")}</label>
+                              <label className="block text-xs text-muted mb-0.5">{t("manager:financeInvoicesId.text.name")}</label>
                               <input value={beForm.name} onChange={(e) => setBeForm((f) => ({ ...f, name: e.target.value }))} className="filter-input" placeholder={t("manager:financeInvoicesId.placeholder.companyName")} />
                             </div>
                             <div>
-                              <label className="block text-xs text-slate-500 mb-0.5">{t("manager:financeInvoicesId.text.address")}</label>
+                              <label className="block text-xs text-muted mb-0.5">{t("manager:financeInvoicesId.text.address")}</label>
                               <input value={beForm.addressLine1} onChange={(e) => setBeForm((f) => ({ ...f, addressLine1: e.target.value }))} className="filter-input" placeholder={t("manager:financeInvoicesId.placeholder.streetNumber")} />
                             </div>
                             <div>
-                              <label className="block text-xs text-slate-500 mb-0.5">{t("manager:financeInvoicesId.text.postalCode")}</label>
+                              <label className="block text-xs text-muted mb-0.5">{t("manager:financeInvoicesId.text.postalCode")}</label>
                               <input value={beForm.postalCode} onChange={(e) => setBeForm((f) => ({ ...f, postalCode: e.target.value }))} className="filter-input" placeholder="1000" />
                             </div>
                             <div>
-                              <label className="block text-xs text-slate-500 mb-0.5">{t("manager:financeInvoicesId.text.city")}</label>
+                              <label className="block text-xs text-muted mb-0.5">{t("manager:financeInvoicesId.text.city")}</label>
                               <input value={beForm.city} onChange={(e) => setBeForm((f) => ({ ...f, city: e.target.value }))} className="filter-input" placeholder={t("manager:financeInvoicesId.placeholder.lausanne")} />
                             </div>
                             <div>
-                              <label className="block text-xs text-slate-500 mb-0.5">{t("manager:financeInvoicesId.text.iBAN")}</label>
+                              <label className="block text-xs text-muted mb-0.5">{t("manager:financeInvoicesId.text.iBAN")}</label>
                               <input value={beForm.iban} onChange={(e) => setBeForm((f) => ({ ...f, iban: e.target.value }))} className="filter-input" placeholder={t("manager:financeInvoicesId.placeholder.cH")} />
                             </div>
                             <div>
-                              <label className="block text-xs text-slate-500 mb-0.5">{t("manager:financeInvoicesId.text.vATNumber")}</label>
+                              <label className="block text-xs text-muted mb-0.5">{t("manager:financeInvoicesId.text.vATNumber")}</label>
                               <input value={beForm.vatNumber} onChange={(e) => setBeForm((f) => ({ ...f, vatNumber: e.target.value }))} className="filter-input" placeholder={t("manager:financeInvoicesId.placeholder.cHE")} />
                             </div>
                           </div>
@@ -483,7 +483,7 @@ export default function InvoiceDetailPage() {
                             </button>
                             <button
                               onClick={() => setShowCreateBE(false)}
-                              className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 transition"
+                              className="rounded-lg border border-surface-border bg-surface px-4 py-2 text-sm font-medium text-muted-text hover:bg-surface-subtle transition"
                             >
                               Cancel
                             </button>
@@ -492,7 +492,7 @@ export default function InvoiceDetailPage() {
                       )}
                     </div>
                   ) : (
-                    <p className="text-sm text-slate-500">{t("manager:financeInvoicesId.text.noBillingEntityLinked")}</p>
+                    <p className="text-sm text-muted">{t("manager:financeInvoicesId.text.noBillingEntityLinked")}</p>
                   )}
                 </Panel>
 
@@ -504,10 +504,10 @@ export default function InvoiceDetailPage() {
                       {inv.lineItems.map((li, i) => (
                         <div key={i} className="px-4 py-3 flex flex-col gap-0.5">
                           <div className="flex items-start justify-between gap-2">
-                            <span className="text-sm font-medium text-slate-800">{li.description || "—"}</span>
-                            <span className="text-sm font-mono text-slate-700 shrink-0">{formatChf(li.lineTotal)}</span>
+                            <span className="text-sm font-medium text-foreground">{li.description || "—"}</span>
+                            <span className="text-sm font-mono text-muted-dark shrink-0">{formatChf(li.lineTotal)}</span>
                           </div>
-                          <span className="text-xs text-slate-500">
+                          <span className="text-xs text-muted">
                             {li.quantity ?? "—"} × {formatChf(li.unitPrice)}
                             {li.vatRate != null && <span className="ml-1">· VAT {li.vatRate}%</span>}
                           </span>
@@ -602,7 +602,7 @@ export default function InvoiceDetailPage() {
                       <img
                         src={sourceBlobUrl}
                         alt="Original captured document"
-                        className="w-full rounded-lg border border-slate-200"
+                        className="w-full rounded-lg border border-surface-border"
                       />
                       <a
                         href={sourceBlobUrl}
@@ -625,14 +625,14 @@ export default function InvoiceDetailPage() {
                     />
                   ) : (
                     <div className="flex items-center justify-center h-32">
-                      <p className="text-sm text-slate-400">Loading preview…</p>
+                      <p className="text-sm text-foreground-dim">Loading preview…</p>
                     </div>
                   )}
                 </Panel>
 
                 {/* Timeline */}
                 <Panel title={t("manager:financeInvoicesId.title.timeline")}>
-                  <div className="space-y-2 text-xs text-slate-600">
+                  <div className="space-y-2 text-xs text-muted-text">
                     <div className="flex justify-between"><span>{t("manager:financeInvoicesId.text.created")}</span><span>{formatDate(inv.createdAt)}</span></div>
                     {inv.submittedAt && <div className="flex justify-between"><span>{t("manager:financeInvoicesId.text.submitted")}</span><span>{formatDate(inv.submittedAt)}</span></div>}
                     {inv.lockedAt && <div className="flex justify-between"><span>{t("manager:financeInvoicesId.text.locked")}</span><span>{formatDate(inv.lockedAt)}</span></div>}

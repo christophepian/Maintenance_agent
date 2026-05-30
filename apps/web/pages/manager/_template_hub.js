@@ -12,9 +12,9 @@
 //
 //  2. SEGMENTED CONTROL  → view/filter switch on the same data set
 //     Use: Tabs + TabsList + TabsTrigger unstyled + blue filled active classes
-//     TabsList className: "flex gap-1 rounded-lg border border-slate-200 bg-white p-1"
+//     TabsList className: "flex gap-1 rounded-lg border border-surface-border bg-surface p-1"
 //     TabsTrigger className: "rounded-lg px-3 py-1.5 text-sm font-medium transition-colors
-//       text-slate-600 hover:bg-slate-100 data-[state=active]:bg-blue-600 data-[state=active]:text-white"
+//       text-muted-text hover:bg-surface-hover data-[state=active]:bg-blue-600 data-[state=active]:text-white"
 //     Example: Reports page (Overview / Contractors / ...) — same page, filtered views
 //
 //  3. PILL TABS  → section navigation within a detail page (single record)

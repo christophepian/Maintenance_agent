@@ -4,13 +4,14 @@ import PageHeader from "../../components/layout/PageHeader";
 import PageContent from "../../components/layout/PageContent";
 import ScrollableTabs from "../../components/mobile/ScrollableTabs";
 import NotificationPreferencesTab from "../../components/NotificationPreferencesTab";
+import AppearanceTab from "../../components/AppearanceTab";
 import { tenantHeaders } from "../../lib/api";
 import { withTranslations } from "../../lib/i18n";
 import { useTranslation } from "next-i18next";
 import { useRouter } from "next/router";
 import { useCallback } from "react";
 
-const TAB_KEYS = ["notifications"];
+const TAB_KEYS = ["notifications", "appearance"];
 
 const EVENT_GROUPS = [
   {
@@ -70,6 +71,10 @@ export default function TenantSettingsPage() {
               t={t}
               ns="tenant"
             />
+          </div>
+
+          <div className={activeTab === 1 ? "tab-panel-active" : "tab-panel"}>
+            <AppearanceTab t={t} ns="tenant" />
           </div>
         </PageContent>
       </PageShell>

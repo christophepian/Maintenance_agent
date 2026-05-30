@@ -57,7 +57,7 @@ const SOURCE_LABEL = {
   BROWSER_UPLOAD: { text: "Upload", cls: "bg-sky-50 text-sky-700 border-sky-200" },
   EMAIL_PDF:      { text: "Email",  cls: "bg-violet-50 text-violet-700 border-violet-200" },
   MOBILE_CAPTURE: { text: "Mobile", cls: "bg-teal-50 text-teal-700 border-teal-200" },
-  MANUAL:         { text: "Manual", cls: "bg-slate-50 text-slate-600 border-slate-200" },
+  MANUAL:         { text: "Manual", cls: "bg-surface-subtle text-muted-text border-surface-border" },
 };
 
 /* ═══════════════════════════════════════════════════════════════
@@ -96,12 +96,12 @@ function SummaryCard({ label, value, sub, accent }) {
     accent === "green" ? "text-success-text" :
     accent === "red"   ? "text-destructive-text" :
     accent === "amber" ? "text-amber-700" :
-    "text-slate-900";
+    "text-foreground";
   return (
     <div className="card mb-0 flex flex-col gap-1">
-      <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">{label}</span>
+      <span className="text-xs font-medium text-muted uppercase tracking-wide">{label}</span>
       <span className={cn("text-xl font-bold", accentClass)}>{value}</span>
-      {sub && <span className="text-xs text-slate-400">{sub}</span>}
+      {sub && <span className="text-xs text-foreground-dim">{sub}</span>}
     </div>
   );
 }
@@ -145,13 +145,13 @@ function ActionDropdown({ actions }) {
       <button
         type="button"
         onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}
-        className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition"
+        className="rounded-lg border border-surface-border bg-surface px-3 py-1.5 text-xs font-semibold text-muted-dark hover:bg-surface-subtle transition"
         aria-label={t("owner:finance.ariaLabel.invoiceActions")}
       >
         Actions ▾
       </button>
       {open && (
-        <div className="absolute right-0 z-20 mt-1 w-48 origin-top-right rounded-lg border border-slate-200 bg-white shadow-lg ring-1 ring-black/5">
+        <div className="absolute right-0 z-20 mt-1 w-48 origin-top-right rounded-lg border border-surface-border bg-surface shadow-lg ring-1 ring-black/5">
           <div className="py-1">
             {actions.map((a, i) => (
               <button
@@ -159,7 +159,7 @@ function ActionDropdown({ actions }) {
                 type="button"
                 disabled={a.disabled}
                 onClick={(e) => { e.stopPropagation(); setOpen(false); a.onClick(); }}
-                className={"w-full text-left px-4 py-2 text-sm hover:bg-slate-50 transition disabled:opacity-40 " + (a.className || "text-slate-700")}
+                className={"w-full text-left px-4 py-2 text-sm hover:bg-surface-subtle transition disabled:opacity-40 " + (a.className || "text-muted-dark")}
               >
                 {a.label}
               </button>
@@ -266,7 +266,7 @@ function OverviewTab() {
 
           <Section title={t("owner:finance.title.buildings")}>
             {/* Stats row */}
-            <div className="flex gap-4 text-xs text-slate-500">
+            <div className="flex gap-4 text-xs text-muted">
               <span>{t("owner:finance.text.avgCollectionRate")} <strong>{formatPercent(p.avgCollectionRate)}</strong></span>
               {p.buildingsInRed > 0 && (
                 <span className="text-destructive-text font-medium">
@@ -328,7 +328,7 @@ function OverviewTab() {
                             <td className="text-right font-mono">
                               {b.receivablesCents > 0
                                 ? <span className="text-amber-700">{formatChfCents(b.receivablesCents)}</span>
-                                : <span className="text-slate-400">—</span>}
+                                : <span className="text-foreground-dim">—</span>}
                             </td>
                           </tr>
                         ))}
@@ -471,7 +471,7 @@ function InvoicesTab() {
       label: isOutgoing ? t("owner:finance.col.tenant") : t("owner:finance.col.issuer"),
       sortable: false,
       defaultVisible: true,
-      render: (inv) => (isOutgoing ? inv.recipientName : inv.issuerName) || <span className="text-slate-400">—</span>,
+      render: (inv) => (isOutgoing ? inv.recipientName : inv.issuerName) || <span className="text-foreground-dim">—</span>,
     },
     {
       id: "createdAt",
@@ -499,7 +499,7 @@ function InvoicesTab() {
           href={`/api/invoices/${inv.id}/pdf`}
           download
           onClick={(e) => e.stopPropagation()}
-          className="text-xs text-slate-500 hover:text-slate-700 font-medium no-underline"
+          className="text-xs text-muted hover:text-muted-dark font-medium no-underline"
         >
           ↓ PDF
         </a>
@@ -550,7 +550,7 @@ function InvoicesTab() {
                   onClick={() => { setDirection(key); setStatusFilter("ALL"); setTableExpanded(false); }}
                   className={cn(
                     "rounded-lg px-3 py-1.5 text-sm font-medium border transition-colors",
-                    direction === key ? "bg-brand text-white border-brand" : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+                    direction === key ? "bg-brand text-white border-brand" : "bg-surface text-muted-text border-surface-border hover:bg-surface-subtle"
                   )}
                 >
                   {label}
@@ -566,7 +566,7 @@ function InvoicesTab() {
                   onClick={() => { setStatusFilter(key); setTableExpanded(false); }}
                   className={cn(
                     "rounded-lg px-3 py-1.5 text-sm font-medium border transition-colors",
-                    statusFilter === key ? "bg-brand text-white border-brand" : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+                    statusFilter === key ? "bg-brand text-white border-brand" : "bg-surface text-muted-text border-surface-border hover:bg-surface-subtle"
                   )}
                 >
                   {label}
@@ -591,11 +591,11 @@ function InvoicesTab() {
             {visibleInvoices.map((inv) => (
               <div
                 key={inv.id}
-                className="table-card cursor-pointer hover:bg-slate-50/80 transition-colors"
+                className="table-card cursor-pointer hover:bg-surface-subtle/80 transition-colors"
                 onClick={() => router.push(`/owner/finance/invoices/${inv.id}`)}
               >
                 <div className="flex items-start justify-between gap-2">
-                  <span className="font-mono text-xs text-slate-500">{inv.invoiceNumber || inv.id?.slice(0, 8)}</span>
+                  <span className="font-mono text-xs text-muted">{inv.invoiceNumber || inv.id?.slice(0, 8)}</span>
                   <Badge variant={invoiceVariant(inv.status)} size="sm">{inv.status}</Badge>
                 </div>
                 <p className="table-card-head mt-1">{(isOutgoing ? inv.recipientName : inv.issuerName) || "—"}</p>
@@ -692,10 +692,10 @@ function BalanceSheetTab() {
   const renderLine = (line) => {
     const isDeduction = line.displayCents < 0;
     return (
-      <tr key={line.accountId} className={cn("hover:bg-slate-50", isDeduction && "text-slate-400")}>
-        <td className="font-mono text-xs text-slate-400">{line.accountCode || "—"}</td>
-        <td className={isDeduction ? "italic text-slate-500" : "text-slate-800"}>{line.accountName}</td>
-        <td className={cn("text-right font-mono", isDeduction ? "text-slate-400" : "text-slate-900")}>
+      <tr key={line.accountId} className={cn("hover:bg-surface-subtle", isDeduction && "text-foreground-dim")}>
+        <td className="font-mono text-xs text-foreground-dim">{line.accountCode || "—"}</td>
+        <td className={isDeduction ? "italic text-muted" : "text-foreground"}>{line.accountName}</td>
+        <td className={cn("text-right font-mono", isDeduction ? "text-foreground-dim" : "text-foreground")}>
           {isDeduction
             ? `(${formatChfCents(Math.abs(line.displayCents))})`
             : formatChfCents(line.displayCents)}
@@ -710,7 +710,7 @@ function BalanceSheetTab() {
       <div className="flex flex-wrap items-end gap-3">
         {buildings.length > 1 && (
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-slate-600">Building</label>
+            <label className="text-xs font-medium text-muted-text">Building</label>
             <select
               className="form-select text-sm"
               value={bsBuildingId}
@@ -722,7 +722,7 @@ function BalanceSheetTab() {
           </div>
         )}
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-slate-600">As of</label>
+          <label className="text-xs font-medium text-muted-text">As of</label>
           <input
             type="date"
             className="form-input text-sm"
@@ -740,7 +740,7 @@ function BalanceSheetTab() {
       </div>
 
       {!bsBuildingId && (
-        <p className="text-sm text-slate-400 py-8 text-center">Select a building to view its balance sheet.</p>
+        <p className="text-sm text-foreground-dim py-8 text-center">Select a building to view its balance sheet.</p>
       )}
 
       {bsError && <p className="text-sm text-red-600">{bsError}</p>}
@@ -748,7 +748,7 @@ function BalanceSheetTab() {
       {bsData && !bsLoading && (() => {
         const { assets, liabilities, totalAssetsCents, totalLiabilitiesCents, differenceCents, isBalanced } = bsData;
         if (assets.length === 0 && liabilities.length === 0) return (
-          <p className="text-sm text-slate-400 py-8 text-center">
+          <p className="text-sm text-foreground-dim py-8 text-center">
             No financial data available for this building as of {bsAsOf}.
           </p>
         );
@@ -763,16 +763,16 @@ function BalanceSheetTab() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Actifs */}
               <div>
-                <div className="bg-slate-100 text-slate-700 text-xs font-semibold uppercase tracking-wide px-3 py-1.5 rounded-t">
+                <div className="bg-surface-hover text-muted-dark text-xs font-semibold uppercase tracking-wide px-3 py-1.5 rounded-t">
                   Actifs
                 </div>
-                <div className="border border-slate-200 rounded-b overflow-x-auto">
+                <div className="border border-surface-border rounded-b overflow-x-auto">
                   <table className="data-table w-full">
-                    <thead><tr className="bg-slate-50"><th>Code</th><th>Account</th><th className="text-right">CHF</th></tr></thead>
+                    <thead><tr className="bg-surface-subtle"><th>Code</th><th>Account</th><th className="text-right">CHF</th></tr></thead>
                     <tbody>{assets.map(renderLine)}</tbody>
                     <tfoot>
-                      <tr className="border-t-2 border-slate-300 bg-slate-50 font-semibold text-sm">
-                        <td colSpan={2} className="text-slate-700">Total Actifs</td>
+                      <tr className="border-t-2 border-muted-ring bg-surface-subtle font-semibold text-sm">
+                        <td colSpan={2} className="text-muted-dark">Total Actifs</td>
                         <td className="text-right font-mono">{formatChfCents(totalAssetsCents)}</td>
                       </tr>
                     </tfoot>
@@ -782,16 +782,16 @@ function BalanceSheetTab() {
 
               {/* Passifs */}
               <div>
-                <div className="bg-slate-100 text-slate-700 text-xs font-semibold uppercase tracking-wide px-3 py-1.5 rounded-t">
+                <div className="bg-surface-hover text-muted-dark text-xs font-semibold uppercase tracking-wide px-3 py-1.5 rounded-t">
                   Passifs
                 </div>
-                <div className="border border-slate-200 rounded-b overflow-x-auto">
+                <div className="border border-surface-border rounded-b overflow-x-auto">
                   <table className="data-table w-full">
-                    <thead><tr className="bg-slate-50"><th>Code</th><th>Account</th><th className="text-right">CHF</th></tr></thead>
+                    <thead><tr className="bg-surface-subtle"><th>Code</th><th>Account</th><th className="text-right">CHF</th></tr></thead>
                     <tbody>{liabilities.map(renderLine)}</tbody>
                     <tfoot>
-                      <tr className="border-t-2 border-slate-300 bg-slate-50 font-semibold text-sm">
-                        <td colSpan={2} className="text-slate-700">Total Passifs</td>
+                      <tr className="border-t-2 border-muted-ring bg-surface-subtle font-semibold text-sm">
+                        <td colSpan={2} className="text-muted-dark">Total Passifs</td>
                         <td className="text-right font-mono">{formatChfCents(totalLiabilitiesCents)}</td>
                       </tr>
                     </tfoot>
@@ -801,7 +801,7 @@ function BalanceSheetTab() {
             </div>
 
             {(assets.some((l) => l.displayCents < 0) || liabilities.some((l) => l.displayCents < 0)) && (
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-foreground-dim">
                 Amounts in parentheses are deductions (contra-assets or debit-balance equity accounts).
               </p>
             )}

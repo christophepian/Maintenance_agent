@@ -26,7 +26,7 @@ function statusBadge(status, t) {
 }
 
 function leaseBadge(lease, t) {
-  if (!lease) return <span className="text-xs text-slate-400">{t("vacancies.noLease")}</span>;
+  if (!lease) return <span className="text-xs text-foreground-dim">{t("vacancies.noLease")}</span>;
   return (
     <Badge variant={leaseVariant(lease.status)} size="sm">
       {t(`leaseStatus.${lease.status}`, { defaultValue: lease.status })}
@@ -217,7 +217,7 @@ export default function VacanciesPanel({ role = "OWNER", refreshKey = 0 }) {
       <ErrorBanner error={error} className="text-sm" />
 
       {/* Segmented control */}
-      <div className="inline-flex rounded-lg border border-slate-200 bg-slate-100 p-0.5 gap-0.5 mb-4">
+      <div className="inline-flex rounded-lg border border-surface-border bg-surface-hover p-0.5 gap-0.5 mb-4">
         {VACANCY_SUB_TABS.map(({ key, labelKey }) => (
           <button
             key={key}
@@ -225,8 +225,8 @@ export default function VacanciesPanel({ role = "OWNER", refreshKey = 0 }) {
             className={[
               "rounded-lg px-4 py-1.5 text-sm font-medium transition-colors",
               subTab === key
-                ? "bg-white text-slate-900 shadow-sm"
-                : "text-slate-500 hover:text-slate-700",
+                ? "bg-surface text-foreground shadow-sm"
+                : "text-muted hover:text-muted-dark",
             ].join(" ")}
           >
             {t(labelKey)}
@@ -246,12 +246,12 @@ export default function VacanciesPanel({ role = "OWNER", refreshKey = 0 }) {
           </FilterSection>
           {subTab === "candidates" && (
             <FilterSection title="Candidates">
-              <label className="flex items-center gap-2 cursor-pointer select-none text-sm text-slate-700">
+              <label className="flex items-center gap-2 cursor-pointer select-none text-sm text-muted-dark">
                 <input
                   type="checkbox"
                   checked={hasCandidatesFilter}
                   onChange={(e) => setHasCandidatesFilter(e.target.checked)}
-                  className="h-4 w-4 rounded border-slate-300 accent-blue-600"
+                  className="h-4 w-4 rounded border-muted-ring accent-blue-600"
                 />
                 Has candidates
               </label>
@@ -299,7 +299,7 @@ export default function VacanciesPanel({ role = "OWNER", refreshKey = 0 }) {
             toolbarSlot={
               <div className="flex items-center gap-2">
                 <div className="relative flex-1 min-w-0">
-                  <svg className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <svg className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground-dim" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                     <path fillRule="evenodd" d="M9 3.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11ZM2 9a7 7 0 1 1 12.452 4.391l3.328 3.329a.75.75 0 1 1-1.06 1.06l-3.329-3.328A7 7 0 0 1 2 9Z" clipRule="evenodd" />
                   </svg>
                   <input
@@ -308,7 +308,7 @@ export default function VacanciesPanel({ role = "OWNER", refreshKey = 0 }) {
                     onChange={(e) => setSearch(e.target.value)}
                     placeholder="Search building or unit…"
                     aria-label="Search vacancies"
-                    className="h-8 w-full rounded-lg border border-slate-200 bg-white pl-8 pr-3 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    className="h-8 w-full rounded-lg border border-surface-border bg-surface pl-8 pr-3 text-sm text-muted-dark placeholder:text-foreground-dim focus:outline-none focus:ring-2 focus:ring-blue-400"
                   />
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
@@ -333,7 +333,7 @@ export default function VacanciesPanel({ role = "OWNER", refreshKey = 0 }) {
               { id: "candidates", label: "Candidates", sortable: false, defaultVisible: true,
                 render: (u) => u.candidateCount > 0
                   ? <Badge variant="brand" size="sm">{u.candidateCount}</Badge>
-                  : <span className="text-slate-400 text-xs">None yet</span> },
+                  : <span className="text-foreground-dim text-xs">None yet</span> },
               { id: "actions", label: "Actions", sortable: false, alwaysVisible: true, className: "text-right", headerClassName: "text-right",
                 render: (u) => (
                   <div className="flex items-center justify-end gap-2">
@@ -371,7 +371,7 @@ export default function VacanciesPanel({ role = "OWNER", refreshKey = 0 }) {
                   <p className="table-card-sub truncate">{u.buildingName}</p>
                   {u.candidateCount > 0
                     ? <Badge variant="brand" size="sm">{u.candidateCount} candidate{u.candidateCount !== 1 ? "s" : ""}</Badge>
-                    : <span className="text-xs text-slate-400 shrink-0">No candidates</span>}
+                    : <span className="text-xs text-foreground-dim shrink-0">No candidates</span>}
                 </div>
                 <p className="table-card-head">{u.unitNumber || "—"}</p>
                 <div className="table-card-footer">
@@ -417,7 +417,7 @@ export default function VacanciesPanel({ role = "OWNER", refreshKey = 0 }) {
             toolbarSlot={
               <div className="flex items-center gap-2">
                 <div className="relative flex-1 min-w-0">
-                  <svg className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <svg className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground-dim" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                     <path fillRule="evenodd" d="M9 3.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11ZM2 9a7 7 0 1 1 12.452 4.391l3.328 3.329a.75.75 0 1 1-1.06 1.06l-3.329-3.328A7 7 0 0 1 2 9Z" clipRule="evenodd" />
                   </svg>
                   <input
@@ -426,7 +426,7 @@ export default function VacanciesPanel({ role = "OWNER", refreshKey = 0 }) {
                     onChange={(e) => setSearch(e.target.value)}
                     placeholder="Search building, unit or candidate…"
                     aria-label="Search vacancies"
-                    className="h-8 w-full rounded-lg border border-slate-200 bg-white pl-8 pr-3 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    className="h-8 w-full rounded-lg border border-surface-border bg-surface pl-8 pr-3 text-sm text-muted-dark placeholder:text-foreground-dim focus:outline-none focus:ring-2 focus:ring-blue-400"
                   />
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
@@ -442,8 +442,8 @@ export default function VacanciesPanel({ role = "OWNER", refreshKey = 0 }) {
                 render: (sel) => sel.unitNumber || "—" },
               { id: "candidate", label: "Primary Candidate", sortable: false, defaultVisible: true,
                 render: (sel) => sel.primaryCandidate
-                  ? <span><span className="font-medium text-slate-900">{sel.primaryCandidate.name}</span><span className="ml-2 text-xs text-slate-400">{sel.primaryCandidate.email}</span></span>
-                  : <span className="text-slate-400">—</span> },
+                  ? <span><span className="font-medium text-foreground">{sel.primaryCandidate.name}</span><span className="ml-2 text-xs text-foreground-dim">{sel.primaryCandidate.email}</span></span>
+                  : <span className="text-foreground-dim">—</span> },
               { id: "status", label: "Status", sortable: false, defaultVisible: true,
                 render: (sel) => statusBadge(sel.status, t) },
               { id: "lease", label: "Lease", sortable: false, defaultVisible: true,
@@ -465,10 +465,10 @@ export default function VacanciesPanel({ role = "OWNER", refreshKey = 0 }) {
                   </div>
                   {statusBadge(sel.status, t)}
                 </div>
-                <p className="mt-2 text-[0.8125rem] text-slate-700">
+                <p className="mt-2 text-[0.8125rem] text-muted-dark">
                   {sel.primaryCandidate
                     ? sel.primaryCandidate.name
-                    : <span className="text-slate-400">{t("empty.noData")}</span>}
+                    : <span className="text-foreground-dim">{t("empty.noData")}</span>}
                 </p>
                 <div className="table-card-footer">
                   {leaseBadge(sel.lease, t)}

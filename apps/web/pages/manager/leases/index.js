@@ -75,7 +75,7 @@ function businessDaysUntil(expiryDate) {
 function CountdownBadge({ sentForSignatureAt }) {
   const { t } = useTranslation("manager");
   if (!sentForSignatureAt) {
-    return <span className="inline-block px-2 py-0.5 rounded text-xs bg-slate-100 text-slate-500">{t("manager:leasesIndex.text.sentDateUnavailable")}</span>;
+    return <span className="inline-block px-2 py-0.5 rounded text-xs bg-surface-hover text-muted">{t("manager:leasesIndex.text.sentDateUnavailable")}</span>;
   }
   const expiry = addBusinessDays(new Date(sentForSignatureAt), 5);
   const remaining = businessDaysUntil(expiry);
@@ -130,16 +130,16 @@ function ActionDropdown({ actions }) {
   return (
     <div ref={ref} className="relative inline-block text-left">
       <button type="button" onClick={() => setOpen((o) => !o)}
-        className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition">
+        className="rounded-lg border border-surface-border bg-surface px-3 py-1.5 text-xs font-semibold text-muted-dark hover:bg-surface-subtle transition">
         Actions ▾
       </button>
       {open && (
-        <div className="absolute right-0 z-20 mt-1 w-48 origin-top-right rounded-lg border border-slate-200 bg-white shadow-lg ring-1 ring-black/5">
+        <div className="absolute right-0 z-20 mt-1 w-48 origin-top-right rounded-lg border border-surface-border bg-surface shadow-lg ring-1 ring-black/5">
           <div className="py-1">
             {actions.map((a, i) => (
               <button key={i} type="button"
                 onClick={() => { setOpen(false); a.onClick(); }}
-                className={"w-full text-left px-4 py-2 text-sm hover:bg-slate-50 transition " + (a.className || "text-slate-700")}>
+                className={"w-full text-left px-4 py-2 text-sm hover:bg-surface-subtle transition " + (a.className || "text-muted-dark")}>
                 {a.label}
               </button>
             ))}
@@ -153,13 +153,13 @@ function ActionDropdown({ actions }) {
 function buildTemplateColumns(tr, router, handleDeleteTemplate) {
   return [
     { id: "templateName", label: tr("manager:leasesIndex.col.templateName"), sortable: true, alwaysVisible: true,
-      render: (tmpl) => <span className="font-medium text-slate-900">{tmpl.templateName || "Unnamed template"}</span> },
+      render: (tmpl) => <span className="font-medium text-foreground">{tmpl.templateName || "Unnamed template"}</span> },
     { id: "building", label: tr("manager:leasesIndex.col.building"), sortable: true, defaultVisible: true,
-      render: (tmpl) => <span className="text-slate-600">{tmpl.unit?.building?.name || "Global"}</span> },
+      render: (tmpl) => <span className="text-muted-text">{tmpl.unit?.building?.name || "Global"}</span> },
     { id: "landlord", label: tr("manager:leasesIndex.col.landlord"), sortable: true, defaultVisible: true,
-      render: (tmpl) => <span className="text-slate-600">{tmpl.landlordName || "\u2014"}</span> },
+      render: (tmpl) => <span className="text-muted-text">{tmpl.landlordName || "\u2014"}</span> },
     { id: "createdAt", label: tr("manager:leasesIndex.col.created"), sortable: true, defaultVisible: true,
-      render: (tmpl) => <span className="text-slate-500 text-xs">{formatDate(tmpl.createdAt)}</span> },
+      render: (tmpl) => <span className="text-muted text-xs">{formatDate(tmpl.createdAt)}</span> },
     { id: "actions", label: "", alwaysVisible: true, className: "text-right",
       render: (tmpl) => (
         <div onClick={(e) => e.stopPropagation()}>
@@ -474,12 +474,12 @@ export default function LeasesPage() {
           {/* Create lease form */}
           {showCreate && (
             <Section title={t("manager:leasesIndex.title.createNewLease")}>
-              <form onSubmit={handleCreate} className="bg-white rounded-lg border p-6 space-y-4 max-w-2xl">
+              <form onSubmit={handleCreate} className="bg-surface rounded-lg border p-6 space-y-4 max-w-2xl">
                 {createError && <p className="text-sm text-red-600">{createError}</p>}
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:leasesIndex.text.building")}</label>
+                    <label className="block text-sm font-medium text-muted-dark mb-1">{t("manager:leasesIndex.text.building")}</label>
                     <select
                       value={selectedBuildingId}
                       onChange={e => { setSelectedBuildingId(e.target.value); setCreateForm(f => ({ ...f, unitId: "" })); }}
@@ -490,7 +490,7 @@ export default function LeasesPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:leasesIndex.text.unit")}</label>
+                    <label className="block text-sm font-medium text-muted-dark mb-1">{t("manager:leasesIndex.text.unit")}</label>
                     <select
                       value={createForm.unitId}
                       onChange={e => setCreateForm(f => ({ ...f, unitId: e.target.value }))}
@@ -505,7 +505,7 @@ export default function LeasesPage() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:leasesIndex.text.tenantName")}</label>
+                    <label className="block text-sm font-medium text-muted-dark mb-1">{t("manager:leasesIndex.text.tenantName")}</label>
                     <input
                       type="text"
                       value={createForm.tenantName}
@@ -515,7 +515,7 @@ export default function LeasesPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:leasesIndex.text.tenantEmail")}</label>
+                    <label className="block text-sm font-medium text-muted-dark mb-1">{t("manager:leasesIndex.text.tenantEmail")}</label>
                     <input
                       type="email"
                       value={createForm.tenantEmail}
@@ -528,7 +528,7 @@ export default function LeasesPage() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:leasesIndex.text.startDate")}</label>
+                    <label className="block text-sm font-medium text-muted-dark mb-1">{t("manager:leasesIndex.text.startDate")}</label>
                     <input
                       type="date"
                       value={createForm.startDate}
@@ -537,7 +537,7 @@ export default function LeasesPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Net Rent (CHF/month) *</label>
+                    <label className="block text-sm font-medium text-muted-dark mb-1">Net Rent (CHF/month) *</label>
                     <input
                       type="number"
                       value={createForm.netRentChf}
@@ -549,7 +549,7 @@ export default function LeasesPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Deposit (CHF)</label>
+                  <label className="block text-sm font-medium text-muted-dark mb-1">Deposit (CHF)</label>
                   <input
                     type="number"
                     value={createForm.depositChf}
@@ -615,20 +615,20 @@ export default function LeasesPage() {
                 <div className="px-4 pt-4">
                   <div className="flex gap-2 mb-4">
                     <button onClick={() => { setTmplCreateMode("scratch"); setTmplCreateError(null); }}
-                      className={cn("px-4 py-2 text-sm font-medium rounded-lg transition-colors", tmplCreateMode === "scratch" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200")}>
+                      className={cn("px-4 py-2 text-sm font-medium rounded-lg transition-colors", tmplCreateMode === "scratch" ? "bg-blue-600 text-white" : "bg-surface-hover text-muted-text hover:bg-surface-border")}>
                       From Scratch
                     </button>
                     <button onClick={() => { setTmplCreateMode("lease"); setTmplCreateError(null); }}
-                      className={cn("px-4 py-2 text-sm font-medium rounded-lg transition-colors", tmplCreateMode === "lease" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200")}>
+                      className={cn("px-4 py-2 text-sm font-medium rounded-lg transition-colors", tmplCreateMode === "lease" ? "bg-blue-600 text-white" : "bg-surface-hover text-muted-text hover:bg-surface-border")}>
                       Copy from Existing Lease
                     </button>
                   </div>
                   {tmplCreateError && <p className="text-sm text-red-600 mb-4">{tmplCreateError}</p>}
                   {tmplCreateMode === "scratch" && (
-                    <form onSubmit={handleCreateFromScratch} className="bg-white rounded-lg border p-6 space-y-4 mb-6">
+                    <form onSubmit={handleCreateFromScratch} className="bg-surface rounded-lg border p-6 space-y-4 mb-6">
                       <div className="grid grid-cols-2 gap-4">
                         <div className="col-span-2">
-                          <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:leasesIndex.text.building2")}</label>
+                          <label className="block text-sm font-medium text-muted-dark mb-1">{t("manager:leasesIndex.text.building2")}</label>
                           <select value={scratchForm.buildingId} onChange={(e) => onScratchBuildingChange(e.target.value)} className="w-full border rounded-lg px-3 py-2 text-sm">
                             <option value="">{t("manager:leasesIndex.text.selectABuilding")}</option>
                             {availableBuildings.map((b) => <option key={b.id} value={b.id}>{b.name} — {b.address}</option>)}
@@ -636,40 +636,40 @@ export default function LeasesPage() {
                           {availableBuildings.length === 0 && buildings.length > 0 && <p className="text-xs text-amber-600 mt-1">{t("manager:leasesIndex.text.allBuildingsAlreadyHaveATemplate")}</p>}
                         </div>
                         <div className="col-span-2">
-                          <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:leasesIndex.text.templateName")} <span className="ml-2 text-xs font-normal text-slate-400">(auto-derived from building)</span></label>
+                          <label className="block text-sm font-medium text-muted-dark mb-1">{t("manager:leasesIndex.text.templateName")} <span className="ml-2 text-xs font-normal text-foreground-dim">(auto-derived from building)</span></label>
                           <input type="text" value={scratchForm.templateName} onChange={(e) => setScratchForm((f) => ({ ...f, templateName: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm" placeholder={t("manager:leasesIndex.placeholder.selectABuildingToAutoFill")} />
                         </div>
                       </div>
                       <div className="border-t pt-4">
-                        <h4 className="text-sm font-semibold text-slate-800 mb-3">{t("manager:leasesIndex.text.1LandlordRgie")}</h4>
+                        <h4 className="text-sm font-semibold text-foreground mb-3">{t("manager:leasesIndex.text.1LandlordRgie")}</h4>
                         <div className="grid grid-cols-2 gap-4">
                           <div className="col-span-2">
-                            <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:leasesIndex.text.landlordName")}</label>
+                            <label className="block text-sm font-medium text-muted-dark mb-1">{t("manager:leasesIndex.text.landlordName")}</label>
                             <input type="text" value={scratchForm.landlordName} onChange={(e) => setScratchForm((f) => ({ ...f, landlordName: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm" placeholder={t("manager:leasesIndex.placeholder.eGRGieDuLacSa")} />
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:leasesIndex.text.address")}</label>
+                            <label className="block text-sm font-medium text-muted-dark mb-1">{t("manager:leasesIndex.text.address")}</label>
                             <input type="text" value={scratchForm.landlordAddress} onChange={(e) => setScratchForm((f) => ({ ...f, landlordAddress: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm" placeholder={t("manager:leasesIndex.placeholder.eGRueDuLac15")} />
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:leasesIndex.text.zipCity")}</label>
+                            <label className="block text-sm font-medium text-muted-dark mb-1">{t("manager:leasesIndex.text.zipCity")}</label>
                             <input type="text" value={scratchForm.landlordZipCity} onChange={(e) => setScratchForm((f) => ({ ...f, landlordZipCity: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm" placeholder={t("manager:leasesIndex.placeholder.eG1003Lausanne")} />
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:leasesIndex.text.phone")}</label>
+                            <label className="block text-sm font-medium text-muted-dark mb-1">{t("manager:leasesIndex.text.phone")}</label>
                             <input type="text" value={scratchForm.landlordPhone} onChange={(e) => setScratchForm((f) => ({ ...f, landlordPhone: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm" placeholder={t("manager:leasesIndex.placeholder.4121")} />
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:leasesIndex.text.email")}</label>
+                            <label className="block text-sm font-medium text-muted-dark mb-1">{t("manager:leasesIndex.text.email")}</label>
                             <input type="text" value={scratchForm.landlordEmail} onChange={(e) => setScratchForm((f) => ({ ...f, landlordEmail: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm" placeholder={t("manager:leasesIndex.placeholder.regieExampleCh")} />
                           </div>
                         </div>
                       </div>
                       <div className="border-t pt-4">
-                        <h4 className="text-sm font-semibold text-slate-800 mb-3">§3–4 Termination &amp; Deposit</h4>
+                        <h4 className="text-sm font-semibold text-foreground mb-3">§3–4 Termination &amp; Deposit</h4>
                         <div className="grid grid-cols-2 gap-4">
                           <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:leasesIndex.text.noticeRule")}</label>
+                            <label className="block text-sm font-medium text-muted-dark mb-1">{t("manager:leasesIndex.text.noticeRule")}</label>
                             <select value={scratchForm.noticeRule} onChange={(e) => setScratchForm((f) => ({ ...f, noticeRule: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm">
                               <option value="3_MONTHS">{t("manager:leasesIndex.text.3Months")}</option>
                               <option value="EXTENDED">Extended (custom)</option>
@@ -677,7 +677,7 @@ export default function LeasesPage() {
                             </select>
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:leasesIndex.text.depositDue")}</label>
+                            <label className="block text-sm font-medium text-muted-dark mb-1">{t("manager:leasesIndex.text.depositDue")}</label>
                             <select value={scratchForm.depositDueRule} onChange={(e) => setScratchForm((f) => ({ ...f, depositDueRule: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm">
                               <option value="AT_SIGNATURE">{t("manager:leasesIndex.text.atSignature")}</option>
                               <option value="BY_START">{t("manager:leasesIndex.text.byLeaseStart")}</option>
@@ -687,23 +687,23 @@ export default function LeasesPage() {
                         </div>
                       </div>
                       <div className="border-t pt-4">
-                        <h4 className="text-sm font-semibold text-slate-800 mb-3">{t("manager:leasesIndex.text.6Payment")}</h4>
+                        <h4 className="text-sm font-semibold text-foreground mb-3">{t("manager:leasesIndex.text.6Payment")}</h4>
                         <div className="grid grid-cols-2 gap-4">
                           <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:leasesIndex.text.paymentDueDay")}</label>
+                            <label className="block text-sm font-medium text-muted-dark mb-1">{t("manager:leasesIndex.text.paymentDueDay")}</label>
                             <input type="number" min="1" max="28" value={scratchForm.paymentDueDayOfMonth} onChange={(e) => setScratchForm((f) => ({ ...f, paymentDueDayOfMonth: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm" />
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:leasesIndex.text.paymentIban")}</label>
+                            <label className="block text-sm font-medium text-muted-dark mb-1">{t("manager:leasesIndex.text.paymentIban")}</label>
                             <input type="text" value={scratchForm.paymentIban} onChange={(e) => setScratchForm((f) => ({ ...f, paymentIban: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm" placeholder={t("manager:leasesIndex.placeholder.cH9300762011623852957")} />
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:leasesIndex.text.referenceRate")}</label>
+                            <label className="block text-sm font-medium text-muted-dark mb-1">{t("manager:leasesIndex.text.referenceRate")}</label>
                             <input type="text" value={scratchForm.referenceRatePercent} onChange={(e) => setScratchForm((f) => ({ ...f, referenceRatePercent: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm" />
                           </div>
                           <div className="flex items-center gap-2 pt-5">
                             <input type="checkbox" id="houseRules" checked={scratchForm.includesHouseRules} onChange={(e) => setScratchForm((f) => ({ ...f, includesHouseRules: e.target.checked }))} className="rounded" />
-                            <label htmlFor="houseRules" className="text-sm text-slate-700">{t("manager:leasesIndex.text.includesHouseRules")}</label>
+                            <label htmlFor="houseRules" className="text-sm text-muted-dark">{t("manager:leasesIndex.text.includesHouseRules")}</label>
                           </div>
                         </div>
                       </div>
@@ -713,13 +713,13 @@ export default function LeasesPage() {
                     </form>
                   )}
                   {tmplCreateMode === "lease" && (
-                    <form onSubmit={handleCreateFromLease} className="bg-white rounded-lg border p-6 space-y-4 mb-6">
+                    <form onSubmit={handleCreateFromLease} className="bg-surface rounded-lg border p-6 space-y-4 mb-6">
                       <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:leasesIndex.text.templateName2")}</label>
+                        <label className="block text-sm font-medium text-muted-dark mb-1">{t("manager:leasesIndex.text.templateName2")}</label>
                         <input type="text" value={leaseFormTmpl.templateName} onChange={(e) => setLeaseFormTmpl((f) => ({ ...f, templateName: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm" placeholder={t("manager:leasesIndex.placeholder.eGStandard3RoomApartment")} />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">{t("manager:leasesIndex.text.sourceLease")}</label>
+                        <label className="block text-sm font-medium text-muted-dark mb-1">{t("manager:leasesIndex.text.sourceLease")}</label>
                         <select value={leaseFormTmpl.leaseId} onChange={(e) => setLeaseFormTmpl((f) => ({ ...f, leaseId: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm">
                           <option value="">{t("manager:leasesIndex.text.selectALeaseToCopyFrom")}</option>
                           {leases.map((l) => <option key={l.id} value={l.id}>{l.tenantName} — {l.unit?.unitNumber || "?"} @ {l.unit?.building?.name || "?"} ({l.status})</option>)}
@@ -727,7 +727,7 @@ export default function LeasesPage() {
                         {leases.length === 0 && <p className="text-xs text-amber-600 mt-1">No leases found. Use the &quot;From Scratch&quot; tab to create a template without an existing lease.</p>}
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Assign to Building (optional)</label>
+                        <label className="block text-sm font-medium text-muted-dark mb-1">Assign to Building (optional)</label>
                         <select value={leaseFormTmpl.buildingId} onChange={(e) => setLeaseFormTmpl((f) => ({ ...f, buildingId: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm">
                           <option value="">All buildings (global)</option>
                           {availableBuildings.map((b) => <option key={b.id} value={b.id}>{b.name} — {b.address}</option>)}
@@ -759,7 +759,7 @@ export default function LeasesPage() {
                     sortDir={tmplSortDir}
                     onSort={handleTmplSort}
                     onRowClick={(t) => router.push(`/manager/leases/${t.id}`)}
-                    emptyState={<p className="text-sm text-slate-500 px-4 py-4">{t("manager:leasesIndex.text.noTemplatesMatchThisFilter")}</p>}
+                    emptyState={<p className="text-sm text-muted px-4 py-4">{t("manager:leasesIndex.text.noTemplatesMatchThisFilter")}</p>}
                     mobileCard={(t) => (
                       <div className="table-card cursor-pointer" onClick={() => router.push(`/manager/leases/${t.id}`)}>
                         <p className="table-card-head">{t.name || "—"}</p>
@@ -796,7 +796,7 @@ export default function LeasesPage() {
                         return (
                           <div
                             key={lease.id}
-                            className={cn("table-card cursor-pointer hover:bg-slate-50/80 transition-colors", expired ? "bg-red-50" : "")}
+                            className={cn("table-card cursor-pointer hover:bg-surface-subtle/80 transition-colors", expired ? "bg-red-50" : "")}
                             onClick={() => router.push(`/manager/leases/${lease.id}`)}
                           >
                             <div className="flex items-start justify-between gap-2">
@@ -845,7 +845,7 @@ export default function LeasesPage() {
                             const expired = isExpired(lease.sentForSignatureAt);
                             const result = expiryResult[lease.id];
                             return (
-                              <tr key={lease.id} onClick={() => router.push(`/manager/leases/${lease.id}`)} className={cn("cursor-pointer hover:bg-slate-50", expired ? "bg-red-50" : "")}>
+                              <tr key={lease.id} onClick={() => router.push(`/manager/leases/${lease.id}`)} className={cn("cursor-pointer hover:bg-surface-subtle", expired ? "bg-red-50" : "")}>
                                 <td className="cell-bold">{lease.tenantName}</td>
                                 <td>{lease.unit?.unitNumber || "—"}</td>
                                 <td>{lease.unit?.building?.name || "—"}</td>
@@ -915,7 +915,7 @@ export default function LeasesPage() {
                           return (
                             <div
                               key={lease.id}
-                              className="table-card cursor-pointer hover:bg-slate-50/80 transition-colors"
+                              className="table-card cursor-pointer hover:bg-surface-subtle/80 transition-colors"
                               onClick={() => router.push(`/manager/leases/${lease.id}`)}
                             >
                               <div className="flex items-start justify-between gap-2">
@@ -960,7 +960,7 @@ export default function LeasesPage() {
                               const charges = lease.chargesTotalChf ?? 0;
                               const totalMo = netRent + charges;
                               return (
-                              <tr key={lease.id} onClick={() => router.push(`/manager/leases/${lease.id}`)} className="cursor-pointer hover:bg-slate-50">
+                              <tr key={lease.id} onClick={() => router.push(`/manager/leases/${lease.id}`)} className="cursor-pointer hover:bg-surface-subtle">
                                 <td className="cell-bold">{lease.tenantName}</td>
                                 <td>{lease.unit?.unitNumber || "—"}</td>
                                 <td>{lease.unit?.building?.name || "—"}</td>

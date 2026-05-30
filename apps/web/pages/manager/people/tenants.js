@@ -33,21 +33,21 @@ const TENANT_COLUMNS = [
     label: "Name",
     sortable: true,
     alwaysVisible: true,
-    render: (t) => <span className="font-medium text-slate-900">{t.name || "\u2014"}</span>,
+    render: (t) => <span className="font-medium text-foreground">{t.name || "\u2014"}</span>,
   },
   {
     id: "phone",
     label: "Phone",
     sortable: true,
     defaultVisible: true,
-    render: (t) => <span className="text-slate-600">{t.phone || "\u2014"}</span>,
+    render: (t) => <span className="text-muted-text">{t.phone || "\u2014"}</span>,
   },
   {
     id: "email",
     label: "Email",
     sortable: true,
     defaultVisible: true,
-    render: (t) => <span className="text-slate-600">{t.email || "\u2014"}</span>,
+    render: (t) => <span className="text-muted-text">{t.email || "\u2014"}</span>,
   },
   {
     id: "unit",
@@ -55,7 +55,7 @@ const TENANT_COLUMNS = [
     sortable: true,
     defaultVisible: true,
     render: (t) => (
-      <span className="text-slate-600">
+      <span className="text-muted-text">
         {t.unit ? `${t.unit.unitNumber}${t.unit.floor ? ` (Floor ${t.unit.floor})` : ""}` : "\u2014"}
       </span>
     ),
@@ -65,14 +65,14 @@ const TENANT_COLUMNS = [
     label: "Building",
     sortable: true,
     defaultVisible: false,
-    render: (t) => <span className="text-slate-600">{t.unit?.building?.name || "\u2014"}</span>,
+    render: (t) => <span className="text-muted-text">{t.unit?.building?.name || "\u2014"}</span>,
   },
   {
     id: "floor",
     label: "Floor",
     sortable: true,
     defaultVisible: false,
-    render: (t) => <span className="text-slate-600">{t.unit?.floor ?? "\u2014"}</span>,
+    render: (t) => <span className="text-muted-text">{t.unit?.floor ?? "\u2014"}</span>,
   },
   {
     id: "actions",
@@ -151,7 +151,7 @@ export default function PeopleTenantsPage() {
                 const next = cycle[(cycle.indexOf(sortField) + 1) % cycle.length];
                 handleSort(next);
               }}
-              className="flex shrink-0 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+              className="flex shrink-0 items-center gap-1.5 rounded-lg border border-surface-border bg-surface px-3 py-2 text-sm font-medium text-muted-text hover:bg-surface-subtle transition-colors"
             >
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4" aria-hidden="true"><path fillRule="evenodd" d="M2 3.75A.75.75 0 0 1 2.75 3h11.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 3.75ZM2 7.5a.75.75 0 0 1 .75-.75h7.508a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 7.5ZM14 7a.75.75 0 0 1 .75.75v6.59l1.95-2.1a.75.75 0 1 1 1.1 1.02l-3.25 3.5a.75.75 0 0 1-1.1 0l-3.25-3.5a.75.75 0 0 1 1.1-1.02l1.95 2.1V7.75A.75.75 0 0 1 14 7ZM2 11.25a.75.75 0 0 1 .75-.75h4.562a.75.75 0 0 1 0 1.5H2.75a.75.75 0 0 1-.75-.75Z" clipRule="evenodd" /></svg>
               <span className="hidden sm:inline capitalize">{sortField === "building" ? "Building" : sortField === "email" ? "Email" : "Name"}</span>
@@ -159,7 +159,7 @@ export default function PeopleTenantsPage() {
             </button>
           </div>
 
-            {loading && <p className="text-sm text-slate-500">{t("manager:peopleTenants.text.loading")}</p>}
+            {loading && <p className="text-sm text-muted">{t("manager:peopleTenants.text.loading")}</p>}
             {error && <p className="text-sm text-red-600">{error}</p>}
 
             {!loading && !error && filtered.length === 0 && (
@@ -178,7 +178,7 @@ export default function PeopleTenantsPage() {
                 sortDir={sortDir}
                 onSort={handleSort}
                 onRowClick={(t) => router.push(`/manager/people/tenants/${t.id}`)}
-                emptyState={<p className="text-sm text-slate-500">{t("manager:peopleTenants.text.noTenantsFound")}</p>}
+                emptyState={<p className="text-sm text-muted">{t("manager:peopleTenants.text.noTenantsFound")}</p>}
                 mobileCard={(t) => (
                   <div className="table-card cursor-pointer" onClick={() => router.push(`/manager/people/tenants/${t.id}`)}>
                     <p className="table-card-head">{t.name || "—"}</p>

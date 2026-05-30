@@ -277,29 +277,29 @@ function RequestsTab() {
             return (
               <div
                 key={req.id}
-                className={cn("rounded-2xl border border-slate-200 border-l-4", borderColor, "bg-white p-4 shadow-sm cursor-pointer hover:bg-slate-50 transition-colors")}
+                className={cn("rounded-2xl border border-surface-border border-l-4", borderColor, "bg-surface p-4 shadow-sm cursor-pointer hover:bg-surface-subtle transition-colors")}
                 onClick={() => router.push(`/owner/requests/${req.id}`)}
               >
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-slate-900">
+                    <p className="text-sm font-semibold text-foreground">
                       {req.requestNumber ? `#${req.requestNumber} — ` : ""}
                       {req.category || "General Maintenance"}
                     </p>
-                    <p className="text-xs text-slate-500 mt-0.5">
+                    <p className="text-xs text-muted mt-0.5">
                       {req.unit?.building?.name || ""}{req.unit?.unitNumber ? ` · Unit ${req.unit.unitNumber}` : ""}
                       {" · "}Submitted {formatDateTime(req.createdAt)}
                     </p>
                     {req.description && (
-                      <p className="text-xs text-slate-400 mt-1 line-clamp-2">{req.description}</p>
+                      <p className="text-xs text-foreground-dim mt-1 line-clamp-2">{req.description}</p>
                     )}
                   </div>
                   <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:gap-3 sm:shrink-0">
                     {req.estimatedCost > 0 && (
-                      <span className="text-xs font-medium text-slate-600">{formatCost(req.estimatedCost)}</span>
+                      <span className="text-xs font-medium text-muted-text">{formatCost(req.estimatedCost)}</span>
                     )}
                     <UrgencyPill urgency={req.urgency} />
-                    <svg className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="h-4 w-4 text-foreground-dim" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
                   </div>
@@ -435,7 +435,7 @@ function RfpsTab() {
       )}
 
       {loading ? (
-        <p className="text-sm text-slate-500">{t("owner:approvals.text.loading")}</p>
+        <p className="text-sm text-muted">{t("owner:approvals.text.loading")}</p>
       ) : sortedFiltered.length === 0 ? (
         <div className="empty-state">
           <p className="empty-state-text">
@@ -455,20 +455,20 @@ function RfpsTab() {
               const isPending = r.status === "PENDING_OWNER_APPROVAL";
               return (
                 <Link key={r.id} href={`/owner/rfps/${r.id}`}>
-                  <div className={cn("rounded-2xl border border-slate-200 border-l-4", borderColor, "bg-white p-4 shadow-sm hover:bg-slate-50 transition-colors cursor-pointer")}>
+                  <div className={cn("rounded-2xl border border-surface-border border-l-4", borderColor, "bg-surface p-4 shadow-sm hover:bg-surface-subtle transition-colors cursor-pointer")}>
                     <div className="flex flex-col gap-2">
                       <div className="min-w-0">
-                        <p className="text-sm font-semibold text-slate-900">{r.category || "General Maintenance"}</p>
-                        <p className="text-xs text-slate-500 mt-0.5">
+                        <p className="text-sm font-semibold text-foreground">{r.category || "General Maintenance"}</p>
+                        <p className="text-xs text-muted mt-0.5">
                           {r.building?.name || "—"} · {formatDate(r.createdAt)}
                         </p>
                       </div>
                       <div className="flex flex-wrap items-center gap-3">
                         {urgencyLabel && (
-                          <span className="text-xs font-medium text-slate-600">{urgencyLabel}</span>
+                          <span className="text-xs font-medium text-muted-text">{urgencyLabel}</span>
                         )}
                         {quoteCount > 0 && (
-                          <span className="text-xs text-slate-500">{quoteCount} quote{quoteCount !== 1 ? "s" : ""}</span>
+                          <span className="text-xs text-muted">{quoteCount} quote{quoteCount !== 1 ? "s" : ""}</span>
                         )}
                         <span className="text-xs font-medium text-blue-600">{isPending ? "Review" : "View"} →</span>
                       </div>

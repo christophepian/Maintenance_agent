@@ -97,20 +97,20 @@ export default function TemplateDetailPage() {
                 {/* REPLACE: Entity fields — use a dl/grid layout */}
                 <dl className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
                   <div>
-                    <dt className="text-sm font-medium text-slate-500">Field One</dt>
-                    <dd className="mt-1 text-sm text-slate-900">Value placeholder</dd>
+                    <dt className="text-sm font-medium text-muted">Field One</dt>
+                    <dd className="mt-1 text-sm text-foreground">Value placeholder</dd>
                   </div>
                   <div>
-                    <dt className="text-sm font-medium text-slate-500">Field Two</dt>
-                    <dd className="mt-1 text-sm text-slate-900">Value placeholder</dd>
+                    <dt className="text-sm font-medium text-muted">Field Two</dt>
+                    <dd className="mt-1 text-sm text-foreground">Value placeholder</dd>
                   </div>
                   <div>
-                    <dt className="text-sm font-medium text-slate-500">Field Three</dt>
-                    <dd className="mt-1 text-sm text-slate-900">Value placeholder</dd>
+                    <dt className="text-sm font-medium text-muted">Field Three</dt>
+                    <dd className="mt-1 text-sm text-foreground">Value placeholder</dd>
                   </div>
                   <div>
-                    <dt className="text-sm font-medium text-slate-500">Field Four</dt>
-                    <dd className="mt-1 text-sm text-slate-900">Value placeholder</dd>
+                    <dt className="text-sm font-medium text-muted">Field Four</dt>
+                    <dd className="mt-1 text-sm text-foreground">Value placeholder</dd>
                   </div>
                 </dl>
               </Panel>
@@ -133,7 +133,7 @@ export default function TemplateDetailPage() {
                     {/* REPLACE: Map over sortedItems (the sorted array) — never the raw array */}
                     {sortedItems.length === 0 ? (
                       <tr>
-                        <td colSpan={3} className="px-4 py-8 text-center text-sm text-slate-400">
+                        <td colSpan={3} className="px-4 py-8 text-center text-sm text-foreground-dim">
                           No related items yet.
                         </td>
                       </tr>

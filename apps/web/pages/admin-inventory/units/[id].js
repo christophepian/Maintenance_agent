@@ -515,7 +515,7 @@ export default function UnitDetail() {
     <AppShell role={isOwner ? "OWNER" : "MANAGER"}>
       <PageShell variant="embedded">
         <div className="mb-3">
-          <Link href={unit?.building?.id ? `/admin-inventory/buildings/${unit.building.id}${isOwner ? "?role=owner" : ""}` : (isOwner ? "/owner/properties" : "/admin-inventory")} className="text-sm font-medium text-slate-600 hover:text-slate-900">
+          <Link href={unit?.building?.id ? `/admin-inventory/buildings/${unit.building.id}${isOwner ? "?role=owner" : ""}` : (isOwner ? "/owner/properties" : "/admin-inventory")} className="text-sm font-medium text-muted-text hover:text-foreground">
             ← Back
           </Link>
         </div>
@@ -576,15 +576,15 @@ export default function UnitDetail() {
               <div className="mb-4">
                 <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-1.5">
-                <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Unit number</span>
+                <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Unit number</span>
                 <input className="filter-input w-full" value={editNumber} onChange={(e) => setEditNumber(e.target.value)} placeholder={t("manager:unitsId.placeholder.eGApt3b")} />
               </div>
               <div className="grid gap-1.5">
-                <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Floor</span>
+                <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Floor</span>
                 <input className="filter-input w-full" value={editFloor} onChange={(e) => setEditFloor(e.target.value)} placeholder={t("manager:unitsId.placeholder.eG3")} />
               </div>
               <div className="grid gap-1.5">
-                <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Type</span>
+                <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Type</span>
                 <select className="filter-input w-full" value={editType} onChange={(e) => setEditType(e.target.value)}>
                   <option value="">— Select type —</option>
                   <option value="RESIDENTIAL">Residential</option>
@@ -592,15 +592,15 @@ export default function UnitDetail() {
                 </select>
               </div>
               <div className="grid gap-1.5">
-                <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Living area (m²)</span>
+                <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Living area (m²)</span>
                 <input className="filter-input w-full" type="number" step="0.1" min="0" value={editLivingArea} onChange={(e) => setEditLivingArea(e.target.value)} placeholder={t("manager:unitsId.placeholder.eG75")} />
               </div>
               <div className="grid gap-1.5">
-                <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Rooms</span>
+                <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Rooms</span>
                 <input className="filter-input w-full" type="number" step="0.5" min="0" value={editRooms} onChange={(e) => setEditRooms(e.target.value)} placeholder={t("manager:unitsId.placeholder.eG35")} />
               </div>
               <div className="grid gap-1.5">
-                <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Location segment</span>
+                <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Location segment</span>
                 <select className="filter-input w-full" value={editLocationSegment} onChange={(e) => setEditLocationSegment(e.target.value)}>
                   <option value="">— Select —</option>
                   <option value="PRIME">Prime</option>
@@ -609,18 +609,18 @@ export default function UnitDetail() {
                 </select>
               </div>
               <div className="grid gap-1.5">
-                <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Last renovation year</span>
+                <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Last renovation year</span>
                 <input className="filter-input w-full" type="number" min="1900" max="2099" value={editLastRenovation} onChange={(e) => setEditLastRenovation(e.target.value)} placeholder={t("manager:unitsId.placeholder.eG2015")} />
               </div>
               <div className="grid gap-1.5">
-                <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Energy label</span>
+                <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Energy label</span>
                 <select className="filter-input w-full" value={editEnergyLabel} onChange={(e) => setEditEnergyLabel(e.target.value)}>
                   <option value="">— Select —</option>
                   {["A","B","C","D","E","F","G"].map(l => <option key={l} value={l}>{l}</option>)}
                 </select>
               </div>
               <div className="grid gap-1.5">
-                <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Heating type</span>
+                <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Heating type</span>
                 <select className="filter-input w-full" value={editHeatingType} onChange={(e) => setEditHeatingType(e.target.value)}>
                   <option value="">— Select —</option>
                   <option value="HEAT_PUMP">Heat pump</option>
@@ -632,7 +632,7 @@ export default function UnitDetail() {
                 </select>
               </div>
               <div className="grid gap-1.5">
-                <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Insulation quality</span>
+                <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Insulation quality</span>
                 <select className="filter-input w-full" value={editInsulation} onChange={(e) => setEditInsulation(e.target.value)}>
                   <option value="">— Select —</option>
                   <option value="EXCELLENT">Excellent</option>
@@ -658,69 +658,69 @@ export default function UnitDetail() {
         ) : (
           <div className="mb-4">
             {/* ── Pricing ── */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4 p-4 bg-surface-subtle rounded-lg border border-surface-border">
               <div>
-                <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Net rent</div>
-                <div className="text-lg font-bold text-slate-900 mt-1">{unit?.monthlyRentChf != null ? `CHF ${unit.monthlyRentChf}.-` : "—"}</div>
+                <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Net rent</div>
+                <div className="text-lg font-bold text-foreground mt-1">{unit?.monthlyRentChf != null ? `CHF ${unit.monthlyRentChf}.-` : "—"}</div>
               </div>
               <div>
-                <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Charges</div>
-                <div className="text-lg font-bold text-slate-900 mt-1">{unit?.monthlyChargesChf != null ? `CHF ${unit.monthlyChargesChf}.-` : "—"}</div>
+                <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Charges</div>
+                <div className="text-lg font-bold text-foreground mt-1">{unit?.monthlyChargesChf != null ? `CHF ${unit.monthlyChargesChf}.-` : "—"}</div>
               </div>
               <div>
-                <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Total incl. charges</div>
-                <div className="text-lg font-bold text-slate-900 mt-1">{unit?.monthlyRentChf != null || unit?.monthlyChargesChf != null ? `CHF ${(unit?.monthlyRentChf || 0) + (unit?.monthlyChargesChf || 0)}.-` : "—"}</div>
+                <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Total incl. charges</div>
+                <div className="text-lg font-bold text-foreground mt-1">{unit?.monthlyRentChf != null || unit?.monthlyChargesChf != null ? `CHF ${(unit?.monthlyRentChf || 0) + (unit?.monthlyChargesChf || 0)}.-` : "—"}</div>
               </div>
             </div>
             {/* ── Unit details grid ── */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Unit number</div>
-                <div className="text-sm text-slate-700 mt-1">{unit?.unitNumber || unit?.name || "—"}</div>
+                <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Unit number</div>
+                <div className="text-sm text-muted-dark mt-1">{unit?.unitNumber || unit?.name || "—"}</div>
               </div>
               <div>
-                <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Floor</div>
-                <div className="text-sm text-slate-700 mt-1">{unit?.floor || "—"}</div>
+                <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Floor</div>
+                <div className="text-sm text-muted-dark mt-1">{unit?.floor || "—"}</div>
               </div>
               <div>
-                <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Type</div>
-                <div className="text-sm text-slate-700 mt-1">{unit?.type || "—"}</div>
+                <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Type</div>
+                <div className="text-sm text-muted-dark mt-1">{unit?.type || "—"}</div>
               </div>
               <div>
-                <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Living area</div>
-                <div className="text-sm text-slate-700 mt-1">{unit?.livingAreaSqm != null ? `${unit.livingAreaSqm} m²` : "—"}</div>
+                <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Living area</div>
+                <div className="text-sm text-muted-dark mt-1">{unit?.livingAreaSqm != null ? `${unit.livingAreaSqm} m²` : "—"}</div>
               </div>
               <div>
-                <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Rooms</div>
-                <div className="text-sm text-slate-700 mt-1">{unit?.rooms ?? "—"}</div>
+                <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Rooms</div>
+                <div className="text-sm text-muted-dark mt-1">{unit?.rooms ?? "—"}</div>
               </div>
               <div>
-                <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Location</div>
-                <div className="text-sm text-slate-700 mt-1">{unit?.locationSegment || "—"}</div>
+                <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Location</div>
+                <div className="text-sm text-muted-dark mt-1">{unit?.locationSegment || "—"}</div>
               </div>
               <div>
-                <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Last renovation</div>
-                <div className="text-sm text-slate-700 mt-1">{unit?.lastRenovationYear || "—"}</div>
+                <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Last renovation</div>
+                <div className="text-sm text-muted-dark mt-1">{unit?.lastRenovationYear || "—"}</div>
               </div>
               <div>
-                <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Energy label</div>
-                <div className="text-sm text-slate-700 mt-1">{unit?.energyLabel || "—"}</div>
+                <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Energy label</div>
+                <div className="text-sm text-muted-dark mt-1">{unit?.energyLabel || "—"}</div>
               </div>
               <div>
-                <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Heating</div>
-                <div className="text-sm text-slate-700 mt-1">{unit?.heatingType ? unit.heatingType.replace(/_/g, " ").toLowerCase() : "—"}</div>
+                <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Heating</div>
+                <div className="text-sm text-muted-dark mt-1">{unit?.heatingType ? unit.heatingType.replace(/_/g, " ").toLowerCase() : "—"}</div>
               </div>
               <div>
-                <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Insulation</div>
-                <div className="text-sm text-slate-700 mt-1">{unit?.insulationQuality ? unit.insulationQuality.toLowerCase() : "—"}</div>
+                <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Insulation</div>
+                <div className="text-sm text-muted-dark mt-1">{unit?.insulationQuality ? unit.insulationQuality.toLowerCase() : "—"}</div>
               </div>
               <div>
-                <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Status</div>
-                <div className="text-sm text-slate-700 mt-1"><Badge variant={occupancyVariant} size="sm">{occupancyLabel}</Badge></div>
+                <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Status</div>
+                <div className="text-sm text-muted-dark mt-1"><Badge variant={occupancyVariant} size="sm">{occupancyLabel}</Badge></div>
               </div>
               <div className="col-span-full">
-                <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Features</div>
-                <div className="text-sm text-slate-700 mt-1 flex gap-2">
+                <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Features</div>
+                <div className="text-sm text-muted-dark mt-1 flex gap-2">
                   {unit?.hasBalcony && <Badge variant="info" size="md">Balcony</Badge>}
                   {unit?.hasTerrace && <Badge variant="info" size="md">Terrace</Badge>}
                   {unit?.hasParking && <Badge variant="info" size="md">Parking</Badge>}
@@ -750,7 +750,7 @@ export default function UnitDetail() {
             )
           }>
           {assetInventoryLoading ? (
-            <p className="text-center text-slate-400">Loading assets…</p>
+            <p className="text-center text-foreground-dim">Loading assets…</p>
           ) : (
             <AssetInventoryPanel
               assets={assetInventory}
@@ -786,7 +786,7 @@ export default function UnitDetail() {
               <div className="empty-state-text py-6 text-center italic">No tenants assigned to this unit.</div>
             ) : (
               tenants.map((t, idx) => (
-                <div key={t.id} className="flex justify-between items-center p-3 border border-slate-200 rounded-lg bg-slate-50">
+                <div key={t.id} className="flex justify-between items-center p-3 border border-surface-border rounded-lg bg-surface-subtle">
                   <div>
                     <div className="font-semibold text-sm">
                       {isOwner ? (
@@ -796,9 +796,9 @@ export default function UnitDetail() {
                           {t.name || "Tenant"}
                         </Link>
                       )}
-                      {idx === 0 && <span className="ml-2 text-xs text-slate-400 font-normal">(primary)</span>}
+                      {idx === 0 && <span className="ml-2 text-xs text-foreground-dim font-normal">(primary)</span>}
                     </div>
-                    <div className="text-sm text-slate-500 mt-1">Phone: {t.phone || "—"}</div>
+                    <div className="text-sm text-muted mt-1">Phone: {t.phone || "—"}</div>
                   </div>
                   <button
                     type="button"
@@ -814,10 +814,10 @@ export default function UnitDetail() {
           </div>
 
           {tenantAction && (
-          <div className="bg-slate-50 border border-slate-200 rounded-lg p-3.5 flex flex-col gap-4 mt-4">
+          <div className="bg-surface-subtle border border-surface-border rounded-lg p-3.5 flex flex-col gap-4 mt-4">
             {tenantAction === "no-lease" && (
-              <div className="text-sm text-slate-600">
-                <div className="font-semibold text-slate-800 mb-2">Lease required</div>
+              <div className="text-sm text-muted-text">
+                <div className="font-semibold text-foreground mb-2">Lease required</div>
                 <p className="mb-3">
                   A primary tenant must be added through a lease contract. Create a lease for this unit first — the tenant will be automatically assigned when the lease is sent for signature.
                 </p>
@@ -834,27 +834,27 @@ export default function UnitDetail() {
 
             {tenantAction === "add-secondary" && (
               <div className="grid gap-2.5">
-                <div className="text-sm text-slate-600 mb-1">
-                  <span className="font-semibold text-slate-800">Add additional occupant</span> — choose how to add this person:
+                <div className="text-sm text-muted-text mb-1">
+                  <span className="font-semibold text-foreground">Add additional occupant</span> — choose how to add this person:
                 </div>
                 <button type="button" className="button-secondary text-left" onClick={() => setTenantAction("lease-amendment")}>
                   Add to lease (amendment)
-                  <div className="text-sm text-slate-500 mt-1">This person has contractual authority and should appear on the lease.</div>
+                  <div className="text-sm text-muted mt-1">This person has contractual authority and should appear on the lease.</div>
                 </button>
                 <button type="button" className="button-secondary text-left" onClick={() => setTenantAction("menu")}>
                   Add as occupant only
-                  <div className="text-sm text-slate-500 mt-1">No lease change needed (e.g. children, dependants without contractual authority).</div>
+                  <div className="text-sm text-muted mt-1">No lease change needed (e.g. children, dependants without contractual authority).</div>
                 </button>
               </div>
             )}
 
             {tenantAction === "lease-amendment" && (
-              <div className="text-sm text-slate-600">
-                <div className="font-semibold text-slate-800 mb-2">Lease amendment required</div>
+              <div className="text-sm text-muted-text">
+                <div className="font-semibold text-foreground mb-2">Lease amendment required</div>
                 <p className="mb-3">
                   Adding a co-tenant to the lease requires an amendment to the existing contract. This will be available as a workflow in a future update.
                 </p>
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-foreground-dim">
                   For now, you can add the person as an occupant and manually update the lease contract.
                 </p>
                 <div className="mt-3 flex gap-2">
@@ -871,15 +871,15 @@ export default function UnitDetail() {
             {tenantAction === "menu" && (
               <div className="grid gap-2.5">
                 {tenants.length > 0 && (
-                  <div className="text-xs text-slate-400 mb-1">Adding as occupant only — no lease change.</div>
+                  <div className="text-xs text-foreground-dim mb-1">Adding as occupant only — no lease change.</div>
                 )}
                 <button type="button" className="button-secondary text-left" onClick={() => setTenantAction("assign")}>
                   Assign tenant
-                  <div className="text-sm text-slate-500 mt-1">Pick from existing tenants.</div>
+                  <div className="text-sm text-muted mt-1">Pick from existing tenants.</div>
                 </button>
                 <button type="button" className="button-secondary text-left" onClick={() => setTenantAction("create")}>
                   Create new tenant + assign
-                  <div className="text-sm text-slate-500 mt-1">Enter name, phone, and email.</div>
+                  <div className="text-sm text-muted mt-1">Enter name, phone, and email.</div>
                 </button>
               </div>
             )}
@@ -907,7 +907,7 @@ export default function UnitDetail() {
                       ))}
                     </select>
                     {allTenants.length === 0 && (
-                      <div className="text-sm text-slate-500 mt-1">No tenants found in the system.</div>
+                      <div className="text-sm text-muted mt-1">No tenants found in the system.</div>
                     )}
                   </div>
                   <button type="submit" className="button-primary" disabled={assigningTenant || !selectedTenantId}>
@@ -989,23 +989,23 @@ export default function UnitDetail() {
                     <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
                       <div className="text-xs font-semibold uppercase text-green-700">{t("manager:unitsId.col.netRent")}</div>
                       <div className="text-2xl font-bold text-green-800">CHF {rentEstimate.netRentChfMonthly}</div>
-                      <div className="text-sm text-slate-500">per month</div>
+                      <div className="text-sm text-muted">per month</div>
                     </div>
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
                       <div className="text-xs font-semibold uppercase text-blue-700">Total (optimistic)</div>
                       <div className="text-2xl font-bold text-blue-800">CHF {rentEstimate.totalOptimisticChfMonthly}</div>
-                      <div className="text-sm text-slate-500">incl. charges CHF {rentEstimate.chargesOptimisticChfMonthly}</div>
+                      <div className="text-sm text-muted">incl. charges CHF {rentEstimate.chargesOptimisticChfMonthly}</div>
                     </div>
                     <div className="bg-amber-100 border border-amber-300 rounded-lg p-4 text-center">
                       <div className="text-xs font-semibold uppercase text-amber-800">Total (pessimistic)</div>
                       <div className="text-2xl font-bold text-amber-900">CHF {rentEstimate.totalPessimisticChfMonthly}</div>
-                      <div className="text-sm text-slate-500">incl. charges CHF {rentEstimate.chargesPessimisticChfMonthly}</div>
+                      <div className="text-sm text-muted">incl. charges CHF {rentEstimate.chargesPessimisticChfMonthly}</div>
                     </div>
                   </div>
 
                   {/* Coefficients breakdown */}
                   <details className="mb-3">
-                    <summary className="cursor-pointer font-semibold text-[0.95rem] text-slate-700">Applied Coefficients</summary>
+                    <summary className="cursor-pointer font-semibold text-[0.95rem] text-muted-dark">Applied Coefficients</summary>
                     <div className="grid grid-cols-2 gap-2 mt-2.5 text-sm">
                       <div>Base rent/m²: <strong>CHF {rentEstimate.appliedCoefficients.baseRentPerSqm}</strong></div>
                       <div>Location: <strong>×{rentEstimate.appliedCoefficients.locationCoef}</strong></div>
@@ -1020,7 +1020,7 @@ export default function UnitDetail() {
 
                   {/* Inputs used */}
                   <details className="mb-3">
-                    <summary className="cursor-pointer font-semibold text-[0.95rem] text-slate-700">Inputs Used</summary>
+                    <summary className="cursor-pointer font-semibold text-[0.95rem] text-muted-dark">Inputs Used</summary>
                     <div className="grid grid-cols-2 gap-2 mt-2.5 text-sm">
                       <div>Living area: <strong>{rentEstimate.inputsUsed.livingAreaSqm} m²</strong></div>
                       <div>Segment: <strong>{rentEstimate.inputsUsed.segment}</strong></div>
@@ -1065,7 +1065,7 @@ export default function UnitDetail() {
           {activeTab === "Financials" && (
         <div>
           {/* Segmented pill control */}
-          <div className="inline-flex rounded-lg border border-slate-200 bg-slate-100 p-0.5 gap-0.5 mt-4 mb-6 flex-wrap">
+          <div className="inline-flex rounded-lg border border-surface-border bg-surface-hover p-0.5 gap-0.5 mt-4 mb-6 flex-wrap">
             {[
               { key: "overview", label: "Overview" },
               { key: "reconciliations", label: "Reconciliations" },
@@ -1076,8 +1076,8 @@ export default function UnitDetail() {
                 type="button"
                 onClick={() => setFinancialsSubTab(key)}
                 className={financialsSubTab === key
-                  ? "rounded-md bg-white shadow-sm px-4 py-1.5 text-sm font-medium text-slate-900 transition"
-                  : "rounded-md px-4 py-1.5 text-sm font-medium text-slate-500 hover:text-slate-700 transition"}
+                  ? "rounded-md bg-surface shadow-sm px-4 py-1.5 text-sm font-medium text-foreground transition"
+                  : "rounded-md px-4 py-1.5 text-sm font-medium text-muted hover:text-muted-dark transition"}
               >
                 {label}
               </button>
@@ -1085,7 +1085,7 @@ export default function UnitDetail() {
           </div>
 
           {financialsLoading ? (
-            <div className="py-6 text-center text-sm text-slate-500">Loading financials…</div>
+            <div className="py-6 text-center text-sm text-muted">Loading financials…</div>
           ) : (
             <>
               {financialsSubTab === "overview" && (() => {
@@ -1099,12 +1099,12 @@ export default function UnitDetail() {
                         <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
                           <div className="text-xs font-medium uppercase tracking-wide text-green-700">Income (tenant invoices)</div>
                           <div className="text-2xl font-bold text-green-800 mt-1">{formatChf(totalIncome)}</div>
-                          <div className="text-xs text-slate-500 mt-0.5">{incomingInvoices.length} invoice{incomingInvoices.length !== 1 ? "s" : ""}</div>
+                          <div className="text-xs text-muted mt-0.5">{incomingInvoices.length} invoice{incomingInvoices.length !== 1 ? "s" : ""}</div>
                         </div>
                         <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
                           <div className="text-xs font-medium uppercase tracking-wide text-red-700">Expenses (maintenance)</div>
                           <div className="text-2xl font-bold text-red-800 mt-1">{formatChf(totalExpenses)}</div>
-                          <div className="text-xs text-slate-500 mt-0.5">{outgoingInvoices.length} invoice{outgoingInvoices.length !== 1 ? "s" : ""}</div>
+                          <div className="text-xs text-muted mt-0.5">{outgoingInvoices.length} invoice{outgoingInvoices.length !== 1 ? "s" : ""}</div>
                         </div>
                         <div className={cn("p-4 border rounded-lg", net >= 0 ? "bg-blue-50 border-blue-200" : "bg-amber-50 border-amber-200")}>
                           <div className={cn("text-xs font-medium uppercase tracking-wide", net >= 0 ? "text-blue-700" : "text-amber-700")}>Net</div>
@@ -1127,7 +1127,7 @@ export default function UnitDetail() {
                             </thead>
                             <tbody>
                               {sortedUnitReconciliations.map((r) => (
-                                <tr key={r.id} className="border-t border-slate-100 hover:bg-slate-50 cursor-pointer" onClick={() => router.push(`/manager/charge-reconciliations/${r.id}`)}>
+                                <tr key={r.id} className="border-t border-surface-divider hover:bg-surface-subtle cursor-pointer" onClick={() => router.push(`/manager/charge-reconciliations/${r.id}`)}>
                                   <td className="tabular-nums">{r.fiscalYear}</td>
                                   <td><Badge variant={reconciliationVariant(r.status)} size="sm">{r.status}</Badge></td>
                                   <td className="text-right tabular-nums">{formatChfCents(r.totalAcomptePaidCents)}</td>
@@ -1166,7 +1166,7 @@ export default function UnitDetail() {
                         </thead>
                         <tbody>
                           {sortedUnitReconciliations.map((r) => (
-                            <tr key={r.id} className="border-t border-slate-100 hover:bg-slate-50">
+                            <tr key={r.id} className="border-t border-surface-divider hover:bg-surface-subtle">
                               <td>
                                 <Link href={`/manager/charge-reconciliations/${r.id}`} className="cell-link">
                                   {r.lease?.tenantName || "—"}
@@ -1201,10 +1201,10 @@ export default function UnitDetail() {
                     <>
                       <div className="sm:hidden space-y-2">
                         {sortedUnitInvoices.map((inv) => (
-                          <div key={inv.id} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 flex items-center justify-between gap-3">
+                          <div key={inv.id} className="rounded-lg border border-surface-border bg-surface-subtle px-3 py-2.5 flex items-center justify-between gap-3">
                             <div className="min-w-0 flex-1">
-                              <p className="text-sm font-medium text-slate-900 truncate">{inv.invoiceNumber || "Draft"}</p>
-                              <p className="text-xs text-slate-500 mt-0.5">{formatChf(inv.totalAmount)}</p>
+                              <p className="text-sm font-medium text-foreground truncate">{inv.invoiceNumber || "Draft"}</p>
+                              <p className="text-xs text-muted mt-0.5">{formatChf(inv.totalAmount)}</p>
                             </div>
                             <Badge variant={invoiceVariant(inv.status)}>{inv.status}</Badge>
                           </div>
@@ -1225,7 +1225,7 @@ export default function UnitDetail() {
                           </thead>
                           <tbody>
                             {sortedUnitInvoices.map((inv) => (
-                              <tr key={inv.id} className="border-t border-slate-100 hover:bg-slate-50">
+                              <tr key={inv.id} className="border-t border-surface-divider hover:bg-surface-subtle">
                                 <td><Badge variant={invoiceVariant(inv.status)}>{inv.status}</Badge></td>
                                 <td>
                                   {isOwner ? (
@@ -1262,7 +1262,7 @@ export default function UnitDetail() {
           {activeTab === "Contracts" && (
         <Panel title={t("manager:unitsId.title.contracts")}>
           {leasesLoading ? (
-            <div className="py-6 text-center text-sm text-slate-500">Loading leases…</div>
+            <div className="py-6 text-center text-sm text-muted">Loading leases…</div>
           ) : unitLeases.length === 0 ? (
             <div className="empty-state-text py-6 text-center italic">No leases found for this unit.</div>
           ) : (
@@ -1270,10 +1270,10 @@ export default function UnitDetail() {
               {/* Mobile: card list */}
               <div className="sm:hidden space-y-2">
                 {sortedUnitLeases.map((lease) => (
-                  <div key={lease.id} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 flex items-center justify-between gap-3">
+                  <div key={lease.id} className="rounded-lg border border-surface-border bg-surface-subtle px-3 py-2.5 flex items-center justify-between gap-3">
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-slate-900 truncate">{lease.tenantName || "—"}</p>
-                      <p className="text-xs text-slate-500 mt-0.5">
+                      <p className="text-sm font-medium text-foreground truncate">{lease.tenantName || "—"}</p>
+                      <p className="text-xs text-muted mt-0.5">
                         {formatDate(lease.startDate)} · {formatChf(lease.netRentChf)}/mo
                       </p>
                     </div>
@@ -1298,7 +1298,7 @@ export default function UnitDetail() {
                   </thead>
                   <tbody>
                     {sortedUnitLeases.map((lease) => (
-                      <tr key={lease.id} className="border-t border-slate-100 hover:bg-slate-50">
+                      <tr key={lease.id} className="border-t border-surface-divider hover:bg-surface-subtle">
                         <td>
                           <Badge variant={leaseVariant(lease.status)}>{lease.status}</Badge>
                         </td>
@@ -1329,7 +1329,7 @@ export default function UnitDetail() {
           {activeTab === "Requests" && (
         <Panel title={t("manager:unitsId.title.openRequests")}>
           {requestsLoading ? (
-            <div className="py-6 text-center text-sm text-slate-500">Loading requests…</div>
+            <div className="py-6 text-center text-sm text-muted">Loading requests…</div>
           ) : unitRequests.length === 0 ? (
             <div className="empty-state-text py-6 text-center italic">No open requests for this unit.</div>
           ) : (
@@ -1350,7 +1350,7 @@ export default function UnitDetail() {
                   {sortedUnitRequests.map((r) => (
                     <tr
                       key={r.id}
-                      className="border-t border-slate-100 hover:bg-slate-50 cursor-pointer"
+                      className="border-t border-surface-divider hover:bg-surface-subtle cursor-pointer"
                       onClick={() => router.push(`/manager/requests/${r.id}?from=/admin-inventory/units/${id}`)}
                     >
                       <td className="tabular-nums font-medium">#{r.requestNumber}</td>

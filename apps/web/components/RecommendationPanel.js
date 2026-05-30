@@ -78,7 +78,7 @@ export default function RecommendationPanel({ requestId }) {
   if (loading) {
     return (
       <Panel title={t("recommendation.title")}>
-        <p className="text-sm text-slate-400 m-0 animate-pulse">{t("label.loading", { ns: "common" })}</p>
+        <p className="text-sm text-foreground-dim m-0 animate-pulse">{t("label.loading", { ns: "common" })}</p>
       </Panel>
     );
   }
@@ -94,7 +94,7 @@ export default function RecommendationPanel({ requestId }) {
   if (recommendations.length === 0) {
     return (
       <Panel title={t("recommendation.title")}>
-        <p className="text-sm text-slate-400 m-0">{t("empty.noData", { ns: "common" })}</p>
+        <p className="text-sm text-foreground-dim m-0">{t("empty.noData", { ns: "common" })}</p>
       </Panel>
     );
   }
@@ -117,12 +117,12 @@ export default function RecommendationPanel({ requestId }) {
       <div className="space-y-4">
         {/* Summary */}
         {explanation?.summary && (
-          <p className="text-sm text-slate-600 m-0">{explanation.summary}</p>
+          <p className="text-sm text-muted-text m-0">{explanation.summary}</p>
         )}
 
         {/* Decision status */}
         <div className="flex items-center gap-2">
-          <span className="text-xs font-medium text-slate-500">{t("label.status", { ns: "common" })}:</span>
+          <span className="text-xs font-medium text-muted">{t("label.status", { ns: "common" })}:</span>
           <Badge variant={decisionVariant}>{t(`recommendation.decision.${decisionKey}`)}</Badge>
         </div>
 
@@ -135,7 +135,7 @@ export default function RecommendationPanel({ requestId }) {
                 key={opt.optionId}
                 className={cn(
                   "rounded-lg border p-3",
-                  i === 0 ? "border-indigo-200 bg-indigo-50/50" : "border-slate-200",
+                  i === 0 ? "border-indigo-200 bg-indigo-50/50" : "border-surface-border",
                   !opt.eligible && "opacity-50",
                 )}
               >
@@ -171,7 +171,7 @@ export default function RecommendationPanel({ requestId }) {
                 )}
 
                 {optExpl && (
-                  <div className="mt-2 space-y-1 text-xs text-slate-500">
+                  <div className="mt-2 space-y-1 text-xs text-muted">
                     <p className="m-0">
                       <span className="font-medium">Short-term:</span> {optExpl.shortTermImpact}
                     </p>
@@ -197,15 +197,15 @@ export default function RecommendationPanel({ requestId }) {
 
         {/* Decision actions (only if pending) */}
         {rec.userDecision === "pending" && (
-          <div className="space-y-3 border-t border-slate-200 pt-3">
-            <label htmlFor="rec-feedback" className="text-xs font-medium text-slate-500">
+          <div className="space-y-3 border-t border-surface-border pt-3">
+            <label htmlFor="rec-feedback" className="text-xs font-medium text-muted">
               {t("label.notes", { ns: "common" })} (optional)
             </label>
             <textarea
               id="rec-feedback"
               value={feedback}
               onChange={(e) => setFeedback(e.target.value)}
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full rounded-md border border-muted-ring px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               rows={2}
               placeholder={t("recommendation.feedbackPlaceholder")}
             />

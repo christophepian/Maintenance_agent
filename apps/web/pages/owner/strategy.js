@@ -199,7 +199,7 @@ function RadioGroup({ options, value, onChange, name }) {
               "flex items-center gap-3 rounded-lg border px-4 py-3 cursor-pointer transition-colors",
               selected
                 ? "border-indigo-300 bg-indigo-50"
-                : "border-slate-200 bg-white hover:bg-slate-50"
+                : "border-surface-border bg-surface hover:bg-surface-subtle"
             )}
           >
             <input
@@ -210,7 +210,7 @@ function RadioGroup({ options, value, onChange, name }) {
               onChange={() => onChange(optValue)}
               className="accent-indigo-600"
             />
-            <span className="text-sm text-slate-900">{label}</span>
+            <span className="text-sm text-foreground">{label}</span>
           </label>
         );
       })}
@@ -348,14 +348,14 @@ export default function StrategyPage() {
             <Panel>
               <div className="space-y-6">
                 <div>
-                  <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                  <p className="text-xs font-medium uppercase tracking-wide text-foreground-dim">
                     Your current strategy
                   </p>
-                  <h2 className="mt-1 text-2xl font-bold text-slate-900">
+                  <h2 className="mt-1 text-2xl font-bold text-foreground">
                     {USER_LABELS[archetype] || archetype}
                   </h2>
                   {secondary && secondary !== archetype && (
-                    <p className="mt-2 text-sm text-slate-600">
+                    <p className="mt-2 text-sm text-muted-text">
                       With a secondary lean toward:{" "}
                       <span className="font-semibold">
                         {USER_LABELS[secondary] || secondary}
@@ -364,18 +364,18 @@ export default function StrategyPage() {
                   )}
                 </div>
 
-                <p className="text-sm text-slate-700 leading-relaxed">
+                <p className="text-sm text-muted-dark leading-relaxed">
                   {EXPLANATIONS[archetype]}
                 </p>
 
                 {/* What this means in practice */}
                 <div>
-                  <h3 className="text-sm font-semibold text-slate-900 mb-2">{t("owner:strategy.heading.whatThisMeansInPractice")}</h3>
+                  <h3 className="text-sm font-semibold text-foreground mb-2">{t("owner:strategy.heading.whatThisMeansInPractice")}</h3>
                   <ul className="space-y-2">
                     {(BULLETS[archetype] || []).map((bullet, i) => (
                       <li
                         key={i}
-                        className="flex items-start gap-2 text-sm text-slate-700"
+                        className="flex items-start gap-2 text-sm text-muted-dark"
                       >
                         <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-indigo-400 shrink-0" />
                         {bullet}
@@ -385,13 +385,13 @@ export default function StrategyPage() {
                 </div>
 
                 {/* Deprioritize note */}
-                <p className="text-sm text-slate-500 italic">
+                <p className="text-sm text-muted italic">
                   {DEPRIORITIZE[archetype]}
                 </p>
 
                 {/* Confidence */}
                 {profile.confidence && (
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-foreground-dim">
                     Confidence: {profile.confidence}
                   </p>
                 )}
@@ -440,7 +440,7 @@ export default function StrategyPage() {
               <Panel key={idx}>
                 <div className="space-y-5">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-semibold text-slate-900">
+                    <h3 className="text-sm font-semibold text-foreground">
                       Building {idx + 1}
                     </h3>
                     {buildingEntries.length > 1 && (
@@ -457,7 +457,7 @@ export default function StrategyPage() {
                   {/* Name + Address */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label htmlFor={`bname-${idx}`} className="block text-sm font-medium text-slate-700 mb-1">
+                      <label htmlFor={`bname-${idx}`} className="block text-sm font-medium text-muted-dark mb-1">
                         Building name *
                       </label>
                       <input
@@ -466,11 +466,11 @@ export default function StrategyPage() {
                         value={entry.name}
                         onChange={(e) => updateBuildingEntry(idx, "name", e.target.value)}
                         placeholder={t("owner:strategy.placeholder.eGRueDuLac12")}
-                        className="block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                        className="block w-full rounded-lg border border-muted-ring px-3 py-2 text-sm"
                       />
                     </div>
                     <div>
-                      <label htmlFor={`baddr-${idx}`} className="block text-sm font-medium text-slate-700 mb-1">
+                      <label htmlFor={`baddr-${idx}`} className="block text-sm font-medium text-muted-dark mb-1">
                         Address
                       </label>
                       <input
@@ -479,14 +479,14 @@ export default function StrategyPage() {
                         value={entry.address}
                         onChange={(e) => updateBuildingEntry(idx, "address", e.target.value)}
                         placeholder={t("owner:strategy.placeholder.eG1003Lausanne")}
-                        className="block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                        className="block w-full rounded-lg border border-muted-ring px-3 py-2 text-sm"
                       />
                     </div>
                   </div>
 
                   {/* Building type */}
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                    <label className="block text-sm font-medium text-muted-dark mb-2">
                       Building type
                     </label>
                     <RadioGroup
@@ -499,7 +499,7 @@ export default function StrategyPage() {
 
                   {/* Approximate units */}
                   <div>
-                    <label htmlFor={`units-${idx}`} className="block text-sm font-medium text-slate-700 mb-1">
+                    <label htmlFor={`units-${idx}`} className="block text-sm font-medium text-muted-dark mb-1">
                       Approximate number of units (optional)
                     </label>
                     <input
@@ -509,13 +509,13 @@ export default function StrategyPage() {
                       value={entry.approxUnits}
                       onChange={(e) => updateBuildingEntry(idx, "approxUnits", e.target.value)}
                       placeholder={t("owner:strategy.placeholder.eG12")}
-                      className="block w-full max-w-[120px] rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                      className="block w-full max-w-[120px] rounded-lg border border-muted-ring px-3 py-2 text-sm"
                     />
                   </div>
 
                   {/* Condition rating */}
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                    <label className="block text-sm font-medium text-muted-dark mb-2">
                       Current condition
                     </label>
                     <RadioGroup
@@ -528,7 +528,7 @@ export default function StrategyPage() {
 
                   {/* Role intent */}
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                    <label className="block text-sm font-medium text-muted-dark mb-2">
                       What is your intent for this building? *
                     </label>
                     <RadioGroup
@@ -567,7 +567,7 @@ export default function StrategyPage() {
                     )}
 
                     {entry.strategyMode === "same" && (
-                      <p className="mt-3 text-xs text-slate-600">
+                      <p className="mt-3 text-xs text-muted-text">
                         This building will use your overall portfolio strategy{portfolioArchetypeLabel ? `: ${portfolioArchetypeLabel}.` : "."}
                       </p>
                     )}
@@ -594,7 +594,7 @@ export default function StrategyPage() {
                 className={cn(
                   "rounded-lg px-5 py-2.5 text-sm font-medium text-white transition-colors",
                   !canSubmit || submitting
-                    ? "bg-slate-300 cursor-not-allowed"
+                    ? "bg-muted-ring cursor-not-allowed"
                     : "bg-indigo-600 hover:bg-indigo-700"
                 )}
               >
@@ -602,7 +602,7 @@ export default function StrategyPage() {
               </button>
               <button
                 onClick={() => router.push("/owner")}
-                className="text-sm font-medium text-slate-500 hover:text-slate-700 transition-colors"
+                className="text-sm font-medium text-muted hover:text-muted-dark transition-colors"
               >
                 Skip for now
               </button>
@@ -625,7 +625,7 @@ export default function StrategyPage() {
           <ErrorBanner error={error} />
           <Panel>
             <div className="space-y-6 max-w-lg">
-              <h2 className="text-lg font-semibold text-slate-900">
+              <h2 className="text-lg font-semibold text-foreground">
                 {currentQuestion.title}
               </h2>
 
@@ -642,7 +642,7 @@ export default function StrategyPage() {
                 {step > 0 && (
                   <button
                     onClick={handleBack}
-                    className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+                    className="rounded-lg border border-surface-border bg-surface px-4 py-2 text-sm font-medium text-muted-dark hover:bg-surface-subtle transition-colors"
                   >
                     Back
                   </button>
@@ -653,7 +653,7 @@ export default function StrategyPage() {
                   className={cn(
                     "rounded-lg px-5 py-2.5 text-sm font-medium text-white transition-colors",
                     !answers[currentQuestion.key] || submitting
-                      ? "bg-slate-300 cursor-not-allowed"
+                      ? "bg-muted-ring cursor-not-allowed"
                       : "bg-indigo-600 hover:bg-indigo-700"
                   )}
                 >
@@ -667,7 +667,7 @@ export default function StrategyPage() {
 
               {/* Progress bar */}
               <div className="pt-2">
-                <div className="h-1.5 w-full rounded-full bg-slate-100">
+                <div className="h-1.5 w-full rounded-full bg-surface-hover">
                   <div
                     className="h-1.5 rounded-full bg-indigo-500 transition-all"
                     style={{ width: `${((step + 1) / totalQuestions) * 100}%` }}

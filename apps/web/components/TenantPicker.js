@@ -124,7 +124,7 @@ export default function TenantPicker({ onSelect }) {
       </select>
       {switching && <span className="text-green-700 text-sm">Switching…</span>}
       {current && !switching && (
-        <span className="text-slate-600 text-xs">
+        <span className="text-muted-text text-xs">
           {current.name || current.id.slice(0, 8)}
           {sessionBuilding ? ` · ${sessionBuilding.name}` : ""}
           {sessionUnit ? ` · Unit ${sessionUnit.unitNumber}` : ""}

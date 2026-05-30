@@ -247,7 +247,7 @@ export default function TenantInboxPage() {
                 className={
                   "card p-4 flex items-start gap-3 cursor-pointer transition-colors border " +
                   (n.readAt
-                    ? "bg-white hover:bg-slate-50"
+                    ? "bg-surface hover:bg-surface-subtle"
                     : "bg-blue-50 border-blue-200 hover:bg-blue-100")
                 }
               >
@@ -258,12 +258,12 @@ export default function TenantInboxPage() {
                   <p
                     className={
                       "text-sm " +
-                      (n.readAt ? "text-slate-600" : "text-slate-900 font-medium")
+                      (n.readAt ? "text-muted-text" : "text-foreground font-medium")
                     }
                   >
                     {n.message || n.eventType.replace(/_/g, " ").toLowerCase()}
                   </p>
-                  <p className="text-xs text-slate-400 mt-1">
+                  <p className="text-xs text-foreground-dim mt-1">
                     {formatDateTime(n.createdAt)}
                   </p>
                   {n.eventType === "OWNER_REJECTED" && (
@@ -285,7 +285,7 @@ export default function TenantInboxPage() {
                       e.stopPropagation();
                       dismissNotification(n.id);
                     }}
-                    className="text-slate-300 hover:text-slate-500 ml-1"
+                    className="text-foreground-dim hover:text-muted ml-1"
                     title={t("tenant:inbox.title.dismiss")}
                   >
                     ✕

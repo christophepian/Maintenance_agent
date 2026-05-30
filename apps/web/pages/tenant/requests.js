@@ -88,7 +88,7 @@ function TenantSchedulingPanel({ requestId }) {
     }
   }
 
-  if (loading) return <p className="text-xs text-slate-400 mt-2">{t("tenant:requests.text.checkingAppointments")}</p>;
+  if (loading) return <p className="text-xs text-foreground-dim mt-2">{t("tenant:requests.text.checkingAppointments")}</p>;
   if (slots.length === 0) return null;
 
   const accepted = slots.find((s) => s.status === "ACCEPTED");
@@ -130,9 +130,9 @@ function TenantSchedulingPanel({ requestId }) {
             {proposed.map((slot) => (
               <div
                 key={slot.id}
-                className={cn("rounded-lg border p-3", slot.status === "ACCEPTED" ? "border-green-200 bg-green-50" : slot.status === "DECLINED" ? "border-red-200 bg-red-50" : slot.status === "PROPOSED" ? "border-yellow-200 bg-yellow-50" : "bg-white border-slate-200")}
+                className={cn("rounded-lg border p-3", slot.status === "ACCEPTED" ? "border-green-200 bg-green-50" : slot.status === "DECLINED" ? "border-red-200 bg-red-50" : slot.status === "PROPOSED" ? "border-yellow-200 bg-yellow-50" : "bg-surface border-surface-border")}
               >
-                <p className="text-sm font-medium text-slate-900">
+                <p className="text-sm font-medium text-foreground">
                   {formatSlotTime(slot.startTime)} – {formatSlotTime(slot.endTime)}
                 </p>
                 <div className="mt-2 flex items-center gap-2">
@@ -146,7 +146,7 @@ function TenantSchedulingPanel({ requestId }) {
                   <button
                     onClick={() => handleAction(slot.id, "decline")}
                     disabled={!!actionLoading}
-                    className="rounded-lg border border-red-300 bg-white px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
+                    className="rounded-lg border border-red-300 bg-surface px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
                   >
                     Decline
                   </button>
@@ -165,7 +165,7 @@ function TenantSchedulingPanel({ requestId }) {
                     key={slot.id}
                     className="flex items-center justify-between rounded-lg border border-red-100 bg-red-50/50 p-2 opacity-60"
                   >
-                    <p className="text-xs text-slate-500 line-through">
+                    <p className="text-xs text-muted line-through">
                       {formatSlotTime(slot.startTime)} – {formatSlotTime(slot.endTime)}
                     </p>
                     <span className="text-xs text-red-600">{t("tenant:requests.text.declined")}</span>
@@ -254,39 +254,39 @@ function TenantCaptureSessionModal({ requestId, onClose, onComplete }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-xl shadow-2xl w-full max-w-sm mx-4 p-6">
-        <h3 className="text-lg font-semibold text-slate-900 mt-0 mb-1">{t("tenant:requests.text.captureWithPhone")}</h3>
+      <div onClick={(e) => e.stopPropagation()} className="bg-surface rounded-xl shadow-2xl w-full max-w-sm mx-4 p-6">
+        <h3 className="text-lg font-semibold text-foreground mt-0 mb-1">{t("tenant:requests.text.captureWithPhone")}</h3>
         {creating ? (
-          <p className="text-sm text-slate-500">{t("tenant:requests.text.creatingCaptureSession")}</p>
+          <p className="text-sm text-muted">{t("tenant:requests.text.creatingCaptureSession")}</p>
         ) : createError ? (
           <div>
             <p className="text-sm text-red-600 mb-3">{createError}</p>
-            <button onClick={onClose} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition">{t("tenant:requests.text.close")}</button>
+            <button onClick={onClose} className="rounded-lg border border-surface-border bg-surface px-4 py-2 text-sm font-medium text-muted-dark hover:bg-surface-subtle transition">{t("tenant:requests.text.close")}</button>
           </div>
         ) : completed ? (
           <div className="text-center py-4">
             <p className="text-2xl mb-2">✅</p>
             <p className="text-sm font-medium text-green-700 mb-1">{t("tenant:requests.text.photosReceived")}</p>
-            <p className="text-xs text-slate-500 mb-4">{t("tenant:requests.text.yourPhotosHaveBeenAttachedToTheRequest")}</p>
+            <p className="text-xs text-muted mb-4">{t("tenant:requests.text.yourPhotosHaveBeenAttachedToTheRequest")}</p>
             <button onClick={onClose} className="button-primary text-sm">{t("tenant:requests.text.done")}</button>
           </div>
         ) : (
           <div>
-            <p className="text-sm text-slate-500 mt-0 mb-4">
+            <p className="text-sm text-muted mt-0 mb-4">
               Scan this QR code with your phone to capture photos for your maintenance request.
             </p>
             <div className="flex justify-center mb-4">
               <QRCodeSVG value={mobileUrl} size={300} level="L" />
             </div>
-            <div className="bg-slate-50 rounded-lg p-2 mb-3">
-              <p className="text-xs text-slate-400 uppercase tracking-wide mb-0.5">{t("tenant:requests.text.mobileLink")}</p>
-              <p className="text-xs text-slate-600 break-all font-mono select-all m-0">{mobileUrl}</p>
+            <div className="bg-surface-subtle rounded-lg p-2 mb-3">
+              <p className="text-xs text-foreground-dim uppercase tracking-wide mb-0.5">{t("tenant:requests.text.mobileLink")}</p>
+              <p className="text-xs text-muted-text break-all font-mono select-all m-0">{mobileUrl}</p>
             </div>
-            <p className="text-xs text-slate-400 text-center mb-3">
+            <p className="text-xs text-foreground-dim text-center mb-3">
               Session expires in 15 minutes. Waiting for photos…
             </p>
             <div className="flex justify-end">
-              <button onClick={onClose} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition">{t("tenant:requests.text.cancel")}</button>
+              <button onClick={onClose} className="rounded-lg border border-surface-border bg-surface px-4 py-2 text-sm font-medium text-muted-dark hover:bg-surface-subtle transition">{t("tenant:requests.text.cancel")}</button>
             </div>
           </div>
         )}
@@ -401,7 +401,7 @@ function TenantPhotosPanel({ requestId }) {
     return blobUrls[a.id] || downloadUrl(a);
   }
 
-  if (loading) return <p className="text-xs text-slate-400 mt-2">{t("tenant:requests.text.loadingPhotos")}</p>;
+  if (loading) return <p className="text-xs text-foreground-dim mt-2">{t("tenant:requests.text.loadingPhotos")}</p>;
 
   const images = attachments.filter((a) => isImage(a.filename));
   const fileList = attachments.filter((a) => !isImage(a.filename));
@@ -409,14 +409,14 @@ function TenantPhotosPanel({ requestId }) {
   return (
     <div className="mt-3">
       {attachments.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-slate-200 bg-slate-50 px-4 py-4 text-center">
-          <p className="text-xs text-slate-400 mb-2">{t("tenant:requests.text.noPhotosYet")}</p>
+        <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-surface-border bg-surface-subtle px-4 py-4 text-center">
+          <p className="text-xs text-foreground-dim mb-2">{t("tenant:requests.text.noPhotosYet")}</p>
           <div className="flex gap-2">
             <label className="cursor-pointer rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700">
               Upload photo
               <input type="file" multiple accept="image/*,.pdf" className="hidden" onChange={handleUpload} />
             </label>
-            <button onClick={() => setShowCapture(true)} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50" aria-label={t("tenant:requests.ariaLabel.captureWithPhone")}>
+            <button onClick={() => setShowCapture(true)} className="rounded-lg border border-surface-border bg-surface px-3 py-1.5 text-xs font-medium text-muted-dark hover:bg-surface-subtle" aria-label={t("tenant:requests.ariaLabel.captureWithPhone")}>
               📷 Capture with phone
             </button>
           </div>
@@ -426,7 +426,7 @@ function TenantPhotosPanel({ requestId }) {
           {images.length > 0 && (
             <div className="grid grid-cols-4 gap-2">
               {images.map((a, i) => (
-                <button key={i} onClick={() => setPreviewUrl(imageUrl(a))} className="group relative aspect-square overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
+                <button key={i} onClick={() => setPreviewUrl(imageUrl(a))} className="group relative aspect-square overflow-hidden rounded-lg border border-surface-border bg-surface-subtle">
                   <img src={imageUrl(a)} alt={a.filename} className="h-full w-full object-cover transition-transform group-hover:scale-105" />
                 </button>
               ))}
@@ -436,20 +436,20 @@ function TenantPhotosPanel({ requestId }) {
           {fileList.length > 0 && (
             <div className="mt-2 flex flex-col gap-1.5">
               {fileList.map((a, i) => (
-                <a key={i} href={downloadUrl(a)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs hover:bg-slate-50">
-                  <span className="font-medium text-slate-700">{a.filename}</span>
-                  {a.size && <span className="text-slate-400">{formatSize(a.size)}</span>}
+                <a key={i} href={downloadUrl(a)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-lg border border-surface-border bg-surface px-3 py-2 text-xs hover:bg-surface-subtle">
+                  <span className="font-medium text-muted-dark">{a.filename}</span>
+                  {a.size && <span className="text-foreground-dim">{formatSize(a.size)}</span>}
                 </a>
               ))}
             </div>
           )}
 
           <div className="mt-2 flex gap-2">
-            <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50">
+            <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-surface-border bg-surface px-3 py-1.5 text-xs font-medium text-muted-text hover:bg-surface-subtle">
               + Upload more
               <input type="file" multiple accept="image/*,.pdf" className="hidden" onChange={handleUpload} />
             </label>
-            <button onClick={() => setShowCapture(true)} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50" aria-label={t("tenant:requests.ariaLabel.captureWithPhone")}>
+            <button onClick={() => setShowCapture(true)} className="inline-flex items-center gap-1.5 rounded-lg border border-surface-border bg-surface px-3 py-1.5 text-xs font-medium text-muted-text hover:bg-surface-subtle" aria-label={t("tenant:requests.ariaLabel.captureWithPhone")}>
               📷 Phone
             </button>
           </div>
@@ -468,7 +468,7 @@ function TenantPhotosPanel({ requestId }) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80" onClick={() => setPreviewUrl(null)}>
           <div className="relative max-h-[90vh] max-w-[90vw]" onClick={(e) => e.stopPropagation()}>
             <img src={previewUrl} alt="Preview" className="max-h-[85vh] max-w-[85vw] rounded-lg object-contain" />
-            <button onClick={() => setPreviewUrl(null)} className="absolute -top-3 -right-3 flex h-8 w-8 items-center justify-center rounded-full bg-white text-slate-700 shadow-lg hover:bg-slate-100">
+            <button onClick={() => setPreviewUrl(null)} className="absolute -top-3 -right-3 flex h-8 w-8 items-center justify-center rounded-full bg-surface text-muted-dark shadow-lg hover:bg-surface-hover">
               &times;
             </button>
           </div>
@@ -498,7 +498,7 @@ function StarRow({ value, onChange, disabled }) {
           disabled={disabled}
           onClick={() => onChange(n)}
           aria-label={`Rate ${n} of 5`}
-          className={cn("text-xl leading-none focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 rounded disabled:cursor-default", n <= (value || 0) ? "text-yellow-400" : "text-slate-300")}
+          className={cn("text-xl leading-none focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 rounded disabled:cursor-default", n <= (value || 0) ? "text-yellow-400" : "text-foreground-dim")}
         >
           ★
         </button>
@@ -601,7 +601,7 @@ function TenantJobReviewPanel({ job, onRefresh }) {
         <form onSubmit={handleRate} className="mt-2 space-y-3">
           {CRITERIA.map((c) => (
             <div key={c.key} className="flex items-center justify-between">
-              <span className="text-xs text-slate-700 w-40">{c.label}</span>
+              <span className="text-xs text-muted-dark w-40">{c.label}</span>
               <StarRow
                 value={scores[c.key]}
                 onChange={(v) => setScores((prev) => ({ ...prev, [c.key]: v }))}
@@ -615,14 +615,14 @@ function TenantJobReviewPanel({ job, onRefresh }) {
               onChange={(e) => setComment(e.target.value)}
               placeholder={t("tenant:requests.placeholder.commentOptional")}
               rows={2}
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs placeholder-slate-400 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400"
+              className="w-full rounded-lg border border-surface-border px-3 py-2 text-xs placeholder-slate-400 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400"
             />
           </div>
           <div className="flex justify-end gap-2">
             <button
               type="button"
               onClick={() => setShowRating(false)}
-              className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
+              className="rounded-lg border border-surface-border px-3 py-1.5 text-xs font-medium text-muted-text hover:bg-surface-subtle"
             >
               Cancel
             </button>
@@ -722,7 +722,7 @@ function TenantClaimAnalysisPanel({ requestId }) {
         <p className="text-xs text-red-700 mb-2">{error}</p>
         <button
           onClick={runAnalysis}
-          className="rounded-lg border border-red-300 bg-white px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50"
+          className="rounded-lg border border-red-300 bg-surface px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50"
         >
           Try again
         </button>
@@ -752,24 +752,24 @@ function TenantClaimAnalysisPanel({ requestId }) {
         <Badge variant={badge.variant} size="sm">
           {badge.label}
         </Badge>
-        <span className="text-xs text-slate-500">
+        <span className="text-xs text-muted">
           Confidence: {Math.round(a.confidence || 0)}%
         </span>
         {a.legalTopic && (
-          <span className="text-xs text-slate-400">• {a.legalTopic}</span>
+          <span className="text-xs text-foreground-dim">• {a.legalTopic}</span>
         )}
       </div>
 
       {/* Tenant Guidance — always visible */}
       {a.tenantGuidance && (
-        <div className="rounded-lg bg-white border border-violet-100 p-3">
-          <p className="text-xs font-medium text-slate-800 mb-1">{a.tenantGuidance.summary}</p>
+        <div className="rounded-lg bg-surface border border-violet-100 p-3">
+          <p className="text-xs font-medium text-foreground mb-1">{a.tenantGuidance.summary}</p>
           {a.tenantGuidance.nextSteps?.length > 0 && (
             <div className="mt-2">
-              <p className="text-xs font-semibold text-slate-600 mb-1">{t("tenant:requests.text.nextSteps")}</p>
+              <p className="text-xs font-semibold text-muted-text mb-1">{t("tenant:requests.text.nextSteps")}</p>
               <ol className="list-decimal list-inside space-y-0.5">
                 {a.tenantGuidance.nextSteps.map((step, i) => (
-                  <li key={i} className="text-xs text-slate-700">{step}</li>
+                  <li key={i} className="text-xs text-muted-dark">{step}</li>
                 ))}
               </ol>
             </div>
@@ -825,29 +825,29 @@ function TenantClaimAnalysisPanel({ requestId }) {
           {/* Matched defects */}
           {a.matchedDefects?.length > 0 && (
             <div>
-              <p className="text-xs font-semibold text-slate-700 mb-1">
+              <p className="text-xs font-semibold text-muted-dark mb-1">
                 Matched precedents ({a.matchedDefects.length})
               </p>
               <div className="space-y-1.5">
                 {a.matchedDefects.map((d, i) => (
                   <div
                     key={i}
-                    className="rounded-lg border border-slate-200 bg-white p-2.5"
+                    className="rounded-lg border border-surface-border bg-surface p-2.5"
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <p className="text-xs font-medium text-slate-800">{d.defect}</p>
-                        <p className="text-xs text-slate-500 mt-0.5">
+                        <p className="text-xs font-medium text-foreground">{d.defect}</p>
+                        <p className="text-xs text-muted mt-0.5">
                           {d.category} • {d.reductionPercent}% reduction
                           {d.reductionMax ? ` (max ${d.reductionMax}%)` : ""}
                         </p>
                       </div>
-                      <span className="text-xs text-slate-400 ml-2">
+                      <span className="text-xs text-foreground-dim ml-2">
                         {Math.round(d.matchConfidence)}% match
                       </span>
                     </div>
                     {d.matchReasons?.length > 0 && (
-                      <p className="text-xs text-slate-400 mt-1">
+                      <p className="text-xs text-foreground-dim mt-1">
                         {d.matchReasons.join(", ")}
                       </p>
                     )}
@@ -860,13 +860,13 @@ function TenantClaimAnalysisPanel({ requestId }) {
           {/* Legal basis */}
           {a.legalBasis?.length > 0 && (
             <div>
-              <p className="text-xs font-semibold text-slate-700 mb-1">{t("tenant:requests.text.legalBasis")}</p>
+              <p className="text-xs font-semibold text-muted-dark mb-1">{t("tenant:requests.text.legalBasis")}</p>
               <div className="space-y-1">
                 {a.legalBasis.map((b, i) => (
-                  <div key={i} className="text-xs text-slate-600">
+                  <div key={i} className="text-xs text-muted-text">
                     <span className="font-medium">{b.article}</span>
                     {b.text && <span> — {b.text}</span>}
-                    <span className="text-slate-400 ml-1">({b.authority})</span>
+                    <span className="text-foreground-dim ml-1">({b.authority})</span>
                   </div>
                 ))}
               </div>
@@ -897,7 +897,7 @@ function TenantClaimAnalysisPanel({ requestId }) {
 
           {/* Temporal context */}
           {a.temporalContext?.seasonalAdjustment && (
-            <div className="text-xs text-slate-500">
+            <div className="text-xs text-muted">
               🌡️ Seasonal adjustment applied
               {a.temporalContext.proRatedPercent != null
                 ? ` — pro-rated to ${a.temporalContext.proRatedPercent}%`
@@ -1002,10 +1002,10 @@ function NewRequestModal({ onClose, onCreated }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-lg rounded-2xl bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
-          <h2 className="text-base font-semibold text-slate-900">{t("tenant:requests.heading.newMaintenanceRequest")}</h2>
-          <button onClick={onClose} className="rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
+      <div className="w-full max-w-lg rounded-2xl bg-surface shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between border-b border-surface-divider px-6 py-4">
+          <h2 className="text-base font-semibold text-foreground">{t("tenant:requests.heading.newMaintenanceRequest")}</h2>
+          <button onClick={onClose} className="rounded-full p-1 text-foreground-dim hover:bg-surface-hover hover:text-muted-text">
             <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
             </svg>
@@ -1022,7 +1022,7 @@ function NewRequestModal({ onClose, onCreated }) {
           )}
 
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-slate-700">
+            <label className="mb-1.5 block text-sm font-medium text-muted-dark">
               Description <span className="text-red-500">*</span>
             </label>
             <textarea
@@ -1032,18 +1032,18 @@ function NewRequestModal({ onClose, onCreated }) {
               placeholder={t("tenant:requests.placeholder.describeTheIssueInDetailEGTheKitchenFaucetIsDripping")}
               rows={4}
               required
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm placeholder-slate-400 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400 disabled:bg-slate-50 disabled:text-slate-500"
+              className="w-full rounded-lg border border-surface-border px-3 py-2 text-sm placeholder-slate-400 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400 disabled:bg-surface-subtle disabled:text-muted"
             />
-            <p className="mt-1 text-xs text-slate-400">{description.trim().length}/2000 — min 10 characters</p>
+            <p className="mt-1 text-xs text-foreground-dim">{description.trim().length}/2000 — min 10 characters</p>
           </div>
 
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-slate-700">{t("tenant:requests.text.category")}</label>
+            <label className="mb-1.5 block text-sm font-medium text-muted-dark">{t("tenant:requests.text.category")}</label>
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value)}
               disabled={!!createdRequestId}
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400 disabled:bg-slate-50 disabled:text-slate-500"
+              className="w-full rounded-lg border border-surface-border px-3 py-2 text-sm text-muted-dark focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400 disabled:bg-surface-subtle disabled:text-muted"
             >
               <option value="">— Select a category (optional) —</option>
               {CATEGORIES.map((c) => (
@@ -1053,19 +1053,19 @@ function NewRequestModal({ onClose, onCreated }) {
           </div>
 
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-slate-700">{t("tenant:requests.text.contactPhone")}</label>
+            <label className="mb-1.5 block text-sm font-medium text-muted-dark">{t("tenant:requests.text.contactPhone")}</label>
             <input
               type="tel"
               value={contactPhone}
               onChange={(e) => setContactPhone(e.target.value)}
               disabled={!!createdRequestId}
               placeholder={t("tenant:requests.placeholder.41791234567")}
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm placeholder-slate-400 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400 disabled:bg-slate-50 disabled:text-slate-500"
+              className="w-full rounded-lg border border-surface-border px-3 py-2 text-sm placeholder-slate-400 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400 disabled:bg-surface-subtle disabled:text-muted"
             />
           </div>
 
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-slate-700">{t("tenant:requests.text.photosAttachments")}</label>
+            <label className="mb-1.5 block text-sm font-medium text-muted-dark">{t("tenant:requests.text.photosAttachments")}</label>
             <input
               type="file"
               multiple
@@ -1091,21 +1091,21 @@ function NewRequestModal({ onClose, onCreated }) {
                 setPendingFiles((prev) => [...prev, ...valid]);
                 e.target.value = "";
               }}
-              className="w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200"
+              className="w-full text-sm text-muted-text file:mr-3 file:rounded-lg file:border-0 file:bg-surface-hover file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-muted-dark hover:file:bg-surface-border"
             />
-            <p className="mt-1 text-xs text-slate-400">{t("tenant:requests.text.upTo5FilesMax10MbEachImagesOrPdf")}</p>
+            <p className="mt-1 text-xs text-foreground-dim">{t("tenant:requests.text.upTo5FilesMax10MbEachImagesOrPdf")}</p>
             {pendingFiles.length > 0 && (
               <ul className="mt-2 space-y-1">
                 {pendingFiles.map((f, i) => (
-                  <li key={i} className="flex items-center justify-between rounded bg-slate-50 px-2 py-1 text-xs text-slate-600">
+                  <li key={i} className="flex items-center justify-between rounded bg-surface-subtle px-2 py-1 text-xs text-muted-text">
                     <span className="truncate max-w-[240px]">{f.name}</span>
                     <span className="ml-2 flex-shrink-0 flex items-center gap-2">
-                      <span className="text-slate-400">{(f.size / 1024).toFixed(0)} KB</span>
+                      <span className="text-foreground-dim">{(f.size / 1024).toFixed(0)} KB</span>
                       <button
                         type="button"
                         aria-label={`Remove ${f.name}`}
                         onClick={() => setPendingFiles((prev) => prev.filter((_, idx) => idx !== i))}
-                        className="text-slate-400 hover:text-red-500"
+                        className="text-foreground-dim hover:text-red-500"
                       >
                         ✕
                       </button>
@@ -1118,7 +1118,7 @@ function NewRequestModal({ onClose, onCreated }) {
               type="button"
               onClick={handleCaptureClick}
               disabled={submitting}
-              className="mt-2 inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+              className="mt-2 inline-flex items-center gap-2 rounded-lg border border-surface-border bg-surface px-3 py-1.5 text-xs font-medium text-muted-dark hover:bg-surface-subtle disabled:opacity-50"
               aria-label={t("tenant:requests.ariaLabel.capturePhotosWithPhoneViaQrCode")}
             >
               📷 Capture with phone
@@ -1132,7 +1132,7 @@ function NewRequestModal({ onClose, onCreated }) {
             <button
               type="button"
               onClick={createdRequestId ? onCreated : onClose}
-              className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
+              className="rounded-lg border border-surface-border px-4 py-2 text-sm font-medium text-muted-text hover:bg-surface-subtle"
             >
               {createdRequestId ? "Done" : "Cancel"}
             </button>
@@ -1306,12 +1306,12 @@ export default function TenantRequestsPage() {
                 <div key={r.id} className="card border overflow-hidden">
                   {/* Clickable header */}
                   <div
-                    className="flex cursor-pointer items-start justify-between px-3 py-3 hover:bg-slate-50"
+                    className="flex cursor-pointer items-start justify-between px-3 py-3 hover:bg-surface-subtle"
                     onClick={() => toggleAccordion(r.id)}
                   >
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-slate-900 truncate">
-                        {r.requestNumber ? <span className="text-slate-500 font-mono">#{r.requestNumber}</span> : null}
+                      <p className="text-sm font-medium text-foreground truncate">
+                        {r.requestNumber ? <span className="text-muted font-mono">#{r.requestNumber}</span> : null}
                         {r.requestNumber ? " " : ""}{r.description}
                       </p>
                       <div className="flex items-center gap-2 mt-1">
@@ -1324,7 +1324,7 @@ export default function TenantRequestsPage() {
                           </Badge>
                         )}
                       </div>
-                      <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1 text-xs text-slate-400">
+                      <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1 text-xs text-foreground-dim">
                         {r.buildingName && <span>{r.buildingName}</span>}
                         {r.unitNumber && <span>Unit {r.unitNumber}</span>}
                         {r.category && <span>{r.category}</span>}
@@ -1333,7 +1333,7 @@ export default function TenantRequestsPage() {
                     </div>
                     <div className="flex items-center gap-2 ml-3 flex-shrink-0">
                       <svg
-                        className={cn("h-4 w-4 text-slate-400 transition-transform", isExpanded ? "rotate-90" : "")}
+                        className={cn("h-4 w-4 text-foreground-dim transition-transform", isExpanded ? "rotate-90" : "")}
                         fill="none" viewBox="0 0 24 24" stroke="currentColor"
                       >
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -1356,7 +1356,7 @@ export default function TenantRequestsPage() {
 
                   {/* Expanded detail */}
                   {isExpanded && (
-                    <div className="border-t border-slate-100 px-3 pb-4 pt-3">
+                    <div className="border-t border-surface-divider px-3 pb-4 pt-3">
                       {r.rejectionReason && r.status === "OWNER_REJECTED" && (
                         <p className="mb-2 text-xs text-red-600">Reason: {r.rejectionReason}</p>
                       )}

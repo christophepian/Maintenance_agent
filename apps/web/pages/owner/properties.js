@@ -39,10 +39,10 @@ function monopolyColor(seed) {
 function StatRow({ label, value, sub, valueClass = "" }) {
   return (
     <div className="flex items-baseline justify-between gap-2 py-2">
-      <span className="text-xs text-slate-500 shrink-0">{label}</span>
-      <span className={cn("text-xs font-semibold text-slate-800 text-right tabular-nums", valueClass)}>
+      <span className="text-xs text-muted shrink-0">{label}</span>
+      <span className={cn("text-xs font-semibold text-foreground text-right tabular-nums", valueClass)}>
         {value}
-        {sub && <span className="text-xs font-normal text-slate-400 ml-0.5">{sub}</span>}
+        {sub && <span className="text-xs font-normal text-foreground-dim ml-0.5">{sub}</span>}
       </span>
     </div>
   );
@@ -113,7 +113,7 @@ function MonopolyCard({ building, fin, onClick }) {
             </span>
           )}
           {building.yearBuilt && (
-            <span className="text-xs text-slate-400">{building.yearBuilt}</span>
+            <span className="text-xs text-foreground-dim">{building.yearBuilt}</span>
           )}
           {amenities.map((a) => (
             <span key={a} className="text-[9px] bg-muted-light text-muted-text rounded px-1.5 py-0.5">
@@ -198,14 +198,14 @@ function buildOwnerBuildingColumns(t) {
     label: t("owner:properties.col.building"),
     sortable: true,
     alwaysVisible: true,
-    render: (b) => <span className="font-medium text-slate-900">{b.name}</span>,
+    render: (b) => <span className="font-medium text-foreground">{b.name}</span>,
   },
   {
     id: "address",
     label: t("owner:properties.col.address"),
     sortable: true,
     defaultVisible: true,
-    render: (b) => <span className="text-slate-500">{b.address || "\u2014"}</span>,
+    render: (b) => <span className="text-muted">{b.address || "\u2014"}</span>,
   },
   {
     id: "unitCount",
@@ -223,7 +223,7 @@ function buildOwnerBuildingColumns(t) {
       <span className={
         "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold " +
         (b.isActive === false
-          ? "bg-slate-100 text-slate-500"
+          ? "bg-surface-hover text-muted"
           : "bg-green-100 text-green-700")
       }>
         {b.isActive === false ? "Inactive" : "Active"}
@@ -235,7 +235,7 @@ function buildOwnerBuildingColumns(t) {
     label: t("owner:properties.col.canton"),
     sortable: true,
     defaultVisible: false,
-    render: (b) => <span className="text-slate-600">{b.canton || "\u2014"}</span>,
+    render: (b) => <span className="text-muted-text">{b.canton || "\u2014"}</span>,
   },
 ];
 }
@@ -254,7 +254,7 @@ export default function OwnerPropertiesPage() {
           actions={
             <button
               onClick={() => setRefreshKey((k) => k + 1)}
-              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              className="rounded-lg border border-surface-border bg-surface px-3 py-2 text-sm font-medium text-muted-dark hover:bg-surface-subtle"
             >
               Refresh
             </button>
@@ -354,7 +354,7 @@ function BuildingsTab({ refreshKey }) {
       {/* View toggle — only shown when data is ready */}
       {!loading && buildings.length > 0 && (
         <div className="flex justify-end mb-3">
-          <div className="inline-flex rounded-lg border border-slate-200 bg-white overflow-hidden shadow-sm">
+          <div className="inline-flex rounded-lg border border-surface-border bg-surface overflow-hidden shadow-sm">
             <button
               type="button"
               onClick={() => setViewMode("list")}
@@ -363,7 +363,7 @@ function BuildingsTab({ refreshKey }) {
                 "px-3 py-1.5 text-sm flex items-center gap-1.5 transition-colors",
                 viewMode === "list"
                   ? "bg-slate-800 text-white"
-                  : "text-slate-500 hover:bg-slate-50"
+                  : "text-muted hover:bg-surface-subtle"
               )}
             >
               {/* List icon */}
@@ -379,10 +379,10 @@ function BuildingsTab({ refreshKey }) {
               onClick={() => setViewMode("monopoly")}
               aria-label={t("owner:properties.ariaLabel.monopolyBoardView")}
               className={cn(
-                "px-3 py-1.5 text-sm flex items-center gap-1.5 transition-colors border-l border-slate-200",
+                "px-3 py-1.5 text-sm flex items-center gap-1.5 transition-colors border-l border-surface-border",
                 viewMode === "monopoly"
                   ? "bg-slate-800 text-white"
-                  : "text-slate-500 hover:bg-slate-50"
+                  : "text-muted hover:bg-surface-subtle"
               )}
             >
               {/* Grid icon */}
@@ -425,15 +425,15 @@ function BuildingsTab({ refreshKey }) {
                 key={b.id}
                 type="button"
                 onClick={() => router.push(buildingDetailUrl(b))}
-                className="w-full rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm hover:bg-slate-50 transition-colors"
+                className="w-full rounded-2xl border border-surface-border bg-surface p-4 text-left shadow-sm hover:bg-surface-subtle transition-colors"
               >
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-slate-900">{b.name}</p>
-                  {b.address && <p className="text-xs text-slate-500 mt-0.5">{b.address}</p>}
+                  <p className="text-sm font-semibold text-foreground">{b.name}</p>
+                  {b.address && <p className="text-xs text-muted mt-0.5">{b.address}</p>}
                 </div>
                 <div className="mt-3 flex flex-wrap items-center gap-2">
-                  {b.unitCount != null && <span className="text-xs text-slate-400">{b.unitCount} units</span>}
-                  <span className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold", b.isActive === false ? "bg-slate-100 text-slate-500" : "bg-green-100 text-green-700")}>
+                  {b.unitCount != null && <span className="text-xs text-foreground-dim">{b.unitCount} units</span>}
+                  <span className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold", b.isActive === false ? "bg-surface-hover text-muted" : "bg-green-100 text-green-700")}>
                     {b.isActive === false ? "Inactive" : "Active"}
                   </span>
                 </div>
@@ -452,7 +452,7 @@ function BuildingsTab({ refreshKey }) {
                 sortDir={sortDir}
                 onSort={handleSort}
                 onRowClick={(b) => router.push(buildingDetailUrl(b))}
-                emptyState={<p className="text-sm text-slate-500">{t("owner:properties.text.noPropertiesFound")}</p>}
+                emptyState={<p className="text-sm text-muted">{t("owner:properties.text.noPropertiesFound")}</p>}
               />
           </div>
         </>

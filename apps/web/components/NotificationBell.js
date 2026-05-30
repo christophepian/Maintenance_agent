@@ -168,7 +168,7 @@ export default function NotificationBell({ role }) {
       case "RATING_SUBMITTED": return "bg-violet-100 text-violet-700";
       case "JOB_CONFIRMED": return "bg-teal-100 text-teal-700";
       case "INVOICE_OVERDUE": return "bg-red-100 text-red-700";
-      default: return "bg-slate-100 text-slate-600";
+      default: return "bg-surface-hover text-muted-text";
     }
   };
 
@@ -194,7 +194,7 @@ export default function NotificationBell({ role }) {
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
         <button
-          className="relative p-2 text-slate-600 hover:text-slate-900 focus:outline-none rounded-full"
+          className="relative p-2 text-muted-text hover:text-foreground focus:outline-none rounded-full"
           aria-label={t("notifications.title")}
           aria-expanded={isOpen}
           aria-haspopup="dialog"
@@ -223,8 +223,8 @@ export default function NotificationBell({ role }) {
 
       <PopoverContent className="w-96 p-0" sideOffset={8}>
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200">
-          <h3 className="text-lg font-semibold text-slate-900">{t("notifications.title")}</h3>
+        <div className="flex items-center justify-between px-4 py-3 border-b border-surface-border">
+          <h3 className="text-lg font-semibold text-foreground">{t("notifications.title")}</h3>
           {notifications.length > 0 && (
             <button
               onClick={markAllAsRead}
@@ -239,16 +239,16 @@ export default function NotificationBell({ role }) {
         {/* Notifications List */}
         <div className="max-h-96 overflow-y-auto" role="list" aria-label={t("notifications.title")}>
           {loading ? (
-            <div className="px-4 py-8 text-center text-slate-500">{t("label.loading")}</div>
+            <div className="px-4 py-8 text-center text-muted">{t("label.loading")}</div>
           ) : notifications.length === 0 ? (
-            <div className="px-4 py-8 text-center text-slate-500">{t("notifications.empty")}</div>
+            <div className="px-4 py-8 text-center text-muted">{t("notifications.empty")}</div>
           ) : (
             notifications.map((notif) => (
               <div
                 key={notif.id}
                 role="listitem"
                 onClick={() => handleNotificationClick(notif)}
-                className={cn("px-4 py-3 border-b border-slate-100 hover:bg-slate-50", !isNotifRead(notif) ? "bg-blue-50" : "", getNotificationLink(notif) ? "cursor-pointer" : "")}
+                className={cn("px-4 py-3 border-b border-surface-divider hover:bg-surface-subtle", !isNotifRead(notif) ? "bg-blue-50" : "", getNotificationLink(notif) ? "cursor-pointer" : "")}
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
@@ -263,8 +263,8 @@ export default function NotificationBell({ role }) {
                         </>
                       )}
                     </div>
-                    <p className="text-sm text-slate-700 mb-1">{notif.message}</p>
-                    <p className="text-xs text-slate-400">{formatDateTime(notif.createdAt)}</p>
+                    <p className="text-sm text-muted-dark mb-1">{notif.message}</p>
+                    <p className="text-xs text-foreground-dim">{formatDateTime(notif.createdAt)}</p>
                   </div>
                   <div className="flex flex-col gap-1 ml-2">
                     {!isNotifRead(notif) && (

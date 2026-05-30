@@ -6,25 +6,25 @@ export default function PaginationControls({ currentPage, totalPages, totalItems
   const from = currentPage * pageSize + 1;
   const to = Math.min((currentPage + 1) * pageSize, totalItems);
   return (
-    <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3">
-      <p className="text-xs text-slate-500">
+    <div className="flex items-center justify-between border-t border-surface-divider px-4 py-3">
+      <p className="text-xs text-muted">
         {t("pagination.showing", { from, to, total: totalItems })}
       </p>
       <div className="flex items-center gap-2">
         <button
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 0}
-          className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+          className="rounded-lg border border-surface-border bg-surface px-3 py-1.5 text-xs font-medium text-muted-text hover:bg-surface-subtle disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {t("pagination.previous")}
         </button>
-        <span className="text-xs text-slate-500">
+        <span className="text-xs text-muted">
           {t("pagination.page", { current: currentPage + 1, total: totalPages })}
         </span>
         <button
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage >= totalPages - 1}
-          className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+          className="rounded-lg border border-surface-border bg-surface px-3 py-1.5 text-xs font-medium text-muted-text hover:bg-surface-subtle disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {t("pagination.next")}
         </button>

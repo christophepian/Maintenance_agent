@@ -34,14 +34,14 @@ function KpiCard({ label, value, sub, accent, rag }) {
   const cls = accent === "green" ? "text-green-700"
     : accent === "red" ? "text-red-600"
     : accent === "amber" ? "text-amber-700"
-    : "text-slate-900";
+    : "text-foreground";
   return (
-    <div className="bg-white rounded-lg border border-slate-200 p-4 flex flex-col gap-1">
-      <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">{label}</span>
+    <div className="bg-surface rounded-lg border border-surface-border p-4 flex flex-col gap-1">
+      <span className="text-xs font-medium text-muted uppercase tracking-wide">{label}</span>
       <span className={cn("text-xl font-bold", cls)}>{value}</span>
-      {sub && <span className="text-xs text-slate-400">{sub}</span>}
+      {sub && <span className="text-xs text-foreground-dim">{sub}</span>}
       {rag && (
-        <span className="text-xs font-medium text-slate-600 mt-0.5">{rag.dot} {rag.label}</span>
+        <span className="text-xs font-medium text-muted-text mt-0.5">{rag.dot} {rag.label}</span>
       )}
     </div>
   );
@@ -53,12 +53,12 @@ function StatRow({ label, value, sub, accent }) {
   const cls = accent === "green" ? "text-green-700"
     : accent === "red" ? "text-red-600"
     : accent === "amber" ? "text-amber-700"
-    : "text-slate-900";
+    : "text-foreground";
   return (
-    <div className="flex items-center justify-between py-2 border-b border-slate-100 last:border-0">
+    <div className="flex items-center justify-between py-2 border-b border-surface-divider last:border-0">
       <div>
-        <span className="text-sm text-slate-700">{label}</span>
-        {sub && <span className="text-xs text-slate-400 ml-2">{sub}</span>}
+        <span className="text-sm text-muted-dark">{label}</span>
+        {sub && <span className="text-xs text-foreground-dim ml-2">{sub}</span>}
       </div>
       <span className={cn("text-sm font-semibold font-mono", cls)}>{value}</span>
     </div>
@@ -125,7 +125,7 @@ export default function BuildingFinancialsView({ buildingId, variant = "page" })
                 </div>
               </div>
               {d && (
-                <p className="text-xs text-slate-400 mt-2">
+                <p className="text-xs text-foreground-dim mt-2">
                   {displayDate(d.from)} – {displayDate(d.to)} · {t("buildingFinancials.units", { count: d.activeUnitsCount })}
                 </p>
               )}
@@ -145,7 +145,7 @@ export default function BuildingFinancialsView({ buildingId, variant = "page" })
         <>
           {/* ─── Tab / segmented control ─── */}
           {variant === "embedded" ? (
-            <div className="inline-flex rounded-lg border border-slate-200 bg-slate-100 p-0.5 gap-0.5 mt-4 mb-6 flex-wrap">
+            <div className="inline-flex rounded-lg border border-surface-border bg-surface-hover p-0.5 gap-0.5 mt-4 mb-6 flex-wrap">
               {TAB_KEYS.map((key) => (
                 <button
                   key={key}
@@ -153,8 +153,8 @@ export default function BuildingFinancialsView({ buildingId, variant = "page" })
                   className={[
                     "rounded-lg px-4 py-1.5 text-sm font-medium transition-colors",
                     activeTab === key
-                      ? "bg-white text-slate-900 shadow-sm"
-                      : "text-slate-500 hover:text-slate-700",
+                      ? "bg-surface text-foreground shadow-sm"
+                      : "text-muted hover:text-muted-dark",
                   ].join(" ")}
                 >
                   {t(`buildingFinancials.tabs.${key}`)}
@@ -296,8 +296,8 @@ export default function BuildingFinancialsView({ buildingId, variant = "page" })
                     value={formatChfCents(d.projectedIncomeCents)}
                     sub={t("buildingFinancials.kpi.projectedIncomeSub")}
                   />
-                  <div className="mt-3 mb-1 pt-3 border-t border-slate-200">
-                    <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">{t("buildingFinancials.kpi.projectedBreakdown")}</span>
+                  <div className="mt-3 mb-1 pt-3 border-t border-surface-border">
+                    <span className="text-xs font-medium text-muted uppercase tracking-wide">{t("buildingFinancials.kpi.projectedBreakdown")}</span>
                   </div>
                   <StatRow
                     label={t("buildingFinancials.kpi.rentalIncome")}
@@ -309,8 +309,8 @@ export default function BuildingFinancialsView({ buildingId, variant = "page" })
                     value={formatChfCents(d.serviceChargeIncomeCents)}
                     sub={t("buildingFinancials.kpi.serviceChargesSub")}
                   />
-                  <div className="mt-3 mb-1 pt-3 border-t border-slate-200">
-                    <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">{t("buildingFinancials.kpi.performance")}</span>
+                  <div className="mt-3 mb-1 pt-3 border-t border-surface-border">
+                    <span className="text-xs font-medium text-muted uppercase tracking-wide">{t("buildingFinancials.kpi.performance")}</span>
                   </div>
                   <StatRow
                     label={t("buildingFinancials.kpi.collectionRate")}
@@ -361,7 +361,7 @@ export default function BuildingFinancialsView({ buildingId, variant = "page" })
                         ))}
                       </tbody>
                       <tfoot>
-                        <tr className="border-t-2 border-slate-300 font-semibold">
+                        <tr className="border-t-2 border-muted-ring font-semibold">
                           <td>{t("buildingFinancials.col.total")}</td>
                           <td className="text-right font-mono">{formatChfCents(d.expensesTotalCents)}</td>
                         </tr>
@@ -385,7 +385,7 @@ export default function BuildingFinancialsView({ buildingId, variant = "page" })
                       <tbody>
                         {d.expensesByAccount.map((row) => (
                           <tr key={row.accountId}>
-                            <td className="font-mono text-xs text-slate-500">{row.accountCode || "—"}</td>
+                            <td className="font-mono text-xs text-muted">{row.accountCode || "—"}</td>
                             <td className="cell-bold">{row.accountName}</td>
                             <td className="text-right font-mono">{formatChfCents(row.totalCents)}</td>
                           </tr>
@@ -424,7 +424,7 @@ export default function BuildingFinancialsView({ buildingId, variant = "page" })
           {/* ═══ Receivables & Payables tab ═══ */}
           {activeTab === "balances" && (
             <Section title={t("buildingFinancials.section.outstandingBalances")}>
-              <p className="text-xs text-slate-500 mb-3">
+              <p className="text-xs text-muted mb-3">
                 {t("buildingFinancials.balances.pointInTime")}
               </p>
               <Panel>
@@ -452,7 +452,7 @@ export default function BuildingFinancialsView({ buildingId, variant = "page" })
           {/* ═══ Advanced tab ═══ */}
           {activeTab === "advanced" && (
             <Section title={t("buildingFinancials.section.advancedAccounting")}>
-              <p className="text-xs text-slate-500 mb-4">
+              <p className="text-xs text-muted mb-4">
                 {t("buildingFinancials.advanced.description")}
               </p>
               <div className="flex flex-wrap gap-3">

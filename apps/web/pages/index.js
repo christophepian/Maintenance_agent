@@ -73,9 +73,9 @@ export default function Home() {
     <div className="max-w-4xl mx-auto p-4 font-sans">
       <header className="mb-6">
         <h1 className="mb-1">{t("tenant:index.heading.maintenanceAgentNdashUiLauncher")}</h1>
-        <div className="text-slate-500 text-sm mb-4">
-          Frontend: <code className="px-1.5 py-0.5 rounded-md bg-slate-100 border border-slate-200 font-mono text-xs">http://localhost:3000</code> &bull; Backend:{" "}
-          <code className="px-1.5 py-0.5 rounded-md bg-slate-100 border border-slate-200 font-mono text-xs">{API_BASE}</code>
+        <div className="text-muted text-sm mb-4">
+          Frontend: <code className="px-1.5 py-0.5 rounded-md bg-surface-hover border border-surface-border font-mono text-xs">http://localhost:3000</code> &bull; Backend:{" "}
+          <code className="px-1.5 py-0.5 rounded-md bg-surface-hover border border-surface-border font-mono text-xs">{API_BASE}</code>
         </div>
       </header>
 
@@ -85,13 +85,13 @@ export default function Home() {
 
       <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(320px,1fr))] mb-8">
         {flows.map((f) => (
-          <div key={f.path} className="border border-slate-300 rounded-xl p-4 bg-white flex flex-col gap-2.5 min-h-[120px]">
+          <div key={f.path} className="border border-muted-ring rounded-xl p-4 bg-surface flex flex-col gap-2.5 min-h-[120px]">
             <div className="flex items-center gap-3">
               <div className="font-semibold text-lg">{f.title}</div>
-              <code className="font-mono text-xs text-slate-400 bg-slate-50 rounded-md px-1.5 py-0.5 ml-2">{f.path}</code>
+              <code className="font-mono text-xs text-foreground-dim bg-surface-subtle rounded-md px-1.5 py-0.5 ml-2">{f.path}</code>
             </div>
 
-            <div className="text-slate-500 text-sm">{f.desc}</div>
+            <div className="text-muted text-sm">{f.desc}</div>
 
             <div className="flex gap-2.5 items-center mt-1">
               <Link href={f.path} className="px-4 py-2 rounded-lg border border-slate-900 bg-slate-900 text-white cursor-pointer font-semibold no-underline">
@@ -99,7 +99,7 @@ export default function Home() {
               </Link>
               <a
                 href={f.path}
-                className="px-4 py-2 rounded-lg border border-slate-300 bg-white text-slate-900 cursor-pointer font-semibold no-underline"
+                className="px-4 py-2 rounded-lg border border-muted-ring bg-surface text-foreground cursor-pointer font-semibold no-underline"
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -110,10 +110,10 @@ export default function Home() {
         ))}
       </div>
 
-      <footer className="mt-10 text-slate-400 text-sm">
+      <footer className="mt-10 text-foreground-dim text-sm">
         <div className="font-semibold mb-1">If a link shows &quot;Not found&quot;</div>
         <div>
-          Make sure the page exists in <code className="font-mono text-xs text-slate-400 bg-slate-50 rounded-md px-1.5 py-0.5 ml-1">apps/web/pages</code> or change the <code className="font-mono text-xs text-slate-400 bg-slate-50 rounded-md px-1.5 py-0.5 ml-1">path</code> in <code className="font-mono text-xs text-slate-400 bg-slate-50 rounded-md px-1.5 py-0.5 ml-1">pages/index.js</code>.
+          Make sure the page exists in <code className="font-mono text-xs text-foreground-dim bg-surface-subtle rounded-md px-1.5 py-0.5 ml-1">apps/web/pages</code> or change the <code className="font-mono text-xs text-foreground-dim bg-surface-subtle rounded-md px-1.5 py-0.5 ml-1">path</code> in <code className="font-mono text-xs text-foreground-dim bg-surface-subtle rounded-md px-1.5 py-0.5 ml-1">pages/index.js</code>.
         </div>
       </footer>
     </div>

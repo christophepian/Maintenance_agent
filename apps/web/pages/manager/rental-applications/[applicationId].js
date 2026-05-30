@@ -48,7 +48,7 @@ export default function ApplicationDetailPage() {
     return (
       <AppShell role="MANAGER">
         <PageShell>
-          <PageContent><p className="text-sm text-slate-500">{t("manager:rental_ApplicationsApplicationid.text.loading")}</p></PageContent>
+          <PageContent><p className="text-sm text-muted">{t("manager:rental_ApplicationsApplicationid.text.loading")}</p></PageContent>
         </PageShell>
       </AppShell>
     );
@@ -60,7 +60,7 @@ export default function ApplicationDetailPage() {
         <PageShell>
           <PageContent>
             <ErrorBanner error={error} className="text-sm" />
-            <p className="text-sm text-slate-500">{t("manager:rental_ApplicationsApplicationid.text.applicationNotFound")}</p>
+            <p className="text-sm text-muted">{t("manager:rental_ApplicationsApplicationid.text.applicationNotFound")}</p>
           </PageContent>
         </PageShell>
       </AppShell>
@@ -76,7 +76,7 @@ export default function ApplicationDetailPage() {
           actions={
             <button
               onClick={() => router.back()}
-              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              className="rounded-lg border border-surface-border bg-surface px-3 py-2 text-sm font-medium text-muted-dark hover:bg-surface-subtle"
             >
               ← Back
             </button>
@@ -90,16 +90,16 @@ export default function ApplicationDetailPage() {
           <Panel title={t("manager:rentalApplicationsApplicationid.title.applicants")}>
             <div className="space-y-4">
               {(app.applicants || []).map((a) => (
-                <div key={a.id} className="rounded-lg border border-slate-100 p-4">
+                <div key={a.id} className="rounded-lg border border-surface-divider p-4">
                   <div className="flex items-center gap-2">
-                    <h4 className="text-sm font-semibold text-slate-900">
+                    <h4 className="text-sm font-semibold text-foreground">
                       {a.firstName} {a.lastName}
                     </h4>
                     <Badge variant={a.role === "PRIMARY" ? "brand" : "muted"} size="sm">
                       {a.role === "PRIMARY" ? "Primary" : "Co-applicant"}
                     </Badge>
                   </div>
-                  <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-slate-600 sm:grid-cols-3">
+                  <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-muted-text sm:grid-cols-3">
                     <Detail label={t("manager:rental_ApplicationsApplicationid.prop.email")} value={a.email} />
                     <Detail label={t("manager:rental_ApplicationsApplicationid.prop.phone")} value={a.phone} />
                     <Detail label={t("manager:rental_ApplicationsApplicationid.prop.dateOfBirth")} value={a.dateOfBirth} />
@@ -120,7 +120,7 @@ export default function ApplicationDetailPage() {
 
           {/* Household Info */}
           <Panel title={t("manager:rentalApplicationsApplicationid.title.householdCurrentHousing")}>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-slate-600 sm:grid-cols-3">
+            <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-muted-text sm:grid-cols-3">
               <Detail label={t("manager:rental_ApplicationsApplicationid.prop.currentLandlord")} value={app.currentLandlordName} />
               <Detail label={t("manager:rental_ApplicationsApplicationid.prop.landlordAddress")} value={app.currentLandlordAddress} />
               <Detail label={t("manager:rental_ApplicationsApplicationid.prop.landlordPhone")} value={app.currentLandlordPhone} />
@@ -140,10 +140,10 @@ export default function ApplicationDetailPage() {
             <Panel title={t("manager:rentalApplicationsApplicationid.title.unitEvaluations")}>
               <div className="space-y-3">
                 {app.applicationUnits.map((au) => (
-                  <div key={au.id} className="rounded-lg border border-slate-100 p-4">
+                  <div key={au.id} className="rounded-lg border border-surface-divider p-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <span className="text-sm font-medium text-slate-900">
+                        <span className="text-sm font-medium text-foreground">
                           {au.unit?.building?.id ? (
                             <Link href={`/manager/buildings/${au.unit.building.id}/financials`} className="cell-link">
                               {au.unit.building.name || "—"}
@@ -161,11 +161,11 @@ export default function ApplicationDetailPage() {
                         </Badge>
                       </div>
                       <div className="text-right">
-                        <div className="text-lg font-bold text-slate-900">{au.scoreTotal ?? "—"}</div>
-                        <div className="text-xs text-slate-500">score</div>
+                        <div className="text-lg font-bold text-foreground">{au.scoreTotal ?? "—"}</div>
+                        <div className="text-xs text-muted">score</div>
                       </div>
                     </div>
-                    <div className="mt-2 grid grid-cols-3 gap-2 text-xs text-slate-600">
+                    <div className="mt-2 grid grid-cols-3 gap-2 text-xs text-muted-text">
                       <Detail label={t("manager:rental_ApplicationsApplicationid.prop.confidence")} value={`${au.confidenceScore ?? 0}%`} />
                       <Detail label={t("manager:rental_ApplicationsApplicationid.prop.status")} value={(au.status || "").replace(/_/g, " ")} />
                       <Detail label={t("manager:rental_ApplicationsApplicationid.prop.managerDelta")} value={au.managerScoreDelta || 0} />
@@ -185,9 +185,9 @@ export default function ApplicationDetailPage() {
           {/* Signature */}
           {app.signedName && (
             <Panel title={t("manager:rentalApplicationsApplicationid.title.signature")}>
-              <div className="text-sm text-slate-700">
+              <div className="text-sm text-muted-dark">
                 <span className="font-serif italic text-lg">{app.signedName}</span>
-                {app.signedAt && <span className="ml-4 text-xs text-slate-500">Signed {formatDate(app.signedAt)}</span>}
+                {app.signedAt && <span className="ml-4 text-xs text-muted">Signed {formatDate(app.signedAt)}</span>}
               </div>
             </Panel>
           )}
@@ -200,8 +200,8 @@ export default function ApplicationDetailPage() {
 function Detail({ label, value }) {
   return (
     <div>
-      <span className="font-medium text-slate-500">{label}:</span>{" "}
-      <span className="text-slate-700">{value || "—"}</span>
+      <span className="font-medium text-muted">{label}:</span>{" "}
+      <span className="text-muted-dark">{value || "—"}</span>
     </div>
   );
 }

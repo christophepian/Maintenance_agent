@@ -2230,7 +2230,15 @@
       "integrations": "Integrations",
       "legal": "Legal Sources",
       "depreciation": "Standards",
-      "categorymappings": "Category Mappings"
+      "categorymappings": "Category Mappings",
+      "appearance": "Appearance"
+    },
+    "appearance": {
+      "colorScheme": "Color scheme",
+      "light": "Light",
+      "lightDescription": "Default — optimised for bright environments.",
+      "dark": "Dark",
+      "darkDescription": "Easier on the eyes in low-light conditions."
     },
     "notifications": {
       "loading": "Loading preferences...",

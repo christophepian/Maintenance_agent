@@ -391,9 +391,9 @@ function JobCard({
 
           {/* Scope of work */}
           {(req?.description || job.requestDescription) && (
-            <div className="mt-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
-              <h4 className="text-xs font-semibold text-slate-700 mb-1">{t("contractor:jobs.text.scope")}</h4>
-              <p className="text-sm text-slate-800 whitespace-pre-wrap">
+            <div className="mt-3 p-3 bg-surface-subtle rounded-lg border border-surface-border">
+              <h4 className="text-xs font-semibold text-muted-dark mb-1">{t("contractor:jobs.text.scope")}</h4>
+              <p className="text-sm text-foreground whitespace-pre-wrap">
                 {req?.description || job.requestDescription}
               </p>
             </div>
@@ -420,12 +420,12 @@ function JobCard({
           )}
 
           {/* Timestamps */}
-          <div className="mt-3 text-xs text-slate-500 flex flex-wrap gap-x-4 gap-y-1">
+          <div className="mt-3 text-xs text-muted flex flex-wrap gap-x-4 gap-y-1">
             <span>Created: {formatDate(job.createdAt)}</span>
             {job.startedAt && <span>Started: {formatDate(job.startedAt)}</span>}
             {job.completedAt && <span>Completed: {formatDate(job.completedAt)}</span>}
             {job.actualCost != null && (
-              <span className="font-semibold text-slate-700">CHF {job.actualCost}</span>
+              <span className="font-semibold text-muted-dark">CHF {job.actualCost}</span>
             )}
           </div>
 
@@ -442,7 +442,7 @@ function JobCard({
             )}
             {job.status === "PENDING" && actionJobId === job.id && (
               <div className="flex items-center gap-2">
-                <span className="text-sm text-slate-700">Ready to start?</span>
+                <span className="text-sm text-muted-dark">Ready to start?</span>
                 <button
                   onClick={() => onStartJob(job.id)}
                   className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
@@ -451,7 +451,7 @@ function JobCard({
                 </button>
                 <button
                   onClick={() => setActionJobId(null)}
-                  className="px-3 py-2 bg-slate-200 text-slate-700 text-sm rounded-lg hover:bg-slate-300"
+                  className="px-3 py-2 bg-surface-border text-muted-dark text-sm rounded-lg hover:bg-muted-ring"
                 >
                   Cancel
                 </button>
@@ -474,7 +474,7 @@ function JobCard({
                   placeholder={t("contractor:jobs.placeholder.actualCostChf")}
                   value={actualCost}
                   onChange={(e) => setActualCost(e.target.value)}
-                  className="w-40 px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                  className="w-40 px-3 py-2 border border-muted-ring rounded-lg text-sm"
                 />
                 <button
                   onClick={() => onCompleteJob(job.id)}
@@ -487,7 +487,7 @@ function JobCard({
                     setActionJobId(null);
                     setActualCost("");
                   }}
-                  className="px-3 py-2 bg-slate-200 text-slate-700 text-sm rounded-lg hover:bg-slate-300"
+                  className="px-3 py-2 bg-surface-border text-muted-dark text-sm rounded-lg hover:bg-muted-ring"
                 >
                   Cancel
                 </button>
@@ -515,7 +515,7 @@ function JobCard({
             {/* Always: View Detail link */}
             <Link
               href={`/contractor/jobs/${job.id}`}
-              className="text-sm text-slate-600 hover:text-slate-900 hover:underline ml-auto"
+              className="text-sm text-muted-text hover:text-foreground hover:underline ml-auto"
             >
               View Detail →
             </Link>

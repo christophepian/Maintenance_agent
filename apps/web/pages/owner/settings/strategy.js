@@ -65,12 +65,12 @@ export default function StrategySettingsPage() {
         <PageContent>
           <ErrorBanner error={error} />
           {loading && (
-            <p className="text-sm text-slate-500">{t("owner:settingsStrategy.text.loading")}</p>
+            <p className="text-sm text-muted">{t("owner:settingsStrategy.text.loading")}</p>
           )}
           {!loading && !profile && (
             <Panel>
               <div className="space-y-4">
-                <p className="text-sm text-slate-600">
+                <p className="text-sm text-muted-text">
                   You haven't set a strategy profile yet. Complete the short
                   questionnaire to get tailored recommendations.
                 </p>
@@ -87,24 +87,24 @@ export default function StrategySettingsPage() {
             <Panel>
               <div className="space-y-4">
                 <div>
-                  <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                  <p className="text-xs font-medium uppercase tracking-wide text-foreground-dim">
                     Current strategy
                   </p>
-                  <h2 className="mt-1 text-xl font-bold text-slate-900">
+                  <h2 className="mt-1 text-xl font-bold text-foreground">
                     {USER_LABELS[archetype] || archetype}
                   </h2>
                 </div>
-                <p className="text-sm text-slate-500 italic">
+                <p className="text-sm text-muted italic">
                   {DEPRIORITIZE[archetype]}
                 </p>
                 {profile.confidence && (
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-foreground-dim">
                     Confidence: {profile.confidence}
                   </p>
                 )}
                 <Link
                   href="/owner/strategy"
-                  className="inline-flex items-center rounded-lg border border-indigo-200 bg-white px-4 py-2 text-sm font-medium text-indigo-600 hover:bg-indigo-50 transition-colors no-underline"
+                  className="inline-flex items-center rounded-lg border border-indigo-200 bg-surface px-4 py-2 text-sm font-medium text-indigo-600 hover:bg-indigo-50 transition-colors no-underline"
                 >
                   Change my strategy
                 </Link>

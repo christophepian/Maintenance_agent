@@ -39,21 +39,21 @@ function buildBuildingColumns(t) {
     label: t("manager:inventory.col.name"),
     sortable: true,
     alwaysVisible: true,
-    render: (b) => <span className="font-medium text-slate-900">{b.name || "Unnamed"}</span>,
+    render: (b) => <span className="font-medium text-foreground">{b.name || "Unnamed"}</span>,
   },
   {
     id: "address",
     label: t("manager:inventory.col.address"),
     sortable: true,
     defaultVisible: true,
-    render: (b) => <span className="text-slate-600">{b.address || "\u2014"}</span>,
+    render: (b) => <span className="text-muted-text">{b.address || "\u2014"}</span>,
   },
   {
     id: "canton",
     label: t("manager:inventory.col.canton"),
     sortable: true,
     defaultVisible: true,
-    render: (b) => <span className="text-slate-600">{b.canton || "\u2014"}</span>,
+    render: (b) => <span className="text-muted-text">{b.canton || "\u2014"}</span>,
   },
   {
     id: "id",
@@ -66,7 +66,7 @@ function buildBuildingColumns(t) {
     label: t("manager:inventory.col.units"),
     sortable: true,
     defaultVisible: false,
-    render: (b) => <span className="text-slate-600">{b._count?.units ?? b.unitCount ?? "\u2014"}</span>,
+    render: (b) => <span className="text-muted-text">{b._count?.units ?? b.unitCount ?? "\u2014"}</span>,
   },
   {
     id: "health",
@@ -74,7 +74,7 @@ function buildBuildingColumns(t) {
     defaultVisible: true,
     render: (b) => {
       const h = b._financial?.health;
-      if (!h) return <span className="text-slate-300">\u2014</span>;
+      if (!h) return <span className="text-foreground-dim">\u2014</span>;
       const dot = { green: "bg-green-500 ring-green-200", amber: "bg-amber-500 ring-amber-200", red: "bg-red-500 ring-red-200" }[h] ?? "bg-slate-400 ring-slate-200";
       return (
         <span className={cn("inline-block h-2.5 w-2.5 rounded-full ring-2", dot)}>
@@ -89,7 +89,7 @@ function buildBuildingColumns(t) {
     defaultVisible: true,
     render: (b) => {
       const n = b._financial?.netIncomeCents;
-      if (n == null) return <span className="text-slate-300">\u2014</span>;
+      if (n == null) return <span className="text-foreground-dim">\u2014</span>;
       return <span className={cn("text-sm font-medium tabular-nums", n >= 0 ? "text-green-700" : "text-red-600")}>{formatChfCents(n)}</span>;
     },
   },
@@ -99,7 +99,7 @@ function buildBuildingColumns(t) {
     defaultVisible: true,
     render: (b) => {
       const r = b._financial?.collectionRate;
-      if (r == null) return <span className="text-slate-300">\u2014</span>;
+      if (r == null) return <span className="text-foreground-dim">\u2014</span>;
       return <span className={cn("text-sm tabular-nums", r >= 0.95 ? "text-green-700" : r >= 0.8 ? "text-amber-700" : "text-red-600")}>{formatPercent(r)}</span>;
     },
   },
@@ -113,40 +113,40 @@ function buildAssetModelColumns(t) {
     label: t("manager:inventory.col.name"),
     sortable: true,
     alwaysVisible: true,
-    render: (m) => <span className="font-medium text-slate-900">{m.name}</span>,
+    render: (m) => <span className="font-medium text-foreground">{m.name}</span>,
   },
   {
     id: "category",
     label: t("manager:inventory.col.category"),
     sortable: true,
     defaultVisible: true,
-    render: (m) => <span className="text-slate-600">{m.category || "\u2014"}</span>,
+    render: (m) => <span className="text-muted-text">{m.category || "\u2014"}</span>,
   },
   {
     id: "manufacturer",
     label: t("manager:inventory.col.manufacturer"),
     sortable: true,
     defaultVisible: true,
-    render: (m) => <span className="text-slate-600">{m.manufacturer || "\u2014"}</span>,
+    render: (m) => <span className="text-muted-text">{m.manufacturer || "\u2014"}</span>,
   },
   {
     id: "scope",
     label: t("manager:inventory.col.scope"),
     sortable: true,
     defaultVisible: true,
-    render: (m) => <span className="text-slate-600">{m.orgId ? "Org" : "Global"}</span>,
+    render: (m) => <span className="text-muted-text">{m.orgId ? "Org" : "Global"}</span>,
   },
   {
     id: "usefulLifeMonths",
     label: t("manager:inventory.col.usefulLife"),
     defaultVisible: false,
-    render: (m) => <span className="text-slate-600">{m.usefulLifeMonths ? `${Math.round(m.usefulLifeMonths / 12)}y` : "\u2014"}</span>,
+    render: (m) => <span className="text-muted-text">{m.usefulLifeMonths ? `${Math.round(m.usefulLifeMonths / 12)}y` : "\u2014"}</span>,
   },
   {
     id: "replacementCostChf",
     label: t("manager:inventory.col.replaceCost"),
     defaultVisible: false,
-    render: (m) => <span className="text-slate-600">{typeof m.replacementCostChf === "number" ? `CHF ${m.replacementCostChf.toLocaleString()}` : "\u2014"}</span>,
+    render: (m) => <span className="text-muted-text">{typeof m.replacementCostChf === "number" ? `CHF ${m.replacementCostChf.toLocaleString()}` : "\u2014"}</span>,
   },
 ];
 }
@@ -450,7 +450,7 @@ export default function ManagerInventoryPage() {
                       "flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
                       buildingCantonFilter
                         ? "border-brand bg-brand-light text-brand"
-                        : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                        : "border-surface-border bg-surface text-muted-text hover:bg-surface-subtle"
                     )}
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4" aria-hidden="true">
@@ -462,8 +462,8 @@ export default function ManagerInventoryPage() {
                 {buildingFilterOpen && (
                     <>
                     <div className="fixed inset-0 z-10" aria-hidden="true" onClick={() => setBuildingFilterOpen(false)} />
-                    <div className="absolute right-0 top-full mt-1.5 z-20 w-52 rounded-xl border border-slate-200 bg-white shadow-lg p-3 space-y-2">
-                      <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">{t("manager:inventory.text.canton")}</p>
+                    <div className="absolute right-0 top-full mt-1.5 z-20 w-52 rounded-xl border border-surface-border bg-surface shadow-lg p-3 space-y-2">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-foreground-dim">{t("manager:inventory.text.canton")}</p>
                       <select
                         className="filter-input w-full"
                         value={buildingCantonFilter}
@@ -479,7 +479,7 @@ export default function ManagerInventoryPage() {
                         <button
                           type="button"
                           onClick={() => { setBuildingCantonFilter(""); setBuildingFilterOpen(false); }}
-                          className="w-full text-xs text-slate-500 hover:text-red-600 transition-colors"
+                          className="w-full text-xs text-muted hover:text-red-600 transition-colors"
                         >
                           Clear filter
                         </button>
@@ -497,7 +497,7 @@ export default function ManagerInventoryPage() {
                     const next = cycle[(cycle.indexOf(sortField) + 1) % cycle.length];
                     handleSort(next);
                   }}
-                  className="flex shrink-0 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+                  className="flex shrink-0 items-center gap-1.5 rounded-lg border border-surface-border bg-surface px-3 py-2 text-sm font-medium text-muted-text hover:bg-surface-subtle transition-colors"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4" aria-hidden="true">
                     <path fillRule="evenodd" d="M2 3.75A.75.75 0 0 1 2.75 3h11.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 3.75ZM2 7.5a.75.75 0 0 1 .75-.75h7.508a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 7.5ZM14 7a.75.75 0 0 1 .75.75v6.59l1.95-2.1a.75.75 0 1 1 1.1 1.02l-3.25 3.5a.75.75 0 0 1-1.1 0l-3.25-3.5a.75.75 0 1 1 1.1-1.02l1.95 2.1V7.75A.75.75 0 0 1 14 7ZM2 11.25a.75.75 0 0 1 .75-.75h4.562a.75.75 0 0 1 0 1.5H2.75a.75.75 0 0 1-.75-.75Z" clipRule="evenodd" />
@@ -533,7 +533,7 @@ export default function ManagerInventoryPage() {
                 sortDir={sortDir}
                 onSort={handleSort}
                 onRowClick={(b) => router.push(`/admin-inventory/buildings/${b.id}?from=/manager/inventory`)}
-                emptyState={<p className="text-sm text-slate-500">{t("manager:inventory.text.noBuildingsFound")}</p>}
+                emptyState={<p className="text-sm text-muted">{t("manager:inventory.text.noBuildingsFound")}</p>}
                 mobileCard={(b) => {
                   const h = b._financial?.health;
                   const dot = h ? ({ green: "bg-green-500 ring-green-200", amber: "bg-amber-500 ring-amber-200", red: "bg-red-500 ring-red-200" }[h] ?? "bg-slate-400 ring-slate-200") : null;
@@ -571,12 +571,12 @@ export default function ManagerInventoryPage() {
           </div>
           {/* Decisions tab */}
           <div className={activeTab === 2 ? "tab-panel-active" : "tab-panel"}>
-            <div className="p-4 border-b border-slate-100">
-              <label className="text-xs font-medium text-slate-600 mr-2">{t("manager:inventory.text.unit")}</label>
+            <div className="p-4 border-b border-surface-divider">
+              <label className="text-xs font-medium text-muted-text mr-2">{t("manager:inventory.text.unit")}</label>
               <select
                 value={decisionsUnitId}
                 onChange={(e) => { setDecisionsUnitId(e.target.value); setSensitivityInputs({}); }}
-                className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                className="rounded-lg border border-surface-border px-3 py-2 text-sm"
               >
                 <option value="">{t("manager:inventory.text.selectAUnit")}</option>
                 {allUnits.map((u) => (
@@ -607,24 +607,24 @@ export default function ManagerInventoryPage() {
               <div className="md:hidden p-4 space-y-3">
                 {decisionsData.map((item) => {
                   const dep = item.depreciationPct;
-                  const depColor = dep >= 100 ? "text-red-600 font-semibold" : dep >= 85 ? "text-orange-600 font-semibold" : dep >= 65 ? "text-amber-600 font-semibold" : "text-slate-700";
+                  const depColor = dep >= 100 ? "text-red-600 font-semibold" : dep >= 85 ? "text-orange-600 font-semibold" : dep >= 65 ? "text-amber-600 font-semibold" : "text-muted-dark";
                   const rawInput = sensitivityInputs[item.assetId];
                   const hyp = rawInput != null && rawInput !== "" ? Number(rawInput) : null;
                   const projected = hyp != null && hyp > 0 ? clientSideVerdict(item, hyp) : null;
                   const effectiveRec = projected || item.recommendation;
                   const recStyle = RECOMMENDATION_STYLES[effectiveRec] || RECOMMENDATION_STYLES.REPAIR;
                   return (
-                    <div key={item.assetId} className="rounded-xl border border-slate-200 p-3.5 bg-white" title={item.recommendationReason}>
+                    <div key={item.assetId} className="rounded-xl border border-surface-border p-3.5 bg-surface" title={item.recommendationReason}>
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
-                          <p className="font-medium text-slate-900 text-[0.8125rem] truncate">{item.assetName}</p>
-                          <p className="text-xs text-slate-500 mt-0.5">{item.topic}</p>
+                          <p className="font-medium text-foreground text-[0.8125rem] truncate">{item.assetName}</p>
+                          <p className="text-xs text-muted mt-0.5">{item.topic}</p>
                         </div>
                         <span className={cn("inline-block shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold", recStyle.badge)}>
                           {recStyle.label}
                         </span>
                       </div>
-                      <div className="mt-2 flex flex-wrap gap-3 text-xs text-slate-600">
+                      <div className="mt-2 flex flex-wrap gap-3 text-xs text-muted-text">
                         {dep != null && <span className={depColor}>Depr. {dep}%</span>}
                         {item.repairToReplacementRatio != null && (
                           <span>Ratio {Math.round(item.repairToReplacementRatio * 100)}%</span>
@@ -643,9 +643,9 @@ export default function ManagerInventoryPage() {
                             aria-label={t("manager:inventory.ariaLabel.hypotheticalNextRepairCostInChf")}
                             value={sensitivityInputs[item.assetId] ?? ""}
                             onChange={(e) => setSensitivityInputs((prev) => ({ ...prev, [item.assetId]: e.target.value }))}
-                            className="w-28 rounded border border-slate-200 px-2 py-1 text-xs text-right focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                            className="w-28 rounded border border-surface-border px-2 py-1 text-xs text-right focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400"
                           />
-                          <span className="text-xs text-slate-400">{t("manager:inventory.text.ifNextRepairChf")}</span>
+                          <span className="text-xs text-foreground-dim">{t("manager:inventory.text.ifNextRepairChf")}</span>
                         </div>
                       )}
                     </div>
@@ -687,18 +687,18 @@ export default function ManagerInventoryPage() {
                       return (
                         <tr key={item.assetId} title={item.recommendationReason}>
                           <td className="cell-bold">{item.assetName}</td>
-                          <td className="text-xs text-slate-500">{item.topic}</td>
+                          <td className="text-xs text-muted">{item.topic}</td>
                           <td>
                             {item.ageMonths != null ? (
                               <span>
                                 {ageYears} yr{lifeYears ? ` / ${lifeYears} yr` : ""}
-                                {remainYears && <span className="block text-xs text-slate-400">{remainYears} yr left</span>}
+                                {remainYears && <span className="block text-xs text-foreground-dim">{remainYears} yr left</span>}
                               </span>
                             ) : "—"}
                           </td>
                           <td>
                             {item.depreciationPct != null ? (
-                              <span className={item.depreciationPct >= 100 ? "text-red-600 font-semibold" : item.depreciationPct >= 85 ? "text-orange-600 font-semibold" : item.depreciationPct >= 65 ? "text-amber-600 font-semibold" : "text-slate-700"}>
+                              <span className={item.depreciationPct >= 100 ? "text-red-600 font-semibold" : item.depreciationPct >= 85 ? "text-orange-600 font-semibold" : item.depreciationPct >= 65 ? "text-amber-600 font-semibold" : "text-muted-dark"}>
                                 {item.depreciationPct}%
                               </span>
                             ) : "—"}
@@ -708,7 +708,7 @@ export default function ManagerInventoryPage() {
                               ? item.cumulativeRepairCostChf.toLocaleString("de-CH", { minimumFractionDigits: 0 })
                               : "—"}
                             {item.annualRepairRate != null && item.annualRepairRate > 0 && (
-                              <span className="block text-xs text-slate-400">
+                              <span className="block text-xs text-foreground-dim">
                                 ~{item.annualRepairRate.toLocaleString("de-CH")}/yr
                               </span>
                             )}
@@ -722,12 +722,12 @@ export default function ManagerInventoryPage() {
                                   aria-label={t("manager:inventory.ariaLabel.hypotheticalNextRepairCostInChf")}
                                   value={sensitivityInputs[item.assetId] ?? ""}
                                   onChange={(e) => setSensitivityInputs((prev) => ({ ...prev, [item.assetId]: e.target.value }))}
-                                  className="w-24 rounded border border-slate-200 px-2 py-1 text-xs text-right focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                                  className="w-24 rounded border border-surface-border px-2 py-1 text-xs text-right focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400"
                                 />
-                                <span className="block text-xs text-slate-400 mt-0.5">{t("manager:inventory.text.ifNextRepairChf")}</span>
+                                <span className="block text-xs text-foreground-dim mt-0.5">{t("manager:inventory.text.ifNextRepairChf")}</span>
                               </div>
                             ) : (
-                              <span className="block text-xs text-slate-400 mt-1">{t("manager:inventory.text.sensitivityUnavailable")}</span>
+                              <span className="block text-xs text-foreground-dim mt-1">{t("manager:inventory.text.sensitivityUnavailable")}</span>
                             )}
                           </td>
                           <td className="text-right">
@@ -735,17 +735,17 @@ export default function ManagerInventoryPage() {
                               ? item.estimatedReplacementCostChf.toLocaleString("de-CH", { minimumFractionDigits: 0 })
                               : "—"}
                             {item.replacementCostConfidence != null && (
-                              <span className="block text-xs text-slate-400">
+                              <span className="block text-xs text-foreground-dim">
                                 {Math.round(item.replacementCostConfidence * 100)}% conf.
                               </span>
                             )}
                           </td>
                           <td className={cn("text-right font-medium", item.repairToReplacementRatio != null
-                              ? item.repairToReplacementRatio >= 0.6 ? "text-red-600" : item.repairToReplacementRatio >= 0.4 ? "text-orange-600" : item.repairToReplacementRatio >= 0.25 ? "text-amber-600" : "text-slate-700"
-                              : "text-slate-400")}>
+                              ? item.repairToReplacementRatio >= 0.6 ? "text-red-600" : item.repairToReplacementRatio >= 0.4 ? "text-orange-600" : item.repairToReplacementRatio >= 0.25 ? "text-amber-600" : "text-muted-dark"
+                              : "text-foreground-dim")}>
                             {ratioDisplay}
                           </td>
-                          <td className={cn("text-right", item.breakEvenMonths != null && item.breakEvenMonths <= 12 ? "text-red-600 font-semibold" : item.breakEvenMonths != null && item.breakEvenMonths <= 36 ? "text-amber-600" : "text-slate-700")}>
+                          <td className={cn("text-right", item.breakEvenMonths != null && item.breakEvenMonths <= 12 ? "text-red-600 font-semibold" : item.breakEvenMonths != null && item.breakEvenMonths <= 36 ? "text-amber-600" : "text-muted-dark")}>
                             {breakEvenDisplay}
                           </td>
                           <td>
@@ -763,12 +763,12 @@ export default function ManagerInventoryPage() {
                                     {effectiveStyle.label}
                                   </span>
                                   {changed && (
-                                    <span className="block text-xs text-slate-400 mt-0.5">
+                                    <span className="block text-xs text-foreground-dim mt-0.5">
                                       was: {(RECOMMENDATION_STYLES[item.recommendation] || RECOMMENDATION_STYLES.REPAIR).label}
                                     </span>
                                   )}
                                   {/* Transparent analysis: show why */}
-                                  <div className="mt-1 text-xs text-slate-400 leading-snug max-w-[160px]">
+                                  <div className="mt-1 text-xs text-foreground-dim leading-snug max-w-[160px]">
                                     {item.repairToReplacementRatio != null && (
                                       <span className="block">
                                         Ratio {Math.round((hyp != null && hyp > 0 ? ((item.cumulativeRepairCostChf || 0) + hyp) / item.estimatedReplacementCostChf : item.repairToReplacementRatio) * 100)}%
@@ -791,7 +791,7 @@ export default function ManagerInventoryPage() {
                   </tbody>
                 </table>
                 {/* Legend */}
-                <div className="px-4 py-3 border-t border-slate-100 text-xs text-slate-500 space-y-1">
+                <div className="px-4 py-3 border-t border-surface-divider text-xs text-muted space-y-1">
                   <p><strong>{t("manager:inventory.text.ratio")}</strong> {t("manager:inventory.text.cumulativeRepairCostEstimatedReplacementCostAbove60Replace")}</p>
                   <p><strong>{t("manager:inventory.text.breakeven")}</strong> {t("manager:inventory.text.atCurrentRepairRateWhenTotalRepairsWillExceedReplacementCost")}</p>
                   <p><strong>{t("manager:inventory.text.warrantyOffset")}</strong>: new appliances typically carry {decisionsData[0]?.warrantyOffsetMonths || 24} months warranty coverage.</p>

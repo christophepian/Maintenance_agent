@@ -104,8 +104,8 @@ export function CapExSummaryBridge() {
     <div className="flex flex-col gap-3">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h3 className="text-sm font-semibold text-slate-800">{t("renovation.capex.title")}</h3>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <h3 className="text-sm font-semibold text-foreground">{t("renovation.capex.title")}</h3>
+            <p className="text-xs text-muted mt-0.5">
               {t("renovation.capex.subtitle")}
             </p>
           </div>
@@ -123,7 +123,7 @@ export function CapExSummaryBridge() {
 
         {!loading && error && (
           <div className="flex items-center justify-between gap-3">
-            <p className="text-xs text-slate-400">{error}</p>
+            <p className="text-xs text-foreground-dim">{error}</p>
             <Link href="/manager/finance?tab=planning" className="text-xs text-brand hover:underline">
               {t("renovation.capex.openPlanning")}
             </Link>
@@ -145,66 +145,66 @@ export function CapExSummaryBridge() {
             {/* Desktop: card grid */}
             <div className="hidden sm:grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="card mb-0 flex flex-col gap-1">
-                <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">{t("renovation.capex.totalCapex")}</span>
+                <span className="text-xs font-medium text-muted uppercase tracking-wide">{t("renovation.capex.totalCapex")}</span>
                 <span className="text-lg font-bold text-amber-700">{fmtChf(data.totalProjectedChf)}</span>
-                <span className="text-xs text-slate-400">{t("renovation.capex.acrossBuildings")}</span>
+                <span className="text-xs text-foreground-dim">{t("renovation.capex.acrossBuildings")}</span>
               </div>
               <div className="card mb-0 flex flex-col gap-1">
-                <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">{t("renovation.capex.bundlingOpps")}</span>
-                <span className={cn("text-lg font-bold", bundlingAdvice.length > 0 ? "text-green-700" : "text-slate-400")}>
+                <span className="text-xs font-medium text-muted uppercase tracking-wide">{t("renovation.capex.bundlingOpps")}</span>
+                <span className={cn("text-lg font-bold", bundlingAdvice.length > 0 ? "text-green-700" : "text-foreground-dim")}>
                   {bundlingAdvice.length}
                 </span>
-                <span className="text-xs text-slate-400">
+                <span className="text-xs text-foreground-dim">
                   {bundlingAdvice.length > 0 ? t("renovation.capex.bundlingGroups") : t("renovation.capex.bundlingNone")}
                 </span>
               </div>
               <div className="card mb-0 flex flex-col gap-1">
-                <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">{t("renovation.capex.timingOpps")}</span>
-                <span className={cn("text-lg font-bold", timingCount > 0 ? "text-brand" : "text-slate-400")}>
+                <span className="text-xs font-medium text-muted uppercase tracking-wide">{t("renovation.capex.timingOpps")}</span>
+                <span className={cn("text-lg font-bold", timingCount > 0 ? "text-brand" : "text-foreground-dim")}>
                   {timingCount}
                 </span>
-                <span className="text-xs text-slate-400">
+                <span className="text-xs text-foreground-dim">
                   {timingCount > 0 ? t("renovation.capex.timingShifts") : t("renovation.capex.timingNone")}
                 </span>
               </div>
               <div className="card mb-0 flex flex-col gap-1">
-                <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">{t("renovation.capex.nearestYear")}</span>
-                <span className="text-lg font-bold text-slate-800">{nearestYear ?? "—"}</span>
-                <span className="text-xs text-slate-400">{t("renovation.capex.firstYear")}</span>
+                <span className="text-xs font-medium text-muted uppercase tracking-wide">{t("renovation.capex.nearestYear")}</span>
+                <span className="text-lg font-bold text-foreground">{nearestYear ?? "—"}</span>
+                <span className="text-xs text-foreground-dim">{t("renovation.capex.firstYear")}</span>
               </div>
             </div>
 
             {/* Bundling recommendations — collapsible */}
             {bundlingAdvice.length > 0 && (
-              <div className="border border-slate-100 rounded-lg overflow-hidden">
+              <div className="border border-surface-divider rounded-lg overflow-hidden">
                 <button
                   onClick={() => setBundlingExpanded((v) => !v)}
-                  className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+                  className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-medium text-muted-dark hover:bg-surface-subtle transition-colors"
                   aria-expanded={bundlingExpanded}
                 >
                   <span>
                     {t("renovation.capex.bundlingRecs")}
-                    <span className="ml-2 text-xs font-normal text-slate-400">
+                    <span className="ml-2 text-xs font-normal text-foreground-dim">
                       {t(bundlingAdvice.length === 1 ? "renovation.capex.suggestion_one" : "renovation.capex.suggestion_other", { count: bundlingAdvice.length })}
                     </span>
                   </span>
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"
-                    className={cn("w-4 h-4 text-slate-400 transition-transform duration-200", bundlingExpanded ? "rotate-180" : "")}>
+                    className={cn("w-4 h-4 text-foreground-dim transition-transform duration-200", bundlingExpanded ? "rotate-180" : "")}>
                     <path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
                   </svg>
                 </button>
 
                 {bundlingExpanded && (
-                  <div className="border-t border-slate-100 divide-y divide-slate-100">
+                  <div className="border-t border-surface-divider divide-y divide-slate-100">
                     {bundlingAdvice.map((adv, i) => (
                       <div key={i} className="px-4 py-3 flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-sm font-semibold text-slate-800">{adv.yearRange}</span>
-                            <span className="text-xs text-slate-400">{adv.buildingName}</span>
-                            <span className="text-xs text-slate-400">· {adv.assetCount} asset{adv.assetCount !== 1 ? "s" : ""}</span>
+                            <span className="text-sm font-semibold text-foreground">{adv.yearRange}</span>
+                            <span className="text-xs text-foreground-dim">{adv.buildingName}</span>
+                            <span className="text-xs text-foreground-dim">· {adv.assetCount} asset{adv.assetCount !== 1 ? "s" : ""}</span>
                           </div>
-                          <p className="text-xs text-slate-600 mt-1">{adv.rationale}</p>
+                          <p className="text-xs text-muted-text mt-1">{adv.rationale}</p>
                           {adv.savingsBreakdown?.length > 0 && (
                             <div className="flex flex-wrap gap-1.5 mt-1.5">
                               {adv.savingsBreakdown.map((s, j) => (
@@ -217,7 +217,7 @@ export function CapExSummaryBridge() {
                         </div>
                         <div className="text-right shrink-0">
                           <div className="text-sm font-bold text-green-700">~{fmtChf(adv.estimatedSavingsChf)}</div>
-                          <div className="text-xs text-slate-400">~{adv.savingsEstimatePct}% savings</div>
+                          <div className="text-xs text-foreground-dim">~{adv.savingsEstimatePct}% savings</div>
                         </div>
                       </div>
                     ))}
@@ -311,24 +311,24 @@ export function RenovationCatalog() {
       {/* Desktop: card grid */}
       <div className="hidden sm:grid grid-cols-2 md:grid-cols-4 gap-3">
         <div className="card mb-0 flex flex-col gap-1">
-          <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">{t("renovation.catalog.valuePreserving")}</span>
+          <span className="text-xs font-medium text-muted uppercase tracking-wide">{t("renovation.catalog.valuePreserving")}</span>
           <span className="text-xl font-bold text-green-700">{categoryCounts.WERTERHALTEND}</span>
-          <span className="text-xs text-slate-400">{t("renovation.catalog.valuePreservingNote")}</span>
+          <span className="text-xs text-foreground-dim">{t("renovation.catalog.valuePreservingNote")}</span>
         </div>
         <div className="card mb-0 flex flex-col gap-1">
-          <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">{t("renovation.catalog.valueEnhancing")}</span>
+          <span className="text-xs font-medium text-muted uppercase tracking-wide">{t("renovation.catalog.valueEnhancing")}</span>
           <span className="text-xl font-bold text-red-600">{categoryCounts.WERTVERMEHREND}</span>
-          <span className="text-xs text-slate-400">{t("renovation.catalog.valueEnhancingNote")}</span>
+          <span className="text-xs text-foreground-dim">{t("renovation.catalog.valueEnhancingNote")}</span>
         </div>
         <div className="card mb-0 flex flex-col gap-1">
-          <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">{t("renovation.catalog.mixed")}</span>
+          <span className="text-xs font-medium text-muted uppercase tracking-wide">{t("renovation.catalog.mixed")}</span>
           <span className="text-xl font-bold text-amber-700">{categoryCounts.MIXED}</span>
-          <span className="text-xs text-slate-400">{t("renovation.catalog.mixedNote")}</span>
+          <span className="text-xs text-foreground-dim">{t("renovation.catalog.mixedNote")}</span>
         </div>
         <div className="card mb-0 flex flex-col gap-1">
-          <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">{t("renovation.catalog.energyEnv")}</span>
+          <span className="text-xs font-medium text-muted uppercase tracking-wide">{t("renovation.catalog.energyEnv")}</span>
           <span className="text-xl font-bold text-blue-700">{categoryCounts.ENERGY_ENVIRONMENT}</span>
-          <span className="text-xs text-slate-400">{t("renovation.catalog.energyEnvNote")}</span>
+          <span className="text-xs text-foreground-dim">{t("renovation.catalog.energyEnvNote")}</span>
         </div>
       </div>
 
@@ -336,11 +336,11 @@ export function RenovationCatalog() {
       <Panel>
         <div className="grid grid-cols-1 sm:flex sm:flex-wrap sm:items-end gap-3">
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-slate-600">{t("renovation.catalog.buildingSystemLabel")}</label>
+            <label className="text-xs font-medium text-muted-text">{t("renovation.catalog.buildingSystemLabel")}</label>
             <select
               value={catalogFilter.system}
               onChange={(e) => setCatalogFilter((f) => ({ ...f, system: e.target.value }))}
-              className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-full sm:w-auto"
+              className="rounded-lg border border-surface-border px-3 py-2 text-sm w-full sm:w-auto"
             >
               <option value="">{t("renovation.catalog.allSystems")}</option>
               {BUILDING_SYSTEM_KEYS.map((k) => (
@@ -349,11 +349,11 @@ export function RenovationCatalog() {
             </select>
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-slate-600">{t("renovation.catalog.taxCategoryLabel")}</label>
+            <label className="text-xs font-medium text-muted-text">{t("renovation.catalog.taxCategoryLabel")}</label>
             <select
               value={catalogFilter.taxCategory}
               onChange={(e) => setCatalogFilter((f) => ({ ...f, taxCategory: e.target.value }))}
-              className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-full sm:w-auto"
+              className="rounded-lg border border-surface-border px-3 py-2 text-sm w-full sm:w-auto"
             >
               <option value="">{t("renovation.catalog.allCategories")}</option>
               {Object.keys(TAX_CATEGORY_STYLES).map((k) => (
@@ -362,13 +362,13 @@ export function RenovationCatalog() {
             </select>
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-slate-600">{t("renovation.catalog.searchLabel")}</label>
+            <label className="text-xs font-medium text-muted-text">{t("renovation.catalog.searchLabel")}</label>
             <input
               type="text"
               value={catalogFilter.search}
               onChange={(e) => setCatalogFilter((f) => ({ ...f, search: e.target.value }))}
               placeholder={t("renovation.catalog.searchPlaceholder")}
-              className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-full sm:w-56"
+              className="rounded-lg border border-surface-border px-3 py-2 text-sm w-full sm:w-56"
             />
           </div>
           {(catalogFilter.system || catalogFilter.taxCategory || catalogFilter.search) && (
@@ -427,7 +427,7 @@ function CatalogSystemGroup({ system, entries }) {
         </div>
         {hasMore && (
           <div
-            className="flex items-center justify-center gap-1.5 px-4 py-2.5 border-t border-slate-100 cursor-pointer hover:bg-slate-50 transition-colors text-sm text-slate-500 select-none"
+            className="flex items-center justify-center gap-1.5 px-4 py-2.5 border-t border-surface-divider cursor-pointer hover:bg-surface-subtle transition-colors text-sm text-muted select-none"
             onClick={() => setExpanded((e) => !e)}
           >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"
@@ -452,45 +452,45 @@ function CatalogEntryRow({ entry }) {
   return (
     <div>
       <div
-        className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-slate-50 transition-colors"
+        className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-surface-subtle transition-colors"
         onClick={() => setOpen((o) => !o)}
       >
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm font-medium text-slate-800">{entry.label}</span>
-            <span className="text-xs text-slate-400 font-mono">{entry.code}</span>
+            <span className="text-sm font-medium text-foreground">{entry.label}</span>
+            <span className="text-xs text-foreground-dim font-mono">{entry.code}</span>
           </div>
-          <div className="text-xs text-slate-500 mt-0.5">{accounting}</div>
+          <div className="text-xs text-muted mt-0.5">{accounting}</div>
           <div className="flex items-center gap-2 flex-wrap mt-1.5">
             <TaxBadge category={entry.taxCategory} />
             <TimingBadge sensitivity={entry.timingSensitivity} />
           </div>
         </div>
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"
-          className={cn("w-4 h-4 text-slate-400 shrink-0 transition-transform duration-200", open ? "rotate-180" : "")}>
+          className={cn("w-4 h-4 text-foreground-dim shrink-0 transition-transform duration-200", open ? "rotate-180" : "")}>
           <path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
         </svg>
       </div>
       {open && (
-        <div className="px-4 pb-4 pt-1 border-t border-slate-50 bg-slate-50/50">
+        <div className="px-4 pb-4 pt-1 border-t border-slate-50 bg-surface-subtle/50">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
             <div>
-              <span className="font-medium text-slate-600">{t("renovation.catalog.deductibilityLabel")}</span>
-              <p className="text-slate-500 mt-0.5">{entry.typicalDeductibility}</p>
+              <span className="font-medium text-muted-text">{t("renovation.catalog.deductibilityLabel")}</span>
+              <p className="text-muted mt-0.5">{entry.typicalDeductibility}</p>
             </div>
             <div>
-              <span className="font-medium text-slate-600">{t("renovation.catalog.deductiblePortion")}</span>
-              <p className="text-slate-500 mt-0.5">{entry.deductiblePct}%</p>
+              <span className="font-medium text-muted-text">{t("renovation.catalog.deductiblePortion")}</span>
+              <p className="text-muted mt-0.5">{entry.deductiblePct}%</p>
             </div>
             <div>
-              <span className="font-medium text-slate-600">{t("renovation.catalog.timingGuidanceLabel")}</span>
-              <p className="text-slate-500 mt-0.5">
+              <span className="font-medium text-muted-text">{t("renovation.catalog.timingGuidanceLabel")}</span>
+              <p className="text-muted mt-0.5">
                 {t(`renovation.buildingSystem.${entry.timingSensitivity}`, { defaultValue: "—" })}
               </p>
             </div>
             <div>
-              <span className="font-medium text-slate-600">{t("renovation.catalog.notesLabel")}</span>
-              <p className="text-slate-500 mt-0.5">{entry.notes || "—"}</p>
+              <span className="font-medium text-muted-text">{t("renovation.catalog.notesLabel")}</span>
+              <p className="text-muted mt-0.5">{entry.notes || "—"}</p>
             </div>
             {entry.assetLinkable && (
               <div className="col-span-full">

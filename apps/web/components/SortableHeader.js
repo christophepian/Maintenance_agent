@@ -18,14 +18,14 @@ export default function SortableHeader({ label, field, sortField, sortDir, onSor
   const sortable = typeof onSort === "function";
   return (
     <th
-      className={cn(sortable && "cursor-pointer select-none hover:text-slate-600 transition-colors", className)}
+      className={cn(sortable && "cursor-pointer select-none hover:text-muted-text transition-colors", className)}
       onClick={sortable ? () => onSort(field) : undefined}
     >
       <span className="inline-flex items-center gap-1">
         {label}
         <span className="inline-flex flex-col leading-none -space-y-0.5">
-          <span className={cn("text-[8px]", active && sortDir === "asc" ? "text-brand" : "text-slate-300")}>▲</span>
-          <span className={cn("text-[8px]", active && sortDir === "desc" ? "text-brand" : "text-slate-300")}>▼</span>
+          <span className={cn("text-[8px]", active && sortDir === "asc" ? "text-brand" : "text-foreground-dim")}>▲</span>
+          <span className={cn("text-[8px]", active && sortDir === "desc" ? "text-brand" : "text-foreground-dim")}>▼</span>
         </span>
       </span>
     </th>
