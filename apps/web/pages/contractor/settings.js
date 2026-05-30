@@ -4,7 +4,7 @@ import PageHeader from "../../components/layout/PageHeader";
 import PageContent from "../../components/layout/PageContent";
 import ScrollableTabs from "../../components/mobile/ScrollableTabs";
 import NotificationPreferencesTab from "../../components/NotificationPreferencesTab";
-import { contractorAuthHeaders } from "../../lib/api";
+import { authHeaders } from "../../lib/api";
 import { withTranslations } from "../../lib/i18n";
 import { useTranslation } from "next-i18next";
 import { useRouter } from "next/router";
@@ -65,7 +65,7 @@ export default function ContractorSettingsPage() {
 
           <div className={activeTab === 0 ? "tab-panel-active" : "tab-panel"}>
             <NotificationPreferencesTab
-              authHeaders={contractorAuthHeaders}
+              authHeaders={authHeaders}
               eventGroups={EVENT_GROUPS}
               t={t}
               ns="contractor"

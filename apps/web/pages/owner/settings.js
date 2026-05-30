@@ -18,7 +18,6 @@ import { useLocalSort } from "../../lib/tableUtils";
 import { withTranslations } from "../../lib/i18n";
 import { useTranslation } from "next-i18next";
 import NotificationPreferencesTab from "../../components/NotificationPreferencesTab";
-import { ownerAuthHeaders } from "../../lib/api";
 
 const SETTINGS_TABS = [
   { key: "ACCOUNT" },
