@@ -5,6 +5,8 @@
  * If a DTO changes, update the matching include in the same PR.
  */
 
+import { Prisma } from "@prisma/client";
+
 /* ── Application detail (full) ─────────────────────────────── */
 
 export const RENTAL_APPLICATION_INCLUDE = {
@@ -86,6 +88,20 @@ export const RENTAL_OWNER_SELECTION_INCLUDE = {
     },
   },
 } as const;
+
+/* ── Derived payload types (G3) ────────────────────────────── */
+
+export type RentalApplicationRow = Prisma.RentalApplicationGetPayload<{
+  include: typeof RENTAL_APPLICATION_INCLUDE;
+}>;
+
+export type RentalApplicantRow = RentalApplicationRow["applicants"][number];
+
+export type RentalApplicationUnitRow = RentalApplicationRow["applicationUnits"][number];
+
+export type RentalApplicationUnitDetailRow = Prisma.RentalApplicationUnitGetPayload<{
+  include: typeof RENTAL_APPLICATION_UNIT_INCLUDE;
+}>;
 
 /* ── Summary includes (for list views — lighter payloads) ──── */
 

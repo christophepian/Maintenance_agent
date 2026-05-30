@@ -573,3 +573,51 @@ export async function findLeaseUnitAndBuilding(
   });
 }
 
+
+/** Find buildings that have at least one lease template, grouped by buildingId. */
+export async function findBuildingsWithLeaseTemplates(
+  prisma: PrismaClient,
+  buildingIds: string[],
+) {
+  return prisma.lease.groupBy({
+    by: ["templateBuildingId"],
+    where: { isTemplate: true, deletedAt: null, templateBuildingId: { in: buildingIds } },
+    _count: { id: true },
+  });
+}
+
+/** Find active leases for a set of unit IDs. */
+export async function findActiveLeasesForUnits(
+  prisma: PrismaClient,
+  unitIds: string[],
+  select?: Record<string, boolean>,
+) {
+  return prisma.lease.findMany({
+    where: { unitId: { in: unitIds }, status: "ACTIVE" },
+    ...(select ? { select } : {}),
+  });
+}
+
+/** Find active/signed leases for rent income projection — select rentTotalChf only. */
+export async function findRentIncomeLeasesForBuilding(
+  prisma: PrismaClient,
+  orgId: string,
+  buildingId: string,
+) {
+  return prisma.lease.findMany({
+    where: { orgId, unit: { buildingId }, status: { in: ["ACTIVE", "SIGNED"] } },
+    select: { rentTotalChf: true },
+  });
+}
+
+/** Find active/signed leases for rent income projection across multiple buildings. */
+export async function findRentIncomeLeasesForBuildings(
+  prisma: PrismaClient,
+  orgId: string,
+  buildingIds: string[],
+) {
+  return prisma.lease.findMany({
+    where: { orgId, status: { in: ["ACTIVE", "SIGNED"] }, unit: { buildingId: { in: buildingIds } } },
+    select: { rentTotalChf: true },
+  });
+}

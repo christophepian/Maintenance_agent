@@ -136,6 +136,13 @@ export async function findRequestById(prisma: PrismaClient, id: string) {
 }
 
 /**
+ * Lightweight existence check — returns id only, no heavy include.
+ */
+export async function findRequestExistsById(prisma: PrismaClient, id: string) {
+  return prisma.request.findUnique({ where: { id }, select: { id: true } });
+}
+
+/**
  * List requests scoped to an org, with pagination and view mode.
  */
 export async function findRequestsByOrg(
@@ -241,6 +248,20 @@ export async function updateRequestContractor(
   return prisma.request.update({
     where: { id: requestId },
     data: { assignedContractorId: contractorId },
+    include: REQUEST_FULL_INCLUDE,
+  });
+}
+
+/**
+ * Unassign contractor and reset status to APPROVED.
+ */
+export async function unassignRequestContractor(
+  prisma: PrismaClient,
+  requestId: string,
+) {
+  return prisma.request.update({
+    where: { id: requestId },
+    data: { assignedContractorId: null, status: RequestStatus.APPROVED },
     include: REQUEST_FULL_INCLUDE,
   });
 }
@@ -451,6 +472,11 @@ export const REQUEST_LEGAL_DECISION_INCLUDE = {
     },
   },
 } as const;
+
+/** Derived payload type for legal-decision queries (G3). */
+export type RequestLegalDecisionRow = Prisma.RequestGetPayload<{
+  include: typeof REQUEST_LEGAL_DECISION_INCLUDE;
+}>;
 
 /**
  * Load a request with unit → building → config for RFP auto-routing.

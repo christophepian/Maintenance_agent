@@ -344,3 +344,19 @@ export async function findInvoiceIdsByStatuses(
   return rows.map((r) => r.id);
 }
 
+/**
+ * Paginated invoice list with count — canonical list query.
+ * Returns [rows, total] tuple matching the where/include callers provide.
+ */
+export async function findInvoicesWithCount(
+  prisma: PrismaClient,
+  where: Prisma.InvoiceWhereInput,
+  include: Prisma.InvoiceInclude,
+  orderBy: Prisma.InvoiceOrderByWithRelationInput = { createdAt: "desc" },
+): Promise<[Awaited<ReturnType<typeof prisma.invoice.findMany>>, number]> {
+  return Promise.all([
+    prisma.invoice.findMany({ where, include, orderBy }),
+    prisma.invoice.count({ where }),
+  ]);
+}
+

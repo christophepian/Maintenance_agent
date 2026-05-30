@@ -6,6 +6,7 @@
  */
 
 import { PrismaClient } from "@prisma/client";
+import { findTenantEmail } from "../repositories/tenantRepository";
 
 /**
  * Resolve a tenantId to a userId for notification lookups.
@@ -24,10 +25,7 @@ export async function resolveTenantUserId(
   if (directUser) return directUser.id;
 
   // Look up the tenant record to get their email
-  const tenant = await prisma.tenant.findUnique({
-    where: { id: tenantId },
-    select: { email: true },
-  });
+  const tenant = await findTenantEmail(prisma, tenantId);
   if (tenant?.email) {
     const userByEmail = await prisma.user.findFirst({
       where: { orgId, email: tenant.email, role: "TENANT" },

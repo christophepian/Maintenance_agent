@@ -16,6 +16,7 @@
 import { PrismaClient, LeaseStatus } from "@prisma/client";
 import { getCapExProjection, type TimingRecommendation } from "./capexProjectionService";
 import type { CashflowPlanWithRelations } from "../repositories/cashflowPlanRepository";
+import { findRentIncomeLeasesForBuildings } from "../repositories/leaseRepository";
 
 // ─── Public types ──────────────────────────────────────────────
 
@@ -133,14 +134,7 @@ export async function computeMonthlyCashflow(
       : 0;
 
   // ── 3. Projected monthly income base from active leases ───────
-  const activeLeases = await prisma.lease.findMany({
-    where: {
-      orgId,
-      status: { in: [LeaseStatus.ACTIVE, LeaseStatus.SIGNED] },
-      unit: { buildingId: { in: buildingIds } },
-    },
-    select: { rentTotalChf: true },
-  });
+  const activeLeases = await findRentIncomeLeasesForBuildings(prisma, orgId, buildingIds);
 
   const baseMonthlyIncomeCents = activeLeases.reduce((sum, l) => {
     const chf = l.rentTotalChf ?? 0;

@@ -2,7 +2,7 @@
 // This is the canonical detail page structure (F-UI2 in PROJECT_STATE.md).
 // Every detail page must follow this exact layout.
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/router";
 import AppShell from "../../components/AppShell";
 import PageShell from "../../components/layout/PageShell";
@@ -10,6 +10,8 @@ import PageHeader from "../../components/layout/PageHeader";
 import PageContent from "../../components/layout/PageContent";
 import Panel from "../../components/layout/Panel";
 import ErrorBanner from "../../components/ui/ErrorBanner";
+import SortableHeader from "../../components/SortableHeader";
+import { useLocalSort, clientSort } from "../../lib/tableUtils";
 import { authHeaders } from "../../lib/api";
 import { withTranslations } from "../../lib/i18n";
 
@@ -21,6 +23,21 @@ export default function TemplateDetailPage() {
   // REPLACE: Data state — add your entity state here.
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  // REPLACE: Related items state (rename to match your entity).
+  const [items, setItems] = useState([]);
+
+  // Sortable table — rename fields to match your entity columns.
+  const { sortField, sortDir, handleSort } = useLocalSort("name", "asc");
+  const sortedItems = useMemo(
+    () => clientSort(items, sortField, sortDir, (item, f) => {
+      if (f === "name")   return (item.name   || "").toLowerCase();
+      if (f === "status") return (item.status  || "").toLowerCase();
+      if (f === "date")   return item.date || "";
+      return "";
+    }),
+    [items, sortField, sortDir],
+  );
 
   // REPLACE: Data fetching — uncomment and adapt for your API endpoint.
   // const loadData = useCallback(async () => {
@@ -106,18 +123,27 @@ export default function TemplateDetailPage() {
                 <table className="data-table">
                   <thead>
                     <tr>
-                      <th className="cell-bold">Name</th>
-                      <th className="cell-bold">Status</th>
-                      <th className="cell-bold">Date</th>
+                      <SortableHeader label="Name"   field="name"   sortField={sortField} sortDir={sortDir} onSort={handleSort} />
+                      <SortableHeader label="Status" field="status" sortField={sortField} sortDir={sortDir} onSort={handleSort} />
+                      <SortableHeader label="Date"   field="date"   sortField={sortField} sortDir={sortDir} onSort={handleSort} />
+                      {/* Action columns stay as plain <th>: */}
                     </tr>
                   </thead>
                   <tbody>
-                    {/* REPLACE: Table rows — map over related items */}
-                    <tr>
-                      <td colSpan={3} className="px-4 py-8 text-center text-sm text-slate-400">
-                        No related items yet.
-                      </td>
-                    </tr>
+                    {/* REPLACE: Map over sortedItems (the sorted array) — never the raw array */}
+                    {sortedItems.length === 0 ? (
+                      <tr>
+                        <td colSpan={3} className="px-4 py-8 text-center text-sm text-slate-400">
+                          No related items yet.
+                        </td>
+                      </tr>
+                    ) : sortedItems.map((item) => (
+                      <tr key={item.id}>
+                        <td>{item.name}</td>
+                        <td>{item.status}</td>
+                        <td>{item.date}</td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </Panel>

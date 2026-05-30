@@ -11,7 +11,7 @@
  *   - No external HTTP calls in CI
  */
 
-import { LegalSourceStatus, LegalSourceScope } from "@prisma/client";
+import { LegalSourceStatus, LegalSourceScope, Prisma } from "@prisma/client";
 import prisma from "./prismaClient";
 import * as legalSourceRepo from "../repositories/legalSourceRepository";
 
@@ -21,7 +21,7 @@ import * as legalSourceRepo from "../repositories/legalSourceRepository";
 
 export interface FetcherResult {
   key: string;
-  value: any;
+  value: Prisma.JsonValue;
   effectiveFrom: Date;
   effectiveTo?: Date | null;
 }
@@ -246,7 +246,7 @@ const cpiFetcher: Fetcher = async (source) => {
       const data = await resp.json();
       // Look through results for CPI-related assets
       const cpiAsset = data?.data?.find(
-        (a: any) =>
+        (a: unknown) =>
           JSON.stringify(a)
             .toLowerCase()
             .match(/konsumentenpreis|consumer.*price.*index|lik|cpi/),
@@ -836,7 +836,7 @@ const aslocaRentReductionFetcher: Fetcher = async (source) => {
           },
         ],
         summary: `${entry.defect}: réduction de ${entry.reductionPercent}%${entry.reductionMax ? `–${entry.reductionMax}%` : ""} du loyer`,
-      } as any);
+      });
     }
 
     upsertCount++;
@@ -1048,10 +1048,10 @@ export async function ingestSource(
           variableId: variable.id,
           effectiveFrom: result.effectiveFrom,
           effectiveTo: result.effectiveTo ?? null,
-          valueJson: result.value,
+          valueJson: result.value as Prisma.InputJsonValue,
           sourceId: source.id,
           fetchedAt: new Date(),
-        } as any);
+        });
         variablesUpdated++;
       }
     }
@@ -1107,7 +1107,7 @@ export async function ingestAllSources(canton?: string): Promise<IngestionResult
   } else {
     // No canton filter — ingest all non-INACTIVE (existing behaviour)
     sources = await legalSourceRepo.findAll(prisma);
-    sources = sources.filter((s: any) => s.status !== LegalSourceStatus.INACTIVE);
+    sources = sources.filter((s) => s.status !== LegalSourceStatus.INACTIVE);
   }
 
   const results: IngestionResult[] = [];

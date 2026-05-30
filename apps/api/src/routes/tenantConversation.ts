@@ -13,38 +13,7 @@ import { sendError, sendJson } from "../http/json";
 import { readJson } from "../http/body";
 import { requireTenantSession, AuthedRequest } from "../authz";
 import { processTurnWorkflow } from "../workflows/conversationWorkflow";
-import { getThreadHistory } from "../repositories/conversationRepository";
-import { PrismaClient } from "@prisma/client";
-
-/**
- * Resolve the internal Tenant.id for a conversation session.
- *
- * `requireTenantSession` returns either:
- *   a) an explicit tenantId from app_metadata  → already correct
- *   b) the Supabase userId (sub UUID)           → need to look up by email
- *
- * This makes chat work for real TENANT Supabase accounts that never had an
- * explicit tenantId set in app_metadata.
- */
-async function resolveConversationTenantId(
-  prisma: PrismaClient,
-  rawTenantId: string,
-  orgId: string,
-  email: string | undefined
-): Promise<string | null> {
-  // Fast path: check whether rawTenantId is an existing Tenant record id
-  const byId = await prisma.tenant.findFirst({ where: { id: rawTenantId, orgId }, select: { id: true } });
-  if (byId) return byId.id;
-
-  // Fallback: resolve by email (raw value is a Supabase sub UUID)
-  if (email) {
-    const byEmail = await prisma.tenant.findFirst({ where: { email, orgId }, select: { id: true } });
-    if (byEmail) return byEmail.id;
-  }
-
-  // Still nothing — return the raw value so upstream gets the original 404/empty behaviour
-  return rawTenantId;
-}
+import { getThreadHistory, resolveConversationTenantId } from "../repositories/conversationRepository";
 
 export function registerTenantConversationRoutes(router: Router) {
   // POST /tenant/conversation

@@ -30,6 +30,8 @@ Safe to:
 
 ✅ **Full project audit + remediation (2026-05-06).** 67 test suites · 1009 tests, 0 TS errors. Three root-cause fixes: (1) `jose@6` ESM-only package caused 31 integration test suites to fail with parse error — downgraded to `jose@5` (CJS+ESM); (2) `server.ts` Supabase JWT pre-resolve was assigning `req.user = null` on verification failure (no `SUPABASE_URL`), silently blocking the legacy `decodeToken` fallback and causing all integration tests to receive 401 — fixed to only assign `req.user` on non-null Supabase result; (3) test DB missing 97 migrations (`add_conversation_thread`, `add_supabase_auth`) — deployed via `prisma migrate deploy`. Additionally: 3 unsorted `<th>` columns converted to `<SortableHeader>` (units/[id], leases/[id], approvals); 6 `style={{}}` inline layout props in `login.js` replaced with Tailwind classes. `docs/AUDIT.md` metadata updated to 2026-05-06 codebase state.
 
+✅ **Session-6 code-quality sweep (2026-05-30).** 72 test suites · 1068 tests, 0 TS errors. 7 audit findings identified and resolved in-session: FE-1 (sortable-table template-literal interpolation + 3 exempt markers), FE-2 (inline `style={{}}` in PortalShell), CQ-NEW-1 (`routes/inventory.ts` direct Prisma → repo), CQ-NEW-2 (`routes/tenantConversation.ts` direct Prisma → repo), CQ-NEW-3/DT-120 first slice (9 service files de-Prisma'd, 10 new repo functions), ARCH-NEW-1 (service `any` types in rentalApplications, legalDecisionEngine, legalService, legalIngestion), ARCH-NEW-3 (HTTP integration tests for cashflowPlan / claimAnalysis / recommendation — 20 tests on port 3272). `docs/AUDIT.md` updated with Session-6 section (105 total findings, 102 resolved, 3 open).
+
 ✅ **ARCH-1 epic complete — service layer fully decoupled from Prisma (2026-05-06).** All 5 slices (DT-120–DT-124) delivered. ~80 direct `prisma.*` calls eliminated from the service layer across 11 service files. No service file may call Prisma directly — all DB access routes through the repository layer. New repos: `notificationRepository`, `financialsRepository`, `ledgerEntryRepository`. Extended: `legalSourceRepository` (+19 fns), `invoiceRepository` (+9 fns), `accountRepository` (+3 fns), `legalSourceRepository`, `leaseRepository`, `jobRepository`, `billingEntityRepository`, `requestRepository`. tsc: 0 errors · 1007/1009 tests (2 pre-existing legalEngine timeout flakes). Commits: `ef8cbaf` (DT-123) · `4c8882c` (DT-124).
 
 
@@ -73,7 +75,7 @@ Six root causes resolved:
 
 Remaining known limitation: OCR extracts amount and date reliably from phone photos; vendor name, building, and category require manual assignment in the PENDING_REVIEW review step (by design).
 
-### Testing — 67 suites
+### Testing — 72 suites
 
 * Jest + ts-jest, `maxWorkers: 1` (serial integration). Test DB: `maint_agent_test` (isolated via `.env.test`).
 * CI: `.github/workflows/ci.yml` with PostgreSQL service container.
@@ -87,24 +89,24 @@ Remaining known limitation: OCR extracts amount and date reliably from phone pho
 
 | Field | Value | Source |
 |-------|-------|--------|
-| Models | 70 | prisma/schema.prisma — derived |
-| Enums | 64 | prisma/schema.prisma — derived |
-| Migrations | 97 | prisma/migrations/ — derived |
-| Workflows | 29 | src/workflows/ — derived |
-| Repositories | 40 | src/repositories/ — derived (excl. index.ts) |
+| Models | 73 | prisma/schema.prisma — derived |
+| Enums | 67 | prisma/schema.prisma — derived |
+| Migrations | 98 | prisma/migrations/ — derived |
+| Workflows | 32 | src/workflows/ — derived |
+| Repositories | 41 | src/repositories/ — derived (excl. index.ts) |
 | Route modules | 28 | src/routes/ — derived (excl. helpers.ts utility) |
-| Backend LOC | ~62k | src/ (incl. tests) — derived |
-| Frontend LOC | ~42k | apps/web/ — derived |
-| Frontend pages | 288 | apps/web/pages/ — derived (88 UI + 200 API) |
+| Backend LOC | ~84k | src/ (incl. tests) — derived |
+| Frontend LOC | ~58k | apps/web/ — derived |
+| Frontend pages | 329 | apps/web/pages/ — derived (88 UI + 200 API proxies) |
 | API operations | 291 | openapi.yaml operationId count — derived |
-| URL paths | 225 | openapi.yaml unique paths — derived |
-| Tests | 67 suites · 1009 tests (pre-existing test interaction TC-11 resolved) | jest — derived |
+| URL paths | 248 | openapi.yaml unique paths — derived |
+| Tests | 72 suites · 1068 tests | jest — derived |
 | Proxy conformance | 198 / 198 | apps/web/pages/api/ — derived |
 | Transition maps | 8 | src/workflows/transitions.ts — derived |
-| Audit findings open | 3 (SI-2/3/4: legal model orgId doc drift) | docs/AUDIT.md — manual |
-| Audit findings resolved | 91 | docs/AUDIT.md — manual |
-| Last auto-sync | 2026-05-06 | blueprint.js |
-| Last manual review | 2026-05-20 | human |
+| Audit findings open | 3 (SI-2/3 broken links; ARCH-1 DT-121–124 remaining) | docs/AUDIT.md — manual |
+| Audit findings resolved | 102 | docs/AUDIT.md — manual |
+| Last auto-sync | 2026-05-30 | blueprint.js |
+| Last manual review | 2026-05-30 | human |
 
 > Derived fields are auto-updated by `npm run blueprint`. Manual fields must be updated at the end of each slice.
 

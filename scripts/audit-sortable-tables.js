@@ -42,6 +42,9 @@ for (const file of files) {
   const hasTable = src.includes("data-table") || src.includes("ConfigurableTable");
   if (!hasTable) continue;
 
+  // Skip files that are entirely exempt (e.g. pure ledger/accounting display tables)
+  if (src.includes("sortable-audit-exempt")) continue;
+
   const rel = path.relative(process.cwd(), file);
 
   // Count SortableHeader usages

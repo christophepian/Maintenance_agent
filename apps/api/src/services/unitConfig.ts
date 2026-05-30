@@ -1,4 +1,8 @@
 import { PrismaClient } from "@prisma/client";
+import {
+  findUnitExistsByIdAndOrg,
+  findUnitWithBuildingConfig,
+} from "../repositories/inventoryRepository";
 
 export type UnitConfigDTO = {
   id: string;
@@ -38,7 +42,7 @@ export async function upsertUnitConfig(
     requireOwnerApprovalAbove?: number | null;
   }
 ): Promise<UnitConfigDTO | null> {
-  const unit = await prisma.unit.findFirst({ where: { id: unitId, orgId } });
+  const unit = await findUnitExistsByIdAndOrg(prisma, unitId, orgId);
   if (!unit) return null;
 
   return prisma.unitConfig.upsert({
@@ -77,7 +81,7 @@ export async function computeEffectiveUnitConfig(
   const [orgConfig, unitOverride, unit] = await Promise.all([
     prisma.orgConfig.findUnique({ where: { orgId } }),
     prisma.unitConfig.findFirst({ where: { orgId, unitId } }),
-    prisma.unit.findFirst({ where: { id: unitId, orgId }, include: { building: { include: { config: true } } } }),
+    findUnitWithBuildingConfig(prisma, unitId, orgId),
   ]);
 
   if (!orgConfig || !unit) throw new Error("ORG_CONFIG_OR_UNIT_NOT_FOUND");

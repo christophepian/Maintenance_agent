@@ -1,6 +1,6 @@
 import { InvoiceStatus, BillingEntityType, Prisma, InvoiceDirection, InvoiceSourceChannel, IngestionStatus } from '@prisma/client';
 import prisma from './prismaClient';
-import { INVOICE_FULL_INCLUDE, INVOICE_SUMMARY_INCLUDE } from '../repositories/invoiceRepository';
+import { INVOICE_FULL_INCLUDE, INVOICE_SUMMARY_INCLUDE, findInvoicesWithCount } from '../repositories/invoiceRepository';
 import * as invoiceRepo from '../repositories/invoiceRepository';
 import * as billingEntityRepo from '../repositories/billingEntityRepository';
 import * as orgConfigRepo from '../repositories/orgConfigRepository';
@@ -557,14 +557,11 @@ export async function listInvoices(
     }
   }
 
-  const [invoices, total] = await Promise.all([
-    prisma.invoice.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
-      include: useSummary ? INVOICE_SUMMARY_INCLUDE : INVOICE_INCLUDE,
-    }),
-    prisma.invoice.count({ where }),
-  ]);
+  const [invoices, total] = await findInvoicesWithCount(
+    prisma,
+    where,
+    useSummary ? INVOICE_SUMMARY_INCLUDE : INVOICE_INCLUDE,
+  );
 
   const data = useSummary ? invoices.map(mapInvoiceToSummaryDTO) : invoices.map(mapInvoiceToDTO);
   return { data, total };

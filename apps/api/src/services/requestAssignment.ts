@@ -1,4 +1,8 @@
 import { PrismaClient, RequestStatus } from "@prisma/client";
+import {
+  updateRequestContractor,
+  unassignRequestContractor,
+} from "../repositories/requestRepository";
 
 export type AssignmentInput = {
   contractorId: string;
@@ -59,10 +63,7 @@ export async function assignContractor(
   }
 
   // Update request with assigned contractor
-  await prisma.request.update({
-    where: { id: requestId },
-    data: { assignedContractorId: contractorId },
-  });
+  await updateRequestContractor(prisma, requestId, contractorId);
 
   return { success: true, message: `Request assigned to ${contractor.name}` };
 }
@@ -74,13 +75,7 @@ export async function unassignContractor(
   prisma: PrismaClient,
   requestId: string
 ): Promise<{ success: boolean; message: string }> {
-  await prisma.request.update({
-    where: { id: requestId },
-    data: {
-      assignedContractorId: null,
-      status: RequestStatus.APPROVED,
-    },
-  });
+  await unassignRequestContractor(prisma, requestId);
 
   return { success: true, message: "Contractor unassigned" };
 }

@@ -26,6 +26,7 @@ import { estimateReplacementCost } from "./replacementCostService";
 import { classifyAsset } from "./taxClassificationService";
 import { findAllSnapshotsForBuilding } from "../repositories/buildingFinancialSnapshotRepository";
 import { findBuildingByIdAndOrg, findBuildingOwnersWithTaxRate } from "../repositories/inventoryRepository";
+import { findRentIncomeLeasesForBuilding } from "../repositories/leaseRepository";
 
 // ─── Constants ────────────────────────────────────────────────────
 
@@ -280,10 +281,7 @@ export async function computeNPVScenarios(
 
   if (baseAnnualNoiChf === 0) {
     // Fallback B: active lease rent as proxy for annual gross income
-    const leases = await prisma.lease.findMany({
-      where: { orgId, unit: { buildingId }, status: { in: ["ACTIVE", "SIGNED"] } },
-      select: { rentTotalChf: true },
-    });
+    const leases = await findRentIncomeLeasesForBuilding(prisma, orgId, buildingId);
     baseAnnualNoiChf = Math.round(
       leases.reduce((s, l) => s + (l.rentTotalChf ?? 0), 0) * 12,
     );

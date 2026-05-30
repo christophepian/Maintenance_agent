@@ -7,6 +7,8 @@
  */
 
 import { PrismaClient, RequestEventType } from "@prisma/client";
+import { findRequestExistsById } from "../repositories/requestRepository";
+import { findContractorByIdRaw } from "../repositories/contractorRepository";
 
 // ─── DTOs ──────────────────────────────────────────────────────
 
@@ -44,17 +46,13 @@ export async function createRequestEvent(
   },
 ): Promise<RequestEventDTO> {
   // Validate request exists
-  const reqExists = await prisma.request.findUnique({
-    where: { id: input.requestId },
-  });
+  const reqExists = await findRequestExistsById(prisma, input.requestId);
   if (!reqExists) {
     throw Object.assign(new Error("Request not found"), { code: "NOT_FOUND" });
   }
 
   // Validate contractor exists
-  const contractorExists = await prisma.contractor.findUnique({
-    where: { id: input.contractorId },
-  });
+  const contractorExists = await findContractorByIdRaw(prisma, input.contractorId);
   if (!contractorExists) {
     throw Object.assign(new Error("Contractor not found"), { code: "NOT_FOUND" });
   }

@@ -6,6 +6,7 @@ import {
   LeaseStatus,
   RentalOwnerSelectionStatus,
   UnitType,
+  Prisma,
 } from "@prisma/client";
 import prisma from "./prismaClient";
 import * as rentalAppRepo from '../repositories/rentalApplicationRepository';
@@ -14,6 +15,9 @@ import {
   RENTAL_APPLICATION_INCLUDE,
   RENTAL_APPLICATION_UNIT_INCLUDE,
   RENTAL_APPLICATION_SUMMARY_SELECT,
+  RentalApplicationRow,
+  RentalApplicantRow,
+  RentalApplicationUnitRow,
 } from "./rentalIncludes";
 import {
   CreateRentalApplicationInput,
@@ -69,7 +73,7 @@ export interface RentalApplicationUnitDTO {
   scoreTotal?: number;
   confidenceScore?: number;
   disqualified: boolean;
-  disqualifiedReasons?: any;
+  disqualifiedReasons?: Prisma.JsonValue;
   rank?: number;
   managerScoreDelta?: number;
   managerOverrideReason?: string;
@@ -137,8 +141,7 @@ export interface RentalApplicationSummaryDTO {
     scoreTotal?: number;
     confidenceScore?: number;
     disqualified: boolean;
-    disqualifiedReasons?: any;
-    overrideReason?: string;
+    disqualifiedReasons?: Prisma.JsonValue;
     rank?: number;
   }[];
 }
@@ -180,7 +183,7 @@ function listingEligibleUnitWhere(orgId: string, unitIds?: string[]) {
    Mappers
    ══════════════════════════════════════════════════════════════ */
 
-function mapApplicantToDTO(a: any): RentalApplicantDTO {
+function mapApplicantToDTO(a: RentalApplicantRow): RentalApplicantDTO {
   const dto: RentalApplicantDTO = {
     id: a.id,
     role: a.role,
@@ -207,7 +210,7 @@ function mapApplicantToDTO(a: any): RentalApplicantDTO {
   return dto;
 }
 
-function mapAttachmentToDTO(a: any): RentalAttachmentDTO {
+function mapAttachmentToDTO(a: RentalApplicantRow["attachments"][number]): RentalAttachmentDTO {
   return {
     id: a.id,
     applicantId: a.applicantId,
@@ -219,7 +222,7 @@ function mapAttachmentToDTO(a: any): RentalAttachmentDTO {
   };
 }
 
-function mapApplicationUnitToDTO(au: any): RentalApplicationUnitDTO {
+function mapApplicationUnitToDTO(au: RentalApplicationUnitRow): RentalApplicationUnitDTO {
   const dto: RentalApplicationUnitDTO = {
     id: au.id,
     applicationId: au.applicationId,
@@ -252,7 +255,7 @@ function mapApplicationUnitToDTO(au: any): RentalApplicationUnitDTO {
   return dto;
 }
 
-export function mapApplicationToDTO(app: any): RentalApplicationDTO {
+export function mapApplicationToDTO(app: RentalApplicationRow): RentalApplicationDTO {
   const dto: RentalApplicationDTO = {
     id: app.id,
     orgId: app.orgId,
@@ -287,10 +290,10 @@ export function mapApplicationToDTO(app: any): RentalApplicationDTO {
   return dto;
 }
 
-function mapApplicationToSummaryDTO(app: any): RentalApplicationSummaryDTO {
-  const primary = app.applicants?.find((a: any) => a.role === "PRIMARY");
+function mapApplicationToSummaryDTO(app: RentalApplicationRow): RentalApplicationSummaryDTO {
+  const primary = app.applicants?.find((a) => a.role === "PRIMARY");
   const totalIncome = (app.applicants || []).reduce(
-    (sum: number, a: any) => sum + (a.netMonthlyIncome || 0),
+    (sum: number, a) => sum + (a.netMonthlyIncome || 0),
     0,
   );
 
@@ -306,7 +309,7 @@ function mapApplicationToSummaryDTO(app: any): RentalApplicationSummaryDTO {
       : undefined,
     totalMonthlyIncome: totalIncome || undefined,
     applicantCount: app.applicants?.length || 0,
-    unitApplications: (app.applicationUnits || []).map((au: any) => ({
+    unitApplications: (app.applicationUnits || []).map((au) => ({
       id: au.id,
       unitId: au.unitId,
       status: au.status,
@@ -341,7 +344,7 @@ export async function createRentalApplicationDraft(
   }
 
   // Create application + applicants in a transaction
-  const app = await prisma.$transaction(async (tx: any) => {
+  const app = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const application = await tx.rentalApplication.create({
       data: {
         orgId,
@@ -430,7 +433,7 @@ export async function submitRentalApplication(
 
   // Build application data snapshot
   const applicationDataJson = {
-    applicants: app.applicants.map((a: any) => ({
+    applicants: app.applicants.map((a) => ({
       id: a.id,
       role: a.role,
       firstName: a.firstName,
@@ -450,13 +453,13 @@ export async function submitRentalApplication(
     scoreTotal: number;
     confidenceScore: number;
     disqualified: boolean;
-    disqualifiedReasons: any;
-    evaluationJson: any;
+    disqualifiedReasons: Prisma.JsonValue;
+    evaluationJson: Prisma.InputJsonValue;
     rank: number;
   }> = [];
 
   for (let i = 0; i < app.applicationUnits.length; i++) {
-    const au = app.applicationUnits[i] as any;
+    const au = app.applicationUnits[i];
     const unit = au.unit;
     const building = unit?.building;
 
@@ -466,11 +469,11 @@ export async function submitRentalApplication(
       : null;
 
     const evalResult = evaluate({
-      applicants: app.applicants as any[],
-      attachments: app.attachments as any[],
+      applicants: app.applicants,
+      attachments: app.attachments ?? [],
       monthlyRentChf: unit?.monthlyRentChf || 0,
       monthlyChargesChf: unit?.monthlyChargesChf || 0,
-      incomeMultiplier: (config as any)?.rentalIncomeMultiplier || 3,
+      incomeMultiplier: (config as { rentalIncomeMultiplier?: number } | null)?.rentalIncomeMultiplier || 3,
     });
 
     evaluationUpdates.push({
@@ -480,13 +483,13 @@ export async function submitRentalApplication(
       confidenceScore: evalResult.confidenceScore,
       disqualified: evalResult.disqualified,
       disqualifiedReasons: evalResult.reasons,
-      evaluationJson: evalResult,
+      evaluationJson: evalResult as unknown as Prisma.InputJsonValue,
       rank: i + 1, // initial rank by submission order; manager can reorder
     });
   }
 
   // Transaction: update application + all unit evaluations
-  const updated = await prisma.$transaction(async (tx: any) => {
+  const updated = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     // Mark submitted
     const updatedApp = await tx.rentalApplication.update({
       where: { id: applicationId },
@@ -521,14 +524,14 @@ export async function submitRentalApplication(
 
   // Enqueue missing-docs email if applicable (non-disqualified by income but missing docs)
   for (const eu of evaluationUpdates) {
-    const evalJson = eu.evaluationJson;
+    const evalJson = eu.evaluationJson as { missingDocs?: string[]; incomeDisqualified?: boolean };
     if (
       evalJson.missingDocs &&
       evalJson.missingDocs.length > 0 &&
       !evalJson.incomeDisqualified
     ) {
       const primaryApplicant = app.applicants.find(
-        (a: any) => a.role === "PRIMARY",
+        (a) => a.role === "PRIMARY",
       );
       if (primaryApplicant?.email) {
         await enqueueEmail(app.orgId, {
@@ -548,14 +551,14 @@ export async function submitRentalApplication(
 
   // Notify managers and owners of the new application
   try {
-    const primaryApplicant = app.applicants.find((a: any) => a.role === "PRIMARY") || app.applicants[0];
+    const primaryApplicant = app.applicants.find((a) => a.role === "PRIMARY") || app.applicants[0];
     const applicantName = primaryApplicant
-      ? `${(primaryApplicant as any).firstName} ${(primaryApplicant as any).lastName}`
+      ? `${primaryApplicant.firstName} ${primaryApplicant.lastName}`
       : "Unknown";
-    const unitNumbers = (app.applicationUnits as any[]).map(
-      (au: any) => au.unit?.unitNumber || au.unitId.slice(0, 8),
+    const unitNumbers = app.applicationUnits.map(
+      (au) => au.unit?.unitNumber || au.unitId.slice(0, 8),
     );
-    const firstUnit = (app.applicationUnits as any[])[0];
+    const firstUnit = app.applicationUnits[0];
     const buildingId = firstUnit?.unit?.buildingId || firstUnit?.unit?.building?.id;
 
     const { notifyApplicationSubmitted } = await import("./notifications");
@@ -665,9 +668,9 @@ export async function adjustEvaluation(
 
   const updated = await rentalAppRepo.updateApplicationUnitWithInclude(prisma, applicationUnitId, {
     scoreTotal: newScore,
-    managerScoreDelta: ((au as any).managerScoreDelta || 0) + input.scoreDelta,
+    managerScoreDelta: (au.managerScoreDelta || 0) + input.scoreDelta,
     managerOverrideReason: input.reason,
-    managerOverrideJson: (input.overrideJson as any) || undefined,
+    managerOverrideJson: (input.overrideJson as Prisma.InputJsonValue) || undefined,
   });
 
   return mapApplicationUnitToDTO(updated);

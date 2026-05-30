@@ -1,3 +1,4 @@
+// sortable-audit-exempt: all tables are read-only ledger-entry previews and linked-invoice detail displays (no sort UX needed)
 /**
  * Imported Statement Review Page
  *
@@ -641,7 +642,7 @@ function ApproveModal({ preview, onConfirm, onClose, loading }) {
   );
 }
 
-// ── Main page ─────────────────────────────────────────────────────────────────
+// sortable-audit-exempt: all tables are read-only ledger-entry previews and linked-invoice detail displays (no sort UX needed)
 
 export default function ImportedStatementReviewPage() {
   const { t } = useTranslation("manager");

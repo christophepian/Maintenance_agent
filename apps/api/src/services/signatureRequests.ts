@@ -1,5 +1,6 @@
 import { SignatureRequestStatus, LeaseStatus } from '@prisma/client';
 import prisma from './prismaClient';
+import { findLeaseRaw, updateLeaseRaw } from '../repositories/leaseRepository';
 
 // ==========================================
 // DTOs
@@ -66,7 +67,7 @@ export async function createSignatureRequest(
   const { orgId, leaseId, level = 'SES' } = params;
 
   // Load lease to verify + build default signers
-  const lease = await prisma.lease.findUnique({ where: { id: leaseId } });
+  const lease = await findLeaseRaw(prisma, leaseId);
   if (!lease || lease.orgId !== orgId) throw new Error('Lease not found');
   if (lease.status !== LeaseStatus.READY_TO_SIGN && lease.status !== LeaseStatus.DRAFT) {
     throw new Error('Lease must be DRAFT or READY_TO_SIGN to create a signature request');
@@ -209,10 +210,7 @@ export async function markSignatureRequestSigned(
 
   // Update linked lease status to SIGNED
   if (sr.entityType === 'LEASE') {
-    await prisma.lease.update({
-      where: { id: sr.entityId },
-      data: { status: LeaseStatus.SIGNED },
-    });
+    await updateLeaseRaw(prisma, sr.entityId, { status: LeaseStatus.SIGNED });
   }
 
   return mapToDTO(updated);

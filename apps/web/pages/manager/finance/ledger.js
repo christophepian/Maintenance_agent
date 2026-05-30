@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+// sortable-audit-exempt: balance-sheet Actifs/Passifs tables are read-only ledger-entry display (no sort UX needed)
 import AppShell from "../../../components/AppShell";
 import PageShell from "../../../components/layout/PageShell";
 import PageHeader from "../../../components/layout/PageHeader";

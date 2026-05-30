@@ -75,6 +75,13 @@ export async function findTenantByOrgAndId(
 }
 
 /**
+ * Find a tenant's email by id (lightweight — no include).
+ */
+export async function findTenantEmail(prisma: PrismaClient, id: string) {
+  return prisma.tenant.findUnique({ where: { id }, select: { email: true } });
+}
+
+/**
  * Update a tenant record by id.
  */
 export async function updateTenantRecord(

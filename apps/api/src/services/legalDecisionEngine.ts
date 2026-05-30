@@ -14,6 +14,7 @@ import { LegalObligation, LegalAuthority, AssetType, LegalRuleScope } from "@pri
 import * as crypto from "crypto";
 import prisma from "./prismaClient";
 import { REQUEST_LEGAL_DECISION_INCLUDE } from "./legalIncludes";
+import { RequestLegalDecisionRow } from "../repositories/requestRepository";
 import { OrgScopeMismatchError } from "../governance/orgScope";
 import { computeDepreciationSignal, DepreciationSignalDTO } from "./depreciation";
 import {
@@ -381,6 +382,25 @@ interface RuleEvaluationResult {
   highestPriority: number;
 }
 
+/** Shape of a parsed LegalRuleVersion.dslJson object (G3 — typed cast only). */
+interface LegalDslJson {
+  topic?: string;
+  type?: string;
+  obligation?: string;
+  cantonalObligation?: string;
+  priority?: number;
+  conditions?: unknown[];
+  citations?: unknown[];
+  // rent-reduction fields
+  defect?: string;
+  category?: string;
+  reductionPercent?: number;
+  reductionMax?: number;
+  basis?: string;
+  source?: string;
+  [key: string]: unknown;
+}
+
 /**
  * Evaluate statutory rules for a given legal topic and canton.
  *
@@ -396,7 +416,7 @@ interface RuleEvaluationResult {
 async function evaluateStatutoryRules(
   legalTopic: string | null,
   canton: string | null,
-  request: any,
+  request: RequestLegalDecisionRow,
 ): Promise<RuleEvaluationResult> {
   if (!legalTopic) {
     return {
@@ -452,7 +472,7 @@ async function evaluateStatutoryRules(
     if (!version) continue;
 
     // Evaluate DSL
-    const dsl = version.dslJson as any;
+    const dsl = version.dslJson as unknown as LegalDslJson;
     if (!dsl) continue;
 
     // Topic already filtered at query level; skip legacy in-DSL topic check
@@ -488,7 +508,7 @@ async function evaluateStatutoryRules(
 
     // Extract citations (deduplicate by article + text + authority)
     if (version.citationsJson) {
-      const ruleCitations = version.citationsJson as any[];
+      const ruleCitations = version.citationsJson as unknown as Array<{ text?: string; url?: string; articleRef?: string; article?: string }>;
       for (const c of ruleCitations) {
         const key = `${c.article || ""}|${c.text || ""}|${rule.authority}`;
         if (!citationMap.has(key)) {
@@ -525,7 +545,7 @@ async function evaluateStatutoryRules(
  * Returns RentReductionMatch[] ordered by relevanceScore desc, reductionPercent desc.
  */
 async function evaluateRentReductionRules(
-  request: any,
+  request: RequestLegalDecisionRow,
   legalTopic: string | null,
   canton: string | null,
 ): Promise<RentReductionMatch[]> {
@@ -566,7 +586,7 @@ async function evaluateRentReductionRules(
     const version = rule.versions[0];
     if (!version) continue;
 
-    const dsl = version.dslJson as any;
+    const dsl = version.dslJson as unknown as LegalDslJson;
     if (!dsl || dsl.type !== "RENT_REDUCTION") continue;
 
     // Nature gate: skip rules whose nature doesn't match the request
@@ -623,7 +643,7 @@ interface SearchContext {
  * Build a rich search context from the request for bilingual matching.
  * Uses accent stripping + stemming for both request text and rule text.
  */
-function buildSearchContext(request: any, legalTopic: string | null): SearchContext {
+function buildSearchContext(request: RequestLegalDecisionRow, legalTopic: string | null): SearchContext {
   const parts: string[] = [];
   if (request.description) parts.push(request.description);
   if (request.category) parts.push(request.category.replace(/[_-]/g, " "));
@@ -728,7 +748,7 @@ function computeRelevance(
  */
 async function evaluateDslConditions(
   conditions: any[],
-  request: any,
+  request: RequestLegalDecisionRow,
   resolvedTopic?: string | null,
   canton?: string | null,
 ): Promise<boolean> {
@@ -743,7 +763,7 @@ async function evaluateDslConditions(
 
 async function evaluateSingleCondition(
   cond: any,
-  request: any,
+  request: RequestLegalDecisionRow,
   resolvedTopic?: string | null,
   canton?: string | null,
 ): Promise<boolean> {
@@ -829,7 +849,7 @@ async function evaluateSingleCondition(
  * Otherwise fall back to the appliance install date if available.
  */
 async function computeDepreciationForRequest(
-  request: any,
+  request: RequestLegalDecisionRow,
   legalTopic: string,
   canton: string | null,
 ): Promise<DepreciationSignalDTO | null> {

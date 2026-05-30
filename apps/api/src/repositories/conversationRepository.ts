@@ -100,3 +100,34 @@ export async function getThreadHistory(
   });
   return thread?.messages ?? [];
 }
+/**
+ * Resolve the internal Tenant.id for a conversation session.
+ *
+ * `requireTenantSession` may return either:
+ *   a) an explicit tenantId stored in app_metadata  → already a valid Tenant.id
+ *   b) the Supabase userId (sub UUID)               → must be looked up by email
+ *
+ * Returns the resolved Tenant.id, or the original rawTenantId if no match is
+ * found (preserving the upstream 404 / empty-result behaviour).
+ */
+export async function resolveConversationTenantId(
+  prisma: PrismaClient,
+  rawTenantId: string,
+  orgId: string,
+  email: string | undefined,
+): Promise<string> {
+  const db = prisma as AnyPrisma;
+
+  // Fast path: check whether rawTenantId is an existing Tenant record id
+  const byId = await db.tenant.findFirst({ where: { id: rawTenantId, orgId }, select: { id: true } });
+  if (byId) return byId.id;
+
+  // Fallback: resolve by email (raw value is a Supabase sub UUID)
+  if (email) {
+    const byEmail = await db.tenant.findFirst({ where: { email, orgId }, select: { id: true } });
+    if (byEmail) return byEmail.id;
+  }
+
+  // Nothing found — return original value so upstream gets 404 / empty behaviour
+  return rawTenantId;
+}

@@ -1515,7 +1515,7 @@ export default function BuildingDetail() {
                 <div className="space-y-2">
                   <pre className="whitespace-pre-wrap text-sm text-slate-700 font-sans leading-relaxed bg-slate-50 rounded-lg border border-slate-200 p-4 max-h-80 overflow-y-auto">{building.houseRulesText}</pre>
                   {houseRulesPreviewUrl && (
-                    <div className="mt-3 rounded-lg overflow-hidden border border-slate-200" style={{ height: 600 }}>
+                    <div className="mt-3 rounded-lg overflow-hidden border border-slate-200 h-[600px]">
                       <iframe src={houseRulesPreviewUrl} className="w-full h-full" title="House Rules PDF Preview" />
                     </div>
                   )}

@@ -10,6 +10,7 @@
 
 import { PrismaClient } from "@prisma/client";
 import * as rentalApplicationRepo from "../repositories/rentalApplicationRepository";
+import { findBuildingsWithLeaseTemplates } from "../repositories/leaseRepository";
 
 // ─── DTOs ──────────────────────────────────────────────────────
 
@@ -60,15 +61,7 @@ export async function listManagerSelections(
   const buildingIds = [
     ...new Set(selections.map((s: any) => s.unit?.building?.id).filter(Boolean)),
   ];
-  const templatesPerBuilding = await prisma.lease.groupBy({
-    by: ["templateBuildingId"],
-    where: {
-      isTemplate: true,
-      deletedAt: null,
-      templateBuildingId: { in: buildingIds },
-    },
-    _count: { id: true },
-  });
+  const templatesPerBuilding = await findBuildingsWithLeaseTemplates(prisma, buildingIds);
   const buildingsWithTemplate = new Set(
     templatesPerBuilding.map((t: any) => t.templateBuildingId),
   );

@@ -409,7 +409,7 @@ export async function findRentReductionRuleKeys(prisma: PrismaClient) {
 
 export async function findEvaluationLogsWithCount(
   prisma: PrismaClient,
-  where: any,
+  where: Prisma.LegalEvaluationLogWhereInput,
   limit: number,
   offset: number,
 ) {

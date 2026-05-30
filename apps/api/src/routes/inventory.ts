@@ -763,7 +763,7 @@ export function registerInventoryRoutes(router: Router) {
   router.post("/buildings/:id/seed-default-assets", async ({ req, res, orgId, params, prisma }) => {
     if (!requireRole(req, res, "MANAGER")) return;
     try {
-      const building = await prisma.building.findFirst({ where: { id: params.id, orgId } });
+      const building = await inventoryRepo.findBuildingByIdAndOrg(prisma, params.id, orgId);
       if (!building) return sendError(res, 404, "NOT_FOUND", "Building not found");
       await seedDefaultBuildingAssets(prisma, orgId, params.id, { hasElevator: building.hasElevator });
       sendJson(res, 200, { success: true });
@@ -776,7 +776,7 @@ export function registerInventoryRoutes(router: Router) {
   router.post("/units/:id/seed-default-assets", async ({ req, res, orgId, params, prisma }) => {
     if (!requireRole(req, res, "MANAGER")) return;
     try {
-      const unit = await prisma.unit.findFirst({ where: { id: params.id, orgId } });
+      const unit = await inventoryRepo.findUnitByIdAndOrg(prisma, params.id, orgId);
       if (!unit) return sendError(res, 404, "NOT_FOUND", "Unit not found");
       await seedDefaultUnitAssets(prisma, orgId, params.id);
       sendJson(res, 200, { success: true });

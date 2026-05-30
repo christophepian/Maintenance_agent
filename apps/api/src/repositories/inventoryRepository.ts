@@ -226,6 +226,27 @@ export async function listAllUnitsForOrg(
   });
 }
 
+/** Lightweight unit ownership check (id + orgId only — no include). */
+export async function findUnitExistsByIdAndOrg(
+  prisma: PrismaClient,
+  unitId: string,
+  orgId: string,
+) {
+  return prisma.unit.findFirst({ where: { id: unitId, orgId }, select: { id: true } });
+}
+
+/** Find unit with building → config cascade for effective-config computation. */
+export async function findUnitWithBuildingConfig(
+  prisma: PrismaClient,
+  unitId: string,
+  orgId: string,
+) {
+  return prisma.unit.findFirst({
+    where: { id: unitId, orgId },
+    include: { building: { include: { config: true } } },
+  });
+}
+
 export async function findUnitByIdAndOrg(
   prisma: PrismaClient,
   unitId: string,

@@ -15,6 +15,7 @@
  * uniformly across all organisations within a jurisdiction.
  */
 
+import { Prisma } from "@prisma/client";
 import prisma from "./prismaClient";
 import * as legalSourceRepo from "../repositories/legalSourceRepository";
 import * as requestRepo from "../repositories/requestRepository";
@@ -215,15 +216,15 @@ export interface ListEvaluationsParams {
 export async function listEvaluations(params: ListEvaluationsParams) {
   const { orgId, limit = 20, offset = 0, obligationFilter, categoryFilter, requestIdFilter } = params;
 
-  const where: any = { orgId };
+  const where: Prisma.LegalEvaluationLogWhereInput = { orgId };
   if (requestIdFilter) where.requestId = requestIdFilter;
 
   const [rows, total] = await legalSourceRepo.findEvaluationLogsWithCount(prisma, where, limit, offset);
 
   // ── Resolve building names, unit numbers, request descriptions ──
-  const buildingIds = [...new Set(rows.map((r: any) => r.buildingId).filter(Boolean))] as string[];
-  const unitIds = [...new Set(rows.map((r: any) => r.unitId).filter(Boolean))] as string[];
-  const requestIds = [...new Set(rows.map((r: any) => r.requestId).filter(Boolean))] as string[];
+  const buildingIds = [...new Set(rows.map((r) => r.buildingId).filter(Boolean))] as string[];
+  const unitIds = [...new Set(rows.map((r) => r.unitId).filter(Boolean))] as string[];
+  const requestIds = [...new Set(rows.map((r) => r.requestId).filter(Boolean))] as string[];
 
   const [buildings, units, requests] = await Promise.all([
     buildingIds.length ? legalSourceRepo.findBuildingNamesByIds(prisma, buildingIds) : [],
@@ -231,14 +232,14 @@ export async function listEvaluations(params: ListEvaluationsParams) {
     requestIds.length ? legalSourceRepo.findRequestSummariesByIds(prisma, requestIds) : [],
   ]);
 
-  const buildingMap = new Map(buildings.map((b: any) => [b.id, b] as const));
-  const unitMap = new Map(units.map((u: any) => [u.id, u] as const));
-  const requestMap = new Map(requests.map((r: any) => [r.id, r] as const));
+  const buildingMap = new Map(buildings.map((b) => [b.id, b] as const));
+  const unitMap = new Map(units.map((u) => [u.id, u] as const));
+  const requestMap = new Map(requests.map((r) => [r.id, r] as const));
 
   const data = rows
-    .map((row: any) => {
-      const ctx = (row.contextJson ?? {}) as Record<string, any>;
-      const result = (row.resultJson ?? {}) as Record<string, any>;
+    .map((row) => {
+      const ctx = (row.contextJson ?? {}) as Record<string, unknown>;
+      const result = (row.resultJson ?? {}) as Record<string, unknown>;
       const building = row.buildingId ? buildingMap.get(row.buildingId) : null;
       const unit = row.unitId ? unitMap.get(row.unitId) : null;
       const request = row.requestId ? requestMap.get(row.requestId) : null;
