@@ -122,6 +122,55 @@ Remaining known limitation: OCR extracts amount and date reliably from phone pho
 
 **Operational requirement for new users:** Supabase `app_metadata` must include `prismaUserId` + `orgId`. Use admin/users UI to set `ownerId` (auto-syncs `BuildingOwner` rows). Manager users need manual SQL assignment of `managerId` on existing buildings after first deploy.
 
+## Triage Agent — Scoped (not yet built)
+
+Post-`REQUEST_CREATED` event handler that enriches the request with contractor suggestions and a budget hint, then marks `triageCompletedAt`. Purely async — never blocks the create request path. Manager sees a read-only hint panel on the request detail page.
+
+### Schema additions (1 migration, 4 fields on `Request`)
+
+```
+triageContractorIds   String[]   @default([])   // ordered by score, top 3
+triageBudgetMin       Int?                       // CHF cents — P25 of historical invoices
+triageBudgetMax       Int?                       // CHF cents — P75 of historical invoices
+triageCompletedAt     DateTime?                  // null = not yet run; set even when no suggestions found
+```
+
+### Scoring (pure SQL, no AI in this slice)
+
+$$\text{score} = 0.4 \times \text{avgRating} + 0.3 \times \text{onTimeRate} + 0.2 \times \text{categoryMatch} + 0.1 \times \text{buildingMatch}$$
+
+### Fallback matrix
+
+| Situation | Contractors | Budget | `triageCompletedAt` |
+|---|---|---|---|
+| No jobs in org (new org) | `[]` — skip entirely | omitted | set (ran, found nothing) |
+| Contractors exist but none match category | All org contractors, unranked | omitted | set |
+| <3 category matches | Return 1–2 ranked | only if ≥2 invoice data points | set |
+| <3 invoices for P25–P75 | Contractors still ranked | omitted — never show misleading single data point | set |
+| Triage throws any error | silently swallowed (event bus pattern) | nothing written | **not set** — manager sees no panel |
+
+**UI rule:** show suggestions panel only when `triageCompletedAt !== null && triageContractorIds.length > 0`. Show budget hint only when both `triageBudgetMin` and `triageBudgetMax` are set.
+
+### Files (when built)
+
+| File | Type | Purpose |
+|---|---|---|
+| `repositories/contractorRepository.ts` | new | `findContractorsByOrg`, `findContractorJobHistory` |
+| `services/requestTriageService.ts` | new | scoring logic, budget P25–P75 |
+| `workflows/requestTriageWorkflow.ts` | new | orchestrate, write fields, emit notification |
+| `src/__tests__/requestTriage.test.ts` | new | integration tests, port 3280 |
+| `events/types.ts` | modify | add `orgId` to `RequestCreatedPayload` |
+| `events/handlers.ts` | modify | `on("REQUEST_CREATED", ...)` |
+| `workflows/createRequestWorkflow.ts` | modify | pass `orgId` into emit |
+
+### Explicitly out of scope for this slice
+- Auto-creating an RFP
+- AI-enriched notification text (Phase 2)
+- Contractor performance score as a standalone model
+- Tenant-facing suggestions
+
+---
+
 ## Owner Surface Segregation Rules
 
 > **Full rules:** See [docs/OWNER_SURFACE.md](docs/OWNER_SURFACE.md) — dashboard vs reporting separation, shared-topic framing, implementation preference, copy guidance.
