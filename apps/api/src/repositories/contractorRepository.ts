@@ -180,3 +180,161 @@ export async function findContractorByOrgAndEmail(
     select: { id: true },
   });
 }
+
+// ─── Triage queries ────────────────────────────────────────────
+
+export type ContractorBasicForTriage = {
+  id: string;
+  name: string;
+  serviceCategories: string;
+};
+
+export type ContractorJobHistory = {
+  contractorId: string;
+  totalJobs: number;
+  completedJobs: number;
+  onTimeRate: number;    // 0–1
+  avgRating: number;     // 0–5 (0 = no ratings)
+  categoryMatch: number; // 0 or 1
+  buildingMatch: number; // 0 or 1
+  invoiceAmounts: number[]; // CHF cents, PAID invoices filtered by category
+};
+
+/**
+ * Return all active contractors for an org (lightweight).
+ */
+export async function findContractorsForTriage(
+  prisma: PrismaClient,
+  orgId: string,
+): Promise<ContractorBasicForTriage[]> {
+  return prisma.contractor.findMany({
+    where: { orgId, isActive: true },
+    select: { id: true, name: true, serviceCategories: true },
+    orderBy: { name: "asc" },
+  });
+}
+
+/**
+ * Aggregate job history stats for all active contractors in an org.
+ * Used by requestTriageService to compute scores.
+ */
+export async function findContractorJobHistories(
+  prisma: PrismaClient,
+  orgId: string,
+  category: string | null | undefined,
+  buildingId: string | null | undefined,
+): Promise<Map<string, ContractorJobHistory>> {
+  const contractors = await findContractorsForTriage(prisma, orgId);
+  const result = new Map<string, ContractorJobHistory>();
+  if (contractors.length === 0) return result;
+
+  const contractorIds = contractors.map((c) => c.id);
+
+  const jobs = await prisma.job.findMany({
+    where: { orgId, contractorId: { in: contractorIds } },
+    select: {
+      id: true,
+      contractorId: true,
+      status: true,
+      completedAt: true,
+      schedulingExpiresAt: true,
+      request: {
+        select: {
+          category: true,
+          unit: {
+            select: {
+              building: { select: { id: true } },
+            },
+          },
+        },
+      },
+      ratings: {
+        select: { score: true },
+      },
+      invoices: {
+        where: { status: "PAID" },
+        select: { totalAmount: true },
+      },
+    },
+  });
+
+  for (const contractor of contractors) {
+    const cJobs = jobs.filter((j) => j.contractorId === contractor.id);
+    const totalJobs = cJobs.length;
+    const completedJobs = cJobs.filter((j) => j.status === "COMPLETED").length;
+
+    const onTimeJobs = cJobs.filter(
+      (j) =>
+        j.status === "COMPLETED" &&
+        (!j.schedulingExpiresAt ||
+          !j.completedAt ||
+          j.completedAt <= j.schedulingExpiresAt),
+    ).length;
+    const onTimeRate = completedJobs > 0 ? onTimeJobs / completedJobs : 0;
+
+    const allScores = cJobs.flatMap((j) => j.ratings.map((r) => r.score));
+    const avgRating =
+      allScores.length > 0
+        ? allScores.reduce((a, b) => a + b, 0) / allScores.length
+        : 0;
+
+    const categoryMatch =
+      category &&
+      contractor.serviceCategories.toLowerCase().includes(category.toLowerCase())
+        ? 1
+        : 0;
+
+    const buildingMatch =
+      buildingId &&
+      cJobs.some((j) => j.request?.unit?.building?.id === buildingId)
+        ? 1
+        : 0;
+
+    // Invoice amounts scoped to the requested category
+    const invoiceAmounts = cJobs
+      .filter(
+        (j) =>
+          !category ||
+          (j.request?.category &&
+            j.request.category.toLowerCase() === category.toLowerCase()),
+      )
+      .flatMap((j) => j.invoices.map((inv) => inv.totalAmount));
+
+    result.set(contractor.id, {
+      contractorId: contractor.id,
+      totalJobs,
+      completedJobs,
+      onTimeRate,
+      avgRating,
+      categoryMatch,
+      buildingMatch,
+      invoiceAmounts,
+    });
+  }
+
+  return result;
+}
+
+/**
+ * Write triage results back to the Request record.
+ */
+export async function updateRequestTriageFields(
+  prisma: PrismaClient,
+  requestId: string,
+  data: {
+    triageContractorIds: string[];
+    triageBudgetMin: number | null;
+    triageBudgetMax: number | null;
+    triageCompletedAt: Date;
+  },
+): Promise<void> {
+  await prisma.request.update({
+    where: { id: requestId },
+    data: {
+      triageContractorIds: data.triageContractorIds,
+      triageBudgetMin: data.triageBudgetMin,
+      triageBudgetMax: data.triageBudgetMax,
+      triageCompletedAt: data.triageCompletedAt,
+    },
+  });
+}

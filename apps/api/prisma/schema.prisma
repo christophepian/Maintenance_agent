@@ -282,6 +282,10 @@ model Request {
   rejectionReason      String?
   payingParty          PayingParty     @default(LANDLORD)
   urgency              RequestUrgency  @default(MEDIUM)
+  triageContractorIds  String[]        @default([])
+  triageBudgetMin      Int?
+  triageBudgetMax      Int?
+  triageCompletedAt    DateTime?
   org                  Org            @relation(fields: [orgId], references: [id])
   job                  Job?
   asset                Asset?         @relation(fields: [assetId], references: [id], onDelete: SetNull)

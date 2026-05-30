@@ -2071,6 +2071,11 @@
       "planReplacement": "Planifier le remplacement",
       "replace": "Remplacer",
       "planreplacement": "Planifier le remplacement"
+    },
+    "triage": {
+      "title": "Prestataires suggérés",
+      "budgetHint": "Fourchette budgétaire historique :",
+      "budgetNote": "(basé sur les travaux passés)"
     }
   },
   "rfps": {

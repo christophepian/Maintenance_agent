@@ -100,8 +100,8 @@ const NEXT_STEP_STYLES = {
 function Field({ label, children }) {
   return (
     <div>
-      <dt className="text-xs font-medium text-slate-500 uppercase tracking-wide">{label}</dt>
-      <dd className="mt-0.5 text-sm text-slate-900">{children || "\u2014"}</dd>
+      <dt className="text-xs font-medium text-muted uppercase tracking-wide">{label}</dt>
+      <dd className="mt-0.5 text-sm text-foreground">{children || "\u2014"}</dd>
     </div>
   );
 }
@@ -138,7 +138,7 @@ function UrgencyPill({ urgency, onChangeUrgency }) {
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full mt-1 z-20 min-w-[120px] rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
+        <div className="absolute left-0 top-full mt-1 z-20 min-w-[120px] rounded-lg border border-surface-border bg-surface py-1 shadow-lg">
           {URGENCY_OPTIONS.map((opt) => {
             const isActive = (urgency === "EMERGENCY" ? "HIGH" : urgency) === opt.value;
             return (
@@ -146,7 +146,7 @@ function UrgencyPill({ urgency, onChangeUrgency }) {
                 key={opt.value}
                 type="button"
                 onClick={() => { onChangeUrgency(opt.value); setOpen(false); }}
-                className={cn("flex w-full items-center gap-2 px-3 py-1.5 text-xs font-medium hover:bg-slate-50 transition", isActive ? "bg-slate-50" : "")}
+                className={cn("flex w-full items-center gap-2 px-3 py-1.5 text-xs font-medium hover:bg-surface-subtle transition", isActive ? "bg-surface-subtle" : "")}
               >
                 <Badge variant={urgencyVariant(opt.value)} size="sm">{t(`manager:requestsId.urgency.${opt.value.toLowerCase()}`)}</Badge>
                 {isActive && <span className="ml-auto text-indigo-500">{"\u2713"}</span>}
@@ -185,7 +185,7 @@ function StatusPipeline({ status, jobStatus, payingParty }) {
     if (tenantFundedHere) return "bg-orange-500 border-orange-600";
     if (isCurrent)        return "bg-indigo-500 border-indigo-600 ring-4 ring-indigo-100";
     if (reached)          return "bg-green-500 border-green-600";
-    return "bg-slate-200 border-slate-300";
+    return "bg-slate-200 border-muted-ring";
   }
 
   function getLabelText(stage, i) {
@@ -212,7 +212,7 @@ function StatusPipeline({ status, jobStatus, payingParty }) {
     if (tenantFundedHere) return "text-orange-600 font-semibold";
     if (isCurrent)        return "text-indigo-700 font-semibold";
     if (reached)          return "text-green-700";
-    return "text-slate-400";
+    return "text-foreground-dim";
   }
 
   const currentStage = stages[idx];
@@ -246,14 +246,14 @@ function StatusPipeline({ status, jobStatus, payingParty }) {
             viewBox="0 0 20 20"
             fill="currentColor"
             aria-hidden="true"
-            className={cn("h-4 w-4 shrink-0 text-slate-400 transition-transform duration-200", expanded && "rotate-180")}
+            className={cn("h-4 w-4 shrink-0 text-foreground-dim transition-transform duration-200", expanded && "rotate-180")}
           >
             <path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
           </svg>
         </button>
 
         {expanded && (
-          <div className="mt-3 space-y-2 border-t border-slate-100 pt-3">
+          <div className="mt-3 space-y-2 border-t border-surface-divider pt-3">
             {stages.map((stage, i) => (
               <div key={stage.key} className="flex items-start gap-3">
                 <div className="flex flex-col items-center pt-0.5">
@@ -300,10 +300,10 @@ function DepreciationBar({ pct }) {
                  "bg-green-500";
   return (
     <div className="flex items-center gap-2">
-      <div className="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden">
+      <div className="flex-1 h-2 rounded-full bg-surface-hover overflow-hidden">
         <div className={cn("h-full rounded-full transition-all", c)} style={{ width: `${Math.min(pct, 100)}%` }} />
       </div>
-      <span className="text-xs font-medium text-slate-600 tabular-nums w-10 text-right">{pct}%</span>
+      <span className="text-xs font-medium text-muted-text tabular-nums w-10 text-right">{pct}%</span>
     </div>
   );
 }
@@ -315,7 +315,7 @@ function AssetRecommendationContent({ applianceId, repairReplaceData, requestEst
   if (!applianceId) return null;
 
   if (!repairReplaceData || repairReplaceData.loading) {
-    return <p className="text-sm text-slate-400 animate-pulse m-0">{t("manager:requestsId.text.loadingAssetAnalysis")}</p>;
+    return <p className="text-sm text-foreground-dim animate-pulse m-0">{t("manager:requestsId.text.loadingAssetAnalysis")}</p>;
   }
   if (repairReplaceData.error) {
     return <p className="text-sm text-red-500 m-0">{t("manager:requestsId.text.failedToLoadAssetAnalysis")}</p>;
@@ -326,7 +326,7 @@ function AssetRecommendationContent({ applianceId, repairReplaceData, requestEst
   if (!item) {
     return (
       <div className="py-4 text-center">
-        <p className="text-sm text-slate-400 m-0">{t("manager:requestsId.text.noRepairvsreplaceDataAvailableForThisAsset")}</p>
+        <p className="text-sm text-foreground-dim m-0">{t("manager:requestsId.text.noRepairvsreplaceDataAvailableForThisAsset")}</p>
         <p className="text-xs text-slate-300 mt-1 m-0">{t("manager:requestsId.text.assetInventoryRecordsAreRequiredForAnalysis")}</p>
       </div>
     );
@@ -341,13 +341,13 @@ function AssetRecommendationContent({ applianceId, repairReplaceData, requestEst
           {t(`manager:requestsId.rec.${(item.recommendation || "REPAIR").toLowerCase().replace("_", "")}`)}
         </Badge>
         {item.explanation && (
-          <p className="text-xs text-slate-500 leading-relaxed m-0">{item.explanation}</p>
+          <p className="text-xs text-muted leading-relaxed m-0">{item.explanation}</p>
         )}
       </div>
 
       {/* Depreciation */}
       <div>
-        <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
+        <div className="flex items-center justify-between text-xs text-muted mb-1">
           <span className="font-medium">{item.applianceName || "Asset"}</span>
           {item.ageMonths != null && item.usefulLifeMonths != null && (
             <span>{Math.round(item.ageMonths / 12)}{t("manager:requestsId.text.yUsefulLife").replace("{n}", Math.round(item.usefulLifeMonths / 12))}</span>
@@ -357,33 +357,33 @@ function AssetRecommendationContent({ applianceId, repairReplaceData, requestEst
       </div>
 
       {/* Cost comparison */}
-      <div className="grid grid-cols-2 gap-4 pt-3 border-t border-slate-100">
+      <div className="grid grid-cols-2 gap-4 pt-3 border-t border-surface-divider">
         <div>
-          <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">{t("manager:requestsId.text.estRepair")}</span>
-          <p className="mt-0.5 text-sm font-semibold text-slate-900 m-0">
+          <span className="text-xs font-medium text-muted uppercase tracking-wide block">{t("manager:requestsId.text.estRepair")}</span>
+          <p className="mt-0.5 text-sm font-semibold text-foreground m-0">
             {requestEstimate > 0
               ? formatCurrency(requestEstimate)
               : item.cumulativeRepairCostChf > 0
-                ? <>{formatCurrency(item.cumulativeRepairCostChf)} <span className="font-normal text-xs text-slate-400">{t("manager:requestsId.text.cumulative")}</span></>
+                ? <>{formatCurrency(item.cumulativeRepairCostChf)} <span className="font-normal text-xs text-foreground-dim">{t("manager:requestsId.text.cumulative")}</span></>
                 : "\u2014"}
           </p>
         </div>
         <div>
-          <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">{t("manager:requestsId.text.estReplacement")}</span>
-          <p className="mt-0.5 text-sm font-semibold text-slate-900 m-0">
+          <span className="text-xs font-medium text-muted uppercase tracking-wide block">{t("manager:requestsId.text.estReplacement")}</span>
+          <p className="mt-0.5 text-sm font-semibold text-foreground m-0">
             {item.estimatedReplacementCostChf > 0 ? formatCurrency(item.estimatedReplacementCostChf) : "\u2014"}
           </p>
         </div>
       </div>
 
       {item.repairReplaceRatio != null && item.repairReplaceRatio > 0 && (
-        <div className="flex items-center gap-4 text-xs text-slate-500">
+        <div className="flex items-center gap-4 text-xs text-muted">
           <span>
             {t("manager:requestsId.text.ratioPrefix")}{" "}
             <strong className={
               item.repairReplaceRatio >= 0.6 ? "text-red-600" :
               item.repairReplaceRatio >= 0.4 ? "text-orange-600" :
-              "text-slate-700"
+              "text-muted-dark"
             }>
               {Math.round(item.repairReplaceRatio * 100)}%
             </strong>
@@ -395,7 +395,7 @@ function AssetRecommendationContent({ applianceId, repairReplaceData, requestEst
                 item.breakEvenMonths === 0  ? "text-red-600" :
                 item.breakEvenMonths < 12   ? "text-red-600" :
                 item.breakEvenMonths < 36   ? "text-amber-600" :
-                "text-slate-700"
+                "text-muted-dark"
               }>
                 {item.breakEvenMonths === 0 ? t("manager:requestsId.text.exceeded") : `${item.breakEvenMonths}mo`}
               </strong>
@@ -426,19 +426,19 @@ function OwnerAdjustedDecision({ state }) {
 
   if (loading) {
     return (
-      <div className="border-t border-slate-100 pt-4 mt-4">
-        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
+      <div className="border-t border-surface-divider pt-4 mt-4">
+        <p className="text-xs font-semibold text-muted uppercase tracking-wide mb-2">
           {t("manager:requestsId.text.ownerContext")}
         </p>
-        <p className="text-sm text-slate-400">{t("manager:requestsId.text.calculating")}</p>
+        <p className="text-sm text-foreground-dim">{t("manager:requestsId.text.calculating")}</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="border-t border-slate-100 pt-4 mt-4">
-        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
+      <div className="border-t border-surface-divider pt-4 mt-4">
+        <p className="text-xs font-semibold text-muted uppercase tracking-wide mb-2">
           {t("manager:requestsId.text.ownerContext")}
         </p>
         <p className="text-sm text-red-500">{error}</p>
@@ -452,9 +452,9 @@ function OwnerAdjustedDecision({ state }) {
   const confVariant = CONFIDENCE_VARIANT[data.confidence] || "neutral";
 
   return (
-    <div className="border-t border-slate-100 pt-4 mt-4 space-y-3">
+    <div className="border-t border-surface-divider pt-4 mt-4 space-y-3">
       <div className="flex items-center justify-between">
-        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+        <p className="text-xs font-semibold text-muted uppercase tracking-wide">
           {t("manager:requestsId.text.ownerContext")}
         </p>
         <Badge variant={confVariant}>{data.confidence} {t("manager:requestsId.text.confidence")}</Badge>
@@ -466,7 +466,7 @@ function OwnerAdjustedDecision({ state }) {
           {t(`manager:requestsId.rec.${(data.verdict || "REPAIR").toLowerCase().replace("_", "")}`)}
         </span>
         {data.archetypeAdjusted && (
-          <span className="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full border border-slate-200">
+          <span className="text-xs bg-surface-hover text-muted px-2 py-0.5 rounded-full border border-surface-border">
             {t("manager:requestsId.text.archetypeAdjusted")}
           </span>
         )}
@@ -474,20 +474,20 @@ function OwnerAdjustedDecision({ state }) {
 
       {/* Archetype alignment */}
       {data.archetypeAlignment && (
-        <p className="text-xs text-slate-500 italic">{data.archetypeAlignment}</p>
+        <p className="text-xs text-muted italic">{data.archetypeAlignment}</p>
       )}
 
       {/* Owner preference note */}
       {data.ownerPreferenceNote && (
-        <p className="text-xs text-slate-600">{data.ownerPreferenceNote}</p>
+        <p className="text-xs text-muted-text">{data.ownerPreferenceNote}</p>
       )}
 
       {/* Rationale bullets */}
       {Array.isArray(data.rationale) && data.rationale.length > 0 && (
         <ul className="space-y-1">
           {data.rationale.map((r, i) => (
-            <li key={i} className="text-xs text-slate-600 flex gap-2">
-              <span className="text-slate-400 flex-shrink-0">•</span>
+            <li key={i} className="text-xs text-muted-text flex gap-2">
+              <span className="text-foreground-dim flex-shrink-0">•</span>
               <span>{r}</span>
             </li>
           ))}
@@ -752,11 +752,11 @@ export default function RequestDetailPage() {
           <div className="mb-6 flex flex-wrap items-center gap-3">
             <button
               onClick={() => router.push(from || "/manager/requests")}
-              className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-500 hover:bg-slate-50 transition mr-1"
+              className="rounded-lg border border-surface-border bg-surface px-3 py-1.5 text-sm font-medium text-muted hover:bg-surface-subtle transition mr-1"
             >
               &larr;
             </button>
-            <h1 className="text-xl font-bold text-slate-900 m-0">
+            <h1 className="text-xl font-bold text-foreground m-0">
               {loading ? "Request" : `Request #${r?.requestNumber || id?.slice(0, 8) || ""}`}
             </h1>
             {!loading && r && (
@@ -802,7 +802,7 @@ export default function RequestDetailPage() {
 
                 {/* Status description — always visible, even on mobile when timeline is collapsed */}
                 {nextStep?.description && (
-                  <p className="mt-3 text-sm text-slate-500 m-0">{nextStep.description}</p>
+                  <p className="mt-3 text-sm text-muted m-0">{nextStep.description}</p>
                 )}
                 {isTenantFunded && r.rejectionReason && (
                   <p className="mt-2 text-xs text-orange-700 m-0">{t("manager:requestsId.text.reasonPrefix")}&ldquo;{r.rejectionReason}&rdquo;</p>
@@ -841,7 +841,7 @@ export default function RequestDetailPage() {
                     {assigningOpen && (
                       <div className="flex items-center gap-2">
                         <select value={selectedContractorId} onChange={(e) => setSelectedContractorId(e.target.value)}
-                          className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm">
+                          className="flex-1 rounded-lg border border-muted-ring px-3 py-2 text-sm">
                           <option value="">{t("manager:requestsId.text.selectContractor")}</option>
                           {contractors.map((c) => (
                             <option key={c.id} value={c.id}>{c.name || c.companyName || c.id.slice(0, 8)}</option>
@@ -890,6 +890,48 @@ export default function RequestDetailPage() {
                 );
               })()}
 
+              {/* ═══ 1c · Triage suggestions ═══ */}
+              {r.triageCompletedAt && r.triageContractorIds?.length > 0 && (
+                <Panel>
+                  <div className="flex items-center gap-2 mb-3">
+                    <svg className="h-4 w-4 text-blue-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636-.707.707M21 12h-1M4 12H3m1.343-5.657-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                    </svg>
+                    <h4 className="text-xs font-semibold uppercase tracking-wider text-muted m-0">
+                      {t("manager:requestsId.triage.title")}
+                    </h4>
+                  </div>
+
+                  {/* Contractor chips */}
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {r.triageContractorIds.map((cId) => {
+                      const c = contractors.find((x) => x.id === cId);
+                      if (!c) return null;
+                      return (
+                        <button
+                          key={cId}
+                          onClick={() => { setSelectedContractorId(cId); setAssigningOpen(true); }}
+                          className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100 transition"
+                        >
+                          {c.name || c.id.slice(0, 8)}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Budget hint */}
+                  {r.triageBudgetMin != null && r.triageBudgetMax != null && (
+                    <p className="text-xs text-muted m-0">
+                      {t("manager:requestsId.triage.budgetHint")}{" "}
+                      <span className="font-semibold text-muted-dark">
+                        {formatCurrency(r.triageBudgetMin / 100)}–{formatCurrency(r.triageBudgetMax / 100)}
+                      </span>
+                      <span className="ml-1 text-foreground-dim">{t("manager:requestsId.triage.budgetNote")}</span>
+                    </p>
+                  )}
+                </Panel>
+              )}
+
               {/* ═══ 2 · Tab bar ═══ */}
               <ScrollableTabs activeIndex={activeTab === "details" ? 0 : 1}>
                 {[
@@ -915,48 +957,48 @@ export default function RequestDetailPage() {
                   <div className="flex flex-wrap items-baseline gap-x-6 gap-y-2 mb-4">
                     {building && (
                       <div>
-                        <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">{t("manager:requestsId.text.building")}</span>
+                        <span className="text-xs font-medium text-muted uppercase tracking-wide block">{t("manager:requestsId.text.building")}</span>
                         <Link href={`/admin-inventory/buildings/${building.id}?from=/manager/requests/${id}`} className="cell-link text-sm font-medium">
                           {building.name}
                         </Link>
-                        {building.address && <p className="text-xs text-slate-400 mt-0.5 m-0">{building.address}</p>}
+                        {building.address && <p className="text-xs text-foreground-dim mt-0.5 m-0">{building.address}</p>}
                       </div>
                     )}
                     {unit && (
                       <div>
-                        <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">{t("manager:requestsId.text.unit")}</span>
-                        <span className="text-sm font-medium text-slate-900">{unit.unitNumber}</span>
-                        {unit.floor != null && <span className="text-xs text-slate-400 ml-1.5">Floor {unit.floor}</span>}
+                        <span className="text-xs font-medium text-muted uppercase tracking-wide block">{t("manager:requestsId.text.unit")}</span>
+                        <span className="text-sm font-medium text-foreground">{unit.unitNumber}</span>
+                        {unit.floor != null && <span className="text-xs text-foreground-dim ml-1.5">Floor {unit.floor}</span>}
                       </div>
                     )}
                     {tenant && (
                       <div>
-                        <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">{t("manager:requestsId.text.tenant")}</span>
+                        <span className="text-xs font-medium text-muted uppercase tracking-wide block">{t("manager:requestsId.text.tenant")}</span>
                         {r.tenantId ? (
                           <Link href={`/manager/people/tenants/${r.tenantId}`} className="cell-link text-sm font-medium">
                             {tenant.name}
                           </Link>
-                        ) : <span className="text-sm font-medium text-slate-900">{tenant.name}</span>}
-                        {tenant.phone && <p className="text-xs text-slate-400 mt-0.5 m-0">{tenant.phone}</p>}
+                        ) : <span className="text-sm font-medium text-foreground">{tenant.name}</span>}
+                        {tenant.phone && <p className="text-xs text-foreground-dim mt-0.5 m-0">{tenant.phone}</p>}
                       </div>
                     )}
                   </div>
 
                   {/* Description */}
                   <div className="mb-4">
-                    <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">{t("manager:requestsId.text.description")}</span>
-                    <p className="mt-1 text-sm text-slate-700 leading-relaxed whitespace-pre-wrap m-0">
-                      {r.description || <span className="text-slate-400">&mdash;</span>}
+                    <span className="text-xs font-medium text-muted uppercase tracking-wide block">{t("manager:requestsId.text.description")}</span>
+                    <p className="mt-1 text-sm text-muted-dark leading-relaxed whitespace-pre-wrap m-0">
+                      {r.description || <span className="text-foreground-dim">&mdash;</span>}
                     </p>
                   </div>
 
                   {/* Photos */}
-                  <div className="border-t border-slate-100 pt-4 mb-4">
+                  <div className="border-t border-surface-divider pt-4 mb-4">
                     <RequestPhotosPanel requestId={id} />
                   </div>
 
                   {/* Metadata grid */}
-                  <div className="border-t border-slate-100 pt-4">
+                  <div className="border-t border-surface-divider pt-4">
                     <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3">
                       <Field label={t("manager:requestsId.prop.created")}>{formatDate(r.createdAt)}</Field>
                       {r.category && (
@@ -989,8 +1031,8 @@ export default function RequestDetailPage() {
 
                   {/* Contractor — only when assigned */}
                   {r.assignedContractor && (
-                    <div className="border-t border-slate-100 pt-4 mt-4">
-                      <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">{t("manager:requestsId.text.contractor")}</h4>
+                    <div className="border-t border-surface-divider pt-4 mt-4">
+                      <h4 className="text-xs font-semibold uppercase tracking-wider text-foreground-dim mb-3">{t("manager:requestsId.text.contractor")}</h4>
                       <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3">
                         <Field label={t("manager:requestsId.prop.name")}>
                           <Link href={`/manager/people/vendors/${r.assignedContractor.id}`} className="cell-link font-medium text-sm">
@@ -1004,15 +1046,15 @@ export default function RequestDetailPage() {
                   )}
 
                   {/* Linked Asset (prefers canonical Asset, falls back to Appliance) */}
-                  <div className="border-t border-slate-100 pt-4 mt-4">
+                  <div className="border-t border-surface-divider pt-4 mt-4">
                     <div className="flex items-center justify-between mb-3">
-                      <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400 m-0">{t("manager:requestsId.text.asset")}</h4>
+                      <h4 className="text-xs font-semibold uppercase tracking-wider text-foreground-dim m-0">{t("manager:requestsId.text.asset")}</h4>
                       {linkedAsset && r.assetId && !assetPickerOpen && (
                         <button
                           type="button"
                           onClick={doUnlinkAsset}
                           disabled={linkingAsset}
-                          className="text-xs text-slate-400 hover:text-red-500 transition disabled:opacity-50"
+                          className="text-xs text-foreground-dim hover:text-red-500 transition disabled:opacity-50"
                         >
                           {t("manager:requestsId.btn.unlink")}
                         </button>
@@ -1068,7 +1110,7 @@ export default function RequestDetailPage() {
                               <select
                                 value={selectedAssetId}
                                 onChange={(e) => setSelectedAssetId(e.target.value)}
-                                className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                                className="flex-1 rounded-lg border border-muted-ring px-3 py-2 text-sm"
                                 aria-label={t("manager:requestsId.ariaLabel.selectAssetToLink")}
                               >
                                 <option value="">Select asset&hellip;</option>
@@ -1094,19 +1136,19 @@ export default function RequestDetailPage() {
                         <button
                           type="button"
                           onClick={() => { setAssetPickerOpen(false); setSelectedAssetId(""); }}
-                          className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-500 hover:bg-slate-50 transition"
+                          className="rounded-lg border border-surface-border bg-surface px-3 py-2 text-sm text-muted hover:bg-surface-subtle transition"
                         >
                           {t("manager:requestsId.btn.cancel")}
                         </button>
                       </div>
                     ) : (
-                      <p className="text-sm text-slate-400 m-0">{r.unitId ? t("manager:requestsId.text.noAssetLinked") : t("manager:requestsId.text.noAssetLinkedNoUnit")}</p>
+                      <p className="text-sm text-foreground-dim m-0">{r.unitId ? t("manager:requestsId.text.noAssetLinked") : t("manager:requestsId.text.noAssetLinkedNoUnit")}</p>
                     )}
                   </div>
 
                   {/* RFP link */}
                   {rfpId && (
-                    <div className="border-t border-slate-100 pt-4 mt-4">
+                    <div className="border-t border-surface-divider pt-4 mt-4">
                       <Link href={`/manager/rfps/${rfpId}`} className="cell-link text-sm font-medium">
                         {t("manager:requestsId.text.viewRfpLink")}
                       </Link>
@@ -1128,7 +1170,7 @@ export default function RequestDetailPage() {
                     />
                     {!legalState.loading && !legalState.data && !legalState.error && (
                       <div className="px-6 py-8 text-center">
-                        <p className="text-sm text-slate-400 m-0">{t("manager:requestsId.text.noLegalAnalysisAvailableForThisRequest")}</p>
+                        <p className="text-sm text-foreground-dim m-0">{t("manager:requestsId.text.noLegalAnalysisAvailableForThisRequest")}</p>
                       </div>
                     )}
                     {/* Route-to-RFP CTA: only when OBLIGATED + PENDING_REVIEW + no rfpId yet */}
@@ -1157,18 +1199,18 @@ export default function RequestDetailPage() {
                         {/* Linked asset summary */}
                         <div className="flex flex-wrap items-baseline gap-x-5 gap-y-1">
                           <div>
-                            <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">{t("manager:requestsId.text.asset")}</span>
-                            <span className="text-sm font-medium text-slate-900">{linkedAsset.name || "\u2014"}</span>
+                            <span className="text-xs font-medium text-muted uppercase tracking-wide block">{t("manager:requestsId.text.asset")}</span>
+                            <span className="text-sm font-medium text-foreground">{linkedAsset.name || "\u2014"}</span>
                           </div>
                           {linkedAsset.manufacturer && (
                             <div>
-                              <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">{t("manager:requestsId.text.manufacturer")}</span>
-                              <span className="text-sm text-slate-700">{linkedAsset.manufacturer}</span>
+                              <span className="text-xs font-medium text-muted uppercase tracking-wide block">{t("manager:requestsId.text.manufacturer")}</span>
+                              <span className="text-sm text-muted-dark">{linkedAsset.manufacturer}</span>
                             </div>
                           )}
                           {linkedAsset.category && (
                             <div>
-                              <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">{t("manager:requestsId.text.category")}</span>
+                              <span className="text-xs font-medium text-muted uppercase tracking-wide block">{t("manager:requestsId.text.category")}</span>
                               <Badge variant="muted" size="sm">
                                 {linkedAsset.category}
                               </Badge>
@@ -1176,14 +1218,14 @@ export default function RequestDetailPage() {
                           )}
                           {linkedAsset.installDate && (
                             <div>
-                              <span className="text-xs font-medium text-slate-500 uppercase tracking-wide block">{t("manager:requestsId.text.installed")}</span>
-                              <span className="text-sm text-slate-700">{formatDate(linkedAsset.installDate)}</span>
+                              <span className="text-xs font-medium text-muted uppercase tracking-wide block">{t("manager:requestsId.text.installed")}</span>
+                              <span className="text-sm text-muted-dark">{formatDate(linkedAsset.installDate)}</span>
                             </div>
                           )}
                         </div>
                         {/* Repair vs Replace analysis (if available) */}
                         {(r.assetId || r.applianceId) && (
-                          <div className="border-t border-slate-100 pt-4">
+                          <div className="border-t border-surface-divider pt-4">
                             <AssetRecommendationContent
                               applianceId={r.assetId || r.applianceId}
                               repairReplaceData={repairReplace}
@@ -1194,7 +1236,7 @@ export default function RequestDetailPage() {
                       </div>
                     ) : (
                       <div className="py-6 text-center">
-                        <p className="text-sm text-slate-400 m-0">{t("manager:requestsId.text.noAssetLinkedToThisRequest")}</p>
+                        <p className="text-sm text-foreground-dim m-0">{t("manager:requestsId.text.noAssetLinkedToThisRequest")}</p>
                       </div>
                     )}
 

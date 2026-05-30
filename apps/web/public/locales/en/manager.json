@@ -2071,6 +2071,11 @@
       "planReplacement": "Plan Replacement",
       "replace": "Replace",
       "planreplacement": "Plan Replacement"
+    },
+    "triage": {
+      "title": "Suggested Contractors",
+      "budgetHint": "Historical budget range:",
+      "budgetNote": "(based on past jobs)"
     }
   },
   "rfps": {

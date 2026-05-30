@@ -22,6 +22,7 @@ import {
   findScheduleByLeaseId,
   advanceSchedule,
 } from "../repositories/recurringBillingRepository";
+import { requestTriageWorkflow } from "../workflows/requestTriageWorkflow";
 
 // SA-20: Redact sensitive fields from event log output
 function redactPayload(payload: Record<string, unknown>): Record<string, unknown> {
@@ -57,6 +58,20 @@ export function registerEventHandlers(prisma: PrismaClient): void {
   });
 
   /* ── Type-specific handlers ─────────────────────────────── */
+
+  /* Async triage: enrich request with contractor suggestions + budget hint */
+  on("REQUEST_CREATED", async (event) => {
+    try {
+      await requestTriageWorkflow(prisma, {
+        requestId: event.payload.requestId,
+        orgId: event.orgId,
+        category: event.payload.category,
+      });
+    } catch (err) {
+      // Swallowed — triageCompletedAt not set means no panel shown to manager
+      console.error("[TRIAGE] requestTriageWorkflow failed", err);
+    }
+  });
 
   /* Notify tenant when their repair job is marked complete */
   on("JOB_COMPLETED", async (event) => {

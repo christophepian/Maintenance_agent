@@ -91,6 +91,12 @@ export type MaintenanceRequestDTO = {
 
   // JSON-friendly
   createdAt: string;
+
+  // Triage suggestions (set after REQUEST_CREATED event is processed)
+  triageContractorIds?: string[];
+  triageBudgetMin?: number | null;
+  triageBudgetMax?: number | null;
+  triageCompletedAt?: string | null;
 };
 
   /**
@@ -273,6 +279,13 @@ export function toDTO(r: RequestWithFullInclude): MaintenanceRequestDTO {
       : null,
 
     createdAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : String(r.createdAt),
+
+    triageContractorIds: (r as any).triageContractorIds ?? [],
+    triageBudgetMin: (r as any).triageBudgetMin ?? null,
+    triageBudgetMax: (r as any).triageBudgetMax ?? null,
+    triageCompletedAt: (r as any).triageCompletedAt instanceof Date
+      ? (r as any).triageCompletedAt.toISOString()
+      : ((r as any).triageCompletedAt ?? null),
   };
 }
 
