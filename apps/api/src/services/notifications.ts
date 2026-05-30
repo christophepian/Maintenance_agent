@@ -1,11 +1,14 @@
 import prisma from './prismaClient';
 import * as notifRepo from '../repositories/notificationRepository';
+import * as prefRepo from '../repositories/notificationPreferenceRepository';
 import * as userRepo from '../repositories/userRepository';
 import {
   CreateNotificationInput,
   NotificationDTO,
   NotificationEventType,
   ListNotificationsInput,
+  NotificationPreferenceDTO,
+  BulkUpsertPreferencesInput,
 } from '../validation/notifications';
 
 /**
@@ -14,7 +17,11 @@ import {
  */
 export async function createNotification(
   input: CreateNotificationInput
-): Promise<NotificationDTO> {
+): Promise<NotificationDTO | null> {
+  // Opt-out check: absent row = enabled (default ON)
+  const inAppEnabled = await prefRepo.isInAppEnabled(prisma, input.userId, input.orgId, input.eventType as import('@prisma/client').NotificationEventType);
+  if (!inAppEnabled) return null;
+
   // First, try to delete any existing notification with the same unique key
   // This ensures we always get a fresh timestamp
   await notifRepo.deleteMatchingNotifications(prisma, {
@@ -492,4 +499,40 @@ function mapNotificationToDTO(notification: any): NotificationDTO {
     readAt: notification.readAt ? notification.readAt.toISOString() : null,
     createdAt: notification.createdAt.toISOString(),
   };
+}
+
+// ── Notification Preferences ──────────────────────────────────────────────────
+
+/**
+ * Get all notification preferences for a user.
+ * Absent rows are not returned — caller should treat absence as inApp=true.
+ */
+export async function getPreferences(
+  orgId: string,
+  userId: string,
+): Promise<NotificationPreferenceDTO[]> {
+  const prefs = await prefRepo.findPreferencesByUser(prisma, userId, orgId);
+  return prefs.map((p) => ({
+    id: p.id,
+    userId: p.userId,
+    orgId: p.orgId,
+    eventType: p.eventType as NotificationEventType,
+    inApp: p.inApp,
+    updatedAt: p.updatedAt.toISOString(),
+  }));
+}
+
+/**
+ * Bulk-upsert notification preferences for a user.
+ */
+export async function bulkUpsertPreferences(
+  input: { orgId: string; userId: string; prefs: Array<{ eventType: string; inApp: boolean }> },
+): Promise<NotificationPreferenceDTO[]> {
+  await prefRepo.bulkUpsertPreferences(
+    prisma,
+    input.userId,
+    input.orgId,
+    input.prefs as Array<{ eventType: import('@prisma/client').NotificationEventType; inApp: boolean }>,
+  );
+  return getPreferences(input.orgId, input.userId);
 }

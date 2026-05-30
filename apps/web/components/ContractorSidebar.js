@@ -7,6 +7,7 @@ import {
   Wrench,
   Receipt,
   FileSearch,
+  Settings,
 } from "lucide-react";
 
 const CONTRACTOR_NAV = [
@@ -14,6 +15,7 @@ const CONTRACTOR_NAV = [
   { id: "jobs",      icon: Wrench,          href: "/contractor/jobs" },
   { id: "invoices",  icon: Receipt,         href: "/contractor/invoices" },
   { id: "rfps",      icon: FileSearch,      href: "/contractor/rfps" },
+  { id: "settings",  icon: Settings,        href: "/contractor/settings" },
 ];
 
 export default function ContractorSidebar() {

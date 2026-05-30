@@ -61,7 +61,9 @@ const ROLE_NAV = {
       { href: '/contractor/invoices', icon: Receipt,         label: 'Invoices'  },
       { href: '/contractor/rfps',     icon: FileSearch,      label: 'RFPs'      },
     ],
-    moreItems: [],
+    moreItems: [
+      { href: '/contractor/settings', icon: Settings, label: 'Settings' },
+    ],
   },
   TENANT: {
     items: [
@@ -70,7 +72,9 @@ const ROLE_NAV = {
       { href: '/tenant/requests', icon: Wrench, label: 'Requests' },
       { href: '/listings',        icon: Search, label: 'Apply'    },
     ],
-    moreItems: [],
+    moreItems: [
+      { href: '/tenant/settings', icon: Settings, label: 'Settings' },
+    ],
   },
 };
 

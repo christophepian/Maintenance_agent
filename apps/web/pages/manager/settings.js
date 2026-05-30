@@ -17,6 +17,7 @@ import SortableHeader from "../../components/SortableHeader";
 import { useLocalSort, clientSort } from "../../lib/tableUtils";
 import { withTranslations } from "../../lib/i18n";
 import { useTranslation } from "next-i18next";
+import NotificationPreferencesTab from "../../components/NotificationPreferencesTab";
 
 const SETTINGS_TABS = [
   { key: "ORG" },
@@ -29,6 +30,15 @@ const SETTINGS_TABS = [
 ];
 
 const TAB_KEYS = ['organisation', 'buildings', 'notifications', 'integrations', 'legal', 'depreciation', 'categorymappings'];
+
+const MANAGER_EVENT_GROUPS = [
+  { groupKey: "requests", events: ["REQUEST_PENDING_REVIEW", "REQUEST_PENDING_OWNER_APPROVAL", "CONTRACTOR_REJECTED", "REJECTED"] },
+  { groupKey: "jobs", events: ["JOB_CREATED", "JOB_COMPLETED", "RATING_SUBMITTED"] },
+  { groupKey: "invoices", events: ["INVOICE_CREATED", "INVOICE_DISPUTED", "INVOICE_OVERDUE"] },
+  { groupKey: "leases", events: ["LEASE_SIGNED"] },
+  { groupKey: "applications", events: ["APPLICATION_SUBMITTED", "TENANT_SELECTED"] },
+  { groupKey: "quotes", events: ["QUOTE_SUBMITTED"] },
+];
 
 export default function ManagerSettingsPage() {
   const { t } = useTranslation("manager");
@@ -575,15 +585,12 @@ export default function ManagerSettingsPage() {
 
           {/* Notifications tab */}
           <div className={activeTab === 2 ? "tab-panel-active" : "tab-panel"}>
-            <div className="px-4 py-4">
-            <div className="coming-soon">
-              <span className="coming-soon-badge">{t("manager:settings.text.comingSoon")}</span>
-              <p className="coming-soon-title">{t("manager:settings.text.notificationPreferences")}</p>
-              <p className="coming-soon-text">
-                Configure email and in-app notification rules per event type.
-              </p>
-            </div>
-            </div>
+            <NotificationPreferencesTab
+              authHeaders={authHeaders}
+              eventGroups={MANAGER_EVENT_GROUPS}
+              t={t}
+              ns="manager"
+            />
           </div>
 
           {/* Integrations tab */}

@@ -146,6 +146,7 @@ model Org {
   invoices              Invoice[]
   jobs                  Job[]
   notifications         Notification[]
+  notificationPrefs     NotificationPreference[]
   config                OrgConfig?
   tenants               Tenant[]
   units                 Unit[]
@@ -739,6 +740,20 @@ model Notification {
   @@index([orgId, userId])
   @@index([orgId, buildingId])
   @@index([orgId, userId, readAt])
+}
+
+model NotificationPreference {
+  id        String                @id @default(uuid())
+  userId    String
+  orgId     String
+  eventType NotificationEventType
+  inApp     Boolean               @default(true)
+  updatedAt DateTime              @updatedAt
+
+  org Org @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, orgId, eventType])
+  @@index([userId, orgId])
 }
 
 // ═══════════════════════════════════════════════════════════

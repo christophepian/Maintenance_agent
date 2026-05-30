@@ -7,7 +7,8 @@
     "invoices": "Factures",
     "assets": "Équipements",
     "myHome": "Mon logement",
-    "apply": "Candidater"
+    "apply": "Candidater",
+    "settings": "Parametres"
   },
   "dashboard": {
     "title": "Espace locataire",
@@ -227,6 +228,38 @@
       "pleaseSignInToViewYourRequests": "Please sign in to view your requests.",
       "loading": "Chargement…",
       "noMaintenanceRequestsYet": "No maintenance requests yet."
+    }
+  },
+  "settings": {
+    "notifications": {
+      "loading": "Chargement des preferences...",
+      "saved": "Preferences enregistrees.",
+      "saving": "Enregistrement...",
+      "saveButton": "Enregistrer les preferences",
+      "error": "Erreur :",
+      "ok": "OK :",
+      "group": {
+        "requests": "Demandes",
+        "jobs": "Travaux",
+        "leases": "Baux",
+        "scheduling": "Planification"
+      },
+      "event": {
+        "REQUEST_APPROVED": "Demande approuvee",
+        "REJECTED": "Demande rejetee par le proprietaire",
+        "TENANT_SELF_PAY_ACCEPTED": "Option autofinancement acceptee",
+        "JOB_STARTED": "Travaux commences",
+        "JOB_COMPLETED": "Travail termine",
+        "LEASE_READY_TO_SIGN": "Bail pret a signer",
+        "LEASE_SIGNED": "Bail signe par le locataire",
+        "SLOT_PROPOSED": "Creneau de visite propose",
+        "SLOT_DECLINED": "Creneau de visite refuse"
+      }
+    },
+    "title": "Parametres",
+    "subtitle": "Gerez vos preferences de notification.",
+    "tabs": {
+      "notifications": "Notifications"
     }
   }
 }

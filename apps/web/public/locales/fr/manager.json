@@ -2226,6 +2226,52 @@
       "legal": "Sources légales",
       "depreciation": "Normes",
       "categorymappings": "Correspondances de catégories"
+    },
+    "notifications": {
+      "loading": "Chargement des preferences...",
+      "saved": "Preferences enregistrees.",
+      "saving": "Enregistrement...",
+      "saveButton": "Enregistrer les preferences",
+      "error": "Erreur :",
+      "ok": "OK :",
+      "group": {
+        "requests": "Demandes",
+        "jobs": "Travaux",
+        "invoices": "Factures",
+        "leases": "Baux",
+        "applications": "Candidatures",
+        "quotes": "Devis",
+        "assignments": "Missions",
+        "scheduling": "Planification"
+      },
+      "event": {
+        "REQUEST_PENDING_REVIEW": "Demande en attente de mon examen",
+        "REQUEST_PENDING_OWNER_APPROVAL": "Demande en attente d'approbation du proprietaire",
+        "CONTRACTOR_REJECTED": "Prestataire a refuse la mission",
+        "REJECTED": "Demande rejetee par le proprietaire",
+        "JOB_CREATED": "Travail cree",
+        "JOB_COMPLETED": "Travail termine",
+        "RATING_SUBMITTED": "Note soumise par le locataire",
+        "INVOICE_CREATED": "Facture creee",
+        "INVOICE_DISPUTED": "Facture contestee",
+        "INVOICE_OVERDUE": "Facture en retard",
+        "LEASE_SIGNED": "Bail signe par le locataire",
+        "APPLICATION_SUBMITTED": "Nouvelle candidature de location",
+        "TENANT_SELECTED": "Proprietaire a selectionne un locataire",
+        "QUOTE_SUBMITTED": "Prestataire a soumis un devis",
+        "CONTRACTOR_ASSIGNED": "Nouvelle mission assignee",
+        "QUOTE_AWARDED": "Devis attribue",
+        "QUOTE_REJECTED": "Devis refuse",
+        "SLOT_PROPOSED": "Creneau de visite propose",
+        "SLOT_ACCEPTED": "Creneau de visite accepte",
+        "SLOT_DECLINED": "Creneau de visite refuse",
+        "JOB_CONFIRMED": "Travail confirme",
+        "INVOICE_PAID": "Facture payee",
+        "REQUEST_APPROVED": "Demande approuvee",
+        "TENANT_SELF_PAY_ACCEPTED": "Option autofinancement acceptee",
+        "JOB_STARTED": "Travaux commences",
+        "LEASE_READY_TO_SIGN": "Bail pret a signer"
+      }
     }
   },
   "vacancies[unitid]Applications": {

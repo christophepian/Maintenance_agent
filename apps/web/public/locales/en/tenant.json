@@ -7,7 +7,8 @@
     "invoices": "Invoices",
     "assets": "Assets",
     "myHome": "My Home",
-    "apply": "Apply"
+    "apply": "Apply",
+    "settings": "Settings"
   },
   "dashboard": {
     "title": "Tenant Portal",
@@ -227,6 +228,38 @@
       "pleaseSignInToViewYourRequests": "Please sign in to view your requests.",
       "loading": "Loading…",
       "noMaintenanceRequestsYet": "No maintenance requests yet."
+    }
+  },
+  "settings": {
+    "notifications": {
+      "loading": "Loading preferences...",
+      "saved": "Preferences saved.",
+      "saving": "Saving...",
+      "saveButton": "Save preferences",
+      "error": "Error:",
+      "ok": "OK:",
+      "group": {
+        "requests": "Requests",
+        "jobs": "Jobs",
+        "leases": "Leases",
+        "scheduling": "Scheduling"
+      },
+      "event": {
+        "REQUEST_APPROVED": "Request approved",
+        "REJECTED": "Request rejected by owner",
+        "TENANT_SELF_PAY_ACCEPTED": "Self-pay option accepted",
+        "JOB_STARTED": "Work has started",
+        "JOB_COMPLETED": "Job completed",
+        "LEASE_READY_TO_SIGN": "Lease ready to sign",
+        "LEASE_SIGNED": "Lease signed by tenant",
+        "SLOT_PROPOSED": "Visit slot proposed",
+        "SLOT_DECLINED": "Visit slot declined"
+      }
+    },
+    "title": "Settings",
+    "subtitle": "Manage your notification preferences.",
+    "tabs": {
+      "notifications": "Notifications"
     }
   }
 }

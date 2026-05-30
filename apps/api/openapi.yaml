@@ -4868,6 +4868,39 @@ paths:
         '204':
           description: Deleted
 
+  /notifications/preferences:
+    get:
+      tags: [Notifications]
+      summary: Get notification preferences for the current user
+      operationId: getNotificationPreferences
+      responses:
+        '200':
+          description: List of notification preferences
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+    put:
+      tags: [Notifications]
+      summary: Bulk upsert notification preferences
+      operationId: putNotificationPreferences
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                prefs:
+                  type: array
+                  items:
+                    type: object
+      responses:
+        '200':
+          description: Updated preferences
+
   # ═══════════════════════════════════════════════════════════
   # Dev-only
   # ═══════════════════════════════════════════════════════════

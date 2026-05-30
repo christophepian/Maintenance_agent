@@ -4,7 +4,8 @@
     "jobs": "Jobs",
     "invoices": "Invoices",
     "rfps": "RFPs",
-    "statusUpdates": "Status Updates"
+    "statusUpdates": "Status Updates",
+    "settings": "Settings"
   },
   "dashboard": {
     "title": "Contractor Dashboard",
@@ -194,6 +195,38 @@
       "requestDate": "Request Date",
       "photosAttachments": "Photos / Attachments",
       "rFPNotFoundOrNotAccessible": "RFP not found or not accessible."
+    }
+  },
+  "settings": {
+    "notifications": {
+      "loading": "Loading preferences...",
+      "saved": "Preferences saved.",
+      "saving": "Saving...",
+      "saveButton": "Save preferences",
+      "error": "Error:",
+      "ok": "OK:",
+      "group": {
+        "assignments": "Assignments",
+        "quotes": "Quotes",
+        "scheduling": "Scheduling",
+        "invoices": "Invoices"
+      },
+      "event": {
+        "CONTRACTOR_ASSIGNED": "New job assigned to me",
+        "JOB_CREATED": "Job created",
+        "QUOTE_AWARDED": "Quote awarded",
+        "QUOTE_REJECTED": "Quote rejected",
+        "SLOT_PROPOSED": "Visit slot proposed",
+        "SLOT_ACCEPTED": "Visit slot accepted",
+        "SLOT_DECLINED": "Visit slot declined",
+        "JOB_CONFIRMED": "Job confirmed",
+        "INVOICE_PAID": "Invoice paid"
+      }
+    },
+    "title": "Settings",
+    "subtitle": "Manage your notification preferences.",
+    "tabs": {
+      "notifications": "Notifications"
     }
   }
 }

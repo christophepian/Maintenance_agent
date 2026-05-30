@@ -630,6 +630,52 @@
       "integrations": "Integrations",
       "legal": "Legal Sources",
       "standards": "Standards"
+    },
+    "notifications": {
+      "loading": "Loading preferences...",
+      "saved": "Preferences saved.",
+      "saving": "Saving...",
+      "saveButton": "Save preferences",
+      "error": "Error:",
+      "ok": "OK:",
+      "group": {
+        "requests": "Requests",
+        "jobs": "Jobs",
+        "invoices": "Invoices",
+        "leases": "Leases",
+        "applications": "Applications",
+        "quotes": "Quotes",
+        "assignments": "Assignments",
+        "scheduling": "Scheduling"
+      },
+      "event": {
+        "REQUEST_PENDING_REVIEW": "Request awaiting my review",
+        "REQUEST_PENDING_OWNER_APPROVAL": "Request awaiting owner approval",
+        "CONTRACTOR_REJECTED": "Contractor rejected assignment",
+        "REJECTED": "Request rejected by owner",
+        "JOB_CREATED": "Job created",
+        "JOB_COMPLETED": "Job completed",
+        "RATING_SUBMITTED": "Rating submitted by tenant",
+        "INVOICE_CREATED": "Invoice created",
+        "INVOICE_DISPUTED": "Invoice disputed",
+        "INVOICE_OVERDUE": "Invoice overdue",
+        "LEASE_SIGNED": "Lease signed by tenant",
+        "APPLICATION_SUBMITTED": "New rental application",
+        "TENANT_SELECTED": "Owner selected tenant",
+        "QUOTE_SUBMITTED": "Contractor submitted quote",
+        "CONTRACTOR_ASSIGNED": "New job assigned to me",
+        "QUOTE_AWARDED": "Quote awarded",
+        "QUOTE_REJECTED": "Quote rejected",
+        "SLOT_PROPOSED": "Visit slot proposed",
+        "SLOT_ACCEPTED": "Visit slot accepted",
+        "SLOT_DECLINED": "Visit slot declined",
+        "JOB_CONFIRMED": "Job confirmed",
+        "INVOICE_PAID": "Invoice paid",
+        "REQUEST_APPROVED": "Request approved",
+        "TENANT_SELF_PAY_ACCEPTED": "Self-pay option accepted",
+        "JOB_STARTED": "Work has started",
+        "LEASE_READY_TO_SIGN": "Lease ready to sign"
+      }
     }
   },
   "settingsStrategy": {

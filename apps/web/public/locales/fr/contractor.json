@@ -4,7 +4,8 @@
     "jobs": "Interventions",
     "invoices": "Factures",
     "rfps": "Appels d'offres",
-    "statusUpdates": "Mises à jour"
+    "statusUpdates": "Mises à jour",
+    "settings": "Parametres"
   },
   "dashboard": {
     "title": "Tableau de bord prestataire",
@@ -194,6 +195,38 @@
       "requestDate": "Request Date",
       "photosAttachments": "Photos / Pièces jointes",
       "rFPNotFoundOrNotAccessible": "RFP not found or not accessible."
+    }
+  },
+  "settings": {
+    "notifications": {
+      "loading": "Chargement des preferences...",
+      "saved": "Preferences enregistrees.",
+      "saving": "Enregistrement...",
+      "saveButton": "Enregistrer les preferences",
+      "error": "Erreur :",
+      "ok": "OK :",
+      "group": {
+        "assignments": "Missions",
+        "quotes": "Devis",
+        "scheduling": "Planification",
+        "invoices": "Factures"
+      },
+      "event": {
+        "CONTRACTOR_ASSIGNED": "Nouvelle mission assignee",
+        "JOB_CREATED": "Travail cree",
+        "QUOTE_AWARDED": "Devis attribue",
+        "QUOTE_REJECTED": "Devis refuse",
+        "SLOT_PROPOSED": "Creneau de visite propose",
+        "SLOT_ACCEPTED": "Creneau de visite accepte",
+        "SLOT_DECLINED": "Creneau de visite refuse",
+        "JOB_CONFIRMED": "Travail confirme",
+        "INVOICE_PAID": "Facture payee"
+      }
+    },
+    "title": "Parametres",
+    "subtitle": "Gerez vos preferences de notification.",
+    "tabs": {
+      "notifications": "Notifications"
     }
   }
 }

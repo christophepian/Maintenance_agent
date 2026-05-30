@@ -3,14 +3,17 @@ import { sendError, sendJson } from "../http/json";
 import { first, getIntParam } from "../http/query";
 import { requireStaffAuth } from "../authz";
 import { safeSendError } from "./helpers";
+import { parseBody } from "../http/body";
 import {
   getUserNotifications,
   markNotificationAsRead,
   deleteNotification,
   getUnreadNotificationCount,
   markAllNotificationsAsRead,
+  getPreferences,
+  bulkUpsertPreferences,
 } from "../services/notifications";
-import { ListNotificationsSchema } from "../validation/notifications";
+import { ListNotificationsSchema, BulkUpsertPreferencesSchema } from "../validation/notifications";
 
 export function registerNotificationRoutes(router: Router) {
   // GET /notifications
@@ -83,6 +86,36 @@ export function registerNotificationRoutes(router: Router) {
       sendJson(res, 200, { message: "Notification deleted" });
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to delete notification", String(e));
+    }
+  });
+
+  // GET /notifications/preferences
+  router.get("/notifications/preferences", async ({ req, res, orgId }) => {
+    const user = requireStaffAuth(req, res);
+    if (!user) return;
+    try {
+      const prefs = await getPreferences(orgId, user.userId);
+      sendJson(res, 200, { data: prefs });
+    } catch (e) {
+      safeSendError(res, 500, "DB_ERROR", "Failed to fetch preferences", String(e));
+    }
+  });
+
+  // PUT /notifications/preferences
+  router.put("/notifications/preferences", async ({ req, res, orgId }) => {
+    const user = requireStaffAuth(req, res);
+    if (!user) return;
+    try {
+      const rawBody = await parseBody(req, BulkUpsertPreferencesSchema.omit({ orgId: true, userId: true }));
+      const input = { orgId, userId: user.userId, prefs: rawBody.prefs };
+      const prefs = await bulkUpsertPreferences(input);
+      sendJson(res, 200, { data: prefs });
+    } catch (e: any) {
+      if (e?.name === "ZodError" || e?.constructor?.name === "ValidationError") {
+        sendError(res, 400, "VALIDATION_ERROR", "Invalid preferences payload", String(e));
+        return;
+      }
+      safeSendError(res, 500, "DB_ERROR", "Failed to save preferences", String(e));
     }
   });
 }

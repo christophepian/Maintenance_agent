@@ -82,3 +82,29 @@ export const ListNotificationsSchema = z.object({
 });
 
 export type ListNotificationsInput = z.infer<typeof ListNotificationsSchema>;
+
+// ── Notification Preference schemas ──────────────────────────────────────────
+
+export const NotificationPreferenceDTOSchema = z.object({
+  id: z.string(),
+  userId: z.string(),
+  orgId: z.string(),
+  eventType: NotificationEventTypeSchema,
+  inApp: z.boolean(),
+  updatedAt: z.string().datetime(),
+});
+
+export type NotificationPreferenceDTO = z.infer<typeof NotificationPreferenceDTOSchema>;
+
+export const BulkUpsertPreferencesSchema = z.object({
+  orgId: z.string().min(1),
+  userId: z.string().min(1),
+  prefs: z.array(
+    z.object({
+      eventType: NotificationEventTypeSchema,
+      inApp: z.boolean(),
+    }),
+  ).min(1),
+});
+
+export type BulkUpsertPreferencesInput = z.infer<typeof BulkUpsertPreferencesSchema>;

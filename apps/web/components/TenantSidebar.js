@@ -7,6 +7,7 @@ import {
   Wrench,
   Home,
   Search,
+  Settings,
 } from "lucide-react";
 
 const TENANT_NAV = [
@@ -14,6 +15,7 @@ const TENANT_NAV = [
   { id: "inbox",     icon: Inbox, href: "/tenant/inbox" },
   { id: "requests",  icon: Wrench, href: "/tenant/requests" },
   { id: "apply",     icon: Search, href: "/listings" },
+  { id: "settings",  icon: Settings, href: "/tenant/settings" },
 ];
 
 export default function TenantSidebar() {

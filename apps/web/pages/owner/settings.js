@@ -17,6 +17,8 @@ import SortableHeader from "../../components/SortableHeader";
 import { useLocalSort } from "../../lib/tableUtils";
 import { withTranslations } from "../../lib/i18n";
 import { useTranslation } from "next-i18next";
+import NotificationPreferencesTab from "../../components/NotificationPreferencesTab";
+import { ownerAuthHeaders } from "../../lib/api";
 
 const SETTINGS_TABS = [
   { key: "ACCOUNT" },
@@ -27,6 +29,14 @@ const SETTINGS_TABS = [
   { key: "STANDARDS" },
 ];
 const TAB_KEYS = ["account", "risk-profile", "notifications", "integrations", "legal", "standards"];
+
+const OWNER_EVENT_GROUPS = [
+  { groupKey: "requests", events: ["REQUEST_PENDING_OWNER_APPROVAL"] },
+  { groupKey: "jobs", events: ["JOB_COMPLETED"] },
+  { groupKey: "invoices", events: ["INVOICE_CREATED", "INVOICE_APPROVED", "INVOICE_PAID"] },
+  { groupKey: "leases", events: ["LEASE_SIGNED"] },
+  { groupKey: "applications", events: ["APPLICATION_SUBMITTED", "TENANT_SELECTED"] },
+];
 
 const USER_LABELS = {
   exit_optimizer: "Prepare for sale",
@@ -353,15 +363,12 @@ export default function OwnerSettingsPage() {
 
               {/* ── Notifications tab ───────────────────────────── */}
               <div className={activeTab === 2 ? "tab-panel-active" : "tab-panel"}>
-                <div className="px-4 py-4">
-                  <div className="coming-soon">
-                    <span className="coming-soon-badge">{t("owner:settings.text.comingSoon")}</span>
-                    <p className="coming-soon-title">{t("owner:settings.text.notificationPreferences")}</p>
-                    <p className="coming-soon-text">
-                      Configure email and in-app notification rules per event type.
-                    </p>
-                  </div>
-                </div>
+                <NotificationPreferencesTab
+                  authHeaders={ownerAuthHeaders}
+                  eventGroups={OWNER_EVENT_GROUPS}
+                  t={t}
+                  ns="owner"
+                />
               </div>
 
               {/* ── Integrations tab ────────────────────────────── */}
