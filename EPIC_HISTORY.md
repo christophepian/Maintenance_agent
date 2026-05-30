@@ -5,6 +5,155 @@
 
 ---
 
+## Session 2026-05-30 — Dark mode implementation
+
+### Commits: `5d40fd2` · `c09ab15` (pushed to origin/main)
+
+### Token completion pass
+
+Extended `scripts/migrate-tokens.js` with three new mapping groups and a `/* no-token: */` line guard (prevents re-touching lines that were intentionally reverted):
+
+| Mapping | Replacements | Files |
+|---|---|---|
+| `bg-slate-200` → `bg-surface-border` | 28 | 18 |
+| `bg-slate-300` → `bg-muted-ring` | 13 | 7 |
+| `text-slate-200/300` → `text-foreground-dim` | 46 | 23 |
+
+Progress bar tracks manually fixed to `bg-track` (AssetInventoryPanel L96/156, capture/[token] L321, contractor/invoices L43/48, apply L537, NPVScenariosPanel L56). Two new tokens added to `@theme {}`: `--color-info-*` (sky-based) and `--color-track` (`rgba(255,255,255,.1)` in dark). Running token total: **37**.
+
+### Dark mode CSS
+
+Added to `globals.css`:
+- `@custom-variant dark (&:where(.dark, .dark *))` — activates `dark:` utilities via `.dark` class on `<html>`
+- `html.dark { ... }` override block — 41 CSS custom property redefinitions (higher specificity than `@theme`'s `:root`, so it always wins without `!important`)
+
+Full dark palette: `#05081a` surface → `#0d1226` raised → `#141d38` subtle; rgba glass borders; brand accent unchanged (`#4f46e5` / `#818cf8`).
+
+### Toggle infrastructure
+
+| File | Change |
+|---|---|
+| `apps/web/hooks/useTheme.js` | New hook — reads/writes `localStorage.theme`, toggles `.dark` on `document.documentElement` |
+| `apps/web/pages/_app.js` | New `useEffect` — restores theme from localStorage on mount (before first render flash) |
+| `apps/web/components/AppearanceTab.js` | New component — Light / Dark radio toggles, visual pattern matches `NotificationPreferencesTab` |
+
+### Settings integration
+
+`AppearanceTab` added as last tab on all 4 persona settings pages (manager, owner, contractor, tenant). `SETTINGS_TABS` + `TAB_KEYS` updated. EN + FR locale keys added to all 8 locale files (`appearance`, `colorScheme`, `light/dark` + descriptions).
+
+Default: **light mode** — no `prefers-color-scheme` fallback. User must opt in via Settings → Appearance.
+
+### Contrast fixes (commit `c09ab15`)
+
+Manager dashboard attention feed: `CATEGORY_CHIP` and `CARD_STYLE` were using hardcoded `bg-amber-100/bg-red-100/bg-blue-100` (light pastels invisible on dark navy). Replaced with semantic token pairs (`warning-*`, `destructive-*`, `brand-*`). Summary pill links updated identically.
+
+Owner reporting hero banner: pastel gradient `from-violet-50 via-sky-50 to-green-50` had no dark override. Added `dark:from-brand-light dark:via-info-light dark:to-transparent` (subtle indigo-to-sky tint). Highlight banner: `dark:from-success-light dark:via-transparent`.
+
+### Remaining scope (QA pass — not done this session)
+
+28 hardcoded `bg-slate-700/800/900` instances remain — all intentional "inverted contrast" elements (Tooltip popup, UndoToast background, dark selected-state pills, health indicator dots). These are visible in dark mode and can be addressed in the QA pass.
+
+---
+
+## Session 2026-05-30 — Request triage agent
+
+### Commit: `9c77488` (pushed to origin/main)
+
+Implemented the triage agent that was scoped in commit `2b54aa7`. Post-`REQUEST_CREATED` event handler runs async scoring and writes contractor suggestions + budget hint back to the request.
+
+### Schema
+
+Migration `20260530185036_add_request_triage_fields`: 4 fields on `Request`:
+
+| Field | Type | Purpose |
+|---|---|---|
+| `triageContractorIds` | `String[] @default([])` | Top-3 contractors, ordered by score |
+| `triageBudgetMin` | `Int?` | P25 of historical invoices (CHF cents) |
+| `triageBudgetMax` | `Int?` | P75 of historical invoices (CHF cents) |
+| `triageCompletedAt` | `DateTime?` | Set even when no suggestions found; null = not yet run |
+
+### Scoring formula
+
+`score = 0.4 × avgRating + 0.3 × onTimeRate + 0.2 × categoryMatch + 0.1 × buildingMatch`
+
+### New files
+
+| File | Purpose |
+|---|---|
+| `repositories/contractorRepository.ts` | `findContractorsByOrg`, `findContractorJobHistory` |
+| `services/requestTriageService.ts` | Scoring logic, budget P25–P75 |
+| `workflows/requestTriageWorkflow.ts` | Orchestrate: score → write fields → done |
+| `src/__tests__/requestTriage.test.ts` | 258-line integration test suite (port 3280) |
+
+### Modified files
+
+- `events/handlers.ts` — `on("REQUEST_CREATED", ...)` calls `requestTriageWorkflow`
+- `services/maintenanceRequests.ts` — passes `orgId` into `REQUEST_CREATED` emit
+- `pages/manager/requests/[id].js` — triage hint panel (contractor suggestions + budget range); shows only when `triageCompletedAt !== null && triageContractorIds.length > 0`
+
+1073 tests pass (72 suites). 100 migrations · 74 models.
+
+---
+
+## Session 2026-05-30 — Design token migration (dark mode foundation)
+
+### Summary
+
+Completed the semantic CSS token layer that was structurally correct but incompletely adopted. The `@theme {}` block had 31 tokens covering brand, status, and surface colors, but 3,683 hardcoded `text-slate-*`, `bg-white`, `bg-slate-*`, and `border-slate-*` classes remained across 131 JSX files and `globals.css @layer components`, bypassing the token system entirely.
+
+### New tokens added
+
+Four tokens added to fill gaps in the neutral color hierarchy:
+
+| Token | Value | Replaces |
+|---|---|---|
+| `--color-foreground` | `#0f172a` (slate-900) | `text-slate-900`, `text-slate-800` |
+| `--color-foreground-dim` | `#94a3b8` (slate-400) | `text-slate-400` |
+| `--color-surface-subtle` | `#f8fafc` (slate-50) | `bg-slate-50` |
+| `--color-surface-divider` | `#f1f5f9` (slate-100) | `border-slate-100` |
+
+Total token count: 31 → 35.
+
+### Migration
+
+- `scripts/migrate-tokens.js` — word-boundary-safe Node.js codemod. Handles variant prefix chains (`sm:hover:bg-slate-50`), opacity modifiers (`bg-slate-50/80`), template literals, and dynamic `cn()` arguments.
+- `globals.css @layer components` — all 35 `@apply` lines using hardcoded slate classes migrated to semantic equivalents.
+- **3,683 replacements across 131 files.**
+
+### Intentional exceptions (`/* no-token: */`)
+
+| File | Class | Reason |
+|---|---|---|
+| `components/NotificationPreferencesTab.js` L127 | `bg-white` | Toggle thumb must stay white — inverting it in dark mode breaks the toggle affordance |
+| `components/ui/UndoToast.js` L83 | `hover:bg-white/10` | On a dark toast background — forced white is correct |
+| `pages/manager/requests.js` L619 | `bg-white/60` | Semi-transparent white overlay on a colored decision card |
+
+### Out-of-scope (deferred to dark mode epic)
+
+27 `bg-slate-200` instances (progress bar tracks, toggle tracks, step indicators, ghost buttons) excluded from automated migration — semantics vary per use case, require manual judgment.
+
+### Guardrail update
+
+`PROJECT_OVERVIEW.md §Frontend Styling` updated: raw `bg-white`, `text-slate-*`, `border-slate-*` added to the **Never** list. Semantic token classes now mandatory for all color-bearing Tailwind utilities in JSX.
+
+### Dark mode status
+
+The `@theme {}` token layer is now the sole color authority. A dark theme requires only a `@variant dark { ... }` block redefining the 35 tokens — estimated 5–6 days total remaining (down from 8–10 before this migration). Full scope in `docs/AUDIT.md § Dark Mode — Scope Assessment`.
+
+### Files changed
+
+| File | Change |
+|---|---|
+| `apps/web/styles/globals.css` | 4 new tokens in `@theme {}`; all hardcoded `@apply` slate classes migrated |
+| `apps/web/pages/**/*.js` (128 files) | Hardcoded slate classes → semantic tokens via codemod |
+| `apps/web/components/**/*.js` (3 files) | Same — plus 3 manual `/* no-token: */` exceptions |
+| `scripts/migrate-tokens.js` | New codemod script |
+| `PROJECT_OVERVIEW.md` | Frontend Styling section updated: token count 23→35, Never list expanded |
+| `PROJECT_STATE.md` | Session entry added |
+| `docs/AUDIT.md` | FE-NEW-1 finding + Dark Mode scope assessment appended |
+
+---
+
 ## Session 2026-05-20 — Balance sheet redesign + Manager assignment (Phase 1)
 
 ### Commits: `41b8a29` → `c39e152` (all pushed to origin/main)

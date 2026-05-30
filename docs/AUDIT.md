@@ -1,7 +1,7 @@
 # Maintenance Agent — Project Audit
 
 **Generated:** 2026-03-10
-**Last updated:** 2026-05-30 — Session-6 code-quality sweep: 7 new findings (FE-1, FE-2, CQ-NEW-1, CQ-NEW-2, CQ-NEW-3, ARCH-NEW-1, ARCH-NEW-3) all resolved in-session; DT-120 first slice complete (9 service files de-Prisma'd, 10 new repo functions); service `any` types eliminated (rentalApplications, legalDecisionEngine, legalService, legalIngestion); HTTP integration tests added for cashflowPlan / claimAnalysis / recommendation routes (port 3272, 20 tests); sortable-table template fixed; 2 inline-style violations removed. Previous: 2026-05-25 — Route-layer Prisma cleanup: 6 direct `prisma.*` calls eliminated across `inventory.ts` (×3), `contractor.ts` (×1), `auth.ts` (×2); 6 repository functions added; workflowCoverage suite expanded to 21 tests.
+**Last updated:** 2026-05-30 — Dark mode fully implemented: 37 tokens, `html.dark` CSS override block (invest.html palette), `useTheme` hook, `AppearanceTab`, wired into all 4 settings pages. Token migration completed (bg-slate-200/300, text-slate-200/300 — total 87 additional replacements). Contrast fixes for manager attention feed and owner reporting hero. Remaining: QA pass across 4 personas. Previous: Design token migration (FE-NEW-1 resolved, 35 → 37 tokens, 3,683+87 replacements across 148 files). Session-6 code-quality sweep: 7 findings all resolved in-session.
 **Scope:** Code Quality, Schema Integrity, Test Coverage, Security & Auth
 **Source commit:** ed7c841 (branch: main); findings reflect state as of 2026-03-10
 **Codebase at audit time:** 46 models · 38 enums · 36 migrations · 17 workflows · 10 repositories · 372 tests / 33 suites · ~36k backend LOC · ~27k frontend LOC · 195 pages · ~146 API routes
@@ -763,4 +763,49 @@ All 7 findings below were identified and resolved within the same session. `tsc 
 
 - **Files:** `routes/cashflowPlans.ts`, `routes/recommendations.ts`, `routes/legal.ts` (claim-analysis endpoint)
 - **Description:** `cashflowPlanWorkflow`, `recommendationWorkflow`, and `analyseClaimWorkflow` had no HTTP integration tests — auth gates and basic shape were unverified.
-- **Fix:** Created `src/__tests__/newWorkflowRoutes.test.ts` (port 3272) with 20 tests covering 401 (no token), 403 (wrong role), and auth-passing 4xx/5xx for all route+method combinations.
+- **Fix:** Created `src/__tests__/newWorkflowRoutes.test.ts` (port 3272) with 20 tests covering 401 (no token), 403 (wrong role), and auth-passing 4xx/5xx for all route+method combinations.- **Fix:** Created `src/__tests__/newWorkflowRoutes.test.ts` (port 3272) with 20 tests covering 401 (no token), 403 (wrong role), and auth-passing 4xx/5xx for all route+method combinations.
+
+---
+
+## Design Token Migration — 2026-05-30
+
+### FE-NEW-1 · Hardcoded Tailwind color classes — token coverage gap (LOW) ✅ Resolved 2026-05-30
+
+- **Files:** `apps/web/styles/globals.css`, `apps/web/pages/**/*.js`, `apps/web/components/**/*.js`
+- **Description:** The `@theme {}` semantic token layer was defined correctly but incompletely adopted. 3,683 raw Tailwind color classes (`text-slate-*`, `bg-white`, `bg-slate-*`, `border-slate-*`) were hardcoded across 131 files in JSX and the `@layer components` block. These classes bypassed the token system, making any future dark mode or theme change require per-file edits instead of a single CSS variable override.
+- **Root cause:** The semantic tokens (`--color-surface`, `--color-brand`, etc.) were added as infrastructure but the existing component layer and all JSX pages were never migrated to use them. The design guidelines specified `@apply`-backed component classes as canonical but did not explicitly prohibit raw Tailwind color utilities in JSX.
+- **Fix:**
+  1. Added 4 new tokens to `@theme {}`: `--color-foreground` (#0f172a = slate-900), `--color-foreground-dim` (#94a3b8 = slate-400), `--color-surface-subtle` (#f8fafc = slate-50), `--color-surface-divider` (#f1f5f9 = slate-100). Total tokens: 35.
+  2. Migrated all hardcoded `@apply` lines in `globals.css @layer components` to semantic equivalents.
+  3. Created `scripts/migrate-tokens.js` — a word-boundary-safe Node.js codemod with prefix-chain and opacity-modifier preservation. Applied 3,683 replacements across 131 JSX files.
+  4. Three intentional exceptions documented with `/* no-token: <reason> */`: toggle thumb in `NotificationPreferencesTab.js`, hover state in `UndoToast.js`, semi-transparent badge in `manager/requests.js`.
+  5. Updated `PROJECT_OVERVIEW.md §Frontend Styling` to make semantic-token usage explicit and add `bg-slate-*` / `text-slate-*` to the Never list.
+- **Guardrail added to guidelines:** Inline Tailwind utilities must use semantic token classes (`bg-surface`, `text-foreground`, `border-surface-border`, etc.). Raw `bg-white`, `text-slate-*`, `border-slate-*` are prohibited; use `/* no-token: <reason> */` for intentional exceptions.
+
+---
+
+## Dark Mode — Implementation Status (2026-05-30)
+
+### ✅ Complete
+
+| Work stream | Status | Notes |
+|---|---|---|
+| `html.dark` token override block (41 CSS vars) | ✅ Done | invest.html palette: `#05081a/0d1226/141d38`, rgba glass borders, brand accent unchanged |
+| `@custom-variant dark` declaration | ✅ Done | `(&:where(.dark, .dark *))` — `.dark` class on `<html>` activates `dark:` utilities |
+| Token completion — `bg-slate-200/300`, `text-slate-200/300` | ✅ Done | 87 additional replacements across 48 files; `bg-track` token added for progress bars |
+| `useTheme` hook + localStorage persistence | ✅ Done | `apps/web/hooks/useTheme.js` |
+| `_app.js` theme restore on mount | ✅ Done | Reads `localStorage.theme` before first render |
+| `AppearanceTab` component | ✅ Done | Light / Dark radio toggles; visual pattern matches `NotificationPreferencesTab` |
+| Settings integration — all 4 personas | ✅ Done | Manager, owner, contractor, tenant; EN+FR locale keys |
+| Status pill dark variants | ✅ Done | All CVA Badge variants use semantic tokens (`warning-*`, `destructive-*`, `brand-*`, `info-*`, `muted`) |
+| Manager attention feed contrast | ✅ Done | `CATEGORY_CHIP` + `CARD_STYLE` migrated from hardcoded amber/red/blue to semantic tokens |
+| Owner reporting hero banner | ✅ Done | `dark:from-brand-light dark:via-info-light dark:to-transparent` override |
+| `/* no-token: */` exceptions reviewed | ✅ Done | 3 exceptions retained: toggle thumb (always white), UndoToast hover (dark bg), confidence badge (colored card) |
+
+### Remaining scope
+
+| Work stream | Effort | Notes |
+|---|---|---|
+| QA across 4 personas | ~1.5 days | Full light/dark sweep: manager, owner, contractor, tenant. 28 hardcoded `bg-slate-700/800/900` instances (Tooltip popup, UndoToast bg, dark selected-state pills, health dots) visible in dark mode — may need `dark:` overrides. |
+
+**Default: light mode. User opts in via Settings → Appearance. No `prefers-color-scheme` fallback.**

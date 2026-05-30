@@ -22,15 +22,21 @@ Safe to:
 
 ---
 
-✅ **Project stabilized, security-hardened, org-scoped, and UI-connected (2026-04-29).** 65 test suites · 980 tests, 0 TS errors. 91/94 audit findings resolved. Backend: ~73k LOC | Frontend: ~45k LOC | 291 API operations | 68 Prisma models | 67 enums | 98 migrations | 289 frontend pages | 28 workflows | 28 route modules. Strategy Engine & Capture Hardening epic complete. Responsive polish pass complete: dual-render pattern (F-UI9) applied to 18+ pages; `KpiInlineGrid` + `QuickLinksRail` components added; `Panel.jsx` header wrapping fixed; RFP deep-link navigation fixed. See [EPIC_HISTORY.md](EPIC_HISTORY.md) for full completion details.
+✅ **Project stabilized, security-hardened, org-scoped, and UI-connected (2026-04-29).** 65 test suites · 980 tests, 0 TS errors. 91/94 audit findings resolved. Backend: ~73k LOC | Frontend: ~45k LOC | 291 API operations | 68 Prisma models | 67 enums | 99 migrations | 289 frontend pages | 28 workflows | 28 route modules. Strategy Engine & Capture Hardening epic complete. Responsive polish pass complete: dual-render pattern (F-UI9) applied to 18+ pages; `KpiInlineGrid` + `QuickLinksRail` components added; `Panel.jsx` header wrapping fixed; RFP deep-link navigation fixed. See [EPIC_HISTORY.md](EPIC_HISTORY.md) for full completion details.
 
 ✅ **Tenant AI Chat + Agentic Asset Matching (2026-05-04).** ChatWidget fully wired end-to-end: tenant phone login → Claude conversation → `reportIssue` tool creates request with correct urgency. Three bugs fixed in session: (1) error display hidden on empty message list; (2) `urgency` field missing from Zod schema / repo / workflow — now flows from AI tool call through to DB; (3) asset auto-link was matching `SHOWER_CABIN_GLASS` via generic token "glass" for a window crack report. Replaced keyword scorer with AI-powered `resolveAssetWithAI()` (claude-3-5-haiku, ~$0.0005/call) — keyword fallback retained when AI unavailable or unit has ≤1 asset. New files: `services/aiClient.ts` (shared Anthropic client), `services/assetMatcher.ts` (asset resolution tool-use).
 
 ✅ **Bilingual EN/FR i18n — full string extraction pass (2026-05-05).** All UI strings extracted through `next-i18next`. Five namespaces: `common`, `manager`, `owner`, `contractor`, `tenant`. All `[FR]` placeholders stripped. Tab labels rendered via `t(\`ns:section.tabs.${key}\`)` template literals. Action buttons in `requests.js` / `leases/[id].js` wired to `t()`. Two root-cause fixes: (1) `reloadOnPrerender: true` in `next-i18next.config.js` — prevents stale in-memory locale cache in dev; (2) `.vercelignore` blanket `*.json` rule replaced with specific exclusions — was silently blocking all locale JSON files from Vercel builds, causing production to show `xx.xx.xx` key paths. `apps/web/.vercelignore` (empty) added as safety net. Two audit scripts: `scripts/i18n-audit-missing.py`, `scripts/i18n-audit-tabs.py`. See [EPIC_HISTORY.md](EPIC_HISTORY.md) for full narrative.
 
-✅ **Full project audit + remediation (2026-05-06).** 67 test suites · 1009 tests, 0 TS errors. Three root-cause fixes: (1) `jose@6` ESM-only package caused 31 integration test suites to fail with parse error — downgraded to `jose@5` (CJS+ESM); (2) `server.ts` Supabase JWT pre-resolve was assigning `req.user = null` on verification failure (no `SUPABASE_URL`), silently blocking the legacy `decodeToken` fallback and causing all integration tests to receive 401 — fixed to only assign `req.user` on non-null Supabase result; (3) test DB missing 98 migrations (`add_conversation_thread`, `add_supabase_auth`) — deployed via `prisma migrate deploy`. Additionally: 3 unsorted `<th>` columns converted to `<SortableHeader>` (units/[id], leases/[id], approvals); 6 `style={{}}` inline layout props in `login.js` replaced with Tailwind classes. `docs/AUDIT.md` metadata updated to 2026-05-06 codebase state.
+✅ **Full project audit + remediation (2026-05-06).** 67 test suites · 1009 tests, 0 TS errors. Three root-cause fixes: (1) `jose@6` ESM-only package caused 31 integration test suites to fail with parse error — downgraded to `jose@5` (CJS+ESM); (2) `server.ts` Supabase JWT pre-resolve was assigning `req.user = null` on verification failure (no `SUPABASE_URL`), silently blocking the legacy `decodeToken` fallback and causing all integration tests to receive 401 — fixed to only assign `req.user` on non-null Supabase result; (3) test DB missing 99 migrations (`add_conversation_thread`, `add_supabase_auth`) — deployed via `prisma migrate deploy`. Additionally: 3 unsorted `<th>` columns converted to `<SortableHeader>` (units/[id], leases/[id], approvals); 6 `style={{}}` inline layout props in `login.js` replaced with Tailwind classes. `docs/AUDIT.md` metadata updated to 2026-05-06 codebase state.
 
 ✅ **Notification preferences (2026-05-30).** 72 test suites · 1068 tests, 0 TS errors. `NotificationPreference` model + migration `20260530170855`. Opt-out model: absent row = enabled. `createNotification()` gated on `isInAppEnabled`. GET/PUT `/notifications/preferences` routes + Next.js proxy. `NotificationPreferencesTab` reusable toggle-grid component wired into manager + owner settings (replaced coming-soon). New `/contractor/settings` + `/tenant/settings` pages with 4 event groups each. Settings nav added to `ContractorSidebar`, `TenantSidebar`, `BottomNav`. 8 locale files patched (EN+FR × 4 personas). 74 models · 99 migrations.
+
+✅ **Dark mode — full implementation (2026-05-30).** Token completion (bg-slate-200/300, text-slate-200/300 — 87 replacements, 37 total tokens), `html.dark` CSS override block (41 vars, invest.html palette), `useTheme` hook + `AppearanceTab` component, settings toggle wired into all 4 personas, EN+FR locale keys. Default: light mode; user opts in via Settings → Appearance. Contrast fixes: manager attention cards and owner reporting hero banner updated for dark readability. Remaining: QA pass across 4 personas (~1.5 days). Commits: `5d40fd2` · `c09ab15`. See [EPIC_HISTORY.md](EPIC_HISTORY.md) for full narrative.
+
+✅ **Request triage agent (2026-05-30).** Post-`REQUEST_CREATED` async handler: scores contractors (avgRating 0.4 + onTimeRate 0.3 + categoryMatch 0.2 + buildingMatch 0.1), computes P25/P75 budget from invoice history, writes `triageContractorIds` + `triageBudgetMin/Max` + `triageCompletedAt`. 4 new fields on `Request` (migration `20260530185036`). Manager sees read-only hint panel on request detail page. 1073 tests · 100 migrations. Commit: `9c77488`. See [EPIC_HISTORY.md](EPIC_HISTORY.md) for full narrative.
+
+✅ **Design token migration — dark mode foundation (2026-05-30).** 0 TS errors. Completed the semantic token layer: 4 new tokens added to `globals.css @theme {}` (`--color-foreground`, `--color-foreground-dim`, `--color-surface-subtle`, `--color-surface-divider`), bringing the total to 35. All hardcoded `text-slate-*`, `bg-white`, `bg-slate-*`, `border-slate-*` classes eliminated from JSX and `@layer components` — 3,683 replacements across 131 files via `scripts/migrate-tokens.js`. Three intentional `/* no-token: */` exceptions preserved (toggle thumb, UndoToast hover, confidence badge). See `docs/AUDIT.md` for the full dark-mode scope assessment.
 
 ✅ **Session-6 code-quality sweep (2026-05-30).**, 0 TS errors. 7 audit findings identified and resolved in-session: FE-1 (sortable-table template-literal interpolation + 3 exempt markers), FE-2 (inline `style={{}}` in PortalShell), CQ-NEW-1 (`routes/inventory.ts` direct Prisma → repo), CQ-NEW-2 (`routes/tenantConversation.ts` direct Prisma → repo), CQ-NEW-3/DT-120 first slice (9 service files de-Prisma'd, 10 new repo functions), ARCH-NEW-1 (service `any` types in rentalApplications, legalDecisionEngine, legalService, legalIngestion), ARCH-NEW-3 (HTTP integration tests for cashflowPlan / claimAnalysis / recommendation — 20 tests on port 3272). `docs/AUDIT.md` updated with Session-6 section (105 total findings, 102 resolved, 3 open).
 
@@ -93,17 +99,17 @@ Remaining known limitation: OCR extracts amount and date reliably from phone pho
 |-------|-------|--------|
 | Models | 74 | prisma/schema.prisma — derived |
 | Enums | 67 | prisma/schema.prisma — derived |
-| Migrations | 99 | prisma/migrations/ — derived |
+| Migrations | 100 | prisma/migrations/ — derived |
 | Workflows | 32 | src/workflows/ — derived |
 | Repositories | 41 | src/repositories/ — derived (excl. index.ts) |
 | Route modules | 28 | src/routes/ — derived (excl. helpers.ts utility) |
 | Backend LOC | ~84k | src/ (incl. tests) — derived |
-| Frontend LOC | ~58k | apps/web/ — derived |
-| Frontend pages | 329 | apps/web/pages/ — derived (88 UI + 200 API proxies) |
+| Frontend LOC | ~60k | apps/web/ — derived |
+| Frontend pages | 332 | apps/web/pages/ — derived (97 UI + 235 API proxies) |
 | API operations | 291 | openapi.yaml operationId count — derived |
 | URL paths | 248 | openapi.yaml unique paths — derived |
-| Tests | 69 suites · 1068 tests | jest — derived |
-| Proxy conformance | 198 / 198 | apps/web/pages/api/ — derived |
+| Tests | 72 suites · 1073 tests | jest — derived |
+| Proxy conformance | 235 / 235 | apps/web/pages/api/ — derived |
 | Transition maps | 8 | src/workflows/transitions.ts — derived |
 | Audit findings open | 3 (SI-2/3 broken links; ARCH-1 DT-121–124 remaining) | docs/AUDIT.md — manual |
 | Audit findings resolved | 102 | docs/AUDIT.md — manual |
@@ -116,58 +122,17 @@ Remaining known limitation: OCR extracts amount and date reliably from phone pho
 
 ✅ **Financial Planning Phase 1 — Historical NOI Aggregation (2026-05-22).** New service `computeAnnualSnapshots()` loops over past N completed fiscal years and upserts `BuildingFinancialSnapshot` rows. Two new endpoints: `GET /buildings/:id/financial-snapshots` + `POST /buildings/:id/financial-snapshots/refresh`. Frontend: `NOITrendPanel` — building selector + CSS bar chart of annual NOI — wired into `/manager/finance?tab=planning`. OpenAPI: `AnnualSnapshotDTO` + 2 operations. 7 integration tests (port 3225). 69 suites · 1034 tests · 0 TS errors. EN/FR i18n complete.
 
-✅ **Manager assignment Phase 1 + Balance sheet redesign (2026-05-20).** `managerId` FK added to `Building` — MANAGER sees only assigned buildings, new buildings auto-assigned to creator. Owner surface uses `?filterByOwner=true` flag to scope by `ownerId` independently of role. `BuildingOwner` rows auto-synced via admin/users UI when `ownerId` set. Balance sheet redesigned: `BALANCE_SHEET_IMPORT` / `INCOME_STATEMENT_IMPORT` sourceTypes, `getBalanceSheet` service, balance sheet tab on manager + owner finance pages. Upload timeout extended to 120 s + orphaned PROCESSING batch auto-purge. 98 migrations. See [EPIC_HISTORY.md](EPIC_HISTORY.md) for full narrative.
+✅ **Manager assignment Phase 1 + Balance sheet redesign (2026-05-20).** `managerId` FK added to `Building` — MANAGER sees only assigned buildings, new buildings auto-assigned to creator. Owner surface uses `?filterByOwner=true` flag to scope by `ownerId` independently of role. `BuildingOwner` rows auto-synced via admin/users UI when `ownerId` set. Balance sheet redesigned: `BALANCE_SHEET_IMPORT` / `INCOME_STATEMENT_IMPORT` sourceTypes, `getBalanceSheet` service, balance sheet tab on manager + owner finance pages. Upload timeout extended to 120 s + orphaned PROCESSING batch auto-purge. 99 migrations. See [EPIC_HISTORY.md](EPIC_HISTORY.md) for full narrative.
 
 **Pending — Phase 2 (deferred):** OWNER_DIRECT UI blend for self-managing owners.
 
 **Operational requirement for new users:** Supabase `app_metadata` must include `prismaUserId` + `orgId`. Use admin/users UI to set `ownerId` (auto-syncs `BuildingOwner` rows). Manager users need manual SQL assignment of `managerId` on existing buildings after first deploy.
 
-## Triage Agent — Scoped (not yet built)
+## Triage Agent — ✅ Built (2026-05-30, commit `9c77488`)
 
-Post-`REQUEST_CREATED` event handler that enriches the request with contractor suggestions and a budget hint, then marks `triageCompletedAt`. Purely async — never blocks the create request path. Manager sees a read-only hint panel on the request detail page.
+See [EPIC_HISTORY.md](EPIC_HISTORY.md) for full narrative. Summary: post-`REQUEST_CREATED` async handler scores contractors and writes suggestions + budget hint to the request. Manager sees a read-only hint panel on request detail. 1073 tests · 100 migrations.
 
-### Schema additions (1 migration, 4 fields on `Request`)
-
-```
-triageContractorIds   String[]   @default([])   // ordered by score, top 3
-triageBudgetMin       Int?                       // CHF cents — P25 of historical invoices
-triageBudgetMax       Int?                       // CHF cents — P75 of historical invoices
-triageCompletedAt     DateTime?                  // null = not yet run; set even when no suggestions found
-```
-
-### Scoring (pure SQL, no AI in this slice)
-
-$$\text{score} = 0.4 \times \text{avgRating} + 0.3 \times \text{onTimeRate} + 0.2 \times \text{categoryMatch} + 0.1 \times \text{buildingMatch}$$
-
-### Fallback matrix
-
-| Situation | Contractors | Budget | `triageCompletedAt` |
-|---|---|---|---|
-| No jobs in org (new org) | `[]` — skip entirely | omitted | set (ran, found nothing) |
-| Contractors exist but none match category | All org contractors, unranked | omitted | set |
-| <3 category matches | Return 1–2 ranked | only if ≥2 invoice data points | set |
-| <3 invoices for P25–P75 | Contractors still ranked | omitted — never show misleading single data point | set |
-| Triage throws any error | silently swallowed (event bus pattern) | nothing written | **not set** — manager sees no panel |
-
-**UI rule:** show suggestions panel only when `triageCompletedAt !== null && triageContractorIds.length > 0`. Show budget hint only when both `triageBudgetMin` and `triageBudgetMax` are set.
-
-### Files (when built)
-
-| File | Type | Purpose |
-|---|---|---|
-| `repositories/contractorRepository.ts` | new | `findContractorsByOrg`, `findContractorJobHistory` |
-| `services/requestTriageService.ts` | new | scoring logic, budget P25–P75 |
-| `workflows/requestTriageWorkflow.ts` | new | orchestrate, write fields, emit notification |
-| `src/__tests__/requestTriage.test.ts` | new | integration tests, port 3280 |
-| `events/types.ts` | modify | add `orgId` to `RequestCreatedPayload` |
-| `events/handlers.ts` | modify | `on("REQUEST_CREATED", ...)` |
-| `workflows/createRequestWorkflow.ts` | modify | pass `orgId` into emit |
-
-### Explicitly out of scope for this slice
-- Auto-creating an RFP
-- AI-enriched notification text (Phase 2)
-- Contractor performance score as a standalone model
-- Tenant-facing suggestions
+**Phase 2 (deferred):** AI-enriched notification text, contractor performance score as a standalone model, tenant-facing suggestions.
 
 ---
 
