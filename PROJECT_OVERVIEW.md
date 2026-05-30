@@ -101,7 +101,7 @@ When touching an older detail page, check for these patterns and migrate:
 
 ### Database
 
-- PostgreSQL 16 via Docker. Prisma ORM. 73 models · 67 enums · 98 migrations.
+- PostgreSQL 16 via Docker. Prisma ORM. 74 models · 67 enums · 99 migrations.
 - Dev DB: `maint_agent` | Test DB: `maint_agent_test` (isolated).
 
 ---

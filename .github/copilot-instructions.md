@@ -24,7 +24,7 @@ Full-stack Swiss property management platform. Monorepo with Node.js + TypeScrip
 |-|-|
 | Backend | Raw `http.createServer()` — no Express/NestJS. Port 3001. |
 | Frontend | Next.js Pages Router. Port 3000. |
-| Database | PostgreSQL 16 via Docker. Prisma ORM. 73 models · 67 enums · 98 migrations. |
+| Database | PostgreSQL 16 via Docker. Prisma ORM. 74 models · 67 enums · 99 migrations. |
 | Auth | JWT-based. Role enum: MANAGER, CONTRACTOR, TENANT, OWNER. |
 | Personas | Manager · Contractor · Tenant · Owner |
 
@@ -130,9 +130,9 @@ Maintenance_Agent/
 │   ├── events/          # Domain event bus
 │   └── governance/      # Org scoping + authz
 ├── apps/api/prisma/
-│   ├── schema.prisma    # 73 models · 67 enums
-│   └── migrations/      # 72 dirs — never edit past migrations
-├── apps/web/pages/      # 288 pages (88 UI + 200 API proxies)
+│   ├── schema.prisma    # 74 models · 67 enums
+│   └── migrations/      # 99 dirs — never edit past migrations
+├── apps/web/pages/      # 332 pages (88 UI + 200 API proxies)
 ├── apps/web/components/ui/  # 10 CVA + 7 presentational components (Button, Badge, ResourceShell, DetailGrid, Modal, etc.)
 ├── apps/web/lib/
 │   ├── utils.js           # cn() = twMerge(clsx()) — ALL dynamic classNames must use this
