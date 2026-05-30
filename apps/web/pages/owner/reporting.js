@@ -522,7 +522,7 @@ export default function OwnerReportingPage() {
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
 
         {/* ── HERO ─────────────────────────────────────────────── */}
-        <header className="mb-6 rounded-3xl border border-surface-border bg-gradient-to-br from-violet-50 via-sky-50 to-green-50 p-6 shadow-sm">
+        <header className="mb-6 rounded-3xl border border-surface-border bg-gradient-to-br from-violet-50 via-sky-50 to-green-50 dark:from-brand-light dark:via-info-light dark:to-transparent p-6 shadow-sm">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-2xl">
               <Badge variant="default" size="lg" className="mb-3">
@@ -582,7 +582,7 @@ export default function OwnerReportingPage() {
         {/* ── HIGHLIGHT ────────────────────────────────────────── */}
         {!loading && highlight && (
           <section className="mb-8">
-            <div className="rounded-3xl border border-surface-border bg-gradient-to-r from-green-50 via-white to-transparent p-6">
+            <div className="rounded-3xl border border-surface-border bg-gradient-to-r from-green-50 via-white to-transparent dark:from-success-light dark:via-transparent p-6">
               <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("owner:reporting.text.highlight")}</div>
               <div className="mt-2 text-xl font-semibold text-foreground">{highlight.title}</div>
               <p className="mt-2 max-w-2xl text-sm text-muted-text">{highlight.body}</p>

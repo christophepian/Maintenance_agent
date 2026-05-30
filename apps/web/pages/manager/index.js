@@ -57,21 +57,21 @@ function InfoStat({ label, value, tone }) {
 /* ─── Category chip used in the priority feed ─── */
 // Labels are translated at render time via t(`manager:dashboard.chip.${category}`)
 const CATEGORY_CHIP = {
-  review:    { cls: "bg-blue-100 text-blue-700" },
-  approval:  { cls: "bg-amber-100 text-amber-700" },
-  disputed:  { cls: "bg-red-100 text-red-700" },
-  stale:     { cls: "bg-amber-100 text-amber-700" },
-  rfp:       { cls: "bg-indigo-100 text-indigo-700" },
-  lease:     { cls: "bg-violet-100 text-violet-700" },
+  review:    { cls: "bg-brand-light text-brand-dark" },
+  approval:  { cls: "bg-warning-light text-warning-dark" },
+  disputed:  { cls: "bg-destructive-light text-destructive-dark" },
+  stale:     { cls: "bg-warning-light text-warning-dark" },
+  rfp:       { cls: "bg-brand-light text-brand-dark" },
+  lease:     { cls: "bg-brand-light text-brand-dark" },
 };
 
 const CARD_STYLE = {
-  review:   "border-blue-200 bg-blue-50 hover:bg-blue-100",
-  approval: "border-amber-200 bg-amber-50 hover:bg-amber-100",
-  disputed: "border-red-200 bg-red-50 hover:bg-red-100",
-  stale:    "border-amber-200 bg-amber-50 hover:bg-amber-100",
-  rfp:      "border-indigo-200 bg-indigo-50 hover:bg-indigo-100",
-  lease:    "border-violet-200 bg-violet-50 hover:bg-violet-100",
+  review:   "border-brand-ring bg-brand-light hover:bg-surface-hover",
+  approval: "border-warning-ring bg-warning-light hover:bg-surface-hover",
+  disputed: "border-destructive-ring bg-destructive-light hover:bg-surface-hover",
+  stale:    "border-warning-ring bg-warning-light hover:bg-surface-hover",
+  rfp:      "border-brand-ring bg-brand-light hover:bg-surface-hover",
+  lease:    "border-brand-ring bg-brand-light hover:bg-surface-hover",
 };
 
 /* ─── Single action item row ─── */
@@ -543,17 +543,17 @@ export default function ManagerDashboard() {
                   </Link>
                 )}
                 {disputedInvoices.length > 0 && (
-                  <Link href="/manager/finance/invoices" className="rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-medium text-red-600 hover:bg-red-100 no-underline">
+                  <Link href="/manager/finance/invoices" className="rounded-full border border-destructive-ring bg-destructive-light px-3 py-1 text-xs font-medium text-destructive-dark hover:bg-surface-hover no-underline">
                     {disputedInvoices.length} disputed →
                   </Link>
                 )}
                 {staleJobs.length > 0 && (
-                  <Link href="/manager/requests?tab=active" className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700 hover:bg-amber-100 no-underline">
+                  <Link href="/manager/requests?tab=active" className="rounded-full border border-warning-ring bg-warning-light px-3 py-1 text-xs font-medium text-warning-dark hover:bg-surface-hover no-underline">
                     {staleJobs.length} stale jobs →
                   </Link>
                 )}
                 {rfpPendingRequests.length > 0 && (
-                  <Link href="/manager/requests?tab=rfp_open" className="rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-600 hover:bg-indigo-100 no-underline">
+                  <Link href="/manager/requests?tab=rfp_open" className="rounded-full border border-brand-ring bg-brand-light px-3 py-1 text-xs font-medium text-brand-dark hover:bg-surface-hover no-underline">
                     {rfpPendingRequests.length} RFPs →
                   </Link>
                 )}
