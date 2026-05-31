@@ -85,7 +85,7 @@ const referenceRateFetcher: Fetcher = async (source) => {
   try {
     const resp = await fetch(url, {
       headers: { "User-Agent": "MaintenanceAgent/1.0 (+property-management)" },
-      signal: AbortSignal.timeout(15_000),
+      signal: AbortSignal.timeout(5_000),
     });
     if (!resp.ok) throw new Error(`BWO HTTP ${resp.status}`);
     const html = await resp.text();
@@ -119,7 +119,7 @@ const referenceRateFetcher: Fetcher = async (source) => {
   try {
     const snbResp = await fetch(
       "https://data.snb.ch/api/cube/zikredm/data/csv/en",
-      { signal: AbortSignal.timeout(10_000) },
+      { signal: AbortSignal.timeout(3_000) },
     );
     if (snbResp.ok) {
       const csv = await snbResp.text();
@@ -196,7 +196,7 @@ const cpiFetcher: Fetcher = async (source) => {
   try {
     const resp = await fetch(bfsUrl, {
       headers: { "User-Agent": "MaintenanceAgent/1.0 (+property-management)" },
-      signal: AbortSignal.timeout(15_000),
+      signal: AbortSignal.timeout(5_000),
     });
     if (!resp.ok) throw new Error(`BFS HTTP ${resp.status}`);
     const html = await resp.text();
@@ -240,7 +240,7 @@ const cpiFetcher: Fetcher = async (source) => {
       "&facetFilters=topic%3D05"; // topic 05 = prices
 
     const resp = await fetch(searchUrl, {
-      signal: AbortSignal.timeout(10_000),
+      signal: AbortSignal.timeout(3_000),
     });
     if (resp.ok) {
       const data = await resp.json();
@@ -607,7 +607,7 @@ const aslocaDepreciationFetcher: Fetcher = async (source) => {
   try {
     const headResp = await fetch(ASLOCA_DEPRECIATION_PDF_URL, {
       method: "HEAD",
-      signal: AbortSignal.timeout(10_000),
+      signal: AbortSignal.timeout(3_000),
     });
     if (!headResp.ok) {
       console.warn(`[ASLOCA_DEPRECIATION] PDF HEAD returned ${headResp.status}`);
@@ -777,7 +777,7 @@ const aslocaRentReductionFetcher: Fetcher = async (source) => {
   try {
     const headResp = await fetch(ASLOCA_REDUCTIONS_PDF_URL, {
       method: "HEAD",
-      signal: AbortSignal.timeout(10_000),
+      signal: AbortSignal.timeout(3_000),
     });
     if (!headResp.ok) {
       console.warn(`[ASLOCA_RENT_REDUCTION] PDF HEAD returned ${headResp.status}`);
@@ -891,7 +891,7 @@ const fedlexFetcher: Fetcher = async (source) => {
     const headResp = await fetch(url, {
       method: "HEAD",
       headers: { "User-Agent": "MaintenanceAgent/1.0 (+property-management)" },
-      signal: AbortSignal.timeout(15_000),
+      signal: AbortSignal.timeout(5_000),
       redirect: "follow",
     });
     if (!headResp.ok) {
@@ -919,7 +919,7 @@ const fedlexFetcher: Fetcher = async (source) => {
           "User-Agent": "MaintenanceAgent/1.0 (+property-management)",
           Range: "bytes=0-8192",
         },
-        signal: AbortSignal.timeout(15_000),
+        signal: AbortSignal.timeout(5_000),
         redirect: "follow",
       });
       const partial = await resp.text();
