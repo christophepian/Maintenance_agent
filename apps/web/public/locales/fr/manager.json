@@ -1909,6 +1909,10 @@
       "low": "Basse",
       "allBuildings": "Tous les immeubles",
       "allCategories": "Toutes les catégories",
+      "allTypes": "Tous les types",
+      "typeMaintenance": "Maintenance",
+      "typeComplaint": "Réclamation",
+      "typeAdministrative": "Administratif",
       "resetFilters": "Réinitialiser les filtres",
       "noRequestsMatchThisFilter": "Aucune demande ne correspond à ce filtre.",
       "selectContractor": "Sélectionner un prestataire…"
@@ -1920,7 +1924,8 @@
       "category": "Catégorie",
       "date": "Date",
       "request": "Demande n°",
-      "estCost": "Est. Cost"
+      "estCost": "Est. Cost",
+      "requestType": "Type"
     },
     "tabs": {
       "all": "Vue d'ensemble",
@@ -1934,6 +1939,7 @@
     },
     "col": {
       "status": "Statut",
+      "requestType": "Type",
       "buildingUnit": "Bâtiment / Unité",
       "category": "Catégorie",
       "description": "Description",
@@ -1959,7 +1965,11 @@
   "requestsId": {
     "title": {
       "legalAnalysis": "Legal Analysis",
-      "maintenanceDecision": "Maintenance Decision"
+      "maintenanceDecision": "Maintenance Decision",
+      "warningLetter": "Générateur de lettre d'avertissement",
+      "infringingRules": "Règlements de maison potentiellement enfreints",
+      "letterText": "Lettre",
+      "resolution": "Résolution"
     },
     "ariaLabel": {
       "selectAssetToLink": "Select asset to link"
@@ -2008,7 +2018,10 @@
       "suggested": "Suggéré",
       "suggestedMatch": "Correspondance suggérée",
       "tenant": "Locataire",
-      "unit": "Unité"
+      "unit": "Unité",
+      "warningLetterDescription": "Générez une lettre d'avertissement pré-remplie basée sur la réclamation et le règlement intérieur applicable. Vous pouvez modifier le texte avant de le télécharger.",
+      "resolutionNotePlaceholder": "Ajouter une note de résolution…",
+      "markedResolved": "Cette réclamation a été marquée comme résolue."
     },
     "prop": {
       "created": "Créé",
@@ -2063,7 +2076,13 @@
       "unlink": "Dissocier",
       "linkAsset": "Lier l’équipement",
       "routing": "Routage…",
-      "routeToRfp": "Envoyer en appel d’offres →"
+      "routeToRfp": "Envoyer en appel d’offres →",
+      "generateLetter": "Générer la lettre d’avertissement",
+      "generating": "Génération…",
+      "downloadLetter": "Télécharger (.txt)",
+      "regenerate": "Régénérer",
+      "saveNote": "Enregistrer la note",
+      "markResolved": "Marquer comme résolu"
     },
     "rec": {
       "repair": "Réparer",

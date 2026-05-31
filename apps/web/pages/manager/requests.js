@@ -111,6 +111,20 @@ function buildRequestColumns({ t, assigningId, setAssigningId, selectedContracto
       ),
     },
     {
+      id: "requestType",
+      label: t("manager:requests.col.requestType"),
+      defaultVisible: true,
+      render: (r) => {
+        const type = r.requestType || "MAINTENANCE";
+        if (type === "MAINTENANCE") return null;
+        return (
+          <span className={type === "COMPLAINT" ? "inline-flex items-center rounded px-1.5 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide bg-orange-100 text-orange-700" : "inline-flex items-center rounded px-1.5 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide bg-blue-100 text-blue-700"}>
+            {type === "COMPLAINT" ? t("manager:requests.text.typeComplaint") : t("manager:requests.text.typeAdministrative")}
+          </span>
+        );
+      },
+    },
+    {
       id: "building",
       label: t("manager:requests.col.buildingUnit"),
       sortable: true,
@@ -1169,6 +1183,7 @@ export default function ManagerRequestsPage() {
   const [filterUrgency, setFilterUrgency] = useState("");
   const [filterCategory, setFilterCategory] = useState("");
   const [filterBuilding, setFilterBuilding] = useState("");
+  const [filterRequestType, setFilterRequestType] = useState("");
 
   const [filterOpen, setFilterOpen] = useState(false);
   const [sortOpen, setSortOpen]     = useState(false);
@@ -1250,10 +1265,11 @@ export default function ManagerRequestsPage() {
     if (filterUrgency) list = list.filter((r) => r.urgency === filterUrgency);
     if (filterCategory) list = list.filter((r) => r.category === filterCategory);
     if (filterBuilding) list = list.filter((r) => r.buildingId === filterBuilding);
+    if (filterRequestType) list = list.filter((r) => (r.requestType || "MAINTENANCE") === filterRequestType);
     return list;
-  }, [filteredRequests, search, filterUrgency, filterCategory, filterBuilding]);
+  }, [filteredRequests, search, filterUrgency, filterCategory, filterBuilding, filterRequestType]);
 
-  const activeFilterCount = [filterUrgency, filterCategory, filterBuilding].filter(Boolean).length;
+  const activeFilterCount = [filterUrgency, filterCategory, filterBuilding, filterRequestType].filter(Boolean).length;
   const hasActiveFilters = activeFilterCount > 0 || search.trim().length > 0;
   const sortActive = !!(sortKey && sortKey !== "date");
 
@@ -1262,6 +1278,7 @@ export default function ManagerRequestsPage() {
     setFilterUrgency("");
     setFilterCategory("");
     setFilterBuilding("");
+    setFilterRequestType("");
   }
 
   // Local sort (replaces URL-synced sort for simplicity, matching owner/approvals)
@@ -1291,7 +1308,7 @@ export default function ManagerRequestsPage() {
   );
 
   // Reset to page 1 whenever search/filters change
-  useEffect(() => { pager.setPage(0); }, [search, filterUrgency, filterCategory, filterBuilding]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { pager.setPage(0); }, [search, filterUrgency, filterCategory, filterBuilding, filterRequestType]); // eslint-disable-line react-hooks/exhaustive-deps
 
 
 
@@ -1451,6 +1468,12 @@ export default function ManagerRequestsPage() {
                     <option value="NORMAL">{t("manager:requests.text.normal")}</option>
                     <option value="LOW">{t("manager:requests.text.low")}</option>
                   </SelectField>
+                  <SelectField label={t("manager:requests.prop.requestType")} value={filterRequestType} onChange={(e) => setFilterRequestType(e.target.value)}>
+                    <option value="">{t("manager:requests.text.allTypes")}</option>
+                    <option value="MAINTENANCE">{t("manager:requests.text.typeMaintenance")}</option>
+                    <option value="COMPLAINT">{t("manager:requests.text.typeComplaint")}</option>
+                    <option value="ADMINISTRATIVE">{t("manager:requests.text.typeAdministrative")}</option>
+                  </SelectField>
                 </div>
               </FilterSection>
 
@@ -1562,9 +1585,14 @@ export default function ManagerRequestsPage() {
                             {r.description}
                           </p>
                         )}
-                        {/* Footer — status badge + category text + optional tenant flag */}
+                        {/* Footer — status badge + type badge + category text + optional tenant flag */}
                         <div className="flex items-center gap-2 flex-wrap mt-2 pt-2 border-t border-surface-divider">
                           <StatusBadge request={r} />
+                          {(r.requestType && r.requestType !== "MAINTENANCE") && (
+                            <span className={r.requestType === "COMPLAINT" ? "inline-flex items-center rounded px-1.5 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide bg-orange-100 text-orange-700" : "inline-flex items-center rounded px-1.5 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide bg-blue-100 text-blue-700"}>
+                              {r.requestType === "COMPLAINT" ? t("manager:requests.text.typeComplaint") : t("manager:requests.text.typeAdministrative")}
+                            </span>
+                          )}
                           {r.category && (
                             <span className="text-xs text-muted">{r.category}</span>
                           )}

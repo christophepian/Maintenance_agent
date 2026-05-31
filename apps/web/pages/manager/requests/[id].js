@@ -531,6 +531,14 @@ export default function RequestDetailPage() {
   const [selectedAssetId, setSelectedAssetId]     = useState("");
   const [linkingAsset, setLinkingAsset]           = useState(false);
 
+  // Complaint-specific state
+  const [resolutionNote, setResolutionNote]         = useState("");
+  const [savingNote, setSavingNote]                 = useState(false);
+  const [warningLetter, setWarningLetter]           = useState(null); // { infringingRules, letterText }
+  const [letterText, setLetterText]                 = useState("");
+  const [generatingLetter, setGeneratingLetter]     = useState(false);
+  const [letterError, setLetterError]               = useState("");
+
   /* ─── Data loading ─── */
 
   const loadRequest = useCallback(async () => {
@@ -547,6 +555,11 @@ export default function RequestDetailPage() {
   }, [id]);
 
   useEffect(() => { loadRequest(); }, [loadRequest]);
+
+  // Sync resolution note from loaded request
+  useEffect(() => {
+    if (request?.resolutionNote != null) setResolutionNote(request.resolutionNote);
+  }, [request?.resolutionNote]);
 
   // Legal decision
   useEffect(() => {
@@ -705,6 +718,47 @@ export default function RequestDetailPage() {
     finally { setActionLoading(false); }
   }
 
+  async function doSaveResolutionNote(markResolved) {
+    setSavingNote(true);
+    try {
+      const res = await fetch(`/api/requests/${id}/resolution`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ resolutionNote, markResolved: !!markResolved }),
+      });
+      if (!res.ok) { const d = await res.json(); throw new Error(d?.error?.message || "Failed to save"); }
+      await loadRequest();
+    } catch (e) { setError(String(e?.message || e)); }
+    finally { setSavingNote(false); }
+  }
+
+  async function doGenerateWarningLetter() {
+    setGeneratingLetter(true);
+    setLetterError("");
+    try {
+      const res = await fetch(`/api/requests/${id}/warning-letter`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({}),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body?.error?.message || "Failed to generate letter");
+      setWarningLetter(body.data);
+      setLetterText(body.data?.letterText || "");
+    } catch (e) { setLetterError(String(e?.message || e)); }
+    finally { setGeneratingLetter(false); }
+  }
+
+  function doDownloadLetter() {
+    const blob = new Blob([letterText], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `warning-letter-${id?.slice(0, 8) || "request"}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   /* ─── Derived ─── */
 
   const r         = request;
@@ -741,6 +795,8 @@ export default function RequestDetailPage() {
   const nextStep  = r ? getNextStep(r, legalState.data) : null;
   const ctaList   = r ? getAvailableCTAs(r, assigningOpen ? id : null) : [];
   const isTenantFunded = r?.payingParty === "TENANT";
+  const isMaintenance = !r?.requestType || r.requestType === "MAINTENANCE";
+  const isComplaint = r?.requestType === "COMPLAINT";
 
   /* ─── JSX ─── */
 
@@ -762,6 +818,16 @@ export default function RequestDetailPage() {
             {!loading && r && (
               <>
                 <UrgencyPill urgency={r.urgency} onChangeUrgency={setUrgency} />
+                {isComplaint && (
+                  <span className="inline-flex items-center rounded px-2 py-0.5 text-xs font-semibold uppercase tracking-wide bg-orange-100 text-orange-700">
+                    {t("manager:requests.text.typeComplaint")}
+                  </span>
+                )}
+                {r.requestType === "ADMINISTRATIVE" && (
+                  <span className="inline-flex items-center rounded px-2 py-0.5 text-xs font-semibold uppercase tracking-wide bg-blue-100 text-blue-700">
+                    {t("manager:requests.text.typeAdministrative")}
+                  </span>
+                )}
                 {isTenantFunded && (
                   <Badge variant="warning" size="sm">
                     {t("manager:requestsId.text.tenantFundedBadge")}
@@ -786,8 +852,8 @@ export default function RequestDetailPage() {
           ) : (
             <div className="space-y-6">
 
-              {/* ═══ 1 · Timeline + CTAs ═══ */}
-              <Panel>
+              {/* ═══ 1 · Timeline + CTAs (MAINTENANCE only) ═══ */}
+              {isMaintenance && <Panel>
                 <div className="flex flex-wrap items-center gap-2 mb-4">
                   {!(isTenantFunded && r.status === "REJECTED") && (
                     <StatusBadge request={r} />
@@ -857,10 +923,10 @@ export default function RequestDetailPage() {
                     )}
                   </div>
                 )}
-              </Panel>
+              </Panel>}
 
-              {/* ═══ 1b · Fast-track replacement banner ═══ */}
-              {(() => {
+              {/* ═══ 1b · Fast-track replacement banner (MAINTENANCE only) ═══ */}
+              {isMaintenance && (() => {
                 if (!repairReplace?.data || !r.assetId) return null;
                 const assetRec = repairReplace.data.find((a) => (a.assetId || a.applianceId) === r.assetId);
                 if (!assetRec) return null;
@@ -890,8 +956,8 @@ export default function RequestDetailPage() {
                 );
               })()}
 
-              {/* ═══ 1c · Triage suggestions ═══ */}
-              {r.triageCompletedAt && r.triageContractorIds?.length > 0 && (
+              {/* ═══ 1c · Triage suggestions (MAINTENANCE only) ═══ */}
+              {isMaintenance && r.triageCompletedAt && r.triageContractorIds?.length > 0 && (
                 <Panel>
                   <div className="flex items-center gap-2 mb-3">
                     <svg className="h-4 w-4 text-blue-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -933,20 +999,26 @@ export default function RequestDetailPage() {
               )}
 
               {/* ═══ 2 · Tab bar ═══ */}
-              <ScrollableTabs activeIndex={activeTab === "details" ? 0 : 1}>
-                {[
-                  { key: "details",  label: t("manager:requestsId.tabs.details") },
-                  { key: "advisory", label: t("manager:requestsId.tabs.advisory") },
-                ].map((tab) => (
-                  <button
-                    key={tab.key}
-                    onClick={() => setActiveTab(tab.key)}
-                    className={activeTab === tab.key ? "tab-btn-active" : "tab-btn"}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
-              </ScrollableTabs>
+              {(() => {
+                const tabs = [
+                  { key: "details", label: t("manager:requestsId.tabs.details") },
+                  ...(isMaintenance ? [{ key: "advisory", label: t("manager:requestsId.tabs.advisory") }] : []),
+                ];
+                const activeIndex = tabs.findIndex((tab) => tab.key === activeTab);
+                return (
+                  <ScrollableTabs activeIndex={activeIndex < 0 ? 0 : activeIndex}>
+                    {tabs.map((tab) => (
+                      <button
+                        key={tab.key}
+                        onClick={() => setActiveTab(tab.key)}
+                        className={activeTab === tab.key ? "tab-btn-active" : "tab-btn"}
+                      >
+                        {tab.label}
+                      </button>
+                    ))}
+                  </ScrollableTabs>
+                );
+              })()}
 
               {/* ═══ 3 · Tab content ═══ */}
 
@@ -1244,6 +1316,117 @@ export default function RequestDetailPage() {
                     <OwnerAdjustedDecision state={ownerDecision} />
                   </Panel>
                 </div>
+              )}
+
+              {/* ═══ Complaint-specific panels ═══ */}
+              {isComplaint && activeTab === "details" && (
+                <>
+                  {/* ── House Rules Infringement + Warning Letter ── */}
+                  <Panel title={t("manager:requestsId.title.warningLetter")}>
+                    {!warningLetter && (
+                      <div className="space-y-3">
+                        <p className="text-sm text-muted m-0">
+                          {t("manager:requestsId.text.warningLetterDescription")}
+                        </p>
+                        {letterError && (
+                          <p className="text-sm text-red-600 m-0">{letterError}</p>
+                        )}
+                        <button
+                          type="button"
+                          className="button-primary disabled:opacity-50"
+                          onClick={doGenerateWarningLetter}
+                          disabled={generatingLetter}
+                        >
+                          {generatingLetter ? t("manager:requestsId.btn.generating") : t("manager:requestsId.btn.generateLetter")}
+                        </button>
+                      </div>
+                    )}
+                    {warningLetter && (
+                      <div className="space-y-4">
+                        {warningLetter.infringingRules?.length > 0 && (
+                          <div>
+                            <h4 className="text-xs font-semibold uppercase tracking-wider text-muted mb-2 m-0">
+                              {t("manager:requestsId.title.infringingRules")}
+                            </h4>
+                            <ul className="space-y-1">
+                              {warningLetter.infringingRules.map((rule, i) => (
+                                <li key={i} className="flex items-start gap-2 text-sm text-foreground">
+                                  <span className="mt-1 h-1.5 w-1.5 rounded-full bg-orange-500 shrink-0" />
+                                  {rule}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                        <div>
+                          <h4 className="text-xs font-semibold uppercase tracking-wider text-muted mb-2 m-0">
+                            {t("manager:requestsId.title.letterText")}
+                          </h4>
+                          <textarea
+                            value={letterText}
+                            onChange={(e) => setLetterText(e.target.value)}
+                            rows={12}
+                            className="w-full rounded-lg border border-muted-ring px-3 py-2 text-sm font-mono leading-relaxed focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-y"
+                          />
+                        </div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <button
+                            type="button"
+                            className="button-primary"
+                            onClick={doDownloadLetter}
+                          >
+                            {t("manager:requestsId.btn.downloadLetter")}
+                          </button>
+                          <button
+                            type="button"
+                            className="button-secondary"
+                            onClick={() => { setWarningLetter(null); setLetterText(""); setLetterError(""); }}
+                          >
+                            {t("manager:requestsId.btn.regenerate")}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </Panel>
+
+                  {/* ── Resolution Note ── */}
+                  <Panel title={t("manager:requestsId.title.resolution")}>
+                    <div className="space-y-3">
+                      {r.status === "COMPLETED" && (
+                        <div className="rounded-lg bg-green-50 border border-green-200 px-3 py-2 text-sm text-green-700 font-medium">
+                          {t("manager:requestsId.text.markedResolved")}
+                        </div>
+                      )}
+                      <textarea
+                        value={resolutionNote}
+                        onChange={(e) => setResolutionNote(e.target.value)}
+                        rows={4}
+                        placeholder={t("manager:requestsId.text.resolutionNotePlaceholder")}
+                        className="w-full rounded-lg border border-muted-ring px-3 py-2 text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-y"
+                      />
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <button
+                          type="button"
+                          className="button-secondary disabled:opacity-50"
+                          onClick={() => doSaveResolutionNote(false)}
+                          disabled={savingNote}
+                        >
+                          {savingNote ? "\u2026" : t("manager:requestsId.btn.saveNote")}
+                        </button>
+                        {r.status !== "COMPLETED" && (
+                          <button
+                            type="button"
+                            className="button-primary disabled:opacity-50"
+                            onClick={() => doSaveResolutionNote(true)}
+                            disabled={savingNote}
+                          >
+                            {savingNote ? "\u2026" : t("manager:requestsId.btn.markResolved")}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </Panel>
+                </>
               )}
             </div>
           )}

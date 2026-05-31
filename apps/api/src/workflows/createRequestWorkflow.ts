@@ -16,7 +16,7 @@
  * not at request creation.
  */
 
-import { RequestStatus, ApprovalSource, LegalObligation, PrismaClient } from "@prisma/client";
+import { RequestStatus, RequestType, ApprovalSource, LegalObligation, PrismaClient } from "@prisma/client";
 import { WorkflowContext } from "./context";
 import { assertRequestTransition } from "./transitions";
 import { emit } from "../events/bus";
@@ -41,6 +41,8 @@ export interface CreateRequestWorkflowInput {
   tenantId?: string | null;
   unitId?: string | null;
   assetId?: string | null;
+  /** MAINTENANCE (default), COMPLAINT, or ADMINISTRATIVE */
+  requestType?: RequestType;
 }
 
 export interface CreateRequestWorkflowResult {
@@ -63,6 +65,8 @@ export async function createRequestWorkflow(
   const hasEstimatedCost = typeof input.estimatedCost === "number";
   const estimatedCost = hasEstimatedCost ? input.estimatedCost! : null;
   const urgency = input.urgency ?? null;
+  const requestType = wfInput.requestType ?? RequestType.MAINTENANCE;
+  const isMaintenance = requestType === RequestType.MAINTENANCE;
 
   // ── 1. Resolve contact phone / tenant ──────────────────────
   let contactPhone: string | null = null;
@@ -104,17 +108,16 @@ export async function createRequestWorkflow(
     estimatedCost,
     urgency,
     status,
+    requestType,
     contactPhone,
     tenantId,
     unitId,
     assetId,
   });
 
-  // ── 4b. Asset auto-link (AI-powered) ────────────────────────
-  // If no assetId was explicitly provided, ask Claude to identify the most
-  // likely affected asset from the unit's asset list.
-  // Falls back to keyword scoring if the AI call fails or is unavailable.
-  if (!assetId && unitId) {
+  // ── 4b. Asset auto-link (MAINTENANCE only) ──────────────────
+  // Skip for COMPLAINT/ADMINISTRATIVE — no physical asset involved.
+  if (isMaintenance && !assetId && unitId) {
     try {
       const unitAssets = await findAssetsByUnit(prisma, orgId, unitId);
       if (unitAssets.length > 0) {
@@ -186,14 +189,13 @@ export async function createRequestWorkflow(
     type: "REQUEST_CREATED",
     orgId,
     actorUserId: ctx.actorUserId,
-    payload: { requestId: created.id, category: created.category, description: created.description },
+    payload: { requestId: created.id, category: created.category, description: created.description, requestType: created.requestType },
   }).catch((err) => console.error("[EVENT] Failed to emit REQUEST_CREATED", err));
 
-  // ── 6. Legal auto-routing (OBLIGATED → RFP_PENDING) ────────
-  // Only 100% certain legal obligations go directly to RFP.
-  // Everything else stays at PENDING_REVIEW for manager triage.
+  // ── 6. Legal auto-routing (MAINTENANCE only, OBLIGATED → RFP_PENDING) ───
+  // COMPLAINT and ADMINISTRATIVE requests never auto-route to RFP.
   let legalAutoRouted = false;
-  if (category) {
+  if (isMaintenance && category) {
     try {
       const orgConfig = await getOrgConfig(prisma, orgId);
 

@@ -1909,6 +1909,10 @@
       "low": "Low",
       "allBuildings": "All buildings",
       "allCategories": "All categories",
+      "allTypes": "All types",
+      "typeMaintenance": "Maintenance",
+      "typeComplaint": "Complaint",
+      "typeAdministrative": "Administrative",
       "resetFilters": "Reset filters",
       "noRequestsMatchThisFilter": "No requests match this filter.",
       "selectContractor": "Select contractor…"
@@ -1920,7 +1924,8 @@
       "category": "Category",
       "date": "Date",
       "request": "Request #",
-      "estCost": "Est. Cost"
+      "estCost": "Est. Cost",
+      "requestType": "Type"
     },
     "tabs": {
       "all": "Overview",
@@ -1934,6 +1939,7 @@
     },
     "col": {
       "status": "Status",
+      "requestType": "Type",
       "buildingUnit": "Building / Unit",
       "category": "Category",
       "description": "Description",
@@ -1959,7 +1965,11 @@
   "requestsId": {
     "title": {
       "legalAnalysis": "Legal Analysis",
-      "maintenanceDecision": "Maintenance Decision"
+      "maintenanceDecision": "Maintenance Decision",
+      "warningLetter": "Warning Letter Generator",
+      "infringingRules": "Potentially Infringed House Rules",
+      "letterText": "Letter",
+      "resolution": "Resolution"
     },
     "ariaLabel": {
       "selectAssetToLink": "Select asset to link"
@@ -2008,7 +2018,10 @@
       "suggested": "Suggested",
       "suggestedMatch": "Suggested match",
       "tenant": "Tenant",
-      "unit": "Unit"
+      "unit": "Unit",
+      "warningLetterDescription": "Generate a pre-populated warning letter based on the complaint and applicable house rules. You can edit the text before downloading.",
+      "resolutionNotePlaceholder": "Add a resolution note…",
+      "markedResolved": "This complaint has been marked as resolved."
     },
     "prop": {
       "created": "Created",
@@ -2063,7 +2076,13 @@
       "unlink": "Unlink",
       "linkAsset": "Link asset",
       "routing": "Routing…",
-      "routeToRfp": "Route to RFP →"
+      "routeToRfp": "Route to RFP →",
+      "generateLetter": "Generate Warning Letter",
+      "generating": "Generating…",
+      "downloadLetter": "Download (.txt)",
+      "regenerate": "Regenerate",
+      "saveNote": "Save note",
+      "markResolved": "Mark resolved"
     },
     "rec": {
       "repair": "Repair",

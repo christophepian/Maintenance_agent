@@ -19,6 +19,7 @@ import {
   addMessage,
 } from "../repositories/conversationRepository";
 import { buildSystemPrompt, LegalContext } from "./conversationPrompts";
+import { RequestType } from "@prisma/client";
 import {
   findTenantUnitId,
   findTenantUnitIds,
@@ -66,7 +67,7 @@ const CONVERSATION_TOOLS: Anthropic.Tool[] = [
   {
     name: "reportIssue",
     description:
-      "Create a new maintenance request when the tenant describes a problem that needs fixing. Use this when the tenant reports a broken, leaking, malfunctioning, or damaged item in their property.",
+      "Create a request that requires property manager follow-up. Use for: (1) physical maintenance issues (broken, leaking, malfunctioning items) → requestType MAINTENANCE; (2) neighbor complaints the tenant wants to formally lodge (noise, behavior, communal area conflicts) → requestType COMPLAINT; (3) administrative matters requiring manager action (authorization requests, lease termination notice, formal communications) → requestType ADMINISTRATIVE.",
     input_schema: {
       type: "object" as const,
       properties: {
@@ -75,16 +76,22 @@ const CONVERSATION_TOOLS: Anthropic.Tool[] = [
           description:
             "Clear description of the issue. Must be at least 10 characters and describe the problem specifically.",
         },
+        requestType: {
+          type: "string",
+          enum: ["MAINTENANCE", "COMPLAINT", "ADMINISTRATIVE"],
+          description:
+            "MAINTENANCE for physical repair/defect issues. COMPLAINT for neighbor behavior, noise, or communal area disputes the tenant wants to formally report. ADMINISTRATIVE for authorization requests, lease termination, or administrative matters.",
+        },
         category: {
           type: "string",
           description:
-            "Category of the issue, e.g. plumbing, heating, electrical, general",
+            "Category of the issue (for MAINTENANCE only), e.g. plumbing, heating, electrical, general",
         },
         urgency: {
           type: "string",
           enum: ["LOW", "MEDIUM", "HIGH"],
           description:
-            "Urgency level. HIGH for safety issues or no water/heat, MEDIUM for significant problems, LOW for minor inconveniences.",
+            "Urgency level. HIGH for safety issues or no water/heat, MEDIUM for significant problems, LOW for minor inconveniences or administrative matters.",
         },
         replyToTenant: {
           type: "string",
@@ -92,7 +99,7 @@ const CONVERSATION_TOOLS: Anthropic.Tool[] = [
             "The message to send back to the tenant confirming the request was created and describing next steps.",
         },
       },
-      required: ["description", "urgency", "replyToTenant"],
+      required: ["description", "requestType", "urgency", "replyToTenant"],
     },
   },
   {
@@ -292,6 +299,12 @@ async function executeReportIssue(
   try {
     const unitId = await findTenantUnitId(prisma, ctx.tenantId);
 
+    const rawType = toolInput.requestType as string | undefined;
+    const requestType =
+      rawType === "COMPLAINT" ? RequestType.COMPLAINT
+      : rawType === "ADMINISTRATIVE" ? RequestType.ADMINISTRATIVE
+      : RequestType.MAINTENANCE;
+
     const { dto } = await createRequestWorkflow(
       { orgId: ctx.orgId, prisma, actorUserId: null },
       {
@@ -302,6 +315,7 @@ async function executeReportIssue(
         },
         tenantId: ctx.tenantId,
         unitId: unitId ?? undefined,
+        requestType,
       }
     );
 

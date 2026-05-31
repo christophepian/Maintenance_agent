@@ -286,6 +286,8 @@ model Request {
   triageBudgetMin      Int?
   triageBudgetMax      Int?
   triageCompletedAt    DateTime?
+  requestType          RequestType     @default(MAINTENANCE)
+  resolutionNote       String?
   org                  Org            @relation(fields: [orgId], references: [id])
   job                  Job?
   asset                Asset?         @relation(fields: [assetId], references: [id], onDelete: SetNull)
@@ -895,6 +897,12 @@ enum RequestUrgency {
   MEDIUM
   HIGH
   EMERGENCY
+}
+
+enum RequestType {
+  MAINTENANCE
+  COMPLAINT
+  ADMINISTRATIVE
 }
 
 enum UnitType {

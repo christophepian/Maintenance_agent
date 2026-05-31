@@ -32,6 +32,7 @@ export interface RequestCreatedPayload {
   requestId: string;
   category?: string | null;
   description: string;
+  requestType?: string | null;
 }
 
 export interface RequestStatusChangedPayload {

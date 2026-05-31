@@ -1,4 +1,4 @@
-import { PrismaClient, Prisma, RequestStatus, JobStatus, ApprovalSource, PayingParty, RequestUrgency } from "@prisma/client";
+import { PrismaClient, Prisma, RequestStatus, JobStatus, ApprovalSource, PayingParty, RequestUrgency, RequestType } from "@prisma/client";
 import { REQUEST_FULL_INCLUDE, REQUEST_SUMMARY_INCLUDE } from "../repositories/requestRepository";
 import { requestTriageWorkflow } from "../workflows/requestTriageWorkflow";
 
@@ -98,6 +98,10 @@ export type MaintenanceRequestDTO = {
   triageBudgetMin?: number | null;
   triageBudgetMax?: number | null;
   triageCompletedAt?: string | null;
+
+  // Request classification + resolution
+  requestType?: RequestType;
+  resolutionNote?: string | null;
 };
 
   /**
@@ -287,6 +291,9 @@ export function toDTO(r: RequestWithFullInclude): MaintenanceRequestDTO {
     triageCompletedAt: (r as any).triageCompletedAt instanceof Date
       ? (r as any).triageCompletedAt.toISOString()
       : ((r as any).triageCompletedAt ?? null),
+
+    requestType: (r as any).requestType ?? RequestType.MAINTENANCE,
+    resolutionNote: (r as any).resolutionNote ?? null,
   };
 }
 
@@ -442,4 +449,103 @@ export async function updateMaintenanceRequestStatus(
   });
 
   return updated ? toDTO(updated) : null;
+}
+
+// ─── Resolution note ──────────────────────────────────────────────────────────
+
+export async function updateResolutionNote(
+  prisma: PrismaClient,
+  requestId: string,
+  resolutionNote: string | null,
+  markResolved: boolean,
+): Promise<MaintenanceRequestDTO | null> {
+  const data: Prisma.RequestUpdateInput = { resolutionNote };
+  if (markResolved) {
+    data.status = RequestStatus.COMPLETED;
+    data.completedAt = new Date();
+  }
+  const updated = await prisma.request.update({
+    where: { id: requestId },
+    data,
+    include: REQUEST_FULL_INCLUDE,
+  });
+  return updated ? toDTO(updated) : null;
+}
+
+// ─── Warning letter generation ────────────────────────────────────────────────
+
+export interface WarningLetterResult {
+  infringingRules: string[];
+  letterText: string;
+}
+
+/**
+ * Use Claude to analyse the complaint description against the building's house
+ * rules and produce:
+ *   1. A list of potentially infringed rules (extracted verbatim or summarised)
+ *   2. A pre-populated formal warning letter in the manager's preferred language
+ */
+export async function generateWarningLetter(
+  prisma: PrismaClient,
+  requestId: string,
+  lang: "fr" | "de" | "en" = "fr",
+): Promise<WarningLetterResult> {
+  // ── 1. Load request + building context ──────────────────────
+  const request = await prisma.request.findUnique({
+    where: { id: requestId },
+    include: {
+      tenant: { select: { name: true, phone: true, email: true } },
+      unit: {
+        select: {
+          unitNumber: true,
+          building: { select: { name: true, address: true, houseRulesText: true } },
+        },
+      },
+    },
+  });
+
+  if (!request) throw Object.assign(new Error("Request not found"), { code: "NOT_FOUND" });
+
+  const building = request.unit?.building;
+  const tenantName = request.tenant?.name ?? "Le/La locataire";
+  const unitNumber = request.unit?.unitNumber ?? "—";
+  const buildingName = building?.name ?? "l'immeuble";
+  const buildingAddress = building?.address ?? "";
+  const houseRules = building?.houseRulesText ?? null;
+  const today = new Date().toLocaleDateString("fr-CH", { day: "numeric", month: "long", year: "numeric" });
+
+  // ── 2. Call Claude ───────────────────────────────────────────
+  const { getAnthropicClient } = await import("./aiClient");
+  const client = getAnthropicClient();
+
+  const houseRulesSection = houseRules
+    ? `\n\nRÈGLEMENT DE LA MAISON (${buildingName}):\n${houseRules.slice(0, 4000)}`
+    : "\n\n(Aucun règlement de maison n'est défini pour cet immeuble.)";
+
+  const prompt = `You are a Swiss property management assistant. A tenant has filed the following complaint:\n\n"${request.description}"\n\nBuilding: ${buildingName}, ${buildingAddress}\nComplainant's unit: ${unitNumber}${houseRulesSection}\n\nTask:\n1. Identify which specific house rules (if any) are potentially infringed by the situation described. Return them as a JSON array of short strings (max 150 chars each), or an empty array if no rules apply.\n2. Draft a formal warning letter in ${lang === "fr" ? "French" : lang === "de" ? "German" : "English"} addressed to the neighbor causing the nuisance (recipient details left as placeholders [NOM DU LOCATAIRE CONCERNÉ] and [NUMÉRO D'APPARTEMENT CONCERNÉ]). The letter should:\n   - Be dated ${today}\n   - Come from the property management\n   - Reference the specific house rules violated (if any) or general community living obligations\n   - Request the tenant stop the problematic behaviour\n   - Warn of consequences under CO Art. 257f (notice of termination for persistent breach)\n   - Be professional, firm, and concise\n\nRespond with ONLY valid JSON in this exact format:\n{\n  "infringingRules": ["rule 1", "rule 2"],\n  "letterText": "full letter text here"\n}`;
+
+  const response = await client.messages.create({
+    model: "claude-haiku-4-5-20251001",
+    max_tokens: 1500,
+    messages: [{ role: "user", content: prompt }],
+  });
+
+  const raw = response.content.find((b) => b.type === "text")?.text ?? "";
+
+  // ── 3. Parse response ────────────────────────────────────────
+  try {
+    // Extract JSON block (Claude may wrap in ```json ... ```)
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error("No JSON found in Claude response");
+    const parsed = JSON.parse(jsonMatch[0]) as { infringingRules?: unknown; letterText?: unknown };
+    return {
+      infringingRules: Array.isArray(parsed.infringingRules)
+        ? (parsed.infringingRules as string[]).filter((s) => typeof s === "string")
+        : [],
+      letterText: typeof parsed.letterText === "string" ? parsed.letterText : raw,
+    };
+  } catch {
+    // Graceful fallback: return raw text as letter with no extracted rules
+    return { infringingRules: [], letterText: raw };
+  }
 }

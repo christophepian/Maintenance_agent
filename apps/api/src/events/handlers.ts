@@ -64,6 +64,10 @@ export function registerEventHandlers(prisma: PrismaClient): void {
      finished by the time the manager opens the request, getMaintenanceRequestById
      runs it synchronously on read (lazy-on-read fallback). */
   onDeferred("REQUEST_CREATED", async (event) => {
+    // Only triage MAINTENANCE requests — complaints and administrative items
+    // have no contractor or budget to suggest.
+    if (event.payload.requestType && event.payload.requestType !== "MAINTENANCE") return;
+
     try {
       await requestTriageWorkflow(prisma, {
         requestId: event.payload.requestId,

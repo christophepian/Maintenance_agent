@@ -10,7 +10,7 @@
  * G9: canonical include constants live here.
  */
 
-import { PrismaClient, Prisma, RequestStatus, RequestUrgency, ApprovalSource, PayingParty } from "@prisma/client";
+import { PrismaClient, Prisma, RequestStatus, RequestUrgency, RequestType, ApprovalSource, PayingParty } from "@prisma/client";
 
 // ─── Canonical Includes ────────────────────────────────────────
 
@@ -188,6 +188,7 @@ export interface CreateRequestData {
   estimatedCost: number | null;
   status: RequestStatus;
   urgency?: RequestUrgency | null;
+  requestType?: RequestType;
   contactPhone?: string | null;
   tenantId?: string | null;
   unitId?: string | null;
@@ -206,6 +207,7 @@ export async function createRequest(prisma: PrismaClient, data: CreateRequestDat
       estimatedCost: data.estimatedCost,
       status: data.status,
       urgency: data.urgency ?? undefined,
+      requestType: data.requestType ?? RequestType.MAINTENANCE,
       contactPhone: data.contactPhone ?? null,
       tenantId: data.tenantId ?? null,
       unitId: data.unitId ?? null,

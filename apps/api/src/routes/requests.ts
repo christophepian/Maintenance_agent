@@ -25,6 +25,8 @@ import {
   getMaintenanceRequestById,
   listOwnerPendingApprovals,
   updateMaintenanceRequestStatus,
+  updateResolutionNote,
+  generateWarningLetter,
 } from "../services/maintenanceRequests";
 import type { MaintenanceRequestDTO } from "../services/maintenanceRequests";
 import { updateContractorRequestStatus, getContractorAssignedRequests } from "../services/contractorRequests";
@@ -580,6 +582,44 @@ export function registerRequestRoutes(router: Router) {
       sendError(ctx.res, 500, "UNKNOWN_ERROR", "Unexpected error", String(e));
     }
   });
+
+  // PATCH /requests/:id/resolution — save manager resolution note, optionally mark COMPLETED
+  router.patch("/requests/:id/resolution", async ({ req, res, params, prisma, orgId }) => {
+    if (!maybeRequireManager(req, res)) return;
+    try {
+      const scopedReq = await resolveAndScopeRequest(prisma, params.id, orgId);
+      if (!scopedReq) return sendError(res, 404, "NOT_FOUND", "Request not found");
+
+      const body = await readJson(req).catch(() => ({})) as any;
+      const resolutionNote = typeof body.resolutionNote === "string" ? body.resolutionNote : null;
+      const markResolved = body.markResolved === true;
+
+      const dto = await updateResolutionNote(prisma, scopedReq.id, resolutionNote, markResolved);
+      sendJson(res, 200, { data: dto });
+    } catch (e: any) {
+      console.error("[PATCH /requests/:id/resolution]", e);
+      sendError(res, 500, "INTERNAL_ERROR", "Failed to update resolution note");
+    }
+  });
+
+  // POST /requests/:id/warning-letter — generate AI-assisted warning letter for COMPLAINT requests
+  router.post("/requests/:id/warning-letter", async ({ req, res, params, prisma, orgId }) => {
+    if (!maybeRequireManager(req, res)) return;
+    try {
+      const scopedReq = await resolveAndScopeRequest(prisma, params.id, orgId);
+      if (!scopedReq) return sendError(res, 404, "NOT_FOUND", "Request not found");
+
+      const body = await readJson(req).catch(() => ({})) as any;
+      const lang: "fr" | "de" | "en" = ["fr", "de", "en"].includes(body.lang) ? body.lang : "fr";
+
+      const result = await generateWarningLetter(prisma, scopedReq.id, lang);
+      sendJson(res, 200, { data: result });
+    } catch (e: any) {
+      console.error("[POST /requests/:id/warning-letter]", e);
+      if ((e as any).code === "NOT_FOUND") return sendError(res, 404, "NOT_FOUND", "Request not found");
+      sendError(res, 500, "INTERNAL_ERROR", "Failed to generate warning letter");
+    }
+  });
 }
 
 /* ── Thin create handler: parse → validate → workflow → respond ── */
@@ -595,6 +635,14 @@ async function handleCreateRequest(ctx: HandlerContext, asWorkRequest: boolean) 
   const parsed = CreateRequestSchema.safeParse(raw);
   if (!parsed.success) return sendError(res, 400, "VALIDATION_ERROR", "Invalid request body", parsed.error.flatten());
 
+  // Parse requestType (optional, defaults to MAINTENANCE in workflow)
+  const { RequestType } = await import("@prisma/client");
+  const rawType = (raw as any).requestType as string | undefined;
+  const requestType =
+    rawType === "COMPLAINT" ? RequestType.COMPLAINT
+    : rawType === "ADMINISTRATIVE" ? RequestType.ADMINISTRATIVE
+    : RequestType.MAINTENANCE;
+
   // Delegate to workflow
   const result = await createRequestWorkflow(wfCtx(ctx), {
     input: parsed.data,
@@ -602,6 +650,7 @@ async function handleCreateRequest(ctx: HandlerContext, asWorkRequest: boolean) 
     tenantId: (raw as any).tenantId ?? null,
     unitId: (raw as any).unitId ?? null,
     assetId: (raw as any).assetId ?? null,
+    requestType,
   });
 
   // Map response format
