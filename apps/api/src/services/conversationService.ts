@@ -18,15 +18,20 @@ import {
   getRecentMessages,
   addMessage,
 } from "../repositories/conversationRepository";
-import { buildSystemPrompt } from "./conversationPrompts";
+import { buildSystemPrompt, LegalContext } from "./conversationPrompts";
 import {
   findTenantUnitId,
   findTenantUnitIds,
+  findTenantBuilding,
   findLeasesByUnitIds,
   findJobInvoicesByTenant,
   findInvoicesByLeaseIds,
   findTenantRequests,
 } from "../repositories/tenantPortalRepository";
+import {
+  findForBuilding,
+  findCurrentVariableValues,
+} from "../repositories/legalSourceRepository";
 import { createRequestWorkflow } from "../workflows/createRequestWorkflow";
 
 import type { ConversationChannel } from "../repositories/conversationRepository";
@@ -152,6 +157,46 @@ const CONVERSATION_TOOLS: Anthropic.Tool[] = [
   },
 ];
 
+// ─── Legal context builder ─────────────────────────────────────────────────────
+
+/**
+ * Fetch the legal context for a tenant's building to inject into the system prompt.
+ * Returns FEDERAL + canton-scoped legal sources, current reference rate / CPI values,
+ * and the building's house rules. Failures are non-fatal — returns undefined.
+ */
+async function buildLegalContext(
+  prisma: PrismaClient,
+  tenantId: string,
+): Promise<LegalContext | undefined> {
+  try {
+    const building = await findTenantBuilding(prisma, tenantId);
+    if (!building) return undefined;
+
+    const [sources, variables] = await Promise.all([
+      findForBuilding(prisma, building.id),
+      findCurrentVariableValues(prisma, ["REFERENCE_INTEREST_RATE", "CPI"]),
+    ]);
+
+    return {
+      buildingName: building.name,
+      canton: building.canton,
+      houseRulesText: building.houseRulesText,
+      sources: sources.map((s) => ({
+        name: s.name,
+        url: s.url,
+        scope: s.scope,
+        fetcherType: s.fetcherType,
+        lastSuccessAt: s.lastSuccessAt,
+      })),
+      variables,
+    };
+  } catch (err) {
+    // Non-fatal — AI still works without legal context
+    console.warn("[conversationService] buildLegalContext failed (non-fatal):", err);
+    return undefined;
+  }
+}
+
 // ─── Service ───────────────────────────────────────────────────────────────────
 
 /**
@@ -180,14 +225,15 @@ export async function handleTurn(
   );
   claudeMessages.push({ role: "user", content: messageText });
 
-  // 4. Call Claude API with tool use
+  // 4. Build legal context and call Claude API with tool use
   // tool_choice "any" forces Claude to always select one of the defined tools,
   // preventing plain-text refusals. generalAnswer handles open-ended replies.
+  const legalCtx = await buildLegalContext(prisma, tenantId);
   const client = getAnthropicClient();
   const response = await client.messages.create({
     model: "claude-haiku-4-5-20251001",
     max_tokens: 1024,
-    system: buildSystemPrompt(orgId, tenantId),
+    system: buildSystemPrompt(orgId, tenantId, legalCtx),
     tools: CONVERSATION_TOOLS,
     tool_choice: { type: "any" },
     messages: claudeMessages,

@@ -99,6 +99,8 @@ export default function BuildingDetail() {
   const [houseRulesEditing, setHouseRulesEditing] = useState(false);
   const [houseRulesSaving, setHouseRulesSaving] = useState(false);
   const [houseRulesPreviewUrl, setHouseRulesPreviewUrl] = useState(null);
+  const [legalSources, setLegalSources] = useState([]);
+  const [legalSourcesLoading, setLegalSourcesLoading] = useState(false);
 
   // ─── Sort state for Tenants + Requests tabs (must be here, before early returns) ───
   const { sortField: tenSF, sortDir: tenSD, handleSort: handleTenSort } = useLocalSort("name", "asc");
@@ -178,6 +180,7 @@ export default function BuildingDetail() {
       await loadBuildingConfig();
       await loadApprovalRules();
       await loadLeaseTemplates();
+      loadLegalSources();
       loadBuildingKpis();
       if (b.owners && b.owners.length > 0) {
         loadOwnerStrategyProfiles(b.owners.map((o) => o.id));
@@ -322,6 +325,20 @@ export default function BuildingDetail() {
     } catch (e) {
       console.error("Failed to load lease templates:", e);
       setLeaseTemplates([]);
+    }
+  }
+
+  async function loadLegalSources() {
+    if (!id || legalSources.length > 0) return;
+    setLegalSourcesLoading(true);
+    try {
+      const data = await fetchJSON(`/buildings/${id}/legal-sources`);
+      setLegalSources(Array.isArray(data) ? data : data?.data || []);
+    } catch (e) {
+      console.error("Failed to load legal sources:", e);
+      setLegalSources([]);
+    } finally {
+      setLegalSourcesLoading(false);
     }
   }
 
@@ -1524,6 +1541,57 @@ export default function BuildingDetail() {
                 <div className="rounded-lg border border-dashed border-muted-ring bg-surface-subtle p-6 text-center">
                   <p className="text-sm text-muted mb-1">No house rules defined yet.</p>
                   <p className="text-xs text-foreground-dim">House rules will be attached to lease PDFs and accessible to tenants via the chatbot.</p>
+                </div>
+              )}
+            </Panel>
+
+            {/* Legal Reference Documents */}
+            <Panel title="Legal Reference Documents">
+              <p className="text-xs text-muted mb-4">
+                Federal and canton-scoped legal sources applicable to this building. These documents are used by the tenant AI chatbot to answer questions about rights, obligations, and procedures.
+                {building?.canton ? ` Canton: ${building.canton}.` : ""}
+              </p>
+              {legalSourcesLoading ? (
+                <p className="text-sm text-muted">{t("common:loading")}</p>
+              ) : legalSources.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-muted-ring bg-surface-subtle p-4 text-center">
+                  <p className="text-sm text-muted">No legal sources configured.</p>
+                  <p className="text-xs text-foreground-dim mt-1">Add sources in Settings → Legal to make them available here.</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {legalSources.map((src) => (
+                    <div key={src.id} className="flex items-start justify-between gap-3 rounded-lg border border-surface-border bg-surface p-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-medium text-sm text-foreground">{src.name}</span>
+                          <span className={src.scope === "FEDERAL" ? "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-brand-light text-brand-dark" : "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-info-light text-info-dark"}>
+                            {src.scope === "FEDERAL" ? "Federal CH" : "Canton " + src.scope}
+                          </span>
+                          {src.fetcherType && (
+                            <span className="inline-flex items-center rounded-full bg-surface-subtle border border-surface-border px-2 py-0.5 text-xs text-muted font-mono">
+                              {src.fetcherType}
+                            </span>
+                          )}
+                        </div>
+                        {src.url && (
+                          <a
+                            href={src.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-1 block truncate text-xs text-blue-600 hover:underline"
+                          >
+                            {src.url}
+                          </a>
+                        )}
+                        {src.lastSuccessAt && (
+                          <p className="mt-1 text-xs text-foreground-dim">
+                            Last synced: {new Date(src.lastSuccessAt).toLocaleDateString()}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </Panel>

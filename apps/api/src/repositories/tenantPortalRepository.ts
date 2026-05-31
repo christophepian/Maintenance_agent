@@ -39,6 +39,26 @@ export async function findTenantRequests(prisma: PrismaClient, tenantId: string)
 }
 
 /**
+ * Resolve the building for a tenant's current occupancy.
+ * Returns building id, name, canton, and house rules for AI context enrichment.
+ */
+export async function findTenantBuilding(prisma: PrismaClient, tenantId: string) {
+  const occupancy = await prisma.occupancy.findFirst({
+    where: { tenantId },
+    include: {
+      unit: {
+        include: {
+          building: {
+            select: { id: true, name: true, canton: true, houseRulesText: true },
+          },
+        },
+      },
+    },
+  });
+  return occupancy?.unit?.building ?? null;
+}
+
+/**
  * Resolve the first unitId for a tenant via their occupancy records.
  */
 export async function findTenantUnitId(prisma: PrismaClient, tenantId: string) {

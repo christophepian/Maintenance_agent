@@ -38,6 +38,7 @@ import { LinkTenantSchema } from "../validation/occupancies";
 import { normalizePhoneToE164 } from "../utils/phoneNormalization";
 import { normalizeTopicKey } from "../utils/topicKey";
 import * as inventoryRepo from "../repositories/inventoryRepository";
+import * as legalSourceRepo from "../repositories/legalSourceRepository";
 import { findDepreciationTopicSuggestions, findAssetTopicSuggestions, findOrgOwnerByIdFull, updateOwnerUser, syncAllBuildingsForOwner } from "../repositories/inventoryRepository";
 import { findUnlinkedJobsByUnit } from "../repositories/jobRepository";
 import { mapBuildingToDetailDTO } from "../dto/buildingDetail";
@@ -344,6 +345,17 @@ export function registerInventoryRoutes(router: Router) {
       sendError(res, 500, "PDF_ERROR", "Failed to generate house rules PDF", String(e));
     }
   });
+
+  // GET /buildings/:id/legal-sources — legal sources applicable to a building (FEDERAL + canton)
+  router.get("/buildings/:id/legal-sources", withAuthRequired(async ({ res, params, prisma }) => {
+    try {
+      const sources = await legalSourceRepo.findForBuilding(prisma, params.id);
+      sendJson(res, 200, { data: sources });
+    } catch (e: any) {
+      console.error("[GET /buildings/:id/legal-sources]", e);
+      sendError(res, 500, "INTERNAL_ERROR", "Failed to fetch legal sources");
+    }
+  }));
 
   /* ── Building Owners ───────────────────────────────────────── */
 

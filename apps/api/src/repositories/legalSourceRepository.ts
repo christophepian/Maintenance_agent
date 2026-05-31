@@ -86,6 +86,34 @@ export async function findByScope(
 }
 
 /**
+ * Find legal sources applicable to a specific building.
+ * Returns FEDERAL sources + canton-specific sources matching the building's canton.
+ * Used by the Documents tab and AI system prompt enrichment.
+ */
+export async function findForBuilding(
+  prisma: PrismaClient,
+  buildingId: string,
+) {
+  const building = await prisma.building.findUnique({
+    where: { id: buildingId },
+    select: { canton: true },
+  });
+
+  const scopes: LegalSourceScope[] = [LegalSourceScope.FEDERAL];
+  if (building?.canton && building.canton in LegalSourceScope) {
+    scopes.push(building.canton as LegalSourceScope);
+  }
+
+  return prisma.legalSource.findMany({
+    where: {
+      status: { not: LegalSourceStatus.INACTIVE },
+      scope: { in: scopes },
+    },
+    orderBy: [{ scope: "asc" }, { name: "asc" }],
+  });
+}
+
+/**
  * Find a single legal source by ID.
  */
 export async function findById(
@@ -308,6 +336,31 @@ export async function findAllLegalVariables(prisma: PrismaClient) {
     include: LEGAL_VARIABLE_INCLUDE,
     orderBy: { key: "asc" },
   });
+}
+
+/**
+ * Fetch the latest active version value for a specific set of variable keys.
+ * Used to inject current rate/index values into the AI system prompt.
+ */
+export async function findCurrentVariableValues(
+  prisma: PrismaClient,
+  keys: string[],
+): Promise<Array<{ key: string; valueJson: unknown; effectiveFrom: Date | null }>> {
+  const variables = await prisma.legalVariable.findMany({
+    where: { key: { in: keys } },
+    include: {
+      versions: {
+        orderBy: { effectiveFrom: "desc" },
+        take: 1,
+      },
+    },
+  });
+
+  return variables.map((v) => ({
+    key: v.key,
+    valueJson: v.versions[0]?.valueJson ?? null,
+    effectiveFrom: v.versions[0]?.effectiveFrom ?? null,
+  }));
 }
 
 // ── Legal Rules list + create ─────────────────────────────────
