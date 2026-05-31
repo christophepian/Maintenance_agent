@@ -352,6 +352,18 @@ export async function updateRequestUrgency(
   });
 }
 
+export async function updateRequestType(
+  prisma: PrismaClient,
+  id: string,
+  requestType: RequestType
+) {
+  return prisma.request.update({
+    where: { id },
+    data: { requestType },
+    include: REQUEST_FULL_INCLUDE,
+  });
+}
+
 /**
  * Delete all requests — dev-only bulk wipe.
  */

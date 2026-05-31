@@ -539,6 +539,10 @@ export default function RequestDetailPage() {
   const [generatingLetter, setGeneratingLetter]     = useState(false);
   const [letterError, setLetterError]               = useState("");
 
+  // Reclassify state
+  const [reclassifyOpen, setReclassifyOpen]         = useState(false);
+  const reclassifyRef                               = useRef(null);
+
   /* ─── Data loading ─── */
 
   const loadRequest = useCallback(async () => {
@@ -560,6 +564,16 @@ export default function RequestDetailPage() {
   useEffect(() => {
     if (request?.resolutionNote != null) setResolutionNote(request.resolutionNote);
   }, [request?.resolutionNote]);
+
+  // Close reclassify dropdown on outside click
+  useEffect(() => {
+    if (!reclassifyOpen) return;
+    function handleClick(e) {
+      if (reclassifyRef.current && !reclassifyRef.current.contains(e.target)) setReclassifyOpen(false);
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [reclassifyOpen]);
 
   // Legal decision
   useEffect(() => {
@@ -718,6 +732,24 @@ export default function RequestDetailPage() {
     finally { setActionLoading(false); }
   }
 
+  async function doReclassify(newType) {
+    if (!newType || newType === r?.requestType) { setReclassifyOpen(false); return; }
+    setActionLoading(true);
+    try {
+      const res = await fetch(`/api/requests/${id}/type`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ requestType: newType }),
+      });
+      if (!res.ok) { const d = await res.json(); throw new Error(d?.error?.message || "Failed to reclassify"); }
+      setReclassifyOpen(false);
+      // Reset complaint-specific state when switching away from COMPLAINT
+      if (newType !== "COMPLAINT") { setWarningLetter(null); setLetterText(""); }
+      await loadRequest();
+    } catch (e) { setError(String(e?.message || e)); }
+    finally { setActionLoading(false); }
+  }
+
   async function doSaveResolutionNote(markResolved) {
     setSavingNote(true);
     try {
@@ -818,16 +850,54 @@ export default function RequestDetailPage() {
             {!loading && r && (
               <>
                 <UrgencyPill urgency={r.urgency} onChangeUrgency={setUrgency} />
-                {isComplaint && (
-                  <span className="inline-flex items-center rounded px-2 py-0.5 text-xs font-semibold uppercase tracking-wide bg-orange-100 text-orange-700">
-                    {t("manager:requests.text.typeComplaint")}
-                  </span>
-                )}
-                {r.requestType === "ADMINISTRATIVE" && (
-                  <span className="inline-flex items-center rounded px-2 py-0.5 text-xs font-semibold uppercase tracking-wide bg-blue-100 text-blue-700">
-                    {t("manager:requests.text.typeAdministrative")}
-                  </span>
-                )}
+                {/* Request type badge + reclassify dropdown */}
+                <div className="relative" ref={reclassifyRef}>
+                  <button
+                    type="button"
+                    onClick={() => setReclassifyOpen((v) => !v)}
+                    title="Change request type"
+                    className={[
+                      "inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-semibold uppercase tracking-wide transition",
+                      isComplaint
+                        ? "bg-orange-100 text-orange-700 hover:bg-orange-200"
+                        : r.requestType === "ADMINISTRATIVE"
+                          ? "bg-blue-100 text-blue-700 hover:bg-blue-200"
+                          : "bg-surface-hover text-muted hover:bg-surface-hover",
+                    ].join(" ")}
+                  >
+                    {isComplaint
+                      ? t("manager:requests.text.typeComplaint")
+                      : r.requestType === "ADMINISTRATIVE"
+                        ? t("manager:requests.text.typeAdministrative")
+                        : t("manager:requests.text.typeMaintenance")}
+                    <svg className="h-3 w-3 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  {reclassifyOpen && (
+                    <div className="absolute left-0 top-full mt-1 z-30 min-w-[160px] rounded-lg border border-surface-border bg-surface py-1 shadow-lg">
+                      {[
+                        { value: "MAINTENANCE",    label: t("manager:requests.text.typeMaintenance") },
+                        { value: "COMPLAINT",      label: t("manager:requests.text.typeComplaint") },
+                        { value: "ADMINISTRATIVE", label: t("manager:requests.text.typeAdministrative") },
+                      ].map((opt) => (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() => doReclassify(opt.value)}
+                          disabled={actionLoading}
+                          className={[
+                            "flex w-full items-center gap-2 px-3 py-1.5 text-xs font-medium hover:bg-surface-subtle transition",
+                            r.requestType === opt.value ? "bg-surface-subtle" : "",
+                          ].join(" ")}
+                        >
+                          {opt.label}
+                          {r.requestType === opt.value && <span className="ml-auto text-indigo-500">✓</span>}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 {isTenantFunded && (
                   <Badge variant="warning" size="sm">
                     {t("manager:requestsId.text.tenantFundedBadge")}

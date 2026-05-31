@@ -5,7 +5,7 @@
  * All orchestration logic lives in workflows/.
  */
 
-import { RequestStatus, RequestUrgency, ApprovalSource, LegalObligation } from "@prisma/client";
+import { RequestStatus, RequestUrgency, RequestType, ApprovalSource, LegalObligation } from "@prisma/client";
 import { Router, HandlerContext } from "../http/router";
 import { sendError, sendJson } from "../http/json";
 import { readJson } from "../http/body";
@@ -13,7 +13,7 @@ import { first, getIntParam, getEnumParam } from "../http/query";
 import { getAuthUser, maybeRequireManager, requireRole, requireAnyRole, requireAuth } from "../authz";
 import { withAuthRequired } from "../http/routeProtection";
 import { requireOwnerAccess, logEvent } from "./helpers";
-import { resolveAndScopeRequest, findRequestRaw, findRequestStatus, findRequestForMaintenanceDecision, updateRequestUrgency, deleteAllRequests, updateRequestAsset, updateRequestStatus } from "../repositories/requestRepository";
+import { resolveAndScopeRequest, findRequestRaw, findRequestStatus, findRequestForMaintenanceDecision, updateRequestUrgency, deleteAllRequests, updateRequestAsset, updateRequestStatus, updateRequestType } from "../repositories/requestRepository";
 import { findAssetById } from "../repositories/assetRepository";
 import { findContractorOrgId } from "../repositories/contractorRepository";
 import { findExistingRfpForRequest } from "../repositories/rfpRepository";
@@ -27,6 +27,7 @@ import {
   updateMaintenanceRequestStatus,
   updateResolutionNote,
   generateWarningLetter,
+  toDTO,
 } from "../services/maintenanceRequests";
 import type { MaintenanceRequestDTO } from "../services/maintenanceRequests";
 import { updateContractorRequestStatus, getContractorAssignedRequests } from "../services/contractorRequests";
@@ -599,6 +600,27 @@ export function registerRequestRoutes(router: Router) {
     } catch (e: any) {
       console.error("[PATCH /requests/:id/resolution]", e);
       sendError(res, 500, "INTERNAL_ERROR", "Failed to update resolution note");
+    }
+  });
+
+  // PATCH /requests/:id/type — reclassify request type (manager only)
+  router.patch("/requests/:id/type", async ({ req, res, params, prisma, orgId }) => {
+    if (!maybeRequireManager(req, res)) return;
+    try {
+      const scopedReq = await resolveAndScopeRequest(prisma, params.id, orgId);
+      if (!scopedReq) return sendError(res, 404, "NOT_FOUND", "Request not found");
+
+      const body = await readJson(req).catch(() => ({})) as any;
+      const validTypes = Object.values(RequestType);
+      if (!validTypes.includes(body.requestType)) {
+        return sendError(res, 400, "VALIDATION_ERROR", `requestType must be one of: ${validTypes.join(", ")}`);
+      }
+
+      const updated = await updateRequestType(prisma, scopedReq.id, body.requestType as RequestType);
+      sendJson(res, 200, { data: toDTO(updated) });
+    } catch (e: any) {
+      console.error("[PATCH /requests/:id/type]", e);
+      sendError(res, 500, "INTERNAL_ERROR", "Failed to update request type");
     }
   });
 
