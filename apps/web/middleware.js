@@ -26,6 +26,7 @@ const PUBLIC_PATHS = [
   "/api/",               // all API proxy routes — Render backend enforces its own auth
   "/_next",
   "/favicon",
+  "/website",             // static marketing assets (e.g. login hero image) under public/website
   "/capture",             // mobile invoice capture — token-gated, no Supabase session required
 ];
 

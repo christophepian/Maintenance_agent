@@ -135,7 +135,7 @@ function Notice({ type, msg }) {
 
 function AuthShell({ children, footer }) {
   return (
-    <div className="min-h-screen flex bg-white">
+    <div className="relative min-h-screen overflow-hidden">
       <Head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
@@ -144,81 +144,99 @@ function AuthShell({ children, footer }) {
           rel="stylesheet"
         />
       </Head>
-      {/* ── Left: immersive dark hero panel (lg+) ─────────────── */}
-      <aside className="hidden lg:flex lg:w-[46%] xl:w-1/2 relative overflow-hidden">
-        {/* Hero photo + dark gradient overlay (mirrors marketing hero) */}
+
+      {/* ── Background: full-bleed dark gradient (matches dark theme) ── */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            "linear-gradient(105deg, #1c2548 0%, #141d38 22%, #0d1226 50%, #05081a 100%)",
+        }}
+      />
+
+      {/* ── Left hero photo panel (lg+) ───────────────────────── */}
+      <div className="hidden lg:block absolute inset-y-0 left-0 w-1/2 overflow-hidden bg-[#05081a]">
+        {/* Hero photo — flipped + offset like the marketing hero */}
         <img
           src="/website/assets/hero-bg.png"
           alt=""
           aria-hidden="true"
           className="absolute inset-0 w-full h-full object-cover"
+          style={{ objectPosition: "65% center", transform: "scaleX(-1)" }}
         />
+        {/* Strong left→right dark gradient (matches website hero-photo-overlay)
+            so the white type sits on the darkest part and reads cleanly */}
         <div
           className="absolute inset-0"
           style={{
             background:
-              "linear-gradient(105deg, rgba(5,8,26,0.94) 0%, rgba(5,8,26,0.80) 45%, rgba(79,70,229,0.55) 100%)",
+              "linear-gradient(105deg, rgba(5,8,26,0.93) 0%, rgba(5,8,26,0.85) 30%, rgba(5,8,26,0.60) 55%, rgba(5,8,26,0.30) 100%)",
           }}
         />
+        {/* Faint grid overlay (matches website hero-grid) */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            backgroundImage:
+              "linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px)",
+            backgroundSize: "60px 60px",
+            maskImage:
+              "radial-gradient(ellipse 80% 80% at 30% 50%, black, transparent)",
+            WebkitMaskImage:
+              "radial-gradient(ellipse 80% 80% at 30% 50%, black, transparent)",
+          }}
+        />
+      </div>
 
-        {/* Panel content */}
-        <div className="relative z-10 flex flex-col justify-between p-12 xl:p-16 text-white w-full">
-          <div className="flex items-center gap-3">
-            <BrandMark size="lg" />
-            <span className="text-xl font-semibold tracking-tight">Sencilo</span>
-          </div>
+      {/* ── Brand mark — pinned top-left on desktop ───────────── */}
+      <div className="hidden lg:flex absolute z-20 top-12 left-12 xl:top-16 xl:left-16 items-center gap-3 text-white">
+        <BrandMark size="lg" />
+        <span className="text-xl font-semibold tracking-tight">Sencilo</span>
+      </div>
 
-          <div className="max-w-md">
-            <h2
-              className="text-4xl xl:text-5xl font-semibold leading-[1.1] tracking-tight"
-              style={{ fontFamily: '"DM Serif Display", Georgia, serif' }}
-            >
-              Swiss property,
-              <br />
-              made simple.
-            </h2>
-            <p className="mt-5 text-base text-indigo-100/80 leading-relaxed">
-              One platform for managers, owners, contractors and tenants —
-              maintenance, leases and finance in a single calm workflow.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-8 text-sm text-indigo-100/70">
-            <div>
-              <div className="text-2xl font-semibold text-white">CHF&nbsp;0</div>
-              <div>setup fees</div>
+      {/* ── Centered content row ──────────────────────────────── */}
+      <div className="relative z-10 min-h-screen flex items-center">
+        <div className="flex w-full">
+          {/* Left: headline — self-start aligns its top to the card top */}
+          <div className="hidden lg:flex lg:w-1/2 self-start px-12 xl:px-16">
+            <div className="max-w-md text-white">
+              <h2
+                className="text-4xl xl:text-5xl leading-[1.05] tracking-tight"
+                style={{ fontFamily: '"DM Serif Display", Georgia, serif' }}
+              >
+                Swiss property,
+                <br />
+                <em className="not-italic" style={{ fontStyle: "italic", color: "#818cf8" }}>
+                  made simple.
+                </em>
+              </h2>
             </div>
-            <div className="h-8 w-px bg-white/15" />
-            <div>
-              <div className="text-2xl font-semibold text-white">4</div>
-              <div>connected personas</div>
+          </div>
+
+          {/* Right: auth card */}
+          <div className="w-full lg:w-1/2 flex justify-center px-6 sm:px-8">
+            <div className="w-full max-w-sm">
+              {/* Mobile brand header (hero hidden below lg) */}
+              <div className="flex items-center gap-2.5 mb-8 lg:hidden">
+                <BrandMark />
+                <span className="text-lg font-semibold tracking-tight text-white">
+                  Sencilo
+                </span>
+              </div>
+
+              {/* Card */}
+              <div className="bg-white rounded-2xl border border-white/10 shadow-2xl shadow-black/40 px-8 py-8">
+                {children}
+              </div>
+
+              {/* Footer */}
+              {footer && (
+                <p className="text-center text-xs text-white/40 mt-6">{footer}</p>
+              )}
             </div>
           </div>
         </div>
-      </aside>
-
-      {/* ── Right: fixed-light auth card ──────────────────────── */}
-      <main className="flex-1 flex flex-col items-center justify-center p-6 sm:p-8 bg-slate-50">
-        <div className="w-full max-w-sm">
-          {/* Mobile brand header (hero hidden below lg) */}
-          <div className="flex items-center gap-2.5 mb-8 lg:hidden">
-            <BrandMark />
-            <span className="text-lg font-semibold tracking-tight text-slate-900">
-              Sencilo
-            </span>
-          </div>
-
-          {/* Card */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm shadow-slate-200/50 px-8 py-8">
-            {children}
-          </div>
-
-          {/* Footer */}
-          {footer && (
-            <p className="text-center text-xs text-slate-400 mt-6">{footer}</p>
-          )}
-        </div>
-      </main>
+      </div>
     </div>
   );
 }
