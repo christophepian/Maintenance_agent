@@ -1,11 +1,22 @@
 /**
- * Login page — redesigned (Clerk-style).
+ * Login page — split-screen redesign (Stripe-benchmarked, Sencilo brand).
+ *
+ * Layout:
+ *   Left  — immersive dark hero panel reusing the marketing hero photo
+ *           (/website/assets/hero-bg.png) with Sencilo branding + tagline.
+ *           Hidden below lg; on mobile a compact brand header shows instead.
+ *   Right — fixed light card with the auth form (Stripe-minimal).
+ *
+ * The right panel is intentionally always light (it sits on the dark hero
+ * and must stay legible regardless of the app's dark-mode toggle), so it
+ * uses explicit slate/white Tailwind palette utilities rather than the
+ * theme-aware semantic tokens used elsewhere in the app.
  *
  * Two auth methods in a tab strip:
  *   Magic link  — email OTP, no password needed (primary)
  *   Password    — email + password with inline "Forgot password?" recovery
  *
- * Flows:
+ * Flows (unchanged):
  *   magic link  → sendMagicLink() → "Check your inbox" confirmation screen
  *   password    → signInWithPassword() → redirectAfterLogin()
  *   forgot pwd  → sendPasswordReset() → "Reset link sent" confirmation screen
@@ -16,10 +27,18 @@
  */
 
 import { useState, useEffect } from "react";
+import Head from "next/head";
 import { useRouter } from "next/router";
 import { createClient } from "../lib/supabase/client";
 import { setAuthToken } from "../lib/api";
 import { withTranslations } from "../lib/i18n";
+import { cn } from "../lib/utils";
+
+/* Shared input + primary-button styling for the fixed-light card */
+const INPUT_CLASS =
+  "w-full px-3.5 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition";
+const PRIMARY_BTN_CLASS =
+  "w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-semibold text-white bg-gradient-to-br from-indigo-600 to-violet-600 shadow-sm shadow-indigo-600/25 hover:opacity-95 active:translate-y-px disabled:opacity-60 transition";
 
 const ROLE_HOME = {
   MANAGER: "/manager",
@@ -56,15 +75,31 @@ function MethodTab({ active, onClick, children }) {
     <button
       type="button"
       onClick={onClick}
-      className={[
+      className={cn(
         "flex-1 py-2 text-sm font-medium rounded-lg transition-all duration-150",
         active
-          ? "bg-surface text-foreground shadow-sm border border-surface-border"
-          : "text-muted hover:text-muted-dark",
-      ].join(" ")}
+          ? "bg-white text-slate-900 shadow-sm border border-slate-200"
+          : "text-slate-500 hover:text-slate-700",
+      )}
     >
       {children}
     </button>
+  );
+}
+
+/* Sencilo gradient logo mark — matches the marketing hero */
+function BrandMark({ size = "md" }) {
+  const dim = size === "lg" ? "w-10 h-10 text-base" : "w-9 h-9 text-sm";
+  return (
+    <div
+      className={cn(
+        "rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center font-extrabold tracking-tight text-white shadow-lg shadow-indigo-600/30",
+        dim,
+      )}
+      aria-hidden="true"
+    >
+      S
+    </div>
   );
 }
 
@@ -72,12 +107,13 @@ function Notice({ type, msg }) {
   const isErr = type === "err";
   return (
     <div
-      className={[
+      className={cn(
         "flex items-start gap-2.5 px-3.5 py-3 rounded-xl mb-5 text-sm border",
         isErr
-          ? "bg-destructive-light border-destructive-ring text-destructive-text"
-          : "bg-success-light border-success-ring text-success-dark",
-      ].join(" ")}
+          ? "bg-red-50 border-red-200 text-red-700"
+          : "bg-emerald-50 border-emerald-200 text-emerald-700",
+      )}
+      role="alert"
     >
       {isErr ? (
         <svg className="w-4 h-4 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -99,31 +135,90 @@ function Notice({ type, msg }) {
 
 function AuthShell({ children, footer }) {
   return (
-    <div className="min-h-screen bg-surface-subtle flex flex-col items-center justify-center p-4">
-      <div className="w-full max-w-sm">
-        {/* Logo */}
-        <div className="flex flex-col items-center mb-8">
-          <div className="w-11 h-11 bg-brand rounded-xl flex items-center justify-center shadow-md mb-4">
-            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75}
-                d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-            </svg>
+    <div className="min-h-screen flex bg-white">
+      <Head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&display=swap"
+          rel="stylesheet"
+        />
+      </Head>
+      {/* ── Left: immersive dark hero panel (lg+) ─────────────── */}
+      <aside className="hidden lg:flex lg:w-[46%] xl:w-1/2 relative overflow-hidden">
+        {/* Hero photo + dark gradient overlay (mirrors marketing hero) */}
+        <img
+          src="/website/assets/hero-bg.png"
+          alt=""
+          aria-hidden="true"
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "linear-gradient(105deg, rgba(5,8,26,0.94) 0%, rgba(5,8,26,0.80) 45%, rgba(79,70,229,0.55) 100%)",
+          }}
+        />
+
+        {/* Panel content */}
+        <div className="relative z-10 flex flex-col justify-between p-12 xl:p-16 text-white w-full">
+          <div className="flex items-center gap-3">
+            <BrandMark size="lg" />
+            <span className="text-xl font-semibold tracking-tight">Sencilo</span>
           </div>
-          <h1 className="text-2xl font-semibold text-foreground tracking-tight">
-            Maintenance Agent
-          </h1>
-        </div>
 
-        {/* Card */}
-        <div className="bg-surface rounded-2xl border border-surface-border shadow-sm px-8 py-7">
-          {children}
-        </div>
+          <div className="max-w-md">
+            <h2
+              className="text-4xl xl:text-5xl font-semibold leading-[1.1] tracking-tight"
+              style={{ fontFamily: '"DM Serif Display", Georgia, serif' }}
+            >
+              Swiss property,
+              <br />
+              made simple.
+            </h2>
+            <p className="mt-5 text-base text-indigo-100/80 leading-relaxed">
+              One platform for managers, owners, contractors and tenants —
+              maintenance, leases and finance in a single calm workflow.
+            </p>
+          </div>
 
-        {/* Footer */}
-        {footer && (
-          <p className="text-center text-xs text-foreground-dim mt-5">{footer}</p>
-        )}
-      </div>
+          <div className="flex items-center gap-8 text-sm text-indigo-100/70">
+            <div>
+              <div className="text-2xl font-semibold text-white">CHF&nbsp;0</div>
+              <div>setup fees</div>
+            </div>
+            <div className="h-8 w-px bg-white/15" />
+            <div>
+              <div className="text-2xl font-semibold text-white">4</div>
+              <div>connected personas</div>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      {/* ── Right: fixed-light auth card ──────────────────────── */}
+      <main className="flex-1 flex flex-col items-center justify-center p-6 sm:p-8 bg-slate-50">
+        <div className="w-full max-w-sm">
+          {/* Mobile brand header (hero hidden below lg) */}
+          <div className="flex items-center gap-2.5 mb-8 lg:hidden">
+            <BrandMark />
+            <span className="text-lg font-semibold tracking-tight text-slate-900">
+              Sencilo
+            </span>
+          </div>
+
+          {/* Card */}
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm shadow-slate-200/50 px-8 py-8">
+            {children}
+          </div>
+
+          {/* Footer */}
+          {footer && (
+            <p className="text-center text-xs text-slate-400 mt-6">{footer}</p>
+          )}
+        </div>
+      </main>
     </div>
   );
 }
@@ -134,23 +229,23 @@ function MagicLinkSentScreen({ email, onBack }) {
   return (
     <AuthShell>
       <div className="text-center py-2">
-        <div className="w-14 h-14 bg-brand-light rounded-full flex items-center justify-center mx-auto mb-5">
-          <svg className="w-7 h-7 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="w-14 h-14 bg-indigo-50 rounded-full flex items-center justify-center mx-auto mb-5">
+          <svg className="w-7 h-7 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
               d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
           </svg>
         </div>
-        <h2 className="text-xl font-semibold text-foreground mb-2">Check your inbox</h2>
-        <p className="text-sm text-muted leading-relaxed mb-6">
+        <h2 className="text-xl font-semibold text-slate-900 mb-2">Check your inbox</h2>
+        <p className="text-sm text-slate-500 leading-relaxed mb-6">
           We sent a sign-in link to{" "}
-          <span className="font-medium text-muted-dark">{email}</span>.
+          <span className="font-medium text-slate-700">{email}</span>.
           <br />
           The link expires in 1 hour.
         </p>
         <button
           type="button"
           onClick={onBack}
-          className="text-sm text-brand hover:text-brand-dark font-medium inline-flex items-center gap-1"
+          className="text-sm text-indigo-600 hover:text-indigo-700 font-medium inline-flex items-center gap-1"
         >
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -166,23 +261,23 @@ function ResetSentScreen({ email, onBack }) {
   return (
     <AuthShell>
       <div className="text-center py-2">
-        <div className="w-14 h-14 bg-success-light rounded-full flex items-center justify-center mx-auto mb-5">
-          <svg className="w-7 h-7 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="w-14 h-14 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-5">
+          <svg className="w-7 h-7 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
               d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         </div>
-        <h2 className="text-xl font-semibold text-foreground mb-2">Reset link sent</h2>
-        <p className="text-sm text-muted leading-relaxed mb-6">
+        <h2 className="text-xl font-semibold text-slate-900 mb-2">Reset link sent</h2>
+        <p className="text-sm text-slate-500 leading-relaxed mb-6">
           Check your inbox at{" "}
-          <span className="font-medium text-muted-dark">{email}</span>
+          <span className="font-medium text-slate-700">{email}</span>
           <br />
           for a password reset link.
         </p>
         <button
           type="button"
           onClick={onBack}
-          className="text-sm text-brand hover:text-brand-dark font-medium inline-flex items-center gap-1"
+          className="text-sm text-indigo-600 hover:text-indigo-700 font-medium inline-flex items-center gap-1"
         >
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -358,13 +453,13 @@ export default function LoginPage() {
   /* ── Main form ──────────────────────────────────────────────── */
   return (
     <AuthShell footer="Access is by invitation only. Contact your administrator.">
-      <h2 className="text-lg font-semibold text-foreground mb-1">Sign in</h2>
-      <p className="text-sm text-muted mb-6">to your account</p>
+      <h2 className="text-xl font-semibold text-slate-900 mb-1">Sign in</h2>
+      <p className="text-sm text-slate-500 mb-6">Welcome back to Sencilo</p>
 
       {notice && <Notice type={notice.type} msg={notice.msg} />}
 
       {/* Method tabs */}
-      <div className="flex gap-1 p-1 bg-surface-hover rounded-xl mb-6">
+      <div className="flex gap-1 p-1 bg-slate-100 rounded-xl mb-6">
         <MethodTab
           active={method === "magic"}
           onClick={() => { setMethod("magic"); setNotice(null); }}
@@ -383,12 +478,12 @@ export default function LoginPage() {
       {method === "magic" && (
         <form onSubmit={sendMagicLink}>
           <div className="mb-5">
-            <label className="block text-sm font-medium text-muted-dark mb-1.5">
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">
               Email address
             </label>
             <input
               type="email"
-              className="input mb-0"
+              className={INPUT_CLASS}
               value={email}
               onChange={e => setEmail(e.target.value)}
               placeholder="you@example.com"
@@ -399,12 +494,12 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="button-primary w-full flex items-center justify-center gap-2 text-sm"
+            className={PRIMARY_BTN_CLASS}
           >
             {loading && <Spinner />}
             {loading ? "Sending…" : "Send sign-in link"}
           </button>
-          <p className="text-xs text-center text-foreground-dim mt-4">
+          <p className="text-xs text-center text-slate-400 mt-4">
             A one-click link will be sent to your inbox.
           </p>
         </form>
@@ -414,12 +509,12 @@ export default function LoginPage() {
       {method === "password" && (
         <form onSubmit={signInWithPassword}>
           <div className="mb-4">
-            <label className="block text-sm font-medium text-muted-dark mb-1.5">
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">
               Email address
             </label>
             <input
               type="email"
-              className="input mb-0"
+              className={INPUT_CLASS}
               value={email}
               onChange={e => setEmail(e.target.value)}
               placeholder="you@example.com"
@@ -430,21 +525,21 @@ export default function LoginPage() {
 
           <div className="mb-5">
             <div className="flex items-center justify-between mb-1.5">
-              <label className="block text-sm font-medium text-muted-dark">
+              <label className="block text-sm font-medium text-slate-700">
                 Password
               </label>
               <button
                 type="button"
                 onClick={sendPasswordReset}
                 disabled={loading}
-                className="text-xs text-brand hover:text-brand-dark font-medium disabled:opacity-50"
+                className="text-xs text-indigo-600 hover:text-indigo-700 font-medium disabled:opacity-50"
               >
                 Forgot password?
               </button>
             </div>
             <input
               type="password"
-              className="input mb-0"
+              className={INPUT_CLASS}
               value={password}
               onChange={e => setPassword(e.target.value)}
               placeholder="••••••••"
@@ -455,7 +550,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="button-primary w-full flex items-center justify-center gap-2 text-sm"
+            className={PRIMARY_BTN_CLASS}
           >
             {loading && <Spinner />}
             {loading ? "Signing in…" : "Sign in"}
