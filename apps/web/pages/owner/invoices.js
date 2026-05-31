@@ -6,6 +6,7 @@ import PageShell from "../../components/layout/PageShell";
 import PageHeader from "../../components/layout/PageHeader";
 import PageContent from "../../components/layout/PageContent";
 import ConfigurableTable from "../../components/ConfigurableTable";
+import PaginationControls from "../../components/PaginationControls";
 import ErrorBanner from "../../components/ui/ErrorBanner";
 import { FilterToggle, FilterPanelBody, FilterSection, FilterSectionClear, SelectField, DateField } from "../../components/ui/FilterPanel";
 import { ownerAuthHeaders } from "../../lib/api";
@@ -414,6 +415,9 @@ export default function OwnerInvoices() {
   const { t } = useTranslation("owner");
   const router = useRouter();
   const [invoices, setInvoices] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [sumTotalAmount, setSumTotalAmount] = useState(0);
+  const [approvalCount, setApprovalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [direction, setDirection] = useState("incoming");
@@ -446,7 +450,19 @@ export default function OwnerInvoices() {
   const [filterOpen, setFilterOpen] = useState(false);
   const { sortField, sortDir, handleSort } = useTableSort(router, SORT_FIELDS);
 
-  useEffect(() => { fetchInvoices(); }, []);
+  // Server-side pagination
+  const PAGE_SIZE = 50;
+  const [offset, setOffset] = useState(0);
+  const currentPage = Math.floor(offset / PAGE_SIZE);
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  useEffect(() => { fetchInvoices(); }, [direction, activeTab, dateFrom, dateTo, sortField, sortDir, offset]);
+  useEffect(() => { loadApprovalCount(); }, []);
+
+  // Any filter / sort change returns to the first page.
+  useEffect(() => {
+    setOffset(0);
+  }, [direction, activeTab, dateFrom, dateTo, sortField, sortDir]);
 
   // Deep-link: open overlay when ?invoiceId= is present on load
   const deepLinked = useRef(false);
@@ -465,14 +481,42 @@ export default function OwnerInvoices() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch("/api/owner/invoices", { headers: ownerAuthHeaders() });
+      const params = new URLSearchParams({ view: "summary", includeSum: "true" });
+      params.set("limit", String(PAGE_SIZE));
+      params.set("offset", String(offset));
+      params.set("direction", direction === "outgoing" ? "OUTGOING" : "INCOMING");
+      if (activeTab !== "ALL") params.set("status", activeTab);
+      if (dateFrom) params.set("createdAfter", dateFrom);
+      if (dateTo) params.set("createdBefore", dateTo + "T23:59:59");
+      const serverSort =
+        sortField === "amount" ? "totalAmount"
+        : ["status", "invoiceNumber", "createdAt"].includes(sortField) ? sortField
+        : "createdAt";
+      params.set("sortField", serverSort);
+      params.set("sortDir", sortDir);
+
+      const res = await fetch(`/api/owner/invoices?${params.toString()}`, { headers: ownerAuthHeaders() });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "Failed to load invoices");
       setInvoices(data.data || []);
+      setTotal(typeof data.total === "number" ? data.total : (data.data?.length || 0));
+      setSumTotalAmount(typeof data.sumTotalAmount === "number" ? data.sumTotalAmount : 0);
     } catch (err) {
       setError(err.message);
     }
     setLoading(false);
+  };
+
+  // Approval-queue count — INCOMING invoices awaiting owner approval (ISSUED).
+  const loadApprovalCount = async () => {
+    try {
+      const res = await fetch(
+        "/api/owner/invoices?view=summary&direction=INCOMING&status=ISSUED&limit=1",
+        { headers: ownerAuthHeaders() }
+      );
+      const data = await res.json();
+      if (res.ok) setApprovalCount(typeof data.total === "number" ? data.total : 0);
+    } catch { /* non-fatal */ }
   };
 
   const actionRequest = async (invoiceId, action) => {
@@ -487,45 +531,14 @@ export default function OwnerInvoices() {
         throw new Error(body?.message || body?.error || `Failed to ${action} invoice`);
       }
       await fetchInvoices();
+      await loadApprovalCount();
     } catch (err) {
       setError(err.message);
     }
   };
 
-  /* Approval queue count — only INCOMING invoices awaiting owner approval */
-  const approvalCount = useMemo(
-    () => invoices.filter((inv) => {
-      if (inv.status !== "ISSUED") return false;
-      if (inv.direction) return inv.direction === "INCOMING";
-      return !inv.leaseId; // heuristic fallback
-    }).length,
-    [invoices],
-  );
-
-  /* Direction-filtered, then status-filtered, then date-filtered */
+  /* Direction drives the server-side `direction` filter. */
   const isOutgoing = direction === "outgoing";
-
-  const directionFiltered = useMemo(() => {
-    return invoices.filter((inv) => {
-      if (inv.direction) return isOutgoing ? inv.direction === "OUTGOING" : inv.direction === "INCOMING";
-      // Heuristic: invoices with leaseId are outgoing (management → tenant)
-      return isOutgoing ? !!inv.leaseId : !inv.leaseId;
-    });
-  }, [invoices, isOutgoing]);
-
-  const filteredInvoices = useMemo(() => {
-    return directionFiltered.filter((inv) => {
-      if (activeTab !== "ALL" && inv.status !== activeTab) return false;
-      if (dateFrom && inv.createdAt < dateFrom) return false;
-      if (dateTo && inv.createdAt > dateTo + "T23:59:59") return false;
-      return true;
-    });
-  }, [directionFiltered, activeTab, dateFrom, dateTo]);
-
-  const sortedInvoices = useMemo(
-    () => clientSort(filteredInvoices, sortField, sortDir, fieldExtractor),
-    [filteredInvoices, sortField, sortDir],
-  );
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const invoiceColumns = useMemo(() => [
@@ -665,7 +678,7 @@ export default function OwnerInvoices() {
             <ConfigurableTable
               tableId="owner-invoices"
               columns={invoiceColumns}
-              data={sortedInvoices}
+              data={invoices}
               rowKey="id"
               rowId={(inv) => `invoice-${inv.id}`}
               rowClassName={() => ""}
@@ -698,12 +711,21 @@ export default function OwnerInvoices() {
             />
           )}
 
+          {/* Pagination */}
+          <PaginationControls
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={total}
+            pageSize={PAGE_SIZE}
+            onPageChange={(p) => setOffset(p * PAGE_SIZE)}
+          />
+
           {/* Summary */}
-          {!loading && sortedInvoices.length > 0 && (
+          {!loading && total > 0 && (
             <div className="mt-3 flex items-center justify-between text-xs text-muted px-1">
-              <span>{sortedInvoices.length} invoice{sortedInvoices.length !== 1 ? "s" : ""}</span>
+              <span>{total} invoice{total !== 1 ? "s" : ""}</span>
               <span>
-                Total: {formatCurrency(sortedInvoices.reduce((sum, inv) => sum + getInvoiceTotal(inv), 0))}
+                Total: {formatCurrency(sumTotalAmount)}
               </span>
             </div>
           )}

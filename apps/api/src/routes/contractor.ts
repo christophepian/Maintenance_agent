@@ -151,6 +151,8 @@ export function registerContractorRoutes(router: Router) {
         status: status as any,
         view,
         contractorId,
+        limit,
+        offset,
       });
 
       sendJson(res, 200, { data: result.data, total: result.total });

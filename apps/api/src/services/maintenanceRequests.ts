@@ -1,5 +1,6 @@
 import { PrismaClient, Prisma, RequestStatus, JobStatus, ApprovalSource, PayingParty, RequestUrgency } from "@prisma/client";
 import { REQUEST_FULL_INCLUDE, REQUEST_SUMMARY_INCLUDE } from "../repositories/requestRepository";
+import { requestTriageWorkflow } from "../workflows/requestTriageWorkflow";
 
 /** Compile-time type for a Request row loaded with REQUEST_FULL_INCLUDE. */
 type RequestWithFullInclude = Prisma.RequestGetPayload<{ include: typeof REQUEST_FULL_INCLUDE }>;
@@ -369,6 +370,30 @@ export async function getMaintenanceRequestById(
   });
 
   if (!row) return null;
+
+  // Lazy-on-read triage (Slice 2, Option A):
+  // Triage normally runs as a deferred handler after REQUEST_CREATED. If it has
+  // not completed yet (just-created request, or the deferred handler failed),
+  // run it synchronously now so the manager always sees the triage hint on the
+  // first request-detail load. Idempotent: only fires while triageCompletedAt
+  // is null. Failures are swallowed — the page still renders without the hint.
+  if (!(row as any).triageCompletedAt) {
+    try {
+      await requestTriageWorkflow(prisma, {
+        requestId: row.id,
+        orgId: row.orgId,
+        category: row.category,
+      });
+      const refreshed = await prisma.request.findUnique({
+        where: { id },
+        include: requestInclude,
+      });
+      if (refreshed) return toDTO(refreshed);
+    } catch (err) {
+      console.error("[TRIAGE] lazy-on-read triage failed", err);
+    }
+  }
+
   return toDTO(row);
 }
 

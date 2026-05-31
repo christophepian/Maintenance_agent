@@ -1170,7 +1170,22 @@ function buildJobsApi(opts: ClientOptions) {
 
 function buildInvoicesApi(opts: ClientOptions) {
   return {
-    list: (params?: PaginationParams & { view?: "summary" | "full" }) =>
+    list: (params?: PaginationParams & {
+      view?: "summary" | "full";
+      search?: string;
+      sortField?: string;
+      sortDir?: "asc" | "desc";
+      status?: string;
+      direction?: "INCOMING" | "OUTGOING";
+      ingestionStatus?: string;
+      expenseCategory?: string;
+      categorized?: boolean;
+      buildingId?: string;
+      expenseTypeId?: string;
+      accountId?: string;
+      paidAfter?: string;
+      paidBefore?: string;
+    }) =>
       request<PaginatedList<InvoiceDTO | InvoiceSummaryDTO>>(opts, "GET", "/invoices", undefined, params as Record<string, string | number | boolean | undefined>),
 
     get: (id: string) =>
@@ -1201,8 +1216,20 @@ function buildInvoicesApi(opts: ClientOptions) {
     dispute: (id: string, body?: { reason?: string }) =>
       request<InvoiceDTO>(opts, "POST", `/invoices/${id}/dispute`, body ?? {}),
 
-    listOwnerInvoices: (params?: { limit?: number; offset?: number }) =>
-      request<{ data: InvoiceDTO[]; total: number }>(opts, "GET", "/owner/invoices", undefined, params as Record<string, string | number | boolean | undefined>),
+    listOwnerInvoices: (params?: {
+      limit?: number;
+      offset?: number;
+      view?: "summary" | "full";
+      status?: string;
+      direction?: "INCOMING" | "OUTGOING";
+      createdAfter?: string;
+      createdBefore?: string;
+      search?: string;
+      sortField?: string;
+      sortDir?: "asc" | "desc";
+      includeSum?: boolean;
+    }) =>
+      request<{ data: InvoiceDTO[]; total: number; sumTotalAmount?: number }>(opts, "GET", "/owner/invoices", undefined, params as Record<string, string | number | boolean | undefined>),
 
     getQrBill: (id: string) =>
       request<unknown>(opts, "GET", `/invoices/${id}/qr-bill`),

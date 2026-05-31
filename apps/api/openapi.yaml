@@ -2909,6 +2909,48 @@ paths:
           in: query
           schema: { type: string, format: uuid }
           description: Filter by COA account ID
+        - name: search
+          in: query
+          schema: { type: string }
+          description: Case-insensitive free-text search across invoiceNumber, recipientName and description
+        - name: sortField
+          in: query
+          schema:
+            type: string
+            enum: [createdAt, issueDate, dueDate, paidAt, totalAmount, amount, invoiceNumber, recipientName, status]
+          description: Column to sort by (defaults to createdAt)
+        - name: sortDir
+          in: query
+          schema: { type: string, enum: [asc, desc] }
+          description: Sort direction (defaults to desc)
+        - name: direction
+          in: query
+          schema: { type: string, enum: [INCOMING, OUTGOING] }
+          description: Filter by invoice direction
+        - name: ingestionStatus
+          in: query
+          schema: { type: string }
+          description: Filter by ingestion status (e.g. PENDING_REVIEW)
+        - name: expenseCategory
+          in: query
+          schema: { type: string }
+          description: Filter by expense category
+        - name: categorized
+          in: query
+          schema: { type: boolean }
+          description: When true (and no expenseCategory given) restrict to invoices that carry an expense category
+        - name: buildingId
+          in: query
+          schema: { type: string, format: uuid }
+          description: Filter by building (via job→request→unit)
+        - name: paidAfter
+          in: query
+          schema: { type: string, format: date }
+          description: Filter by paidAt ≥ value
+        - name: paidBefore
+          in: query
+          schema: { type: string, format: date }
+          description: Filter by paidAt ≤ value
       responses:
         '200':
           description: Invoice list
@@ -3077,6 +3119,37 @@ paths:
       parameters:
         - $ref: '#/components/parameters/LimitParam'
         - $ref: '#/components/parameters/OffsetParam'
+        - $ref: '#/components/parameters/StatusFilter'
+        - name: direction
+          in: query
+          schema: { type: string, enum: [INCOMING, OUTGOING] }
+          description: Filter by invoice direction
+        - name: createdAfter
+          in: query
+          schema: { type: string, format: date-time }
+          description: Filter by createdAt ≥ value
+        - name: createdBefore
+          in: query
+          schema: { type: string, format: date-time }
+          description: Filter by createdAt ≤ value
+        - name: search
+          in: query
+          schema: { type: string }
+          description: Case-insensitive free-text search across invoiceNumber, recipientName and description
+        - name: sortField
+          in: query
+          schema:
+            type: string
+            enum: [createdAt, issueDate, dueDate, paidAt, totalAmount, amount, invoiceNumber, recipientName, status]
+          description: Column to sort by (defaults to createdAt)
+        - name: sortDir
+          in: query
+          schema: { type: string, enum: [asc, desc] }
+          description: Sort direction (defaults to desc)
+        - name: includeSum
+          in: query
+          schema: { type: boolean }
+          description: When true, include sumTotalAmount (CHF) aggregated across the full filtered set
       responses:
         '200':
           description: Owner invoice list
@@ -3089,6 +3162,9 @@ paths:
                     type: array
                     items: { $ref: '#/components/schemas/InvoiceDTO' }
                   total: { type: integer }
+                  sumTotalAmount:
+                    type: number
+                    description: Aggregate total (CHF) across the full filtered set; present only when includeSum=true
 
   /invoices/{id}/qr-bill:
     get:

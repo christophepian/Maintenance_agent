@@ -194,6 +194,51 @@ describe("Jobs and Invoices", () => {
     expect(result.data.length).toBeGreaterThan(0);
     expect(result.data.every((i) => i.status === InvoiceStatus.PAID)).toBe(true);
   });
+
+  it("should cap results by limit while total reflects the full set", async () => {
+    const full = await listInvoices(orgId);
+    const paged = await listInvoices(orgId, { limit: 1, offset: 0 });
+
+    expect(paged.data.length).toBeLessThanOrEqual(1);
+    // total ignores take/skip — it is the full count
+    expect(paged.total).toBe(full.total);
+    expect(paged.total).toBeGreaterThanOrEqual(paged.data.length);
+  });
+
+  it("should not overlap rows across pages", async () => {
+    const page1 = await listInvoices(orgId, { limit: 1, offset: 0, sortField: "createdAt", sortDir: "asc" });
+    const page2 = await listInvoices(orgId, { limit: 1, offset: 1, sortField: "createdAt", sortDir: "asc" });
+
+    if (page1.data.length && page2.data.length) {
+      expect(page1.data[0].id).not.toBe(page2.data[0].id);
+    }
+  });
+
+  it("should sort by totalAmount ascending and descending", async () => {
+    const asc = await listInvoices(orgId, { sortField: "totalAmount", sortDir: "asc" });
+    const desc = await listInvoices(orgId, { sortField: "totalAmount", sortDir: "desc" });
+
+    const ascAmounts = asc.data.map((i) => i.totalAmount);
+    const descAmounts = desc.data.map((i) => i.totalAmount);
+    const sortedAsc = [...ascAmounts].sort((a, b) => a - b);
+    expect(ascAmounts).toEqual(sortedAsc);
+    expect(descAmounts).toEqual([...ascAmounts].reverse());
+  });
+
+  it("should filter by case-insensitive search on invoice number", async () => {
+    const created = await getInvoice(invoiceId);
+    const number = created?.invoiceNumber;
+    if (!number) return; // invoice may not be numbered until issued
+    const result = await listInvoices(orgId, { search: number.toLowerCase() });
+    expect(result.data.some((i) => i.id === invoiceId)).toBe(true);
+    expect(result.total).toBeGreaterThanOrEqual(1);
+  });
+
+  it("should return sumTotalAmount when includeSum is set", async () => {
+    const result = await listInvoices(orgId, { includeSum: true });
+    expect(typeof result.sumTotalAmount).toBe("number");
+    expect(result.sumTotalAmount).toBeGreaterThanOrEqual(0);
+  });
 });
 
 describe("Slice 8.3 — Invoice Model Upgrade", () => {

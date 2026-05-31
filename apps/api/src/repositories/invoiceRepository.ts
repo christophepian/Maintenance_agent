@@ -347,16 +347,38 @@ export async function findInvoiceIdsByStatuses(
 /**
  * Paginated invoice list with count — canonical list query.
  * Returns [rows, total] tuple matching the where/include callers provide.
+ *
+ * `total` always reflects the full result set (ignores take/skip) so callers
+ * can render "showing X–Y of N" and drive pagination controls.
  */
 export async function findInvoicesWithCount(
   prisma: PrismaClient,
   where: Prisma.InvoiceWhereInput,
   include: Prisma.InvoiceInclude,
   orderBy: Prisma.InvoiceOrderByWithRelationInput = { createdAt: "desc" },
+  pagination?: { take?: number; skip?: number },
 ): Promise<[Awaited<ReturnType<typeof prisma.invoice.findMany>>, number]> {
   return Promise.all([
-    prisma.invoice.findMany({ where, include, orderBy }),
+    prisma.invoice.findMany({
+      where,
+      include,
+      orderBy,
+      ...(pagination?.take != null && { take: pagination.take }),
+      ...(pagination?.skip != null && { skip: pagination.skip }),
+    }),
     prisma.invoice.count({ where }),
   ]);
+}
+
+/**
+ * Sum of `totalAmount` (cents) across the full where set — used to render an
+ * accurate aggregate total alongside a paginated list.
+ */
+export async function sumInvoiceTotals(
+  prisma: PrismaClient,
+  where: Prisma.InvoiceWhereInput,
+): Promise<number> {
+  const result = await prisma.invoice.aggregate({ where, _sum: { totalAmount: true } });
+  return result._sum.totalAmount ?? 0;
 }
 

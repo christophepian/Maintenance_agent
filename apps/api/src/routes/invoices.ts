@@ -1,7 +1,7 @@
 import { Router, HandlerContext } from "../http/router";
 import { sendError, sendJson } from "../http/json";
 import { readJson } from "../http/body";
-import { first } from "../http/query";
+import { first, getIntParam } from "../http/query";
 import { getAuthUser } from "../authz";
 import { requireOrgViewer, logEvent } from "./helpers";
 import { requireAnyRole } from "../authz";
@@ -86,7 +86,13 @@ export function registerInvoiceRoutes(router: Router) {
       const ingestionStatus = first(query, "ingestionStatus") || undefined;
       const unitId = first(query, "unitId") || undefined;
       const view = first(query, "view") as "summary" | "full" | undefined;
-      const result = await listInvoices(orgId, { jobId, status: status as any, view, contractorId, expenseCategory, buildingId, paidAfter, paidBefore, expenseTypeId, accountId, direction, ingestionStatus, unitId });
+      const search = first(query, "search") || undefined;
+      const sortField = first(query, "sortField") || undefined;
+      const sortDir = (first(query, "sortDir") === "asc" ? "asc" : first(query, "sortDir") === "desc" ? "desc" : undefined) as "asc" | "desc" | undefined;
+      const categorized = first(query, "categorized") === "true" ? true : undefined;
+      const limit = getIntParam(query, "limit", { defaultValue: 50, min: 1, max: 200 });
+      const offset = getIntParam(query, "offset", { defaultValue: 0, min: 0, max: 1_000_000 });
+      const result = await listInvoices(orgId, { jobId, status: status as any, view, contractorId, expenseCategory, buildingId, paidAfter, paidBefore, expenseTypeId, accountId, direction, ingestionStatus, unitId, search, sortField, sortDir, categorized, limit, offset });
       sendJson(res, 200, { data: result.data, total: result.total });
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to load invoices", String(e));
@@ -280,10 +286,19 @@ export function registerInvoiceRoutes(router: Router) {
     try {
       const status = first(query, "status") || undefined;
       const view = first(query, "view") as "summary" | "full" | undefined;
+      const direction = first(query, "direction") || undefined;
+      const createdAfter = first(query, "createdAfter") || undefined;
+      const createdBefore = first(query, "createdBefore") || undefined;
+      const search = first(query, "search") || undefined;
+      const sortField = first(query, "sortField") || undefined;
+      const sortDir = (first(query, "sortDir") === "asc" ? "asc" : first(query, "sortDir") === "desc" ? "desc" : undefined) as "asc" | "desc" | undefined;
       const user = getAuthUser(req);
       const ownerId = (user?.role === "OWNER" || user?.ownerId) ? (user.ownerId || user.userId) : undefined;
-      const result = await listInvoices(orgId, { status: status as any, view, ownerId });
-      sendJson(res, 200, { data: result.data, total: result.total });
+      const includeSum = first(query, "includeSum") === "true" ? true : undefined;
+      const limit = getIntParam(query, "limit", { defaultValue: 50, min: 1, max: 200 });
+      const offset = getIntParam(query, "offset", { defaultValue: 0, min: 0, max: 1_000_000 });
+      const result = await listInvoices(orgId, { status: status as any, view, ownerId, direction, createdAfter, createdBefore, search, sortField, sortDir, includeSum, limit, offset });
+      sendJson(res, 200, { data: result.data, total: result.total, sumTotalAmount: result.sumTotalAmount });
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to load invoices", String(e));
     }

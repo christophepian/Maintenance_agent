@@ -10,7 +10,7 @@
  */
 
 import { PrismaClient } from "@prisma/client";
-import { onAll, on } from "./bus";
+import { onAll, on, onDeferred } from "./bus";
 import { DomainEvent } from "./types";
 import { createNotification } from "../services/notifications";
 import {
@@ -59,8 +59,11 @@ export function registerEventHandlers(prisma: PrismaClient): void {
 
   /* ── Type-specific handlers ─────────────────────────────── */
 
-  /* Async triage: enrich request with contractor suggestions + budget hint */
-  on("REQUEST_CREATED", async (event) => {
+  /* Async triage: enrich request with contractor suggestions + budget hint.
+     Deferred so request creation responds immediately. If triage has not
+     finished by the time the manager opens the request, getMaintenanceRequestById
+     runs it synchronously on read (lazy-on-read fallback). */
+  onDeferred("REQUEST_CREATED", async (event) => {
     try {
       await requestTriageWorkflow(prisma, {
         requestId: event.payload.requestId,
@@ -73,8 +76,8 @@ export function registerEventHandlers(prisma: PrismaClient): void {
     }
   });
 
-  /* Notify tenant when their repair job is marked complete */
-  on("JOB_COMPLETED", async (event) => {
+  /* Notify tenant when their repair job is marked complete (deferred — non-blocking) */
+  onDeferred("JOB_COMPLETED", async (event) => {
     try {
       const job = await prisma.job.findUnique({
         where: { id: event.payload.jobId },
@@ -95,8 +98,8 @@ export function registerEventHandlers(prisma: PrismaClient): void {
     }
   });
 
-  /* Notify tenant when an invoice is issued for their repair */
-  on("INVOICE_ISSUED", async (event) => {
+  /* Notify tenant when an invoice is issued for their repair (deferred — non-blocking) */
+  onDeferred("INVOICE_ISSUED", async (event) => {
     try {
       const invoice = await prisma.invoice.findUnique({
         where: { id: event.payload.invoiceId },

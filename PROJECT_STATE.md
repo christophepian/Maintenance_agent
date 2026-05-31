@@ -18,6 +18,8 @@ Safe to:
 
 ⚠️ **Before any code change, re-read the 🛡️ GUARDRAILS section at the top of this file.**
 
+> **New to the codebase?** Start with [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md) — it is the essential first-read for guardrails, architecture, and task routing.
+
 <!-- reviewed 2026-03-10 -->
 
 ---
@@ -34,7 +36,7 @@ Safe to:
 
 ✅ **Dark mode — full implementation (2026-05-30).** Token completion (bg-slate-200/300, text-slate-200/300 — 87 replacements, 37 total tokens), `html.dark` CSS override block (41 vars, invest.html palette), `useTheme` hook + `AppearanceTab` component, settings toggle wired into all 4 personas, EN+FR locale keys. Default: light mode; user opts in via Settings → Appearance. Contrast fixes: manager attention cards and owner reporting hero banner updated for dark readability. Remaining: QA pass across 4 personas (~1.5 days). Commits: `5d40fd2` · `c09ab15`. See [EPIC_HISTORY.md](EPIC_HISTORY.md) for full narrative.
 
-✅ **Request triage agent (2026-05-30).** Post-`REQUEST_CREATED` async handler: scores contractors (avgRating 0.4 + onTimeRate 0.3 + categoryMatch 0.2 + buildingMatch 0.1), computes P25/P75 budget from invoice history, writes `triageContractorIds` + `triageBudgetMin/Max` + `triageCompletedAt`. 4 new fields on `Request` (migration `20260530185036`). Manager sees read-only hint panel on request detail page. 1073 tests · 100 migrations. Commit: `9c77488`. See [EPIC_HISTORY.md](EPIC_HISTORY.md) for full narrative.
+✅ **Request triage agent (2026-05-30).** Post-`REQUEST_CREATED` async handler: scores contractors (avgRating 0.4 + onTimeRate 0.3 + categoryMatch 0.2 + buildingMatch 0.1), computes P25/P75 budget from invoice history, writes `triageContractorIds` + `triageBudgetMin/Max` + `triageCompletedAt`. 4 new fields on `Request` (migration `20260530185036`). Manager sees read-only hint panel on request detail page. 1073 tests · 99 migrations. Commit: `9c77488`. See [EPIC_HISTORY.md](EPIC_HISTORY.md) for full narrative.
 
 ✅ **Design token migration — dark mode foundation (2026-05-30).** 0 TS errors. Completed the semantic token layer: 4 new tokens added to `globals.css @theme {}` (`--color-foreground`, `--color-foreground-dim`, `--color-surface-subtle`, `--color-surface-divider`), bringing the total to 35. All hardcoded `text-slate-*`, `bg-white`, `bg-slate-*`, `border-slate-*` classes eliminated from JSX and `@layer components` — 3,683 replacements across 131 files via `scripts/migrate-tokens.js`. Three intentional `/* no-token: */` exceptions preserved (toggle thumb, UndoToast hover, confidence badge). See `docs/AUDIT.md` for the full dark-mode scope assessment.
 
@@ -108,7 +110,7 @@ Remaining known limitation: OCR extracts amount and date reliably from phone pho
 | Frontend pages | 332 | apps/web/pages/ — derived (97 UI + 235 API proxies) |
 | API operations | 291 | openapi.yaml operationId count — derived |
 | URL paths | 248 | openapi.yaml unique paths — derived |
-| Tests | 72 suites · 1073 tests | jest — derived |
+| Tests | 69 suites · 1073 tests | jest — derived |
 | Proxy conformance | 235 / 235 | apps/web/pages/api/ — derived |
 | Transition maps | 8 | src/workflows/transitions.ts — derived |
 | Audit findings open | 3 (SI-2/3 broken links; ARCH-1 DT-121–124 remaining) | docs/AUDIT.md — manual |
@@ -130,7 +132,7 @@ Remaining known limitation: OCR extracts amount and date reliably from phone pho
 
 ## Triage Agent — ✅ Built (2026-05-30, commit `9c77488`)
 
-See [EPIC_HISTORY.md](EPIC_HISTORY.md) for full narrative. Summary: post-`REQUEST_CREATED` async handler scores contractors and writes suggestions + budget hint to the request. Manager sees a read-only hint panel on request detail. 1073 tests · 100 migrations.
+See [EPIC_HISTORY.md](EPIC_HISTORY.md) for full narrative. Summary: post-`REQUEST_CREATED` async handler scores contractors and writes suggestions + budget hint to the request. Manager sees a read-only hint panel on request detail. 1073 tests · 99 migrations.
 
 **Phase 2 (deferred):** AI-enriched notification text, contractor performance score as a standalone model, tenant-facing suggestions.
 
@@ -138,4 +140,4 @@ See [EPIC_HISTORY.md](EPIC_HISTORY.md) for full narrative. Summary: post-`REQUES
 
 ## Owner Surface Segregation Rules
 
-> **Full rules:** See [docs/OWNER_SURFACE.md](docs/OWNER_SURFACE.md) — dashboard vs reporting separation, shared-topic framing, implementation preference, copy guidance.
+> **Full rules:** Owner surface segregation — dashboard vs reporting separation, shared-topic framing, implementation preference, copy guidance.

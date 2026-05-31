@@ -162,14 +162,16 @@ Production server refuses to boot if:
 
 Three-layer CSS architecture on **Tailwind v4.1**:
 
-1. **Semantic tokens** — 23 CSS custom properties in `globals.css @theme {}` (brand, destructive, success, muted, surface + variants)
+1. **Semantic tokens** — 35 CSS custom properties in `globals.css @theme {}` (brand, destructive, success, warning, muted, foreground, surface + table variants). All 35 tokens are fully adopted — no hardcoded `slate-*` or `bg-white` remain in JSX or `@layer components`. **New tokens added 2026-05-30:** `--color-foreground` (slate-900), `--color-foreground-dim` (slate-400), `--color-surface-subtle` (slate-50), `--color-surface-divider` (slate-100).
 2. **@apply classes** — 78 utility-backed CSS classes in `globals.css @layer components` (buttons, notices, tables, tabs, filters, forms)
 3. **CVA primitives** — 10 variant-based components in `components/ui/` (Button, Badge, Card, DataTable, Input, Select, ErrorBanner, EmptyState, StatusPill, KpiCard)
 
 - **`cn()`** = `twMerge(clsx())` in `lib/utils.js` — **mandatory** for all dynamic className composition (replaces template-literal interpolation)
 - **`statusVariants.js`** — 20 status→Badge variant mappers. All status indicators use `<Badge variant={mapper(status)}>`. Never define per-file color constants.
-- **Inline Tailwind utilities** (e.g. `className="rounded-2xl border ..."`) — fine for one-off styling
-- **Never:** static `style={{}}`, hardcoded hex/rgb, new `.css` files, `tailwind.config.js` theme extensions (TW v4 uses `@theme {}` in CSS), `className={\`...${x}\`}` template literals, per-file `STATUS_COLORS` objects
+- **Inline Tailwind utilities** (e.g. `className="rounded-2xl border ..."`) — fine for one-off styling, **but must use semantic token classes** (`bg-surface`, `text-foreground`, `border-surface-border`, etc.) — never hardcode `bg-white`, `text-slate-*`, or `border-slate-*`.
+- **Never:** static `style={{}}`, hardcoded hex/rgb, raw `bg-white` / `text-slate-*` / `border-slate-*`, new `.css` files, `tailwind.config.js` theme extensions (TW v4 uses `@theme {}` in CSS), `className={\`...${x}\`}` template literals, per-file `STATUS_COLORS` objects
+- **Exception pattern:** use `/* no-token: <reason> */` to document intentional raw-color overrides (e.g. toggle thumbs, overlay buttons where the color must not invert in dark mode)
+- **Dark mode readiness:** the `@theme {}` token layer is now the sole color authority. A dark theme requires only a `@variant dark { ... }` block in `globals.css` redefining the 35 surface/foreground/border tokens — no JSX changes needed.
 - **Design reference:** [docs/design-system.html](docs/design-system.html) — visual spec with architecture summary
 - **Accessibility baseline:** skip-to-content link in AppShell, `<nav aria-label>` on all sidebars, `aria-label` on icon-only buttons, `sr-only` for visual-only indicators, `role="alert"` on error banners, `focus-visible:ring` on interactive elements
 
@@ -332,6 +334,8 @@ npx prisma migrate diff \
 - Define inline `include: { ... }` — use canonical constants
 - Use `prisma db push` — ever, under any circumstances
 - Add inline `style={{}}` — use Tailwind classes, `@apply` classes, or CVA components from `components/ui/`
+- Use hardcoded hex/rgb — use Tailwind tokens or semantic tokens from `@theme {}` in `globals.css`
+- Create new `.css` files — all shared styles go in `globals.css @layer components` via `@apply`
 - **Add `MyApp.getInitialProps` to `_app.js`** — this forces ALL pages through Node.js SSR and causes `FUNCTION_INVOCATION_FAILED` on Vercel because Radix UI accesses `document`/`window` at module eval time (2026-05-04 incident, half a day lost). Fix individual pages with `getServerSideProps` on that page only. See G16 in `PROJECT_STATE.md`.
 - **Push directly to `main` for non-trivial changes** — always use a feature branch, run `cd apps/web && npm run build` locally first, verify the Vercel Preview URL, then merge. See G17 in `PROJECT_STATE.md`.
 - Change `maybeRequireManager` to allow writes — use `requireRole('MANAGER')`
@@ -361,7 +365,7 @@ npx prisma migrate diff \
 
 **i18n (bilingual EN/FR — live as of 2026-05-05):** All UI strings extracted through `next-i18next`. Five namespaces: `common`, `manager`, `owner`, `contractor`, `tenant`. Tab labels rendered via `t(\`ns:section.tabs.\${key}\`)` template literals — runtime keys must exist in locale JSON. Critical dev rule: `reloadOnPrerender: true` is set in `next-i18next.config.js` so locale file changes are picked up without a server restart. Critical deploy rule: `.vercelignore` must never contain a bare `*.json` rule — it excluded all locale files from Vercel builds (now replaced with specific root-level exclusions; `apps/web/.vercelignore` is empty). Audit scripts: `scripts/i18n-audit-missing.py` (static key coverage), `scripts/i18n-audit-tabs.py` (template-literal tab key coverage).
 
-**Deployment readiness:** Gate 1 complete. Staging stack live and seeded: API `https://maintenance-agent.onrender.com`, frontend `https://maintenance-agent-api-git-main-christophepians-projects.vercel.app`. Gate 2 (production) pending T-UI sign-off. See [docs/MIGRATION_PLAN.md](docs/MIGRATION_PLAN.md).
+**Deployment readiness:** Gate 1 complete. Staging stack live and seeded: API `https://maintenance-agent.onrender.com`, frontend `https://maintenance-agent-api-git-main-christophepians-projects.vercel.app`. Gate 2 (production) pending T-UI sign-off.
 
 **Render config (2026-05-09):** Service now deploys from `main` branch with `autoDeploy: true` — every push to main triggers a build automatically. Build command corrected to `cd apps/api && npm ci && npx prisma generate --schema ./prisma/schema.prisma && rm -rf dist && npm run build`. Boot-time guard added: server refuses to start in production if `RENDER_GIT_BRANCH` is not `main`. Public listings seeded (7 units across 3 buildings, `isListedPublicly: true`). App rebranded to Sencilo in sidebar nav. Mobile nav labels synced with desktop (Properties, Contacts).
 

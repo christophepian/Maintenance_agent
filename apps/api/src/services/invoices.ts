@@ -488,14 +488,23 @@ export async function listInvoices(
     buildingId?: string;
     paidAfter?: string;
     paidBefore?: string;
+    createdAfter?: string;
+    createdBefore?: string;
     expenseTypeId?: string;
     accountId?: string;
     direction?: string;
     ingestionStatus?: string;
     unitId?: string;
     ownerId?: string;
+    search?: string;
+    sortField?: string;
+    sortDir?: "asc" | "desc";
+    categorized?: boolean;
+    includeSum?: boolean;
+    limit?: number;
+    offset?: number;
   }
-): Promise<{ data: InvoiceDTO[] | InvoiceSummaryDTO[]; total: number }> {
+): Promise<{ data: InvoiceDTO[] | InvoiceSummaryDTO[]; total: number; sumTotalAmount?: number }> {
   const useSummary = filters?.view === "summary";
 
   const where: any = {
@@ -508,6 +517,21 @@ export async function listInvoices(
     ...(filters?.direction && { direction: filters.direction }),
     ...(filters?.ingestionStatus && { ingestionStatus: filters.ingestionStatus }),
   };
+
+  // Restrict to invoices that carry an expense category (expenses surface).
+  if (filters?.categorized && !filters?.expenseCategory) {
+    where.expenseCategory = { not: null };
+  }
+
+  // Free-text search across invoiceNumber / recipientName / description (case-insensitive).
+  const searchTerm = filters?.search?.trim();
+  const searchClause: any[] | null = searchTerm
+    ? [
+        { invoiceNumber: { contains: searchTerm, mode: "insensitive" } },
+        { recipientName: { contains: searchTerm, mode: "insensitive" } },
+        { description: { contains: searchTerm, mode: "insensitive" } },
+      ]
+    : null;
 
   // Contractor and building filters both traverse the job relation
   // Only apply job-based filters when jobId is not null
@@ -541,6 +565,13 @@ export async function listInvoices(
     if (filters?.paidBefore) where.paidAt.lte = new Date(filters.paidBefore);
   }
 
+  // Date range filters on createdAt (owner invoice surface)
+  if (filters?.createdAfter || filters?.createdBefore) {
+    where.createdAt = {};
+    if (filters?.createdAfter) where.createdAt.gte = new Date(filters.createdAfter);
+    if (filters?.createdBefore) where.createdAt.lte = new Date(filters.createdBefore);
+  }
+
   // Owner scoping: restrict to buildings owned by the user
   if (filters?.ownerId) {
     const ownerBuildingFilter = { owners: { some: { userId: filters.ownerId } } };
@@ -557,13 +588,50 @@ export async function listInvoices(
     }
   }
 
+  // Fold free-text search in as an AND constraint so it intersects all other filters.
+  if (searchClause) {
+    const andList: any[] = where.AND ? [...where.AND] : [];
+    if (where.OR) {
+      andList.push({ OR: where.OR });
+      delete where.OR;
+    }
+    andList.push({ OR: searchClause });
+    where.AND = andList;
+  }
+
+  // Server-side sort — whitelist scalar columns; default newest-first.
+  const SORTABLE: Record<string, true> = {
+    createdAt: true,
+    issueDate: true,
+    dueDate: true,
+    paidAt: true,
+    totalAmount: true,
+    amount: true,
+    invoiceNumber: true,
+    recipientName: true,
+    status: true,
+  };
+  const sortField = filters?.sortField && SORTABLE[filters.sortField] ? filters.sortField : "createdAt";
+  const sortDir: "asc" | "desc" = filters?.sortDir === "asc" ? "asc" : "desc";
+  const orderBy: any = { [sortField]: sortDir };
+
   const [invoices, total] = await findInvoicesWithCount(
     prisma,
     where,
     useSummary ? INVOICE_SUMMARY_INCLUDE : INVOICE_INCLUDE,
+    orderBy,
+    {
+      ...(filters?.limit != null && { take: filters.limit }),
+      ...(filters?.offset != null && { skip: filters.offset }),
+    },
   );
 
   const data = useSummary ? invoices.map(mapInvoiceToSummaryDTO) : invoices.map(mapInvoiceToDTO);
+
+  if (filters?.includeSum) {
+    const sumCents = await invoiceRepo.sumInvoiceTotals(prisma, where);
+    return { data, total, sumTotalAmount: fromCents(sumCents) };
+  }
   return { data, total };
 }
 

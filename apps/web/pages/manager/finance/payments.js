@@ -9,6 +9,7 @@ import { FilterToggle, FilterPanelBody, FilterSection, FilterSectionClear, Selec
 import { authHeaders } from "../../../lib/api";
 import { formatDate, formatChf } from "../../../lib/format";
 import ConfigurableTable from "../../../components/ConfigurableTable";
+import PaginationControls from "../../../components/PaginationControls";
 import { useTableSort, clientSort } from "../../../lib/tableUtils";
 import { withTranslations } from "../../../lib/i18n";
 import { useTranslation } from "next-i18next";
@@ -78,8 +79,17 @@ export default function ManagerPaymentsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [payments, setPayments] = useState([]);
+  const [total, setTotal] = useState(0);
   const [buildings, setBuildings] = useState([]);
   const { sortField, sortDir, handleSort } = useTableSort(router, PAYMENT_SORT_FIELDS, { defaultField: "paidAt", defaultDir: "desc" });
+
+  // Search (debounced) + server-side pagination
+  const [paySearch, setPaySearch] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const PAGE_SIZE = 50;
+  const [offset, setOffset] = useState(0);
+  const currentPage = Math.floor(offset / PAGE_SIZE);
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   // Filters
   const [buildingId, setBuildingId] = useState("");
@@ -99,42 +109,50 @@ export default function ManagerPaymentsPage() {
     setError("");
     try {
       const params = new URLSearchParams({ status: "PAID", view: "summary" });
+      params.set("limit", String(PAGE_SIZE));
+      params.set("offset", String(offset));
       if (buildingId) params.set("buildingId", buildingId);
       if (paidAfter) params.set("paidAfter", paidAfter);
       if (paidBefore) params.set("paidBefore", paidBefore);
+      if (searchTerm.trim()) params.set("search", searchTerm.trim());
+      const serverSort =
+        sortField === "amount" ? "totalAmount"
+        : sortField === "paidAt" ? "paidAt"
+        : sortField === "invoiceNumber" ? "invoiceNumber"
+        : "paidAt";
+      params.set("sortField", serverSort);
+      params.set("sortDir", sortDir);
 
       const res = await fetch(`/api/invoices?${params.toString()}`, { headers: authHeaders() });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error?.message || "Failed to load payments");
       setPayments(data?.data || []);
+      setTotal(typeof data?.total === "number" ? data.total : (data?.data?.length || 0));
     } catch (e) {
       setError(String(e?.message || e));
     } finally {
       setLoading(false);
     }
-  }, [buildingId, paidAfter, paidBefore]);
+  }, [buildingId, paidAfter, paidBefore, searchTerm, sortField, sortDir, offset]);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  // Debounce free-text search → server param.
+  useEffect(() => {
+    const id = setTimeout(() => setSearchTerm(paySearch), 300);
+    return () => clearTimeout(id);
+  }, [paySearch]);
+
+  // Any filter / search / sort change returns to the first page.
+  useEffect(() => {
+    setOffset(0);
+  }, [buildingId, paidAfter, paidBefore, searchTerm, sortField, sortDir]);
 
   function clearFilters() {
     setBuildingId("");
     setPaidAfter("");
     setPaidBefore("");
   }
-
-  const [paySearch, setPaySearch] = useState("");
-  const filteredPayments = useMemo(() => {
-    const q = paySearch.trim().toLowerCase();
-    if (!q) return payments;
-    return payments.filter((p) =>
-      (p.invoiceNumber || "").toLowerCase().includes(q) ||
-      (p.description || "").toLowerCase().includes(q)
-    );
-  }, [payments, paySearch]);
-  const sortedPayments = useMemo(
-    () => clientSort(filteredPayments, sortField, sortDir, paymentFieldExtractor),
-    [filteredPayments, sortField, sortDir]
-  );
 
   const hasFilters = buildingId || paidAfter || paidBefore;
   const activeCount = [buildingId, paidAfter, paidBefore].filter(Boolean).length;
@@ -185,10 +203,11 @@ export default function ManagerPaymentsPage() {
           {loading ? (
             <Panel><p className="m-0">{t("manager:financePayments.text.loadingPayments")}</p></Panel>
           ) : (
+            <>
             <ConfigurableTable
                 tableId="manager-payments"
                 columns={paymentColumns}
-                data={sortedPayments}
+                data={payments}
                 rowKey={(p) => p.id}
                 sortField={sortField}
                 sortDir={sortDir}
@@ -207,6 +226,14 @@ export default function ManagerPaymentsPage() {
                   </div>
                 )}
               />
+            <PaginationControls
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={total}
+              pageSize={PAGE_SIZE}
+              onPageChange={(p) => setOffset(p * PAGE_SIZE)}
+            />
+            </>
           )}
         </PageContent>
       </PageShell>

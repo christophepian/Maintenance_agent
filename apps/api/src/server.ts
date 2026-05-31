@@ -55,13 +55,21 @@ import { flushLegalVariableIngestion } from "./services/legalVariableIngestion";
 /* ── Supabase → Prisma user identity resolution ─────────────
    Bridges the gap between Supabase auth UUIDs and Prisma User.id values.
    prismaUserId is not reliably set in app_metadata, so we query once per
-   distinct Supabase user and cache the result for the process lifetime. */
-const _prismaUserIdCache = new Map<string, string>(); // supabaseId → User.id
+   distinct Supabase user and cache the result.
+
+   Slice 5: entries carry a TTL so the cache cannot grow unbounded over a
+   long-lived process and so identity changes (e.g. user re-keyed) are picked
+   up within the TTL window instead of persisting for the whole process life. */
+const IDENTITY_CACHE_TTL_MS = Number(process.env.IDENTITY_CACHE_TTL_MS) || 10 * 60 * 1000; // 10 min
+const IDENTITY_CACHE_MAX_ENTRIES = 10_000;
+const _prismaUserIdCache = new Map<string, { id: string; expiresAt: number }>(); // supabaseId|email → { User.id, expiresAt }
 
 async function resolvePrismaUserId(supabaseId: string | undefined, email: string): Promise<string | null> {
   if (!supabaseId && !email) return null;
   const cacheKey = supabaseId || email;
-  if (_prismaUserIdCache.has(cacheKey)) return _prismaUserIdCache.get(cacheKey)!;
+  const cached = _prismaUserIdCache.get(cacheKey);
+  if (cached && Date.now() < cached.expiresAt) return cached.id;
+  if (cached) _prismaUserIdCache.delete(cacheKey); // expired — drop and re-resolve
 
   try {
     // Try supabaseId first (populated after backfill-supabase-ids.sql is run),
@@ -73,7 +81,19 @@ async function resolvePrismaUserId(supabaseId: string | undefined, email: string
       user = await prisma.user.findFirst({ where: { email }, select: { id: true } });
     }
     if (user) {
-      _prismaUserIdCache.set(cacheKey, user.id);
+      // Opportunistic eviction: if the cache is full, clear expired entries first,
+      // then fall back to dropping the oldest-inserted key to bound memory.
+      if (_prismaUserIdCache.size >= IDENTITY_CACHE_MAX_ENTRIES) {
+        const now = Date.now();
+        for (const [k, v] of _prismaUserIdCache) {
+          if (now >= v.expiresAt) _prismaUserIdCache.delete(k);
+        }
+        if (_prismaUserIdCache.size >= IDENTITY_CACHE_MAX_ENTRIES) {
+          const oldestKey = _prismaUserIdCache.keys().next().value;
+          if (oldestKey !== undefined) _prismaUserIdCache.delete(oldestKey);
+        }
+      }
+      _prismaUserIdCache.set(cacheKey, { id: user.id, expiresAt: Date.now() + IDENTITY_CACHE_TTL_MS });
       return user.id;
     }
   } catch (err) {
@@ -109,6 +129,16 @@ if (isProdEnv) {
   if (deployedBranch && deployedBranch !== "main") {
     console.error(
       `[FATAL] Production must deploy from 'main'. Currently on '${deployedBranch}'. Update the Render service branch setting.`,
+    );
+    process.exit(1);
+  }
+  // Slice 6: durable storage required in production. Local-disk attachments are
+  // ephemeral on Render (lost on every deploy/restart), so refuse to boot unless
+  // an object-store backend (s3) is configured.
+  if ((process.env.ATTACHMENTS_STORAGE || "local") !== "s3") {
+    console.error(
+      `[FATAL] ATTACHMENTS_STORAGE must be 's3' in production (got '${process.env.ATTACHMENTS_STORAGE || "local"}'). ` +
+        "Local-disk storage is ephemeral and loses uploaded files on restart. Configure S3 before starting.",
     );
     process.exit(1);
   }
@@ -429,7 +459,12 @@ const BG_JOB_INTERVAL_MS = Number(process.env.BG_JOB_INTERVAL_MS) || 60 * 60 * 1
 const BG_JOBS_ENABLED = process.env.BG_JOBS_ENABLED !== "false"; // enabled by default
 let bgJobTimer: ReturnType<typeof setInterval> | null = null;
 
-async function runBackgroundJobs() {
+// Slice 4: Postgres advisory-lock key so only ONE instance runs the scheduler
+// at a time. Protects the deploy-overlap window (old + new instance both live)
+// and any accidental horizontal scale-out. Arbitrary constant unique to this job.
+const BG_JOB_ADVISORY_LOCK_KEY = 91237;
+
+async function runBackgroundJobsInner() {
   try {
     const timeouts = await processSelectionTimeouts();
     const attachments = await processAttachmentRetention();
@@ -479,6 +514,36 @@ async function runBackgroundJobs() {
     }
   } catch (e) {
     console.error("[BG-JOBS] Legal variable ingestion error:", e);
+  }
+}
+
+async function runBackgroundJobs() {
+  // Slice 4: gate the whole run behind a transaction-scoped advisory lock.
+  // pg_try_advisory_xact_lock is non-blocking (returns immediately) and the
+  // lock auto-releases when the transaction ends — including on crash or
+  // connection loss — so it can never leak and permanently wedge the scheduler.
+  try {
+    await prisma.$transaction(
+      async (tx) => {
+        const rows = await tx.$queryRaw<{ locked: boolean }[]>`
+          SELECT pg_try_advisory_xact_lock(${BG_JOB_ADVISORY_LOCK_KEY}) AS locked
+        `;
+        if (!rows[0]?.locked) {
+          console.log(
+            "[BG-JOBS] Another instance holds the scheduler lock — skipping this run",
+          );
+          return;
+        }
+        await runBackgroundJobsInner();
+      },
+      {
+        // Hold the lock for the full run; floor at 10 min for long batches.
+        timeout: Math.max(BG_JOB_INTERVAL_MS, 10 * 60 * 1000),
+        maxWait: 5_000,
+      },
+    );
+  } catch (e) {
+    console.error("[BG-JOBS] Scheduler lock/transaction error:", e);
   }
 }
 

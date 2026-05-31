@@ -18,8 +18,13 @@ import { DomainEvent, DomainEventType, DomainEventMap } from "./types";
 
 type EventHandler<T extends DomainEventType> = (event: DomainEvent<T>) => Promise<void>;
 
-/* Listeners stored per event type */
+/* Synchronous listeners stored per event type (awaited within emit) */
 const listeners = new Map<DomainEventType, EventHandler<any>[]>();
+
+/* Deferred listeners — scheduled via setImmediate, NOT awaited within emit.
+   Used for non-critical side-effects (notifications, async triage) that
+   must not add latency to the request that emitted the event. */
+const deferredListeners = new Map<DomainEventType, EventHandler<any>[]>();
 
 /**
  * Subscribe to a specific event type.
@@ -36,6 +41,23 @@ export function on<T extends DomainEventType>(
   const handlers = listeners.get(type) || [];
   handlers.push(handler);
   listeners.set(type, handlers);
+}
+
+/**
+ * Subscribe to a specific event type as a DEFERRED handler.
+ *
+ * Deferred handlers run via `setImmediate` after `emit()` has returned,
+ * so they never add latency to the request that emitted the event and
+ * their failures can never affect the response.  Use for non-critical
+ * side-effects: notifications, async enrichment, etc.
+ */
+export function onDeferred<T extends DomainEventType>(
+  type: T,
+  handler: EventHandler<T>,
+): void {
+  const handlers = deferredListeners.get(type) || [];
+  handlers.push(handler);
+  deferredListeners.set(type, handlers);
 }
 
 /**
@@ -72,7 +94,7 @@ export async function emit<T extends DomainEventType>(
     }
   }
 
-  /* Run type-specific handlers */
+  /* Run synchronous type-specific handlers */
   const typeHandlers = listeners.get(event.type) || [];
   for (const handler of typeHandlers) {
     try {
@@ -80,6 +102,24 @@ export async function emit<T extends DomainEventType>(
     } catch (err) {
       console.error(`[EVENT BUS] Handler error for ${stamped.type}:`, err);
     }
+  }
+
+  /* Schedule deferred handlers — run after emit() returns, never awaited.
+     Failures are logged but cannot affect the emitting request. */
+  const deferred = deferredListeners.get(event.type) || [];
+  if (deferred.length > 0) {
+    setImmediate(() => {
+      for (const handler of deferred) {
+        Promise.resolve()
+          .then(() => handler(stamped))
+          .catch((err) =>
+            console.error(
+              `[EVENT BUS] Deferred handler error for ${stamped.type}:`,
+              err,
+            ),
+          );
+      }
+    });
   }
 
   return stamped;
@@ -90,15 +130,25 @@ export async function emit<T extends DomainEventType>(
  */
 export function clearAllListeners(): void {
   listeners.clear();
+  deferredListeners.clear();
 }
 
 /**
  * Get current listener count (for diagnostics/tests).
+ * Includes both synchronous and deferred handlers.
  */
 export function listenerCount(type?: DomainEventType): number {
-  if (type) return (listeners.get(type) || []).length;
+  if (type) {
+    return (
+      (listeners.get(type) || []).length +
+      (deferredListeners.get(type) || []).length
+    );
+  }
   let total = 0;
   for (const handlers of listeners.values()) {
+    total += handlers.length;
+  }
+  for (const handlers of deferredListeners.values()) {
     total += handlers.length;
   }
   return total;

@@ -9,6 +9,7 @@ import { FilterToggle, FilterPanelBody, FilterSection, FilterSectionClear, Selec
 import { authHeaders } from "../../../lib/api";
 import { formatDate, formatChf } from "../../../lib/format";
 import ConfigurableTable from "../../../components/ConfigurableTable";
+import PaginationControls from "../../../components/PaginationControls";
 import { useTableSort, clientSort } from "../../../lib/tableUtils";
 import Badge from "../../../components/ui/Badge";
 import { withTranslations } from "../../../lib/i18n";
@@ -57,21 +58,18 @@ export default function ManagerExpensesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [invoices, setInvoices] = useState([]);
+  const [total, setTotal] = useState(0);
   const [buildings, setBuildings] = useState([]);
   const [actionLoading, setActionLoading] = useState(null);
   const [expSearch, setExpSearch] = useState("");
+  const [searchTerm, setSearchTerm] = useState(""); // debounced value sent to server
   const { sortField, sortDir, handleSort } = useTableSort(router, EXPENSE_SORT_FIELDS, { defaultField: "date", defaultDir: "desc" });
-  const sortedInvoices = useMemo(() => {
-    const q = expSearch.trim().toLowerCase();
-    const base = q
-      ? invoices.filter((inv) =>
-          (inv.invoiceNumber || "").toLowerCase().includes(q) ||
-          (inv.description || "").toLowerCase().includes(q) ||
-          (inv.expenseCategory || "").toLowerCase().includes(q)
-        )
-      : invoices;
-    return clientSort(base, sortField, sortDir, expenseFieldExtractor);
-  }, [invoices, expSearch, sortField, sortDir]);
+
+  // Server-side pagination
+  const PAGE_SIZE = 50;
+  const [offset, setOffset] = useState(0);
+  const currentPage = Math.floor(offset / PAGE_SIZE);
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   // Filters
   const [categoryFilter, setCategoryFilter] = useState("");
@@ -104,25 +102,46 @@ export default function ManagerExpensesPage() {
     setError("");
     try {
       const params = new URLSearchParams({ view: "summary" });
+      params.set("limit", String(PAGE_SIZE));
+      params.set("offset", String(offset));
       if (categoryFilter) params.set("expenseCategory", categoryFilter);
+      else params.set("categorized", "true"); // expenses surface = categorised invoices only
       if (buildingId) params.set("buildingId", buildingId);
       if (expenseTypeId) params.set("expenseTypeId", expenseTypeId);
       if (accountId) params.set("accountId", accountId);
+      if (searchTerm.trim()) params.set("search", searchTerm.trim());
+      const serverSort =
+        sortField === "amount" ? "totalAmount"
+        : sortField === "date" ? "createdAt"
+        : sortField === "invoiceNumber" ? "invoiceNumber"
+        : "createdAt";
+      params.set("sortField", serverSort);
+      params.set("sortDir", sortDir);
 
       const res = await fetch(`/api/invoices?${params.toString()}`, { headers: authHeaders() });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error?.message || "Failed to load expenses");
-      // If no category filter, only show invoices that have an expenseCategory
-      const all = data?.data || [];
-      setInvoices(categoryFilter ? all : all.filter((inv) => inv.expenseCategory));
+      setInvoices(data?.data || []);
+      setTotal(typeof data?.total === "number" ? data.total : (data?.data?.length || 0));
     } catch (e) {
       setError(String(e?.message || e));
     } finally {
       setLoading(false);
     }
-  }, [categoryFilter, buildingId, expenseTypeId, accountId]);
+  }, [categoryFilter, buildingId, expenseTypeId, accountId, searchTerm, sortField, sortDir, offset]);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  // Debounce free-text search → server param.
+  useEffect(() => {
+    const id = setTimeout(() => setSearchTerm(expSearch), 300);
+    return () => clearTimeout(id);
+  }, [expSearch]);
+
+  // Any filter / search / sort change returns to the first page.
+  useEffect(() => {
+    setOffset(0);
+  }, [categoryFilter, buildingId, expenseTypeId, accountId, searchTerm, sortField, sortDir]);
 
   function clearFilters() {
     setCategoryFilter("");
@@ -214,6 +233,7 @@ export default function ManagerExpensesPage() {
           {loading ? (
             <Panel><p className="m-0">{t("manager:financeExpenses.text.loadingExpenses")}</p></Panel>
           ) : (
+            <>
             <ConfigurableTable
                 tableId="manager-expenses"
                 columns={useMemo(() => [
@@ -277,7 +297,7 @@ export default function ManagerExpensesPage() {
                     },
                   },
                 ], [setExpenseCategory, actionLoading])}
-                data={sortedInvoices}
+                data={invoices}
                 rowKey={(inv) => inv.id}
                 sortField={sortField}
                 sortDir={sortDir}
@@ -299,6 +319,14 @@ export default function ManagerExpensesPage() {
                   </div>
                 )}
               />
+            <PaginationControls
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={total}
+              pageSize={PAGE_SIZE}
+              onPageChange={(p) => setOffset(p * PAGE_SIZE)}
+            />
+            </>
           )}
         </PageContent>
       </PageShell>

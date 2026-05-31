@@ -8,6 +8,7 @@ import PageHeader from "../../../components/layout/PageHeader";
 import PageContent from "../../../components/layout/PageContent";
 import Panel from "../../../components/layout/Panel";
 import ConfigurableTable from "../../../components/ConfigurableTable";
+import PaginationControls from "../../../components/PaginationControls";
 import { useLocalSort, clientSort } from "../../../lib/tableUtils";
 import { FilterToggle, FilterPanelBody, FilterSection, FilterSectionClear } from "../../../components/ui/FilterPanel";
 import { authHeaders } from "../../../lib/api";
@@ -538,10 +539,16 @@ export function InvoicesContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [invoices, setInvoices] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [pendingReviewCount, setPendingReviewCount] = useState(0);
   const [direction, setDirection] = useState("incoming"); // "incoming" | "outgoing" | "pending"
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [actionLoading, setActionLoading] = useState(null);
+
+  // Server-side pagination
+  const PAGE_SIZE = 50;
+  const [offset, setOffset] = useState(0);
 
   // Overlay state
   const [overlayInvoiceId, setOverlayInvoiceId] = useState(null);
@@ -558,91 +565,14 @@ export function InvoicesContent() {
 
   // Toolbar
   const [invSearch, setInvSearch] = useState("");
+  const [searchTerm, setSearchTerm] = useState(""); // debounced value sent to server
   const [actionsOpen, setActionsOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
-
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const res = await fetch("/api/invoices?view=summary&limit=200", { headers: authHeaders() });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error?.message || "Failed to load invoices");
-      setInvoices(data?.data || []);
-    } catch (e) {
-      setError(String(e?.message || e));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { loadData(); }, [loadData]);
-
-  // Deep-link: auto-open invoice overlay from ?invoiceId= query param.
-  // Use a ref so this only fires once per mount — hot-reloads re-mount the
-  // component but the ref resets, while URL params persist, preventing loops.
-  useEffect(() => {
-    if (!router.isReady) return;
-    if (deepLinkConsumed.current) return;
-    const qId = router.query.invoiceId;
-    if (!qId) return;
-    deepLinkConsumed.current = true;
-    setOverlayInvoiceId(qId);
-    // Immediately strip the param from the URL so the next hot-reload won't retrigger
-    const { invoiceId: _omit, ...rest } = router.query;
-    router.replace({ pathname: router.pathname, query: rest }, undefined, { shallow: true });
-  }, [router.isReady, router.query.invoiceId]);
 
   const isOutgoing = direction === "outgoing";
   const isPending = direction === "pending";
 
-  const pendingReviewCount = useMemo(
-    () => invoices.filter((inv) => inv.ingestionStatus === "PENDING_REVIEW").length,
-    [invoices]
-  );
-
-  const directionFiltered = useMemo(() => {
-    if (isPending) {
-      return invoices.filter((inv) => inv.ingestionStatus === "PENDING_REVIEW");
-    }
-    // Use direction field if available, fallback to leaseId heuristic
-    return invoices.filter((inv) => {
-      if (inv.direction) return isOutgoing ? inv.direction === "OUTGOING" : inv.direction === "INCOMING";
-      return isOutgoing ? !!inv.leaseId : !inv.leaseId;
-    });
-  }, [invoices, isOutgoing, isPending]);
-
-  // Apply status + category + text search filters on top of direction
-  const filteredInvoices = useMemo(() => {
-    let list = directionFiltered;
-    if (statusFilter !== "ALL") {
-      list = list.filter((inv) => inv.status === statusFilter);
-    }
-    if (categoryFilter) {
-      list = list.filter((inv) => inv.expenseCategory === categoryFilter);
-    }
-    const q = invSearch.trim().toLowerCase();
-    if (q) {
-      list = list.filter((inv) =>
-        (inv.invoiceNumber || "").toLowerCase().includes(q) ||
-        (inv.issuerName || "").toLowerCase().includes(q) ||
-        (inv.recipientName || "").toLowerCase().includes(q) ||
-        (inv.buildingName || "").toLowerCase().includes(q) ||
-        (inv.description || "").toLowerCase().includes(q)
-      );
-    }
-    return list;
-  }, [directionFiltered, statusFilter, categoryFilter, invSearch]);
-
-  // Unique expense categories across all invoices for the filter dropdown
-  const availableCategories = useMemo(() => {
-    const cats = new Set();
-    directionFiltered.forEach((inv) => { if (inv.expenseCategory) cats.add(inv.expenseCategory); });
-    return [...cats].sort();
-  }, [directionFiltered]);
-
-  const [tableExpanded, setTableExpanded] = useState(false);
-
+  // Sort — drives the server query (whitelisted scalar columns only).
   const INV_SORT_CYCLE = [
     { field: "createdAt", label: t("manager:financeInvoices.col.date") },
     { field: "amount",    label: "Amount" },
@@ -659,13 +589,91 @@ export function InvoicesContent() {
     handleSort(INV_SORT_CYCLE[next].field);
   }
 
-  const sortedInvoices = useMemo(
-    () => clientSort(filteredInvoices, sortField, sortDir, invoiceFieldExtractor),
-    [filteredInvoices, sortField, sortDir]
-  );
+  // Map UI column ids onto server-whitelisted sort fields.
+  function toServerSortField(f) {
+    if (f === "amount") return "totalAmount";
+    if (f === "issuer" || f === "recipient" || f === "issuerOrRecipient") return "recipientName";
+    const allowed = ["createdAt", "issueDate", "dueDate", "paidAt", "totalAmount", "amount", "invoiceNumber", "recipientName", "status"];
+    return allowed.includes(f) ? f : "createdAt";
+  }
 
-  const COLLAPSED_ROWS = 5;
-  const visibleInvoices = tableExpanded ? sortedInvoices : sortedInvoices.slice(0, COLLAPSED_ROWS);
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const params = new URLSearchParams();
+      params.set("view", "summary");
+      params.set("limit", String(PAGE_SIZE));
+      params.set("offset", String(offset));
+      if (direction === "pending") {
+        params.set("ingestionStatus", "PENDING_REVIEW");
+      } else {
+        params.set("direction", direction === "outgoing" ? "OUTGOING" : "INCOMING");
+      }
+      if (statusFilter !== "ALL") params.set("status", statusFilter);
+      if (categoryFilter) params.set("expenseCategory", categoryFilter);
+      if (searchTerm.trim()) params.set("search", searchTerm.trim());
+      params.set("sortField", toServerSortField(sortField));
+      params.set("sortDir", sortDir);
+      const res = await fetch(`/api/invoices?${params.toString()}`, { headers: authHeaders() });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error?.message || "Failed to load invoices");
+      setInvoices(data?.data || []);
+      setTotal(typeof data?.total === "number" ? data.total : (data?.data?.length || 0));
+    } catch (e) {
+      setError(String(e?.message || e));
+    } finally {
+      setLoading(false);
+    }
+  }, [direction, statusFilter, categoryFilter, searchTerm, sortField, sortDir, offset]);
+
+  // Pending-review tab count — independent of the active page/filters.
+  const loadPendingCount = useCallback(async () => {
+    try {
+      const res = await fetch(
+        "/api/invoices?view=summary&ingestionStatus=PENDING_REVIEW&limit=1",
+        { headers: authHeaders() }
+      );
+      const data = await res.json();
+      if (res.ok) setPendingReviewCount(typeof data?.total === "number" ? data.total : 0);
+    } catch { /* non-fatal */ }
+  }, []);
+
+  useEffect(() => { loadData(); }, [loadData]);
+  useEffect(() => { loadPendingCount(); }, [loadPendingCount]);
+
+  // Debounce free-text search → server param; reset to first page.
+  useEffect(() => {
+    const id = setTimeout(() => { setSearchTerm(invSearch); }, 300);
+    return () => clearTimeout(id);
+  }, [invSearch]);
+
+  // Any filter / sort / search change returns to the first page.
+  useEffect(() => {
+    setOffset(0);
+  }, [direction, statusFilter, categoryFilter, searchTerm, sortField, sortDir]);
+
+  // Deep-link: auto-open invoice overlay from ?invoiceId= query param.
+  // Use a ref so this only fires once per mount — hot-reloads re-mount the
+  // component but the ref resets, while URL params persist, preventing loops.
+  useEffect(() => {
+    if (!router.isReady) return;
+    if (deepLinkConsumed.current) return;
+    const qId = router.query.invoiceId;
+    if (!qId) return;
+    deepLinkConsumed.current = true;
+    setOverlayInvoiceId(qId);
+    // Immediately strip the param from the URL so the next hot-reload won't retrigger
+    const { invoiceId: _omit, ...rest } = router.query;
+    router.replace({ pathname: router.pathname, query: rest }, undefined, { shallow: true });
+  }, [router.isReady, router.query.invoiceId]);
+
+  // Static expense-category list (server filters on the canonical enum).
+  const EXPENSE_CATEGORIES = ["MAINTENANCE", "UTILITIES", "CLEANING", "INSURANCE", "TAX", "ADMIN", "CAPEX", "OTHER"];
+
+  // Pagination derived values (page-based for PaginationControls).
+  const currentPage = Math.floor(offset / PAGE_SIZE);
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   const activeFilterCount = [
     direction !== "incoming",
@@ -688,6 +696,7 @@ export function InvoicesContent() {
         throw new Error(data?.error?.message || `Failed to ${action}`);
       }
       await loadData();
+      await loadPendingCount();
     } catch (e) {
       setError(String(e?.message || e));
     } finally {
@@ -871,7 +880,7 @@ export function InvoicesContent() {
           type="search"
           placeholder={t("manager:financeInvoices.placeholder.searchInvoices")}
           value={invSearch}
-          onChange={(e) => { setInvSearch(e.target.value); setTableExpanded(false); }}
+          onChange={(e) => { setInvSearch(e.target.value); }}
           className="filter-input flex-1 min-w-0 mb-0"
         />
         {/* Filter button */}
@@ -950,7 +959,7 @@ export function InvoicesContent() {
               ].map(({ key, label }) => (
                 <button
                   key={key}
-                  onClick={() => { setDirection(key); setStatusFilter("ALL"); setTableExpanded(false); }}
+                  onClick={() => { setDirection(key); setStatusFilter("ALL"); }}
                   className={cn(
                     "rounded-lg px-3 py-1.5 text-sm font-medium border transition-colors",
                     direction === key
@@ -968,7 +977,7 @@ export function InvoicesContent() {
               {(isOutgoing ? OUTGOING_STATUS_TABS : INCOMING_STATUS_TABS).map(({ key, label }) => (
                 <button
                   key={key}
-                  onClick={() => { setStatusFilter(key); setTableExpanded(false); }}
+                  onClick={() => { setStatusFilter(key); }}
                   className={cn(
                     "rounded-lg px-3 py-1.5 text-sm font-medium border transition-colors",
                     statusFilter === key
@@ -981,11 +990,11 @@ export function InvoicesContent() {
               ))}
             </div>
           </FilterSection>
-          {availableCategories.length > 0 && (
+          {!isPending && (
             <FilterSection title={t("manager:financeInvoices.title.category")}>
               <div className="flex flex-wrap gap-2">
                 <button
-                  onClick={() => { setCategoryFilter(""); setTableExpanded(false); }}
+                  onClick={() => { setCategoryFilter(""); }}
                   className={cn(
                     "rounded-lg px-3 py-1.5 text-sm font-medium border transition-colors",
                     !categoryFilter
@@ -993,10 +1002,10 @@ export function InvoicesContent() {
                       : "bg-surface text-muted-text border-surface-border hover:bg-surface-subtle"
                   )}
                 >{t("manager:financeInvoices.text.all")}</button>
-                {availableCategories.map((cat) => (
+                {EXPENSE_CATEGORIES.map((cat) => (
                   <button
                     key={cat}
-                    onClick={() => { setCategoryFilter(cat); setTableExpanded(false); }}
+                    onClick={() => { setCategoryFilter(cat); }}
                     className={cn(
                       "rounded-lg px-3 py-1.5 text-sm font-medium border transition-colors",
                       categoryFilter === cat
@@ -1019,13 +1028,13 @@ export function InvoicesContent() {
 
       {loading ? (
         <Panel><p className="loading-text">{t("manager:financeInvoices.text.loadingInvoices")}</p></Panel>
-      ) : filteredInvoices.length === 0 ? (
+      ) : invoices.length === 0 ? (
         <div className="empty-state"><p className="empty-state-text">{t("manager:financeInvoices.text.noInvoicesMatchThisFilter")}</p></div>
       ) : (
         <>
           {/* Mobile: clean card list (no Panel wrapper) */}
           <div className="sm:hidden overflow-hidden rounded-lg border border-table-border divide-y divide-table-divider">
-            {visibleInvoices.map((inv) => (
+            {invoices.map((inv) => (
               <div
                 key={inv.id}
                 className="table-card cursor-pointer hover:bg-surface-subtle/80 transition-colors"
@@ -1042,17 +1051,13 @@ export function InvoicesContent() {
                 </div>
               </div>
             ))}
-            {/* Expand / collapse */}
-            <div
-              className="expand-footer"
-              onClick={() => setTableExpanded((e) => !e)}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"
-                className={cn("w-4 h-4 transition-transform duration-200", tableExpanded ? "rotate-180" : "")}>
-                <path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
-              </svg>
-              {tableExpanded ? "Show less" : `Show all ${sortedInvoices.length} invoice${sortedInvoices.length !== 1 ? "s" : ""}`}
-            </div>
+            <PaginationControls
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={total}
+              pageSize={PAGE_SIZE}
+              onPageChange={(p) => setOffset(p * PAGE_SIZE)}
+            />
           </div>
 
           {/* Desktop: Panel + ConfigurableTable */}
@@ -1060,7 +1065,7 @@ export function InvoicesContent() {
               <ConfigurableTable
                 tableId="manager-invoices"
                 columns={invoiceColumns}
-                data={visibleInvoices}
+                data={invoices}
                 rowKey="id"
                 sortField={sortField}
                 sortDir={sortDir}
@@ -1068,23 +1073,13 @@ export function InvoicesContent() {
                 onRowClick={(inv) => router.push(`/manager/finance/invoices/${inv.id}`)}
                 emptyState="No invoices match this filter."
               />
-              {/* Expand / collapse row */}
-              <div
-                className="expand-footer"
-                onClick={() => setTableExpanded((e) => !e)}
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                  className={cn("w-4 h-4 transition-transform duration-200", tableExpanded ? "rotate-180" : "")}
-                >
-                  <path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
-                </svg>
-                {tableExpanded
-                  ? "Show less"
-                  : `Show all ${sortedInvoices.length} invoice${sortedInvoices.length !== 1 ? "s" : ""}`}
-              </div>
+              <PaginationControls
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={total}
+                pageSize={PAGE_SIZE}
+                onPageChange={(p) => setOffset(p * PAGE_SIZE)}
+              />
           </div>
         </>
       )}

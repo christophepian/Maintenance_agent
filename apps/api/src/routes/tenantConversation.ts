@@ -15,11 +15,34 @@ import { requireTenantSession, AuthedRequest } from "../authz";
 import { processTurnWorkflow } from "../workflows/conversationWorkflow";
 import { getThreadHistory, resolveConversationTenantId } from "../repositories/conversationRepository";
 
+// Slice 3: In-memory rate limiter for POST /tenant/conversation (keyed by tenantId).
+// AI turns are expensive (Claude calls) — cap each tenant at 20 messages/minute.
+// NOTE: Resets on server restart — replace with Redis-backed limiter before multi-instance production.
+const conversationRateMap = new Map<string, { count: number; resetAt: number }>();
+const CONVERSATION_RATE_LIMIT = 20;
+const CONVERSATION_RATE_WINDOW_MS = 60_000;
+
+function checkConversationRateLimit(tenantId: string): boolean {
+  const now = Date.now();
+  const entry = conversationRateMap.get(tenantId);
+  if (!entry || now >= entry.resetAt) {
+    conversationRateMap.set(tenantId, { count: 1, resetAt: now + CONVERSATION_RATE_WINDOW_MS });
+    return true;
+  }
+  entry.count++;
+  return entry.count <= CONVERSATION_RATE_LIMIT;
+}
+
 export function registerTenantConversationRoutes(router: Router) {
   // POST /tenant/conversation
   router.post("/tenant/conversation", async ({ req, res, orgId, prisma }) => {
     const rawTenantId = requireTenantSession(req, res);
     if (!rawTenantId) return;
+
+    // Slice 3: rate limit per tenant before any expensive AI work
+    if (!checkConversationRateLimit(rawTenantId)) {
+      return sendError(res, 429, "RATE_LIMITED", "Too many messages. Please wait a moment and try again.");
+    }
 
     const email = (req as AuthedRequest).user?.email;
     const tenantId = await resolveConversationTenantId(prisma, rawTenantId, orgId, email);

@@ -752,6 +752,32 @@ describe('G10: API Contract Tests', () => {
     });
   });
 
+  // Slice 3: per-tenant rate limit on the AI conversation endpoint
+  describe('POST /tenant/conversation — rate limit', () => {
+    it('returns 429 once a single tenant exceeds 20 messages/minute', async () => {
+      // Unique userId so this test does not consume the shared "test-user-id" budget
+      const tenantToken = createTestToken({ role: 'TENANT', userId: 'ratelimit-tenant-conv' });
+      let sawRateLimit = false;
+
+      // 21 rapid requests — the limiter (20/min) must reject at least one
+      for (let i = 0; i < 21; i++) {
+        const res = await fetch(`${API_BASE}/tenant/conversation`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', ...getAuthHeaders(tenantToken) },
+          body: JSON.stringify({ message: 'rate limit probe' }),
+        });
+        if (res.status === 429) {
+          const body = await res.json();
+          expect(body.error.code).toBe('RATE_LIMITED');
+          sawRateLimit = true;
+          break;
+        }
+      }
+
+      expect(sawRateLimit).toBe(true);
+    }, 30000);
+  });
+
   describe('GET /tenant/conversation/history', () => {
     it('returns data envelope with messages array', async () => {
       const tenantToken = createTenantToken();
