@@ -1001,6 +1001,16 @@ export async function ingestSource(
 
   const fetcher = getFetcher(source.fetcherType ?? "");
   if (!fetcher) {
+    // No fetcherType set — this is a manual reference entry, not an auto-fetched source.
+    // Skip silently without marking it as ERROR.
+    if (!source.fetcherType) {
+      return {
+        sourceId,
+        sourceName: source.name,
+        status: "skipped",
+        variablesUpdated: 0,
+      };
+    }
     await legalSourceRepo.updateLegalSourceById(prisma, sourceId, {
       status: "ERROR",
       lastCheckedAt: new Date(),

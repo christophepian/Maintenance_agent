@@ -963,7 +963,14 @@ function LegalSourceForm({ source, saving, formError, onSubmit, onCancel }) {
         </div>
         <div>
           <label className={labelClass}>{t("manager:settings.text.fetcherType")}</label>
-          <input type="text" value={fetcherType} onChange={(e) => setFetcherType(e.target.value)} className={inputClass} placeholder={t("manager:settings.placeholder.eGReferenceRateCpi")} />
+          <select value={fetcherType} onChange={(e) => setFetcherType(e.target.value)} className={inputClass}>
+            <option value="">— Manual / no auto-fetch —</option>
+            <option value="REFERENCE_RATE">REFERENCE_RATE</option>
+            <option value="CPI">CPI</option>
+            <option value="ASLOCA_DEPRECIATION">ASLOCA_DEPRECIATION</option>
+            <option value="ASLOCA_RENT_REDUCTION">ASLOCA_RENT_REDUCTION</option>
+            <option value="FEDLEX">FEDLEX</option>
+          </select>
         </div>
         <div>
           <label className={labelClass}>{t("manager:settings.text.parserType")}</label>
