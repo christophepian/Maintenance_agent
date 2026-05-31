@@ -893,7 +893,7 @@ function LegalScopeFilterBar({ sources, activeFilter, onFilter }) {
               ? "bg-blue-600 text-white"
               : "bg-surface-hover text-muted-text hover:bg-surface-border")}
         >
-          {t(`manager:settings.tabs.${tab.key.toLowerCase()}`)}
+          {tab.label}
         </button>
       ))}
     </div>
