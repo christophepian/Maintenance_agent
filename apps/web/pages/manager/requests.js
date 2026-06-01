@@ -101,7 +101,7 @@ function ActionDropdown({ actions, loading }) {
         type="button"
         onClick={() => setOpen((o) => !o)}
         disabled={loading}
-        className="rounded-lg border border-surface-border bg-surface px-3 py-1.5 text-xs font-semibold text-muted-dark hover:bg-surface-subtle transition disabled:opacity-50"
+        className="whitespace-nowrap rounded-lg border border-surface-border bg-surface px-3 py-1.5 text-xs font-semibold text-muted-dark hover:bg-surface-subtle transition disabled:opacity-50"
       >
         {loading ? "\u2026" : "Actions \u25be"}
       </button>
@@ -1446,95 +1446,92 @@ export default function ManagerRequestsPage() {
             })}
           </ScrollableTabs>
 
-          {/* Filter + Sort toggles */}
-          {!loading && (
-            <div className="flex items-center gap-2">
-              <input
-                type="search"
-                aria-label={t("manager:requests.ariaLabel.searchRequests")}
-                placeholder={t("manager:requests.placeholder.descriptionBuildingUnitContractor")}
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="filter-input flex-1 min-w-0 mb-0"
-              />
-              <FilterToggle open={filterOpen} onToggle={() => setFilterOpen((v) => !v)} activeCount={activeFilterCount} />
-              <SortToggle open={sortOpen} onToggle={() => setSortOpen((v) => !v)} active={sortActive} />
-            </div>
-          )}
-
-          {/* Collapsible filter panel */}
-          {filterOpen && (
-            <FilterPanelBody>
-              <FilterSection title={t("manager:requests.title.priority")} first>
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                  <SelectField label={t("manager:requests.prop.urgency")} value={filterUrgency} onChange={(e) => setFilterUrgency(e.target.value)}>
-                    <option value="">{t("manager:requests.text.allUrgencies")}</option>
-                    <option value="EMERGENCY">{t("manager:requests.text.emergency")}</option>
-                    <option value="HIGH">{t("manager:requests.text.high")}</option>
-                    <option value="NORMAL">{t("manager:requests.text.normal")}</option>
-                    <option value="LOW">{t("manager:requests.text.low")}</option>
-                  </SelectField>
-                  <SelectField label={t("manager:requests.prop.requestType")} value={filterRequestType} onChange={(e) => setFilterRequestType(e.target.value)}>
-                    <option value="">{t("manager:requests.text.allTypes")}</option>
-                    <option value="MAINTENANCE">{t("manager:requests.text.typeMaintenance")}</option>
-                    <option value="COMPLAINT">{t("manager:requests.text.typeComplaint")}</option>
-                    <option value="ADMINISTRATIVE">{t("manager:requests.text.typeAdministrative")}</option>
-                  </SelectField>
-                </div>
-              </FilterSection>
-
-              <FilterSection title={t("manager:requests.title.scope")}>
-                <div className="grid grid-cols-2 gap-3">
-                  {buildingOptions.length > 1 && (
-                    <SelectField label={t("manager:requests.prop.building")} value={filterBuilding} onChange={(e) => { setFilterBuilding(e.target.value); }}>
-                      <option value="">{t("manager:requests.text.allBuildings")}</option>
-                      {buildingOptions.map(([id, name]) => (
-                        <option key={id} value={id}>{name}</option>
-                      ))}
-                    </SelectField>
-                  )}
-                  {categoryOptions.length > 0 && (
-                    <SelectField label={t("manager:requests.prop.category")} value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)}>
-                      <option value="">{t("manager:requests.text.allCategories")}</option>
-                      {categoryOptions.map((c) => (
-                        <option key={c} value={c}>{c}</option>
-                      ))}
-                    </SelectField>
-                  )}
-                </div>
-              </FilterSection>
-
-              <FilterSectionClear hasFilter={hasActiveFilters} onClear={clearFilters} />
-            </FilterPanelBody>
-          )}
-
-          {/* Collapsible sort panel */}
-          {sortOpen && (
-            <SortPanelBody>
-              <SortRow active={sortKey === "date"} dir={sortKey === "date" ? sortDir : "desc"} label={t("manager:requests.prop.date")} descLabel="Newest first" ascLabel="Oldest first" onSelect={(dir) => handleSort("date", dir)} />
-              <SortRow active={sortKey === "number"} dir={sortKey === "number" ? sortDir : "asc"} label={t("manager:requests.prop.request")} ascLabel="Low → High" descLabel="High → Low" onSelect={(dir) => handleSort("number", dir)} />
-              <SortRow active={sortKey === "urgency"} dir={sortKey === "urgency" ? sortDir : "desc"} label={t("manager:requests.prop.urgency")} descLabel="High → Low" ascLabel="Low → High" onSelect={(dir) => handleSort("urgency", dir)} />
-              <SortRow active={sortKey === "cost"} dir={sortKey === "cost" ? sortDir : "desc"} label={t("manager:requests.prop.estCost")} descLabel="High → Low" ascLabel="Low → High" onSelect={(dir) => handleSort("cost", dir)} />
-              <SortRow active={sortKey === "building"} dir={sortKey === "building" ? sortDir : "asc"} label={t("manager:requests.prop.building")} ascLabel="A → Z" descLabel="Z → A" onSelect={(dir) => handleSort("building", dir)} />
-            </SortPanelBody>
-          )}
-
-          {/* Content */}
+          {/* Table with integrated toolbar */}
           {loading ? (
             <div className="px-4"><p className="text-sm text-muted">Loading requests&hellip;</p></div>
-          ) : searchFilteredRequests.length === 0 ? (
-            <div className="px-4 py-6 text-center">
-              <p className="empty-state-text">{hasActiveFilters ? "No requests match your search or filters." : "No requests match this filter."}</p>
-              {hasActiveFilters && (
-                <button onClick={clearFilters} className="mt-2 text-xs text-blue-600 hover:underline">{t("manager:requests.text.resetFilters")}</button>
-              )}
-            </div>
           ) : (
             <div>
               <ConfigurableTable
                 tableId="manager-requests"
                 columns={requestColumns}
                 data={paginatedRequests}
+                toolbarSlot={
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <input
+                      type="search"
+                      aria-label={t("manager:requests.ariaLabel.searchRequests")}
+                      placeholder={t("manager:requests.placeholder.descriptionBuildingUnitContractor")}
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      className="filter-input flex-1 min-w-0 mb-0"
+                    />
+                    <FilterToggle open={filterOpen} onToggle={() => setFilterOpen((v) => !v)} activeCount={activeFilterCount} />
+                    <SortToggle open={sortOpen} onToggle={() => setSortOpen((v) => !v)} active={sortActive} />
+                  </div>
+                }
+                toolbarPanel={
+                  <>
+                    {filterOpen && (
+                      <FilterPanelBody>
+                        <FilterSection title={t("manager:requests.title.priority")} first>
+                          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                            <SelectField label={t("manager:requests.prop.urgency")} value={filterUrgency} onChange={(e) => setFilterUrgency(e.target.value)}>
+                              <option value="">{t("manager:requests.text.allUrgencies")}</option>
+                              <option value="EMERGENCY">{t("manager:requests.text.emergency")}</option>
+                              <option value="HIGH">{t("manager:requests.text.high")}</option>
+                              <option value="NORMAL">{t("manager:requests.text.normal")}</option>
+                              <option value="LOW">{t("manager:requests.text.low")}</option>
+                            </SelectField>
+                            <SelectField label={t("manager:requests.prop.requestType")} value={filterRequestType} onChange={(e) => setFilterRequestType(e.target.value)}>
+                              <option value="">{t("manager:requests.text.allTypes")}</option>
+                              <option value="MAINTENANCE">{t("manager:requests.text.typeMaintenance")}</option>
+                              <option value="COMPLAINT">{t("manager:requests.text.typeComplaint")}</option>
+                              <option value="ADMINISTRATIVE">{t("manager:requests.text.typeAdministrative")}</option>
+                            </SelectField>
+                          </div>
+                        </FilterSection>
+                        <FilterSection title={t("manager:requests.title.scope")}>
+                          <div className="grid grid-cols-2 gap-3">
+                            {buildingOptions.length > 1 && (
+                              <SelectField label={t("manager:requests.prop.building")} value={filterBuilding} onChange={(e) => { setFilterBuilding(e.target.value); }}>
+                                <option value="">{t("manager:requests.text.allBuildings")}</option>
+                                {buildingOptions.map(([id, name]) => (
+                                  <option key={id} value={id}>{name}</option>
+                                ))}
+                              </SelectField>
+                            )}
+                            {categoryOptions.length > 0 && (
+                              <SelectField label={t("manager:requests.prop.category")} value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)}>
+                                <option value="">{t("manager:requests.text.allCategories")}</option>
+                                {categoryOptions.map((c) => (
+                                  <option key={c} value={c}>{c}</option>
+                                ))}
+                              </SelectField>
+                            )}
+                          </div>
+                        </FilterSection>
+                        <FilterSectionClear hasFilter={hasActiveFilters} onClear={clearFilters} />
+                      </FilterPanelBody>
+                    )}
+                    {sortOpen && (
+                      <SortPanelBody>
+                        <SortRow active={sortKey === "date"} dir={sortKey === "date" ? sortDir : "desc"} label={t("manager:requests.prop.date")} descLabel="Newest first" ascLabel="Oldest first" onSelect={(dir) => handleSort("date", dir)} />
+                        <SortRow active={sortKey === "number"} dir={sortKey === "number" ? sortDir : "asc"} label={t("manager:requests.prop.request")} ascLabel="Low → High" descLabel="High → Low" onSelect={(dir) => handleSort("number", dir)} />
+                        <SortRow active={sortKey === "urgency"} dir={sortKey === "urgency" ? sortDir : "desc"} label={t("manager:requests.prop.urgency")} descLabel="High → Low" ascLabel="Low → High" onSelect={(dir) => handleSort("urgency", dir)} />
+                        <SortRow active={sortKey === "cost"} dir={sortKey === "cost" ? sortDir : "desc"} label={t("manager:requests.prop.estCost")} descLabel="High → Low" ascLabel="Low → High" onSelect={(dir) => handleSort("cost", dir)} />
+                        <SortRow active={sortKey === "building"} dir={sortKey === "building" ? sortDir : "asc"} label={t("manager:requests.prop.building")} ascLabel="A → Z" descLabel="Z → A" onSelect={(dir) => handleSort("building", dir)} />
+                      </SortPanelBody>
+                    )}
+                  </>
+                }
+                emptyState={
+                  <div className="text-center">
+                    <p className="empty-state-text">{hasActiveFilters ? "No requests match your search or filters." : "No requests match this filter."}</p>
+                    {hasActiveFilters && (
+                      <button onClick={clearFilters} className="mt-2 text-xs text-blue-600 hover:underline">{t("manager:requests.text.resetFilters")}</button>
+                    )}
+                  </div>
+                }
                 rowKey={(r) => r.id}
                 sortField={sortKey}
                 sortDir={sortDir}
