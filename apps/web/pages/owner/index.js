@@ -19,7 +19,7 @@ import { withTranslations } from "../../lib/i18n";
 import { useTranslation } from "next-i18next";
 
 function ActionStat({ label, value, href, tone }) {
-  const valueColor = { warn: "text-amber-700", bad: "text-red-600", good: "text-green-700" }[tone] ?? "text-foreground";
+  const valueColor = { warn: "text-warning-text", bad: "text-destructive-text", good: "text-success-text" }[tone] ?? "text-foreground";
   return (
     <Link href={href} className="no-underline group flex flex-col justify-between">
       <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{label}</span>
@@ -29,7 +29,7 @@ function ActionStat({ label, value, href, tone }) {
 }
 
 function InfoStat({ label, value, tone }) {
-  const valueColor = { good: "text-green-700", warn: "text-amber-700", bad: "text-red-600" }[tone] ?? "text-foreground";
+  const valueColor = { good: "text-success-text", warn: "text-warning-text", bad: "text-destructive-text" }[tone] ?? "text-foreground";
   return (
     <div className="flex flex-col justify-between">
       <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{label}</span>

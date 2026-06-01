@@ -27,9 +27,9 @@ function ytdRange() {
 /* ─── Actionable KPI: same flat layout as InfoStat but clickable ─── */
 function ActionStat({ label, value, href, tone }) {
   const valueColor = {
-    warn: "text-amber-700",
-    bad:  "text-red-600",
-    good: "text-green-700",
+    warn: "text-warning-text",
+    bad:  "text-destructive-text",
+    good: "text-success-text",
   }[tone] ?? "text-foreground";
   return (
     <Link href={href} className="no-underline group flex flex-col justify-between">
@@ -42,9 +42,9 @@ function ActionStat({ label, value, href, tone }) {
 /* ─── Informational KPI: read-only, no hover affordance ─── */
 function InfoStat({ label, value, tone }) {
   const valueColor = {
-    good: "text-green-700",
-    warn: "text-amber-700",
-    bad:  "text-red-600",
+    good: "text-success-text",
+    warn: "text-warning-text",
+    bad:  "text-destructive-text",
   }[tone] ?? "text-foreground";
   return (
     <div className="flex flex-col justify-between">

@@ -89,26 +89,26 @@
 html.dark {
   /* ── Foreground ── */
   --color-foreground:     #ffffff;
-  --color-foreground-dim: rgba(255,255,255,.35);
+  --color-foreground-dim: rgba(255,255,255,.55);
 
   /* ── Surface ── */
   --color-surface:         #05081a;
   --color-surface-raised:  #0d1226;
   --color-surface-subtle:  #141d38;
-  --color-surface-border:  rgba(255,255,255,.1);
-  --color-surface-hover:   rgba(255,255,255,.06);
-  --color-surface-divider: rgba(255,255,255,.05);
+  --color-surface-border:  rgba(255,255,255,.22);
+  --color-surface-hover:   rgba(255,255,255,.08);
+  --color-surface-divider: rgba(255,255,255,.12);
 
   /* ── Table ── */
-  --color-table-header:    rgba(255,255,255,.04);
-  --color-table-border:    rgba(255,255,255,.08);
-  --color-table-divider:   rgba(255,255,255,.05);
+  --color-table-header:    rgba(255,255,255,.06);
+  --color-table-border:    rgba(255,255,255,.2);
+  --color-table-divider:   rgba(255,255,255,.12);
 
   /* ── Muted ── */
   --color-muted:       rgba(255,255,255,.6);
   --color-muted-light: rgba(255,255,255,.05);
   --color-muted-dark:  rgba(255,255,255,.8);
-  --color-muted-ring:  rgba(255,255,255,.15);
+  --color-muted-ring:  rgba(255,255,255,.28);
   --color-muted-text:  rgba(255,255,255,.6);
 
   /* ── Brand (indigo) — core stays, light/dark/ring adapt to dark bg ── */
@@ -345,9 +345,14 @@ h1, h2 {
   }
 
   .tab-btn-active {
-    @apply px-5 py-2.5 text-sm font-medium text-brand bg-transparent;
-    @apply border-0 border-b-2 border-brand -mb-px cursor-pointer;
+    @apply px-5 py-2.5 text-sm font-medium text-brand-dark bg-transparent;
+    @apply border-0 border-b-2 border-brand-dark -mb-px cursor-pointer;
     @apply whitespace-nowrap;
+  }
+
+  html.dark .tab-btn-active {
+    color: var(--color-foreground);
+    border-bottom-color: var(--color-brand-dark);
   }
 
   /* ── Tab panels ── */
