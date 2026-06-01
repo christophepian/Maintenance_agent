@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useRouter } from "next/router";
 import AppShell from "../../components/AppShell";
 import Badge from "../../components/ui/Badge";
 import { authHeaders } from "../../lib/api";
@@ -9,9 +10,6 @@ import { useTranslation } from "next-i18next";
 /* ─── Constants ──────────────────────────────────────────────── */
 
 const PREVIEW = 3; // rows shown before expand
-
-const MONTHS_SHORT = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-const MONTHS_FULL  = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 
 function lastDayOfMonth(year, month) {
   return new Date(year, month + 1, 0).getDate();
@@ -45,24 +43,30 @@ function fmtPct(rate) {
   return `${Math.round(rate * 100)}%`;
 }
 
-function delta(curr, prev, format) {
+function delta(curr, prev, t) {
   if (!Number.isFinite(curr) || !Number.isFinite(prev) || prev === 0) return null;
   const pct = ((curr - prev) / Math.abs(prev)) * 100;
   const sign = pct >= 0 ? "+" : "";
   const tone = pct >= 0 ? "text-green-600" : "text-red-500";
-  return { label: `${sign}${pct.toFixed(1)}% vs prev month`, tone };
+  const label = t
+    ? t("reporting.text.vsPrevMonth", { delta: `${sign}${pct.toFixed(1)}` })
+    : `${sign}${pct.toFixed(1)}% vs prev month`;
+  return { label, tone };
 }
 
 /* ─── Shared expand toggle ───────────────────────────────────── */
 
 function ExpandToggle({ expanded, total, onToggle }) {
+  const { t } = useTranslation("owner");
   if (total <= PREVIEW) return null;
   return (
     <button
       onClick={onToggle}
       className="mt-3 w-full rounded-xl border border-surface-divider py-1.5 text-xs font-medium text-muted hover:bg-surface-subtle transition-colors"
     >
-      {expanded ? "Show less ↑" : `Show ${total - PREVIEW} more ↓`}
+      {expanded
+        ? t("reporting.text.showLess")
+        : t("reporting.text.showMore", { count: total - PREVIEW })}
     </button>
   );
 }
@@ -71,6 +75,7 @@ function ExpandToggle({ expanded, total, onToggle }) {
 
 function TimelineHeader({ year, month, mode, onSelect, onYearNav, onModeToggle }) {
   const { t } = useTranslation("owner");
+  const { locale } = useRouter();
   const scrollRef = useRef(null);
 
   // Auto-scroll selected month into view
@@ -79,6 +84,12 @@ function TimelineHeader({ year, month, mode, onSelect, onYearNav, onModeToggle }
     const el = scrollRef.current.querySelector("[data-selected='true']");
     if (el) el.scrollIntoView({ inline: "center", behavior: "smooth", block: "nearest" });
   }, [month, mode]);
+
+  // Localized abbreviated month names
+  const monthsShort = useMemo(() =>
+    Array.from({ length: 12 }, (_, i) =>
+      new Intl.DateTimeFormat(locale, { month: "short" }).format(new Date(2024, i, 1))
+    ), [locale]);
 
   // Year range: show a 9-year window centred on selected year
   const yearRange = useMemo(() => {
@@ -97,7 +108,7 @@ function TimelineHeader({ year, month, mode, onSelect, onYearNav, onModeToggle }
               <button
                 onClick={() => onYearNav(-1)}
                 className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-surface-hover text-muted transition-colors text-sm"
-                aria-label={t("owner:reporting.ariaLabel.previousYear")}
+                aria-label={t("reporting.ariaLabel.previousYear")}
               >
                 ‹
               </button>
@@ -110,7 +121,7 @@ function TimelineHeader({ year, month, mode, onSelect, onYearNav, onModeToggle }
               <button
                 onClick={() => onYearNav(1)}
                 className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-surface-hover text-muted transition-colors text-sm"
-                aria-label={t("owner:reporting.ariaLabel.nextYear")}
+                aria-label={t("reporting.ariaLabel.nextYear")}
               >
                 ›
               </button>
@@ -120,7 +131,7 @@ function TimelineHeader({ year, month, mode, onSelect, onYearNav, onModeToggle }
               onClick={onModeToggle}
               className="shrink-0 rounded-full px-3 py-1 text-sm font-medium text-muted hover:bg-surface-hover transition-colors"
             >
-              ← Months
+              {t("reporting.text.backToMonths")}
             </button>
           )}
 
@@ -132,12 +143,12 @@ function TimelineHeader({ year, month, mode, onSelect, onYearNav, onModeToggle }
             className="flex gap-1.5 overflow-x-auto scrollbar-none flex-1"
           >
             {mode === "month"
-              ? MONTHS_SHORT.map((m, i) => {
+              ? monthsShort.map((m, i) => {
                   const isSelected = i === month;
                   const isFuture = new Date(year, i, 1) > new Date();
                   return (
                     <button
-                      key={m}
+                      key={i}
                       data-selected={isSelected ? "true" : "false"}
                       disabled={isFuture}
                       onClick={() => onSelect(year, i)}
@@ -225,21 +236,21 @@ function BuildingRow({ name, earned, expenses, net, collectionRate }) {
       <div className="text-sm font-medium text-foreground truncate mr-4">{name}</div>
       <div className="flex items-center gap-6 shrink-0 text-right">
         <div className="hidden sm:block">
-          <div className="text-xs text-foreground-dim">{t("owner:reporting.text.income")}</div>
+          <div className="text-xs text-foreground-dim">{t("reporting.text.income")}</div>
           <div className="text-sm font-medium text-muted-dark">{fmtChf(earned)}</div>
         </div>
         <div className="hidden sm:block">
-          <div className="text-xs text-foreground-dim">{t("owner:reporting.text.expenses")}</div>
+          <div className="text-xs text-foreground-dim">{t("reporting.text.expenses")}</div>
           <div className="text-sm font-medium text-muted-dark">{fmtChf(expenses)}</div>
         </div>
         <div>
-          <div className="text-xs text-foreground-dim">{t("owner:reporting.text.net")}</div>
+          <div className="text-xs text-foreground-dim">{t("reporting.text.net")}</div>
           <div className={cn("text-sm font-semibold", netPositive ? "text-green-700" : "text-red-600")}>
             {fmtChf(net)}
           </div>
         </div>
         <div className="hidden md:block">
-          <div className="text-xs text-foreground-dim">{t("owner:reporting.text.collection")}</div>
+          <div className="text-xs text-foreground-dim">{t("reporting.text.collection")}</div>
           <div className="text-sm text-muted-dark">{fmtPct(collectionRate)}</div>
         </div>
       </div>
@@ -248,6 +259,8 @@ function BuildingRow({ name, earned, expenses, net, collectionRate }) {
 }
 
 function OccupancyEvent({ type, tenantName, unitLabel, buildingName, date }) {
+  const { t } = useTranslation("owner");
+  const { locale } = useRouter();
   const isMoveIn = type === "in";
   return (
     <div className="flex items-start gap-3 py-3 border-b border-surface-divider last:border-0">
@@ -261,11 +274,11 @@ function OccupancyEvent({ type, tenantName, unitLabel, buildingName, date }) {
         <div className="flex items-baseline justify-between gap-2">
           <span className="text-sm font-medium text-foreground truncate">{tenantName}</span>
           <span className="shrink-0 text-xs text-foreground-dim">
-            {date ? new Date(date).toLocaleDateString("fr-CH", { day: "numeric", month: "short" }) : "—"}
+            {date ? new Date(date).toLocaleDateString(locale, { day: "numeric", month: "short" }) : "—"}
           </span>
         </div>
         <div className="text-xs text-muted truncate">
-          {isMoveIn ? "Moving in" : "Moving out"} · {unitLabel}{buildingName ? ` · ${buildingName}` : ""}
+          {isMoveIn ? t("reporting.text.movingIn") : t("reporting.text.movingOut")} · {unitLabel}{buildingName ? ` · ${buildingName}` : ""}
         </div>
       </div>
     </div>
@@ -287,115 +300,101 @@ function RecommendationCard({ number, text }) {
 
 /* ─── Derive narrative from real data ────────────────────────── */
 
-function buildDrivers(curr, prev) {
+function buildDrivers(curr, prev, t) {
   const drivers = [];
 
   if (curr && prev) {
     const netDiff = curr.totalNetIncomeCents - prev.totalNetIncomeCents;
     const expDiff = curr.totalExpensesCents - prev.totalExpensesCents;
-    const incDiff = curr.totalEarnedIncomeCents - prev.totalEarnedIncomeCents;
 
     if (Math.abs(netDiff) > 0) {
+      const key = netDiff >= 0 ? "netIncomeImproved" : "netIncomeDeclined";
       drivers.push({
-        title: netDiff >= 0 ? "Net income improved" : "Net income declined",
-        body: netDiff >= 0
-          ? `Portfolio net result rose by ${fmtChf(Math.abs(netDiff))} compared to the previous month.`
-          : `Portfolio net result fell by ${fmtChf(Math.abs(netDiff))} compared to the previous month.`,
-        impact: (netDiff >= 0 ? "+" : "") + fmtChf(netDiff),
+        title: t(`reporting.driver.${key}.title`),
+        body:  t(`reporting.driver.${key}.body`, { amount: fmtChf(Math.abs(netDiff)) }),
+        impact: t(`reporting.driver.${key}.impact`, { amount: fmtChf(Math.abs(netDiff)) }),
       });
     }
 
     if (expDiff > 0) {
       drivers.push({
-        title: "Maintenance and operating costs increased",
-        body: `Total expenses rose by ${fmtChf(expDiff)} this month. Review the ledger for the largest contributors.`,
-        impact: `+${fmtChf(expDiff)} costs`,
+        title: t("reporting.driver.costsIncreased.title"),
+        body:  t("reporting.driver.costsIncreased.body", { amount: fmtChf(expDiff) }),
+        impact: t("reporting.driver.costsIncreased.impact", { amount: fmtChf(expDiff) }),
       });
     } else if (expDiff < 0) {
       drivers.push({
-        title: "Operating costs came down",
-        body: `Expenses reduced by ${fmtChf(Math.abs(expDiff))} vs the prior month.`,
-        impact: `${fmtChf(expDiff)} savings`,
+        title: t("reporting.driver.costsCameDown.title"),
+        body:  t("reporting.driver.costsCameDown.body", { amount: fmtChf(Math.abs(expDiff)) }),
+        impact: t("reporting.driver.costsCameDown.impact", { amount: fmtChf(Math.abs(expDiff)) }),
       });
     }
   }
 
   if (curr && curr.totalExpensesCents > 0 && drivers.length < 3) {
     drivers.push({
-      title: "Maintenance spend is active",
-      body: `${fmtChf(curr.totalExpensesCents)} in maintenance costs were logged this period across ${curr.buildingCount} building${curr.buildingCount !== 1 ? "s" : ""}.`,
-      impact: fmtChf(curr.totalExpensesCents),
+      title: t("reporting.driver.maintenanceSpend.title"),
+      body: t(`reporting.driver.maintenanceSpend.body`, {
+        count: curr.buildingCount,
+        amount: fmtChf(curr.totalExpensesCents),
+      }),
+      impact: t("reporting.driver.maintenanceSpend.impact", { amount: fmtChf(curr.totalExpensesCents) }),
     });
   }
 
   if (!drivers.length) {
     drivers.push({
-      title: "No significant movements this period",
-      body: "No invoices were issued or paid in the selected month. Ledger activity will appear here once invoices are processed.",
-      impact: "—",
+      title: t("reporting.driver.noMovements.title"),
+      body:  t("reporting.driver.noMovements.body"),
+      impact: t("reporting.driver.noMovements.impact"),
     });
   }
 
   return drivers;
 }
 
-function buildInsights(curr, prev, moveIns, moveOuts) {
+function buildInsights(curr, prev, moveIns, moveOuts, t) {
   const insights = [];
-  if (!curr) return ["No data available for this period."];
+  if (!curr) return [t("reporting.insight.noData")];
 
-  // Collection shortfall — structural framing, not a task
   if (curr.avgCollectionRate < 0.95 && curr.avgCollectionRate > 0) {
     const shortfall = 0.95 - curr.avgCollectionRate;
-    insights.push(
-      `Collection rate was ${fmtPct(curr.avgCollectionRate)}, leaving a ${fmtPct(shortfall)} gap against the 95% benchmark. ` +
-      `Consider reviewing payment terms or tenant communication patterns to close this gap in future periods.`
-    );
+    insights.push(t("reporting.insight.collectionShortfall", {
+      rate: fmtPct(curr.avgCollectionRate),
+      gap: fmtPct(shortfall),
+    }));
   }
 
-  // Buildings in red — cost-structure framing
   if (curr.buildingsInRed > 0) {
-    insights.push(
-      `${curr.buildingsInRed} building${curr.buildingsInRed !== 1 ? "s" : ""} posted a net loss this period. ` +
-      `Recurring maintenance charges may be compressing margins — review service contract costs before the next period.`
-    );
+    insights.push(t("reporting.insight.buildingsInRed", { count: curr.buildingsInRed }));
   }
 
-  // High payables relative to expenses — concentration risk, not a task
   if (
     curr.totalPayablesCents > 0 &&
     curr.totalExpensesCents > 0 &&
     curr.totalPayablesCents / curr.totalExpensesCents > 0.5
   ) {
-    insights.push(
-      `Accrued payables (${fmtChf(curr.totalPayablesCents)}) represent more than half of total period expenses — ` +
-      `contractor cost concentration may warrant a cost review before the next budget cycle.`
-    );
+    insights.push(t("reporting.insight.payablesConcentration", {
+      amount: fmtChf(curr.totalPayablesCents),
+    }));
   }
 
-  // Occupancy churn — forward-looking observation
   const totalChurn = (moveIns?.length ?? 0) + (moveOuts?.length ?? 0);
   if (totalChurn > 0) {
-    insights.push(
-      `${totalChurn} occupancy change${totalChurn !== 1 ? "s" : ""} recorded this period. ` +
-      `Monitor the effect on collection continuity and vacancy costs in the following month.`
-    );
+    insights.push(t("reporting.insight.occupancyChurn", { count: totalChurn }));
   }
 
-  // Month-over-month expense trend — structural observation
   if (prev && curr.totalExpensesCents > 0) {
     const ratio = prev.totalExpensesCents > 0
       ? curr.totalExpensesCents / prev.totalExpensesCents
       : null;
     if (ratio !== null && ratio > 1.3) {
-      insights.push(
-        `Expenses rose by ${fmtPct(ratio - 1)} compared to the prior month. If this reflects non-recurring work, ` +
-        `no action is needed — if recurring, consider renegotiating maintenance contracts.`
-      );
+      insights.push(t("reporting.insight.expenseTrend", { pct: fmtPct(ratio - 1) }));
     }
   }
 
   if (!insights.length) {
-    insights.push("Portfolio is performing within normal parameters this period. No structural anomalies detected.");
+    insights.push(t("reporting.insight.normal"));
   }
   return insights;
 }
@@ -404,6 +403,7 @@ function buildInsights(curr, prev, moveIns, moveOuts) {
 
 export default function OwnerReportingPage() {
   const { t } = useTranslation("owner");
+  const { locale } = useRouter();
   const today = new Date();
   const [tlMode, setTlMode]   = useState("month");
   const [selYear, setSelYear]  = useState(today.getFullYear());
@@ -423,6 +423,18 @@ export default function OwnerReportingPage() {
   const { from, to, prevFrom, prevTo } = useMemo(
     () => periodStrings(selYear, selMonth),
     [selYear, selMonth]
+  );
+
+  // Localized period label (e.g. "juin 2026" in French)
+  const periodLabel = useMemo(() =>
+    new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(new Date(selYear, selMonth, 1)),
+    [locale, selYear, selMonth]
+  );
+
+  // Localized full month name for highlight body
+  const monthFull = useMemo(() =>
+    new Intl.DateTimeFormat(locale, { month: "long" }).format(new Date(selYear, selMonth, 1)),
+    [locale, selYear, selMonth]
   );
 
   const fetchPeriod = useCallback(async (f, t) => {
@@ -482,30 +494,43 @@ export default function OwnerReportingPage() {
   const prevCollRate  = prevData?.avgCollectionRate ?? 0;
   const totalUnits    = currData?.totalActiveUnits ?? 0;
 
-  const netDelta      = (currData && prevData) ? delta(netIncome, prevNet) : null;
-  const expDelta      = (currData && prevData) ? delta(expenses, prevExpenses) : null;
-  const earnedDelta   = (currData && prevData) ? delta(earned, prevEarned) : null;
-  const collDelta     = (currData && prevData) ? delta(collRate, prevCollRate) : null;
+  const netDelta      = (currData && prevData) ? delta(netIncome, prevNet, t) : null;
+  const expDelta      = (currData && prevData) ? delta(expenses, prevExpenses, t) : null;
+  const earnedDelta   = (currData && prevData) ? delta(earned, prevEarned, t) : null;
+  const collDelta     = (currData && prevData) ? delta(collRate, prevCollRate, t) : null;
 
-  const drivers  = useMemo(() => buildDrivers(currData, prevData), [currData, prevData]);
-  const insights = useMemo(() => buildInsights(currData, prevData, moveIns, moveOuts), [currData, prevData, moveIns, moveOuts]);
+  const drivers  = useMemo(() => buildDrivers(currData, prevData, t), [currData, prevData, t]);
+  const insights = useMemo(() => buildInsights(currData, prevData, moveIns, moveOuts, t), [currData, prevData, moveIns, moveOuts, t]);
 
   // Highlight: pick best story
   const highlight = useMemo(() => {
     if (!currData) return null;
     if (currData.buildingsInRed === 0 && currData.buildingCount > 0) {
-      return { title: "All properties in the green", body: `Every building in your portfolio posted a positive net result this ${MONTHS_FULL[selMonth]}.` };
+      return {
+        title: t("reporting.highlight.allGreen.title"),
+        body: t("reporting.highlight.allGreen.body", { month: monthFull }),
+      };
     }
     if (collRate >= 0.95) {
-      return { title: "Strong rent collection", body: `${fmtPct(collRate)} of projected rent was collected — well above the 95% benchmark.` };
+      return {
+        title: t("reporting.highlight.strongCollection.title"),
+        body: t("reporting.highlight.strongCollection.body", { rate: fmtPct(collRate) }),
+      };
     }
     if (netIncome > 0) {
-      return { title: "Positive net result", body: `The portfolio generated ${fmtChf(netIncome)} net income in ${MONTHS_FULL[selMonth]} ${selYear}.` };
+      return {
+        title: t("reporting.highlight.positiveNet.title"),
+        body: t("reporting.highlight.positiveNet.body", { amount: fmtChf(netIncome), month: monthFull, year: selYear }),
+      };
     }
     return null;
-  }, [currData, selMonth, selYear, collRate, netIncome]);
+  }, [currData, selYear, monthFull, collRate, netIncome, t]);
 
-  const periodLabel = `${MONTHS_FULL[selMonth]} ${selYear}`;
+  const heroMessage = loading
+    ? t("reporting.text.loadingReport")
+    : netIncome > 0
+      ? (currData?.buildingsInRed === 0 ? t("reporting.text.strongMonth") : t("reporting.text.mixedMonth"))
+      : t("reporting.text.portfolioSummary");
 
   return (
     <AppShell role="OWNER">
@@ -526,23 +551,21 @@ export default function OwnerReportingPage() {
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-2xl">
               <Badge variant="default" size="lg" className="mb-3">
-                {periodLabel} · Monthly Owner Report
+                {periodLabel} · {t("reporting.text.monthlyReport")}
               </Badge>
               <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-                {loading ? "Loading your report…" : netIncome > 0
-                  ? `Your portfolio had a ${currData?.buildingsInRed === 0 ? "strong" : "mixed"} month.`
-                  : "Here's your portfolio summary."}
+                {heroMessage}
               </h1>
               {!loading && currData && (
                 <p className="mt-3 text-sm leading-6 text-muted-text sm:text-base">
                   {earned > 0
-                    ? <>{t("owner:reporting.text.rentCollected")} <span className="font-semibold text-foreground">{fmtChf(earned)}</span>. </>
+                    ? <>{t("reporting.text.rentCollected")} <span className="font-semibold text-foreground">{fmtChf(earned)}</span>. </>
                     : ""}
                   {expenses > 0
-                    ? <>{t("owner:reporting.text.operatingCosts")} <span className="font-semibold text-foreground">{fmtChf(expenses)}</span>. </>
+                    ? <>{t("reporting.text.operatingCosts")} <span className="font-semibold text-foreground">{fmtChf(expenses)}</span>. </>
                     : ""}
                   {totalUnits > 0
-                    ? <>{totalUnits} unit{totalUnits !== 1 ? "s" : ""} leased this period across {currData.buildingCount} building{currData.buildingCount !== 1 ? "s" : ""}.</>
+                    ? t("reporting.text.unitsLeased", { count: totalUnits, units: totalUnits, buildings: currData.buildingCount })
                     : ""}
                 </p>
               )}
@@ -550,7 +573,7 @@ export default function OwnerReportingPage() {
 
             <div className="grid min-w-[260px] grid-cols-2 gap-3">
               <div className="rounded-2xl border border-surface-border bg-surface p-4">
-                <div className="text-xs text-foreground-dim">{t("owner:reporting.text.netResult")}</div>
+                <div className="text-xs text-foreground-dim">{t("reporting.text.netResult")}</div>
                 {loading
                   ? <div className="mt-2 h-7 w-20 animate-pulse rounded bg-surface-hover" />
                   : <div className="mt-2 text-2xl font-semibold text-foreground">{fmtChf(netIncome)}</div>}
@@ -559,12 +582,12 @@ export default function OwnerReportingPage() {
                 )}
               </div>
               <div className="rounded-2xl border border-surface-border bg-surface p-4">
-                <div className="text-xs text-foreground-dim">{t("owner:reporting.text.accruedPayables")}</div>
+                <div className="text-xs text-foreground-dim">{t("reporting.text.accruedPayables")}</div>
                 {loading
                   ? <div className="mt-2 h-7 w-20 animate-pulse rounded bg-surface-hover" />
                   : <div className="mt-2 text-2xl font-semibold text-foreground">{fmtChf(currData?.totalPayablesCents ?? 0)}</div>}
                 {!loading && (currData?.totalPayablesCents ?? 0) > 0 && (
-                  <div className="mt-1 text-xs text-foreground-dim">{t("owner:reporting.text.periodendBalance")}</div>
+                  <div className="mt-1 text-xs text-foreground-dim">{t("reporting.text.periodendBalance")}</div>
                 )}
               </div>
             </div>
@@ -573,17 +596,17 @@ export default function OwnerReportingPage() {
 
         {/* ── KPI ROW ──────────────────────────────────────────── */}
         <section className="kpi-grid mb-8 gap-4 xl:grid-cols-4">
-          <KpiCard label={t("owner:reporting.prop.netIncome")}       value={fmtChf(netIncome)}     delta={netDelta}    isLoading={loading} />
-          <KpiCard label={t("owner:reporting.prop.rentCollected")}   value={fmtChf(earned)}        delta={earnedDelta} isLoading={loading} />
-          <KpiCard label={t("owner:reporting.prop.totalExpenses")}   value={fmtChf(expenses)}      delta={expDelta}    isLoading={loading} />
-          <KpiCard label={t("owner:reporting.prop.collectionRate")}  value={fmtPct(collRate)}      delta={collDelta}   isLoading={loading} />
+          <KpiCard label={t("reporting.prop.netIncome")}       value={fmtChf(netIncome)}     delta={netDelta}    isLoading={loading} />
+          <KpiCard label={t("reporting.prop.rentCollected")}   value={fmtChf(earned)}        delta={earnedDelta} isLoading={loading} />
+          <KpiCard label={t("reporting.prop.totalExpenses")}   value={fmtChf(expenses)}      delta={expDelta}    isLoading={loading} />
+          <KpiCard label={t("reporting.prop.collectionRate")}  value={fmtPct(collRate)}      delta={collDelta}   isLoading={loading} />
         </section>
 
         {/* ── HIGHLIGHT ────────────────────────────────────────── */}
         {!loading && highlight && (
           <section className="mb-8">
             <div className="rounded-3xl border border-surface-border bg-gradient-to-r from-green-50 via-white to-transparent dark:from-success-light dark:via-transparent p-6">
-              <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("owner:reporting.text.highlight")}</div>
+              <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("reporting.text.highlight")}</div>
               <div className="mt-2 text-xl font-semibold text-foreground">{highlight.title}</div>
               <p className="mt-2 max-w-2xl text-sm text-muted-text">{highlight.body}</p>
             </div>
@@ -593,8 +616,8 @@ export default function OwnerReportingPage() {
         {/* ── PERFORMANCE DRIVERS ──────────────────────────────── */}
         <section className="mb-8">
           <div className="mb-4">
-            <h2 className="text-lg font-semibold text-foreground">{t("owner:reporting.heading.whatDrovePerformance")}</h2>
-            <p className="text-sm text-foreground-dim">{t("owner:reporting.text.theMainForcesBehindThisMonthsNumbers")}</p>
+            <h2 className="text-lg font-semibold text-foreground">{t("reporting.heading.whatDrovePerformance")}</h2>
+            <p className="text-sm text-foreground-dim">{t("reporting.text.theMainForcesBehindThisMonthsNumbers")}</p>
           </div>
           {loading ? (
             <div className="space-y-3">
@@ -620,8 +643,8 @@ export default function OwnerReportingPage() {
           return (
             <section className="mb-8">
               <div className="mb-4">
-                <h2 className="text-lg font-semibold text-foreground">{t("owner:reporting.heading.byProperty")}</h2>
-                <p className="text-sm text-foreground-dim">Net result per building for {periodLabel}.</p>
+                <h2 className="text-lg font-semibold text-foreground">{t("reporting.heading.byProperty")}</h2>
+                <p className="text-sm text-foreground-dim">{t("reporting.text.netResultForPeriod", { period: periodLabel })}</p>
               </div>
               <div className="space-y-2">
                 {visibleBuildings.map((b) => (
@@ -648,8 +671,8 @@ export default function OwnerReportingPage() {
         {!loading && (moveIns.length > 0 || moveOuts.length > 0) && (
           <section className="mb-8">
             <div className="mb-4">
-              <h2 className="text-lg font-semibold text-foreground">{t("owner:reporting.heading.tenantMovements")}</h2>
-              <p className="text-sm text-foreground-dim">Move-ins and move-outs in {periodLabel}.</p>
+              <h2 className="text-lg font-semibold text-foreground">{t("reporting.heading.tenantMovements")}</h2>
+              <p className="text-sm text-foreground-dim">{t("reporting.text.moveInsAndMoveoutsIn", { period: periodLabel })}</p>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               {/* Move-ins */}
@@ -657,11 +680,11 @@ export default function OwnerReportingPage() {
                 <div className="mb-3 flex items-center gap-2">
                   <span className="flex h-6 w-6 items-center justify-center rounded-full bg-green-100 text-xs font-semibold text-green-700">↓</span>
                   <span className="text-sm font-semibold text-foreground">
-                    Move-ins <span className="ml-1 text-foreground-dim font-normal">({moveIns.length})</span>
+                    {t("reporting.text.moveIns")} <span className="ml-1 text-foreground-dim font-normal">({moveIns.length})</span>
                   </span>
                 </div>
                 {moveIns.length === 0 ? (
-                  <p className="text-sm text-foreground-dim">{t("owner:reporting.text.noMoveinsThisPeriod")}</p>
+                  <p className="text-sm text-foreground-dim">{t("reporting.text.noMoveinsThisPeriod")}</p>
                 ) : (
                   <>
                     {(insExpanded ? moveIns : moveIns.slice(0, PREVIEW)).map((l) => (
@@ -687,11 +710,11 @@ export default function OwnerReportingPage() {
                 <div className="mb-3 flex items-center gap-2">
                   <span className="flex h-6 w-6 items-center justify-center rounded-full bg-surface-hover text-xs font-semibold text-muted">↑</span>
                   <span className="text-sm font-semibold text-foreground">
-                    Move-outs <span className="ml-1 text-foreground-dim font-normal">({moveOuts.length})</span>
+                    {t("reporting.text.moveOuts")} <span className="ml-1 text-foreground-dim font-normal">({moveOuts.length})</span>
                   </span>
                 </div>
                 {moveOuts.length === 0 ? (
-                  <p className="text-sm text-foreground-dim">{t("owner:reporting.text.noMoveoutsThisPeriod")}</p>
+                  <p className="text-sm text-foreground-dim">{t("reporting.text.noMoveoutsThisPeriod")}</p>
                 ) : (
                   <>
                     {(outsExpanded ? moveOuts : moveOuts.slice(0, PREVIEW)).map((l) => (
@@ -720,8 +743,8 @@ export default function OwnerReportingPage() {
         <section className="mb-8">
           <div className="rounded-3xl border border-surface-border bg-surface p-5">
             <div className="mb-4">
-              <h2 className="text-lg font-semibold text-foreground">{t("owner:reporting.heading.periodInsights")}</h2>
-              <p className="text-sm text-foreground-dim">{t("owner:reporting.text.whatThisPeriodsDataSuggestsForFuturePlanning")}</p>
+              <h2 className="text-lg font-semibold text-foreground">{t("reporting.heading.periodInsights")}</h2>
+              <p className="text-sm text-foreground-dim">{t("reporting.text.whatThisPeriodsDataSuggestsForFuturePlanning")}</p>
             </div>
             {loading ? (
               <div className="space-y-3">
@@ -741,9 +764,9 @@ export default function OwnerReportingPage() {
         <section className="rounded-3xl border border-surface-border bg-surface p-5">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="text-base font-semibold text-foreground">{t("owner:reporting.heading.fullFinancialDetail")}</h2>
+              <h2 className="text-base font-semibold text-foreground">{t("reporting.heading.fullFinancialDetail")}</h2>
               <p className="mt-1 text-sm text-muted">
-                Drill into ledger entries, trial balance, and per-building financials in the Finance section.
+                {t("reporting.text.financeDetail")}
               </p>
             </div>
             <div className="flex gap-3 shrink-0">
@@ -751,13 +774,13 @@ export default function OwnerReportingPage() {
                 href="/manager/finance"
                 className="rounded-2xl border border-surface-border bg-surface px-4 py-2 text-sm font-medium text-muted-dark hover:bg-surface-subtle transition-colors no-underline"
               >
-                Finance overview
+                {t("reporting.cta.financeOverview")}
               </a>
               <a
                 href="/manager/finance/ledger"
                 className="rounded-2xl bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors no-underline"
               >
-                Open ledger
+                {t("reporting.cta.openLedger")}
               </a>
             </div>
           </div>

@@ -477,6 +477,12 @@
       "previousYear": "Année précédente",
       "nextYear": "Année suivante"
     },
+    "prop": {
+      "netIncome": "Revenu net",
+      "rentCollected": "Loyer encaissé",
+      "totalExpenses": "Total des dépenses",
+      "collectionRate": "Taux de recouvrement"
+    },
     "text": {
       "income": "Revenus",
       "expenses": "Dépenses",
@@ -491,13 +497,87 @@
       "theMainForcesBehindThisMonthsNumbers": "Les principaux facteurs derrière les chiffres de ce mois.",
       "noMoveinsThisPeriod": "Aucune entrée cette période.",
       "noMoveoutsThisPeriod": "Aucune sortie cette période.",
-      "whatThisPeriodsDataSuggestsForFuturePlanning": "Ce que les données de cette période suggèrent pour la planification future."
+      "whatThisPeriodsDataSuggestsForFuturePlanning": "Ce que les données de cette période suggèrent pour la planification future.",
+      "showLess": "Afficher moins ↑",
+      "showMore": "Afficher {{count}} de plus ↓",
+      "backToMonths": "← Mois",
+      "movingIn": "Entrée",
+      "movingOut": "Sortie",
+      "loadingReport": "Chargement du rapport…",
+      "strongMonth": "Votre portefeuille a eu un excellent mois.",
+      "mixedMonth": "Votre portefeuille a eu un mois mitigé.",
+      "portfolioSummary": "Voici le résumé de votre portefeuille.",
+      "unitsLeased_one": "{{units}} unité louée cette période dans {{buildings}} immeuble.",
+      "unitsLeased_other": "{{units}} unités louées cette période dans {{buildings}} immeubles.",
+      "netResultForPeriod": "Résultat net par immeuble pour {{period}}.",
+      "moveInsAndMoveoutsIn": "Entrées et sorties en {{period}}.",
+      "moveIns": "Entrées",
+      "moveOuts": "Sorties",
+      "financeDetail": "Consultez les écritures du grand livre, la balance de vérification et les données financières par immeuble dans la section Finance.",
+      "monthlyReport": "Rapport mensuel propriétaire",
+      "vsPrevMonth": "{{delta}}% vs mois préc."
     },
-    "prop": {
-      "netIncome": "Revenu net",
-      "rentCollected": "Loyer encaissé",
-      "totalExpenses": "Total des dépenses",
-      "collectionRate": "Taux de recouvrement"
+    "cta": {
+      "financeOverview": "Aperçu finances",
+      "openLedger": "Ouvrir le grand livre"
+    },
+    "highlight": {
+      "allGreen": {
+        "title": "Tous les biens dans le vert",
+        "body": "Chaque immeuble de votre portefeuille a affiché un résultat net positif en {{month}}."
+      },
+      "strongCollection": {
+        "title": "Excellent taux de recouvrement",
+        "body": "{{rate}} des loyers prévus ont été encaissés — bien au-dessus du seuil de 95 %."
+      },
+      "positiveNet": {
+        "title": "Résultat net positif",
+        "body": "Le portefeuille a généré {{amount}} de revenu net en {{month}} {{year}}."
+      }
+    },
+    "driver": {
+      "netIncomeImproved": {
+        "title": "Revenu net en hausse",
+        "body": "Le résultat net du portefeuille a progressé de {{amount}} par rapport au mois précédent.",
+        "impact": "+{{amount}}"
+      },
+      "netIncomeDeclined": {
+        "title": "Revenu net en baisse",
+        "body": "Le résultat net du portefeuille a reculé de {{amount}} par rapport au mois précédent.",
+        "impact": "-{{amount}}"
+      },
+      "costsIncreased": {
+        "title": "Charges de maintenance et d'exploitation en hausse",
+        "body": "Les dépenses totales ont augmenté de {{amount}} ce mois-ci. Consultez le grand livre pour identifier les postes les plus importants.",
+        "impact": "+{{amount}} de charges"
+      },
+      "costsCameDown": {
+        "title": "Charges d'exploitation en baisse",
+        "body": "Les dépenses ont diminué de {{amount}} par rapport au mois précédent.",
+        "impact": "{{amount}} d'économies"
+      },
+      "maintenanceSpend": {
+        "title": "Dépenses de maintenance actives",
+        "body_one": "{{amount}} de charges de maintenance ont été enregistrées cette période dans {{count}} immeuble.",
+        "body_other": "{{amount}} de charges de maintenance ont été enregistrées cette période dans {{count}} immeubles.",
+        "impact": "{{amount}}"
+      },
+      "noMovements": {
+        "title": "Aucun mouvement significatif cette période",
+        "body": "Aucune facture n'a été émise ou payée durant le mois sélectionné. L'activité du grand livre apparaîtra ici dès que des factures seront traitées.",
+        "impact": "—"
+      }
+    },
+    "insight": {
+      "noData": "Aucune donnée disponible pour cette période.",
+      "collectionShortfall": "Le taux de recouvrement était de {{rate}}, soit un écart de {{gap}} par rapport au seuil de 95 %. Envisagez de revoir les conditions de paiement ou la communication avec les locataires pour réduire cet écart lors des prochaines périodes.",
+      "buildingsInRed_one": "{{count}} immeuble a affiché un résultat net négatif cette période. Les charges de maintenance récurrentes pourraient comprimer les marges — révisez les coûts des contrats de service avant la prochaine période.",
+      "buildingsInRed_other": "{{count}} immeubles ont affiché un résultat net négatif cette période. Les charges de maintenance récurrentes pourraient comprimer les marges — révisez les coûts des contrats de service avant la prochaine période.",
+      "payablesConcentration": "Les charges à payer ({{amount}}) représentent plus de la moitié des dépenses totales de la période — la concentration des coûts prestataires pourrait justifier une revue avant le prochain cycle budgétaire.",
+      "occupancyChurn_one": "{{count}} changement d'occupation enregistré cette période. Surveillez l'impact sur la continuité du recouvrement et les coûts de vacance le mois suivant.",
+      "occupancyChurn_other": "{{count}} changements d'occupation enregistrés cette période. Surveillez l'impact sur la continuité du recouvrement et les coûts de vacance le mois suivant.",
+      "expenseTrend": "Les dépenses ont augmenté de {{pct}} par rapport au mois précédent. S'il s'agit de travaux non récurrents, aucune action n'est nécessaire — si c'est récurrent, envisagez de renégocier les contrats de maintenance.",
+      "normal": "Le portefeuille fonctionne dans les paramètres normaux cette période. Aucune anomalie structurelle détectée."
     }
   },
   "requestsId": {

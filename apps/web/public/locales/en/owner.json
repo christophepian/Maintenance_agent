@@ -477,6 +477,12 @@
       "previousYear": "Previous year",
       "nextYear": "Next year"
     },
+    "prop": {
+      "netIncome": "Net Income",
+      "rentCollected": "Rent Collected",
+      "totalExpenses": "Total Expenses",
+      "collectionRate": "Collection Rate"
+    },
     "text": {
       "income": "Income",
       "expenses": "Expenses",
@@ -491,13 +497,87 @@
       "theMainForcesBehindThisMonthsNumbers": "The main forces behind this month's numbers.",
       "noMoveinsThisPeriod": "No move-ins this period.",
       "noMoveoutsThisPeriod": "No move-outs this period.",
-      "whatThisPeriodsDataSuggestsForFuturePlanning": "What this period's data suggests for future planning."
+      "whatThisPeriodsDataSuggestsForFuturePlanning": "What this period's data suggests for future planning.",
+      "showLess": "Show less ↑",
+      "showMore": "Show {{count}} more ↓",
+      "backToMonths": "← Months",
+      "movingIn": "Moving in",
+      "movingOut": "Moving out",
+      "loadingReport": "Loading your report…",
+      "strongMonth": "Your portfolio had a strong month.",
+      "mixedMonth": "Your portfolio had a mixed month.",
+      "portfolioSummary": "Here's your portfolio summary.",
+      "unitsLeased_one": "{{units}} unit leased this period across {{buildings}} building.",
+      "unitsLeased_other": "{{units}} units leased this period across {{buildings}} buildings.",
+      "netResultForPeriod": "Net result per building for {{period}}.",
+      "moveInsAndMoveoutsIn": "Move-ins and move-outs in {{period}}.",
+      "moveIns": "Move-ins",
+      "moveOuts": "Move-outs",
+      "financeDetail": "Drill into ledger entries, trial balance, and per-building financials in the Finance section.",
+      "monthlyReport": "Monthly Owner Report",
+      "vsPrevMonth": "{{delta}}% vs prev month"
     },
-    "prop": {
-      "netIncome": "Net Income",
-      "rentCollected": "Rent Collected",
-      "totalExpenses": "Total Expenses",
-      "collectionRate": "Collection Rate"
+    "cta": {
+      "financeOverview": "Finance overview",
+      "openLedger": "Open ledger"
+    },
+    "highlight": {
+      "allGreen": {
+        "title": "All properties in the green",
+        "body": "Every building in your portfolio posted a positive net result this {{month}}."
+      },
+      "strongCollection": {
+        "title": "Strong rent collection",
+        "body": "{{rate}} of projected rent was collected — well above the 95% benchmark."
+      },
+      "positiveNet": {
+        "title": "Positive net result",
+        "body": "The portfolio generated {{amount}} net income in {{month}} {{year}}."
+      }
+    },
+    "driver": {
+      "netIncomeImproved": {
+        "title": "Net income improved",
+        "body": "Portfolio net result rose by {{amount}} compared to the previous month.",
+        "impact": "+{{amount}}"
+      },
+      "netIncomeDeclined": {
+        "title": "Net income declined",
+        "body": "Portfolio net result fell by {{amount}} compared to the previous month.",
+        "impact": "-{{amount}}"
+      },
+      "costsIncreased": {
+        "title": "Maintenance and operating costs increased",
+        "body": "Total expenses rose by {{amount}} this month. Review the ledger for the largest contributors.",
+        "impact": "+{{amount}} costs"
+      },
+      "costsCameDown": {
+        "title": "Operating costs came down",
+        "body": "Expenses reduced by {{amount}} vs the prior month.",
+        "impact": "{{amount}} savings"
+      },
+      "maintenanceSpend": {
+        "title": "Maintenance spend is active",
+        "body_one": "{{amount}} in maintenance costs were logged this period across {{count}} building.",
+        "body_other": "{{amount}} in maintenance costs were logged this period across {{count}} buildings.",
+        "impact": "{{amount}}"
+      },
+      "noMovements": {
+        "title": "No significant movements this period",
+        "body": "No invoices were issued or paid in the selected month. Ledger activity will appear here once invoices are processed.",
+        "impact": "—"
+      }
+    },
+    "insight": {
+      "noData": "No data available for this period.",
+      "collectionShortfall": "Collection rate was {{rate}}, leaving a {{gap}} gap against the 95% benchmark. Consider reviewing payment terms or tenant communication patterns to close this gap in future periods.",
+      "buildingsInRed_one": "{{count}} building posted a net loss this period. Recurring maintenance charges may be compressing margins — review service contract costs before the next period.",
+      "buildingsInRed_other": "{{count}} buildings posted a net loss this period. Recurring maintenance charges may be compressing margins — review service contract costs before the next period.",
+      "payablesConcentration": "Accrued payables ({{amount}}) represent more than half of total period expenses — contractor cost concentration may warrant a cost review before the next budget cycle.",
+      "occupancyChurn_one": "{{count}} occupancy change recorded this period. Monitor the effect on collection continuity and vacancy costs in the following month.",
+      "occupancyChurn_other": "{{count}} occupancy changes recorded this period. Monitor the effect on collection continuity and vacancy costs in the following month.",
+      "expenseTrend": "Expenses rose by {{pct}} compared to the prior month. If this reflects non-recurring work, no action is needed — if recurring, consider renegotiating maintenance contracts.",
+      "normal": "Portfolio is performing within normal parameters this period. No structural anomalies detected."
     }
   },
   "requestsId": {
