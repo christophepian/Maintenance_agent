@@ -51,11 +51,10 @@ export async function middleware(request) {
   if (
     preferredLocale &&
     NON_DEFAULT_LOCALES.includes(preferredLocale) &&
+    request.nextUrl.locale !== preferredLocale &&
     !pathname.startsWith("/_next") &&
     !pathname.startsWith("/api/") &&
-    !pathname.startsWith("/favicon") &&
-    !pathname.startsWith(`/${preferredLocale}/`) &&
-    pathname !== `/${preferredLocale}`
+    !pathname.startsWith("/favicon")
   ) {
     const url = request.nextUrl.clone();
     url.pathname = `/${preferredLocale}${pathname}`;
