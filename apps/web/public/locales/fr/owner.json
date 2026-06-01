@@ -18,7 +18,7 @@
     "openRequests": "Demandes ouvertes",
     "pendingInvoices": "Factures en attente",
     "feed": {
-      "noMatch": "Aucun element ne correspond au filtre.",
+      "noMatch": "Aucun élément ne correspond au filtre sélectionné.",
       "showLess": "Afficher moins"
     },
     "filter": {
@@ -30,27 +30,27 @@
       "urgency": "Urgence",
       "building": "Immeuble",
       "date": "Date",
-      "category": "Categorie"
+      "category": "Catégorie"
     },
     "moreTools": {
       "finance": "Finance",
       "title": "Plus d'outils",
-      "properties": "Proprietes",
-      "settings": "Parametres"
+      "properties": "Propriétés",
+      "settings": "Paramètres"
     },
     "chip": {
       "approval": "Approbation requise",
       "invoice": "Facture en attente",
-      "rfp": "Appel d'offres a examiner",
-      "vacancy": "Unite vacante"
+      "rfp": "Appel d'offres à examiner",
+      "vacancy": "Unité vacante"
     },
     "hero": {
-      "allClear": "Tout va bien — aucun element ne necessite d'attention.",
-      "one": "1 element necessite votre attention aujourd'hui.",
-      "many": "{{count}} elements necessitent votre attention aujourd'hui."
+      "allClear": "Tout va bien — aucun élément ne nécessite d'attention.",
+      "one": "1 élément nécessite votre attention aujourd'hui.",
+      "many": "{{count}} éléments nécessitent votre attention aujourd'hui."
     },
     "kpi": {
-      "title": "Resume du portefeuille",
+      "title": "Résumé du portefeuille",
       "netIncomeYtd": "Revenu net (cumul annuel)",
       "occupancy": "Occupation",
       "vacancies": "Vacances",
@@ -171,27 +171,27 @@
     },
     "title": {
       "approvals": "Approbations",
-      "dateRange": "Date range",
-      "scope": "Scope",
+      "dateRange": "Plage de dates",
+      "scope": "Périmètre",
       "priority": "Priorité",
-      "request": "Request #",
+      "request": "Demande n°",
       "status": "Statut"
     },
     "text": {
       "allBuildings": "Tous les immeubles",
-      "allUnits": "Àus units",
-      "allLevels": "Àus levels",
+      "allUnits": "Toutes les unités",
+      "allLevels": "Tous les niveaux",
       "low": "Basse",
       "medium": "Moyen",
       "high": "Élevée",
       "emergency": "Urgence",
       "loading": "Chargement…",
       "pendingApproval": "En attente d'approbation",
-      "allRfps": "Àus RFPs",
+      "allRfps": "Tous les appels d'offres",
       "draft": "Brouillon",
       "open": "Ouvert",
-      "closed": "Fermerd",
-      "awarded": "Awarded",
+      "closed": "Fermé",
+      "awarded": "Attribué",
       "cancelled": "Annulé"
     },
     "prop": {
@@ -200,39 +200,39 @@
       "building": "Immeuble",
       "unit": "Unité",
       "urgency": "Urgence",
-      "requestNumber": "Request number",
-      "requestDate": "Request date",
-      "quotePrice": "Quote price",
-      "show": "Show",
+      "requestNumber": "Numéro de demande",
+      "requestDate": "Date de la demande",
+      "quotePrice": "Prix de l'offre",
+      "show": "Afficher",
       "category": "Catégorie",
-      "quotes": "Quotes",
+      "quotes": "Offres",
       "created": "Créé"
     }
   },
   "billingEntities": {
     "title": {
-      "ownerBillingEntities": "Owner Billing Entities"
+      "ownerBillingEntities": "Entités de facturation propriétaire"
     }
   },
   "finance": {
     "placeholder": {
-      "searchInvoices": "Search invoices…"
+      "searchInvoices": "Rechercher des factures…"
     },
     "title": {
-      "dateRange": "Date range",
+      "dateRange": "Plage de dates",
       "buildings": "Immeubles",
       "direction": "Direction",
       "status": "Statut",
       "finance": "Finance"
     },
     "ariaLabel": {
-      "invoiceActions": "Invoice actions"
+      "invoiceActions": "Actions sur la facture"
     },
     "text": {
       "loadingPortfolioSummary": "Chargement du résumé de portefeuille…",
       "avgCollectionRate": "Taux de recouvrement moy. :",
       "noBuildingsInThisPortfolioYet": "Aucun immeuble dans ce portefeuille.",
-      "reviewIssuedInvoicesAndApproveOrDisputeThem": "Révision issued invoices and approve or dispute them",
+      "reviewIssuedInvoicesAndApproveOrDisputeThem": "Révisez les factures émises et approuvez-les ou contestez-les",
       "loadingInvoices": "Chargement des factures…"
     },
     "prop": {
@@ -247,7 +247,7 @@
       "expenses": "Dépenses",
       "net": "Net",
       "collection": "Recouvrement",
-      "portfolioSummaryInvoicesAndCashflowPlanning": "Portefeuille summary, invoices, and cashflow planning"
+      "portfolioSummaryInvoicesAndCashflowPlanning": "Résumé du portefeuille, factures et planification de trésorerie"
     },
     "tabs": {
       "overview": "Vue d'ensemble",
@@ -274,30 +274,30 @@
   "financeInvoicesId": {
     "col": {
       "description": "Description",
-      "qty": "Qty",
-      "unitPrice": "Unit Price",
-      "vAT": "VAT %",
+      "qty": "Qté",
+      "unitPrice": "Prix unitaire",
+      "vAT": "TVA %",
       "total": "Total"
     },
     "heading": {
-      "disputeThisInvoice": "Dispute this invoice"
+      "disputeThisInvoice": "Contester cette facture"
     },
     "placeholder": {
-      "describeWhyYouAreDisputingThisInvoice": "Describe why you are disputing this invoice…"
+      "describeWhyYouAreDisputingThisInvoice": "Décrivez pourquoi vous contestez cette facture…"
     },
     "title": {
-      "invoiceDetails": "Invoice Details",
-      "recipient": "Recipient",
-      "issuer": "Issuer",
-      "lineItems": "Line Items",
-      "accounting": "Accounting",
-      "originalCapture": "Original Capture",
-      "pDFPreview": "PDF Preview",
-      "invoicePdf": "Invoice PDF",
-      "timeline": "Timeline"
+      "invoiceDetails": "Détails de la facture",
+      "recipient": "Destinataire",
+      "issuer": "Émetteur",
+      "lineItems": "Lignes de détail",
+      "accounting": "Comptabilité",
+      "originalCapture": "Capture originale",
+      "pDFPreview": "Aperçu PDF",
+      "invoicePdf": "Facture PDF",
+      "timeline": "Historique"
     },
     "ariaLabel": {
-      "disputeInvoice": "Dispute invoice"
+      "disputeInvoice": "Contester la facture"
     },
     "text": {
       "error": "Erreur :",
@@ -305,7 +305,7 @@
       "loadingInvoice": "Chargement de la facture…",
       "invoiceNotFound": "Facture introuvable.",
       "created": "Créé",
-      "submitted": "Soumettreted",
+      "submitted": "Soumis",
       "approved": "Approuvé",
       "paid": "Payé"
     },
@@ -328,7 +328,7 @@
   },
   "index": {
     "heading": {
-      "moreViews": "More views"
+      "moreViews": "Plus de vues"
     },
     "title": {
       "category": "Catégorie"
@@ -337,44 +337,44 @@
       "refreshDashboard": "Actualiser le tableau de bord"
     },
     "text": {
-      "portfolioSnapshot": "Portefeuille snapshot",
-      "allClearNoItemsNeedYourAttention": "Tout est en ordre — no items need your attention",
-      "checkBackAfterNewApprovalsOrInvoicesArrive": "Check back after new approvals or invoices arrive.",
-      "financeReportingStrategyAndLeaseManagement": "Finance reporting, strategy, and lease management.",
+      "portfolioSnapshot": "Aperçu du portefeuille",
+      "allClearNoItemsNeedYourAttention": "Tout est en ordre — aucun élément ne nécessite votre attention",
+      "checkBackAfterNewApprovalsOrInvoicesArrive": "Revenez après l'arrivée de nouvelles approbations ou factures.",
+      "financeReportingStrategyAndLeaseManagement": "Finances, rapports, stratégie et gestion des baux.",
       "reporting": "Rapports",
-      "leases": "Bails",
-      "allApprovals": "Àus approvals"
+      "leases": "Baux",
+      "allApprovals": "Toutes les approbations"
     },
     "prop": {
       "monthlyRent": "Loyer mensuel",
       "outstanding": "En suspens",
-      "activeLeases": "Actif leases",
+      "activeLeases": "Baux actifs",
       "pendingApprovals": "En attente d'approbations",
-      "invoicesToReview": "Factures to review",
-      "vacancyRate": "Vacancy rate",
+      "invoicesToReview": "Factures à réviser",
+      "vacancyRate": "Taux de vacance",
       "vacantUnits": "Unités vacantes"
     }
   },
   "invoices": {
     "heading": {
-      "downloadPdf": "Download PDF"
+      "downloadPdf": "Télécharger PDF"
     },
     "title": {
       "invoices": "Factures",
       "status": "Statut",
-      "dateRange": "Date range"
+      "dateRange": "Plage de dates"
     },
     "ariaLabel": {
-      "downloadPdf": "Download PDF"
+      "downloadPdf": "Télécharger PDF"
     },
     "text": {
-      "includeQrBill": "Include QR bill",
-      "appendsTheSwissQrPaymentSlip": "Appends the Swiss QR payment slip",
-      "reviewIssuedInvoicesAndApproveOrDisputeThem": "Révision issued invoices and approve or dispute them",
+      "includeQrBill": "Inclure le bulletin QR",
+      "appendsTheSwissQrPaymentSlip": "Ajoute le bulletin de paiement QR suisse",
+      "reviewIssuedInvoicesAndApproveOrDisputeThem": "Révisez les factures émises et approuvez-les ou contestez-les",
       "loadingInvoices": "Chargement des factures…"
     },
     "prop": {
-      "reviewApproveAndManageInvoicePayments": "Révision, approve, and manage invoice payments",
+      "reviewApproveAndManageInvoicePayments": "Révisez, approuvez et gérez les paiements de factures",
       "from": "De",
       "to": "À"
     },
@@ -393,37 +393,37 @@
       "date": "Date",
       "amount": "Montant",
       "actions": "Actions",
-      "Approve": "✓ Approve",
-      "MarkAsPaid": "💰 Mark as Paid",
-      "DownloadPdf": "📄 Download PDF",
-      "Dispute": "⚠ Dispute",
+      "Approve": "✓ Approuver",
+      "MarkAsPaid": "💰 Marquer comme payé",
+      "DownloadPdf": "📄 Télécharger PDF",
+      "Dispute": "⚠ Contester",
       "tenant": "Locataire",
       "issuer": "Émetteur"
     }
   },
   "jobs": {
     "title": {
-      "jobsOverview": "Jobs Overview",
+      "jobsOverview": "Aperçu des interventions",
       "status": "Statut",
-      "dateRange": "Date range",
-      "scope": "Scope",
+      "dateRange": "Plage de dates",
+      "scope": "Périmètre",
       "priority": "Priorité"
     },
     "text": {
-      "allStatuses": "Àus statuses",
+      "allStatuses": "Tous les statuts",
       "pending": "En attente",
       "inProgress": "En cours",
       "completed": "Terminé",
-      "invoiced": "Invoiced",
+      "invoiced": "Facturé",
       "allBuildings": "Tous les immeubles",
-      "allUnits": "Àus units",
-      "allLevels": "Àus levels",
+      "allUnits": "Toutes les unités",
+      "allLevels": "Tous les niveaux",
       "low": "Basse",
       "medium": "Moyen",
       "high": "Élevée",
       "emergency": "Urgence",
-      "loadingJobs": "Loading jobs...",
-      "requestDetails": "Request Details",
+      "loadingJobs": "Chargement des interventions…",
+      "requestDetails": "Détails de la demande",
       "location": "Emplacement",
       "tenant": "Locataire",
       "contractor": "Prestataire",
@@ -442,20 +442,20 @@
       "properties": "Propriétés"
     },
     "ariaLabel": {
-      "listView": "List view",
-      "monopolyBoardView": "Monopoly board view"
+      "listView": "Vue liste",
+      "monopolyBoardView": "Vue plateau de jeu"
     },
     "text": {
-      "list": "List",
-      "monopoly": "Monopoly",
-      "loadingProperties": "Loading properties…",
-      "noPropertiesFound": "No properties found."
+      "list": "Liste",
+      "monopoly": "Monopole",
+      "loadingProperties": "Chargement des propriétés…",
+      "noPropertiesFound": "Aucune propriété trouvée."
     },
     "prop": {
       "units": "Unités",
-      "avgRentUnit": "Avg rent / unit",
+      "avgRentUnit": "Loyer moy. / unité",
       "collection": "Recouvrement",
-      "buildingsAndUnitsInYourPortfolio": "Immeubles and units in your portfolio"
+      "buildingsAndUnitsInYourPortfolio": "Immeubles et unités de votre portefeuille"
     },
     "col": {
       "building": "Bâtiment",
@@ -467,64 +467,64 @@
   },
   "reporting": {
     "heading": {
-      "whatDrovePerformance": "What drove performance",
-      "byProperty": "By property",
-      "tenantMovements": "Tenant movements",
-      "periodInsights": "Period insights",
-      "fullFinancialDetail": "Full financial detail"
+      "whatDrovePerformance": "Ce qui a influencé la performance",
+      "byProperty": "Par bien",
+      "tenantMovements": "Mouvements de locataires",
+      "periodInsights": "Analyses de la période",
+      "fullFinancialDetail": "Détail financier complet"
     },
     "ariaLabel": {
-      "previousYear": "Previous year",
-      "nextYear": "Next year"
+      "previousYear": "Année précédente",
+      "nextYear": "Année suivante"
     },
     "text": {
       "income": "Revenus",
       "expenses": "Dépenses",
       "net": "Net",
       "collection": "Recouvrement",
-      "rentCollected": "Loyer collected:",
-      "operatingCosts": "Operating costs:",
+      "rentCollected": "Loyer encaissé :",
+      "operatingCosts": "Charges d'exploitation :",
       "netResult": "Résultat net",
-      "accruedPayables": "Accrued payables",
-      "periodendBalance": "Period-end balance",
-      "highlight": "Élevéelight",
-      "theMainForcesBehindThisMonthsNumbers": "The main forces behind this month's numbers.",
-      "noMoveinsThisPeriod": "No move-ins this period.",
-      "noMoveoutsThisPeriod": "No move-outs this period.",
-      "whatThisPeriodsDataSuggestsForFuturePlanning": "What this period's data suggests for future planning."
+      "accruedPayables": "Charges à payer",
+      "periodendBalance": "Solde de fin de période",
+      "highlight": "Point marquant",
+      "theMainForcesBehindThisMonthsNumbers": "Les principaux facteurs derrière les chiffres de ce mois.",
+      "noMoveinsThisPeriod": "Aucune entrée cette période.",
+      "noMoveoutsThisPeriod": "Aucune sortie cette période.",
+      "whatThisPeriodsDataSuggestsForFuturePlanning": "Ce que les données de cette période suggèrent pour la planification future."
     },
     "prop": {
       "netIncome": "Revenu net",
-      "rentCollected": "Loyer Collected",
+      "rentCollected": "Loyer encaissé",
       "totalExpenses": "Total des dépenses",
       "collectionRate": "Taux de recouvrement"
     }
   },
   "requestsId": {
     "title": {
-      "legalAnalysis": "Legal Analysis",
-      "maintenanceDecision": "Maintenance Decision"
+      "legalAnalysis": "Analyse juridique",
+      "maintenanceDecision": "Décision de maintenance"
     },
     "ariaLabel": {
-      "backToApprovals": "Back to approvals",
-      "dismissError": "Dismiss error"
+      "backToApprovals": "Retour aux approbations",
+      "dismissError": "Ignorer l'erreur"
     },
     "text": {
       "noAssetLinkedToThisRequest": "Aucun actif lié à cette demande.",
-      "linkAnAssetToGetRepairReplaceRecommendations": "Link an asset to get repair / replace recommendations.",
+      "linkAnAssetToGetRepairReplaceRecommendations": "Liez un actif pour obtenir des recommandations réparation/remplacement.",
       "recommendation": "Recommandation",
-      "notAvailable": "Not available",
-      "estimatedPrice": "Estimated price",
+      "notAvailable": "Non disponible",
+      "estimatedPrice": "Prix estimé",
       "noRepairvsreplaceDataAvailableForThisAsset": "Aucune donnée réparation/remplacement disponible.",
       "estRepair": "Réparation est.",
       "estReplacement": "Remplacement est.",
-      "tenantfunded": "Locataire-funded",
+      "tenantfunded": "Financé par le locataire",
       "error": "Erreur :",
       "dismiss": "Ignorer",
       "requestNotFound": "Demande introuvable.",
-      "yourApprovalIsRequired": "Your approval is required",
-      "selectedContractor": "Selected Prestataire",
-      "quoteAmount": "Quote Montant",
+      "yourApprovalIsRequired": "Votre approbation est requise",
+      "selectedContractor": "Prestataire sélectionné",
+      "quoteAmount": "Montant de l'offre",
       "building": "Immeuble",
       "unit": "Unité",
       "tenant": "Locataire",
@@ -540,7 +540,7 @@
       "category": "Catégorie",
       "estimatedCost": "Coût estimé",
       "payingParty": "Partie payante",
-      "rejectionReason": "Rejet Reason",
+      "rejectionReason": "Motif de rejet",
       "name": "Nom",
       "phone": "Téléphone",
       "email": "E-mail",
@@ -551,24 +551,24 @@
   },
   "rfpsId": {
     "title": {
-      "rFPDetails": "RFP Details"
+      "rFPDetails": "Détails de l'appel d'offres"
     },
     "text": {
       "loading": "Chargement…",
-      "yourApprovalRequired": "⚠️ Your Approval Required",
+      "yourApprovalRequired": "⚠️ Votre approbation est requise",
       "status": "Statut",
       "category": "Catégorie",
       "legalObligation": "Obligation légale",
       "building": "Immeuble",
       "unit": "Unité",
-      "quoteDeadline": "Quote Échéance",
+      "quoteDeadline": "Échéance de l'offre",
       "created": "Créé",
-      "awardedTo": "Awarded À",
+      "awardedTo": "Attribué à",
       "exclVat": "HT",
       "duration": "Durée",
       "available": "Disponible",
       "validUntil": "Valable jusqu'au",
-      "submitted": "Soumettreted",
+      "submitted": "Soumis",
       "workPlan": "Plan de travail",
       "assumptions": "Hypothèses",
       "notes": "Notes",
@@ -580,12 +580,12 @@
       "versions": "Versions"
     },
     "heading": {
-      "legalSources": "Legal Sources",
-      "legalVariables": "Legal Variables"
+      "legalSources": "Sources légales",
+      "legalVariables": "Variables légales"
     },
     "placeholder": {
-      "yourName": "Your name",
-      "youExampleCom": "you@example.com"
+      "yourName": "Votre nom",
+      "youExampleCom": "vous@exemple.com"
     },
     "title": {
       "settings": "Paramètres"
@@ -593,28 +593,28 @@
     "text": {
       "error": "Erreur :",
       "oK": "OK :",
-      "profile": "Prdeile",
+      "profile": "Profil",
       "loading": "Chargement…",
-      "displayName": "Display name",
-      "emailAddress": "E-mail address",
-      "changingYourEmailAlsoChangesYourLoginCredential": "Changing your email also changes your login credential.",
-      "changePassword": "Modification password",
-      "currentPassword": "Current password",
-      "newPassword": "Nouveau password",
-      "confirmNewPassword": "Confirmer new password",
-      "notSetUp": "Not set up",
-      "noStrategyProfileYet": "No strategy prdeile yet",
-      "primaryArchetype": "Primary archetype",
-      "riskTolerance": "Risk tolerance",
-      "investmentHorizon": "Investment horizon",
+      "displayName": "Nom d'affichage",
+      "emailAddress": "Adresse e-mail",
+      "changingYourEmailAlsoChangesYourLoginCredential": "Modifier votre e-mail modifie également vos identifiants de connexion.",
+      "changePassword": "Modifier le mot de passe",
+      "currentPassword": "Mot de passe actuel",
+      "newPassword": "Nouveau mot de passe",
+      "confirmNewPassword": "Confirmer le nouveau mot de passe",
+      "notSetUp": "Non configuré",
+      "noStrategyProfileYet": "Aucun profil stratégique",
+      "primaryArchetype": "Archétype principal",
+      "riskTolerance": "Tolérance au risque",
+      "investmentHorizon": "Horizon d'investissement",
       "comingSoon": "Bientôt disponible",
       "notificationPreferences": "Préférences de notification",
       "integrations": "Intégrations",
       "loadingSources": "Chargement des sources…",
-      "noLegalSourcesFound": "No legal sources found."
+      "noLegalSourcesFound": "Aucune source légale trouvée."
     },
     "prop": {
-      "manageYourAccountRiskProfileAndPreferences": "Manage your account, risk prdeile, and preferences.",
+      "manageYourAccountRiskProfileAndPreferences": "Gérez votre compte, profil de risque et préférences.",
       "name": "Nom",
       "scope": "Périmètre",
       "frequency": "Fréquence",
@@ -640,10 +640,10 @@
       "darkDescription": "Plus reposant pour les yeux dans les conditions de faible luminosité."
     },
     "notifications": {
-      "loading": "Chargement des preferences...",
-      "saved": "Preferences enregistrees.",
-      "saving": "Enregistrement...",
-      "saveButton": "Enregistrer les preferences",
+      "loading": "Chargement des préférences…",
+      "saved": "Préférences enregistrées.",
+      "saving": "Enregistrement…",
+      "saveButton": "Enregistrer les préférences",
       "error": "Erreur :",
       "ok": "OK :",
       "group": {
@@ -658,37 +658,37 @@
       },
       "event": {
         "REQUEST_PENDING_REVIEW": "Demande en attente de mon examen",
-        "REQUEST_PENDING_OWNER_APPROVAL": "Demande en attente d'approbation du proprietaire",
-        "CONTRACTOR_REJECTED": "Prestataire a refuse la mission",
-        "REJECTED": "Demande rejetee par le proprietaire",
-        "JOB_CREATED": "Travail cree",
-        "JOB_COMPLETED": "Travail termine",
+        "REQUEST_PENDING_OWNER_APPROVAL": "Demande en attente d'approbation du propriétaire",
+        "CONTRACTOR_REJECTED": "Prestataire a refusé la mission",
+        "REJECTED": "Demande rejetée par le propriétaire",
+        "JOB_CREATED": "Intervention créée",
+        "JOB_COMPLETED": "Intervention terminée",
         "RATING_SUBMITTED": "Note soumise par le locataire",
-        "INVOICE_CREATED": "Facture creee",
-        "INVOICE_DISPUTED": "Facture contestee",
+        "INVOICE_CREATED": "Facture créée",
+        "INVOICE_DISPUTED": "Facture contestée",
         "INVOICE_OVERDUE": "Facture en retard",
-        "LEASE_SIGNED": "Bail signe par le locataire",
+        "LEASE_SIGNED": "Bail signé par le locataire",
         "APPLICATION_SUBMITTED": "Nouvelle candidature de location",
-        "TENANT_SELECTED": "Proprietaire a selectionne un locataire",
+        "TENANT_SELECTED": "Propriétaire a sélectionné un locataire",
         "QUOTE_SUBMITTED": "Prestataire a soumis un devis",
-        "CONTRACTOR_ASSIGNED": "Nouvelle mission assignee",
-        "QUOTE_AWARDED": "Devis attribue",
-        "QUOTE_REJECTED": "Devis refuse",
-        "SLOT_PROPOSED": "Creneau de visite propose",
-        "SLOT_ACCEPTED": "Creneau de visite accepte",
-        "SLOT_DECLINED": "Creneau de visite refuse",
-        "JOB_CONFIRMED": "Travail confirme",
-        "INVOICE_PAID": "Facture payee",
-        "REQUEST_APPROVED": "Demande approuvee",
-        "TENANT_SELF_PAY_ACCEPTED": "Option autofinancement acceptee",
-        "JOB_STARTED": "Travaux commences",
-        "LEASE_READY_TO_SIGN": "Bail pret a signer"
+        "CONTRACTOR_ASSIGNED": "Nouvelle mission assignée",
+        "QUOTE_AWARDED": "Devis attribué",
+        "QUOTE_REJECTED": "Devis refusé",
+        "SLOT_PROPOSED": "Créneau de visite proposé",
+        "SLOT_ACCEPTED": "Créneau de visite accepté",
+        "SLOT_DECLINED": "Créneau de visite refusé",
+        "JOB_CONFIRMED": "Intervention confirmée",
+        "INVOICE_PAID": "Facture payée",
+        "REQUEST_APPROVED": "Demande approuvée",
+        "TENANT_SELF_PAY_ACCEPTED": "Option autofinancement acceptée",
+        "JOB_STARTED": "Travaux commencés",
+        "LEASE_READY_TO_SIGN": "Bail prêt à signer"
       }
     }
   },
   "settingsStrategy": {
     "title": {
-      "myStrategy": "My Strategy"
+      "myStrategy": "Ma stratégie"
     },
     "text": {
       "loading": "Chargement…"
@@ -696,7 +696,7 @@
   },
   "strategy": {
     "heading": {
-      "whatThisMeansInPractice": "What this means in practice"
+      "whatThisMeansInPractice": "Ce que cela signifie en pratique"
     },
     "placeholder": {
       "eGRueDuLac12": "e.g. Rue du Lac 12",
@@ -704,60 +704,60 @@
       "eG12": "e.g. 12"
     },
     "title": {
-      "yourStrategy": "Your Strategy",
-      "setUpYourProperties": "Set up your properties",
-      "strategyQuestionnaire": "Strategy Questionnaire"
+      "yourStrategy": "Votre stratégie",
+      "setUpYourProperties": "Configurer vos biens",
+      "strategyQuestionnaire": "Questionnaire stratégique"
     },
     "prop": {
-      "addTheBuildingsYouOwnOrManage": "Ajouter the buildings you own or manage"
+      "addTheBuildingsYouOwnOrManage": "Ajoutez les immeubles que vous possédez ou gérez"
     }
   },
   "vacancies": {
     "title": {
-      "vacancies": "Vacancies"
+      "vacancies": "Vacances"
     },
     "prop": {
-      "vacantUnitsOpenForRentalApplications": "Vacant units open for rental applications"
+      "vacantUnitsOpenForRentalApplications": "Unités vacantes ouvertes aux candidatures locatives"
     }
   },
   "vacancies[unitid]Candidates": {
     "col": {
-      "rank": "Rank",
+      "rank": "Rang",
       "assign": "Attribuer"
     },
     "heading": {
-      "confirmTenantSelection": "Confirm Tenant Selection",
-      "overrideDisqualification": "Override Disqualification"
+      "confirmTenantSelection": "Confirmer la sélection du locataire",
+      "overrideDisqualification": "Lever la disqualification"
     },
     "placeholder": {
-      "eGVerifiedIncomeDirectlyWithEmployerDebtEnforcementExtractIsClear": "e.g. Verified income directly with employer; debt enforcement extract is clear…"
+      "eGVerifiedIncomeDirectlyWithEmployerDebtEnforcementExtractIsClear": "ex. Revenus vérifiés directement avec l'employeur ; extrait des poursuites est vierge…"
     },
     "title": {
-      "selectTenants": "Select Tenants",
-      "yourSelection": "Your Selection",
-      "clickToViewCorroborativeDocuments": "Click to view corroborative documents",
-      "overrideDisqualificationAndMakeThisCandidateEligible": "Override disqualification and make this candidate eligible"
+      "selectTenants": "Sélectionner les locataires",
+      "yourSelection": "Votre sélection",
+      "clickToViewCorroborativeDocuments": "Cliquez pour voir les documents justificatifs",
+      "overrideDisqualificationAndMakeThisCandidateEligible": "Lever la disqualification et rendre ce candidat éligible"
     }
   },
   "vacancies[unitid]Fill": {
     "placeholder": {
-      "searchByNamePhoneOrEmail": "Search by name, phone, or email",
+      "searchByNamePhoneOrEmail": "Rechercher par nom, téléphone ou e-mail",
       "tenantName": "Nom du locataire",
-      "phone41": "Phone (+41...)",
-      "emailOptional": "Email (optional)",
+      "phone41": "Téléphone (+41...)",
+      "emailOptional": "E-mail (optionnel)",
       "eG1850": "e.g. 1850"
     },
     "title": {
-      "fillVacancy": "Fill vacancy",
-      "step1SelectOrCreateTenant": "Step 1: Select or create tenant",
-      "step2AssignTenantToUnit": "Step 2: Assign tenant to unit",
-      "step3CreateLeaseDraft": "Step 3: Create lease (DRAFT)",
-      "nextSteps": "Next steps"
+      "fillVacancy": "Attribuer la vacance",
+      "step1SelectOrCreateTenant": "Étape 1 : Sélectionner ou créer un locataire",
+      "step2AssignTenantToUnit": "Étape 2 : Attribuer le locataire à l'unité",
+      "step3CreateLeaseDraft": "Étape 3 : Créer un bail (BROUILLON)",
+      "nextSteps": "Étapes suivantes"
     }
   },
   "workRequests": {
     "title": {
-      "workRequests": "Work Requests"
+      "workRequests": "Demandes de travaux"
     },
     "tabs": {
       "all": "Tous",
@@ -780,13 +780,13 @@
   },
   "vacanciesUnitidCandidates": {
     "text": {
-      "candidatesSelectedSuccessfully": "Candidates selected successfully!",
-      "loadingCandidates": "Loading candidates…",
-      "noApplicationsSubmittedForThisUnit": "No applications submitted for this unit.",
+      "candidatesSelectedSuccessfully": "Candidats sélectionnés avec succès !",
+      "loadingCandidates": "Chargement des candidats…",
+      "noApplicationsSubmittedForThisUnit": "Aucune candidature soumise pour cette unité.",
       "disqualified": "Disqualifié",
-      "override": "✓ Remplacement",
-      "override2": "⚠ Remplacement",
-      "disqualificationReasons": "Disqualification Motifs",
+      "override": "✓ Lever",
+      "override2": "⚠ Lever",
+      "disqualificationReasons": "Motifs de disqualification",
       "docs": "▼ docs",
       "minimum3CharactersThisWillBeRecordedForAudit": "Minimum 3 caractères. Ceci sera enregistré pour audit."
     },
@@ -798,22 +798,22 @@
   },
   "vacanciesUnitidFill": {
     "text": {
-      "loadingVacancyData": "Loading vacancy data...",
+      "loadingVacancyData": "Chargement des données de vacance…",
       "searchTenants": "Rechercher des locataires",
       "noTenantsFound": "Aucun locataire trouvé.",
-      "createNewTenant": "Créer new tenant",
-      "leaseStartDate": "Bail start date"
+      "createNewTenant": "Créer un nouveau locataire",
+      "leaseStartDate": "Date de début du bail"
     },
     "prop": {
-      "vacancyWillBeRemovedOnceTheLeaseIsActive": "Vacancy will be removed once the lease is ACTIVE."
+      "vacancyWillBeRemovedOnceTheLeaseIsActive": "La vacance sera supprimée une fois le bail ACTIF."
     }
   },
   "work_Requests": {
     "text": {
-      "loadingRequests": "Loading requests…"
+      "loadingRequests": "Chargement des demandes…"
     },
     "prop": {
-      "allMaintenanceRequestsAcrossYourProperties": "Àus maintenance requests across your properties"
+      "allMaintenanceRequestsAcrossYourProperties": "Toutes les demandes de maintenance sur vos biens"
     }
   }
 }
