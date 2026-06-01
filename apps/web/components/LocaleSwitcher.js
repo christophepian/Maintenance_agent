@@ -15,6 +15,8 @@ export default function LocaleSwitcher() {
 
   function handleClick() {
     const next = LOCALES[(LOCALES.indexOf(current) + 1) % LOCALES.length];
+    // Persist so middleware can redirect future page navigations to the right locale
+    document.cookie = `NEXT_LOCALE=${next}; path=/; max-age=${60 * 60 * 24 * 365}; SameSite=Lax`;
     router.push(router.asPath, undefined, { locale: next });
   }
 

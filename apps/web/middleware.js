@@ -41,6 +41,27 @@ const isAdminPath = (path) => path.startsWith("/admin");
 export async function middleware(request) {
   const { pathname } = request.nextUrl;
 
+  // ── Locale preference redirect ─────────────────────────────────────────────
+  // If the user has previously chosen a non-default locale (persisted in the
+  // NEXT_LOCALE cookie by LocaleSwitcher), redirect bare URLs to the locale-
+  // prefixed variant so the chosen language survives cross-page navigation.
+  // Skip static assets, API proxy routes, and paths that are already prefixed.
+  const NON_DEFAULT_LOCALES = ["fr"];
+  const preferredLocale = request.cookies.get("NEXT_LOCALE")?.value;
+  if (
+    preferredLocale &&
+    NON_DEFAULT_LOCALES.includes(preferredLocale) &&
+    !pathname.startsWith("/_next") &&
+    !pathname.startsWith("/api/") &&
+    !pathname.startsWith("/favicon") &&
+    !pathname.startsWith(`/${preferredLocale}/`) &&
+    pathname !== `/${preferredLocale}`
+  ) {
+    const url = request.nextUrl.clone();
+    url.pathname = `/${preferredLocale}${pathname}`;
+    return NextResponse.redirect(url);
+  }
+
   // Allow public paths through unconditionally
   if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
     return NextResponse.next();

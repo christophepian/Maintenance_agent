@@ -102,13 +102,13 @@ export default function AppShell({ role: roleProp, children }) {
     }
     setRole(nextRole);
     if (nextRole === "CONTRACTOR") {
-      router.push("/contractor");
+      router.push("/contractor", undefined, { locale: router.locale });
     } else if (nextRole === "TENANT") {
-      router.push("/tenant/leases");
+      router.push("/tenant/leases", undefined, { locale: router.locale });
     } else if (nextRole === "OWNER") {
-      router.push("/owner");
+      router.push("/owner", undefined, { locale: router.locale });
     } else {
-      router.push("/manager");
+      router.push("/manager", undefined, { locale: router.locale });
     }
   }
 
@@ -119,7 +119,7 @@ export default function AppShell({ role: roleProp, children }) {
     // token revocation, so a tenant preview open in another tab is unaffected.
     await supabase.auth.signOut({ scope: "local" });
     setAuthToken(null);
-    router.push("/login");
+    router.push("/login", undefined, { locale: router.locale });
   }
 
   const showHubBar = isAdmin || role === "MANAGER";
