@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import AppShell from "../../components/AppShell";
@@ -78,8 +78,55 @@ function nextApproverLabel(status) {
 
 const REQUEST_SORT_FIELDS = ["requestNumber", "status", "building", "category", "urgency", "createdAt", "estimatedCost", "contractor", "nextApprover", "payingParty", "approvalSource"];
 
+// ---------------------------------------------------------------------------
+// ActionDropdown — "Actions ▾" trigger + popover menu (desktop table only)
+// ---------------------------------------------------------------------------
+function ActionDropdown({ actions, loading }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!open) return;
+    function handleOutside(e) {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handleOutside);
+    return () => document.removeEventListener("mousedown", handleOutside);
+  }, [open]);
+
+  if (!actions.length) return null;
+
+  return (
+    <div ref={ref} className="relative inline-block text-left">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        disabled={loading}
+        className="rounded-lg border border-surface-border bg-surface px-3 py-1.5 text-xs font-semibold text-muted-dark hover:bg-surface-subtle transition disabled:opacity-50"
+      >
+        {loading ? "\u2026" : "Actions \u25be"}
+      </button>
+      {open && (
+        <div className="absolute right-0 z-20 mt-1 w-48 origin-top-right rounded-lg border border-surface-border bg-surface shadow-lg">
+          <div className="py-1">
+            {actions.map((a, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => { setOpen(false); a.onClick(); }}
+                className={"w-full text-left px-4 py-2 text-sm hover:bg-surface-subtle transition " + (a.className || "text-muted-dark")}
+              >
+                {a.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Column definitions for ConfigurableTable — render closures capture outer scope via page component
-function buildRequestColumns({ t, assigningId, setAssigningId, selectedContractorId, setSelectedContractorId, contractors, actionLoading, approveRequest, rejectRequest, doAssignContractor, doUnassignContractor, getAvailableCTAs }) {
+function buildRequestColumns({ t, router, actionLoading, approveRequest, rejectRequest, doUnassignContractor, getAvailableCTAs }) {
   return [
     {
       id: "requestNumber",
@@ -253,70 +300,30 @@ function buildRequestColumns({ t, assigningId, setAssigningId, selectedContracto
     },
     {
       id: "actions",
-      label: t("manager:requests.col.actions"),
+      label: "",
       alwaysVisible: true,
+      className: "text-right",
       render: (r) => {
-        const ctaList = getAvailableCTAs(r, assigningId);
+        const ctaList = getAvailableCTAs(r);
+        const actions = ctaList.map((cta) => {
+          switch (cta) {
+            case "approve":
+              return { label: t("manager:requests.btn.approve"), onClick: () => approveRequest(r.id) };
+            case "reject":
+              return { label: t("manager:requests.btn.reject"), onClick: () => rejectRequest(r.id), className: "text-destructive-text" };
+            case "view_rfp":
+              return { label: t("manager:requests.btn.viewRfp"), onClick: () => router.push(r.rfpId ? `/manager/rfps/${r.rfpId}` : "/manager/rfps") };
+            case "assign":
+              return { label: t("manager:requests.btn.assign"), onClick: () => router.push(`/manager/requests/${r.id}`) };
+            case "unassign":
+              return { label: t("manager:requests.btn.unassign"), onClick: () => doUnassignContractor(r.id), className: "text-destructive-text" };
+            default:
+              return null;
+          }
+        }).filter(Boolean);
         return (
-          <div className="flex items-center gap-1.5 flex-wrap" onClick={(e) => e.stopPropagation()}>
-            {ctaList.map((cta) => {
-              switch (cta) {
-                case 'approve':
-                  return (
-                    <button key="approve" onClick={() => approveRequest(r.id)} disabled={actionLoading === r.id}
-                      className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-50">
-                      {actionLoading === r.id ? "\u2026" : t("manager:requests.btn.approve")}
-                    </button>
-                  );
-                case 'reject':
-                  return (
-                    <button key="reject" onClick={() => rejectRequest(r.id)} disabled={actionLoading === r.id}
-                      className="rounded-lg border border-muted-ring bg-surface px-3 py-1.5 text-xs font-medium text-muted-dark hover:bg-surface-subtle disabled:opacity-50">
-                      {actionLoading === r.id ? "\u2026" : t("manager:requests.btn.reject")}
-                    </button>
-                  );
-                case 'view_rfp':
-                  return (
-                    <a key="view_rfp" href={r.rfpId ? `/manager/rfps/${r.rfpId}` : "/manager/rfps"} className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-700">
-                      {t("manager:requests.btn.viewRfp")}
-                    </a>
-                  );
-                case 'assign':
-                  return assigningId === r.id ? (
-                    <div key="assign-modal" className="flex items-center gap-1.5">
-                      <select value={selectedContractorId} onChange={(e) => setSelectedContractorId(e.target.value)}
-                        className="rounded border border-muted-ring px-2 py-1 text-xs">
-                        <option value="">Select&hellip;</option>
-                        {contractors.map((c) => (
-                          <option key={c.id} value={c.id}>{c.name || c.companyName || c.id.slice(0, 8)}</option>
-                        ))}
-                      </select>
-                      <button onClick={() => doAssignContractor(r.id)} disabled={!selectedContractorId || actionLoading === r.id}
-                        className="rounded-lg bg-blue-600 px-2 py-1 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50">
-                        {actionLoading === r.id ? "\u2026" : t("manager:requests.btn.ok")}
-                      </button>
-                      <button onClick={() => { setAssigningId(null); setSelectedContractorId(""); }}
-                        className="rounded-lg border border-surface-border bg-surface px-2 py-1 text-xs text-muted hover:bg-surface-subtle">
-                        &times;
-                      </button>
-                    </div>
-                  ) : (
-                    <button key="assign" onClick={() => setAssigningId(r.id)}
-                      className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700">
-                      {t("manager:requests.btn.assign")}
-                    </button>
-                  );
-                case 'unassign':
-                  return (
-                    <button key="unassign" onClick={() => doUnassignContractor(r.id)} disabled={actionLoading === r.id}
-                      className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-50">
-                      {actionLoading === r.id ? "\u2026" : t("manager:requests.btn.unassign")}
-                    </button>
-                  );
-                default:
-                  return null;
-              }
-            })}
+          <div onClick={(e) => e.stopPropagation()}>
+            <ActionDropdown actions={actions} loading={actionLoading === r.id} />
           </div>
         );
       },
@@ -1387,12 +1394,11 @@ export default function ManagerRequestsPage() {
 
   const requestColumns = useMemo(
     () => buildRequestColumns({
-      t, assigningId, setAssigningId, selectedContractorId, setSelectedContractorId,
-      contractors, actionLoading,
-      approveRequest, rejectRequest, doAssignContractor, doUnassignContractor,
+      t, router, actionLoading,
+      approveRequest, rejectRequest, doUnassignContractor,
       getAvailableCTAs,
     }),
-    [assigningId, selectedContractorId, contractors, actionLoading]
+    [actionLoading] // eslint-disable-line react-hooks/exhaustive-deps
   );
 
   return (
