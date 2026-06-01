@@ -22,6 +22,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
+import { useTranslation } from "next-i18next";
 import NotificationBell from "./NotificationBell";
 import LocaleSwitcher from "./LocaleSwitcher";
 import ManagerSidebar from "./ManagerSidebar";
@@ -44,6 +45,7 @@ function getStoredRole() {
 
 export default function AppShell({ role: roleProp, children }) {
   const router = useRouter();
+  const { t } = useTranslation("common");
   const [role, setRole] = useState(roleProp || null);
   const [isAdmin, setIsAdmin] = useState(false);
 
@@ -135,29 +137,29 @@ export default function AppShell({ role: roleProp, children }) {
           href="#main-content"
           className="sr-only focus:not-sr-only focus:fixed focus:top-10 focus:left-2 focus:z-50 focus:rounded focus:bg-surface focus:px-4 focus:py-2 focus:shadow-lg focus:ring-2 focus:ring-blue-500"
         >
-          Skip to main content
+          {t("appShell.skipToMainContent")}
         </a>
 
       <aside
         className="hidden md:flex md:flex-col border-r border-surface-border px-4 py-5 bg-surface-hover"
-        aria-label="Sidebar navigation"
+        aria-label={t("appShell.sidebarNavigation")}
       >
         <div className="font-bold text-lg mb-5">Sencilo</div>
 
         {/* Role switcher — admin users and dev/staging environments */}
         {(ROLE_SWITCH_ENABLED || isAdmin) && (
           <div className="mb-5">
-            <div className="text-sm text-muted mb-2">Role</div>
+            <div className="text-sm text-muted mb-2">{t("appShell.roleSwitcher")}</div>
             <select
               value={role || "MANAGER"}
               onChange={(e) => setRoleAndRoute(e.target.value)}
-              aria-label="Switch role"
+              aria-label={t("appShell.switchRole")}
               className="w-full px-2.5 py-2 rounded-lg border border-muted-ring bg-surface-subtle text-foreground cursor-pointer"
             >
-              <option value="MANAGER">Manager</option>
-              <option value="OWNER">Owner</option>
-              <option value="CONTRACTOR">Contractor</option>
-              <option value="TENANT">Tenant</option>
+              <option value="MANAGER">{t("role.MANAGER")}</option>
+              <option value="OWNER">{t("role.OWNER")}</option>
+              <option value="CONTRACTOR">{t("role.CONTRACTOR")}</option>
+              <option value="TENANT">{t("role.TENANT")}</option>
             </select>
           </div>
         )}
@@ -187,7 +189,7 @@ export default function AppShell({ role: roleProp, children }) {
               <polyline points="16 17 21 12 16 7"/>
               <line x1="21" y1="12" x2="9" y2="12"/>
             </svg>
-            Sign out
+            {t("action.signOut")}
           </button>
         </div>
       </aside>

@@ -28,7 +28,49 @@
     "preview": "Aperçu",
     "undo": "Annuler",
     "more": "Plus",
-    "dismiss": "Fermer"
+    "dismiss": "Fermer",
+    "signOut": "Se déconnecter",
+    "tryAgain": "Réessayer"
+  },
+  "appShell": {
+    "skipToMainContent": "Aller au contenu principal",
+    "sidebarNavigation": "Navigation latérale",
+    "roleSwitcher": "Rôle",
+    "switchRole": "Changer de rôle"
+  },
+  "login": {
+    "title": "Se connecter",
+    "subtitle": "Bienvenue sur Sencilo",
+    "tabMagicLink": "Lien magique",
+    "tabPassword": "Mot de passe",
+    "emailLabel": "Adresse e-mail",
+    "emailPlaceholder": "vous@exemple.com",
+    "passwordLabel": "Mot de passe",
+    "sendSignInLink": "Envoyer le lien de connexion",
+    "sending": "Envoi en cours…",
+    "oneClickHint": "Un lien de connexion en un clic sera envoyé à votre boîte de réception.",
+    "forgotPassword": "Mot de passe oublié ?",
+    "signingIn": "Connexion en cours…",
+    "signIn": "Se connecter",
+    "footer": "L'accès est sur invitation uniquement. Contactez votre administrateur.",
+    "checkInbox": {
+      "title": "Vérifiez votre boîte de réception",
+      "body": "Nous avons envoyé un lien de connexion à {{email}}. Le lien expire dans 1 heure.",
+      "useDifferentEmail": "Utiliser une autre adresse e-mail"
+    },
+    "resetSent": {
+      "title": "Lien de réinitialisation envoyé",
+      "body": "Consultez votre boîte de réception à {{email}} pour le lien de réinitialisation.",
+      "backToSignIn": "Retour à la connexion"
+    },
+    "error": {
+      "forbidden": "Vous n'avez pas la permission d'accéder à cette page.",
+      "authFailed": "Échec de l'authentification. Veuillez réessayer.",
+      "missingCode": "Lien de connexion invalide. Veuillez en demander un nouveau.",
+      "emailNotFound": "Si cette adresse est enregistrée, vous recevrez un lien sous peu.",
+      "incorrectCredentials": "E-mail ou mot de passe incorrect.",
+      "enterEmail": "Veuillez saisir votre adresse e-mail d'abord."
+    }
   },
   "status": {
     "open": "Ouvert",

@@ -98,7 +98,7 @@ function TenantSchedulingPanel({ requestId }) {
   return (
     <div className="mt-3 rounded-lg border border-indigo-100 bg-indigo-50/50 p-4">
       <h3 className="text-sm font-semibold text-indigo-900 mb-2">
-        📅 Appointment Scheduling
+        {t("tenant:requests.text.appointmentScheduling")}
       </h3>
 
       <ErrorBanner error={error} className="mb-2 text-xs" />
@@ -108,7 +108,7 @@ function TenantSchedulingPanel({ requestId }) {
           <div className="flex items-center gap-2 mb-1">
             <span className="text-green-700">✓</span>
             <span className="text-sm font-semibold text-green-900">
-              Appointment Confirmed
+              {t("tenant:requests.text.appointmentConfirmed")}
             </span>
           </div>
           <p className="text-sm text-green-700">
@@ -117,14 +117,12 @@ function TenantSchedulingPanel({ requestId }) {
         </div>
       ) : allDeclined ? (
         <p className="text-sm text-red-700">
-          All proposed time slots have been declined. The manager will be notified
-          and the contractor may propose new slots.
+          {t("tenant:requests.text.allSlotsDeclined")}
         </p>
       ) : (
         <>
           <p className="text-xs text-indigo-700 mb-2">
-            The contractor has proposed the following time slots.
-            Please accept one or decline those that don't work.
+            {t("tenant:requests.text.slotsProposed")}
           </p>
           <div className="space-y-2">
             {proposed.map((slot) => (
@@ -141,14 +139,14 @@ function TenantSchedulingPanel({ requestId }) {
                     disabled={!!actionLoading}
                     className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-50"
                   >
-                    {actionLoading === slot.id ? "…" : "Accept"}
+                    {actionLoading === slot.id ? "…" : t("tenant:requests.text.accept")}
                   </button>
                   <button
                     onClick={() => handleAction(slot.id, "decline")}
                     disabled={!!actionLoading}
                     className="rounded-lg border border-red-300 bg-surface px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
                   >
-                    Decline
+                    {t("tenant:requests.text.declineBtn")}
                   </button>
                 </div>
               </div>
@@ -483,9 +481,9 @@ function TenantPhotosPanel({ requestId }) {
 // ---------------------------------------------------------------------------
 
 const CRITERIA = [
-  { key: "scorePunctuality", label: "Punctuality" },
-  { key: "scoreAccuracy",    label: "Accuracy of information given" },
-  { key: "scoreCourtesy",    label: "Courtesy" },
+  { key: "scorePunctuality", labelKey: "punctuality" },
+  { key: "scoreAccuracy",    labelKey: "accuracy" },
+  { key: "scoreCourtesy",    labelKey: "courtesy" },
 ];
 
 function StarRow({ value, onChange, disabled }) {
@@ -572,14 +570,14 @@ function TenantJobReviewPanel({ job, onRefresh }) {
       {!job.confirmedAt && (
         <div className="flex flex-wrap items-start justify-between gap-3">
           <p className="text-xs text-green-700 flex-1">
-            The contractor has marked this job as done. Please confirm you are satisfied.
+            {t("tenant:requests.text.contractorMarkedDone")}
           </p>
           <button
             onClick={handleConfirm}
             disabled={confirming}
             className="ml-3 flex-shrink-0 rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-50"
           >
-            {confirming ? "…" : "Confirm completion"}
+            {confirming ? "…" : t("tenant:requests.text.confirmCompletion")}
           </button>
         </div>
       )}
@@ -587,12 +585,12 @@ function TenantJobReviewPanel({ job, onRefresh }) {
       {/* Step 2: rate */}
       {job.confirmedAt && !job.tenantRated && !showRating && (
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-xs text-green-700 flex-1">Completion confirmed. How was the service?</p>
+          <p className="text-xs text-green-700 flex-1">{t("tenant:requests.text.completionConfirmedRateService")}</p>
           <button
             onClick={() => setShowRating(true)}
             className="flex-shrink-0 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-700"
           >
-            Rate the service
+            {t("tenant:requests.text.rateTheService")}
           </button>
         </div>
       )}
@@ -601,7 +599,7 @@ function TenantJobReviewPanel({ job, onRefresh }) {
         <form onSubmit={handleRate} className="mt-2 space-y-3">
           {CRITERIA.map((c) => (
             <div key={c.key} className="flex items-center justify-between">
-              <span className="text-xs text-muted-dark w-40">{c.label}</span>
+              <span className="text-xs text-muted-dark w-40">{t(`tenant:requests.criteria.${c.labelKey}`)}</span>
               <StarRow
                 value={scores[c.key]}
                 onChange={(v) => setScores((prev) => ({ ...prev, [c.key]: v }))}
@@ -624,14 +622,14 @@ function TenantJobReviewPanel({ job, onRefresh }) {
               onClick={() => setShowRating(false)}
               className="rounded-lg border border-surface-border px-3 py-1.5 text-xs font-medium text-muted-text hover:bg-surface-subtle"
             >
-              Cancel
+              {t("tenant:requests.text.cancel")}
             </button>
             <button
               type="submit"
               disabled={submitting}
               className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
             >
-              {submitting ? "Submitting…" : "Submit rating"}
+              {submitting ? t("tenant:requests.text.submitting") : t("tenant:requests.text.submitRating")}
             </button>
           </div>
         </form>
@@ -651,12 +649,12 @@ const CATEGORIES = ["stove", "oven", "dishwasher", "bathroom", "lighting"];
 // ---------------------------------------------------------------------------
 
 const OBLIGATION_BADGE = {
-  OBLIGATED: { variant: "success", label: "Landlord obligated" },
-  DISCRETIONARY: { variant: "warning", label: "Discretionary" },
-  TENANT_RESPONSIBLE: { variant: "destructive", label: "Tenant responsible" },
-  RECOMMENDED: { variant: "info", label: "Recommended" },
-  NOT_APPLICABLE: { variant: "muted", label: "N/A" },
-  UNKNOWN: { variant: "muted", label: "Unknown" },
+  OBLIGATED: { variant: "success" },
+  DISCRETIONARY: { variant: "warning" },
+  TENANT_RESPONSIBLE: { variant: "destructive" },
+  RECOMMENDED: { variant: "info" },
+  NOT_APPLICABLE: { variant: "muted" },
+  UNKNOWN: { variant: "muted" },
 };
 
 function TenantClaimAnalysisPanel({ requestId }) {
@@ -691,14 +689,14 @@ function TenantClaimAnalysisPanel({ requestId }) {
           <div>
             <h3 className="text-sm font-semibold text-violet-900">{t("tenant:requests.text.legalAnalysis")}</h3>
             <p className="text-xs text-violet-700 mt-0.5">
-              Get a detailed analysis of your legal rights for this issue.
+              {t("tenant:requests.text.legalRightsDesc")}
             </p>
           </div>
           <button
             onClick={runAnalysis}
             className="flex-shrink-0 rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-violet-700"
           >
-            Analyse my claim
+            {t("tenant:requests.text.analyseMyClaimBtn")}
           </button>
         </div>
       </div>
@@ -724,7 +722,7 @@ function TenantClaimAnalysisPanel({ requestId }) {
           onClick={runAnalysis}
           className="rounded-lg border border-red-300 bg-surface px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50"
         >
-          Try again
+          {t("tenant:requests.text.tryAgain")}
         </button>
       </div>
     );
@@ -743,17 +741,17 @@ function TenantClaimAnalysisPanel({ requestId }) {
           disabled={loading}
           className="text-xs text-violet-600 hover:text-violet-700 underline"
         >
-          Re-analyse
+          {t("tenant:requests.text.reAnalyse")}
         </button>
       </div>
 
       {/* Obligation badge + confidence */}
       <div className="flex items-center gap-2 flex-wrap">
         <Badge variant={badge.variant} size="sm">
-          {badge.label}
+          {t(`tenant:requests.obligation.${a.legalObligation || "UNKNOWN"}`)}
         </Badge>
         <span className="text-xs text-muted">
-          Confidence: {Math.round(a.confidence || 0)}%
+          {t("tenant:requests.text.confidence", { pct: Math.round(a.confidence || 0) })}
         </span>
         {a.legalTopic && (
           <span className="text-xs text-foreground-dim">• {a.legalTopic}</span>
@@ -788,25 +786,24 @@ function TenantClaimAnalysisPanel({ requestId }) {
       {a.rentReduction && a.rentReduction.totalReductionChf > 0 && (
         <div className="rounded-lg bg-green-50 border border-green-200 p-3">
           <p className="text-xs font-semibold text-green-900 mb-1">
-            💰 Estimated rent reduction
+            {t("tenant:requests.text.estimatedRentReduction")}
           </p>
           <div className="flex items-baseline gap-3">
             <span className="text-lg font-bold text-green-700">
               CHF {a.rentReduction.totalReductionChf.toFixed(0)}
             </span>
             <span className="text-xs text-green-700">
-              / month ({a.rentReduction.totalReductionPercent}% of CHF {a.rentReduction.netRentChf})
+              {t("tenant:requests.text.perMonthOf", { pct: a.rentReduction.totalReductionPercent, amount: a.rentReduction.netRentChf })}
             </span>
           </div>
           {a.rentReduction.capApplied && (
-            <p className="text-xs text-green-600 mt-1">Cap applied (max 70%)</p>
+            <p className="text-xs text-green-600 mt-1">{t("tenant:requests.text.capApplied")}</p>
           )}
           {a.temporalContext?.backdatedReductionChf > 0 && (
             <p className="text-xs text-green-600 mt-1">
-              Back-dated: ~CHF {a.temporalContext.backdatedReductionChf.toFixed(0)}
               {a.temporalContext.durationMonths
-                ? ` (${a.temporalContext.durationMonths} months)`
-                : ""}
+                ? t("tenant:requests.text.backDatedMonths", { amount: a.temporalContext.backdatedReductionChf.toFixed(0), months: a.temporalContext.durationMonths })
+                : t("tenant:requests.text.backDated", { amount: a.temporalContext.backdatedReductionChf.toFixed(0) })}
             </p>
           )}
         </div>
@@ -817,7 +814,7 @@ function TenantClaimAnalysisPanel({ requestId }) {
         onClick={() => setExpanded((v) => !v)}
         className="text-xs text-violet-600 hover:text-violet-700 font-medium"
       >
-        {expanded ? "▾ Hide details" : "▸ Show detailed analysis"}
+        {expanded ? t("tenant:requests.text.hideDetails") : t("tenant:requests.text.showDetailedAnalysis")}
       </button>
 
       {expanded && (
@@ -826,7 +823,7 @@ function TenantClaimAnalysisPanel({ requestId }) {
           {a.matchedDefects?.length > 0 && (
             <div>
               <p className="text-xs font-semibold text-muted-dark mb-1">
-                Matched precedents ({a.matchedDefects.length})
+                {t("tenant:requests.text.matchedPrecedents", { count: a.matchedDefects.length })}
               </p>
               <div className="space-y-1.5">
                 {a.matchedDefects.map((d, i) => (
@@ -843,7 +840,7 @@ function TenantClaimAnalysisPanel({ requestId }) {
                         </p>
                       </div>
                       <span className="text-xs text-foreground-dim ml-2">
-                        {Math.round(d.matchConfidence)}% match
+                        {t("tenant:requests.text.matchConfidence", { pct: Math.round(d.matchConfidence) })}
                       </span>
                     </div>
                     {d.matchReasons?.length > 0 && (
@@ -877,7 +874,7 @@ function TenantClaimAnalysisPanel({ requestId }) {
           {a.landlordObligations && (
             <div className="rounded-lg bg-amber-50 border border-amber-200 p-3">
               <p className="text-xs font-semibold text-amber-900 mb-1">
-                Landlord obligations
+                {t("tenant:requests.text.landlordObligations")}
               </p>
               <p className="text-xs text-amber-700">{a.landlordObligations.summary}</p>
               {a.landlordObligations.requiredActions?.length > 0 && (
@@ -889,7 +886,7 @@ function TenantClaimAnalysisPanel({ requestId }) {
               )}
               {a.landlordObligations.timeline && (
                 <p className="text-xs text-amber-600 mt-1">
-                  Timeline: {a.landlordObligations.timeline}
+                  {t("tenant:requests.text.timeline", { text: a.landlordObligations.timeline })}
                 </p>
               )}
             </div>
@@ -898,10 +895,9 @@ function TenantClaimAnalysisPanel({ requestId }) {
           {/* Temporal context */}
           {a.temporalContext?.seasonalAdjustment && (
             <div className="text-xs text-muted">
-              🌡️ Seasonal adjustment applied
               {a.temporalContext.proRatedPercent != null
-                ? ` — pro-rated to ${a.temporalContext.proRatedPercent}%`
-                : ""}
+                ? t("tenant:requests.text.seasonalAdjustmentProRated", { pct: a.temporalContext.proRatedPercent })
+                : t("tenant:requests.text.seasonalAdjustment")}
             </div>
           )}
 
@@ -934,7 +930,7 @@ function NewRequestModal({ onClose, onCreated }) {
   async function ensureRequestCreated() {
     if (createdRequestId) return createdRequestId;
     if (description.trim().length < 10) {
-      setError("Description must be at least 10 characters.");
+      setError(t("tenant:requests.text.descriptionMinChars"));
       return null;
     }
     setSubmitting(true);
@@ -1103,7 +1099,7 @@ function NewRequestModal({ onClose, onCreated }) {
                       <span className="text-foreground-dim">{(f.size / 1024).toFixed(0)} KB</span>
                       <button
                         type="button"
-                        aria-label={`Remove ${f.name}`}
+                        aria-label={t("tenant:requests.ariaLabel.removeFile", { name: f.name })}
                         onClick={() => setPendingFiles((prev) => prev.filter((_, idx) => idx !== i))}
                         className="text-foreground-dim hover:text-red-500"
                       >
@@ -1121,10 +1117,10 @@ function NewRequestModal({ onClose, onCreated }) {
               className="mt-2 inline-flex items-center gap-2 rounded-lg border border-surface-border bg-surface px-3 py-1.5 text-xs font-medium text-muted-dark hover:bg-surface-subtle disabled:opacity-50"
               aria-label={t("tenant:requests.ariaLabel.capturePhotosWithPhoneViaQrCode")}
             >
-              📷 Capture with phone
+              {t("tenant:requests.text.captureWithPhoneBtn")}
             </button>
             {captureCount > 0 && (
-              <p className="mt-1 text-xs text-green-600">✅ {captureCount} photo(s) captured from phone</p>
+              <p className="mt-1 text-xs text-green-600">{t("tenant:requests.text.photosCaptured", { count: captureCount })}</p>
             )}
           </div>
 
@@ -1134,14 +1130,18 @@ function NewRequestModal({ onClose, onCreated }) {
               onClick={createdRequestId ? onCreated : onClose}
               className="rounded-lg border border-surface-border px-4 py-2 text-sm font-medium text-muted-text hover:bg-surface-subtle"
             >
-              {createdRequestId ? "Done" : "Cancel"}
+              {createdRequestId ? t("tenant:requests.text.done") : t("tenant:requests.text.cancel")}
             </button>
             <button
               type="submit"
               disabled={submitting}
               className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
             >
-              {submitting ? (pendingFiles.length > 0 ? "Uploading…" : "Submitting…") : createdRequestId ? "Submit files & close" : "Submit request"}
+              {submitting
+                ? (pendingFiles.length > 0 ? t("tenant:requests.text.uploading") : t("tenant:requests.text.submitting"))
+                : createdRequestId
+                  ? t("tenant:requests.text.submitFilesAndClose")
+                  : t("tenant:requests.text.submitRequest")}
             </button>
           </div>
 
@@ -1320,13 +1320,13 @@ export default function TenantRequestsPage() {
                         </Badge>
                         {r.payingParty === "TENANT" && (
                           <Badge variant="warning" size="sm">
-                            Self-pay
+                            {t("tenant:requests.text.selfPay")}
                           </Badge>
                         )}
                       </div>
                       <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1 text-xs text-foreground-dim">
                         {r.buildingName && <span>{r.buildingName}</span>}
-                        {r.unitNumber && <span>Unit {r.unitNumber}</span>}
+                        {r.unitNumber && <span>{t("tenant:requests.text.unit", { number: r.unitNumber })}</span>}
                         {r.category && <span>{r.category}</span>}
                         <span>{formatDateTime(r.createdAt)}</span>
                       </div>
@@ -1349,7 +1349,7 @@ export default function TenantRequestsPage() {
                         disabled={selfPayLoading === r.id}
                         className="w-full rounded-lg bg-orange-500 px-4 py-2 text-sm font-medium text-white hover:bg-orange-600 disabled:opacity-50 sm:w-auto"
                       >
-                        {selfPayLoading === r.id ? "Processing…" : "Proceed at my own expense"}
+                        {selfPayLoading === r.id ? t("tenant:requests.text.processing") : t("tenant:requests.text.proceedAtOwnExpense")}
                       </button>
                     </div>
                   )}
@@ -1358,7 +1358,7 @@ export default function TenantRequestsPage() {
                   {isExpanded && (
                     <div className="border-t border-surface-divider px-3 pb-4 pt-3">
                       {r.rejectionReason && r.status === "OWNER_REJECTED" && (
-                        <p className="mb-2 text-xs text-red-600">Reason: {r.rejectionReason}</p>
+                        <p className="mb-2 text-xs text-red-600">{t("tenant:requests.text.rejectionReasonPrefix", { reason: r.rejectionReason })}</p>
                       )}
 
                       {/* Photos / Attachments */}

@@ -8,7 +8,7 @@
     "assets": "Équipements",
     "myHome": "Mon logement",
     "apply": "Candidater",
-    "settings": "Parametres"
+    "settings": "Paramètres"
   },
   "dashboard": {
     "title": "Espace locataire",
@@ -26,7 +26,7 @@
     "assistantName": "Assistant de maintenance",
     "assistantTagline": "Posez-moi vos questions sur votre logement",
     "loading": "Chargement…",
-    "greeting": "Bonjour ! Je suis votre assistant de maintenance.",
+    "greeting": "Bonjour ! Je suis votre assistant de maintenance.",
     "greetingHint": "Décrivez un problème dans votre logement ou renseignez-vous sur l'état d'une demande.",
     "suggestion1": "Mon robinet fuit",
     "suggestion2": "Afficher les détails de mon bail",
@@ -37,59 +37,59 @@
   },
   "index": {
     "heading": {
-      "rentalApplication": "Rental Application",
-      "selectUnitsToApplyFor": "Select units to apply for",
-      "uploadYourDocuments": "Upload your documents",
-      "applicantDetails": "Applicant Details",
-      "currentHousingHousehold": "Current Housing & Household",
-      "reviewSubmit": "Review & Submit",
-      "unitsAppliedFor": "Units Applied For",
-      "applicants": "Applicants",
+      "rentalApplication": "Candidature locative",
+      "selectUnitsToApplyFor": "Sélectionner les unités pour lesquelles candidater",
+      "uploadYourDocuments": "Téléverser vos documents",
+      "applicantDetails": "Informations du candidat",
+      "currentHousingHousehold": "Logement actuel & ménage",
+      "reviewSubmit": "Réviser & soumettre",
+      "unitsAppliedFor": "Unités visées",
+      "applicants": "Candidats",
       "documents": "Documents",
-      "electronicSignature": "Electronic Signature",
-      "applicationSubmitted": "Application Submitted",
+      "electronicSignature": "Signature électronique",
+      "applicationSubmitted": "Candidature soumise",
       "maintenanceAgentNdashUiLauncher": "Maintenance Agent &ndash; UI Launcher",
-      "rentalListings": "Rental Listings",
-      "findYourNextHome": "Find your next home",
-      "maintenanceHelp": "Maintenance help",
-      "quickFixes": "Quick fixes",
-      "tenantRequestByPhone": "Tenant request (by phone)",
-      "requestContext": "Request context",
-      "tenantSignIn": "Tenant sign-in"
+      "rentalListings": "Annonces locatives",
+      "findYourNextHome": "Trouvez votre prochain logement",
+      "maintenanceHelp": "Aide à la maintenance",
+      "quickFixes": "Solutions rapides",
+      "tenantRequestByPhone": "Demande locataire (par téléphone)",
+      "requestContext": "Contexte de la demande",
+      "tenantSignIn": "Connexion locataire"
     },
     "placeholder": {
-      "eGChFrDe": "e.g. CH, FR, DE",
-      "eGJeanDupont": "e.g. Jean Dupont",
-      "searchByAddressBuildingNameOrUnit": "Search by address, building name, or unit…",
-      "yourName": "Your name",
-      "youExampleCom": "you@example.com",
-      "minimum8Characters": "Minimum 8 characters",
-      "eGTheOvenIsOverheating": "e.g., The oven is overheating",
+      "eGChFrDe": "ex. CH, FR, DE",
+      "eGJeanDupont": "ex. Jean Dupont",
+      "searchByAddressBuildingNameOrUnit": "Rechercher par adresse, nom d'immeuble ou unité…",
+      "yourName": "Votre nom",
+      "youExampleCom": "vous@exemple.com",
+      "minimum8Characters": "Minimum 8 caractères",
+      "eGTheOvenIsOverheating": "ex. Le four surchauffe",
       "41791234567": "+41 79 123 45 67",
-      "describeTheIssueU2026": "Describe the issue\\u2026",
-      "eG150": "e.g. 150"
+      "describeTheIssueU2026": "Décrivez le problème\\u2026",
+      "eG150": "ex. 150"
     },
     "title": {
-      "showExtractionDebugInfo": "Show extraction debug info"
+      "showExtractionDebugInfo": "Afficher les infos de débogage d'extraction"
     },
     "ariaLabel": {
-      "removeDocument": "Remove document"
+      "removeDocument": "Supprimer le document"
     }
   },
   "token": {
     "heading": {
-      "invoiceCapture": "Invoice Capture",
-      "thisLinkHasExpired": "This link has expired",
+      "invoiceCapture": "Capture de facture",
+      "thisLinkHasExpired": "Ce lien a expiré",
       "somethingWentWrong": "Une erreur s'est produite",
-      "takePhotosOfYourInvoice": "Take photos of your invoice",
-      "uploading": "Uploading…",
-      "photosSubmitted": "Photos submitted!"
+      "takePhotosOfYourInvoice": "Prenez des photos de votre facture",
+      "uploading": "Téléversement…",
+      "photosSubmitted": "Photos soumises !"
     }
   },
   "assets": {
     "heading": {
-      "myUnitAmpAssets": "My Unit &amp; Assets",
-      "unitAmpAssetDetails": "Unit &amp; Asset Details"
+      "myUnitAmpAssets": "Mon unité &amp; équipements",
+      "unitAmpAssetDetails": "Détails unité &amp; équipements"
     },
     "text": {
       "comingSoon": "Bientôt disponible"
@@ -98,31 +98,31 @@
   "inbox": {
     "title": {
       "inbox": "Boîte de réception",
-      "unread": "Unread",
+      "unread": "Non lu",
       "dismiss": "Ignorer"
     },
     "text": {
-      "pleaseSignInToViewYourNotifications": "Please sign in to view your notifications.",
+      "pleaseSignInToViewYourNotifications": "Veuillez vous connecter pour voir vos notifications.",
       "loading": "Chargement…",
-      "noNotificationsYetYouWillBeNotifiedHereWhenYourLeaseIsReadyToSignInvoicesAreCreatedAndMore": "Aucune notification yet. You will be notified here when your lease is ready to sign, invoices are created, and more."
+      "noNotificationsYetYouWillBeNotifiedHereWhenYourLeaseIsReadyToSignInvoicesAreCreatedAndMore": "Aucune notification pour l'instant. Vous serez notifié ici lorsque votre bail sera prêt à signer, que des factures seront créées, etc."
     }
   },
   "invoices": {
     "heading": {
-      "myInvoices": "My Invoices"
+      "myInvoices": "Mes factures"
     },
     "text": {
       "loading": "Chargement…",
-      "totalInvoices": "Total Factures",
+      "totalInvoices": "Total des factures",
       "outstanding": "En suspens",
       "paid": "Payé",
       "loadingInvoices": "Chargement des factures…",
-      "noInvoicesYet": "No invoices yet"
+      "noInvoicesYet": "Aucune facture pour l'instant"
     }
   },
   "invoicesId": {
     "heading": {
-      "paymentQrCode": "Payment QR Code"
+      "paymentQrCode": "Code QR de paiement"
     },
     "text": {
       "loading": "Chargement…",
@@ -133,109 +133,169 @@
       "dueDate": "Date d'échéance",
       "paid": "Payé",
       "property": "Bien",
-      "payableTo": "Payable to",
+      "payableTo": "Payable à",
       "reference": "Référence",
-      "referenceType": "Reference type"
+      "referenceType": "Type de référence",
+      "backToMyHome": "← Retour à Mon logement",
+      "invoiceNumber": "Facture n°{{number}}",
+      "generatingQrCode": "Génération du QR code…",
+      "scanQrCode": "Scannez avec votre application d'e-banking pour payer cette facture ou configurer un ordre permanent.",
+      "unitSuffix": " — Unité {{number}}"
     }
   },
   "leasesId": {
     "heading": {
-      "leaseAgreement": "Lease Agreement",
-      "signatureStatus": "Signature Status"
+      "leaseAgreement": "Contrat de bail",
+      "signatureStatus": "État de la signature"
     },
     "text": {
       "loading": "Chargement…",
-      "loadingLeaseDetails": "Loading lease details…",
-      "leaseNotFoundOrNotAccessible": "Bail not found or not accessible.",
+      "loadingLeaseDetails": "Chargement des détails du bail…",
+      "leaseNotFoundOrNotAccessible": "Bail introuvable ou inaccessible.",
       "1Parties": "§ 1 — Parties",
       "landlord": "Propriétaire",
       "tenant": "Locataire",
-      "2Object": "§ 2 — Object",
+      "2Object": "§ 2 — Objet",
       "type": "Type",
-      "rooms": "Rooms",
+      "rooms": "Pièces",
       "floor": "Étage",
       "address": "Adresse",
       "startDate": "Date de début",
-      "term": "Term",
+      "term": "Durée",
       "endDate": "Date de fin",
-      "noticePeriod": "Préavis Period",
+      "noticePeriod": "Délai de préavis",
       "netRent": "Loyer net",
       "garageParking": "Garage / parking",
-      "otherServices": "Other services",
-      "totalMonthly": "Àtal monthly",
+      "otherServices": "Autres services",
+      "totalMonthly": "Total mensuel",
       "7Deposit": "§ 7 — Dépôt de garantie",
-      "securityDeposit": "Security deposit",
-      "15OtherStipulations": "§ 15 — Other Stipulations",
-      "leaseTerminated": "📋 Lease Résilié",
-      "terminatedOn": "Résilié on:",
+      "securityDeposit": "Dépôt de garantie",
+      "15OtherStipulations": "§ 15 — Autres dispositions",
+      "leaseTerminated": "📋 Bail résilié",
+      "terminatedOn": "Résilié le :",
       "reason": "Motif :",
       "notice": "Préavis :"
     }
   },
   "leasesIndex": {
     "heading": {
-      "myLeases": "My Leases"
+      "myLeases": "Mes baux"
     },
     "text": {
-      "loadingSession": "Loading session…",
+      "loadingSession": "Chargement de la session…",
       "loadingLeases": "Chargement des baux…",
       "noLeasesFound": "Aucun bail trouvé",
-      "mo": "/mo"
+      "mo": "/mois"
     }
   },
   "requests": {
     "heading": {
-      "newMaintenanceRequest": "New Maintenance Request"
+      "newMaintenanceRequest": "Nouvelle demande de maintenance"
     },
     "placeholder": {
-      "commentOptional": "Comment (optional)",
-      "describeTheIssueInDetailEGTheKitchenFaucetIsDripping": "Describe the issue in detail (e.g. the kitchen faucet is dripping)",
+      "commentOptional": "Commentaire (optionnel)",
+      "describeTheIssueInDetailEGTheKitchenFaucetIsDripping": "Décrivez le problème en détail (ex. le robinet de cuisine goutte)",
       "41791234567": "+41 79 123 45 67"
     },
     "title": {
-      "myRequests": "My Requests",
-      "myMaintenanceRequests": "My Maintenance Requests"
+      "myRequests": "Mes demandes",
+      "myMaintenanceRequests": "Mes demandes de maintenance"
     },
     "ariaLabel": {
-      "captureWithPhone": "Capture with phone",
-      "attachPhotosOrDocuments": "Attach photos or documents",
-      "capturePhotosWithPhoneViaQrCode": "Capture photos with phone via QR code"
+      "captureWithPhone": "Capturer avec le téléphone",
+      "attachPhotosOrDocuments": "Joindre des photos ou documents",
+      "capturePhotosWithPhoneViaQrCode": "Capturer des photos avec le téléphone via QR code",
+      "removeFile": "Supprimer {{name}}"
+    },
+    "criteria": {
+      "punctuality": "Ponctualité",
+      "accuracy": "Précision des informations",
+      "courtesy": "Courtoisie"
+    },
+    "obligation": {
+      "OBLIGATED": "Bailleur obligé",
+      "DISCRETIONARY": "Discrétionnaire",
+      "TENANT_RESPONSIBLE": "Locataire responsable",
+      "RECOMMENDED": "Recommandé",
+      "NOT_APPLICABLE": "N/A",
+      "UNKNOWN": "Inconnu"
     },
     "text": {
-      "checkingAppointments": "Checking appointments…",
-      "declined": "Declined",
-      "captureWithPhone": "📷 Capture with Téléphone",
+      "checkingAppointments": "Vérification des rendez-vous…",
+      "declined": "Refusé",
+      "appointmentScheduling": "📅 Planification du rendez-vous",
+      "appointmentConfirmed": "Rendez-vous confirmé",
+      "allSlotsDeclined": "Tous les créneaux proposés ont été refusés. Le gestionnaire sera notifié et le prestataire pourra proposer de nouveaux créneaux.",
+      "slotsProposed": "Le prestataire a proposé les créneaux suivants. Veuillez en accepter un ou décliner ceux qui ne conviennent pas.",
+      "accept": "Accepter",
+      "declineBtn": "Refuser",
+      "captureWithPhone": "📷 Capturer avec le téléphone",
       "creatingCaptureSession": "Création de la session de capture…",
       "close": "Fermer",
       "photosReceived": "Photos reçues !",
-      "yourPhotosHaveBeenAttachedToTheRequest": "Your photos have been attached to the request.",
+      "yourPhotosHaveBeenAttachedToTheRequest": "Vos photos ont été jointes à la demande.",
       "done": "Terminé",
       "mobileLink": "Lien mobile",
       "cancel": "Annuler",
-      "loadingPhotos": "Loading photos…",
+      "loadingPhotos": "Chargement des photos…",
       "noPhotosYet": "Aucune photo pour l'instant",
-      "jobCompleted": "✅ Job Terminé",
-      "thankYouYourRatingHasBeenSubmitted": "Thank you — your rating has been submitted.",
+      "jobCompleted": "✅ Intervention terminée",
+      "contractorMarkedDone": "Le prestataire a marqué cette intervention comme terminée. Veuillez confirmer que vous êtes satisfait.",
+      "confirmCompletion": "Confirmer la fin de l'intervention",
+      "completionConfirmedRateService": "Fin de l'intervention confirmée. Comment s'est passée l'intervention ?",
+      "rateTheService": "Évaluer l'intervention",
+      "submitRating": "Soumettre l'évaluation",
+      "submitting": "Envoi en cours…",
+      "thankYouYourRatingHasBeenSubmitted": "Merci — votre évaluation a été soumise.",
       "legalAnalysis": "⚖️ Analyse juridique",
-      "analysingYourClaim": "Analysing your claim…",
-      "nextSteps": "Suivant steps:",
-      "legalBasis": "Legal basis",
-      "escalation": "Escalation",
+      "analysingYourClaim": "Analyse de votre demande…",
+      "legalRightsDesc": "Obtenez une analyse détaillée de vos droits légaux pour ce problème.",
+      "analyseMyClaimBtn": "Analyser ma demande",
+      "tryAgain": "Réessayer",
+      "reAnalyse": "Ré-analyser",
+      "confidence": "Confiance : {{pct}} %",
+      "matchConfidence": "{{pct}} % de correspondance",
+      "estimatedRentReduction": "💰 Réduction de loyer estimée",
+      "perMonthOf": "/ mois ({{pct}} % de CHF {{amount}})",
+      "capApplied": "Plafond appliqué (max 70 %)",
+      "backDated": "Rétroactif : ~CHF {{amount}}",
+      "backDatedMonths": "Rétroactif : ~CHF {{amount}} ({{months}} mois)",
+      "hideDetails": "▾ Masquer les détails",
+      "showDetailedAnalysis": "▸ Afficher l'analyse détaillée",
+      "matchedPrecedents": "Précédents correspondants ({{count}})",
+      "landlordObligations": "Obligations du bailleur",
+      "timeline": "Calendrier : {{text}}",
+      "seasonalAdjustment": "🌡️ Ajustement saisonnier appliqué",
+      "seasonalAdjustmentProRated": "🌡️ Ajustement saisonnier appliqué — au prorata : {{pct}} %",
+      "nextSteps": "Prochaines étapes :",
+      "legalBasis": "Base légale",
+      "escalation": "Escalade",
+      "descriptionMinChars": "La description doit comporter au moins 10 caractères.",
+      "captureWithPhoneBtn": "📷 Capturer avec le téléphone",
+      "photosCaptured": "✅ {{count}} photo(s) capturée(s) depuis le téléphone",
+      "submitFilesAndClose": "Soumettre les fichiers et fermer",
+      "submitRequest": "Soumettre la demande",
+      "uploading": "Téléversement…",
       "category": "Catégorie",
-      "contactPhone": "Contact phone",
+      "contactPhone": "Téléphone de contact",
       "photosAttachments": "Photos / Pièces jointes",
-      "upTo5FilesMax10MbEachImagesOrPdf": "Up to 5 files, max 10 MB each. Images or PDF.",
-      "pleaseSignInToViewYourRequests": "Please sign in to view your requests.",
+      "upTo5FilesMax10MbEachImagesOrPdf": "Jusqu'à 5 fichiers, max 10 Mo chacun. Images ou PDF.",
+      "selfPay": "Autofinancement",
+      "unit": "Unité {{number}}",
+      "processing": "En cours…",
+      "proceedAtOwnExpense": "Prendre en charge à mes frais",
+      "rejectionReasonPrefix": "Motif : {{reason}}",
+      "pleaseSignInToViewYourRequests": "Veuillez vous connecter pour voir vos demandes.",
       "loading": "Chargement…",
-      "noMaintenanceRequestsYet": "No maintenance requests yet."
+      "noMaintenanceRequestsYet": "Aucune demande de maintenance pour l'instant."
     }
   },
   "settings": {
     "notifications": {
-      "loading": "Chargement des preferences...",
-      "saved": "Preferences enregistrees.",
-      "saving": "Enregistrement...",
-      "saveButton": "Enregistrer les preferences",
+      "loading": "Chargement des préférences…",
+      "saved": "Préférences enregistrées.",
+      "saving": "Enregistrement…",
+      "saveButton": "Enregistrer les préférences",
       "error": "Erreur :",
       "ok": "OK :",
       "group": {
@@ -245,19 +305,19 @@
         "scheduling": "Planification"
       },
       "event": {
-        "REQUEST_APPROVED": "Demande approuvee",
-        "REJECTED": "Demande rejetee par le proprietaire",
-        "TENANT_SELF_PAY_ACCEPTED": "Option autofinancement acceptee",
-        "JOB_STARTED": "Travaux commences",
-        "JOB_COMPLETED": "Travail termine",
-        "LEASE_READY_TO_SIGN": "Bail pret a signer",
-        "LEASE_SIGNED": "Bail signe par le locataire",
-        "SLOT_PROPOSED": "Creneau de visite propose",
-        "SLOT_DECLINED": "Creneau de visite refuse"
+        "REQUEST_APPROVED": "Demande approuvée",
+        "REJECTED": "Demande rejetée par le propriétaire",
+        "TENANT_SELF_PAY_ACCEPTED": "Option autofinancement acceptée",
+        "JOB_STARTED": "Travaux commencés",
+        "JOB_COMPLETED": "Intervention terminée",
+        "LEASE_READY_TO_SIGN": "Bail prêt à signer",
+        "LEASE_SIGNED": "Bail signé par le locataire",
+        "SLOT_PROPOSED": "Créneau de visite proposé",
+        "SLOT_DECLINED": "Créneau de visite refusé"
       }
     },
-    "title": "Parametres",
-    "subtitle": "Gerez vos preferences de notification.",
+    "title": "Paramètres",
+    "subtitle": "Gérez vos préférences de notification.",
     "tabs": {
       "notifications": "Notifications",
       "appearance": "Apparence"

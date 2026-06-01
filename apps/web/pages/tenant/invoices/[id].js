@@ -105,7 +105,7 @@ export default function TenantInvoiceDetailPage() {
           href="/tenant/myhome"
           className="inline-flex items-center gap-1 text-sm text-muted hover:text-muted-dark mb-4"
         >
-          ← Back to My Home
+          {t("tenant:invoicesId.text.backToMyHome")}
         </Link>
 
         {error && <div className="notice notice-err mb-4">{error}</div>}
@@ -123,7 +123,7 @@ export default function TenantInvoiceDetailPage() {
                   </h1>
                   {invoice.invoiceNumber && (
                     <p className="text-sm text-muted mt-1">
-                      Invoice #{invoice.invoiceNumber}
+                      {t("tenant:invoicesId.text.invoiceNumber", { number: invoice.invoiceNumber })}
                     </p>
                   )}
                 </div>
@@ -173,8 +173,8 @@ export default function TenantInvoiceDetailPage() {
                   <div>
                     <p className="text-muted">{t("tenant:invoicesId.text.property")}</p>
                     <p className="font-medium">
-                      {invoice.unit.building?.name || "Property"}
-                      {invoice.unit.unitNumber ? ` — Unit ${invoice.unit.unitNumber}` : ""}
+                      {invoice.unit.building?.name || t("tenant:invoicesId.text.property")}
+                      {invoice.unit.unitNumber ? t("tenant:invoicesId.text.unitSuffix", { number: invoice.unit.unitNumber }) : ""}
                     </p>
                   </div>
                 )}
@@ -187,7 +187,7 @@ export default function TenantInvoiceDetailPage() {
 
               {qrLoading ? (
                 <div className="text-center py-8 text-muted">
-                  Generating QR code…
+                  {t("tenant:invoicesId.text.generatingQrCode")}
                 </div>
               ) : qrError ? (
                 <div className="text-center py-8">
@@ -203,7 +203,7 @@ export default function TenantInvoiceDetailPage() {
                       dangerouslySetInnerHTML={{ __html: qrBill.qrCodeSVG }}
                     />
                     <p className="text-xs text-muted-dark text-center">
-                      Scan with your e-banking app to pay this invoice or set up a standing order.
+                      {t("tenant:invoicesId.text.scanQrCode")}
                     </p>
                   </div>
 

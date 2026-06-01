@@ -28,7 +28,49 @@
     "preview": "Preview",
     "undo": "Undo",
     "more": "More",
-    "dismiss": "Dismiss"
+    "dismiss": "Dismiss",
+    "signOut": "Sign out",
+    "tryAgain": "Try again"
+  },
+  "appShell": {
+    "skipToMainContent": "Skip to main content",
+    "sidebarNavigation": "Sidebar navigation",
+    "roleSwitcher": "Role",
+    "switchRole": "Switch role"
+  },
+  "login": {
+    "title": "Sign in",
+    "subtitle": "Welcome back to Sencilo",
+    "tabMagicLink": "Magic link",
+    "tabPassword": "Password",
+    "emailLabel": "Email address",
+    "emailPlaceholder": "you@example.com",
+    "passwordLabel": "Password",
+    "sendSignInLink": "Send sign-in link",
+    "sending": "Sending…",
+    "oneClickHint": "A one-click link will be sent to your inbox.",
+    "forgotPassword": "Forgot password?",
+    "signingIn": "Signing in…",
+    "signIn": "Sign in",
+    "footer": "Access is by invitation only. Contact your administrator.",
+    "checkInbox": {
+      "title": "Check your inbox",
+      "body": "We sent a sign-in link to {{email}}. The link expires in 1 hour.",
+      "useDifferentEmail": "Use a different email"
+    },
+    "resetSent": {
+      "title": "Reset link sent",
+      "body": "Check your inbox at {{email}} for a password reset link.",
+      "backToSignIn": "Back to sign in"
+    },
+    "error": {
+      "forbidden": "You don't have permission to access that page.",
+      "authFailed": "Authentication failed. Please try again.",
+      "missingCode": "Invalid login link. Please request a new one.",
+      "emailNotFound": "If that address is registered you'll receive a link shortly.",
+      "incorrectCredentials": "Incorrect email or password.",
+      "enterEmail": "Enter your email address first."
+    }
   },
   "status": {
     "open": "Open",

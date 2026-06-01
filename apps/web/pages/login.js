@@ -32,6 +32,7 @@ import { useRouter } from "next/router";
 import { createClient } from "../lib/supabase/client";
 import { setAuthToken } from "../lib/api";
 import { withTranslations } from "../lib/i18n";
+import { useTranslation } from "next-i18next";
 import { cn } from "../lib/utils";
 
 /* Shared input + primary-button styling for the fixed-light card */
@@ -244,6 +245,7 @@ function AuthShell({ children, footer }) {
 /* ── Confirmation screens ─────────────────────────────────────── */
 
 function MagicLinkSentScreen({ email, onBack }) {
+  const { t } = useTranslation("common");
   return (
     <AuthShell>
       <div className="text-center py-2">
@@ -253,12 +255,9 @@ function MagicLinkSentScreen({ email, onBack }) {
               d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
           </svg>
         </div>
-        <h2 className="text-xl font-semibold text-slate-900 mb-2">Check your inbox</h2>
+        <h2 className="text-xl font-semibold text-slate-900 mb-2">{t("login.checkInbox.title")}</h2>
         <p className="text-sm text-slate-500 leading-relaxed mb-6">
-          We sent a sign-in link to{" "}
-          <span className="font-medium text-slate-700">{email}</span>.
-          <br />
-          The link expires in 1 hour.
+          {t("login.checkInbox.body", { email })}
         </p>
         <button
           type="button"
@@ -268,7 +267,7 @@ function MagicLinkSentScreen({ email, onBack }) {
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
-          Use a different email
+          {t("login.checkInbox.useDifferentEmail")}
         </button>
       </div>
     </AuthShell>
@@ -276,6 +275,7 @@ function MagicLinkSentScreen({ email, onBack }) {
 }
 
 function ResetSentScreen({ email, onBack }) {
+  const { t } = useTranslation("common");
   return (
     <AuthShell>
       <div className="text-center py-2">
@@ -285,12 +285,9 @@ function ResetSentScreen({ email, onBack }) {
               d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         </div>
-        <h2 className="text-xl font-semibold text-slate-900 mb-2">Reset link sent</h2>
+        <h2 className="text-xl font-semibold text-slate-900 mb-2">{t("login.resetSent.title")}</h2>
         <p className="text-sm text-slate-500 leading-relaxed mb-6">
-          Check your inbox at{" "}
-          <span className="font-medium text-slate-700">{email}</span>
-          <br />
-          for a password reset link.
+          {t("login.resetSent.body", { email })}
         </p>
         <button
           type="button"
@@ -300,7 +297,7 @@ function ResetSentScreen({ email, onBack }) {
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
-          Back to sign in
+          {t("login.resetSent.backToSignIn")}
         </button>
       </div>
     </AuthShell>
@@ -310,6 +307,7 @@ function ResetSentScreen({ email, onBack }) {
 /* ── Main page ────────────────────────────────────────────────── */
 
 export default function LoginPage() {
+  const { t } = useTranslation("common");
   const router = useRouter();
   const { next, error: queryError } = router.query;
 
@@ -337,13 +335,13 @@ export default function LoginPage() {
   // Surface errors forwarded from /api/auth/callback
   useEffect(() => {
     if (queryError === "forbidden") {
-      setNotice({ type: "err", msg: "You don't have permission to access that page." });
+      setNotice({ type: "err", msg: t("login.error.forbidden") });
     } else if (queryError === "auth_failed") {
-      setNotice({ type: "err", msg: "Authentication failed. Please try again." });
+      setNotice({ type: "err", msg: t("login.error.authFailed") });
     } else if (queryError === "missing_code") {
-      setNotice({ type: "err", msg: "Invalid login link. Please request a new one." });
+      setNotice({ type: "err", msg: t("login.error.missingCode") });
     }
-  }, [queryError]);
+  }, [queryError, t]);
 
   function redirectAfterLogin(session) {
     const meta = session.user?.app_metadata ?? {};
@@ -391,12 +389,12 @@ export default function LoginPage() {
         options: { emailRedirectTo: redirectTo, shouldCreateUser: false },
       });
       if (error) {
-        setNotice({ type: "err", msg: "If that address is registered you'll receive a link shortly." });
+        setNotice({ type: "err", msg: t("login.error.emailNotFound") });
       } else {
         setMagicSent(true);
       }
     } catch {
-      setNotice({ type: "err", msg: "Something went wrong. Please try again." });
+      setNotice({ type: "err", msg: t("error.generic") });
     } finally {
       setLoading(false);
     }
@@ -415,13 +413,13 @@ export default function LoginPage() {
         password,
       });
       if (error || !data.session) {
-        setNotice({ type: "err", msg: "Incorrect email or password." });
+        setNotice({ type: "err", msg: t("login.error.incorrectCredentials") });
         setPassword("");
         return;
       }
       redirectAfterLogin(data.session);
     } catch {
-      setNotice({ type: "err", msg: "Something went wrong. Please try again." });
+      setNotice({ type: "err", msg: t("error.generic") });
     } finally {
       setLoading(false);
     }
@@ -431,7 +429,7 @@ export default function LoginPage() {
   async function sendPasswordReset(e) {
     e.preventDefault();
     if (!email.trim()) {
-      setNotice({ type: "err", msg: "Enter your email address first." });
+      setNotice({ type: "err", msg: t("login.error.enterEmail") });
       return;
     }
     setNotice(null);
@@ -443,7 +441,7 @@ export default function LoginPage() {
       });
       setResetSent(true);
     } catch {
-      setNotice({ type: "err", msg: "Something went wrong. Please try again." });
+      setNotice({ type: "err", msg: t("error.generic") });
     } finally {
       setLoading(false);
     }
@@ -470,9 +468,9 @@ export default function LoginPage() {
 
   /* ── Main form ──────────────────────────────────────────────── */
   return (
-    <AuthShell footer="Access is by invitation only. Contact your administrator.">
-      <h2 className="text-xl font-semibold text-slate-900 mb-1">Sign in</h2>
-      <p className="text-sm text-slate-500 mb-6">Welcome back to Sencilo</p>
+    <AuthShell footer={t("login.footer")}>
+      <h2 className="text-xl font-semibold text-slate-900 mb-1">{t("login.title")}</h2>
+      <p className="text-sm text-slate-500 mb-6">{t("login.subtitle")}</p>
 
       {notice && <Notice type={notice.type} msg={notice.msg} />}
 
@@ -482,13 +480,13 @@ export default function LoginPage() {
           active={method === "magic"}
           onClick={() => { setMethod("magic"); setNotice(null); }}
         >
-          Magic link
+          {t("login.tabMagicLink")}
         </MethodTab>
         <MethodTab
           active={method === "password"}
           onClick={() => { setMethod("password"); setNotice(null); }}
         >
-          Password
+          {t("login.tabPassword")}
         </MethodTab>
       </div>
 
@@ -497,14 +495,14 @@ export default function LoginPage() {
         <form onSubmit={sendMagicLink}>
           <div className="mb-5">
             <label className="block text-sm font-medium text-slate-700 mb-1.5">
-              Email address
+              {t("login.emailLabel")}
             </label>
             <input
               type="email"
               className={INPUT_CLASS}
               value={email}
               onChange={e => setEmail(e.target.value)}
-              placeholder="you@example.com"
+              placeholder={t("login.emailPlaceholder")}
               required
               autoFocus
             />
@@ -515,10 +513,10 @@ export default function LoginPage() {
             className={PRIMARY_BTN_CLASS}
           >
             {loading && <Spinner />}
-            {loading ? "Sending…" : "Send sign-in link"}
+            {loading ? t("login.sending") : t("login.sendSignInLink")}
           </button>
           <p className="text-xs text-center text-slate-400 mt-4">
-            A one-click link will be sent to your inbox.
+            {t("login.oneClickHint")}
           </p>
         </form>
       )}
@@ -528,14 +526,14 @@ export default function LoginPage() {
         <form onSubmit={signInWithPassword}>
           <div className="mb-4">
             <label className="block text-sm font-medium text-slate-700 mb-1.5">
-              Email address
+              {t("login.emailLabel")}
             </label>
             <input
               type="email"
               className={INPUT_CLASS}
               value={email}
               onChange={e => setEmail(e.target.value)}
-              placeholder="you@example.com"
+              placeholder={t("login.emailPlaceholder")}
               required
               autoFocus
             />
@@ -544,7 +542,7 @@ export default function LoginPage() {
           <div className="mb-5">
             <div className="flex items-center justify-between mb-1.5">
               <label className="block text-sm font-medium text-slate-700">
-                Password
+                {t("login.passwordLabel")}
               </label>
               <button
                 type="button"
@@ -552,7 +550,7 @@ export default function LoginPage() {
                 disabled={loading}
                 className="text-xs text-indigo-600 hover:text-indigo-700 font-medium disabled:opacity-50"
               >
-                Forgot password?
+                {t("login.forgotPassword")}
               </button>
             </div>
             <input
@@ -571,7 +569,7 @@ export default function LoginPage() {
             className={PRIMARY_BTN_CLASS}
           >
             {loading && <Spinner />}
-            {loading ? "Signing in…" : "Sign in"}
+            {loading ? t("login.signingIn") : t("login.signIn")}
           </button>
         </form>
       )}
