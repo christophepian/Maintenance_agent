@@ -40,16 +40,16 @@ function InfoStat({ label, value, tone }) {
 
 // Labels are translated at render time via t(`owner:dashboard.chip.${category}`)
 const CATEGORY_CHIP = {
-  approval: { cls: "bg-amber-100 text-amber-700" },
-  invoice:  { cls: "bg-blue-100 text-blue-700" },
-  rfp:      { cls: "bg-indigo-100 text-indigo-700" },
-  vacancy:  { cls: "bg-red-100 text-red-700" },
+  approval: { cls: "bg-warning-light text-warning-dark" },
+  invoice:  { cls: "bg-info-light text-info-dark" },
+  rfp:      { cls: "bg-brand-light text-brand-dark" },
+  vacancy:  { cls: "bg-destructive-light text-destructive-dark" },
 };
 const CARD_STYLE = {
-  approval: "border-amber-200 bg-amber-50 hover:bg-amber-100",
-  invoice:  "border-blue-200 bg-blue-50 hover:bg-blue-100",
-  rfp:      "border-indigo-200 bg-indigo-50 hover:bg-indigo-100",
-  vacancy:  "border-red-200 bg-red-50 hover:bg-red-100",
+  approval: "border-warning-ring bg-warning-light hover:bg-surface-hover",
+  invoice:  "border-info-ring bg-info-light hover:bg-surface-hover",
+  rfp:      "border-brand-ring bg-brand-light hover:bg-surface-hover",
+  vacancy:  "border-destructive-ring bg-destructive-light hover:bg-surface-hover",
 };
 
 function ActionRow({ category, title, sub, building, date, href }) {
