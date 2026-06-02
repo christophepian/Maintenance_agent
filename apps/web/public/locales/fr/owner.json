@@ -445,11 +445,25 @@
       "listView": "Vue liste",
       "monopolyBoardView": "Vue plateau de jeu"
     },
+    "tabs": {
+      "buildings": "Immeubles",
+      "vacancies": "Vacances"
+    },
     "text": {
       "list": "Liste",
       "monopoly": "Monopole",
       "loadingProperties": "Chargement des propriétés…",
-      "noPropertiesFound": "Aucune propriété trouvée."
+      "noPropertiesFound": "Aucune propriété trouvée.",
+      "refresh": "Actualiser",
+      "active": "Actif",
+      "inactive": "Inactif",
+      "titleDeed": "Acte de propriété",
+      "units": "unités"
+    },
+    "health": {
+      "healthy": "En bonne santé",
+      "watch": "À surveiller",
+      "atRisk": "À risque"
     },
     "prop": {
       "units": "Unités",
@@ -779,9 +793,9 @@
       "whatThisMeansInPractice": "Ce que cela signifie en pratique"
     },
     "placeholder": {
-      "eGRueDuLac12": "e.g. Rue du Lac 12",
+      "eGRueDuLac12": "ex. Rue du Lac 12",
       "eG1003Lausanne": "ex. 1003 Lausanne",
-      "eG12": "e.g. 12"
+      "eG12": "ex. 12"
     },
     "title": {
       "yourStrategy": "Votre stratégie",
@@ -790,6 +804,164 @@
     },
     "prop": {
       "addTheBuildingsYouOwnOrManage": "Ajoutez les immeubles que vous possédez ou gérez"
+    },
+    "text": {
+      "yourCurrentStrategy": "Votre stratégie actuelle",
+      "withSecondaryLeanToward": "Avec une orientation secondaire vers :",
+      "confidence": "Confiance : {{value}}",
+      "questionOf": "Question {{current}} sur {{total}}",
+      "buildingN": "Immeuble {{n}}",
+      "sameStrategyNote": "Cet immeuble utilisera votre stratégie globale de portefeuille.",
+      "sameStrategyNoteWithLabel": "Cet immeuble utilisera votre stratégie globale de portefeuille : {{label}}.",
+      "differentStrategyNote": "Cet immeuble sera traité différemment par le moteur de décision que les immeubles suivant votre stratégie globale de portefeuille (par exemple, les décisions d'entretien et d'investissement)."
+    },
+    "button": {
+      "continueToSetUp": "Continuer pour configurer vos biens",
+      "changeMyAnswers": "Modifier mes réponses",
+      "back": "Retour",
+      "next": "Suivant",
+      "seeMyStrategy": "Voir ma stratégie",
+      "saveAndContinue": "Enregistrer et continuer",
+      "skipForNow": "Passer pour l'instant",
+      "addAnotherBuilding": "+ Ajouter un immeuble",
+      "saving": "Enregistrement...",
+      "calculating": "Calcul en cours..."
+    },
+    "label": {
+      "remove": "Supprimer",
+      "buildingName": "Nom du bâtiment *",
+      "address": "Adresse",
+      "buildingType": "Type de bâtiment",
+      "approxUnits": "Nombre approximatif d'unités (optionnel)",
+      "currentCondition": "État actuel",
+      "intent": "Quelle est votre intention pour cet immeuble ? *"
+    },
+    "option": {
+      "sameStrategy": "Même stratégie que le portefeuille global",
+      "sameStrategyWithLabel": "Même stratégie que le portefeuille global ({{label}})",
+      "differentStrategy": "Stratégie différente du portefeuille global"
+    },
+    "archetype": {
+      "exit_optimizer": "Préparer à la vente",
+      "yield_maximizer": "Maximiser les revenus",
+      "value_builder": "Améliorer la valeur à long terme",
+      "capital_preserver": "Maintenir la stabilité",
+      "opportunistic_repositioner": "Moderniser et repositionner"
+    },
+    "explanation": {
+      "exit_optimizer": "Vous préparez ce bien à la vente. Nous prioriserons les décisions qui améliorent la présentation et réduisent le risque pour l'acheteur, avec un horizon de rentabilité court.",
+      "yield_maximizer": "Vous souhaitez un revenu stable et régulier. Nous privilégierons les options qui protègent les flux de trésorerie et évitent les mauvaises surprises plutôt que les projets de mise à niveau importants.",
+      "value_builder": "Vous êtes focalisé sur la croissance de la valeur à long terme de votre bien. Nous privilégierons les investissements qui prolongent la durée de vie des actifs et améliorent la qualité plutôt que les solutions rapides.",
+      "capital_preserver": "La stabilité est ce qui compte le plus pour vous. Nous recommanderons des options à faible risque et prévisibles qui évitent les perturbations importantes ou les résultats incertains.",
+      "opportunistic_repositioner": "Vous êtes prêt à investir significativement pour repositionner ce bien. Nous privilégierons les améliorations avec une forte plus-value à long terme, même si le coût initial est plus élevé."
+    },
+    "bullets": {
+      "exit_optimizer": [
+        "Nous prioriserons les réparations qui améliorent la présentation et réduisent le risque pour l'acheteur",
+        "Pour les décisions réparation vs. remplacement, nous favoriserons un coût initial plus faible sauf si l'élément affecte directement la préparation à la vente",
+        "Nous signalerons les problèmes de conformité susceptibles d'affecter une transaction de vente"
+      ],
+      "yield_maximizer": [
+        "Nous privilégierons un entretien fiable et peu perturbateur plutôt que des mises à niveau ambitieuses",
+        "Les recommandations protégeront d'abord vos revenus locatifs — nous signalerons tout ce qui risque de nuire à la satisfaction ou à l'occupation des locataires",
+        "Pour la planification des flux de trésorerie, nous tendrons vers des dépenses prévisibles et signalerons les éléments à risque de surprise"
+      ],
+      "value_builder": [
+        "En cas de défaillance d'un actif, nous pencherons vers le remplacement s'il dépasse 60 % de sa durée de vie utile plutôt que de le rapiécer",
+        "Dans la planification des flux de trésorerie, nous indiquerons quels investissements valent la peine d'être réalisés maintenant par rapport à ceux qui peuvent attendre",
+        "Les mises à niveau de conformité et d'efficacité énergétique auront plus de poids dans nos recommandations"
+      ],
+      "capital_preserver": [
+        "Nous recommanderons l'option la moins risquée et la plus prévisible — réparations plutôt que remplacements lorsque le risque est gérable",
+        "Nous signalerons toute option qui introduit une incertitude de coût ou une perturbation significative des locataires",
+        "Les grands projets de rénovation seront signalés comme priorité basse sauf si la conformité l'exige"
+      ],
+      "opportunistic_repositioner": [
+        "Nous rechercherons des opportunités de mise à niveau, pas seulement des remplacements identiques",
+        "Un coût initial plus élevé est acceptable lorsque le cas de valeur à long terme ou de hausse locative est solide",
+        "Nous signalerons les opportunités de modernisation — efficacité énergétique, mises à niveau des spécifications — qui s'alignent avec le repositionnement"
+      ]
+    },
+    "deprioritize": {
+      "exit_optimizer": "Nous déprioritiserons les mises à niveau à long terme dont le retour sur investissement dépasse votre horizon de vente prévu.",
+      "yield_maximizer": "Nous déprioritiserons les projets de modernisation qui perturbent les locataires sans impact sur les revenus à court terme.",
+      "value_builder": "Nous déprioritiserons les améliorations cosmétiques à court terme au profit d'investissements durables.",
+      "capital_preserver": "Nous déprioritiserons tout projet qui introduit une incertitude de coût ou une perturbation des locataires, même lorsque la plus-value à long terme est réelle.",
+      "opportunistic_repositioner": "Nous déprioritiserons les réparations à faible impact lorsqu'une option de mise à niveau significative existe."
+    },
+    "questions": [
+      {
+        "key": "mainGoal",
+        "title": "Lorsqu'un système majeur de votre bien nécessite une attention, quelle est votre première réaction ?",
+        "options": [
+          "Tout ce qui le rend le plus présentable rapidement — je pourrais vendre bientôt",
+          "Bien le réparer sans exagérer — maintenir les revenus locatifs",
+          "Profiter de l'occasion pour moderniser — la qualité à long terme compte",
+          "Le faire réparer le moins cher possible — coût minimal, risque minimal",
+          "Voir si cela ouvre une opportunité d'amélioration plus grande"
+        ]
+      },
+      {
+        "key": "holdPeriod",
+        "title": "Combien de temps prévoyez-vous de conserver ce bien ?",
+        "options": [
+          "Moins de 3 ans",
+          "3 à 5 ans",
+          "5 à 10 ans",
+          "Plus de 10 ans"
+        ]
+      },
+      {
+        "key": "renovationAppetite",
+        "title": "Dans quelle mesure êtes-vous à l'aise avec les projets de rénovation importants ?",
+        "options": [
+          "Les éviter dans la mesure du possible",
+          "Seulement lorsque clairement nécessaire",
+          "À l'aise avec des projets sélectifs",
+          "À l'aise avec des mises à niveau importantes",
+          "À l'aise avec un repositionnement majeur"
+        ]
+      },
+      {
+        "key": "cashSensitivity",
+        "title": "À quel point est-il important d'éviter les grosses dépenses imprévues ?",
+        "options": [
+          "Extrêmement important",
+          "Très important",
+          "Modérément important",
+          "Peu important",
+          "Pas une préoccupation majeure"
+        ]
+      },
+      {
+        "key": "disruptionTolerance",
+        "title": "Quelle perturbation ce bien peut-il tolérer si le résultat est meilleur à long terme ?",
+        "options": [
+          "Presque aucune",
+          "Faible",
+          "Modérée",
+          "Significative",
+          "Élevée"
+        ]
+      }
+    ],
+    "roleIntent": {
+      "sell": "Vente prochaine",
+      "income": "Générateur de revenus",
+      "long_term_quality": "Détention à long terme",
+      "reposition": "Candidat à la mise à niveau",
+      "stable_hold": "Détention stable"
+    },
+    "condition": {
+      "poor": "Mauvais",
+      "fair": "Passable",
+      "good": "Bon",
+      "very_good": "Très bon"
+    },
+    "buildingType": {
+      "residential": "Résidentiel",
+      "mixed": "Usage mixte",
+      "commercial": "Commercial"
     }
   },
   "vacancies": {

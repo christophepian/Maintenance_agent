@@ -64,11 +64,11 @@ function MonopolyCard({ building, fin, onClick }) {
   // Health badge
   const health = fin?.health;
   const healthBadge = health === "green"
-    ? { label: "Healthy",  cls: "bg-success-light text-success-dark" }
+    ? { label: t("owner:properties.health.healthy"),  cls: "bg-success-light text-success-dark" }
     : health === "amber"
-    ? { label: "Watch",    cls: "bg-warning-light text-warning-dark" }
+    ? { label: t("owner:properties.health.watch"),    cls: "bg-warning-light text-warning-dark" }
     : health === "red"
-    ? { label: "At Risk",  cls: "bg-destructive-light text-destructive-text" }
+    ? { label: t("owner:properties.health.atRisk"),  cls: "bg-destructive-light text-destructive-text" }
     : null;
 
   const amenities = [
@@ -88,7 +88,7 @@ function MonopolyCard({ building, fin, onClick }) {
         className="px-4 pt-4 pb-3.5 flex flex-col bg-[var(--band)]"
       >
         <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-white/70 mb-0.5">
-          Title Deed
+          {t("owner:properties.text.titleDeed")}
         </span>
         <span className="text-sm font-bold leading-snug text-white line-clamp-2">
           {building.name}
@@ -165,7 +165,7 @@ function MonopolyCard({ building, fin, onClick }) {
                 : "bg-success-light text-success-dark"
             )}
           >
-            {building.isActive === false ? "Inactive" : "Active"}
+            {building.isActive === false ? t("owner:properties.text.inactive") : t("owner:properties.text.active")}
           </span>
           {healthBadge && (
             <span className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold", healthBadge.cls)}>
@@ -226,7 +226,7 @@ function buildOwnerBuildingColumns(t) {
           ? "bg-surface-hover text-muted"
           : "bg-green-100 text-green-700")
       }>
-        {b.isActive === false ? "Inactive" : "Active"}
+        {b.isActive === false ? t("owner:properties.text.inactive") : t("owner:properties.text.active")}
       </span>
     ),
   },
@@ -256,7 +256,7 @@ export default function OwnerPropertiesPage() {
               onClick={() => setRefreshKey((k) => k + 1)}
               className="rounded-lg border border-surface-border bg-surface px-3 py-2 text-sm font-medium text-muted-dark hover:bg-surface-subtle"
             >
-              Refresh
+              {t("owner:properties.text.refresh")}
             </button>
           }
         />
@@ -264,8 +264,8 @@ export default function OwnerPropertiesPage() {
           {/* Tab bar */}
           <ScrollableTabs activeIndex={tab === "buildings" ? 0 : 1}>
             {[
-              { key: "buildings", label: "Buildings" },
-              { key: "vacancies", label: "Vacancies" },
+              { key: "buildings", label: t("owner:properties.tabs.buildings") },
+              { key: "vacancies", label: t("owner:properties.tabs.vacancies") },
             ].map(({ key, label }) => (
               <button
                 key={key}
@@ -432,9 +432,9 @@ function BuildingsTab({ refreshKey }) {
                   {b.address && <p className="text-xs text-muted mt-0.5">{b.address}</p>}
                 </div>
                 <div className="mt-3 flex flex-wrap items-center gap-2">
-                  {b.unitCount != null && <span className="text-xs text-foreground-dim">{b.unitCount} units</span>}
+                  {b.unitCount != null && <span className="text-xs text-foreground-dim">{b.unitCount} {t("owner:properties.text.units")}</span>}
                   <span className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold", b.isActive === false ? "bg-surface-hover text-muted" : "bg-green-100 text-green-700")}>
-                    {b.isActive === false ? "Inactive" : "Active"}
+                    {b.isActive === false ? t("owner:properties.text.inactive") : t("owner:properties.text.active")}
                   </span>
                 </div>
               </button>

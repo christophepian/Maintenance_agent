@@ -445,11 +445,25 @@
       "listView": "List view",
       "monopolyBoardView": "Monopoly board view"
     },
+    "tabs": {
+      "buildings": "Buildings",
+      "vacancies": "Vacancies"
+    },
     "text": {
       "list": "List",
       "monopoly": "Monopoly",
       "loadingProperties": "Loading properties…",
-      "noPropertiesFound": "No properties found."
+      "noPropertiesFound": "No properties found.",
+      "refresh": "Refresh",
+      "active": "Active",
+      "inactive": "Inactive",
+      "titleDeed": "Title Deed",
+      "units": "units"
+    },
+    "health": {
+      "healthy": "Healthy",
+      "watch": "Watch",
+      "atRisk": "At Risk"
     },
     "prop": {
       "units": "Units",
@@ -790,6 +804,164 @@
     },
     "prop": {
       "addTheBuildingsYouOwnOrManage": "Add the buildings you own or manage"
+    },
+    "text": {
+      "yourCurrentStrategy": "Your current strategy",
+      "withSecondaryLeanToward": "With a secondary lean toward:",
+      "confidence": "Confidence: {{value}}",
+      "questionOf": "Question {{current}} of {{total}}",
+      "buildingN": "Building {{n}}",
+      "sameStrategyNote": "This building will use your overall portfolio strategy.",
+      "sameStrategyNoteWithLabel": "This building will use your overall portfolio strategy: {{label}}.",
+      "differentStrategyNote": "This building will be treated differently by the decision engine than buildings following your overall portfolio strategy (for example, maintenance and CAPEX decisions)."
+    },
+    "button": {
+      "continueToSetUp": "Continue to set up your property",
+      "changeMyAnswers": "Change my answers",
+      "back": "Back",
+      "next": "Next",
+      "seeMyStrategy": "See my strategy",
+      "saveAndContinue": "Save and continue",
+      "skipForNow": "Skip for now",
+      "addAnotherBuilding": "+ Add another building",
+      "saving": "Saving...",
+      "calculating": "Calculating..."
+    },
+    "label": {
+      "remove": "Remove",
+      "buildingName": "Building name *",
+      "address": "Address",
+      "buildingType": "Building type",
+      "approxUnits": "Approximate number of units (optional)",
+      "currentCondition": "Current condition",
+      "intent": "What is your intent for this building? *"
+    },
+    "option": {
+      "sameStrategy": "Same strategy as overall portfolio",
+      "sameStrategyWithLabel": "Same strategy as overall portfolio ({{label}})",
+      "differentStrategy": "Different strategy than overall portfolio"
+    },
+    "archetype": {
+      "exit_optimizer": "Prepare for sale",
+      "yield_maximizer": "Maximize income",
+      "value_builder": "Improve long-term value",
+      "capital_preserver": "Keep things stable",
+      "opportunistic_repositioner": "Upgrade and reposition"
+    },
+    "explanation": {
+      "exit_optimizer": "You're preparing this property for sale. We'll prioritise decisions that improve presentation and reduce buyer risk, with a short payback horizon.",
+      "yield_maximizer": "You want steady, reliable income. We'll favour options that protect cash flow and avoid costly surprises over major upgrade projects.",
+      "value_builder": "You're focused on growing the long-term worth of your property. We'll favour investments that extend asset life and improve quality over quick fixes.",
+      "capital_preserver": "Stability matters most to you. We'll recommend low-risk, predictable options that avoid large disruptions or uncertain outcomes.",
+      "opportunistic_repositioner": "You're ready to invest significantly to reposition this property. We'll favour upgrades with strong long-term upside, even if the upfront cost is higher."
+    },
+    "bullets": {
+      "exit_optimizer": [
+        "We'll prioritise fixes that improve presentation and reduce buyer risk",
+        "For repair vs. replace decisions, we'll favour lower upfront cost unless the item directly affects sale readiness",
+        "We'll highlight compliance issues that could affect a sale transaction"
+      ],
+      "yield_maximizer": [
+        "We'll favour reliable, low-disruption maintenance over ambitious upgrades",
+        "Recommendations will protect your rental income first — we'll flag anything that risks tenant satisfaction or occupancy",
+        "For cashflow planning, we'll lean toward predictable spend and flag surprise-risk items"
+      ],
+      "value_builder": [
+        "When an asset fails, we'll lean toward replacement if it's past 60% of its useful life rather than patching it",
+        "In cashflow planning, we'll flag which investments are worth making now vs. which can wait",
+        "Compliance and energy efficiency upgrades will rank higher in our recommendations"
+      ],
+      "capital_preserver": [
+        "We'll recommend the lowest-risk, most predictable option — repairs over replacements where the risk is manageable",
+        "We'll flag any option that introduces cost uncertainty or significant tenant disruption",
+        "Large renovation projects will be flagged as low-priority unless compliance requires them"
+      ],
+      "opportunistic_repositioner": [
+        "We'll look for upgrade opportunities, not just like-for-like replacements",
+        "Higher upfront cost is acceptable when the long-term value or rental uplift case is strong",
+        "We'll flag modernisation opportunities — energy efficiency, spec upgrades — that align with repositioning"
+      ]
+    },
+    "deprioritize": {
+      "exit_optimizer": "We'll deprioritize long-term upgrades with payback beyond your expected sale horizon.",
+      "yield_maximizer": "We'll deprioritize modernisation projects that disrupt tenants without near-term income impact.",
+      "value_builder": "We'll deprioritize short-payback cosmetic fixes in favour of durable investments.",
+      "capital_preserver": "We'll deprioritize any project that introduces cost uncertainty or tenant disruption, even when the long-term upside is real.",
+      "opportunistic_repositioner": "We'll deprioritize low-impact repairs when a meaningful upgrade option exists."
+    },
+    "questions": [
+      {
+        "key": "mainGoal",
+        "title": "When a major system in your property needs attention, what's your first instinct?",
+        "options": [
+          "Whatever gets it looking good fastest — I may sell soon",
+          "Fix it well but don't go overboard — keep rental income flowing",
+          "Take the opportunity to upgrade — long-term quality matters",
+          "Get it fixed as cheaply as possible — minimal cost, minimal risk",
+          "See if this opens up a bigger improvement opportunity"
+        ]
+      },
+      {
+        "key": "holdPeriod",
+        "title": "How long do you expect to keep this property?",
+        "options": [
+          "Less than 3 years",
+          "3 to 5 years",
+          "5 to 10 years",
+          "More than 10 years"
+        ]
+      },
+      {
+        "key": "renovationAppetite",
+        "title": "How comfortable are you with larger renovation projects?",
+        "options": [
+          "Avoid them whenever possible",
+          "Only when clearly necessary",
+          "Comfortable with selective projects",
+          "Comfortable with major upgrades",
+          "Comfortable with major repositioning"
+        ]
+      },
+      {
+        "key": "cashSensitivity",
+        "title": "How important is it to avoid large surprise expenses?",
+        "options": [
+          "Extremely important",
+          "Very important",
+          "Moderately important",
+          "Slightly important",
+          "Not a major concern"
+        ]
+      },
+      {
+        "key": "disruptionTolerance",
+        "title": "How much disruption can this property tolerate if the result is better long term?",
+        "options": [
+          "Almost none",
+          "Low",
+          "Moderate",
+          "Significant",
+          "High"
+        ]
+      }
+    ],
+    "roleIntent": {
+      "sell": "Sell soon",
+      "income": "Income generator",
+      "long_term_quality": "Long-term hold",
+      "reposition": "Upgrade candidate",
+      "stable_hold": "Stable hold"
+    },
+    "condition": {
+      "poor": "Poor",
+      "fair": "Fair",
+      "good": "Good",
+      "very_good": "Very good"
+    },
+    "buildingType": {
+      "residential": "Residential",
+      "mixed": "Mixed use",
+      "commercial": "Commercial"
     }
   },
   "vacancies": {

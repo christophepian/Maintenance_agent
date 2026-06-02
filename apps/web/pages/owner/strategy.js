@@ -11,148 +11,34 @@ import { ownerAuthHeaders } from "../../lib/api";
 import { withTranslations } from "../../lib/i18n";
 import { useTranslation } from "next-i18next";
 
-/* ─── Constants ─────────────────────────────────────────────── */
+/* ─── i18n helpers ──────────────────────────────────────────── */
 
-const USER_LABELS = {
-  exit_optimizer: "Prepare for sale",
-  yield_maximizer: "Maximize income",
-  value_builder: "Improve long-term value",
-  capital_preserver: "Keep things stable",
-  opportunistic_repositioner: "Upgrade and reposition",
-};
+function getRoleIntentOptions(t) {
+  return [
+    { value: "sell", label: t("owner:strategy.roleIntent.sell") },
+    { value: "income", label: t("owner:strategy.roleIntent.income") },
+    { value: "long_term_quality", label: t("owner:strategy.roleIntent.long_term_quality") },
+    { value: "reposition", label: t("owner:strategy.roleIntent.reposition") },
+    { value: "stable_hold", label: t("owner:strategy.roleIntent.stable_hold") },
+  ];
+}
 
-const EXPLANATIONS = {
-  exit_optimizer:
-    "You're preparing this property for sale. We'll prioritise decisions that improve presentation and reduce buyer risk, with a short payback horizon.",
-  yield_maximizer:
-    "You want steady, reliable income. We'll favour options that protect cash flow and avoid costly surprises over major upgrade projects.",
-  value_builder:
-    "You're focused on growing the long-term worth of your property. We'll favour investments that extend asset life and improve quality over quick fixes.",
-  capital_preserver:
-    "Stability matters most to you. We'll recommend low-risk, predictable options that avoid large disruptions or uncertain outcomes.",
-  opportunistic_repositioner:
-    "You're ready to invest significantly to reposition this property. We'll favour upgrades with strong long-term upside, even if the upfront cost is higher.",
-};
+function getConditionOptions(t) {
+  return [
+    { value: "poor", label: t("owner:strategy.condition.poor") },
+    { value: "fair", label: t("owner:strategy.condition.fair") },
+    { value: "good", label: t("owner:strategy.condition.good") },
+    { value: "very_good", label: t("owner:strategy.condition.very_good") },
+  ];
+}
 
-const BULLETS = {
-  exit_optimizer: [
-    "We'll prioritise fixes that improve presentation and reduce buyer risk",
-    "For repair vs. replace decisions, we'll favour lower upfront cost unless the item directly affects sale readiness",
-    "We'll highlight compliance issues that could affect a sale transaction",
-  ],
-  yield_maximizer: [
-    "We'll favour reliable, low-disruption maintenance over ambitious upgrades",
-    "Recommendations will protect your rental income first — we'll flag anything that risks tenant satisfaction or occupancy",
-    "For cashflow planning, we'll lean toward predictable spend and flag surprise-risk items",
-  ],
-  value_builder: [
-    "When an asset fails, we'll lean toward replacement if it's past 60% of its useful life rather than patching it",
-    "In cashflow planning, we'll flag which investments are worth making now vs. which can wait",
-    "Compliance and energy efficiency upgrades will rank higher in our recommendations",
-  ],
-  capital_preserver: [
-    "We'll recommend the lowest-risk, most predictable option — repairs over replacements where the risk is manageable",
-    "We'll flag any option that introduces cost uncertainty or significant tenant disruption",
-    "Large renovation projects will be flagged as low-priority unless compliance requires them",
-  ],
-  opportunistic_repositioner: [
-    "We'll look for upgrade opportunities, not just like-for-like replacements",
-    "Higher upfront cost is acceptable when the long-term value or rental uplift case is strong",
-    "We'll flag modernisation opportunities — energy efficiency, spec upgrades — that align with repositioning",
-  ],
-};
-
-const DEPRIORITIZE = {
-  exit_optimizer:
-    "We'll deprioritize long-term upgrades with payback beyond your expected sale horizon.",
-  yield_maximizer:
-    "We'll deprioritize modernisation projects that disrupt tenants without near-term income impact.",
-  value_builder:
-    "We'll deprioritize short-payback cosmetic fixes in favour of durable investments.",
-  capital_preserver:
-    "We'll deprioritize any project that introduces cost uncertainty or tenant disruption, even when the long-term upside is real.",
-  opportunistic_repositioner:
-    "We'll deprioritize low-impact repairs when a meaningful upgrade option exists.",
-};
-
-const QUESTIONS = [
-  {
-    key: "mainGoal",
-    title: "When a major system in your property needs attention, what\u2019s your first instinct?",
-    options: [
-      "Whatever gets it looking good fastest \u2014 I may sell soon",
-      "Fix it well but don\u2019t go overboard \u2014 keep rental income flowing",
-      "Take the opportunity to upgrade \u2014 long-term quality matters",
-      "Get it fixed as cheaply as possible \u2014 minimal cost, minimal risk",
-      "See if this opens up a bigger improvement opportunity",
-    ],
-  },
-  {
-    key: "holdPeriod",
-    title: "How long do you expect to keep this property?",
-    options: [
-      "Less than 3 years",
-      "3 to 5 years",
-      "5 to 10 years",
-      "More than 10 years",
-    ],
-  },
-  {
-    key: "renovationAppetite",
-    title: "How comfortable are you with larger renovation projects?",
-    options: [
-      "Avoid them whenever possible",
-      "Only when clearly necessary",
-      "Comfortable with selective projects",
-      "Comfortable with major upgrades",
-      "Comfortable with major repositioning",
-    ],
-  },
-  {
-    key: "cashSensitivity",
-    title: "How important is it to avoid large surprise expenses?",
-    options: [
-      "Extremely important",
-      "Very important",
-      "Moderately important",
-      "Slightly important",
-      "Not a major concern",
-    ],
-  },
-  {
-    key: "disruptionTolerance",
-    title:
-      "How much disruption can this property tolerate if the result is better long term?",
-    options: [
-      "Almost none",
-      "Low",
-      "Moderate",
-      "Significant",
-      "High",
-    ],
-  },
-];
-
-const ROLE_INTENT_OPTIONS = [
-  { value: "sell", label: "Sell soon" },
-  { value: "income", label: "Income generator" },
-  { value: "long_term_quality", label: "Long-term hold" },
-  { value: "reposition", label: "Upgrade candidate" },
-  { value: "stable_hold", label: "Stable hold" },
-];
-
-const CONDITION_OPTIONS = [
-  { value: "poor", label: "Poor" },
-  { value: "fair", label: "Fair" },
-  { value: "good", label: "Good" },
-  { value: "very_good", label: "Very good" },
-];
-
-const BUILDING_TYPE_OPTIONS = [
-  { value: "residential", label: "Residential" },
-  { value: "mixed", label: "Mixed use" },
-  { value: "commercial", label: "Commercial" },
-];
+function getBuildingTypeOptions(t) {
+  return [
+    { value: "residential", label: t("owner:strategy.buildingType.residential") },
+    { value: "mixed", label: t("owner:strategy.buildingType.mixed") },
+    { value: "commercial", label: t("owner:strategy.buildingType.commercial") },
+  ];
+}
 
 function archetypeToRoleIntent(archetype) {
   switch (archetype) {
@@ -232,12 +118,16 @@ export default function StrategyPage() {
   // Building setup state — multi-building creation
   const [buildingEntries, setBuildingEntries] = useState([createBuildingEntry("")]);
 
+  const questions = t("owner:strategy.questions", { returnObjects: true });
+  const totalQuestions = questions.length;
+
   const portfolioArchetype = profile?.primaryArchetype || "";
-  const portfolioArchetypeLabel = USER_LABELS[portfolioArchetype] || portfolioArchetype;
+  const portfolioArchetypeLabel = portfolioArchetype
+    ? t(`owner:strategy.archetype.${portfolioArchetype}`)
+    : "";
   const portfolioRoleIntent = archetypeToRoleIntent(portfolioArchetype);
 
-  const currentQuestion = QUESTIONS[step];
-  const totalQuestions = QUESTIONS.length;
+  const currentQuestion = questions[step];
 
   async function handleSubmitQuestionnaire() {
     setSubmitting(true);
@@ -349,30 +239,30 @@ export default function StrategyPage() {
               <div className="space-y-6">
                 <div>
                   <p className="text-xs font-medium uppercase tracking-wide text-foreground-dim">
-                    Your current strategy
+                    {t("owner:strategy.text.yourCurrentStrategy")}
                   </p>
                   <h2 className="mt-1 text-2xl font-bold text-foreground">
-                    {USER_LABELS[archetype] || archetype}
+                    {t(`owner:strategy.archetype.${archetype}`) || archetype}
                   </h2>
                   {secondary && secondary !== archetype && (
                     <p className="mt-2 text-sm text-muted-text">
-                      With a secondary lean toward:{" "}
+                      {t("owner:strategy.text.withSecondaryLeanToward")}{" "}
                       <span className="font-semibold">
-                        {USER_LABELS[secondary] || secondary}
+                        {t(`owner:strategy.archetype.${secondary}`) || secondary}
                       </span>
                     </p>
                   )}
                 </div>
 
                 <p className="text-sm text-muted-dark leading-relaxed">
-                  {EXPLANATIONS[archetype]}
+                  {t(`owner:strategy.explanation.${archetype}`)}
                 </p>
 
                 {/* What this means in practice */}
                 <div>
                   <h3 className="text-sm font-semibold text-foreground mb-2">{t("owner:strategy.heading.whatThisMeansInPractice")}</h3>
                   <ul className="space-y-2">
-                    {(BULLETS[archetype] || []).map((bullet, i) => (
+                    {(t(`owner:strategy.bullets.${archetype}`, { returnObjects: true }) || []).map((bullet, i) => (
                       <li
                         key={i}
                         className="flex items-start gap-2 text-sm text-muted-dark"
@@ -386,13 +276,13 @@ export default function StrategyPage() {
 
                 {/* Deprioritize note */}
                 <p className="text-sm text-muted italic">
-                  {DEPRIORITIZE[archetype]}
+                  {t(`owner:strategy.deprioritize.${archetype}`)}
                 </p>
 
                 {/* Confidence */}
                 {profile.confidence && (
                   <p className="text-xs text-foreground-dim">
-                    Confidence: {profile.confidence}
+                    {t("owner:strategy.text.confidence", { value: profile.confidence })}
                   </p>
                 )}
 
@@ -405,13 +295,13 @@ export default function StrategyPage() {
                     }}
                     className="rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-indigo-700 transition-colors"
                   >
-                    Continue to set up your property
+                    {t("owner:strategy.button.continueToSetUp")}
                   </button>
                   <button
                     onClick={handleBack}
                     className="text-sm font-medium text-indigo-600 hover:text-indigo-800 transition-colors"
                   >
-                    Change my answers
+                    {t("owner:strategy.button.changeMyAnswers")}
                   </button>
                 </div>
               </div>
@@ -441,15 +331,15 @@ export default function StrategyPage() {
                 <div className="space-y-5">
                   <div className="flex items-center justify-between">
                     <h3 className="text-sm font-semibold text-foreground">
-                      Building {idx + 1}
+                      {t("owner:strategy.text.buildingN", { n: idx + 1 })}
                     </h3>
                     {buildingEntries.length > 1 && (
                       <button
                         onClick={() => removeBuildingEntry(idx)}
                         className="text-xs text-red-500 hover:text-red-700 transition-colors"
-                        aria-label={`Remove building ${idx + 1}`}
+                        aria-label={`${t("owner:strategy.label.remove")} ${idx + 1}`}
                       >
-                        Remove
+                        {t("owner:strategy.label.remove")}
                       </button>
                     )}
                   </div>
@@ -458,7 +348,7 @@ export default function StrategyPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label htmlFor={`bname-${idx}`} className="block text-sm font-medium text-muted-dark mb-1">
-                        Building name *
+                        {t("owner:strategy.label.buildingName")}
                       </label>
                       <input
                         id={`bname-${idx}`}
@@ -471,7 +361,7 @@ export default function StrategyPage() {
                     </div>
                     <div>
                       <label htmlFor={`baddr-${idx}`} className="block text-sm font-medium text-muted-dark mb-1">
-                        Address
+                        {t("owner:strategy.label.address")}
                       </label>
                       <input
                         id={`baddr-${idx}`}
@@ -487,10 +377,10 @@ export default function StrategyPage() {
                   {/* Building type */}
                   <div>
                     <label className="block text-sm font-medium text-muted-dark mb-2">
-                      Building type
+                      {t("owner:strategy.label.buildingType")}
                     </label>
                     <RadioGroup
-                      options={BUILDING_TYPE_OPTIONS}
+                      options={getBuildingTypeOptions(t)}
                       value={entry.buildingType}
                       onChange={(val) => updateBuildingEntry(idx, "buildingType", val)}
                       name={`buildingType-${idx}`}
@@ -500,7 +390,7 @@ export default function StrategyPage() {
                   {/* Approximate units */}
                   <div>
                     <label htmlFor={`units-${idx}`} className="block text-sm font-medium text-muted-dark mb-1">
-                      Approximate number of units (optional)
+                      {t("owner:strategy.label.approxUnits")}
                     </label>
                     <input
                       id={`units-${idx}`}
@@ -516,10 +406,10 @@ export default function StrategyPage() {
                   {/* Condition rating */}
                   <div>
                     <label className="block text-sm font-medium text-muted-dark mb-2">
-                      Current condition
+                      {t("owner:strategy.label.currentCondition")}
                     </label>
                     <RadioGroup
-                      options={CONDITION_OPTIONS}
+                      options={getConditionOptions(t)}
                       value={entry.conditionRating}
                       onChange={(val) => updateBuildingEntry(idx, "conditionRating", val)}
                       name={`conditionRating-${idx}`}
@@ -529,17 +419,19 @@ export default function StrategyPage() {
                   {/* Role intent */}
                   <div>
                     <label className="block text-sm font-medium text-muted-dark mb-2">
-                      What is your intent for this building? *
+                      {t("owner:strategy.label.intent")}
                     </label>
                     <RadioGroup
                       options={[
                         {
                           value: "same",
-                          label: `Same strategy as overall portfolio${portfolioArchetypeLabel ? ` (${portfolioArchetypeLabel})` : ""}`,
+                          label: portfolioArchetypeLabel
+                            ? t("owner:strategy.option.sameStrategyWithLabel", { label: portfolioArchetypeLabel })
+                            : t("owner:strategy.option.sameStrategy"),
                         },
                         {
                           value: "different",
-                          label: "Different strategy than overall portfolio",
+                          label: t("owner:strategy.option.differentStrategy"),
                         },
                       ]}
                       value={entry.strategyMode}
@@ -551,14 +443,14 @@ export default function StrategyPage() {
 
                     {entry.strategyMode === "different" && (
                       <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
-                        This building will be treated differently by the decision engine than buildings following your overall portfolio strategy (for example, maintenance and CAPEX decisions).
+                        {t("owner:strategy.text.differentStrategyNote")}
                       </div>
                     )}
 
                     {entry.strategyMode === "different" && (
                       <div className="mt-3">
                         <RadioGroup
-                          options={ROLE_INTENT_OPTIONS}
+                          options={getRoleIntentOptions(t)}
                           value={entry.roleIntent}
                           onChange={(val) => updateBuildingEntry(idx, "roleIntent", val)}
                           name={`roleIntent-${idx}`}
@@ -568,7 +460,9 @@ export default function StrategyPage() {
 
                     {entry.strategyMode === "same" && (
                       <p className="mt-3 text-xs text-muted-text">
-                        This building will use your overall portfolio strategy{portfolioArchetypeLabel ? `: ${portfolioArchetypeLabel}.` : "."}
+                        {portfolioArchetypeLabel
+                          ? t("owner:strategy.text.sameStrategyNoteWithLabel", { label: portfolioArchetypeLabel })
+                          : t("owner:strategy.text.sameStrategyNote")}
                       </p>
                     )}
                   </div>
@@ -582,7 +476,7 @@ export default function StrategyPage() {
                 onClick={addBuildingEntry}
                 className="text-sm font-medium text-indigo-600 hover:text-indigo-800 transition-colors"
               >
-                + Add another building
+                {t("owner:strategy.button.addAnotherBuilding")}
               </button>
             </div>
 
@@ -598,13 +492,13 @@ export default function StrategyPage() {
                     : "bg-indigo-600 hover:bg-indigo-700"
                 )}
               >
-                {submitting ? "Saving..." : "Save and continue"}
+                {submitting ? t("owner:strategy.button.saving") : t("owner:strategy.button.saveAndContinue")}
               </button>
               <button
                 onClick={() => router.push("/owner")}
                 className="text-sm font-medium text-muted hover:text-muted-dark transition-colors"
               >
-                Skip for now
+                {t("owner:strategy.button.skipForNow")}
               </button>
             </div>
           </PageContent>
@@ -619,7 +513,7 @@ export default function StrategyPage() {
       <PageShell>
         <PageHeader
           title={t("owner:strategy.title.strategyQuestionnaire")}
-          subtitle={`Question ${step + 1} of ${totalQuestions}`}
+          subtitle={t("owner:strategy.text.questionOf", { current: step + 1, total: totalQuestions })}
         />
         <PageContent>
           <ErrorBanner error={error} />
@@ -644,7 +538,7 @@ export default function StrategyPage() {
                     onClick={handleBack}
                     className="rounded-lg border border-surface-border bg-surface px-4 py-2 text-sm font-medium text-muted-dark hover:bg-surface-subtle transition-colors"
                   >
-                    Back
+                    {t("owner:strategy.button.back")}
                   </button>
                 )}
                 <button
@@ -659,9 +553,9 @@ export default function StrategyPage() {
                 >
                   {step === totalQuestions - 1
                     ? submitting
-                      ? "Calculating..."
-                      : "See my strategy"
-                    : "Next"}
+                      ? t("owner:strategy.button.calculating")
+                      : t("owner:strategy.button.seeMyStrategy")
+                    : t("owner:strategy.button.next")}
                 </button>
               </div>
 
