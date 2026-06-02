@@ -1794,13 +1794,15 @@
       "personalInformation": "Personal information",
       "serviceDetails": "Service details",
       "contracts": "Contracts",
-      "invoices": "Invoices"
+      "invoices": "Invoices",
+      "ratings": "Ratings"
     },
     "title": {
       "personalInformation": "Personal information",
       "serviceDetails": "Service details",
       "contracts": "Contracts",
-      "invoices": "Invoices"
+      "invoices": "Invoices",
+      "ratings": "Tenant ratings"
     },
     "text": {
       "back": "← Back",
@@ -1832,7 +1834,13 @@
       "loadingInvoices": "Loading invoices…",
       "noInvoicesFoundForThisContractor": "No invoices found for this contractor.",
       "contractorNotFound": "Contractor not found.",
-      "goBack": "Go back"
+      "goBack": "Go back",
+      "loadingRatings": "Loading ratings…",
+      "noRatingsYet": "No tenant ratings yet.",
+      "averageRating": "Average rating",
+      "ratingsCount": "({{count}} rating)",
+      "ratingsCount_other": "({{count}} ratings)",
+      "noComment": "No comment left."
     },
     "prop": {
       "contractorProfileAndServiceDetails": "Contractor profile and service details.",

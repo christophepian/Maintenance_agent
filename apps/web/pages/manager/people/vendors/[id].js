@@ -19,6 +19,19 @@ import { useLocalSort, clientSort } from "../../../../lib/tableUtils";
 import { withServerTranslations } from "../../../../lib/i18n";
 import { useTranslation } from "next-i18next";
 
+function StarDisplay({ score }) {
+  const full = Math.round(score);
+  return (
+    <span className="flex items-center gap-0.5" aria-label={`${score} out of 5`}>
+      {[1, 2, 3, 4, 5].map((n) => (
+        <svg key={n} width="14" height="14" viewBox="0 0 24 24" fill={n <= full ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" className={n <= full ? "text-yellow-400" : "text-muted"}>
+          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+        </svg>
+      ))}
+    </span>
+  );
+}
+
 export default function ContractorDetailPage() {
   const { t } = useTranslation("manager");
   const router = useRouter();
@@ -53,11 +66,15 @@ export default function ContractorDetailPage() {
     { id: "service",   label: t("manager:peopleVendorsId.tab.serviceDetails") },
     { id: "contracts", label: t("manager:peopleVendorsId.tab.contracts") },
     { id: "invoices",  label: t("manager:peopleVendorsId.tab.invoices") },
+    { id: "ratings",   label: t("manager:peopleVendorsId.tab.ratings") },
   ];
   const [jobs, setJobs] = useState([]);
   const [jobsLoading, setJobsLoading] = useState(false);
   const [contractorInvoices, setContractorInvoices] = useState([]);
   const [invoicesLoading, setInvoicesLoading] = useState(false);
+  const [ratings, setRatings] = useState([]);
+  const [ratingsLoading, setRatingsLoading] = useState(false);
+  const [ratingsLoaded, setRatingsLoaded] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -66,6 +83,13 @@ export default function ContractorDetailPage() {
     loadContractorInvoices();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  useEffect(() => {
+    if (activeTab === "ratings" && !ratingsLoaded && id) {
+      loadRatings();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, id]);
 
   async function loadContractorJobs() {
     setJobsLoading(true);
@@ -86,6 +110,19 @@ export default function ContractorDetailPage() {
       setContractorInvoices(data?.data || []);
     } catch {} finally {
       setInvoicesLoading(false);
+    }
+  }
+
+  async function loadRatings() {
+    setRatingsLoading(true);
+    try {
+      const res = await fetch(`/api/contractors/${id}/ratings?limit=100`, { headers: authHeaders() });
+      const data = await res.json().catch(() => ({}));
+      const tenantRatings = (data?.data || []).filter((r) => r.raterRole === "TENANT");
+      setRatings(tenantRatings);
+      setRatingsLoaded(true);
+    } catch {} finally {
+      setRatingsLoading(false);
     }
   }
 
@@ -600,6 +637,58 @@ export default function ContractorDetailPage() {
                           ))}
                         </tbody>
                       </table>
+                    </div>
+                  )}
+                </Panel>
+              )}
+
+              {activeTab === "ratings" && (
+                <Panel title={t("manager:peopleVendorsId.title.ratings")}>
+                  {ratingsLoading ? (
+                    <p className="text-sm text-muted-text">{t("manager:peopleVendorsId.text.loadingRatings")}</p>
+                  ) : ratings.length === 0 ? (
+                    <p className="text-sm text-muted">{t("manager:peopleVendorsId.text.noRatingsYet")}</p>
+                  ) : (
+                    <div className="space-y-4">
+                      {/* Summary */}
+                      <div className="flex items-center gap-3 pb-4 border-b border-surface-border">
+                        <div>
+                          <p className="text-xs font-medium uppercase tracking-wide text-foreground-dim mb-1">
+                            {t("manager:peopleVendorsId.text.averageRating")}
+                          </p>
+                          <div className="flex items-center gap-2">
+                            <StarDisplay score={ratings.reduce((sum, r) => sum + r.score, 0) / ratings.length} />
+                            <span className="text-sm font-semibold text-foreground">
+                              {(ratings.reduce((sum, r) => sum + r.score, 0) / ratings.length).toFixed(1)}
+                            </span>
+                            <span className="text-sm text-muted">
+                              {t("manager:peopleVendorsId.text.ratingsCount", { count: ratings.length })}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Individual ratings */}
+                      {[...ratings].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).map((r) => (
+                        <div key={r.id} className="bg-surface-subtle rounded-lg p-4 space-y-2">
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex items-center gap-2">
+                              <StarDisplay score={r.score} />
+                              <span className="text-sm font-semibold text-foreground">{r.score}/5</span>
+                            </div>
+                            <span className="text-xs text-muted shrink-0">{formatDate(r.createdAt)}</span>
+                          </div>
+                          {r.job && (
+                            <p className="text-xs text-muted-dark">
+                              {[r.job.description, r.job.building, r.job.unit ? `— ${r.job.unit}` : null]
+                                .filter(Boolean).join(" · ")}
+                            </p>
+                          )}
+                          <p className={cn("text-sm", r.comment ? "text-foreground" : "text-muted italic")}>
+                            {r.comment || t("manager:peopleVendorsId.text.noComment")}
+                          </p>
+                        </div>
+                      ))}
                     </div>
                   )}
                 </Panel>

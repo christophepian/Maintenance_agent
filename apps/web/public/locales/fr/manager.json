@@ -1794,13 +1794,15 @@
       "personalInformation": "Informations personnelles",
       "serviceDetails": "Détails du service",
       "contracts": "Contrats",
-      "invoices": "Factures"
+      "invoices": "Factures",
+      "ratings": "Évaluations"
     },
     "title": {
       "personalInformation": "Informations personnelles",
       "serviceDetails": "Détails du service",
       "contracts": "Contrats",
-      "invoices": "Factures"
+      "invoices": "Factures",
+      "ratings": "Évaluations des locataires"
     },
     "text": {
       "back": "← Retour",
@@ -1832,7 +1834,13 @@
       "loadingInvoices": "Chargement des factures…",
       "noInvoicesFoundForThisContractor": "Aucune facture trouvée pour ce prestataire.",
       "contractorNotFound": "Prestataire introuvable.",
-      "goBack": "Retour"
+      "goBack": "Retour",
+      "loadingRatings": "Chargement des évaluations…",
+      "noRatingsYet": "Aucune évaluation de locataire pour l'instant.",
+      "averageRating": "Note moyenne",
+      "ratingsCount": "({{count}} évaluation)",
+      "ratingsCount_other": "({{count}} évaluations)",
+      "noComment": "Aucun commentaire."
     },
     "prop": {
       "contractorProfileAndServiceDetails": "Profil et détails du service du prestataire.",
