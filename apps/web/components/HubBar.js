@@ -26,6 +26,7 @@ const WEBSITE_LINKS = [
 ];
 
 export default function HubBar() {
+  if (process.env.NEXT_PUBLIC_SANDBOX === "true") return null;
   return (
     <div
       style={{

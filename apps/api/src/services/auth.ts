@@ -22,8 +22,9 @@ export interface TokenPayload {
   role: string;        // from app_metadata.appRole
   supabaseId?: string; // sub claim
   accessLevel?: string;// ADMIN | APP_USER | DOCS_INVESTOR
-  tenantId?: string;   // Tenant.id — set in app_metadata for TENANT role users
-  ownerId?: string;    // User.id of an OWNER — set in app_metadata for admin owner-preview
+  tenantId?: string;      // Tenant.id — set in app_metadata for TENANT role users
+  ownerId?: string;       // User.id of an OWNER — set in app_metadata for admin owner-preview
+  contractorId?: string;  // Contractor.id — set in app_metadata for sandbox contractor demo-grant
 }
 
 // ── Supabase JWKS (production) ───────────────────────────────────────────────
@@ -57,6 +58,7 @@ function mapJwtPayload(payload: Record<string, unknown>): TokenPayload {
     accessLevel: meta["accessLevel"],
     tenantId: meta["tenantId"] || undefined,
     ownerId: meta["ownerId"] || undefined,
+    contractorId: meta["contractorId"] || undefined,
   };
 }
 

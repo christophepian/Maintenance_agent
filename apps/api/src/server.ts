@@ -41,6 +41,7 @@ import { registerStrategyRoutes } from "./routes/strategy";
 import { registerRecommendationRoutes } from "./routes/recommendations";
 import { registerTenantConversationRoutes } from "./routes/tenantConversation";
 import { registerImportedStatementRoutes } from "./routes/importedStatements";
+import { registerSandboxRoutes } from "./routes/sandbox";
 import { registerEventHandlers } from "./events";
 import {
   processSelectionTimeouts,
@@ -179,6 +180,7 @@ registerStrategyRoutes(router);
 registerRecommendationRoutes(router);
 registerTenantConversationRoutes(router);
 registerImportedStatementRoutes(router);
+registerSandboxRoutes(router);
 
 /* ── Dev-only: background job trigger route ─────────────────── */
 router.post("/__dev/rental/run-jobs", async ({ res }) => {

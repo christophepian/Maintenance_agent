@@ -88,6 +88,12 @@ export default function SetPasswordPage() {
 
       setDone(true);
 
+      // In sandbox mode, provision multi-persona records before redirecting so the
+      // persona switcher works error-free from the very first session.
+      if (process.env.NEXT_PUBLIC_SANDBOX === "true") {
+        fetch("/api/sandbox/setup", { method: "POST" }).catch(() => {});
+      }
+
       setTimeout(() => {
         const target =
           (typeof next === "string" && next.startsWith("/") ? next : null) ||
@@ -103,6 +109,9 @@ export default function SetPasswordPage() {
   }
 
   async function skipForNow() {
+    if (process.env.NEXT_PUBLIC_SANDBOX === "true") {
+      fetch("/api/sandbox/setup", { method: "POST" }).catch(() => {});
+    }
     const target =
       (typeof next === "string" && next.startsWith("/") ? next : null) ||
       (appMeta.appRole ? ROLE_HOME[appMeta.appRole] : null) ||

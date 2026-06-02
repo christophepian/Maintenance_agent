@@ -1,7 +1,7 @@
 import { Router } from "../http/router";
 import { sendError, sendJson } from "../http/json";
 import { first, getIntParam } from "../http/query";
-import { requireRole } from "../authz";
+import { requireContractorSession } from "../authz";
 import type { TokenPayload } from "../services/auth";
 import { PrismaClient } from "@prisma/client";
 import { listJobs, getJob } from "../services/jobs";
@@ -40,6 +40,10 @@ async function resolveContractorId(
   if (user.accessLevel === "ADMIN") {
     return queryContractorId ?? null;
   }
+  // Demo grant: contractorId set in app_metadata (sandbox multi-persona access)
+  if (user.contractorId) {
+    return user.contractorId;
+  }
   const row = await findContractorByOrgAndEmail(prisma, user.email, orgId);
   return row?.id ?? null;
 }
@@ -54,7 +58,7 @@ export function registerContractorRoutes(router: Router) {
   /* ── GET /contractor/jobs ─────────────────────────────────── */
   router.get("/contractor/jobs", async ({ req, res, query, orgId, prisma }) => {
     try {
-      const user = requireRole(req, res, "CONTRACTOR");
+      const user = requireContractorSession(req, res);
       if (!user) return;
 
       const contractorId = await resolveContractorId(prisma, user, first(query, "contractorId") as string | undefined, orgId);
@@ -90,7 +94,7 @@ export function registerContractorRoutes(router: Router) {
   /* ── GET /contractor/jobs/:id ─────────────────────────────── */
   router.get("/contractor/jobs/:id", async ({ req, res, params, query, orgId, prisma }) => {
     try {
-      const user = requireRole(req, res, "CONTRACTOR");
+      const user = requireContractorSession(req, res);
       if (!user) return;
 
       const contractorId = await resolveContractorId(prisma, user, first(query, "contractorId") as string | undefined, orgId);
@@ -126,7 +130,7 @@ export function registerContractorRoutes(router: Router) {
   /* ── GET /contractor/invoices ───────────────────────────────── */
   router.get("/contractor/invoices", async ({ req, res, query, orgId, prisma }) => {
     try {
-      const user = requireRole(req, res, "CONTRACTOR");
+      const user = requireContractorSession(req, res);
       if (!user) return;
 
       const contractorId = await resolveContractorId(prisma, user, first(query, "contractorId") as string | undefined, orgId);
@@ -164,7 +168,7 @@ export function registerContractorRoutes(router: Router) {
   /* ── GET /contractor/invoices/:id ──────────────────────────── */
   router.get("/contractor/invoices/:id", async ({ req, res, params, query, orgId, prisma }) => {
     try {
-      const user = requireRole(req, res, "CONTRACTOR");
+      const user = requireContractorSession(req, res);
       if (!user) return;
 
       const contractorId = await resolveContractorId(prisma, user, first(query, "contractorId") as string | undefined, orgId);
@@ -202,7 +206,7 @@ export function registerContractorRoutes(router: Router) {
   /* ── GET /contractor/rfps ─────────────────────────────────── */
   router.get("/contractor/rfps", async ({ req, res, query, orgId, prisma }) => {
     try {
-      const user = requireRole(req, res, "CONTRACTOR");
+      const user = requireContractorSession(req, res);
       if (!user) return;
 
       // Resolve contractor identity before Zod parse so we always use the
@@ -248,7 +252,7 @@ export function registerContractorRoutes(router: Router) {
   /* ── POST /contractor/jobs/:id/complete ─────────────────── */
   router.post("/contractor/jobs/:id/complete", async ({ req, res, params, query, orgId, prisma }) => {
     try {
-      const user = requireRole(req, res, "CONTRACTOR");
+      const user = requireContractorSession(req, res);
       if (!user) return;
 
       const contractorId = await resolveContractorId(prisma, user, first(query, "contractorId") as string | undefined, orgId);
@@ -277,7 +281,7 @@ export function registerContractorRoutes(router: Router) {
   /* ── POST /contractor/jobs/:id/rate ──────────────────────── */
   router.post("/contractor/jobs/:id/rate", async ({ req, res, params, query, orgId, prisma }) => {
     try {
-      const user = requireRole(req, res, "CONTRACTOR");
+      const user = requireContractorSession(req, res);
       if (!user) return;
 
       const contractorId = await resolveContractorId(prisma, user, first(query, "contractorId") as string | undefined, orgId);
@@ -322,7 +326,7 @@ export function registerContractorRoutes(router: Router) {
   /* ── GET /contractor/rfps/:id ─────────────────────────────── */
   router.get("/contractor/rfps/:id", async ({ req, res, params, query, orgId, prisma }) => {
     try {
-      const user = requireRole(req, res, "CONTRACTOR");
+      const user = requireContractorSession(req, res);
       if (!user) return;
 
       const contractorId = await resolveContractorId(prisma, user, first(query, "contractorId") as string | undefined, orgId);
@@ -350,7 +354,7 @@ export function registerContractorRoutes(router: Router) {
   /* ── POST /contractor/rfps/:id/quotes ─────────────────────── */
   router.post("/contractor/rfps/:id/quotes", async ({ req, res, params, query, orgId, prisma }) => {
     try {
-      const user = requireRole(req, res, "CONTRACTOR");
+      const user = requireContractorSession(req, res);
       if (!user) return;
 
       const contractorId = await resolveContractorId(prisma, user, first(query, "contractorId") as string | undefined, orgId);

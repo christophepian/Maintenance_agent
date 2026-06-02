@@ -336,6 +336,7 @@ export default function ManagerDashboard() {
   }, [pendingOwnerApprovalRequests, disputedInvoices, staleJobs, pendingReviewRequests, rfpPendingRequests, selections, t]);
 
   const [feedExpanded, setFeedExpanded] = useState(false);
+  const [seedState, setSeedState] = useState("idle"); // idle | loading | done | error
   const [filterOpen, setFilterOpen] = useState(false);
   const [sortOpen, setSortOpen] = useState(false);
   const [filterBy, setFilterBy] = useState("all"); // "all" | category key
@@ -374,6 +375,39 @@ export default function ManagerDashboard() {
 
         <ErrorBanner error={error} />
         <ErrorBanner error={portfolioError} />
+
+        {/* ── SANDBOX: seed-data banner (only shown in sandbox builds) ── */}
+        {process.env.NEXT_PUBLIC_SANDBOX === "true" && seedState !== "done" && (
+          <div className="mb-6 flex items-center gap-4 rounded-2xl border border-brand-ring bg-brand-light px-5 py-4">
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-brand-dark">Sandbox — no data yet?</p>
+              <p className="text-xs text-brand mt-0.5">
+                Populate 2 buildings, units, tenants and sample requests to see the platform with live content.
+              </p>
+            </div>
+            <button
+              disabled={seedState === "loading"}
+              onClick={async () => {
+                setSeedState("loading");
+                try {
+                  const r = await fetch("/api/sandbox/seed", { method: "POST" });
+                  if (r.ok) {
+                    setSeedState("done");
+                    loadDashboardData();
+                    loadPortfolio();
+                  } else {
+                    setSeedState("error");
+                  }
+                } catch {
+                  setSeedState("error");
+                }
+              }}
+              className="shrink-0 rounded-xl bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-dark disabled:opacity-60 transition-colors"
+            >
+              {seedState === "loading" ? "Seeding…" : seedState === "error" ? "Retry" : "Populate demo data"}
+            </button>
+          </div>
+        )}
 
         {/* ── HEADLINE + KPIs ── */}
         <div className="mb-8">

@@ -10,7 +10,7 @@ import { Router, HandlerContext } from "../http/router";
 import { sendError, sendJson } from "../http/json";
 import { readJson } from "../http/body";
 import { first, getIntParam, getEnumParam } from "../http/query";
-import { getAuthUser, maybeRequireManager, requireRole, requireAnyRole, requireAuth } from "../authz";
+import { getAuthUser, maybeRequireManager, requireRole, requireAnyRole, requireAuth, requireContractorSession } from "../authz";
 import { withAuthRequired } from "../http/routeProtection";
 import { requireOwnerAccess, logEvent } from "./helpers";
 import { resolveAndScopeRequest, findRequestRaw, findRequestStatus, findRequestForMaintenanceDecision, updateRequestUrgency, deleteAllRequests, updateRequestAsset, updateRequestStatus, updateRequestType } from "../repositories/requestRepository";
@@ -199,7 +199,7 @@ export function registerRequestRoutes(router: Router) {
 
     // Contractor-scoped status update (unchanged — different flow)
     if (contractorId) {
-      if (!requireRole(req, res, "CONTRACTOR")) return;
+      if (!requireContractorSession(req, res)) return;
       const result = await updateContractorRequestStatus(
         prisma, scopedReq.id, contractorId,
         RequestStatus[input.status as keyof typeof RequestStatus],
@@ -507,7 +507,7 @@ export function registerRequestRoutes(router: Router) {
   /* ── Contractor requests (thin — pure query) ───────────────── */
 
   router.get("/requests/contractor/:contractorId", async ({ req, res, prisma, params, orgId }) => {
-    if (!requireRole(req, res, "CONTRACTOR")) return;
+    if (!requireContractorSession(req, res)) return;
     const c = await findContractorOrgId(prisma, params.contractorId);
     if (!c || c.orgId !== orgId) return sendError(res, 404, "NOT_FOUND", "Contractor not found");
     const requests = await getContractorAssignedRequests(prisma, params.contractorId);
@@ -515,7 +515,7 @@ export function registerRequestRoutes(router: Router) {
   });
 
   router.get("/requests/contractor", async ({ req, res, prisma, query, orgId }) => {
-    if (!requireRole(req, res, "CONTRACTOR")) return;
+    if (!requireContractorSession(req, res)) return;
     const cid = first(query, "contractorId");
     if (!cid) return sendError(res, 400, "VALIDATION_ERROR", "Missing contractorId");
     const c = await findContractorOrgId(prisma, cid);

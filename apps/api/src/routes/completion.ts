@@ -20,7 +20,7 @@ import { Router } from "../http/router";
 import { sendError, sendJson } from "../http/json";
 import { first, getIntParam } from "../http/query";
 import { parseBody } from "../http/body";
-import { requireRole, requireTenantSession, maybeRequireManager } from "../authz";
+import { requireContractorSession, requireTenantSession, maybeRequireManager } from "../authz";
 import {
   contractorCompleteJobWorkflow,
   confirmCompletionWorkflow,
@@ -59,7 +59,7 @@ export function registerCompletionRoutes(router: Router) {
     "/contractor/jobs/:id/complete",
     async ({ req, res, params, query, orgId, prisma }) => {
       try {
-        const user = requireRole(req, res, "CONTRACTOR");
+        const user = requireContractorSession(req, res);
         if (!user) return;
 
         const contractorId = first(query, "contractorId") as string | undefined;
@@ -111,7 +111,7 @@ export function registerCompletionRoutes(router: Router) {
     "/contractor/jobs/:id/rate",
     async ({ req, res, params, query, orgId, prisma }) => {
       try {
-        const user = requireRole(req, res, "CONTRACTOR");
+        const user = requireContractorSession(req, res);
         if (!user) return;
 
         const contractorId = first(query, "contractorId") as string | undefined;

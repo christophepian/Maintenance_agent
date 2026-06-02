@@ -220,6 +220,49 @@ export function requireTenantSession(req: http.IncomingMessage, res: http.Server
   }
 }
 
+export function requireContractorSession(req: http.IncomingMessage, res: http.ServerResponse): TokenPayload | null {
+  const authedReq = req as AuthedRequest;
+  if (authedReq.user) {
+    const { role, accessLevel, contractorId } = authedReq.user;
+    // Allow access if:
+    //   - user has appRole CONTRACTOR (normal path), OR
+    //   - user has accessLevel ADMIN (full access), OR
+    //   - user has an explicit contractorId in app_metadata (sandbox demo-grant so a
+    //     MANAGER persona can walk through the contractor experience without re-login)
+    const isContractor = role === "CONTRACTOR";
+    const isAdmin = accessLevel === "ADMIN";
+    const hasExplicitContractorId = !!contractorId;
+    if (!isContractor && !isAdmin && !hasExplicitContractorId) {
+      res.writeHead(403, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "Contractor role required" }));
+      return null;
+    }
+    return authedReq.user;
+  }
+
+  // Fallback for legacy dev JWTs (AUTH_OPTIONAL mode)
+  const authHeader = req.headers["authorization"];
+  if (!authHeader?.startsWith("Bearer ")) {
+    res.writeHead(401, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ error: "Contractor authentication required" }));
+    return null;
+  }
+  try {
+    const token = authHeader.slice(7);
+    const decoded = decodeToken(token) as TokenPayload | null;
+    if (!decoded || (decoded.role !== "CONTRACTOR" && decoded.accessLevel !== "ADMIN" && !decoded.contractorId)) {
+      res.writeHead(403, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "Contractor role required" }));
+      return null;
+    }
+    return decoded;
+  } catch {
+    res.writeHead(401, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ error: "Invalid or expired token" }));
+    return null;
+  }
+}
+
 export function requireOwnerSession(req: http.IncomingMessage, res: http.ServerResponse): string | null {
   const authedReq = req as AuthedRequest;
   if (authedReq.user) {

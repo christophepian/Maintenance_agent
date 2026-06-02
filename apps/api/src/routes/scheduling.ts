@@ -18,7 +18,7 @@ import { Router } from "../http/router";
 import { sendError, sendJson } from "../http/json";
 import { first } from "../http/query";
 import { parseBody } from "../http/body";
-import { requireRole, requireTenantSession } from "../authz";
+import { requireContractorSession, requireTenantSession } from "../authz";
 import {
   proposeSlotsWorkflow,
   respondToSlotWorkflow,
@@ -35,7 +35,7 @@ export function registerSchedulingRoutes(router: Router) {
     "/contractor/jobs/:id/slots",
     async ({ req, res, params, query, orgId, prisma }) => {
       try {
-        const user = requireRole(req, res, "CONTRACTOR");
+        const user = requireContractorSession(req, res);
         if (!user) return;
 
         const contractorId = first(query, "contractorId") as string | undefined;
@@ -81,7 +81,7 @@ export function registerSchedulingRoutes(router: Router) {
     "/contractor/jobs/:id/slots",
     async ({ req, res, params, query, orgId, prisma }) => {
       try {
-        const user = requireRole(req, res, "CONTRACTOR");
+        const user = requireContractorSession(req, res);
         if (!user) return;
 
         const contractorId = first(query, "contractorId") as string | undefined;
