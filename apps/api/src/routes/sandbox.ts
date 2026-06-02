@@ -14,6 +14,7 @@
 import { Router } from "../http/router";
 import { sendError, sendJson } from "../http/json";
 import { requireAuth } from "../authz";
+import { RequestStatus, RequestUrgency, JobStatus } from "@prisma/client";
 
 const isSandbox = process.env.SANDBOX_MODE === "true";
 
@@ -182,10 +183,10 @@ export function registerSandboxRoutes(router: Router) {
             orgId,
             description: "Fuite sous l'évier de la cuisine — eau visible sous le meuble.",
             category: "Plumbing",
-            status: "PENDING_REVIEW",
+            status: RequestStatus.PENDING_REVIEW,
             tenantId: tA.id,
             unitId: u1.id,
-            urgency: "HIGH",
+            urgency: RequestUrgency.HIGH,
           },
         }),
         prisma.request.create({
@@ -193,10 +194,10 @@ export function registerSandboxRoutes(router: Router) {
             orgId,
             description: "Radiateur du salon ne chauffe plus depuis une semaine.",
             category: "Heating",
-            status: "IN_PROGRESS",
+            status: RequestStatus.ASSIGNED,
             tenantId: tB.id,
             unitId: u4.id,
-            urgency: "MEDIUM",
+            urgency: RequestUrgency.MEDIUM,
             assignedContractorId: seedContractor.id,
           },
         }),
@@ -205,10 +206,10 @@ export function registerSandboxRoutes(router: Router) {
             orgId,
             description: "Remplacement de l'interrupteur de la chambre principale.",
             category: "Electrical",
-            status: "COMPLETED",
+            status: RequestStatus.COMPLETED,
             tenantId: tA.id,
             unitId: u1.id,
-            urgency: "LOW",
+            urgency: RequestUrgency.LOW,
             assignedContractorId: seedContractor.id,
             completedAt: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000),
           },
@@ -221,7 +222,7 @@ export function registerSandboxRoutes(router: Router) {
           orgId,
           requestId: rCompleted.id,
           contractorId: seedContractor.id,
-          status: "COMPLETED",
+          status: JobStatus.COMPLETED,
           actualCost: 28000, // CHF in cents
           completedAt: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000),
         },
