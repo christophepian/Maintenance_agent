@@ -221,9 +221,11 @@ export function registerInventoryRoutes(router: Router) {
       const filterByOwner = first(query, "filterByOwner") === "true";
       const user = getAuthUser(req);
       // filterByOwner=true: owner surface requesting owner-scoped view (works for any role)
-      const ownerId   = filterByOwner ? (user?.ownerId || user?.userId) : user?.role === "OWNER" ? (user.ownerId || user.userId) : undefined;
-      const managerId = !filterByOwner && user?.role === "MANAGER" ? user.userId : undefined;
-      const buildings = await listBuildings(orgId, includeInactive, ownerId, managerId);
+      const ownerId = filterByOwner ? (user?.ownerId || user?.userId) : user?.role === "OWNER" ? (user.ownerId || user.userId) : undefined;
+      // Managers see all org buildings — managerId on Building is an assignment field,
+      // not an access-control gate. Filtering by userId here breaks when prismaUserId
+      // is absent from the JWT (Supabase UUID ≠ Prisma User.id).
+      const buildings = await listBuildings(orgId, includeInactive, ownerId, undefined);
       sendJson(res, 200, { data: buildings, total: buildings.length });
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to fetch buildings", String(e));
