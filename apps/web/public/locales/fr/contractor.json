@@ -5,7 +5,7 @@
     "invoices": "Factures",
     "rfps": "Appels d'offres",
     "statusUpdates": "Mises à jour",
-    "settings": "Parametres"
+    "settings": "Paramètres"
   },
   "dashboard": {
     "title": "Tableau de bord prestataire",
@@ -14,53 +14,53 @@
   },
   "estimates": {
     "heading": {
-      "estimates": "Estimates"
+      "estimates": "Devis"
     },
     "text": {
-      "comingSoonEstimateDraftingAndApproval": "Bientôt disponible: estimate drafting and approval."
+      "comingSoonEstimateDraftingAndApproval": "Bientôt disponible : rédaction et approbation de devis."
     }
   },
   "index": {
     "title": {
-      "contractorDashboard": "Contractor Dashboard",
-      "quickLinks": "Quick Links",
-      "todayActionRequired": "Today / Action Required",
-      "pipelineOverview": "Pipeline Overview"
+      "contractorDashboard": "Tableau de bord prestataire",
+      "quickLinks": "Accès rapides",
+      "todayActionRequired": "Aujourd'hui / Action requise",
+      "pipelineOverview": "Aperçu du pipeline"
     },
     "text": {
-      "loadingDashboard": "Loading dashboard...",
+      "loadingDashboard": "Chargement du tableau de bord…",
       "error": "Erreur :",
       "pendingJobs": "Interventions en attente",
-      "needAcceptancestart": "Need acceptance/start",
-      "staleInprogressJobs": "Stale In-Progress Interventions",
-      "completedNotInvoiced": "Terminé - Not Invoiced",
-      "readyForBilling": "Ready for billing",
-      "noItemsRequireImmediateAction": "✓ No items require immediate action",
-      "openJobs": "Open Interventions",
-      "pendingInProgress": "En attente + in progress",
-      "completedThisMonth": "Terminé This Month",
-      "jobsFinished": "Interventions finished",
-      "invoicedThisMonth": "Invoiced This Month",
-      "totalBilled": "Àtal billed"
+      "needAcceptancestart": "En attente d'acceptation/démarrage",
+      "staleInprogressJobs": "Interventions en retard",
+      "completedNotInvoiced": "Terminé — non facturé",
+      "readyForBilling": "Prêt pour facturation",
+      "noItemsRequireImmediateAction": "✓ Aucun élément ne requiert d'action immédiate",
+      "openJobs": "Interventions ouvertes",
+      "pendingInProgress": "En attente + en cours",
+      "completedThisMonth": "Terminé ce mois-ci",
+      "jobsFinished": "Interventions terminées",
+      "invoicedThisMonth": "Facturé ce mois-ci",
+      "totalBilled": "Total facturé"
     }
   },
   "invoices": {
     "heading": {
-      "createInvoice": "Create Invoice"
+      "createInvoice": "Créer une facture"
     },
     "placeholder": {
-      "briefDescriptionOfWorkPerformed": "Brief description of work performed"
+      "briefDescriptionOfWorkPerformed": "Brève description des travaux effectués"
     },
     "title": {
-      "myInvoices": "My Invoices"
+      "myInvoices": "Mes factures"
     },
     "text": {
-      "dISPUTED": "⚠ DISPUTED",
+      "dISPUTED": "⚠ CONTESTÉE",
       "uploadInvoice": "📤 Téléverser une facture",
       "job": "Intervention",
-      "prefilledFromJobDetailPage": "Pre-filled from job detail page",
+      "prefilledFromJobDetailPage": "Prérempli depuis la page de détail de l'intervention",
       "loadingInvoices": "Chargement des factures…",
-      "noInvoicesMatchThisFilter": "No invoices match this filter"
+      "noInvoicesMatchThisFilter": "Aucune facture ne correspond à ce filtre"
     },
     "tabs": {
       "all": "Tous",
@@ -73,18 +73,18 @@
   },
   "jobs": {
     "placeholder": {
-      "actualCostChf": "Actual cost (CHF)"
+      "actualCostChf": "Coût réel (CHF)"
     },
     "title": {
-      "myJobs": "My Jobs"
+      "myJobs": "Mes interventions"
     },
     "text": {
       "loadingJobs": "Chargement des interventions…",
-      "noUpcomingJobs": "No upcoming jobs",
-      "noCompletedJobsYet": "No completed jobs yet",
+      "noUpcomingJobs": "Aucune intervention à venir",
+      "noCompletedJobsYet": "Aucune intervention terminée",
       "location": "📍 Emplacement",
       "tenant": "👤 Locataire",
-      "appointment": "📅 Appointment",
+      "appointment": "📅 Rendez-vous",
       "asset": "🔧 Actif",
       "scope": "📋 Périmètre"
     },
@@ -95,46 +95,46 @@
   },
   "jobsId": {
     "heading": {
-      "rateTheTenant": "Rate the tenant"
+      "rateTheTenant": "Évaluer le locataire"
     },
     "ariaLabel": {
       "close": "Fermer",
-      "removeScheduleRow": "Remove schedule row"
+      "removeScheduleRow": "Supprimer la ligne de planification"
     },
     "text": {
-      "noSlotsProposedYetProposeTimesForTheTenantToChooseFrom": "No slots proposed yet. Propose times for the tenant to choose from.",
-      "appointmentConfirmedByTenant": "Appointment confirmed by tenant.",
-      "addAnotherSlot": "+ Ajouter another slot",
+      "noSlotsProposedYetProposeTimesForTheTenantToChooseFrom": "Aucun créneau proposé. Proposez des horaires parmi lesquels le locataire pourra choisir.",
+      "appointmentConfirmedByTenant": "Rendez-vous confirmé par le locataire.",
+      "addAnotherSlot": "+ Ajouter un créneau",
       "cancel": "Annuler",
       "myJobs": "← Mes interventions",
-      "selectYourContractorProfileToUseJobActions": "Select your contractor prdeile to use job actions:",
+      "selectYourContractorProfileToUseJobActions": "Sélectionnez votre profil prestataire pour accéder aux actions :",
       "created": "Créé :",
-      "started": "Started:",
+      "started": "Démarré :",
       "completed": "Terminé :",
       "category": "Catégorie :",
       "asset": "Actif :",
-      "invoiceSubmittedForThisJob": "✅ Invoice submitted for this job."
+      "invoiceSubmittedForThisJob": "✅ Facture soumise pour cette intervention."
     },
     "prop": {
-      "appointmentSlots": "📅 Appointment Slots",
-      "jobNotFound": "Intervention not found.",
+      "appointmentSlots": "📅 Créneaux de rendez-vous",
+      "jobNotFound": "Intervention introuvable.",
       "location": "📍 Emplacement",
       "dates": "📅 Dates",
-      "confirmedAppointment": "✅ Confirmeré Appointment",
-      "cost": "💰 Cost",
-      "scopeOfWork": "📋 Périmètre de Work",
-      "tenantContact": "👤 Locataire Contact"
+      "confirmedAppointment": "✅ Rendez-vous confirmé",
+      "cost": "💰 Coût",
+      "scopeOfWork": "📋 Périmètre des travaux",
+      "tenantContact": "👤 Contact locataire"
     }
   },
   "rfps": {
     "heading": {
-      "availableRfps": "Available RFPs"
+      "availableRfps": "Appels d'offres disponibles"
     },
     "text": {
       "invited": "Invité",
       "view": "Voir",
-      "loadingRfps": "Loading RFPs...",
-      "rFPsMatchingYourServiceCategoriesWillAppearHere": "RFPs matching your service categories will appear here."
+      "loadingRfps": "Chargement des appels d'offres…",
+      "rFPsMatchingYourServiceCategoriesWillAppearHere": "Les appels d'offres correspondant à vos catégories de service apparaîtront ici."
     },
     "tabs": {
       "all": "Tous",
@@ -155,29 +155,29 @@
   },
   "rfpsId": {
     "heading": {
-      "submitYourQuote": "Submit Your Quote",
-      "appointmentConfirmed": "Appointment Confirmed",
-      "rFPDetails": "RFP Details",
-      "workDescription": "Work Description"
+      "submitYourQuote": "Soumettre votre offre",
+      "appointmentConfirmed": "Rendez-vous confirmé",
+      "rFPDetails": "Détails de l'appel d'offres",
+      "workDescription": "Description des travaux"
     },
     "placeholder": {
-      "eG150000": "e.g. 1500.00",
-      "eG5": "e.g. 5",
-      "describeTheProposedWorkPlanMethodsAndTimeline": "Describe the proposed work plan, methods, and timeline…",
-      "anyAssumptionsExclusionsOrConditions": "Any assumptions, exclusions, or conditions…",
-      "anyOtherInformationForTheManager": "Any other information for the manager…",
+      "eG150000": "ex. 1500.00",
+      "eG5": "ex. 5",
+      "describeTheProposedWorkPlanMethodsAndTimeline": "Décrivez le plan de travail, les méthodes et le calendrier proposés…",
+      "anyAssumptionsExclusionsOrConditions": "Hypothèses, exclusions ou conditions éventuelles…",
+      "anyOtherInformationForTheManager": "Toute autre information pour le gestionnaire…",
       "description": "Description"
     },
     "text": {
       "date": "Date",
       "from": "De",
       "to": "À",
-      "loadingSlots": "Loading slots…",
+      "loadingSlots": "Chargement des créneaux…",
       "amount": "Montant",
-      "estDuration": "Est. Durée",
-      "earliestAvailable": "Earliest Disponible",
+      "estDuration": "Durée est.",
+      "earliestAvailable": "Disponibilité au plus tôt",
       "validUntil": "Valable jusqu'au",
-      "submitted": "Soumettreted",
+      "submitted": "Soumis",
       "workPlan": "Plan de travail",
       "assumptions": "Hypothèses",
       "notes": "Notes",
@@ -188,21 +188,21 @@
       "legalObligation": "Obligation légale",
       "location": "Emplacement",
       "unit": "Unité",
-      "quoteDeadline": "Quote Échéance",
+      "quoteDeadline": "Échéance de l'offre",
       "created": "Créé",
-      "quotesSubmitted": "Quotes Soumettreted",
+      "quotesSubmitted": "Offres soumises",
       "request": "Demande n°",
-      "requestDate": "Request Date",
+      "requestDate": "Date de la demande",
       "photosAttachments": "Photos / Pièces jointes",
-      "rFPNotFoundOrNotAccessible": "RFP not found or not accessible."
+      "rFPNotFoundOrNotAccessible": "Appel d'offres introuvable ou inaccessible."
     }
   },
   "settings": {
     "notifications": {
-      "loading": "Chargement des preferences...",
-      "saved": "Preferences enregistrees.",
-      "saving": "Enregistrement...",
-      "saveButton": "Enregistrer les preferences",
+      "loading": "Chargement des préférences…",
+      "saved": "Préférences enregistrées.",
+      "saving": "Enregistrement…",
+      "saveButton": "Enregistrer les préférences",
       "error": "Erreur :",
       "ok": "OK :",
       "group": {
@@ -212,19 +212,19 @@
         "invoices": "Factures"
       },
       "event": {
-        "CONTRACTOR_ASSIGNED": "Nouvelle mission assignee",
-        "JOB_CREATED": "Travail cree",
-        "QUOTE_AWARDED": "Devis attribue",
-        "QUOTE_REJECTED": "Devis refuse",
-        "SLOT_PROPOSED": "Creneau de visite propose",
-        "SLOT_ACCEPTED": "Creneau de visite accepte",
-        "SLOT_DECLINED": "Creneau de visite refuse",
-        "JOB_CONFIRMED": "Travail confirme",
-        "INVOICE_PAID": "Facture payee"
+        "CONTRACTOR_ASSIGNED": "Nouvelle mission assignée",
+        "JOB_CREATED": "Intervention créée",
+        "QUOTE_AWARDED": "Devis attribué",
+        "QUOTE_REJECTED": "Devis refusé",
+        "SLOT_PROPOSED": "Créneau de visite proposé",
+        "SLOT_ACCEPTED": "Créneau de visite accepté",
+        "SLOT_DECLINED": "Créneau de visite refusé",
+        "JOB_CONFIRMED": "Intervention confirmée",
+        "INVOICE_PAID": "Facture payée"
       }
     },
-    "title": "Parametres",
-    "subtitle": "Gerez vos preferences de notification.",
+    "title": "Paramètres",
+    "subtitle": "Gérez vos préférences de notification.",
     "tabs": {
       "notifications": "Notifications",
       "appearance": "Apparence"

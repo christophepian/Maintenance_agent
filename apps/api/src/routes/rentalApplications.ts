@@ -56,6 +56,38 @@ import { listManagerSelections, listOwnerSelections } from "../services/rentalSe
      GET  /dev/emails/:id
    ══════════════════════════════════════════════════════════════ */
 
+// ── Rate limiters for unauthenticated public endpoints ──────────────────────
+// document-scan hits Azure OCR (costs money) — tight limit
+const docScanRateMap = new Map<string, { count: number; resetAt: number }>();
+const DOC_SCAN_LIMIT = 5;
+const DOC_SCAN_WINDOW_MS = 60_000; // 5 req/IP/min
+
+// Rental application creation — prevent DB flooding
+const rentalCreateRateMap = new Map<string, { count: number; resetAt: number }>();
+const RENTAL_CREATE_LIMIT = 10;
+const RENTAL_CREATE_WINDOW_MS = 10 * 60_000; // 10 req/IP/10 min
+
+// Attachment upload — prevent S3 storage abuse
+const rentalAttachRateMap = new Map<string, { count: number; resetAt: number }>();
+const RENTAL_ATTACH_LIMIT = 20;
+const RENTAL_ATTACH_WINDOW_MS = 10 * 60_000; // 20 req/IP/10 min
+
+function checkRateLimit(
+  map: Map<string, { count: number; resetAt: number }>,
+  ip: string,
+  limit: number,
+  windowMs: number,
+): boolean {
+  const now = Date.now();
+  const entry = map.get(ip);
+  if (!entry || now >= entry.resetAt) {
+    map.set(ip, { count: 1, resetAt: now + windowMs });
+    return true;
+  }
+  entry.count++;
+  return entry.count <= limit;
+}
+
 export function registerRentalRoutes(router: Router) {
 
   /* ────────────────────────────────────────────────────────────
@@ -99,6 +131,11 @@ export function registerRentalRoutes(router: Router) {
    */
   router.post("/document-scan", async ({ req, res }) => {
     // Public endpoint — no auth required (used by unauthenticated apply wizard)
+    const ip = req.socket?.remoteAddress ?? "unknown";
+    if (!checkRateLimit(docScanRateMap, ip, DOC_SCAN_LIMIT, DOC_SCAN_WINDOW_MS)) {
+      sendError(res, 429, "RATE_LIMITED", "Too many scan requests. Please wait a moment and try again.");
+      return;
+    }
     try {
       const contentType = req.headers["content-type"] || "";
       const boundaryMatch = contentType.match(/boundary=(.+)/i);
@@ -144,6 +181,11 @@ export function registerRentalRoutes(router: Router) {
    * Create a new rental application draft.
    */
   router.post("/rental-applications", async ({ req, res, orgId }) => {
+    const ip = req.socket?.remoteAddress ?? "unknown";
+    if (!checkRateLimit(rentalCreateRateMap, ip, RENTAL_CREATE_LIMIT, RENTAL_CREATE_WINDOW_MS)) {
+      sendError(res, 429, "RATE_LIMITED", "Too many applications from this address. Please try again later.");
+      return;
+    }
     try {
       const input = await parseBody(req, CreateRentalApplicationSchema);
       const dto = await createRentalApplicationDraft(orgId, input);
@@ -204,6 +246,11 @@ export function registerRentalRoutes(router: Router) {
    * Multipart form-data: field "file" + field "meta" (JSON with applicantId, docType).
    */
   router.post("/rental-applications/:id/attachments", async ({ req, res, params }) => {
+    const ip = req.socket?.remoteAddress ?? "unknown";
+    if (!checkRateLimit(rentalAttachRateMap, ip, RENTAL_ATTACH_LIMIT, RENTAL_ATTACH_WINDOW_MS)) {
+      sendError(res, 429, "RATE_LIMITED", "Too many uploads from this address. Please try again later.");
+      return;
+    }
     try {
       const contentType = req.headers["content-type"] || "";
       const boundaryMatch = contentType.match(/boundary=(.+)/i);

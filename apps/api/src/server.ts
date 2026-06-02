@@ -295,10 +295,11 @@ const server = http.createServer(async (req: AuthedRequest, res) => {
   try {
     /* CORS — explicit origin allowlist; never wildcard.
        Priority: CORS_ORIGIN env var (comma-separated) → built-in Vercel staging
-       origin → localhost (dev only). */
+       origin (non-production only) → localhost (dev only).
+       In production, CORS_ORIGIN must be set — no hardcoded fallbacks apply. */
     const isProd = process.env.NODE_ENV === "production";
-    // Vercel preview/staging URL for this project — allows direct browser uploads
-    // that bypass Vercel's 4.5 MB serverless request-body limit.
+    // Vercel preview/staging URL — allowed in non-production only.
+    // In production add it to the CORS_ORIGIN env var if needed.
     const VERCEL_STAGING_ORIGIN = "https://maintenance-agent-api-git-main-christophepians-projects.vercel.app";
     const DEV_ALLOWED_ORIGINS = ["http://localhost:3000", "http://localhost:3001", "http://127.0.0.1:3000", "http://127.0.0.1:3001"];
     const requestOrigin = req.headers["origin"] as string | undefined;
@@ -310,7 +311,8 @@ const server = http.createServer(async (req: AuthedRequest, res) => {
         corsOrigin = requestOrigin;
       }
     }
-    if (!corsOrigin && requestOrigin === VERCEL_STAGING_ORIGIN) {
+    // Hardcoded convenience origins apply in non-production only
+    if (!corsOrigin && !isProd && requestOrigin === VERCEL_STAGING_ORIGIN) {
       corsOrigin = requestOrigin;
     }
     if (!corsOrigin && !isProd && requestOrigin && DEV_ALLOWED_ORIGINS.includes(requestOrigin)) {
@@ -324,10 +326,17 @@ const server = http.createServer(async (req: AuthedRequest, res) => {
       "Access-Control-Allow-Methods",
       "GET,POST,PUT,PATCH,DELETE,OPTIONS",
     );
-    res.setHeader(
-      "Access-Control-Allow-Headers",
-      "content-type, authorization, x-dev-role, x-dev-org-id, x-dev-user-id, x-dev-email",
-    );
+    // x-dev-* headers only advertised in non-production to avoid revealing
+    // the existence of the dev identity bypass mechanism to external observers
+    const allowedHeaders = isProd
+      ? "content-type, authorization"
+      : "content-type, authorization, x-dev-role, x-dev-org-id, x-dev-user-id, x-dev-email";
+    res.setHeader("Access-Control-Allow-Headers", allowedHeaders);
+
+    // Security headers — applied to every response
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("X-Frame-Options", "DENY");
+    res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
 
     if (req.method === "OPTIONS") {
       res.writeHead(204);

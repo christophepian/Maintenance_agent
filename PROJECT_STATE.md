@@ -44,6 +44,16 @@ Safe to:
 
 ✅ **ARCH-1 epic complete — service layer fully decoupled from Prisma (2026-05-06).** All 5 slices (DT-120–DT-124) delivered. ~80 direct `prisma.*` calls eliminated from the service layer across 11 service files. No service file may call Prisma directly — all DB access routes through the repository layer. New repos: `notificationRepository`, `financialsRepository`, `ledgerEntryRepository`. Extended: `legalSourceRepository` (+19 fns), `invoiceRepository` (+9 fns), `accountRepository` (+3 fns), `legalSourceRepository`, `leaseRepository`, `jobRepository`, `billingEntityRepository`, `requestRepository`. tsc: 0 errors · 1007/1009 tests (2 pre-existing legalEngine timeout flakes). Commits: `ef8cbaf` (DT-123) · `4c8882c` (DT-124).
 
+✅ **Legal Sources — Canton mapping + Tenant AI context (2026-05-31).** Per-building Documents tab lists canton-scoped legal sources (FEDERAL + canton). Tenant chatbot system prompt enriched with applicable legal docs, current reference rate / CPI values, and building house rules. `LegalSource`, `LegalVariable`, `LegalVariableValue` models. `legalVariableIngestion` background job. Commits: `9234363`, `fa676d7`, `ec971b5`.
+
+✅ **Request type classification — COMPLAINT + ADMINISTRATIVE (2026-05-31).** Three-type `RequestType` enum (MAINTENANCE / COMPLAINT / ADMINISTRATIVE). AI intake classifies at creation via `reportIssue` tool. MAINTENANCE-only guard on asset auto-link and triage handler. Manager UI: type badge on request cards, filter dropdown, complaint-specific detail view (hides pipeline, adds Warning Letter Generator + Resolution panel). `POST /requests/:id/warning-letter` — Claude Haiku generates letter from house rules + complaint text. `PATCH /requests/:id/resolution` saves note and optionally marks COMPLETED. EN + FR locale keys. Migration: `20260531173301_add_request_type_and_resolution_note`. Commit: `a8f5f27`.
+
+✅ **French translation — full pass (2026-05-31 → 2026-06-02).** Locale persistence via `NEXT_LOCALE` cookie + middleware redirect + router push. Login, AppShell, tenant pages, owner/reporting page fully translated. Infinite redirect loop on `/fr/*` fixed (`request.nextUrl.locale` instead of `pathname` prefix). Remaining: `contractor.json` ~47 keys, 2 page files. Commits: `2df04ac`, `7df53bf`, `56ff6f9`, `57bcea7`, `02289f4`.
+
+✅ **Vendor ratings tab on vendor detail page (2026-06-02).** Commit: `e64fe4b`.
+
+✅ **Security hardening — first full audit + remediation (2026-06-02).** Source-code security audit across all 25 OWASP testing categories. No critical vulnerabilities found. Shipped: HTTP security headers (`X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`) on both Next.js and Express; rate limiting on public rental endpoints (`/document-scan` 5/min, `POST /rental-applications` 10/10min, attachments 20/10min); CORS hardened (Vercel staging URL non-production only; `x-dev-*` headers hidden in production); path traversal blocked in `LocalDiskStorage` via `_safePath()` containment helper; prompt injection hardening added to tenant conversation system prompt. Pre-GA deferred items: Redis-backed rate limiters, audit logging (DSG/GDPR), CSP header. See memory `project_security_hardening.md` for full deferred list.
+
 
 ## 13. Authentication & Testing
 
@@ -115,8 +125,8 @@ Remaining known limitation: OCR extracts amount and date reliably from phone pho
 | Transition maps | 8 | src/workflows/transitions.ts — derived |
 | Audit findings open | 3 (SI-2/3 broken links; ARCH-1 DT-121–124 remaining) | docs/AUDIT.md — manual |
 | Audit findings resolved | 102 | docs/AUDIT.md — manual |
-| Last auto-sync | 2026-05-30 | blueprint.js |
-| Last manual review | 2026-05-30 | human |
+| Last auto-sync | 2026-05-30 | blueprint.js — run `npm run blueprint` to refresh derived fields |
+| Last manual review | 2026-06-02 | human |
 
 > Derived fields are auto-updated by `npm run blueprint`. Manual fields must be updated at the end of each slice.
 

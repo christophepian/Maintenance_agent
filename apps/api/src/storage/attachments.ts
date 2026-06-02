@@ -109,28 +109,42 @@ class LocalDiskStorage implements AttachmentStorage {
     };
   }
 
+  /**
+   * Resolve a storage key to an absolute path, ensuring it stays within
+   * the storage root. Throws if the resolved path would escape the root
+   * (path traversal defence for the local-disk backend).
+   */
+  private _safePath(key: string): string {
+    const resolvedRoot = path.resolve(this.root);
+    const resolvedFull = path.resolve(path.join(resolvedRoot, key));
+    if (resolvedFull !== resolvedRoot && !resolvedFull.startsWith(resolvedRoot + path.sep)) {
+      throw new Error(`Invalid storage key: path would escape storage root`);
+    }
+    return resolvedFull;
+  }
+
   async put(key: string, buffer: Buffer): Promise<void> {
     if (buffer.length > MAX_PUT_FILE_SIZE) {
       throw new Error(`File exceeds maximum size of ${MAX_PUT_FILE_SIZE} bytes`);
     }
-    const fullPath = path.join(this.root, key);
+    const fullPath = this._safePath(key);
     const dir = path.dirname(fullPath);
     await fs.promises.mkdir(dir, { recursive: true });
     await fs.promises.writeFile(fullPath, buffer);
   }
 
   async get(key: string): Promise<Buffer> {
-    const fullPath = path.join(this.root, key);
+    const fullPath = this._safePath(key);
     return fs.promises.readFile(fullPath);
   }
 
   getStream(key: string): fs.ReadStream {
-    const fullPath = path.join(this.root, key);
+    const fullPath = this._safePath(key);
     return fs.createReadStream(fullPath);
   }
 
   async delete(key: string): Promise<void> {
-    const fullPath = path.join(this.root, key);
+    const fullPath = this._safePath(key);
     try {
       await fs.promises.unlink(fullPath);
     } catch (err: any) {
@@ -140,7 +154,7 @@ class LocalDiskStorage implements AttachmentStorage {
   }
 
   async exists(key: string): Promise<boolean> {
-    const fullPath = path.join(this.root, key);
+    const fullPath = this._safePath(key);
     try {
       await fs.promises.access(fullPath, fs.constants.F_OK);
       return true;
