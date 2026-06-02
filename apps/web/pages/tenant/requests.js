@@ -10,7 +10,7 @@ import { tenantFetch } from "../../lib/api";
 import ErrorBanner from "../../components/ui/ErrorBanner";
 import Badge from "../../components/ui/Badge";
 import { requestVariant } from "../../lib/statusVariants";
-import ChatWidget from "../../components/ChatWidget";
+import InlineChatSection from "../../components/InlineChatSection";
 
 import { cn } from "../../lib/utils";
 import { QRCodeSVG } from "qrcode.react";
@@ -1262,7 +1262,6 @@ export default function TenantRequestsPage() {
 
   return (
     <AppShell role="TENANT">
-      <ChatWidget />
       <PageShell>
         <PageHeader
           title={t("tenant:requests.title.myMaintenanceRequests")}
@@ -1387,6 +1386,7 @@ export default function TenantRequestsPage() {
               </div>
             )}
           </div>
+          <InlineChatSection />
         </PageContent>
       </PageShell>
     </AppShell>

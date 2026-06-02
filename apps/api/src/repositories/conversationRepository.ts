@@ -101,6 +101,32 @@ export async function getThreadHistory(
   return thread?.messages ?? [];
 }
 /**
+ * Delete all messages in a tenant's IN_APP thread (called when starting a fresh session
+ * after the 24h inactivity window so stale history doesn't leak into the new context).
+ * No-ops if no thread exists.
+ */
+export async function clearStaleThreadMessages(
+  prisma: PrismaClient,
+  tenantId: string,
+  channel: ConversationChannel,
+  maxAgeMs: number,
+): Promise<void> {
+  const db = prisma as AnyPrisma;
+  const thread = await db.conversationThread.findUnique({
+    where: { tenantId_channel: { tenantId, channel } },
+    select: {
+      id: true,
+      messages: { orderBy: { createdAt: "desc" as const }, take: 1, select: { createdAt: true } },
+    },
+  });
+  if (!thread || thread.messages.length === 0) return;
+  const lastMsgAge = Date.now() - new Date(thread.messages[0].createdAt).getTime();
+  if (lastMsgAge > maxAgeMs) {
+    await db.conversationMessage.deleteMany({ where: { threadId: thread.id } });
+  }
+}
+
+/**
  * Resolve the internal Tenant.id for a conversation session.
  *
  * `requireTenantSession` may return either:

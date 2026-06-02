@@ -13,7 +13,9 @@ import { sendError, sendJson } from "../http/json";
 import { readJson } from "../http/body";
 import { requireTenantSession, AuthedRequest } from "../authz";
 import { processTurnWorkflow } from "../workflows/conversationWorkflow";
-import { getThreadHistory, resolveConversationTenantId } from "../repositories/conversationRepository";
+import { getThreadHistory, resolveConversationTenantId, clearStaleThreadMessages } from "../repositories/conversationRepository";
+
+const SESSION_TIMEOUT_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 // Slice 3: In-memory rate limiter for POST /tenant/conversation (keyed by tenantId).
 // AI turns are expensive (Claude calls) — cap each tenant at 20 messages/minute.
@@ -61,6 +63,11 @@ export function registerTenantConversationRoutes(router: Router) {
     if (messageText.length > 2000) {
       return sendError(res, 400, "VALIDATION_ERROR", "message must be 2000 characters or fewer");
     }
+
+    // Clear stale thread if last message is older than 24h so context stays fresh
+    try {
+      await clearStaleThreadMessages(prisma, tenantId, "IN_APP", SESSION_TIMEOUT_MS);
+    } catch { /* non-fatal */ }
 
     try {
       const result = await processTurnWorkflow(
