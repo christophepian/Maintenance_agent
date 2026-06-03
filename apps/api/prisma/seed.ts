@@ -209,6 +209,7 @@ async function main() {
           category: req.category,
           estimatedCost: req.estimatedCost,
           status: "APPROVED",
+          orgId,
           tenantId: tenant.id,
           unitId: unit.id,
           assetId: asset.id,
