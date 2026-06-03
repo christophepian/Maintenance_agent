@@ -1304,7 +1304,7 @@
     },
     "tabs": {
       "buildings": "Immeubles",
-      "vacancies": "Postes vacants",
+      "vacancies": "Vacances",
       "assets": "Équipements",
       "decisions": "Décisions de maintenance"
     }
@@ -2356,7 +2356,7 @@
       "noLeaseTemplateReady": "Pas de bail — modèle prêt",
       "noLeaseTemplateCreateOneFirst": "Pas de modèle de bail — créez-en un d'abord",
       "buildings": "Immeubles",
-      "vacancies": "Postes vacants",
+      "vacancies": "Vacances",
       "assets": "Actifs",
       "maintenanceDecisions": "Décisions de maintenance",
       "loadingSelections": "Chargement des sélections…",
@@ -2598,7 +2598,7 @@
   },
   "vacanciesUnitidApplications": {
     "text": {
-      "vacancies": "← Postes vacants",
+      "vacancies": "← Vacances",
       "summary": "Résumé",
       "fullDetail": "Détail complet",
       "loading": "Chargement…",
