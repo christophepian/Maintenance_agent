@@ -324,25 +324,28 @@ async function main() {
   ];
 
   for (const s of depStandards) {
-    await prisma.depreciationStandard.upsert({
-      where: {
-        jurisdiction_canton_assetType_topic: {
+    // Prisma upsert cannot match on null in composite unique constraints —
+    // use findFirst + create instead.
+    const existing = await prisma.depreciationStandard.findFirst({
+      where: { jurisdiction: "CH", canton: null, assetType: s.assetType, topic: s.topic },
+    });
+    if (!existing) {
+      await prisma.depreciationStandard.create({
+        data: {
           jurisdiction: "CH",
           canton: null,
           assetType: s.assetType,
           topic: s.topic,
+          usefulLifeMonths: s.usefulLifeMonths,
+          notes: s.notes,
         },
-      },
-      update: { usefulLifeMonths: s.usefulLifeMonths, notes: s.notes },
-      create: {
-        jurisdiction: "CH",
-        canton: null,
-        assetType: s.assetType,
-        topic: s.topic,
-        usefulLifeMonths: s.usefulLifeMonths,
-        notes: s.notes,
-      },
-    });
+      });
+    } else {
+      await prisma.depreciationStandard.update({
+        where: { id: existing.id },
+        data: { usefulLifeMonths: s.usefulLifeMonths, notes: s.notes },
+      });
+    }
   }
 
   console.log("Seed complete:");
