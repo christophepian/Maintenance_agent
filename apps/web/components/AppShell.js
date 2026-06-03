@@ -73,6 +73,11 @@ export default function AppShell({ role: roleProp, children }) {
           setRole(meta.appRole);
           localStorage.setItem("role", meta.appRole);
         }
+        // Persist demo-grant IDs so contractor/tenant pages can read them
+        // from localStorage without needing to re-decode the JWT.
+        if (meta.contractorId) localStorage.setItem("contractorId", meta.contractorId);
+        if (meta.tenantId)     localStorage.setItem("tenantId",     meta.tenantId);
+        if (meta.ownerId)      localStorage.setItem("ownerId",      meta.ownerId);
       }
     });
 
