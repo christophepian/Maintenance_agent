@@ -390,7 +390,7 @@ export default function ManagerDashboard() {
               onClick={async () => {
                 setSeedState("loading");
                 try {
-                  const r = await fetch("/api/sandbox/seed", { method: "POST" });
+                  const r = await fetch("/api/sandbox/seed", { method: "POST", headers: authHeaders() });
                   if (r.ok) {
                     setSeedState("done");
                     loadDashboardData();
