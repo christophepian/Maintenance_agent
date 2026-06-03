@@ -192,7 +192,9 @@ function AuthShell({ children, footer }) {
       {/* ── Brand mark — pinned top-left on desktop ───────────── */}
       <div className="hidden lg:flex absolute z-20 top-12 left-12 xl:top-16 xl:left-16 items-center gap-3 text-white">
         <BrandMark size="lg" />
-        <span className="text-xl font-semibold tracking-tight">Sencilo</span>
+        <span className="text-xl font-semibold tracking-tight">
+          {process.env.NEXT_PUBLIC_SANDBOX === "true" ? "Sandbox" : "Sencilo"}
+        </span>
       </div>
 
       {/* ── Centered content row ──────────────────────────────── */}
@@ -205,11 +207,11 @@ function AuthShell({ children, footer }) {
                 className="text-4xl xl:text-5xl leading-[1.05] tracking-tight"
                 style={{ fontFamily: '"DM Serif Display", Georgia, serif' }}
               >
-                Swiss property,
-                <br />
-                <em className="not-italic" style={{ fontStyle: "italic", color: "#818cf8" }}>
-                  made simple.
-                </em>
+                {process.env.NEXT_PUBLIC_SANDBOX === "true" ? (
+                  <>User test<br /><em className="not-italic" style={{ fontStyle: "italic", color: "#818cf8" }}>environment.</em></>
+                ) : (
+                  <>Swiss property,<br /><em className="not-italic" style={{ fontStyle: "italic", color: "#818cf8" }}>made simple.</em></>
+                )}
               </h2>
             </div>
           </div>
@@ -221,7 +223,7 @@ function AuthShell({ children, footer }) {
               <div className="flex items-center gap-2.5 mb-8 lg:hidden">
                 <BrandMark />
                 <span className="text-lg font-semibold tracking-tight text-white">
-                  Sencilo
+                  {process.env.NEXT_PUBLIC_SANDBOX === "true" ? "Sandbox" : "Sencilo"}
                 </span>
               </div>
 
