@@ -380,9 +380,9 @@ export default function ManagerDashboard() {
         {process.env.NEXT_PUBLIC_SANDBOX === "true" && seedState !== "done" && (
           <div className="mb-6 flex items-center gap-4 rounded-2xl border border-brand-ring bg-brand-light px-5 py-4">
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold text-brand-dark">Sandbox — no data yet?</p>
+              <p className="text-sm font-semibold text-brand-dark">{t("manager:sandbox.banner.title")}</p>
               <p className="text-xs text-brand mt-0.5">
-                Populate 2 buildings, units, tenants and sample requests to see the platform with live content.
+                {t("manager:sandbox.banner.description")}
               </p>
             </div>
             <button
@@ -404,7 +404,7 @@ export default function ManagerDashboard() {
               }}
               className="shrink-0 rounded-xl bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-dark disabled:opacity-60 transition-colors"
             >
-              {seedState === "loading" ? "Seeding…" : seedState === "error" ? "Retry" : "Populate demo data"}
+              {seedState === "loading" ? t("manager:sandbox.banner.buttonLoading") : seedState === "error" ? t("manager:sandbox.banner.buttonRetry") : t("manager:sandbox.banner.button")}
             </button>
           </div>
         )}

@@ -248,6 +248,44 @@ if [ -f "$APP_FILE" ]; then
   fi
 fi
 
+# ─── G17: Warn on hardcoded user-facing strings in frontend files ────────
+# Policy: every user-facing label in pages/ and components/ must go through
+# next-i18next t() so FR/EN translations work seamlessly. Never hardcode
+# visible text as a string literal directly in JSX.
+#
+# Detection: staged .js files in apps/web/pages/ or apps/web/components/ that
+# contain text-like string literals (2+ words, starts with capital) inside JSX
+# — i.e. lines with quoted strings that aren't inside a t() call and aren't
+# purely structural (className, href, aria-*, key, type, etc.).
+echo ""
+echo "━━━ G17: Checking for hardcoded labels (should use t()) ━━━"
+
+STAGED_FRONTEND=$(git diff --cached --name-only | grep -E "^apps/web/(pages|components)/.*\.js$" || true)
+
+if [ -z "$STAGED_FRONTEND" ]; then
+  pass "G17: No staged frontend files to check"
+else
+  G17_HITS=""
+  while IFS= read -r file; do
+    # Look for lines with quoted strings of 2+ English words that don't use t()
+    # Exclude: comments, import lines, className, href, aria-*, key=, type=, style=, placeholder (handled separately), and lines that already call t(
+    HITS=$(grep -n '"[A-Z][a-zA-Z]* [a-zA-Z]' "$ROOT/$file" 2>/dev/null \
+      | grep -v "//\|import \|className\|href=\| key=\|type=\| id=\|style=\|aria-\|data-\|rel=\|method=\|target=\|name=\|role=\|tabIndex\|autoComplete\|defaultValue\|accept=\|encType\|action=\| t(\|console\.\|error\.\| code:\| message:\|@\|http" \
+      | grep -v "^ *\*\|^ *//" \
+      || true)
+    if [ -n "$HITS" ]; then
+      G17_HITS="${G17_HITS}  ${file}:\n${HITS}\n"
+    fi
+  done <<< "$STAGED_FRONTEND"
+
+  if [ -n "$G17_HITS" ]; then
+    warn "G17: Possible hardcoded labels found — wrap in t() and add keys to locale files:"
+    echo -e "$G17_HITS" | head -30
+  else
+    pass "G17: No obvious hardcoded labels detected"
+  fi
+fi
+
 # ─── Summary ─────────────────────────────────────────────────────────────
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

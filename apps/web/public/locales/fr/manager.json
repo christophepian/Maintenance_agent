@@ -1,4 +1,13 @@
 {
+  "sandbox": {
+    "banner": {
+      "title": "Sandbox — pas encore de données ?",
+      "description": "Ajoutez 2 immeubles, logements, locataires et demandes types pour voir la plateforme avec un contenu réel.",
+      "button": "Remplir avec des données de démo",
+      "buttonLoading": "Chargement…",
+      "buttonRetry": "Réessayer"
+    }
+  },
   "nav": {
     "dashboard": "Tableau de bord",
     "requests": "Demandes",

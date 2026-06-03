@@ -1,4 +1,13 @@
 {
+  "sandbox": {
+    "banner": {
+      "title": "Sandbox — no data yet?",
+      "description": "Populate 2 buildings, units, tenants and sample requests to see the platform with live content.",
+      "button": "Populate demo data",
+      "buttonLoading": "Seeding…",
+      "buttonRetry": "Retry"
+    }
+  },
   "nav": {
     "dashboard": "Dashboard",
     "requests": "Requests",
