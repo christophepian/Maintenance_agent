@@ -78,6 +78,15 @@ export default function AppShell({ role: roleProp, children }) {
         if (meta.contractorId) localStorage.setItem("contractorId", meta.contractorId);
         if (meta.tenantId)     localStorage.setItem("tenantId",     meta.tenantId);
         if (meta.ownerId)      localStorage.setItem("ownerId",      meta.ownerId);
+
+        // Sandbox: auto-provision persona records if setup hasn't run yet.
+        // Idempotent — safe to call on every cold session. Fires when contractorId
+        // is absent (e.g. SQL-created accounts that bypassed the magic-link flow).
+        if (process.env.NEXT_PUBLIC_SANDBOX === "true" && !meta.contractorId) {
+          fetch("/api/sandbox/setup", { method: "POST" })
+            .then((r) => r.ok && window.location.reload())
+            .catch(() => {});
+        }
       }
     });
 
