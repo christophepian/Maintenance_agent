@@ -57,6 +57,10 @@ apps/api/.data/
 # One-off test/seed scripts at root
 create-test-*.js
 
+# One-off utility scripts (dangerous or superseded — not for general use)
+scripts/apply-fr-translations.js
+scripts/cleanup-duplicate-buildings.js
+
 # Local database backups
 backups/*.sql
 
