@@ -264,11 +264,8 @@ export function registerInventoryRoutes(router: Router) {
     try {
       const building = await inventoryRepo.findBuildingByIdDeep(prisma, params.id, orgId);
       if (!building) return sendError(res, 404, "NOT_FOUND", "Building not found");
-      // MANAGER role: only see buildings explicitly assigned to them
-      const user = getAuthUser(req);
-      if (user?.role === "MANAGER" && (building as any).managerId !== user.userId) {
-        return sendError(res, 404, "NOT_FOUND", "Building not found");
-      }
+      // managerId is an assignment/tracking field, not an access gate —
+      // same rationale as GET /buildings (see earlier fix). Managers see all org buildings.
       sendJson(res, 200, { data: mapBuildingToDetailDTO(building as any) });
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to fetch building", String(e));
