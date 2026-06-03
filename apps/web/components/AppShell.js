@@ -144,7 +144,9 @@ export default function AppShell({ role: roleProp, children }) {
         className="hidden md:flex md:flex-col border-r border-surface-border px-4 py-5 bg-surface-hover"
         aria-label={t("appShell.sidebarNavigation")}
       >
-        <div className="font-bold text-lg mb-5">Sencilo</div>
+        <div className="font-bold text-lg mb-5">
+          {process.env.NEXT_PUBLIC_SANDBOX === "true" ? "Sandbox" : "Sencilo"}
+        </div>
 
         {/* Role switcher — admin users and dev/staging environments */}
         {(ROLE_SWITCH_ENABLED || isAdmin) && (
