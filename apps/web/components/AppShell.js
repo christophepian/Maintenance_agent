@@ -124,7 +124,7 @@ export default function AppShell({ role: roleProp, children }) {
     router.push("/login", undefined, { locale: router.locale });
   }
 
-  const showHubBar = isAdmin || role === "MANAGER";
+  const showHubBar = process.env.NEXT_PUBLIC_SANDBOX !== "true" && (isAdmin || role === "MANAGER");
 
   return (
     <>
