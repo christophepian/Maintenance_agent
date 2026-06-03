@@ -11,7 +11,7 @@
     "start": "npx prisma migrate deploy --schema ./prisma/schema.prisma && node dist/server.js",
     "start:dev": "ts-node src/server.ts",
     "dev": "ts-node src/server.ts",
-    "build": "tsc -p tsconfig.json && npx prisma migrate deploy --schema ./prisma/schema.prisma",
+    "build": "tsc -p tsconfig.json",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev --name init",
     "seed": "ts-node prisma/seed.ts",
