@@ -127,9 +127,10 @@ if (isProdEnv) {
   // Guard against deploying from a branch other than main.
   // RENDER_GIT_BRANCH is injected automatically by Render at build time.
   const deployedBranch = process.env.RENDER_GIT_BRANCH;
-  if (deployedBranch && deployedBranch !== "main") {
+  const allowedBranches = ["main", "sandbox"];
+  if (deployedBranch && !allowedBranches.includes(deployedBranch)) {
     console.error(
-      `[FATAL] Production must deploy from 'main'. Currently on '${deployedBranch}'. Update the Render service branch setting.`,
+      `[FATAL] Production must deploy from 'main' or 'sandbox'. Currently on '${deployedBranch}'. Update the Render service branch setting.`,
     );
     process.exit(1);
   }
