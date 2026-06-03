@@ -4,6 +4,9 @@
   "engines": {
     "node": ">=20.0.0 <21.0.0"
   },
+  "prisma": {
+    "seed": "ts-node prisma/seed.ts"
+  },
   "scripts": {
     "start": "npx prisma migrate deploy --schema ./prisma/schema.prisma && node dist/server.js",
     "start:dev": "ts-node src/server.ts",
