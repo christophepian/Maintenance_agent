@@ -80,11 +80,16 @@ export default function AppShell({ role: roleProp, children }) {
         if (meta.ownerId)      localStorage.setItem("ownerId",      meta.ownerId);
 
         // Sandbox: auto-provision persona records if setup hasn't run yet.
-        // Idempotent — safe to call on every cold session. Fires when contractorId
-        // is absent (e.g. SQL-created accounts that bypassed the magic-link flow).
-        if (process.env.NEXT_PUBLIC_SANDBOX === "true" && !meta.contractorId) {
+        // Uses a localStorage flag to prevent re-triggering after reload
+        // (Supabase JWT claims update on next sign-in, not immediately).
+        if (
+          process.env.NEXT_PUBLIC_SANDBOX === "true" &&
+          !meta.contractorId &&
+          !localStorage.getItem("sandboxSetupDone")
+        ) {
+          localStorage.setItem("sandboxSetupDone", "1");
           fetch("/api/sandbox/setup", { method: "POST" })
-            .then((r) => r.ok && window.location.reload())
+            .then((r) => { if (r.ok) window.location.reload(); })
             .catch(() => {});
         }
       }
