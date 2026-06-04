@@ -2,31 +2,37 @@
  * Condition Report routes (État des lieux)
  *
  * Manager endpoints:
- *   GET  /units/:id/condition-reports          — list for a unit
- *   POST /units/:id/condition-reports          — manually create
- *   GET  /condition-reports/:id                — detail + items + delta
- *   POST /condition-reports/:id/approve        — manager sign-off
- *   POST /condition-reports/:id/reopen         — send back to tenant
+ *   GET  /units/:id/condition-reports                                      — list for a unit
+ *   POST /units/:id/condition-reports                                      — manually create
+ *   GET  /condition-reports/:id                                            — detail + items + delta
+ *   POST /condition-reports/:id/approve                                    — manager sign-off
+ *   POST /condition-reports/:id/reopen                                     — send back to tenant
+ *   GET  /condition-report-photos/:photoId                                 — serve photo file
  *
  * Tenant-portal endpoints:
- *   GET    /tenant-portal/condition-reports                             — tenant inbox
- *   GET    /tenant-portal/condition-reports/:id                        — report detail
- *   POST   /tenant-portal/condition-reports/:id/items                  — add item
- *   PATCH  /tenant-portal/condition-reports/:id/items/:itemId          — update item
- *   DELETE /tenant-portal/condition-reports/:id/items/:itemId          — remove item
- *   POST   /tenant-portal/condition-reports/:id/submit                 — submit
- *
- *   Photo upload/delete added in Increment 3.
+ *   GET    /tenant-portal/condition-reports                                — tenant inbox
+ *   GET    /tenant-portal/condition-reports/:id                           — report detail
+ *   POST   /tenant-portal/condition-reports/:id/items                     — add item
+ *   PATCH  /tenant-portal/condition-reports/:id/items/:itemId             — update item
+ *   DELETE /tenant-portal/condition-reports/:id/items/:itemId             — remove item
+ *   POST   /tenant-portal/condition-reports/:id/items/:itemId/photos      — upload photo
+ *   DELETE /tenant-portal/condition-reports/:id/items/:itemId/photos/:photoId — delete photo
+ *   POST   /tenant-portal/condition-reports/:id/submit                    — submit
  */
 
 import { Router } from "../http/router";
 import { sendError, sendJson } from "../http/json";
 import { readJson } from "../http/body";
-import { maybeRequireManager, requireTenantSession } from "../authz";
+import { readRawBody, parseMultipart, storage } from "../storage/attachments";
+import { maybeRequireManager, requireTenantSession, requireAuth } from "../authz";
 import { ConditionReportType, ConditionReportStatus, ItemCondition } from "@prisma/client";
 import * as repo from "../repositories/conditionReportRepository";
 import * as svc from "../services/conditionReportService";
 import { assertConditionReportTransition } from "../workflows/transitions";
+import { randomUUID } from "crypto";
+
+const ACCEPTED_PHOTO_MIMES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const MAX_PHOTO_SIZE = 5 * 1024 * 1024; // 5 MB
 
 const VALID_CONDITIONS = Object.values(ItemCondition);
 const VALID_TYPES = Object.values(ConditionReportType);
@@ -297,6 +303,112 @@ export function registerConditionReportRoutes(router: Router) {
       sendJson(res, 200, { data: { ok: true } });
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to delete item", String(e));
+    }
+  });
+
+  // ── POST /tenant-portal/condition-reports/:id/items/:itemId/photos ──────────
+  router.post("/tenant-portal/condition-reports/:id/items/:itemId/photos", async ({ req, res, orgId, prisma, params }) => {
+    const tenantId = requireTenantSession(req, res);
+    if (!tenantId) return;
+    try {
+      const report = await repo.findById(prisma, params.id, orgId);
+      if (!report || report.tenantId !== tenantId) {
+        return sendError(res, 404, "NOT_FOUND", "Report not found");
+      }
+      if (report.status !== ConditionReportStatus.PENDING) {
+        return sendError(res, 409, "CONFLICT", "Report is no longer editable");
+      }
+
+      // Verify item belongs to this report
+      const item = report.items.find((i) => i.id === params.itemId);
+      if (!item) return sendError(res, 404, "NOT_FOUND", "Item not found");
+
+      // Parse multipart body
+      const contentType = req.headers["content-type"] || "";
+      const boundaryMatch = contentType.match(/boundary=([^\s;]+)/);
+      if (!boundaryMatch) {
+        return sendError(res, 400, "BAD_REQUEST", "Content-Type must be multipart/form-data");
+      }
+      const rawBody = await readRawBody(req, MAX_PHOTO_SIZE);
+      const parts = parseMultipart(rawBody, boundaryMatch[1]);
+      const filePart = parts.find((p) => p.name === "photo" && p.filename);
+
+      if (!filePart) {
+        return sendError(res, 400, "BAD_REQUEST", 'Missing "photo" file field');
+      }
+      const mimeType = filePart.contentType ?? "image/jpeg";
+      if (!ACCEPTED_PHOTO_MIMES.has(mimeType)) {
+        return sendError(res, 400, "BAD_REQUEST", "Only JPEG, PNG, and WebP photos are accepted");
+      }
+      if (filePart.data.length > MAX_PHOTO_SIZE) {
+        return sendError(res, 413, "PAYLOAD_TOO_LARGE", "Photo exceeds 5 MB limit");
+      }
+
+      const ext = mimeType === "image/png" ? "png" : mimeType === "image/webp" ? "webp" : "jpg";
+      const key = `condition-reports/${params.id}/${params.itemId}/${randomUUID()}.${ext}`;
+      await storage.put(key, filePart.data);
+
+      const captionPart = parts.find((p) => p.name === "caption" && !p.filename);
+      const caption = captionPart ? captionPart.data.toString("utf8").trim() : undefined;
+
+      const photo = await repo.addPhoto(prisma, params.itemId, key, caption || undefined);
+      sendJson(res, 201, { data: { ...photo, url: `/api/condition-report-photos/${photo.id}` } });
+    } catch (e: any) {
+      if (e?.message?.includes("too large") || e?.code === "PAYLOAD_TOO_LARGE") {
+        return sendError(res, 413, "PAYLOAD_TOO_LARGE", "Photo exceeds 5 MB limit");
+      }
+      console.error("[condition-reports/upload-photo]", e);
+      sendError(res, 500, "UPLOAD_ERROR", "Failed to upload photo", String(e));
+    }
+  });
+
+  // ── DELETE /tenant-portal/condition-reports/:id/items/:itemId/photos/:photoId ─
+  router.delete("/tenant-portal/condition-reports/:id/items/:itemId/photos/:photoId", async ({ req, res, orgId, prisma, params }) => {
+    const tenantId = requireTenantSession(req, res);
+    if (!tenantId) return;
+    try {
+      const report = await repo.findById(prisma, params.id, orgId);
+      if (!report || report.tenantId !== tenantId) {
+        return sendError(res, 404, "NOT_FOUND", "Report not found");
+      }
+      if (report.status !== ConditionReportStatus.PENDING) {
+        return sendError(res, 409, "CONFLICT", "Report is no longer editable");
+      }
+      // Fetch photo to get storageKey before deleting
+      const photo = await prisma.unitConditionReportPhoto.findFirst({
+        where: { id: params.photoId, itemId: params.itemId },
+      });
+      if (!photo) return sendError(res, 404, "NOT_FOUND", "Photo not found");
+
+      await repo.deletePhoto(prisma, params.photoId, params.itemId);
+      storage.delete(photo.storageKey).catch(() => {}); // best-effort storage cleanup
+      sendJson(res, 200, { data: { ok: true } });
+    } catch (e) {
+      sendError(res, 500, "DB_ERROR", "Failed to delete photo", String(e));
+    }
+  });
+
+  // ── GET /condition-report-photos/:photoId — serve photo file ─────────────────
+  // Accessible to any authenticated user (manager or tenant) — auth enforced by requireAuth.
+  router.get("/condition-report-photos/:photoId", async ({ req, res, prisma, params }) => {
+    if (!requireAuth(req, res)) return;
+    try {
+      const photo = await prisma.unitConditionReportPhoto.findUnique({
+        where: { id: params.photoId },
+      });
+      if (!photo) return sendError(res, 404, "NOT_FOUND", "Photo not found");
+
+      const buffer = await storage.get(photo.storageKey);
+      const ext = photo.storageKey.split(".").pop() ?? "jpg";
+      const mime = ext === "png" ? "image/png" : ext === "webp" ? "image/webp" : "image/jpeg";
+      res.writeHead(200, {
+        "Content-Type": mime,
+        "Content-Length": buffer.length,
+        "Cache-Control": "private, max-age=3600",
+      });
+      res.end(buffer);
+    } catch (e) {
+      sendError(res, 500, "STORAGE_ERROR", "Failed to retrieve photo", String(e));
     }
   });
 
