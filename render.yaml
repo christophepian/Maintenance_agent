@@ -10,11 +10,8 @@ services:
     # --- Build ---
     buildCommand: npm ci && cd apps/api && npx prisma generate --schema ./prisma/schema.prisma && rm -rf dist && npm run build
 
-    # --- Pre-deploy: run migrations before new code goes live ---
-    preDeployCommand: cd apps/api && npx prisma migrate deploy --schema ./prisma/schema.prisma
-
-    # --- Start ---
-    startCommand: cd apps/api && node dist/server.js
+    # --- Start (migrate first — idempotent, safe on every boot) ---
+    startCommand: cd apps/api && npx prisma migrate deploy --schema ./prisma/schema.prisma && node dist/server.js
 
     # --- Health check ---
     healthCheckPath: /health
