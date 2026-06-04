@@ -114,7 +114,8 @@ export default function ManagerConditionReportDetail() {
     (url) => fetch(url, { headers: authHeaders() }),
   );
 
-  const report = data?.data ?? null;
+  // useDetailResource already unwraps .data — report is the full object directly
+  const report = data ?? null;
   const delta = data?.delta ?? null;
   const deltaCount = data?.deltaCount ?? 0;
 
@@ -171,7 +172,7 @@ export default function ManagerConditionReportDetail() {
           }
         />
         <PageContent>
-          <ResourceShell loading={loading} error={error} notFound={!loading && !report}>
+          <ResourceShell loading={loading} error={error} hasData={!!report}>
             {report && (
               <div className="space-y-6 max-w-3xl">
                 {actionError && <ErrorBanner error={actionError} />}

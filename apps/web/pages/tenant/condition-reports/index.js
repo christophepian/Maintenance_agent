@@ -33,7 +33,8 @@ export default function TenantConditionReports() {
     tenantFetch,
   );
 
-  const reports = data?.data ?? [];
+  // useDetailResource already unwraps .data — reports is the array directly
+  const reports = Array.isArray(data) ? data : [];
 
   return (
     <AppShell role="TENANT">
@@ -43,7 +44,7 @@ export default function TenantConditionReports() {
           subtitle={t("conditionReport.subtitle")}
         />
         <PageContent>
-          <ResourceShell loading={loading} error={error}>
+          <ResourceShell loading={loading} error={error} hasData={true}>
             {reports.length === 0 ? (
               <div className="empty-state">
                 <p className="empty-state-text">{t("conditionReport.empty")}</p>

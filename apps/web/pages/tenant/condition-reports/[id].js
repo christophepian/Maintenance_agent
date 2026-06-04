@@ -320,7 +320,8 @@ export default function TenantConditionReportDetail() {
     tenantFetch,
   );
 
-  const report = data?.data ?? null;
+  // useDetailResource already unwraps .data — report is the object directly
+  const report = data ?? null;
   const [items, setItems] = useState(null);
   const [submitError, setSubmitError] = useState("");
   const { pending: submitting, run: runSubmit } = useAction();
@@ -366,7 +367,7 @@ export default function TenantConditionReportDetail() {
           ) : null}
         />
         <PageContent>
-          <ResourceShell loading={loading} error={error} notFound={!loading && !report}>
+          <ResourceShell loading={loading} error={error} hasData={!!report}>
             {report && (
               <div className="space-y-6 max-w-2xl">
                 {submitError && <ErrorBanner error={submitError} />}
