@@ -22,7 +22,7 @@ export default function ContractorPicker({ onSelect }) {
         // Load full contractor list (uses /api/contractors proxy → backend)
         const res = await fetch("/api/contractors", { headers: authHeaders() });
         const data = await res.json();
-        const list = data?.data || data || [];
+        const list = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : [];
         setContractors(list);
 
         // Pre-select from localStorage if already set
