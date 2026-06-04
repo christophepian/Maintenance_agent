@@ -9,13 +9,15 @@ import {
   Search,
   Settings,
   Mail,
+  ClipboardList,
 } from "lucide-react";
 
 const TENANT_NAV = [
   { id: "myHome",    icon: Home,  href: "/tenant/myhome", aliases: ["/tenant/leases", "/tenant/invoices"] },
   { id: "inbox",     icon: Inbox, href: "/tenant/inbox" },
   { id: "requests",  icon: Wrench, href: "/tenant/requests" },
-  { id: "letters",   icon: Mail,  href: "/tenant/letters" },
+  { id: "letters",          icon: Mail,          href: "/tenant/letters" },
+  { id: "conditionReports", icon: ClipboardList, href: "/tenant/condition-reports" },
   { id: "apply",     icon: Search, href: "/listings" },
   { id: "settings",  icon: Settings, href: "/tenant/settings" },
 ];

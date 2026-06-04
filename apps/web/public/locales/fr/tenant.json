@@ -9,7 +9,8 @@
     "myHome": "Mon logement",
     "apply": "Candidater",
     "settings": "Paramètres",
-    "letters": "Courrier"
+    "letters": "Courrier",
+    "conditionReports": "États des lieux"
   },
   "dashboard": {
     "title": "Espace locataire",
@@ -346,5 +347,46 @@
     "replySent": "Votre réponse a été envoyée.",
     "sending": "Envoi…",
     "sendReply": "Envoyer"
+  },
+  "conditionReport": {
+    "nav": "États des lieux",
+    "title": "États des lieux",
+    "subtitle": "Inspections d'entrée et de sortie",
+    "loading": "Chargement…",
+    "empty": "Aucun état des lieux pour l'instant.",
+    "notFound": "Rapport introuvable.",
+    "dueIn": "À remettre dans {{days}} jour(s)",
+    "overdue": "En retard",
+    "type": {
+      "MOVE_IN": "Entrée",
+      "MOVE_OUT": "Sortie"
+    },
+    "status": {
+      "PENDING": "En attente",
+      "SUBMITTED": "Soumis",
+      "APPROVED": "Approuvé"
+    },
+    "items": "éléments",
+    "addItem": "Ajouter un élément",
+    "roomLabel": "Pièce",
+    "roomPlaceholder": "ex. Cuisine, Chambre 1…",
+    "itemLabel": "Élément",
+    "itemPlaceholder": "ex. Murs, Sol, Fenêtre…",
+    "condition": "État",
+    "notes": "Remarques",
+    "notesPlaceholder": "Remarques optionnelles…",
+    "condition_GOOD": "Bon",
+    "condition_FAIR": "Correct",
+    "condition_POOR": "Mauvais",
+    "condition_DAMAGED": "Endommagé",
+    "saveItem": "Enregistrer",
+    "saving": "Enregistrement…",
+    "deleteItem": "Supprimer",
+    "submit": "Soumettre le rapport",
+    "submitting": "Envoi en cours…",
+    "submitConfirm": "Soumettre ce rapport à votre gérance ? Vous ne pourrez plus le modifier ensuite.",
+    "photosRequired": "Photos requises pour les éléments dégradés : {{items}}",
+    "managerNotes": "Remarques de la gérance",
+    "approvedOn": "Approuvé le {{date}}"
   }
 }

@@ -9,7 +9,8 @@
     "myHome": "My Home",
     "apply": "Apply",
     "settings": "Settings",
-    "letters": "Letters"
+    "letters": "Letters",
+    "conditionReports": "Condition Reports"
   },
   "dashboard": {
     "title": "Tenant Portal",
@@ -346,5 +347,46 @@
     "replySent": "Your reply has been sent.",
     "sending": "Sending…",
     "sendReply": "Send reply"
+  },
+  "conditionReport": {
+    "nav": "Condition Reports",
+    "title": "Condition Reports",
+    "subtitle": "Move-in and move-out inspections",
+    "loading": "Loading…",
+    "empty": "No condition reports yet.",
+    "notFound": "Report not found.",
+    "dueIn": "Due in {{days}} day(s)",
+    "overdue": "Overdue",
+    "type": {
+      "MOVE_IN": "Move-in",
+      "MOVE_OUT": "Move-out"
+    },
+    "status": {
+      "PENDING": "Pending",
+      "SUBMITTED": "Submitted",
+      "APPROVED": "Approved"
+    },
+    "items": "items",
+    "addItem": "Add item",
+    "roomLabel": "Room",
+    "roomPlaceholder": "e.g. Kitchen, Bedroom 1…",
+    "itemLabel": "Item",
+    "itemPlaceholder": "e.g. Walls, Floor, Window…",
+    "condition": "Condition",
+    "notes": "Notes",
+    "notesPlaceholder": "Optional notes…",
+    "condition_GOOD": "Good",
+    "condition_FAIR": "Fair",
+    "condition_POOR": "Poor",
+    "condition_DAMAGED": "Damaged",
+    "saveItem": "Save item",
+    "saving": "Saving…",
+    "deleteItem": "Remove",
+    "submit": "Submit report",
+    "submitting": "Submitting…",
+    "submitConfirm": "Submit this report to your property manager? You won't be able to edit it afterwards.",
+    "photosRequired": "Photos required for degraded items: {{items}}",
+    "managerNotes": "Manager notes",
+    "approvedOn": "Approved on {{date}}"
   }
 }
