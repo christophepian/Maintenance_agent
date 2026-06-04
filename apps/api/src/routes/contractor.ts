@@ -38,11 +38,16 @@ async function resolveContractorId(
   orgId: string,
 ): Promise<string | null> {
   if (user.accessLevel === "ADMIN") {
-    return queryContractorId ?? null;
+    // Explicit query param wins; fall through to demo grant if absent
+    if (queryContractorId) return queryContractorId;
   }
   // Demo grant: contractorId set in app_metadata (sandbox multi-persona access)
+  // Checked for both ADMIN and non-ADMIN users so sandbox ADMIN accounts work.
   if (user.contractorId) {
     return user.contractorId;
+  }
+  if (user.accessLevel === "ADMIN") {
+    return null; // ADMIN with no query param and no demo grant
   }
   const row = await findContractorByOrgAndEmail(prisma, user.email, orgId);
   return row?.id ?? null;
