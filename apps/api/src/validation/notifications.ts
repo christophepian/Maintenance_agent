@@ -30,6 +30,8 @@ export const NotificationEventTypeSchema = z.enum([
   'RATING_SUBMITTED',
   'INVOICE_OVERDUE',
   'LETTER_REPLY_RECEIVED',
+  'CONDITION_REPORT_SUBMITTED',
+  'CONDITION_REPORT_APPROVED',
 ]);
 
 export type NotificationEventType = z.infer<typeof NotificationEventTypeSchema>;

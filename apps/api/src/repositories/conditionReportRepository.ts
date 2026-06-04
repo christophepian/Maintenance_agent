@@ -73,6 +73,47 @@ export async function findLatestApprovedItemForAsset(
   });
 }
 
+export interface LatestCondition {
+  condition: ItemCondition;
+  reportId: string;
+  reportedAt: Date | null;
+  reportType: string;
+}
+
+export async function findLatestConditionsForAssets(
+  prisma: PrismaClient,
+  assetIds: string[],
+  orgId: string,
+): Promise<Map<string, LatestCondition>> {
+  if (assetIds.length === 0) return new Map();
+
+  const rows = await prisma.unitConditionReportItem.findMany({
+    where: {
+      assetId: { in: assetIds },
+      report: { orgId, status: ConditionReportStatus.APPROVED },
+    },
+    select: {
+      assetId: true,
+      condition: true,
+      report: { select: { id: true, approvedAt: true, type: true } },
+    },
+    orderBy: { report: { approvedAt: "desc" } },
+  });
+
+  // For each asset, keep only the most recent row (already sorted desc)
+  const result = new Map<string, LatestCondition>();
+  for (const row of rows) {
+    if (!row.assetId || result.has(row.assetId)) continue;
+    result.set(row.assetId, {
+      condition: row.condition,
+      reportId: row.report.id,
+      reportedAt: row.report.approvedAt,
+      reportType: row.report.type,
+    });
+  }
+  return result;
+}
+
 // ── Mutations ──────────────────────────────────────────────────────────────────
 
 export async function createReport(

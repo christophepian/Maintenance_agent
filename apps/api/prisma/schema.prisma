@@ -969,6 +969,8 @@ enum NotificationEventType {
   INVOICE_OVERDUE
   RATING_SUBMITTED
   LETTER_REPLY_RECEIVED
+  CONDITION_REPORT_SUBMITTED
+  CONDITION_REPORT_APPROVED
 }
 
 // ==========================================
