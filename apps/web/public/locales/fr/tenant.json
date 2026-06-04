@@ -177,6 +177,21 @@
       "terminatedOn": "Résilié le :",
       "reason": "Motif :",
       "notice": "Préavis :"
+    },
+    "giveNotice": {
+      "button": "Donner son préavis de départ",
+      "title": "Processus de départ",
+      "intro": "En confirmant, vous enregistrez votre intention de quitter le logement. Votre gérance sera informée et votre formulaire d'état des lieux de sortie sera créé.",
+      "step1": "Remplir le formulaire d'état des lieux de sortie",
+      "step2": "Remettre l'appartement propre et en bon état",
+      "step3": "Planifier la remise des clés avec votre gérance",
+      "step4": "Confirmer votre adresse de réexpédition (plaquette sonnette et boîte aux lettres — à organiser avec votre gérance)",
+      "confirm": "Confirmer le préavis de départ",
+      "submitting": "Envoi en cours…",
+      "cancel": "Annuler",
+      "doneTitle": "Préavis enregistré",
+      "doneBody": "Votre gérance a été informée et un e-mail de confirmation vous a été envoyé. Votre formulaire d'état des lieux de sortie est prêt — veuillez le compléter avant la date limite indiquée.",
+      "goToReport": "Ouvrir l'état des lieux de sortie"
     }
   },
   "leasesIndex": {

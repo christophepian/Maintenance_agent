@@ -177,6 +177,21 @@
       "terminatedOn": "Terminated on:",
       "reason": "Reason:",
       "notice": "Notice:"
+    },
+    "giveNotice": {
+      "button": "Give notice of departure",
+      "title": "Departure process",
+      "intro": "By confirming, you are registering your intention to leave. Your property manager will be informed and your move-out inspection form will be created.",
+      "step1": "Fill in your move-out condition report (État des lieux)",
+      "step2": "Ensure the apartment is clean and in good order",
+      "step3": "Schedule the key handover with your property manager",
+      "step4": "Confirm your forwarding address (bell & mailbox nameplate — to be arranged with your manager)",
+      "confirm": "Confirm departure notice",
+      "submitting": "Sending…",
+      "cancel": "Cancel",
+      "doneTitle": "Notice registered",
+      "doneBody": "Your property manager has been notified and a confirmation email has been sent to you. Your move-out inspection form is ready — please complete it before the indicated deadline.",
+      "goToReport": "Open move-out inspection"
     }
   },
   "leasesIndex": {
