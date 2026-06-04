@@ -387,6 +387,14 @@
     "submitConfirm": "Soumettre ce rapport à votre gérance ? Vous ne pourrez plus le modifier ensuite.",
     "photosRequired": "Photos requises pour les éléments dégradés : {{items}}",
     "managerNotes": "Remarques de la gérance",
-    "approvedOn": "Approuvé le {{date}}"
+    "approvedOn": "Approuvé le {{date}}",
+    "edit": "Modifier",
+    "cancel": "Annuler",
+    "noItems": "Aucun élément. Ajoutez des pièces et éléments ci-dessous.",
+    "roomItemRequired": "Les champs pièce et élément sont requis.",
+    "addPhoto": "Ajouter une photo",
+    "uploadingPhoto": "Téléchargement…",
+    "photoAdvisory": "Photos recommandées pour les éléments en mauvais état ou endommagés.",
+    "noPhotos": "Aucune photo"
   }
 }

@@ -387,6 +387,14 @@
     "submitConfirm": "Submit this report to your property manager? You won't be able to edit it afterwards.",
     "photosRequired": "Photos required for degraded items: {{items}}",
     "managerNotes": "Manager notes",
-    "approvedOn": "Approved on {{date}}"
+    "approvedOn": "Approved on {{date}}",
+    "edit": "Edit",
+    "cancel": "Cancel",
+    "noItems": "No items yet. Add rooms and items below.",
+    "roomItemRequired": "Room and item labels are required.",
+    "addPhoto": "Add photo",
+    "uploadingPhoto": "Uploading…",
+    "photoAdvisory": "Photos recommended for damaged or poor-condition items.",
+    "noPhotos": "No photos"
   }
 }
