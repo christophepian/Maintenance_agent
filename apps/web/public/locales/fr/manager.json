@@ -2823,5 +2823,27 @@
       "sent": "Envoyé",
       "archived": "Archivé"
     }
+  },
+  "conditionReport": {
+    "title": "État des lieux",
+    "moveIn": "État des lieux d'entrée",
+    "moveOut": "État des lieux de sortie",
+    "backToUnit": "Retour à l'unité",
+    "status_PENDING": "En attente",
+    "status_SUBMITTED": "Soumis",
+    "status_APPROVED": "Approuvé",
+    "submittedOn": "Soumis le",
+    "approvedOn": "Approuvé le",
+    "approve": "Approuver",
+    "approving": "Approbation…",
+    "reopen": "Renvoyer au locataire",
+    "reopening": "Renvoi en cours…",
+    "reopenNotesRequired": "Veuillez ajouter une remarque expliquant ce qui doit être corrigé.",
+    "reopenNotesHint": "Une remarque est requise lors du renvoi du rapport au locataire.",
+    "managerNotes": "Remarques de la gérance",
+    "managerNotesPlaceholder": "Remarques optionnelles visibles par le locataire…",
+    "deltaCount": "{{count}} élément(s) présente(nt) une dégradation par rapport à l'état des lieux d'entrée.",
+    "noDelta": "Aucune dégradation détectée par rapport à l'état des lieux d'entrée.",
+    "missingPhotoWarning": "Photo requise — cet élément est dégradé mais n'a pas de photo."
   }
 }

@@ -2824,5 +2824,27 @@
       "sent": "Sent",
       "archived": "Archived"
     }
+  },
+  "conditionReport": {
+    "title": "Condition Report",
+    "moveIn": "Move-in inspection",
+    "moveOut": "Move-out inspection",
+    "backToUnit": "Back to unit",
+    "status_PENDING": "Pending",
+    "status_SUBMITTED": "Submitted",
+    "status_APPROVED": "Approved",
+    "submittedOn": "Submitted on",
+    "approvedOn": "Approved on",
+    "approve": "Approve",
+    "approving": "Approving…",
+    "reopen": "Send back",
+    "reopening": "Sending back…",
+    "reopenNotesRequired": "Please add a note explaining what needs to be corrected before reopening.",
+    "reopenNotesHint": "A note is required when sending the report back to the tenant.",
+    "managerNotes": "Manager notes",
+    "managerNotesPlaceholder": "Optional notes visible to the tenant…",
+    "deltaCount": "{{count}} item(s) show degradation compared to the move-in report.",
+    "noDelta": "No degradation detected compared to the move-in report.",
+    "missingPhotoWarning": "Photo required — this item is degraded but has no photo."
   }
 }

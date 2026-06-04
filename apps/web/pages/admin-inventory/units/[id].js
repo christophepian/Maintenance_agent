@@ -44,6 +44,8 @@ export default function UnitDetail() {
   const [editFloor, setEditFloor] = useState("");
   const [editType, setEditType] = useState("");
   const [activeTab, setActiveTab] = useState("Details");
+  const [conditionReports, setConditionReports] = useState([]);
+  const [conditionReportsLoading, setConditionReportsLoading] = useState(false);
   const [tenantAction, setTenantAction] = useState(null);
   const [applicationIds, setApplicationIds] = useState([]);
 
@@ -356,6 +358,14 @@ export default function UnitDetail() {
     if (id && activeTab === "Contracts") loadLeases();
     if (id && activeTab === "Financials") loadUnitFinancials();
     if (id && activeTab === "Requests") loadUnitRequests();
+    if (id && activeTab === "Condition Reports") {
+      setConditionReportsLoading(true);
+      fetch(`/api/units/${id}/condition-reports`, { headers: authHeaders() })
+        .then((r) => r.json())
+        .then((d) => setConditionReports(d?.data ?? []))
+        .catch(() => {})
+        .finally(() => setConditionReportsLoading(false));
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, activeTab]);
 
@@ -530,8 +540,8 @@ export default function UnitDetail() {
             </div>
           )}
 
-          <ScrollableTabs activeIndex={["Details", "Tenants", "Assets", "Rent Estimate", "Documents", "Financials", "Contracts", "Requests"].indexOf(activeTab)}>
-            {["Details", "Tenants", "Assets", "Rent Estimate", "Documents", "Financials", "Contracts", "Requests"].map((tab) => (
+          <ScrollableTabs activeIndex={["Details", "Tenants", "Assets", "Rent Estimate", "Documents", "Financials", "Contracts", "Requests", "Condition Reports"].indexOf(activeTab)}>
+            {["Details", "Tenants", "Assets", "Rent Estimate", "Documents", "Financials", "Contracts", "Requests", "Condition Reports"].map((tab) => (
               <button key={tab} type="button"
                 className={activeTab === tab ? "tab-btn-active" : "tab-btn"}
                 onClick={() => setActiveTab(tab)}>
@@ -1367,6 +1377,38 @@ export default function UnitDetail() {
             </div>
           )}
         </Panel>
+          )}
+
+          {activeTab === "Condition Reports" && (
+            <div className="space-y-2 py-4">
+              {conditionReportsLoading ? (
+                <p className="text-sm text-muted py-6 text-center">Loading…</p>
+              ) : conditionReports.length === 0 ? (
+                <p className="text-sm text-foreground-dim italic py-6 text-center">No condition reports for this unit yet.</p>
+              ) : (
+                conditionReports.map((r) => {
+                  const statusVariant = { PENDING: "warning", SUBMITTED: "info", APPROVED: "success" };
+                  const typeLabel = r.type === "MOVE_IN" ? "Move-in" : "Move-out";
+                  return (
+                    <div
+                      key={r.id}
+                      onClick={() => router.push(`/manager/condition-reports/${r.id}?from=/admin-inventory/units/${id}`)}
+                      className="card border px-4 py-3 cursor-pointer hover:bg-surface-subtle transition-colors"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2 flex-wrap min-w-0">
+                          <Badge variant={statusVariant[r.status] || "neutral"} size="sm">{r.status}</Badge>
+                          <span className="text-sm font-medium text-foreground">{typeLabel}</span>
+                          {r.tenant?.name && <span className="text-xs text-foreground-dim">— {r.tenant.name}</span>}
+                          <span className="text-xs text-foreground-dim">{r.itemCount} items</span>
+                        </div>
+                        <span className="text-xs text-foreground-dim shrink-0">{formatDate(r.createdAt)}</span>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
           )}
 
       </PageContent>
