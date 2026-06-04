@@ -46,6 +46,14 @@ export default function UnitDetail() {
   const [activeTab, setActiveTab] = useState("Details");
   const [conditionReports, setConditionReports] = useState([]);
   const [conditionReportsLoading, setConditionReportsLoading] = useState(false);
+  const [showCreateReport, setShowCreateReport] = useState(false);
+  const [newReportType, setNewReportType] = useState("MOVE_IN");
+  const [newReportTenantId, setNewReportTenantId] = useState("");
+  const [newReportLeaseId, setNewReportLeaseId] = useState("");
+  const [newReportDays, setNewReportDays] = useState("7");
+  const [newReportLeases, setNewReportLeases] = useState([]);
+  const [creatingReport, setCreatingReport] = useState(false);
+  const [createReportErr, setCreateReportErr] = useState("");
   const [tenantAction, setTenantAction] = useState(null);
   const [applicationIds, setApplicationIds] = useState([]);
 
@@ -365,6 +373,11 @@ export default function UnitDetail() {
         .then((d) => setConditionReports(d?.data ?? []))
         .catch(() => {})
         .finally(() => setConditionReportsLoading(false));
+      // Pre-load leases for the create form
+      fetch(`/api/leases?unitId=${id}`, { headers: authHeaders() })
+        .then((r) => r.json())
+        .then((d) => setNewReportLeases(Array.isArray(d) ? d : d?.data ?? []))
+        .catch(() => {});
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, activeTab]);
@@ -1380,7 +1393,107 @@ export default function UnitDetail() {
           )}
 
           {activeTab === "Condition Reports" && (
-            <div className="space-y-2 py-4">
+            <div className="space-y-4 py-4">
+              {/* Header row with create button */}
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium text-foreground">Inspections</p>
+                <button
+                  onClick={() => {
+                    setShowCreateReport(!showCreateReport);
+                    setCreateReportErr("");
+                  }}
+                  className="rounded-lg border border-brand px-3 py-1.5 text-xs font-medium text-brand hover:bg-brand hover:text-white transition-colors"
+                >
+                  {showCreateReport ? "Cancel" : "+ Start inspection"}
+                </button>
+              </div>
+
+              {/* Inline create form */}
+              {showCreateReport && (
+                <div className="card border p-4 space-y-3">
+                  <p className="text-sm font-semibold text-foreground">New condition report</p>
+                  {createReportErr && <p className="text-xs text-destructive-text">{createReportErr}</p>}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-muted-dark mb-1">Type</label>
+                      <select value={newReportType} onChange={(e) => setNewReportType(e.target.value)} className="input mb-0">
+                        <option value="MOVE_IN">Move-in (entrée)</option>
+                        <option value="MOVE_OUT">Move-out (sortie)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-muted-dark mb-1">Deadline (days from today)</label>
+                      <input type="number" value={newReportDays} onChange={(e) => setNewReportDays(e.target.value)}
+                        min="1" max="90" className="input mb-0" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-muted-dark mb-1">Lease</label>
+                      <select value={newReportLeaseId} onChange={(e) => {
+                        setNewReportLeaseId(e.target.value);
+                        // Auto-fill tenant from lease occupancy if available
+                        const lease = newReportLeases.find((l) => l.id === e.target.value);
+                        if (lease?.tenants?.[0]?.id) setNewReportTenantId(lease.tenants[0].id);
+                      }} className="input mb-0">
+                        <option value="">— Select lease —</option>
+                        {newReportLeases.map((l) => (
+                          <option key={l.id} value={l.id}>
+                            {l.status} · {l.tenantName || l.id.slice(0, 8)}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-muted-dark mb-1">Tenant</label>
+                      <select value={newReportTenantId} onChange={(e) => setNewReportTenantId(e.target.value)} className="input mb-0">
+                        <option value="">— Select tenant —</option>
+                        {tenants.map((t) => (
+                          <option key={t.id} value={t.id}>
+                            {t.name || t.phone || t.id.slice(0, 8)}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <button
+                    disabled={creatingReport || !newReportLeaseId || !newReportTenantId}
+                    onClick={async () => {
+                      setCreatingReport(true);
+                      setCreateReportErr("");
+                      try {
+                        const res = await fetch(`/api/units/${id}/condition-reports`, {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json", ...authHeaders() },
+                          body: JSON.stringify({
+                            type: newReportType,
+                            leaseId: newReportLeaseId,
+                            tenantId: newReportTenantId,
+                            dueAtDays: parseInt(newReportDays, 10) || 7,
+                          }),
+                        });
+                        const data = await res.json();
+                        if (!res.ok) throw new Error(data?.error?.message || "Failed");
+                        setShowCreateReport(false);
+                        setNewReportLeaseId(""); setNewReportTenantId("");
+                        // Reload the list
+                        setConditionReportsLoading(true);
+                        const listRes = await fetch(`/api/units/${id}/condition-reports`, { headers: authHeaders() });
+                        const listData = await listRes.json();
+                        setConditionReports(listData?.data ?? []);
+                        setConditionReportsLoading(false);
+                      } catch (e) {
+                        setCreateReportErr(e.message || "Failed to create report");
+                      } finally {
+                        setCreatingReport(false);
+                      }
+                    }}
+                    className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-dark disabled:opacity-50 transition-colors"
+                  >
+                    {creatingReport ? "Creating…" : "Create report"}
+                  </button>
+                </div>
+              )}
+
+              {/* Report list */}
               {conditionReportsLoading ? (
                 <p className="text-sm text-muted py-6 text-center">Loading…</p>
               ) : conditionReports.length === 0 ? (
