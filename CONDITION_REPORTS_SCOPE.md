@@ -1,6 +1,6 @@
 # Unit Condition Reports — Implementation Scope
 
-> **Status:** In progress — implementation started 2026-06-04
+> **Status:** In progress — implementation started 2026-06-04. Scope decisions locked 2026-06-04.
 >
 > This document is the authoritative spec for the Unit Condition Reports feature.
 > It supersedes any earlier verbal or chat-based scoping.
@@ -22,9 +22,9 @@ move-in baseline; any degraded item **must** be accompanied by at least one phot
 
 | Actor | Responsibility |
 |---|---|
-| System | Auto-creates MOVE_IN report when lease becomes ACTIVE; auto-creates MOVE_OUT when lease is TERMINATED |
-| Tenant | Fills in items (room, label, condition, notes), uploads photos for damaged/degraded items, submits |
-| Manager | Reviews, views delta (move-out vs move-in), adds manager notes, approves (or reopens with a note) |
+| System | Auto-creates MOVE_IN report when lease becomes ACTIVE; auto-creates MOVE_OUT as fallback when lease is TERMINATED by manager |
+| Tenant | Initiates departure via "Give notice" button on their lease page → guided checkout flow → fills in move-out condition report. Also fills in move-in report. |
+| Manager | Reviews, views delta (move-out vs move-in), adds manager notes, approves (or reopens) |
 
 ---
 
@@ -286,31 +286,42 @@ Each increment is committed and tested before starting the next.
 
 | # | What ships | Testable via |
 |---|---|---|
-| 1 | Schema + migration + repository + routes (no photos yet) + proxy stubs | API (curl / network tab) |
-| 2 | Event hooks (auto-create on LEASE_STATUS_CHANGED) + BuildingConfig deadline | Verify report created after lease activation |
-| 3 | Photo upload endpoint + storage wiring | API / multipart POST |
-| **4** | **Tenant frontend: inbox + form (no photo UI yet)** | **→ User can test** |
+| 1 ✅ | Schema + migration + repository + routes + proxy stubs | — |
+| 2 ✅ | Event hooks (auto-create on LEASE_STATUS_CHANGED) + BuildingConfig deadline | — |
+| 3 ✅ | Photo upload endpoint + storage wiring | — |
+| 4 ✅ | Tenant frontend: inbox + form (no photo UI) | Tenant portal sidebar |
 | **5** | **Photo upload UI in tenant form** | **→ User can test** |
-| **6** | **Manager frontend: delta view + approve/reopen** | **→ User can test** |
-| **7** | **Asset enrichment badge on building detail page** | **→ User can test** |
-| 8 | Notifications (CONDITION_REPORT_SUBMITTED/APPROVED) | Notification bell |
-| 9 | Full EN+FR i18n, integration tests, contracts.test.ts update | CI |
+| **5b** | **"Give notice" departure flow on tenant lease page** | **→ User can test** |
+| **6** | **Manager frontend: delta view + approve/reopen (unit detail tab)** | **→ User can test** |
+| **7** | **Asset enrichment badge on unit/building asset tabs** | **→ User can test** |
+| 8 | Notifications (SUBMITTED/APPROVED + tenant email on MOVE_OUT created) | Notification bell + email |
+| 9 | Full EN+FR i18n, integration tests | CI |
 
 ---
 
-## 13. Open Questions
+## 13. Open Questions → Resolved
 
-> ✅ = answered, ❓ = still open
+1. ✅ **Navigation** — Condition Reports tab added to `/admin-inventory/units/[id]` (existing unit
+   detail page). Manager accesses per-unit reports from there.
 
-1. **Navigation to per-unit condition reports** ❓ — Is there a per-unit detail page in
-   admin-inventory, or should condition report links appear inline on the Units tab of the
-   building detail page?
-2. **MOVE_OUT creation timing** — Currently triggered on `toStatus === "TERMINATED"`. Is this
-   correct, or should the manager manually initiate the MOVE_OUT report before termination
-   is finalised?
-3. **Tenant notification on APPROVED** — The current notification system targets `User` records.
-   Tenants are in the `Tenant` table (separate from `User`). This increment is deferred to
-   slice 8; in the meantime only managers are notified.
+2. ✅ **MOVE_OUT trigger** — Tenant-initiated via "Give notice of departure" button on
+   `/tenant/leases/[id]` (ACTIVE leases only). New endpoint:
+   `POST /tenant-portal/leases/:id/give-notice` creates the MOVE_OUT report and triggers the
+   guided checkout flow. The existing TERMINATED event hook remains as a **fallback** for
+   manager-initiated terminations.
+
+3. ✅ **Unit vs tenant ownership** — Keep BOTH FKs:
+   - `unitId` owns the audit trail, asset enrichment, and manager view
+   - `tenantId` is access control for the tenant portal only
+   - Delta comparison: same-lease MOVE_IN first, fallback to latest approved MOVE_IN for same unit
+
+4. ✅ **Departure checklist** — Placeholder for now. The checkout flow shows a static multi-step
+   modal: (1) notice period reminder, (2) condition report (primary action — links to form),
+   (3) placeholder items (keys, cleaning, nameplate/bell — to be scoped separately). No DB state
+   for checklist steps yet. Email + in-app notification to tenant on report creation.
+
+5. ✅ **Tenant notification on MOVE_OUT created** — Email to tenant + in-app notification.
+   Tenant notifications use the `Tenant.email` field directly (not the User table).
 
 ---
 
