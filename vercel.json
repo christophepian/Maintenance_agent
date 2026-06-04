@@ -1,6 +1,6 @@
 {
   "framework": "nextjs",
-  "ignoreCommand": "[ -n \"$VERCEL_DEPLOY_BRANCH\" ] && [ \"$VERCEL_GIT_COMMIT_REF\" != \"$VERCEL_DEPLOY_BRANCH\" ] && exit 0 || exit 1",
+  "ignoreCommand": "([ \"$VERCEL_PROJECT_ID\" = \"prj_kKQxpZIrGqB8ISszd7m0fvNtv5yC\" ] && [ \"$VERCEL_GIT_COMMIT_REF\" = \"sandbox\" ] || [ \"$VERCEL_PROJECT_ID\" = \"prj_ALq71n6tsRlzyZvvoSZUwIsVaXkg\" ] && [ \"$VERCEL_GIT_COMMIT_REF\" = \"main\" ]) && exit 1 || exit 0",
   "functions": {
     "apps/web/pages/api/imported-statements/upload.js": {
       "maxDuration": 60
