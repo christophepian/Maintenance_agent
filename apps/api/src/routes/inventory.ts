@@ -208,8 +208,11 @@ export function registerInventoryRoutes(router: Router) {
       const updated = await updateOwnerUser(prisma, params.id, { ...(name ? { name } : {}), ...(email ? { email } : {}) });
       sendJson(res, 200, { data: { id: updated.id, name: updated.name, email: updated.email } });
     } catch (e: any) {
-      console.error("[owners/patch]", e);
       if (e.message === "Invalid JSON") return sendError(res, 400, "INVALID_JSON", "Invalid JSON");
+      if (e?.code === "P2002") {
+        return sendError(res, 409, "DUPLICATE_EMAIL", "This email address is already in use by another user in your organisation.");
+      }
+      console.error("[owners/patch]", e);
       sendError(res, 500, "DB_ERROR", "Failed to update owner", String(e));
     }
   });
