@@ -2308,6 +2308,7 @@
         "INVOICE_OVERDUE": "Facture en retard",
         "LEASE_SIGNED": "Bail signe par le locataire",
         "APPLICATION_SUBMITTED": "Nouvelle candidature de location",
+        "LETTER_REPLY_RECEIVED": "Locataire a répondu à une lettre",
         "TENANT_SELECTED": "Proprietaire a selectionne un locataire",
         "QUOTE_SUBMITTED": "Prestataire a soumis un devis",
         "CONTRACTOR_ASSIGNED": "Nouvelle mission assignee",

@@ -960,6 +960,7 @@ enum NotificationEventType {
   JOB_CONFIRMED
   INVOICE_OVERDUE
   RATING_SUBMITTED
+  LETTER_REPLY_RECEIVED
 }
 
 // ==========================================

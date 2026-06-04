@@ -8,6 +8,8 @@
 import { PrismaClient, LetterTemplateType } from "@prisma/client";
 import { enqueueEmail } from "./emailOutbox";
 import { trySendImmediate } from "./emailTransport";
+import * as userRepo from "../repositories/userRepository";
+import { createNotification } from "./notifications";
 
 // ── AI draft ─────────────────────────────────────────────────────────────────
 
@@ -168,10 +170,27 @@ export async function createLetterResponse(
   // Verify tenant is a recipient
   const recipient = await prisma.letterRecipient.findUnique({
     where: { letterId_tenantId: { letterId, tenantId } },
+    include: { letter: { select: { orgId: true, subject: true } } },
   });
   if (!recipient) throw Object.assign(new Error("Not a recipient"), { code: "FORBIDDEN" });
 
   await prisma.letterResponse.create({
     data: { letterId, tenantId, content },
   });
+
+  // Notify all managers in the org
+  const { orgId, subject } = recipient.letter;
+  const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true } });
+  const tenantLabel = tenant?.name || "A tenant";
+  const managers = await userRepo.findManagersByOrg(prisma, orgId);
+  for (const mgr of managers) {
+    await createNotification({
+      orgId,
+      userId: mgr.id,
+      entityType: "LETTER",
+      entityId: letterId,
+      eventType: "LETTER_REPLY_RECEIVED",
+      message: `${tenantLabel} replied to "${subject}".`,
+    });
+  }
 }

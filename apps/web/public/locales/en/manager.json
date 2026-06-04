@@ -2308,6 +2308,7 @@
         "INVOICE_OVERDUE": "Invoice overdue",
         "LEASE_SIGNED": "Lease signed by tenant",
         "APPLICATION_SUBMITTED": "New rental application",
+        "LETTER_REPLY_RECEIVED": "Tenant replied to a letter",
         "TENANT_SELECTED": "Owner selected tenant",
         "QUOTE_SUBMITTED": "Contractor submitted quote",
         "CONTRACTOR_ASSIGNED": "New job assigned to me",

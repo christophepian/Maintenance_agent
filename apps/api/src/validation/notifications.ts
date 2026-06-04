@@ -29,11 +29,12 @@ export const NotificationEventTypeSchema = z.enum([
   'JOB_CONFIRMED',
   'RATING_SUBMITTED',
   'INVOICE_OVERDUE',
+  'LETTER_REPLY_RECEIVED',
 ]);
 
 export type NotificationEventType = z.infer<typeof NotificationEventTypeSchema>;
 
-export const NotificationEntityTypeSchema = z.enum(['REQUEST', 'JOB', 'INVOICE', 'SELECTION', 'LEASE', 'APPLICATION', 'RFP', 'SCHEDULING', 'RATING']);
+export const NotificationEntityTypeSchema = z.enum(['REQUEST', 'JOB', 'INVOICE', 'SELECTION', 'LEASE', 'APPLICATION', 'RFP', 'SCHEDULING', 'RATING', 'LETTER']);
 
 export type NotificationEntityType = z.infer<typeof NotificationEntityTypeSchema>;
 
