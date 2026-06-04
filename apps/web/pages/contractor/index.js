@@ -32,12 +32,14 @@ export default function ContractorDashboard() {
     try {
       // Fetch contractor-relevant data (H5: use view=summary; prefer contractor-scoped endpoints)
       const contractorId = typeof window !== "undefined" ? localStorage.getItem("contractorId") : null;
+      // Always use contractor-scoped endpoints — the backend resolves contractorId
+      // from the JWT demo grant if not in query params (no manager endpoint fallback).
       const jobUrl = contractorId
         ? `/api/contractor/jobs?contractorId=${contractorId}&view=summary`
-        : "/api/jobs?view=summary";
+        : `/api/contractor/jobs?view=summary`;
       const invUrl = contractorId
         ? `/api/contractor/invoices?contractorId=${contractorId}&view=summary`
-        : "/api/invoices?view=summary";
+        : `/api/contractor/invoices?view=summary`;
       const [jobRes, invRes] = await Promise.all([
         fetch(jobUrl, { headers: authHeaders() }),
         fetch(invUrl, { headers: authHeaders() }),
