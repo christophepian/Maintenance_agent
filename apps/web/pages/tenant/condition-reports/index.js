@@ -30,7 +30,7 @@ export default function TenantConditionReports() {
 
   const { data, loading, error } = useDetailResource(
     "/api/tenant/condition-reports",
-    (url) => tenantFetch(url).then((r) => r.json()),
+    tenantFetch,
   );
 
   const reports = data?.data ?? [];

@@ -317,7 +317,7 @@ export default function TenantConditionReportDetail() {
 
   const { data, loading, error, refresh } = useDetailResource(
     id ? `/api/tenant/condition-reports/${id}` : null,
-    (url) => tenantFetch(url).then((r) => r.json()),
+    tenantFetch,
   );
 
   const report = data?.data ?? null;
