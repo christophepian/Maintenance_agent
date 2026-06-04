@@ -10,6 +10,7 @@ import {
   Users,
   Building2,
   Settings,
+  Mail,
 } from "lucide-react";
 
 /**
@@ -22,8 +23,9 @@ const MANAGER_NAV = [
   { id: "requests",  icon: Wrench,    href: "/manager/requests" },
   { id: "leases",    icon: KeyRound,  href: "/manager/leases" },
   { id: "finances",  icon: Wallet,    href: "/manager/finance" },
-  { id: "contacts",  icon: Users,     href: "/manager/people" },
-  { id: "settings",  icon: Settings,  href: "/manager/settings" },
+  { id: "contacts",        icon: Users,     href: "/manager/people" },
+  { id: "correspondence",  icon: Mail,      href: "/manager/correspondence" },
+  { id: "settings",        icon: Settings,  href: "/manager/settings" },
 ];
 
 export default function ManagerSidebar() {

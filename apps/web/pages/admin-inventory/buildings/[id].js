@@ -1,5 +1,34 @@
 import { useRouter } from "next/router";
 import { useEffect, useState, useCallback, useMemo } from "react";
+
+function CorrespondenceTab({ buildingId }) {
+  const [letters, setLetters] = useState([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    if (!buildingId) return;
+    fetch(`/api/owner/letters?buildingId=${buildingId}`, { headers: authHeaders() })
+      .then((r) => r.json())
+      .then((d) => { setLetters(d?.data || []); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, [buildingId]);
+  if (loading) return <p className="text-sm text-muted py-4">Chargement…</p>;
+  if (letters.length === 0) return <p className="text-sm text-muted italic py-4">Aucune correspondance envoyée pour cet immeuble.</p>;
+  return (
+    <div className="space-y-2">
+      {letters.map((l) => (
+        <div key={l.id} className="card border px-4 py-3">
+          <div className="flex items-start justify-between gap-3">
+            <p className="text-sm font-medium text-foreground truncate">{l.subject}</p>
+            <div className="shrink-0 text-right">
+              <p className="text-xs text-foreground-dim">{l.sentAt ? new Date(l.sentAt).toLocaleDateString("de-CH") : "—"}</p>
+              <p className="text-xs text-foreground-dim">{l.recipientCount} destinataire{l.recipientCount !== 1 ? "s" : ""}</p>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import AppShell from "../../../components/AppShell";
@@ -718,7 +747,7 @@ export default function BuildingDetail() {
 
           {/* Tabs Navigation */}
           {(() => {
-            const TAB_KEYS = ["Building information", "Units", "Tenants", "Assets", "Documents", "Policies", "Financials", "Requests"];
+            const TAB_KEYS = ["Building information", "Units", "Tenants", "Assets", "Documents", "Policies", "Financials", "Requests", "Correspondence"];
             const TAB_I18N = {
               "Building information": t("manager:buildingsId.tabs.buildingInformation"),
               "Units":                t("manager:buildingsId.tabs.units"),
@@ -728,6 +757,7 @@ export default function BuildingDetail() {
               "Policies":             t("manager:buildingsId.tabs.policies"),
               "Financials":           t("manager:buildingsId.tabs.financials"),
               "Requests":             t("manager:buildingsId.tabs.requests"),
+              "Correspondence":       t("manager:buildingsId.tabs.correspondence"),
             };
             return (
               <ScrollableTabs activeIndex={TAB_KEYS.indexOf(activeTab)}>
@@ -1971,6 +2001,11 @@ export default function BuildingDetail() {
           {/* Financials tab */}
           {activeTab === "Financials" && id && (
             <BuildingFinancialsView buildingId={id} variant="embedded" />
+          )}
+
+          {/* Correspondence tab — read-only view of letters sent to this building's tenants */}
+          {activeTab === "Correspondence" && (
+            <CorrespondenceTab buildingId={id} />
           )}
         </PageContent>
         <UndoToast {...toast} />

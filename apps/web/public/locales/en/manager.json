@@ -28,7 +28,8 @@
     "emails": "Emails",
     "contacts": "Contacts",
     "finances": "Finances",
-    "settings": "Settings"
+    "settings": "Settings",
+    "correspondence": "Correspondence"
   },
   "dashboard": {
     "title": "Manager Dashboard",
@@ -409,7 +410,8 @@
       "documents": "Documents",
       "policies": "Policies",
       "financials": "Financials",
-      "requests": "Requests"
+      "requests": "Requests",
+      "correspondence": "Correspondence"
     },
     "kpi": {
       "openRequests": "Open Requests",
@@ -2775,6 +2777,51 @@
       "vatNumber": "VAT number",
       "type": "Type",
       "building": "Building"
+    }
+  },
+  "correspondence": {
+    "title": "Correspondence",
+    "subtitle": "Letters sent to tenants",
+    "newLetter": "New letter",
+    "loading": "Loading…",
+    "empty": "No letters yet. Compose your first letter.",
+    "untitled": "Untitled letter",
+    "saveDraft": "Save draft",
+    "saving": "Saving…",
+    "send": "Send",
+    "sending": "Sending…",
+    "drafting": "Generating…",
+    "generateDraft": "Generate with AI",
+    "subject": "Subject",
+    "subjectPlaceholder": "Letter subject…",
+    "body": "Body",
+    "bodyPlaceholder": "Write your letter here, or use AI to generate a draft…",
+    "templateType": "Template",
+    "language": "Language",
+    "additionalContext": "Context for AI (optional)",
+    "additionalContextPlaceholder": "e.g. Handyman unavailable 15–25 July, fallback contact: Pierre Dupont 079 123 45 67",
+    "recipients": "Recipients",
+    "selected": "selected",
+    "noTenants": "No tenants found",
+    "targetSingle": "Single tenant",
+    "targetBuilding": "All tenants of a building",
+    "targetMultiBuilding": "Multiple buildings",
+    "noRecipientsError": "Please select at least one recipient.",
+    "emptyLetterError": "Subject and body are required before sending.",
+    "replies": "Replies",
+    "read": "Read",
+    "unread": "Unread",
+    "sentOn": "Sent on",
+    "edit": "Edit",
+    "delete": "Delete",
+    "confirmDelete": "Delete this draft? This cannot be undone.",
+    "notFound": "Letter not found.",
+    "emptyBody": "Empty letter.",
+    "tenant": "Tenant",
+    "status": {
+      "draft": "Draft",
+      "sent": "Sent",
+      "archived": "Archived"
     }
   }
 }

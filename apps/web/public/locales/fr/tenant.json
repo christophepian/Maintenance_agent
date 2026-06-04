@@ -8,7 +8,8 @@
     "assets": "Équipements",
     "myHome": "Mon logement",
     "apply": "Candidater",
-    "settings": "Paramètres"
+    "settings": "Paramètres",
+    "letters": "Courrier"
   },
   "dashboard": {
     "title": "Espace locataire",
@@ -329,5 +330,21 @@
       "dark": "Sombre",
       "darkDescription": "Plus reposant pour les yeux dans les conditions de faible luminosité."
     }
+  },
+  "letters": {
+    "title": "Courrier",
+    "unread": "non lu(s)",
+    "loading": "Chargement…",
+    "empty": "Aucune lettre pour l'instant.",
+    "notFound": "Lettre introuvable.",
+    "from": "De",
+    "propertyManager": "Gérance",
+    "yourReplies": "Vos réponses",
+    "you": "Vous",
+    "replyTitle": "Envoyer une réponse",
+    "replyPlaceholder": "Rédigez votre réponse…",
+    "replySent": "Votre réponse a été envoyée.",
+    "sending": "Envoi…",
+    "sendReply": "Envoyer"
   }
 }

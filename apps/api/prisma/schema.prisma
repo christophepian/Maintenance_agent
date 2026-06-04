@@ -188,6 +188,8 @@ model Org {
   uploadBatches               UploadBatch[]
   importedStatements          ImportedStatement[]
   importedAccountBalances     ImportedAccountBalance[]
+  // Correspondence
+  letters                     Letter[]
 }
 
 model OrgConfig {
@@ -342,6 +344,8 @@ model Tenant {
   occupancies           Occupancy[]
   requests              Request[]
   conversationThreads   ConversationThread[]
+  letterRecipients      LetterRecipient[]
+  letterResponses       LetterResponse[]
   org                   Org         @relation(fields: [orgId], references: [id], onDelete: Cascade)
 
   @@unique([orgId, phone])
@@ -1048,6 +1052,22 @@ enum EmailTemplate {
   SELECTED_LEASE_LINK
   MANAGER_TENANT_SELECTED
   INVOICE_OVERDUE
+  TENANT_LETTER
+}
+
+enum LetterStatus {
+  DRAFT
+  SENT
+  ARCHIVED
+}
+
+enum LetterTemplateType {
+  GENERAL
+  MAINTENANCE_NOTICE
+  COMPLIANCE_REQUEST
+  FINANCIAL_NOTICE
+  SEASONAL
+  LEASE_ADMIN
 }
 
 // ==========================================
@@ -2582,4 +2602,59 @@ model ImportedAccountBalance {
   @@index([orgId])
   @@index([statementId])
   @@index([accountId])
+}
+
+// ==========================================
+// Correspondence (manager → tenant letters)
+// ==========================================
+
+model Letter {
+  id              String             @id @default(uuid())
+  orgId           String
+  subject         String
+  body            String             @default("")
+  templateType    LetterTemplateType @default(GENERAL)
+  status          LetterStatus       @default(DRAFT)
+  lang            String             @default("fr")
+  createdByUserId String?
+
+  sentAt    DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  org        Org               @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  recipients LetterRecipient[]
+  responses  LetterResponse[]
+
+  @@index([orgId])
+  @@index([orgId, status])
+}
+
+model LetterRecipient {
+  id          String    @id @default(uuid())
+  letterId    String
+  tenantId    String
+  readAt      DateTime?
+  emailSentAt DateTime?
+
+  letter Letter @relation(fields: [letterId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([letterId, tenantId])
+  @@index([letterId])
+  @@index([tenantId])
+}
+
+model LetterResponse {
+  id        String   @id @default(uuid())
+  letterId  String
+  tenantId  String
+  content   String
+  createdAt DateTime @default(now())
+
+  letter Letter @relation(fields: [letterId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([letterId])
+  @@index([tenantId])
 }
