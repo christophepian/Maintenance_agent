@@ -2309,6 +2309,8 @@
         "LEASE_SIGNED": "Bail signe par le locataire",
         "APPLICATION_SUBMITTED": "Nouvelle candidature de location",
         "LETTER_REPLY_RECEIVED": "Locataire a répondu à une lettre",
+        "CONDITION_REPORT_SUBMITTED": "Locataire a soumis un état des lieux",
+        "CONDITION_REPORT_APPROVED": "État des lieux approuvé",
         "TENANT_SELECTED": "Proprietaire a selectionne un locataire",
         "QUOTE_SUBMITTED": "Prestataire a soumis un devis",
         "CONTRACTOR_ASSIGNED": "Nouvelle mission assignee",

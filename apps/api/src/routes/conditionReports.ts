@@ -30,6 +30,10 @@ import * as repo from "../repositories/conditionReportRepository";
 import * as svc from "../services/conditionReportService";
 import { assertConditionReportTransition } from "../workflows/transitions";
 import { randomUUID } from "crypto";
+import { createNotification } from "../services/notifications";
+import { enqueueEmail } from "../services/emailOutbox";
+import { trySendImmediate } from "../services/emailTransport";
+import * as userRepo from "../repositories/userRepository";
 
 const ACCEPTED_PHOTO_MIMES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const MAX_PHOTO_SIZE = 5 * 1024 * 1024; // 5 MB
@@ -167,6 +171,29 @@ export function registerConditionReportRoutes(router: Router) {
         approvedByUserId: (req as any).user?.userId,
         managerNotes: body.managerNotes,
       });
+
+      // Email tenant confirmation (best-effort)
+      const tenant = await prisma.tenant.findUnique({
+        where: { id: report.tenantId }, select: { email: true, name: true },
+      });
+      if (tenant?.email) {
+        const emailRecord = await enqueueEmail(orgId, {
+          toEmail: tenant.email,
+          template: "TENANT_LETTER",
+          subject: "Votre état des lieux a été approuvé / Your condition report has been approved",
+          bodyText: [
+            `${tenant.name ? `Chère/Cher ${tenant.name},` : "Madame, Monsieur,"}`,
+            "",
+            "Votre état des lieux a été examiné et approuvé par la gérance.",
+            "Your condition report has been reviewed and approved by the property manager.",
+            "",
+            "La Gérance",
+          ].join("\n"),
+          metaJson: { conditionReportId: params.id },
+        });
+        trySendImmediate(emailRecord.id);
+      }
+
       sendJson(res, 200, { data: { ok: true } });
     } catch (e: any) {
       if (e?.code === "INVALID_TRANSITION") return sendError(res, 409, "CONFLICT", e.message);
@@ -438,6 +465,24 @@ export function registerConditionReportRoutes(router: Router) {
       await repo.setStatus(prisma, params.id, ConditionReportStatus.SUBMITTED, {
         submittedAt: new Date(),
       });
+
+      // Notify all managers in-app (best-effort, non-blocking)
+      const tenant = await prisma.tenant.findUnique({
+        where: { id: tenantId }, select: { name: true },
+      });
+      const typeLabel = report.type === ConditionReportType.MOVE_IN ? "move-in" : "move-out";
+      const managers = await userRepo.findManagersByOrg(prisma, orgId);
+      for (const mgr of managers) {
+        createNotification({
+          orgId,
+          userId: mgr.id,
+          entityType: "LETTER",
+          entityId: params.id,
+          eventType: "CONDITION_REPORT_SUBMITTED",
+          message: `${tenant?.name ?? "A tenant"} submitted their ${typeLabel} condition report.`,
+        }).catch(() => {});
+      }
+
       sendJson(res, 200, { data: { ok: true } });
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to submit report", String(e));

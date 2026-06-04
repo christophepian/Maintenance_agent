@@ -2309,6 +2309,8 @@
         "LEASE_SIGNED": "Lease signed by tenant",
         "APPLICATION_SUBMITTED": "New rental application",
         "LETTER_REPLY_RECEIVED": "Tenant replied to a letter",
+        "CONDITION_REPORT_SUBMITTED": "Tenant submitted a condition report",
+        "CONDITION_REPORT_APPROVED": "Condition report approved",
         "TENANT_SELECTED": "Owner selected tenant",
         "QUOTE_SUBMITTED": "Contractor submitted quote",
         "CONTRACTOR_ASSIGNED": "New job assigned to me",
