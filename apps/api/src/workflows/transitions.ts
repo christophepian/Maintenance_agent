@@ -6,7 +6,7 @@
  * invalid transitions are rejected in exactly one place.
  */
 
-import { RequestStatus, JobStatus, InvoiceStatus, LeaseStatus, RfpStatus, RfpQuoteStatus, CashflowPlanStatus } from "@prisma/client";
+import { RequestStatus, JobStatus, InvoiceStatus, LeaseStatus, RfpStatus, RfpQuoteStatus, CashflowPlanStatus, ConditionReportStatus } from "@prisma/client";
 
 // ─── Request Transitions ───────────────────────────────────────
 
@@ -228,4 +228,22 @@ export function canTransitionCashflowPlan(
 ): boolean {
   const allowed = VALID_CASHFLOW_PLAN_TRANSITIONS[from];
   return !!allowed && allowed.includes(to);
+}
+
+// ─── Condition Report Transitions ──────────────────────────────
+
+const VALID_CONDITION_REPORT_TRANSITIONS: Record<string, ConditionReportStatus[]> = {
+  [ConditionReportStatus.PENDING]:   [ConditionReportStatus.SUBMITTED],
+  [ConditionReportStatus.SUBMITTED]: [ConditionReportStatus.APPROVED, ConditionReportStatus.PENDING],
+  [ConditionReportStatus.APPROVED]:  [],
+};
+
+export function assertConditionReportTransition(
+  from: ConditionReportStatus,
+  to: ConditionReportStatus,
+): void {
+  const allowed = VALID_CONDITION_REPORT_TRANSITIONS[from];
+  if (!allowed || !allowed.includes(to)) {
+    throw new InvalidTransitionError("ConditionReport", from, to);
+  }
 }

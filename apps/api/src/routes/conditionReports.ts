@@ -1,0 +1,334 @@
+/**
+ * Condition Report routes (État des lieux)
+ *
+ * Manager endpoints:
+ *   GET  /units/:id/condition-reports          — list for a unit
+ *   POST /units/:id/condition-reports          — manually create
+ *   GET  /condition-reports/:id                — detail + items + delta
+ *   POST /condition-reports/:id/approve        — manager sign-off
+ *   POST /condition-reports/:id/reopen         — send back to tenant
+ *
+ * Tenant-portal endpoints:
+ *   GET    /tenant-portal/condition-reports                             — tenant inbox
+ *   GET    /tenant-portal/condition-reports/:id                        — report detail
+ *   POST   /tenant-portal/condition-reports/:id/items                  — add item
+ *   PATCH  /tenant-portal/condition-reports/:id/items/:itemId          — update item
+ *   DELETE /tenant-portal/condition-reports/:id/items/:itemId          — remove item
+ *   POST   /tenant-portal/condition-reports/:id/submit                 — submit
+ *
+ *   Photo upload/delete added in Increment 3.
+ */
+
+import { Router } from "../http/router";
+import { sendError, sendJson } from "../http/json";
+import { readJson } from "../http/body";
+import { maybeRequireManager, requireTenantSession } from "../authz";
+import { ConditionReportType, ConditionReportStatus, ItemCondition } from "@prisma/client";
+import * as repo from "../repositories/conditionReportRepository";
+import * as svc from "../services/conditionReportService";
+import { assertConditionReportTransition } from "../workflows/transitions";
+
+const VALID_CONDITIONS = Object.values(ItemCondition);
+const VALID_TYPES = Object.values(ConditionReportType);
+
+// ── DTO mappers ────────────────────────────────────────────────────────────────
+
+function mapListItem(r: any) {
+  return {
+    id: r.id,
+    type: r.type,
+    status: r.status,
+    dueAt: r.dueAt,
+    submittedAt: r.submittedAt,
+    approvedAt: r.approvedAt,
+    itemCount: r._count?.items ?? 0,
+    tenant: r.tenant,
+    createdAt: r.createdAt,
+  };
+}
+
+function mapFull(r: repo.ReportFull) {
+  return {
+    id: r.id,
+    orgId: r.orgId,
+    type: r.type,
+    status: r.status,
+    dueAt: r.dueAt,
+    submittedAt: r.submittedAt,
+    approvedAt: r.approvedAt,
+    managerNotes: r.managerNotes,
+    unit: r.unit,
+    tenant: r.tenant,
+    lease: r.lease,
+    approvedBy: r.approvedBy,
+    items: r.items.map((it) => ({
+      id: it.id,
+      assetId: it.assetId,
+      asset: it.asset,
+      roomLabel: it.roomLabel,
+      itemLabel: it.itemLabel,
+      condition: it.condition,
+      notes: it.notes,
+      photos: it.photos,
+    })),
+    createdAt: r.createdAt,
+  };
+}
+
+export function registerConditionReportRoutes(router: Router) {
+
+  // ── GET /units/:id/condition-reports ─────────────────────────────────────────
+  router.get("/units/:id/condition-reports", async ({ req, res, orgId, prisma, params }) => {
+    if (!maybeRequireManager(req, res)) return;
+    try {
+      const reports = await repo.listByUnit(prisma, params.id, orgId);
+      sendJson(res, 200, { data: reports.map(mapListItem) });
+    } catch (e) {
+      console.error("[condition-reports/listByUnit]", e);
+      sendError(res, 500, "DB_ERROR", "Failed to list reports", String(e));
+    }
+  });
+
+  // ── POST /units/:id/condition-reports ────────────────────────────────────────
+  router.post("/units/:id/condition-reports", async ({ req, res, orgId, prisma, params }) => {
+    if (!maybeRequireManager(req, res)) return;
+    try {
+      const body = await readJson(req) as any;
+      if (!VALID_TYPES.includes(body.type)) {
+        return sendError(res, 400, "VALIDATION_ERROR", "Invalid type");
+      }
+
+      // Verify unit belongs to org
+      const unit = await prisma.unit.findFirst({ where: { id: params.id, orgId } });
+      if (!unit) return sendError(res, 404, "NOT_FOUND", "Unit not found");
+
+      if (!body.tenantId || !body.leaseId) {
+        return sendError(res, 400, "VALIDATION_ERROR", "tenantId and leaseId are required");
+      }
+
+      const dueAt = body.dueAtDays
+        ? (() => { const d = new Date(); d.setDate(d.getDate() + Number(body.dueAtDays)); return d; })()
+        : undefined;
+
+      const report = await repo.createReport(prisma, {
+        orgId,
+        unitId: params.id,
+        tenantId: body.tenantId,
+        leaseId: body.leaseId,
+        type: body.type as ConditionReportType,
+        dueAt,
+      });
+      sendJson(res, 201, { data: report });
+    } catch (e) {
+      console.error("[condition-reports/create]", e);
+      sendError(res, 500, "DB_ERROR", "Failed to create report", String(e));
+    }
+  });
+
+  // ── GET /condition-reports/:id ────────────────────────────────────────────────
+  router.get("/condition-reports/:id", async ({ req, res, orgId, prisma, params }) => {
+    if (!maybeRequireManager(req, res)) return;
+    try {
+      const report = await repo.findById(prisma, params.id, orgId);
+      if (!report) return sendError(res, 404, "NOT_FOUND", "Report not found");
+
+      const withDelta = await svc.attachDelta(prisma, report);
+      sendJson(res, 200, {
+        data: {
+          ...mapFull(report),
+          delta: withDelta.delta,
+          deltaCount: withDelta.deltaCount,
+          hasUnphotoedDeltas: withDelta.hasUnphotoedDeltas,
+        },
+      });
+    } catch (e) {
+      console.error("[condition-reports/get]", e);
+      sendError(res, 500, "DB_ERROR", "Failed to fetch report", String(e));
+    }
+  });
+
+  // ── POST /condition-reports/:id/approve ───────────────────────────────────────
+  router.post("/condition-reports/:id/approve", async ({ req, res, orgId, prisma, params }) => {
+    if (!maybeRequireManager(req, res)) return;
+    try {
+      const report = await repo.findById(prisma, params.id, orgId);
+      if (!report) return sendError(res, 404, "NOT_FOUND", "Report not found");
+      assertConditionReportTransition(report.status, ConditionReportStatus.APPROVED);
+
+      const body = await readJson(req).catch(() => ({})) as any;
+      await repo.setStatus(prisma, params.id, ConditionReportStatus.APPROVED, {
+        approvedAt: new Date(),
+        approvedByUserId: (req as any).user?.userId,
+        managerNotes: body.managerNotes,
+      });
+      sendJson(res, 200, { data: { ok: true } });
+    } catch (e: any) {
+      if (e?.code === "INVALID_TRANSITION") return sendError(res, 409, "CONFLICT", e.message);
+      console.error("[condition-reports/approve]", e);
+      sendError(res, 500, "DB_ERROR", "Failed to approve report", String(e));
+    }
+  });
+
+  // ── POST /condition-reports/:id/reopen ───────────────────────────────────────
+  router.post("/condition-reports/:id/reopen", async ({ req, res, orgId, prisma, params }) => {
+    if (!maybeRequireManager(req, res)) return;
+    try {
+      const report = await repo.findById(prisma, params.id, orgId);
+      if (!report) return sendError(res, 404, "NOT_FOUND", "Report not found");
+      assertConditionReportTransition(report.status, ConditionReportStatus.PENDING);
+
+      const body = await readJson(req).catch(() => ({})) as any;
+      if (!body.managerNotes?.trim()) {
+        return sendError(res, 400, "VALIDATION_ERROR", "managerNotes required when reopening");
+      }
+      await repo.setStatus(prisma, params.id, ConditionReportStatus.PENDING, {
+        managerNotes: body.managerNotes,
+      });
+      sendJson(res, 200, { data: { ok: true } });
+    } catch (e: any) {
+      if (e?.code === "INVALID_TRANSITION") return sendError(res, 409, "CONFLICT", e.message);
+      console.error("[condition-reports/reopen]", e);
+      sendError(res, 500, "DB_ERROR", "Failed to reopen report", String(e));
+    }
+  });
+
+  // ── GET /tenant-portal/condition-reports ─────────────────────────────────────
+  router.get("/tenant-portal/condition-reports", async ({ req, res, orgId, prisma }) => {
+    const tenantId = requireTenantSession(req, res);
+    if (!tenantId) return;
+    try {
+      const reports = await repo.listByTenant(prisma, tenantId, orgId);
+      sendJson(res, 200, { data: reports.map(mapListItem) });
+    } catch (e) {
+      sendError(res, 500, "DB_ERROR", "Failed to list reports", String(e));
+    }
+  });
+
+  // ── GET /tenant-portal/condition-reports/:id ──────────────────────────────────
+  router.get("/tenant-portal/condition-reports/:id", async ({ req, res, orgId, prisma, params }) => {
+    const tenantId = requireTenantSession(req, res);
+    if (!tenantId) return;
+    try {
+      const report = await repo.findById(prisma, params.id, orgId);
+      if (!report || report.tenantId !== tenantId) {
+        return sendError(res, 404, "NOT_FOUND", "Report not found");
+      }
+      sendJson(res, 200, { data: mapFull(report) });
+    } catch (e) {
+      sendError(res, 500, "DB_ERROR", "Failed to fetch report", String(e));
+    }
+  });
+
+  // ── POST /tenant-portal/condition-reports/:id/items ───────────────────────────
+  router.post("/tenant-portal/condition-reports/:id/items", async ({ req, res, orgId, prisma, params }) => {
+    const tenantId = requireTenantSession(req, res);
+    if (!tenantId) return;
+    try {
+      const report = await repo.findById(prisma, params.id, orgId);
+      if (!report || report.tenantId !== tenantId) {
+        return sendError(res, 404, "NOT_FOUND", "Report not found");
+      }
+      if (report.status !== ConditionReportStatus.PENDING) {
+        return sendError(res, 409, "CONFLICT", "Report is no longer editable");
+      }
+
+      const body = await readJson(req) as any;
+      if (!body.roomLabel?.trim() || !body.itemLabel?.trim()) {
+        return sendError(res, 400, "VALIDATION_ERROR", "roomLabel and itemLabel are required");
+      }
+      if (!VALID_CONDITIONS.includes(body.condition)) {
+        return sendError(res, 400, "VALIDATION_ERROR", "Invalid condition");
+      }
+
+      const item = await repo.addItem(prisma, params.id, {
+        assetId: body.assetId || undefined,
+        roomLabel: body.roomLabel.trim(),
+        itemLabel: body.itemLabel.trim(),
+        condition: body.condition as ItemCondition,
+        notes: body.notes?.trim() || undefined,
+      });
+      sendJson(res, 201, { data: item });
+    } catch (e) {
+      sendError(res, 500, "DB_ERROR", "Failed to add item", String(e));
+    }
+  });
+
+  // ── PATCH /tenant-portal/condition-reports/:id/items/:itemId ─────────────────
+  router.patch("/tenant-portal/condition-reports/:id/items/:itemId", async ({ req, res, orgId, prisma, params }) => {
+    const tenantId = requireTenantSession(req, res);
+    if (!tenantId) return;
+    try {
+      const report = await repo.findById(prisma, params.id, orgId);
+      if (!report || report.tenantId !== tenantId) {
+        return sendError(res, 404, "NOT_FOUND", "Report not found");
+      }
+      if (report.status !== ConditionReportStatus.PENDING) {
+        return sendError(res, 409, "CONFLICT", "Report is no longer editable");
+      }
+
+      const body = await readJson(req) as any;
+      if (body.condition && !VALID_CONDITIONS.includes(body.condition)) {
+        return sendError(res, 400, "VALIDATION_ERROR", "Invalid condition");
+      }
+
+      await repo.upsertItem(prisma, params.itemId, params.id, {
+        ...(body.condition && { condition: body.condition as ItemCondition }),
+        ...(body.notes !== undefined && { notes: body.notes?.trim() || null }),
+      });
+      sendJson(res, 200, { data: { ok: true } });
+    } catch (e) {
+      sendError(res, 500, "DB_ERROR", "Failed to update item", String(e));
+    }
+  });
+
+  // ── DELETE /tenant-portal/condition-reports/:id/items/:itemId ────────────────
+  router.delete("/tenant-portal/condition-reports/:id/items/:itemId", async ({ req, res, orgId, prisma, params }) => {
+    const tenantId = requireTenantSession(req, res);
+    if (!tenantId) return;
+    try {
+      const report = await repo.findById(prisma, params.id, orgId);
+      if (!report || report.tenantId !== tenantId) {
+        return sendError(res, 404, "NOT_FOUND", "Report not found");
+      }
+      if (report.status !== ConditionReportStatus.PENDING) {
+        return sendError(res, 409, "CONFLICT", "Report is no longer editable");
+      }
+      await repo.deleteItem(prisma, params.itemId, params.id);
+      sendJson(res, 200, { data: { ok: true } });
+    } catch (e) {
+      sendError(res, 500, "DB_ERROR", "Failed to delete item", String(e));
+    }
+  });
+
+  // ── POST /tenant-portal/condition-reports/:id/submit ─────────────────────────
+  router.post("/tenant-portal/condition-reports/:id/submit", async ({ req, res, orgId, prisma, params }) => {
+    const tenantId = requireTenantSession(req, res);
+    if (!tenantId) return;
+    try {
+      const report = await repo.findById(prisma, params.id, orgId);
+      if (!report || report.tenantId !== tenantId) {
+        return sendError(res, 404, "NOT_FOUND", "Report not found");
+      }
+
+      const err = await svc.validateSubmit(prisma, report);
+      if (err) {
+        if (err.code === "WRONG_STATUS") {
+          return sendError(res, 409, "CONFLICT", `Report is ${err.current}, not submittable`);
+        }
+        if (err.code === "UNPHOTOED_DELTAS") {
+          return sendError(
+            res, 400, "PHOTOS_REQUIRED",
+            `Photos required for degraded items: ${err.items.join(", ")}`,
+          );
+        }
+      }
+
+      await repo.setStatus(prisma, params.id, ConditionReportStatus.SUBMITTED, {
+        submittedAt: new Date(),
+      });
+      sendJson(res, 200, { data: { ok: true } });
+    } catch (e) {
+      sendError(res, 500, "DB_ERROR", "Failed to submit report", String(e));
+    }
+  });
+}

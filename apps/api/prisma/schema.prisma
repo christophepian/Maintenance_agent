@@ -190,6 +190,8 @@ model Org {
   importedAccountBalances     ImportedAccountBalance[]
   // Correspondence
   letters                     Letter[]
+  // Condition reports
+  conditionReports            UnitConditionReport[]
 }
 
 model OrgConfig {
@@ -226,6 +228,7 @@ model User {
   billingEntity    BillingEntity?
   marginalTaxRate Float?         /// User's marginal income tax rate (0–1) for CapEx tax impact
   strategyProfile OwnerStrategyProfile?
+  approvedConditionReports UnitConditionReport[]
 
   @@unique([orgId, email], name: "user_org_email_unique")
   @@index([orgId])
@@ -346,6 +349,7 @@ model Tenant {
   conversationThreads   ConversationThread[]
   letterRecipients      LetterRecipient[]
   letterResponses       LetterResponse[]
+  conditionReports      UnitConditionReport[]
   org                   Org         @relation(fields: [orgId], references: [id], onDelete: Cascade)
 
   @@unique([orgId, phone])
@@ -429,6 +433,9 @@ model BuildingConfig {
   rentalSignatureDeadlineDays           Int?   @default(7)
   rentalManualReviewConfidenceThreshold Int?   @default(60)
 
+  // Condition report policy
+  conditionReportDeadlineDays           Int?   @default(7)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   building  Building @relation(fields: [buildingId], references: [id], onDelete: Cascade)
@@ -492,6 +499,7 @@ model Unit {
   assets                 Asset[]
   rfps                   Rfp[]
   ledgerEntries          LedgerEntry[]
+  conditionReports       UnitConditionReport[]
 
   @@unique([buildingId, unitNumber])
   @@index([buildingId])
@@ -1191,6 +1199,7 @@ model Lease {
   billingSchedule   RecurringBillingSchedule?
   chargeReconciliations ChargeReconciliation[]
   rentAdjustments   RentAdjustment[]
+  conditionReports  UnitConditionReport[]
 
   @@index([orgId])
   @@index([unitId])
@@ -1692,6 +1701,7 @@ model Asset {
   interventions     AssetIntervention[]
   cashflowOverrides CashflowOverride[]
   requests          Request[]
+  conditionItems    UnitConditionReportItem[]
 
   @@index([orgId])
   @@index([unitId])
@@ -2658,4 +2668,84 @@ model LetterResponse {
 
   @@index([letterId])
   @@index([tenantId])
+}
+
+// ==========================================
+// Unit Condition Reports (État des lieux)
+// ==========================================
+
+enum ConditionReportType {
+  MOVE_IN
+  MOVE_OUT
+}
+
+enum ConditionReportStatus {
+  PENDING
+  SUBMITTED
+  APPROVED
+}
+
+enum ItemCondition {
+  GOOD
+  FAIR
+  POOR
+  DAMAGED
+}
+
+model UnitConditionReport {
+  id               String                @id @default(uuid())
+  orgId            String
+  unitId           String
+  tenantId         String
+  leaseId          String
+  type             ConditionReportType
+  status           ConditionReportStatus @default(PENDING)
+  dueAt            DateTime?
+  submittedAt      DateTime?
+  approvedAt       DateTime?
+  approvedByUserId String?
+  managerNotes     String?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+
+  org        Org                      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  unit       Unit                     @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  tenant     Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  lease      Lease                    @relation(fields: [leaseId], references: [id], onDelete: Cascade)
+  approvedBy User?                    @relation(fields: [approvedByUserId], references: [id], onDelete: SetNull)
+  items      UnitConditionReportItem[]
+
+  @@index([orgId])
+  @@index([unitId])
+  @@index([tenantId])
+  @@index([leaseId])
+}
+
+model UnitConditionReportItem {
+  id        String        @id @default(uuid())
+  reportId  String
+  assetId   String?
+  roomLabel String
+  itemLabel String
+  condition ItemCondition
+  notes     String?
+
+  report UnitConditionReport        @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  asset  Asset?                    @relation(fields: [assetId], references: [id], onDelete: SetNull)
+  photos UnitConditionReportPhoto[]
+
+  @@index([reportId])
+  @@index([assetId])
+}
+
+model UnitConditionReportPhoto {
+  id         String   @id @default(uuid())
+  itemId     String
+  storageKey String
+  caption    String?
+  createdAt  DateTime @default(now())
+
+  item UnitConditionReportItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@index([itemId])
 }

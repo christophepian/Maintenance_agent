@@ -44,6 +44,7 @@ import { registerTenantConversationRoutes } from "./routes/tenantConversation";
 import { registerImportedStatementRoutes } from "./routes/importedStatements";
 import { registerSandboxRoutes } from "./routes/sandbox";
 import { registerCorrespondenceRoutes } from "./routes/correspondence";
+import { registerConditionReportRoutes } from "./routes/conditionReports";
 import { registerEventHandlers } from "./events";
 import {
   processSelectionTimeouts,
@@ -185,6 +186,7 @@ registerTenantConversationRoutes(router);
 registerImportedStatementRoutes(router);
 registerSandboxRoutes(router);
 registerCorrespondenceRoutes(router);
+registerConditionReportRoutes(router);
 
 /* ── Dev-only: background job trigger route ─────────────────── */
 router.post("/__dev/rental/run-jobs", async ({ res }) => {
