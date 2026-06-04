@@ -1,6 +1,7 @@
 import "dotenv/config";
 
 import * as http from "http";
+import { execSync } from "child_process";
 import { sendError, sendJson } from "./http/json";
 import { parseQuery } from "./http/query";
 import { getOrgIdForRequest, AuthedRequest, requireAuth } from "./authz";
@@ -563,6 +564,20 @@ async function runBackgroundJobs() {
 
 async function start() {
   try {
+    // Apply pending DB migrations before the server accepts traffic.
+    // execSync blocks the event loop intentionally — nothing should run before
+    // the schema is up to date. migrate deploy is idempotent: no-ops when
+    // all migrations are already applied.
+    try {
+      console.log("[STARTUP] Running prisma migrate deploy...");
+      execSync("npx prisma migrate deploy", { stdio: "inherit" });
+      console.log("[STARTUP] Migrations up to date.");
+    } catch (migErr) {
+      console.error("[STARTUP] prisma migrate deploy failed:", migErr);
+      // Exit so Render surfaces the failure rather than booting a broken server.
+      process.exit(1);
+    }
+
     const supabaseUrl = process.env.SUPABASE_URL;
     console.log(`[STARTUP] SUPABASE_URL: ${supabaseUrl ? `set (${supabaseUrl.slice(0, 30)}...)` : "NOT SET — Supabase JWT verification will fail"}`);
 
