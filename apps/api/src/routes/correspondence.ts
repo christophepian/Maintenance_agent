@@ -83,6 +83,7 @@ export function registerCorrespondenceRoutes(router: Router) {
       });
       sendJson(res, 201, { data: letter });
     } catch (e) {
+      console.error("[correspondence/create]", e);
       sendError(res, 500, "DB_ERROR", "Failed to create letter", String(e));
     }
   });
