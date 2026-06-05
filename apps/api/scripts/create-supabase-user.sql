@@ -6,6 +6,9 @@
 -- After running, also set app_metadata (step 2) and the app-side User record (step 3).
 
 -- ── Step 1: Insert auth user ───────────────────────────────────────────────
+-- phone and phone_change are omitted: GoTrue's unique constraint on phone
+-- means setting them to '' causes a duplicate key error when other users exist.
+-- NULL is correct when phone-based auth is not used.
 INSERT INTO auth.users (
   id,
   instance_id,
@@ -24,8 +27,6 @@ INSERT INTO auth.users (
   email_change_token_new,
   email_change_token_current,
   reauthentication_token,
-  phone,
-  phone_change,
   phone_change_token,
   email_change
 )
@@ -41,7 +42,7 @@ VALUES (
   now(),
   '{"appRole":"MANAGER","orgId":"default-org","accessLevel":"APP_USER"}',  -- ← adjust role
   '{}',
-  '', '', '', '', '', '', '', '', ''
+  '', '', '', '', '', '', ''
 );
 
 -- ── Step 1b: Fix any NULL token columns (GoTrue fails to scan NULLs) ────────
