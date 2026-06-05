@@ -74,12 +74,11 @@ export default async function handler(req, res) {
   }
 
   // First-time users: no password_set flag in user_metadata.
-  // Redirect them to /set-password so they can create their own password.
-  // The flag is set to true by /set-password and /reset-password after a
-  // successful updateUser() call.
+  // In sandbox, skip this entirely — magic link is the only auth method and
+  // there is no password to set. Go straight to the app.
   const isFirstLogin = !userMeta.password_set;
 
-  if (isFirstLogin) {
+  if (isFirstLogin && process.env.NEXT_PUBLIC_SANDBOX !== "true") {
     const dest = next ? `/set-password?next=${encodeURIComponent(next)}` : "/set-password";
     return res.redirect(302, dest);
   }
