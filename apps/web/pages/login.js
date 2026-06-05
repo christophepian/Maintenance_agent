@@ -308,8 +308,6 @@ function ResetSentScreen({ email, onBack }) {
 
 /* ── Main page ────────────────────────────────────────────────── */
 
-const isSandbox = process.env.NEXT_PUBLIC_SANDBOX === "true";
-
 export default function LoginPage() {
   const { t } = useTranslation("common");
   const router = useRouter();
@@ -392,7 +390,7 @@ export default function LoginPage() {
     try {
       // SANDBOX: check the beta allowlist before sending any OTP.
       // In non-sandbox environments this block is never reached.
-      if (isSandbox) {
+      if (process.env.NEXT_PUBLIC_SANDBOX === "true") {
         const checkRes = await fetch("/api/auth/beta-check", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -506,7 +504,7 @@ export default function LoginPage() {
       {notice && <Notice type={notice.type} msg={notice.msg} />}
 
       {/* Method tabs — hidden in sandbox (magic link only) */}
-      {!isSandbox && (
+      {process.env.NEXT_PUBLIC_SANDBOX !== "true" && (
         <div className="flex gap-1 p-1 bg-slate-100 rounded-xl mb-6">
           <MethodTab
             active={method === "magic"}
@@ -524,7 +522,7 @@ export default function LoginPage() {
       )}
 
       {/* Magic link form — always shown in sandbox; shown when method=magic elsewhere */}
-      {(isSandbox || method === "magic") && (
+      {(process.env.NEXT_PUBLIC_SANDBOX === "true" || method === "magic") && (
         <form onSubmit={sendMagicLink}>
           <div className="mb-5">
             <label className="block text-sm font-medium text-slate-700 mb-1.5">
@@ -555,7 +553,7 @@ export default function LoginPage() {
       )}
 
       {/* Password form — never shown in sandbox */}
-      {!isSandbox && method === "password" && (
+      {process.env.NEXT_PUBLIC_SANDBOX !== "true" && method === "password" && (
         <form onSubmit={signInWithPassword}>
           <div className="mb-4">
             <label className="block text-sm font-medium text-slate-700 mb-1.5">
