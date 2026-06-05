@@ -31,6 +31,7 @@ import { assetRepo } from "../repositories";
 import { ASSET_TYPE_TO_CATEGORY } from "../repositories/assetRepository";
 import { estimateReplacementCost, ReplacementCostEstimate } from "./replacementCostService";
 import { normalizeTopicKey } from "../utils/topicKey";
+import { findLatestConditionsForAssets, LatestCondition } from "../repositories/conditionReportRepository";
 
 // ─── Types ─────────────────────────────────────────────────────
 
@@ -71,6 +72,7 @@ export interface AssetInventoryItem {
   depreciation: DepreciationInfo | null;
   interventions: InterventionDTO[];
   unit?: { id: string; unitNumber: string };
+  latestCondition?: LatestCondition | null;
 }
 
 export interface InterventionDTO {
@@ -295,6 +297,7 @@ function mapIntervention(i: any): InterventionDTO {
 function mapAssetToDTO(
   asset: any,
   depreciation: DepreciationInfo | null,
+  latestCondition?: LatestCondition | null,
 ): AssetInventoryItem {
   return {
     id: asset.id,
@@ -322,6 +325,7 @@ function mapAssetToDTO(
     depreciation,
     interventions: (asset.interventions ?? []).map(mapIntervention),
     ...(asset.unit ? { unit: { id: asset.unit.id, unitNumber: asset.unit.unitNumber } } : {}),
+    latestCondition: latestCondition ?? null,
   };
 }
 
@@ -338,6 +342,10 @@ export async function getAssetInventoryForUnit(
 ): Promise<AssetInventoryItem[]> {
   const assets = await assetRepo.findAssetsByUnit(prisma, orgId, unitId);
 
+  // Batch-fetch latest condition for all assets in one query
+  const assetIds = assets.map((a) => a.id);
+  const conditionMap = await findLatestConditionsForAssets(prisma, assetIds, orgId);
+
   const result: AssetInventoryItem[] = [];
   for (const asset of assets) {
     const resolved = await resolveUsefulLife(
@@ -346,7 +354,7 @@ export async function getAssetInventoryForUnit(
       asset.assetModel?.defaultUsefulLifeMonths,
     );
     const depreciation = computeDepreciation(asset, resolved);
-    result.push(mapAssetToDTO(asset, depreciation));
+    result.push(mapAssetToDTO(asset, depreciation, conditionMap.get(asset.id) ?? null));
   }
 
   return result;

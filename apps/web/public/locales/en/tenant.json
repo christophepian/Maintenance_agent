@@ -8,7 +8,9 @@
     "assets": "Assets",
     "myHome": "My Home",
     "apply": "Apply",
-    "settings": "Settings"
+    "settings": "Settings",
+    "letters": "Letters",
+    "conditionReports": "Condition Reports"
   },
   "dashboard": {
     "title": "Tenant Portal",
@@ -175,6 +177,21 @@
       "terminatedOn": "Terminated on:",
       "reason": "Reason:",
       "notice": "Notice:"
+    },
+    "giveNotice": {
+      "button": "Give notice of departure",
+      "title": "Departure process",
+      "intro": "By confirming, you are registering your intention to leave. Your property manager will be informed and your move-out inspection form will be created.",
+      "step1": "Fill in your move-out condition report (État des lieux)",
+      "step2": "Ensure the apartment is clean and in good order",
+      "step3": "Schedule the key handover with your property manager",
+      "step4": "Confirm your forwarding address (bell & mailbox nameplate — to be arranged with your manager)",
+      "confirm": "Confirm departure notice",
+      "submitting": "Sending…",
+      "cancel": "Cancel",
+      "doneTitle": "Notice registered",
+      "doneBody": "Your property manager has been notified and a confirmation email has been sent to you. Your move-out inspection form is ready — please complete it before the indicated deadline.",
+      "goToReport": "Open move-out inspection"
     }
   },
   "leasesIndex": {
@@ -329,5 +346,70 @@
       "dark": "Dark",
       "darkDescription": "Easier on the eyes in low-light conditions."
     }
+  },
+  "letters": {
+    "title": "Letters",
+    "unread": "unread",
+    "loading": "Loading…",
+    "empty": "No letters yet.",
+    "notFound": "Letter not found.",
+    "from": "From",
+    "propertyManager": "Property manager",
+    "yourReplies": "Your replies",
+    "you": "You",
+    "replyTitle": "Send a reply",
+    "replyPlaceholder": "Write your reply…",
+    "replySent": "Your reply has been sent.",
+    "sending": "Sending…",
+    "sendReply": "Send reply"
+  },
+  "conditionReport": {
+    "nav": "Condition Reports",
+    "title": "Condition Reports",
+    "subtitle": "Move-in and move-out inspections",
+    "loading": "Loading…",
+    "empty": "No condition reports yet.",
+    "notFound": "Report not found.",
+    "dueIn": "Due in {{days}} day(s)",
+    "overdue": "Overdue",
+    "type": {
+      "MOVE_IN": "Move-in",
+      "MOVE_OUT": "Move-out"
+    },
+    "status": {
+      "PENDING": "Pending",
+      "SUBMITTED": "Submitted",
+      "APPROVED": "Approved"
+    },
+    "items": "items",
+    "addItem": "Add item",
+    "roomLabel": "Room",
+    "roomPlaceholder": "e.g. Kitchen, Bedroom 1…",
+    "itemLabel": "Item",
+    "itemPlaceholder": "e.g. Walls, Floor, Window…",
+    "condition": "Condition",
+    "notes": "Notes",
+    "notesPlaceholder": "Optional notes…",
+    "condition_GOOD": "Good",
+    "condition_FAIR": "Fair",
+    "condition_POOR": "Poor",
+    "condition_DAMAGED": "Damaged",
+    "saveItem": "Save item",
+    "saving": "Saving…",
+    "deleteItem": "Remove",
+    "submit": "Submit report",
+    "submitting": "Submitting…",
+    "submitConfirm": "Submit this report to your property manager? You won't be able to edit it afterwards.",
+    "photosRequired": "Photos required for degraded items: {{items}}",
+    "managerNotes": "Manager notes",
+    "approvedOn": "Approved on {{date}}",
+    "edit": "Edit",
+    "cancel": "Cancel",
+    "noItems": "No items yet. Add rooms and items below.",
+    "roomItemRequired": "Room and item labels are required.",
+    "addPhoto": "Add photo",
+    "uploadingPhoto": "Uploading…",
+    "photoAdvisory": "Photos recommended for damaged or poor-condition items.",
+    "noPhotos": "No photos"
   }
 }

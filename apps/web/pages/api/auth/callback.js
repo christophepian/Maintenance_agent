@@ -18,7 +18,7 @@
  *   Add: https://<your-domain>/api/auth/callback
  */
 
-import { createApiClient } from "../../../lib/supabase/server";
+import { createApiClient, createAdminClient } from "../../../lib/supabase/server";
 
 const ROLE_HOME = {
   MANAGER: "/manager",
@@ -49,6 +49,29 @@ export default async function handler(req, res) {
   const userMeta = session.user?.user_metadata ?? {};
   const accessLevel = meta.accessLevel;
   const appRole = meta.appRole;
+
+  // SANDBOX: validate beta tester status after every magic link click.
+  // This is a second line of defence — the login form already calls beta-check
+  // before sending the OTP, but we re-validate here to catch edge cases such
+  // as a trial that expired between OTP send and link click.
+  if (process.env.NEXT_PUBLIC_SANDBOX === "true") {
+    const admin = createAdminClient();
+    const { data: beta } = await admin
+      .from("beta_testers")
+      .select("status, trial_expires_at")
+      .ilike("email", session.user.email)
+      .maybeSingle();
+
+    const isValidBeta =
+      beta &&
+      beta.status === "active" &&
+      (!beta.trial_expires_at || new Date(beta.trial_expires_at) > new Date());
+
+    if (!isValidBeta) {
+      const reason = !beta ? "not_allowed" : beta.status !== "active" ? "not_allowed" : "expired";
+      return res.redirect(302, `/login?reason=${reason}`);
+    }
+  }
 
   // First-time users: no password_set flag in user_metadata.
   // Redirect them to /set-password so they can create their own password.

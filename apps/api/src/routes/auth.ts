@@ -28,6 +28,10 @@ import {
 import { tenantSelfPayWorkflow } from "../workflows/tenantSelfPayWorkflow";
 import { InvalidTransitionError } from "../workflows/transitions";
 import { resolveTenantUserId } from "../services/tenantIdentity";
+import { createReportFromLease } from "../services/conditionReportService";
+import { enqueueEmail } from "../services/emailOutbox";
+import { trySendImmediate } from "../services/emailTransport";
+import * as userRepo from "../repositories/userRepository";
 import { listTenantsForDevImpersonation, findTenantForDevLogin } from "../repositories/tenantRepository";
 import { parseBody } from "../http/body";
 import { CreateRequestSchema } from "../validation/requests";
@@ -121,6 +125,71 @@ export function registerAuthRoutes(router: Router) {
       if (e.message?.includes("Only READY_TO_SIGN")) return sendError(res, 409, "CONFLICT", e.message);
       if (e.message?.includes("No active signature")) return sendError(res, 409, "CONFLICT", e.message);
       sendError(res, 500, "DB_ERROR", "Failed to accept lease", String(e));
+    }
+  });
+
+  // POST /tenant-portal/leases/:id/give-notice — tenant initiates departure
+  router.post("/tenant-portal/leases/:id/give-notice", async ({ req, res, params, orgId, prisma }) => {
+    const tenantId = requireTenantSession(req, res);
+    if (!tenantId) return;
+    try {
+      // Verify the lease belongs to this tenant and is ACTIVE
+      const lease = await prisma.lease.findFirst({
+        where: { id: params.id, orgId, status: "ACTIVE" },
+        include: { unit: { select: { id: true, unitNumber: true } } },
+      });
+      if (!lease) return sendError(res, 404, "NOT_FOUND", "Active lease not found");
+
+      // Verify the tenant occupies the unit
+      if (lease.unitId) {
+        const occ = await prisma.occupancy.findFirst({ where: { tenantId, unitId: lease.unitId } });
+        if (!occ) return sendError(res, 403, "FORBIDDEN", "You are not an occupant of this unit");
+      }
+
+      // Idempotent: create MOVE_OUT report (createReportFromLease guards duplicates)
+      await createReportFromLease(prisma, lease.id, "MOVE_OUT");
+
+      // Email tenant confirmation
+      const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { email: true, name: true } });
+      if (tenant?.email) {
+        const emailRecord = await enqueueEmail(orgId, {
+          toEmail: tenant.email,
+          template: "TENANT_LETTER",
+          subject: "Confirmation de votre préavis de départ / Confirmation of your notice of departure",
+          bodyText: [
+            `${tenant.name ? `Chère/Cher ${tenant.name},` : "Madame, Monsieur,"}`,
+            "",
+            "Nous avons bien reçu votre préavis de départ. Un formulaire d'état des lieux de sortie a été créé pour vous dans votre portail locataire.",
+            "Veuillez le compléter avant la date limite indiquée.",
+            "",
+            "We have received your notice of departure. A move-out condition report has been created for you in your tenant portal.",
+            "Please complete it before the indicated deadline.",
+            "",
+            "La Gérance",
+          ].join("\n"),
+          metaJson: { leaseId: lease.id, tenantId },
+        });
+        trySendImmediate(emailRecord.id);
+      }
+
+      // Notify all managers in-app
+      const { createNotification } = await import("../services/notifications");
+      const managers = await userRepo.findManagersByOrg(prisma, orgId);
+      for (const mgr of managers) {
+        await createNotification({
+          orgId,
+          userId: mgr.id,
+          entityType: "LETTER",
+          entityId: lease.id,
+          eventType: "CONDITION_REPORT_SUBMITTED",
+          message: `${tenant?.name ?? "A tenant"} has given notice of departure for unit ${lease.unit?.unitNumber ?? lease.unitId}.`,
+        }).catch(() => {});
+      }
+
+      sendJson(res, 200, { data: { ok: true } });
+    } catch (e: any) {
+      console.error("[give-notice]", e);
+      sendError(res, 500, "DB_ERROR", "Failed to register notice of departure", String(e));
     }
   });
 

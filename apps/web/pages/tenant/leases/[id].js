@@ -36,6 +36,9 @@ export default function TenantLeaseDetailPage() {
   const [accepting, setAccepting] = useState(false);
   const [acceptConfirm, setAcceptConfirm] = useState(false);
   const [acceptResult, setAcceptResult] = useState(null);
+  const [noticeStep, setNoticeStep] = useState(null); // null | "confirm" | "done"
+  const [noticeSubmitting, setNoticeSubmitting] = useState(false);
+  const [noticeError, setNoticeError] = useState("");
 
   // Load tenant session
   useEffect(() => {
@@ -388,10 +391,84 @@ export default function TenantLeaseDetailPage() {
 
             {/* Lifecycle Status */}
             {lease.status === "ACTIVE" && (
-              <div className="mt-6 text-center p-4 bg-green-50 border border-green-200 rounded-lg">
+              <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg text-center">
                 <span className="text-green-700 font-medium">
                   ⚡ This lease is active{lease.activatedAt ? ` since ${formatDate(lease.activatedAt)}` : ""}.
                 </span>
+              </div>
+            )}
+
+            {/* Give notice of departure — ACTIVE leases only */}
+            {lease.status === "ACTIVE" && noticeStep === null && (
+              <div className="mt-4">
+                <button
+                  onClick={() => setNoticeStep("confirm")}
+                  className="w-full rounded-xl border border-warning-ring bg-warning-light px-4 py-3 text-sm font-medium text-warning-text hover:bg-warning-light/80 transition-colors"
+                >
+                  {t("tenant:leasesId.giveNotice.button")}
+                </button>
+              </div>
+            )}
+
+            {lease.status === "ACTIVE" && noticeStep === "confirm" && (
+              <div className="mt-4 rounded-xl border border-warning-ring bg-warning-light p-5 space-y-4">
+                <h3 className="font-semibold text-warning-text">{t("tenant:leasesId.giveNotice.title")}</h3>
+                <p className="text-sm text-foreground">{t("tenant:leasesId.giveNotice.intro")}</p>
+
+                {/* Checklist of steps */}
+                <ol className="list-decimal list-inside space-y-2 text-sm text-foreground">
+                  <li className="font-medium">{t("tenant:leasesId.giveNotice.step1")}</li>
+                  <li>{t("tenant:leasesId.giveNotice.step2")}</li>
+                  <li>{t("tenant:leasesId.giveNotice.step3")}</li>
+                  <li>{t("tenant:leasesId.giveNotice.step4")}</li>
+                </ol>
+
+                {noticeError && (
+                  <p className="text-sm text-destructive-text">{noticeError}</p>
+                )}
+
+                <div className="flex gap-3">
+                  <button
+                    disabled={noticeSubmitting}
+                    onClick={async () => {
+                      setNoticeSubmitting(true);
+                      setNoticeError("");
+                      try {
+                        const res = await tenantFetch(`/api/tenant-portal/leases/${leaseId}/give-notice`, { method: "POST" });
+                        const data = await res.json();
+                        if (!res.ok) throw new Error(data?.error?.message || "Failed");
+                        setNoticeStep("done");
+                      } catch (e) {
+                        setNoticeError(e.message || "An error occurred");
+                      } finally {
+                        setNoticeSubmitting(false);
+                      }
+                    }}
+                    className="flex-1 rounded-lg bg-warning-text px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50 transition-opacity"
+                  >
+                    {noticeSubmitting ? t("tenant:leasesId.giveNotice.submitting") : t("tenant:leasesId.giveNotice.confirm")}
+                  </button>
+                  <button
+                    onClick={() => setNoticeStep(null)}
+                    disabled={noticeSubmitting}
+                    className="rounded-lg border border-surface-border px-4 py-2 text-sm text-muted-text hover:bg-surface-subtle disabled:opacity-50 transition-colors"
+                  >
+                    {t("tenant:leasesId.giveNotice.cancel")}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {lease.status === "ACTIVE" && noticeStep === "done" && (
+              <div className="mt-4 rounded-xl border border-success-ring bg-success-light p-5 space-y-3">
+                <p className="font-semibold text-success-text">{t("tenant:leasesId.giveNotice.doneTitle")}</p>
+                <p className="text-sm text-foreground">{t("tenant:leasesId.giveNotice.doneBody")}</p>
+                <button
+                  onClick={() => router.push("/tenant/condition-reports")}
+                  className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-dark transition-colors"
+                >
+                  {t("tenant:leasesId.giveNotice.goToReport")}
+                </button>
               </div>
             )}
 

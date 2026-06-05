@@ -28,7 +28,8 @@
     "emails": "E-mails",
     "contacts": "Contacts",
     "finances": "Finances",
-    "settings": "Paramètres"
+    "settings": "Paramètres",
+    "correspondence": "Correspondance"
   },
   "dashboard": {
     "title": "Tableau de bord gérant",
@@ -409,7 +410,8 @@
       "documents": "Documents",
       "policies": "Politiques",
       "financials": "Finances",
-      "requests": "Demandes"
+      "requests": "Demandes",
+      "correspondence": "Correspondance"
     },
     "kpi": {
       "openRequests": "Demandes ouvertes",
@@ -2306,6 +2308,9 @@
         "INVOICE_OVERDUE": "Facture en retard",
         "LEASE_SIGNED": "Bail signe par le locataire",
         "APPLICATION_SUBMITTED": "Nouvelle candidature de location",
+        "LETTER_REPLY_RECEIVED": "Locataire a répondu à une lettre",
+        "CONDITION_REPORT_SUBMITTED": "Locataire a soumis un état des lieux",
+        "CONDITION_REPORT_APPROVED": "État des lieux approuvé",
         "TENANT_SELECTED": "Proprietaire a selectionne un locataire",
         "QUOTE_SUBMITTED": "Prestataire a soumis un devis",
         "CONTRACTOR_ASSIGNED": "Nouvelle mission assignee",
@@ -2775,5 +2780,72 @@
       "type": "Type",
       "building": "Immeuble"
     }
+  },
+  "correspondence": {
+    "title": "Correspondance",
+    "subtitle": "Lettres envoyées aux locataires",
+    "newLetter": "Nouvelle lettre",
+    "loading": "Chargement…",
+    "empty": "Aucune lettre. Rédigez votre première lettre.",
+    "untitled": "Lettre sans titre",
+    "saveDraft": "Enregistrer le brouillon",
+    "saving": "Enregistrement…",
+    "send": "Envoyer",
+    "sending": "Envoi…",
+    "drafting": "Génération…",
+    "generateDraft": "Générer avec l'IA",
+    "subject": "Objet",
+    "subjectPlaceholder": "Objet de la lettre…",
+    "body": "Corps",
+    "bodyPlaceholder": "Rédigez votre lettre ici, ou utilisez l'IA pour générer un brouillon…",
+    "templateType": "Modèle",
+    "language": "Langue",
+    "additionalContext": "Contexte pour l'IA (optionnel)",
+    "additionalContextPlaceholder": "ex. Concierge absent du 15 au 25 juillet, contact de remplacement : Pierre Dupont 079 123 45 67",
+    "recipients": "Destinataires",
+    "selected": "sélectionné(s)",
+    "noTenants": "Aucun locataire trouvé",
+    "targetSingle": "Locataire individuel",
+    "targetBuilding": "Tous les locataires d'un immeuble",
+    "targetMultiBuilding": "Plusieurs immeubles",
+    "noRecipientsError": "Veuillez sélectionner au moins un destinataire.",
+    "emptyLetterError": "L'objet et le corps sont requis avant l'envoi.",
+    "replies": "Réponses",
+    "read": "Lu",
+    "unread": "Non lu",
+    "sentOn": "Envoyé le",
+    "edit": "Modifier",
+    "delete": "Supprimer",
+    "confirmDelete": "Supprimer ce brouillon ? Cette action est irréversible.",
+    "notFound": "Lettre introuvable.",
+    "emptyBody": "Lettre vide.",
+    "tenant": "Locataire",
+    "status": {
+      "draft": "Brouillon",
+      "sent": "Envoyé",
+      "archived": "Archivé"
+    }
+  },
+  "conditionReport": {
+    "title": "État des lieux",
+    "moveIn": "État des lieux d'entrée",
+    "moveOut": "État des lieux de sortie",
+    "backToUnit": "Retour à l'unité",
+    "status_PENDING": "En attente",
+    "status_SUBMITTED": "Soumis",
+    "status_APPROVED": "Approuvé",
+    "submittedOn": "Soumis le",
+    "approvedOn": "Approuvé le",
+    "approve": "Approuver",
+    "approving": "Approbation…",
+    "reopen": "Renvoyer au locataire",
+    "reopening": "Renvoi en cours…",
+    "reopenNotesRequired": "Veuillez ajouter une remarque expliquant ce qui doit être corrigé.",
+    "reopenNotesHint": "Une remarque est requise lors du renvoi du rapport au locataire.",
+    "managerNotes": "Remarques de la gérance",
+    "managerNotesPlaceholder": "Remarques optionnelles visibles par le locataire…",
+    "deltaCount": "{{count}} élément(s) présente(nt) une dégradation par rapport à l'état des lieux d'entrée.",
+    "noDelta": "Aucune dégradation détectée par rapport à l'état des lieux d'entrée.",
+    "missingPhotoWarning": "Photo requise — cet élément est dégradé mais n'a pas de photo."
   }
 }

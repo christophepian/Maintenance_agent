@@ -13,6 +13,7 @@ import { PrismaClient } from "@prisma/client";
 import { onAll, on, onDeferred } from "./bus";
 import { DomainEvent } from "./types";
 import { createNotification } from "../services/notifications";
+import { createReportFromLease } from "../services/conditionReportService";
 import {
   createScheduleForLease,
   generateInvoiceForPeriod,
@@ -251,6 +252,18 @@ export function registerEventHandlers(prisma: PrismaClient): void {
           err,
         );
       }
+    }
+
+    // ── Condition reports: auto-create on move-in / move-out ──
+    if (toStatus === "ACTIVE") {
+      createReportFromLease(prisma, leaseId, "MOVE_IN").catch((err) =>
+        console.error(`[CONDITION-REPORT] Failed to create MOVE_IN for lease ${leaseId}:`, err),
+      );
+    }
+    if (toStatus === "TERMINATED") {
+      createReportFromLease(prisma, leaseId, "MOVE_OUT").catch((err) =>
+        console.error(`[CONDITION-REPORT] Failed to create MOVE_OUT for lease ${leaseId}:`, err),
+      );
     }
   });
 

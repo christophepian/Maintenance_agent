@@ -308,10 +308,12 @@ function ResetSentScreen({ email, onBack }) {
 
 /* ── Main page ────────────────────────────────────────────────── */
 
+const isSandbox = process.env.NEXT_PUBLIC_SANDBOX === "true";
+
 export default function LoginPage() {
   const { t } = useTranslation("common");
   const router = useRouter();
-  const { next, error: queryError } = router.query;
+  const { next, error: queryError, reason: queryReason } = router.query;
 
   const [email, setEmail]         = useState("");
   const [password, setPassword]   = useState("");
@@ -334,7 +336,7 @@ export default function LoginPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Surface errors forwarded from /api/auth/callback
+  // Surface errors forwarded from /api/auth/callback or sandbox expiry redirects
   useEffect(() => {
     if (queryError === "forbidden") {
       setNotice({ type: "err", msg: t("login.error.forbidden") });
@@ -342,8 +344,14 @@ export default function LoginPage() {
       setNotice({ type: "err", msg: t("login.error.authFailed") });
     } else if (queryError === "missing_code") {
       setNotice({ type: "err", msg: t("login.error.missingCode") });
+    } else if (queryReason === "expired") {
+      // SANDBOX: beta trial has expired (mid-session or at login)
+      setNotice({ type: "err", msg: t("login.error.betaTrialExpired") });
+    } else if (queryReason === "not_allowed" || queryReason === "inactive") {
+      // SANDBOX: email not on the allowlist or access revoked
+      setNotice({ type: "err", msg: t("login.error.betaNotRegistered") });
     }
-  }, [queryError, t]);
+  }, [queryError, queryReason, t]);
 
   function redirectAfterLogin(session) {
     const meta = session.user?.app_metadata ?? {};
@@ -382,7 +390,28 @@ export default function LoginPage() {
     setNotice(null);
     setLoading(true);
     try {
+      // SANDBOX: check the beta allowlist before sending any OTP.
+      // In non-sandbox environments this block is never reached.
+      if (isSandbox) {
+        const checkRes = await fetch("/api/auth/beta-check", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: email.trim().toLowerCase() }),
+        });
+        const check = await checkRes.json();
+        if (!check.allowed) {
+          const msgKey =
+            check.reason === "expired"
+              ? "login.error.betaTrialExpired"
+              : "login.error.betaNotRegistered";
+          setNotice({ type: "err", msg: t(msgKey) });
+          return;
+        }
+      }
+
       const supabase = createClient();
+      // redirectTo resolves to the current origin, which is the sandbox domain
+      // in sandbox and the main domain in production — no hardcoding needed.
       const redirectTo = `${window.location.origin}/api/auth/callback${
         next ? `?next=${encodeURIComponent(next)}` : ""
       }`;
@@ -476,24 +505,26 @@ export default function LoginPage() {
 
       {notice && <Notice type={notice.type} msg={notice.msg} />}
 
-      {/* Method tabs */}
-      <div className="flex gap-1 p-1 bg-slate-100 rounded-xl mb-6">
-        <MethodTab
-          active={method === "magic"}
-          onClick={() => { setMethod("magic"); setNotice(null); }}
-        >
-          {t("login.tabMagicLink")}
-        </MethodTab>
-        <MethodTab
-          active={method === "password"}
-          onClick={() => { setMethod("password"); setNotice(null); }}
-        >
-          {t("login.tabPassword")}
-        </MethodTab>
-      </div>
+      {/* Method tabs — hidden in sandbox (magic link only) */}
+      {!isSandbox && (
+        <div className="flex gap-1 p-1 bg-slate-100 rounded-xl mb-6">
+          <MethodTab
+            active={method === "magic"}
+            onClick={() => { setMethod("magic"); setNotice(null); }}
+          >
+            {t("login.tabMagicLink")}
+          </MethodTab>
+          <MethodTab
+            active={method === "password"}
+            onClick={() => { setMethod("password"); setNotice(null); }}
+          >
+            {t("login.tabPassword")}
+          </MethodTab>
+        </div>
+      )}
 
-      {/* Magic link form */}
-      {method === "magic" && (
+      {/* Magic link form — always shown in sandbox; shown when method=magic elsewhere */}
+      {(isSandbox || method === "magic") && (
         <form onSubmit={sendMagicLink}>
           <div className="mb-5">
             <label className="block text-sm font-medium text-slate-700 mb-1.5">
@@ -523,8 +554,8 @@ export default function LoginPage() {
         </form>
       )}
 
-      {/* Password form */}
-      {method === "password" && (
+      {/* Password form — never shown in sandbox */}
+      {!isSandbox && method === "password" && (
         <form onSubmit={signInWithPassword}>
           <div className="mb-4">
             <label className="block text-sm font-medium text-slate-700 mb-1.5">

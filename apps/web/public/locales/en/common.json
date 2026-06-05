@@ -69,7 +69,9 @@
       "missingCode": "Invalid login link. Please request a new one.",
       "emailNotFound": "If that address is registered you'll receive a link shortly.",
       "incorrectCredentials": "Incorrect email or password.",
-      "enterEmail": "Enter your email address first."
+      "enterEmail": "Enter your email address first.",
+      "betaNotRegistered": "This beta invitation is not active. Please contact the team.",
+      "betaTrialExpired": "Your beta trial has ended. Please contact the team to extend access."
     }
   },
   "status": {

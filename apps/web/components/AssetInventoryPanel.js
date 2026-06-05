@@ -909,6 +909,17 @@ export default function AssetInventoryPanel({ assets, onRefresh, scope, parentId
                     {asset.brand && <span className="text-xs text-foreground-dim">{asset.brand}</span>}
                     <div className="flex-1" />
                     <DepreciationBar depreciation={asset.depreciation} installedAt={asset.installedAt} />
+                    {asset.latestCondition && (
+                      <span className={cn(
+                        "text-xs px-1.5 py-0.5 rounded font-medium shrink-0",
+                        asset.latestCondition.condition === "GOOD"    && "bg-success-light text-success-text",
+                        asset.latestCondition.condition === "FAIR"    && "bg-warning-light text-warning-text",
+                        asset.latestCondition.condition === "POOR"    && "bg-warning-light text-warning-text",
+                        asset.latestCondition.condition === "DAMAGED" && "bg-destructive-light text-destructive-text",
+                      )}>
+                        {asset.latestCondition.condition}
+                      </span>
+                    )}
                     {!asset.isPresent && (
                       <span className="text-xs bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-semibold">ABSENT</span>
                     )}

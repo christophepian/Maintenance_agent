@@ -28,7 +28,8 @@
     "emails": "Emails",
     "contacts": "Contacts",
     "finances": "Finances",
-    "settings": "Settings"
+    "settings": "Settings",
+    "correspondence": "Correspondence"
   },
   "dashboard": {
     "title": "Manager Dashboard",
@@ -409,7 +410,8 @@
       "documents": "Documents",
       "policies": "Policies",
       "financials": "Financials",
-      "requests": "Requests"
+      "requests": "Requests",
+      "correspondence": "Correspondence"
     },
     "kpi": {
       "openRequests": "Open Requests",
@@ -2306,6 +2308,9 @@
         "INVOICE_OVERDUE": "Invoice overdue",
         "LEASE_SIGNED": "Lease signed by tenant",
         "APPLICATION_SUBMITTED": "New rental application",
+        "LETTER_REPLY_RECEIVED": "Tenant replied to a letter",
+        "CONDITION_REPORT_SUBMITTED": "Tenant submitted a condition report",
+        "CONDITION_REPORT_APPROVED": "Condition report approved",
         "TENANT_SELECTED": "Owner selected tenant",
         "QUOTE_SUBMITTED": "Contractor submitted quote",
         "CONTRACTOR_ASSIGNED": "New job assigned to me",
@@ -2776,5 +2781,72 @@
       "type": "Type",
       "building": "Building"
     }
+  },
+  "correspondence": {
+    "title": "Correspondence",
+    "subtitle": "Letters sent to tenants",
+    "newLetter": "New letter",
+    "loading": "Loading…",
+    "empty": "No letters yet. Compose your first letter.",
+    "untitled": "Untitled letter",
+    "saveDraft": "Save draft",
+    "saving": "Saving…",
+    "send": "Send",
+    "sending": "Sending…",
+    "drafting": "Generating…",
+    "generateDraft": "Generate with AI",
+    "subject": "Subject",
+    "subjectPlaceholder": "Letter subject…",
+    "body": "Body",
+    "bodyPlaceholder": "Write your letter here, or use AI to generate a draft…",
+    "templateType": "Template",
+    "language": "Language",
+    "additionalContext": "Context for AI (optional)",
+    "additionalContextPlaceholder": "e.g. Handyman unavailable 15–25 July, fallback contact: Pierre Dupont 079 123 45 67",
+    "recipients": "Recipients",
+    "selected": "selected",
+    "noTenants": "No tenants found",
+    "targetSingle": "Single tenant",
+    "targetBuilding": "All tenants of a building",
+    "targetMultiBuilding": "Multiple buildings",
+    "noRecipientsError": "Please select at least one recipient.",
+    "emptyLetterError": "Subject and body are required before sending.",
+    "replies": "Replies",
+    "read": "Read",
+    "unread": "Unread",
+    "sentOn": "Sent on",
+    "edit": "Edit",
+    "delete": "Delete",
+    "confirmDelete": "Delete this draft? This cannot be undone.",
+    "notFound": "Letter not found.",
+    "emptyBody": "Empty letter.",
+    "tenant": "Tenant",
+    "status": {
+      "draft": "Draft",
+      "sent": "Sent",
+      "archived": "Archived"
+    }
+  },
+  "conditionReport": {
+    "title": "Condition Report",
+    "moveIn": "Move-in inspection",
+    "moveOut": "Move-out inspection",
+    "backToUnit": "Back to unit",
+    "status_PENDING": "Pending",
+    "status_SUBMITTED": "Submitted",
+    "status_APPROVED": "Approved",
+    "submittedOn": "Submitted on",
+    "approvedOn": "Approved on",
+    "approve": "Approve",
+    "approving": "Approving…",
+    "reopen": "Send back",
+    "reopening": "Sending back…",
+    "reopenNotesRequired": "Please add a note explaining what needs to be corrected before reopening.",
+    "reopenNotesHint": "A note is required when sending the report back to the tenant.",
+    "managerNotes": "Manager notes",
+    "managerNotesPlaceholder": "Optional notes visible to the tenant…",
+    "deltaCount": "{{count}} item(s) show degradation compared to the move-in report.",
+    "noDelta": "No degradation detected compared to the move-in report.",
+    "missingPhotoWarning": "Photo required — this item is degraded but has no photo."
   }
 }

@@ -8,7 +8,9 @@
     "assets": "Équipements",
     "myHome": "Mon logement",
     "apply": "Candidater",
-    "settings": "Paramètres"
+    "settings": "Paramètres",
+    "letters": "Courrier",
+    "conditionReports": "États des lieux"
   },
   "dashboard": {
     "title": "Espace locataire",
@@ -175,6 +177,21 @@
       "terminatedOn": "Résilié le :",
       "reason": "Motif :",
       "notice": "Préavis :"
+    },
+    "giveNotice": {
+      "button": "Donner son préavis de départ",
+      "title": "Processus de départ",
+      "intro": "En confirmant, vous enregistrez votre intention de quitter le logement. Votre gérance sera informée et votre formulaire d'état des lieux de sortie sera créé.",
+      "step1": "Remplir le formulaire d'état des lieux de sortie",
+      "step2": "Remettre l'appartement propre et en bon état",
+      "step3": "Planifier la remise des clés avec votre gérance",
+      "step4": "Confirmer votre adresse de réexpédition (plaquette sonnette et boîte aux lettres — à organiser avec votre gérance)",
+      "confirm": "Confirmer le préavis de départ",
+      "submitting": "Envoi en cours…",
+      "cancel": "Annuler",
+      "doneTitle": "Préavis enregistré",
+      "doneBody": "Votre gérance a été informée et un e-mail de confirmation vous a été envoyé. Votre formulaire d'état des lieux de sortie est prêt — veuillez le compléter avant la date limite indiquée.",
+      "goToReport": "Ouvrir l'état des lieux de sortie"
     }
   },
   "leasesIndex": {
@@ -329,5 +346,70 @@
       "dark": "Sombre",
       "darkDescription": "Plus reposant pour les yeux dans les conditions de faible luminosité."
     }
+  },
+  "letters": {
+    "title": "Courrier",
+    "unread": "non lu(s)",
+    "loading": "Chargement…",
+    "empty": "Aucune lettre pour l'instant.",
+    "notFound": "Lettre introuvable.",
+    "from": "De",
+    "propertyManager": "Gérance",
+    "yourReplies": "Vos réponses",
+    "you": "Vous",
+    "replyTitle": "Envoyer une réponse",
+    "replyPlaceholder": "Rédigez votre réponse…",
+    "replySent": "Votre réponse a été envoyée.",
+    "sending": "Envoi…",
+    "sendReply": "Envoyer"
+  },
+  "conditionReport": {
+    "nav": "États des lieux",
+    "title": "États des lieux",
+    "subtitle": "Inspections d'entrée et de sortie",
+    "loading": "Chargement…",
+    "empty": "Aucun état des lieux pour l'instant.",
+    "notFound": "Rapport introuvable.",
+    "dueIn": "À remettre dans {{days}} jour(s)",
+    "overdue": "En retard",
+    "type": {
+      "MOVE_IN": "Entrée",
+      "MOVE_OUT": "Sortie"
+    },
+    "status": {
+      "PENDING": "En attente",
+      "SUBMITTED": "Soumis",
+      "APPROVED": "Approuvé"
+    },
+    "items": "éléments",
+    "addItem": "Ajouter un élément",
+    "roomLabel": "Pièce",
+    "roomPlaceholder": "ex. Cuisine, Chambre 1…",
+    "itemLabel": "Élément",
+    "itemPlaceholder": "ex. Murs, Sol, Fenêtre…",
+    "condition": "État",
+    "notes": "Remarques",
+    "notesPlaceholder": "Remarques optionnelles…",
+    "condition_GOOD": "Bon",
+    "condition_FAIR": "Correct",
+    "condition_POOR": "Mauvais",
+    "condition_DAMAGED": "Endommagé",
+    "saveItem": "Enregistrer",
+    "saving": "Enregistrement…",
+    "deleteItem": "Supprimer",
+    "submit": "Soumettre le rapport",
+    "submitting": "Envoi en cours…",
+    "submitConfirm": "Soumettre ce rapport à votre gérance ? Vous ne pourrez plus le modifier ensuite.",
+    "photosRequired": "Photos requises pour les éléments dégradés : {{items}}",
+    "managerNotes": "Remarques de la gérance",
+    "approvedOn": "Approuvé le {{date}}",
+    "edit": "Modifier",
+    "cancel": "Annuler",
+    "noItems": "Aucun élément. Ajoutez des pièces et éléments ci-dessous.",
+    "roomItemRequired": "Les champs pièce et élément sont requis.",
+    "addPhoto": "Ajouter une photo",
+    "uploadingPhoto": "Téléchargement…",
+    "photoAdvisory": "Photos recommandées pour les éléments en mauvais état ou endommagés.",
+    "noPhotos": "Aucune photo"
   }
 }
