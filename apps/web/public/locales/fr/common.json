@@ -69,7 +69,9 @@
       "missingCode": "Lien de connexion invalide. Veuillez en demander un nouveau.",
       "emailNotFound": "Si cette adresse est enregistrée, vous recevrez un lien sous peu.",
       "incorrectCredentials": "E-mail ou mot de passe incorrect.",
-      "enterEmail": "Veuillez saisir votre adresse e-mail d'abord."
+      "enterEmail": "Veuillez saisir votre adresse e-mail d'abord.",
+      "betaNotRegistered": "Cette invitation bêta n'est pas active. Veuillez contacter l'équipe.",
+      "betaTrialExpired": "Votre période d'essai bêta est terminée. Veuillez contacter l'équipe pour prolonger l'accès."
     }
   },
   "status": {

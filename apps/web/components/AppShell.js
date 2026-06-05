@@ -92,6 +92,21 @@ export default function AppShell({ role: roleProp, children }) {
             .then((r) => { if (r.ok) window.location.reload(); })
             .catch(() => {});
         }
+
+        // Sandbox: validate beta trial on each app load and record the session.
+        // Catches mid-session expiry: if the trial has lapsed since last login,
+        // sign the user out and redirect to the login page with an expiry notice.
+        if (process.env.NEXT_PUBLIC_SANDBOX === "true") {
+          fetch("/api/auth/beta-validate", { method: "POST" })
+            .then((r) => r.json())
+            .then((json) => {
+              if (!json.ok) {
+                supabase.auth.signOut({ scope: "local" });
+                router.push("/login?reason=expired");
+              }
+            })
+            .catch(() => {});
+        }
       }
     });
 
