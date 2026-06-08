@@ -111,7 +111,6 @@ export default function ManagerConditionReportDetail() {
 
   const { data, loading, error, refresh } = useDetailResource(
     id ? `/api/condition-reports/${id}` : null,
-    (url) => fetch(url, { headers: authHeaders() }),
   );
 
   // useDetailResource already unwraps .data — report is the full object directly
