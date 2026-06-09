@@ -73,7 +73,7 @@
     font-family: 'DM Serif Display', Georgia, serif;
     font-size: clamp(3.5rem, 8vw, 7rem);
     font-weight: 900;
-    line-height: 0.92;
+    line-height: 1.1;
     letter-spacing: -0.02em;
     max-width: 14ch;
     margin-bottom: 1.5rem;
@@ -81,7 +81,7 @@
 
   h1 em {
     font-style: italic;
-    color: var(--forest);
+    color: #4f46e5;
   }
 
   .cover-sub {
@@ -816,7 +816,7 @@
 </head>
 <body>
 <style>#hub-bar{position:fixed;top:0;left:0;right:0;z-index:9000;height:36px;background:#0f172a;display:flex;align-items:center;padding:0 20px;font-family:'Inter',-apple-system,sans-serif;font-size:12px;font-weight:500;border-bottom:1px solid rgba(255,255,255,.08)}#hub-bar a{color:rgba(255,255,255,.5);text-decoration:none;padding:0 8px;height:36px;display:flex;align-items:center;transition:color .12s}#hub-bar a:hover,#hub-bar a.hub-active{color:#fff}#hub-bar .hub-brand{color:rgba(255,255,255,.9)!important;font-weight:700;padding-right:14px;margin-right:6px;border-right:1px solid rgba(255,255,255,.15)}#hub-bar .hub-open{margin-left:auto;background:#4f46e5;color:#fff!important;padding:0 12px;height:24px;border-radius:4px;font-size:11px;font-weight:600}#hub-bar .hub-open:hover{background:#4338ca!important}</style>
-<div id="hub-bar"><a href="index.html" class="hub-brand">MA Docs</a><a href="wiki.html">Wiki</a><a href="blueprint.html">Blueprint</a><a href="product-overview.html">Product</a><a href="roadmap.html">Roadmap</a><a href="design-system.html">Design</a><a href="pitchdeck.html">Pitch</a><a href="../website/index.html" target="_blank" class="hub-open">Public Website →</a><a href="https://maintenance-agent-api-git-main-christophepians-projects.vercel.app/login" target="_blank" class="hub-open">Open App →</a></div>
+<div id="hub-bar"><a href="index.html" class="hub-brand">MA Docs</a><a href="wiki.html">Wiki</a><a href="blueprint.html">Blueprint</a><a href="product-overview.html">Product</a><a href="roadmap.html">Roadmap</a><a href="design-system.html">Design</a><a href="pitchdeck.html">Pitch</a><a href="https://maintenance-agent-api-git-main-christophepians-projects.vercel.app/fr/website/index.html" target="_blank" class="hub-open">Public Website →</a><a href="https://maintenance-agent-api-git-main-christophepians-projects.vercel.app/login" target="_blank" class="hub-open">Open App →</a></div>
 <script>(function(){var c=window.location.pathname.split('/').pop()||'index.html';document.querySelectorAll('#hub-bar a[href]').forEach(function(a){if(a.getAttribute('href')===c)a.classList.add('hub-active');});})()</script>
 <script>(function(){var isInvestor=document.cookie.split(';').some(function(c){return c.trim()==='ma_docs_role=investor';});if(!isInvestor)return;var restricted=['wiki.html','blueprint.html','product-overview.html','roadmap.html','design-system.html','index.html'];document.querySelectorAll('#hub-bar a[href]').forEach(function(a){if(restricted.indexOf(a.getAttribute('href'))!==-1)a.style.display='none';});})()</script>
 
@@ -876,18 +876,13 @@
 
 <!-- ━━━━━━━━ STICKY NAV ━━━━━━━━ -->
 <nav id="sidenav" style="position:fixed;top:50%;left:0;transform:translateY(-50%);z-index:900;display:flex;flex-direction:column;gap:1px;padding:0.5rem 0;">
-  <a href="#ch01" title="01 · Title" onclick="setActive(this)" class="d-flex-link">
+  <a href="#ch01" title="01 · Vision" onclick="setActive(this)" class="d-flex-link">
     <span class="nav-num">01</span>
-    <span class="nav-label">Title</span>
-    <span class="nav-dot"></span>
-  </a>
-  <a href="#ch02" title="02 · Vision" onclick="setActive(this)" class="d-flex-link">
-    <span class="nav-num">02</span>
     <span class="nav-label">Vision</span>
     <span class="nav-dot"></span>
   </a>
-  <a href="#ch03" title="03 · Problem" onclick="setActive(this)" class="d-flex-link">
-    <span class="nav-num">03</span>
+  <a href="#ch02" title="02 · Problem" onclick="setActive(this)" class="d-flex-link">
+    <span class="nav-num">02</span>
     <span class="nav-label">Problem</span>
     <span class="nav-dot"></span>
   </a>
@@ -968,15 +963,15 @@
 <!-- ━━━━━━━━ COVER ━━━━━━━━ -->
 <section class="cover">
   <div class="cover-header">
-    <span>Christophe Pian · Founder</span>
-    <span>Confidential · March 2026</span>
+    <span>Christophe Pian &amp; Magno Martin · Co-Founders</span>
+    <span>Confidential · <span class="dynamic-date"></span></span>
     <span>Swiss PropTech · Seed Stage</span>
   </div>
 
   <div class="cover-body">
     <div class="eyebrow">Investment Pitch · Pre-Seed</div>
-    <h1>Property <em>intelligence</em> for every Swiss landlord.</h1>
-    <p class="cover-sub">A 360° platform that gives self-managing Swiss landlords the compliance tools, operational workflows, and — ultimately — the private banking grade intelligence they've never had access to.</p>
+    <h1>Property <em>intelligence</em> for every Swiss Landlord.</h1>
+    <p class="cover-sub">A 360° platform that gives self-managing Swiss landlords the operational workflows, compliance tools, and — ultimately — the private banking grade intelligence they've never had access to.</p>
     <div class="cover-meta">
       <div class="meta-item">
         <span class="meta-label">Horizon</span>
@@ -1002,94 +997,33 @@
       <span class="tag">Swiss-native · Trilingual</span>
     </div>
     <div style="margin-top:1.2rem;font-family:'Inter',-apple-system,sans-serif;font-size:0.75rem;color:var(--slate);">
-      Public Website: <a href="https://maintenance-agent-api-git-main-christophepians-projects.vercel.app/docs/website/index.html" target="_blank" style="color:var(--gold);text-decoration:none;border-bottom:1px solid rgba(79,70,229,0.3);">maintenance-agent-api-git-main-christophepians-projects.vercel.app</a>
+      Public Website: <a href="https://maintenance-agent-api-git-main-christophepians-projects.vercel.app/fr/website/index.html" target="_blank" style="color:var(--gold);text-decoration:none;border-bottom:1px solid rgba(79,70,229,0.3);">maintenance-agent-api-git-main-christophepians-projects.vercel.app</a>
     </div>
   </div>
 
   <div class="cover-decoration">CH</div>
 
   <div class="cover-footer">
-    <span>Christophe Pian · <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="6f0c071d061c1b001f070a411f060e012f08020e0603410c0002">[email&#160;protected]</a> · +41 78 720 87 72</span>
-    <span>Private &amp; Confidential · March 2026</span>
+    <span style="display:flex;flex-direction:column;gap:0.2rem;">
+      <span>Christophe Pian · christophe.pian@gmail.com · +41 78 720 87 72</span>
+      <span>Magno Martin · +41 79 723 73 10</span>
+    </span>
+    <span>Private &amp; Confidential · <span class="dynamic-date"></span></span>
   </div>
 </section>
+
+
+
+
 
 
 
 <!-- ━━━━━━━━ CHAPTER 01 ━━━━━━━━ -->
 <div id="ch01" class="chapter-anchor"></div>
 <div class="content">
-  <div class="d-label-rust">Who we are</div>
-  <div class="section-header">
-    <span class="section-num">01</span>
-    <h2 class="section-title">Company <em>Overview</em></h2>
-  </div>
-
-  <!-- COMPANY CARD -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px;background:var(--rule);border:1px solid var(--rule);margin-bottom:2.5rem;">
-    <div style="background:linear-gradient(135deg,var(--gold),var(--rust));color:#fff;padding:2.5rem;">
-      <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.55rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--gold-light);margin-bottom:1.2rem;">Working title</div>
-      <div style="font-family:'DM Serif Display',Georgia,serif;font-size:2.5rem;font-weight:900;line-height:1;margin-bottom:0.5rem;">Sencilo</div>
-      <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.65rem;color:rgba(255,255,255,0.45);margin-bottom:2rem;">Final brand name to be confirmed</div>
-      <div style="font-family:'DM Serif Display',Georgia,serif;font-size:1rem;font-style:italic;color:rgba(255,255,255,0.8);line-height:1.5;border-top:1px solid rgba(255,255,255,0.1);padding-top:1.2rem;">Property management as simple as online banking. Advisory as rigorous as private wealth management.</div>
-    </div>
-    <div style="background:var(--paper);padding:2.5rem;display:flex;flex-direction:column;gap:1.5rem;">
-      <div>
-        <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.55rem;color:var(--muted);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.4rem;">What we build</div>
-        <div style="font-size:0.88rem;line-height:1.65;color:var(--slate);">A 360° Swiss property management platform for self-managing landlords — automating compliance, guiding operational decisions, and progressively unlocking private banking grade portfolio intelligence.</div>
-      </div>
-      <div>
-        <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.55rem;color:var(--muted);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.4rem;">Stage</div>
-        <div style="font-size:0.88rem;color:var(--slate);">Pre-revenue · Product in development · Pre-seed raise: CHF 300K</div>
-      </div>
-      <div>
-        <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.55rem;color:var(--muted);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.4rem;">Co-Founders</div>
-        <div style="font-size:0.88rem;color:var(--slate);">Christophe Pian · Lausanne, CH<br><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="c1a2a9b3a8b2b5aeb1a9a4efb1a8a0af81a6aca0a8adefa2aeac">[email&#160;protected]</a> · +41 78 720 87 72<br>Magno Martin Leon</div>
-      </div>
-      <div>
-        <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.55rem;color:var(--muted);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.4rem;">Document</div>
-        <div style="font-size:0.88rem;color:var(--slate);">Investment pitch · March 2026 · Confidential</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- TWO SENTENCES -->
-  <div class="d-grid-2col">
-    <div style="background:var(--cream);padding:1.8rem;">
-      <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.58rem;color:var(--muted);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.6rem;">The problem in one sentence</div>
-      <p style="font-family:'DM Serif Display',Georgia,serif;font-size:1.05rem;line-height:1.55;color:var(--ink);">Switzerland's 341,000 private landlords must choose between paying a régie 4–7% of their rent for generic service, or self-managing with spreadsheets and no safety net.</p>
-    </div>
-    <div style="background:var(--paper);padding:1.8rem;">
-      <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.58rem;color:var(--muted);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.6rem;">The solution in one sentence</div>
-      <p style="font-family:'DM Serif Display',Georgia,serif;font-size:1.05rem;line-height:1.55;color:var(--ink);">We give them a third option: a platform that automates compliance, guides day-to-day decisions, and — as their portfolio grows — delivers the intelligence that private banks provide for equities.</p>
-    </div>
-  </div>
-
-</div>
-
-<div id="ch01" class="chapter-anchor"></div>
-<div class="content">
-  <div class="d-label-rust">Who we are</div>
-  <div class="section-header">
-    <span class="section-num">01</span>
-    <h2 class="section-title">Company <em>Overview</em></h2>
-  </div>
-  <div style="border:2px dashed var(--rule);padding:2rem 2.5rem;margin-bottom:2rem;background:var(--cream);position:relative;">
-      <div style="position:absolute;top:-0.75rem;left:1.5rem;background:var(--cream);padding:0 0.6rem;font-family:'Inter',-apple-system,sans-serif;font-size:0.58rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--rust);">⚑ Placeholder — content to be completed</div>
-      <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.62rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:0.5rem;">Title / Company Overview</div>
-      <p style="font-size:0.85rem;line-height:1.7;color:var(--slate);margin-bottom:0.8rem;">Replace with confirmed company details before sharing externally.</p>
-      <ul style="font-size:0.82rem;line-height:1.75;color:var(--slate);padding-left:1.2rem;"><li class="d-mb-04">Company name (working title: Sencilo)</li><li class="d-mb-04">Tagline: 'We are building the [X] platform for [Y] that solves [Z]'</li><li class="d-mb-04">Founding team names, roles, and photos</li><li class="d-mb-04">Contact information and document date / version</li></ul>
-    </div><div style="font-size:0.85rem;line-height:1.7;color:var(--slate);padding:1.5rem;border:1px solid var(--rule);">The cover page currently uses <em>"Sencilo"</em> and <em>"The Disruptor's Path Through Swiss Real Estate"</em> as working titles. These will be updated once company name and branding are confirmed.</div>
-</div>
-
-
-
-<!-- ━━━━━━━━ CHAPTER 02 ━━━━━━━━ -->
-<div id="ch02" class="chapter-anchor"></div>
-<div class="content">
   <div class="d-label-rust">The future we are building</div>
   <div class="section-header">
-    <span class="section-num">02</span>
+    <span class="section-num">01</span>
     <h2 class="section-title"><em>Vision</em></h2>
   </div>
 
@@ -1146,13 +1080,25 @@
 
 
 
-<!-- ━━━━━━━━ CHAPTER 03 ━━━━━━━━ -->
-<div id="ch03" class="chapter-anchor"></div>
+<!-- ━━━━━━━━ CHAPTER 02 ━━━━━━━━ -->
+<div id="ch02" class="chapter-anchor"></div>
 <div class="content">
   <div class="d-label-rust">Why the status quo fails</div>
   <div class="section-header">
-    <span class="section-num">03</span>
+    <span class="section-num">02</span>
     <h2 class="section-title">The <em>Problem</em></h2>
+  </div>
+
+  <!-- TWO SENTENCES -->
+  <div class="d-grid-2col" style="margin-bottom:3rem;">
+    <div style="background:var(--cream);padding:1.8rem;">
+      <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.58rem;color:var(--muted);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.6rem;">The problem in one sentence</div>
+      <p style="font-family:'DM Serif Display',Georgia,serif;font-size:1.05rem;line-height:1.55;color:var(--ink);">Switzerland's 341,000 private landlords must choose between paying a régie 4–7% of their rent for generic service, or self-managing with spreadsheets and no safety net.</p>
+    </div>
+    <div style="background:var(--paper);padding:1.8rem;">
+      <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.58rem;color:var(--muted);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.6rem;">The solution in one sentence</div>
+      <p style="font-family:'DM Serif Display',Georgia,serif;font-size:1.05rem;line-height:1.55;color:var(--ink);">We give them a third option: a platform that automates compliance, guides day-to-day decisions, and — as their portfolio grows — delivers the intelligence that private banks provide for equities.</p>
+    </div>
   </div>
 
   <!-- CORE TENSION -->
@@ -1171,6 +1117,32 @@
       <div style="font-family:'DM Serif Display',Georgia,serif;font-size:1.3rem;font-weight:700;line-height:1.35;margin-bottom:1rem;">The complexity hits fast — and there is no tool built for them.</div>
       <p style="font-size:0.85rem;line-height:1.72;color:var(--slate);">UBS confirms: <em>"en Suisse, de plus en plus de propriétaires prennent en charge la gestion de leurs immeubles locatifs"</em> — particularly for small properties. Self-management works up to roughly 15 units. Beyond that, most owners hit their limits. But even well below that threshold, the operational burden is real: tenant changeovers, maintenance coordination, QR-invoice compliance, Nebenkosten statements, rent adjustment rules, document management. None of it is hard in isolation. Together, it consumes time that most landlords do not have — and errors carry legal consequences.</p>
     </div>
+  </div>
+
+  <!-- OWNER QUOTES -->
+  <div class="d-label-muted" style="margin-bottom:1rem;">In their own words — owner interviews</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px;background:var(--rule);border:1px solid var(--rule);margin-bottom:3rem;">
+
+    <div style="background:var(--cream);padding:1.8rem 2rem;display:flex;flex-direction:column;justify-content:space-between;">
+      <p style="font-family:'DM Serif Display',Georgia,serif;font-size:1rem;font-style:italic;line-height:1.55;color:var(--ink);margin-bottom:1.2rem;">"We have the choice between a terrible and a horrible property manager."</p>
+      <span style="font-family:'Inter',-apple-system,sans-serif;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);">— Owner 2</span>
+    </div>
+
+    <div style="background:var(--paper);padding:1.8rem 2rem;display:flex;flex-direction:column;justify-content:space-between;">
+      <p style="font-family:'DM Serif Display',Georgia,serif;font-size:1rem;font-style:italic;line-height:1.55;color:var(--ink);margin-bottom:1.2rem;">"They are worthless. I've been visiting one of my properties recently and I was wondering what I pay them for."</p>
+      <span style="font-family:'Inter',-apple-system,sans-serif;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);">— Owner 5</span>
+    </div>
+
+    <div style="background:var(--paper);padding:1.8rem 2rem;display:flex;flex-direction:column;justify-content:space-between;">
+      <p style="font-family:'DM Serif Display',Georgia,serif;font-size:1rem;font-style:italic;line-height:1.55;color:var(--ink);margin-bottom:1.2rem;">"We received opaque bills for things they had obviously mismanaged, but eventually we have no choice but to pay up."</p>
+      <span style="font-family:'Inter',-apple-system,sans-serif;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);">— Owners 3 &amp; 4</span>
+    </div>
+
+    <div style="background:var(--cream);padding:1.8rem 2rem;display:flex;flex-direction:column;justify-content:space-between;">
+      <p style="font-family:'DM Serif Display',Georgia,serif;font-size:1rem;font-style:italic;line-height:1.55;color:var(--ink);margin-bottom:1.2rem;">"We don't feel we get much bang for our buck, but it's convenient — they do our tax statement at the end of the year. Come to think of it, that's quite expensive."</p>
+      <span style="font-family:'Inter',-apple-system,sans-serif;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);">— Owner 1</span>
+    </div>
+
   </div>
 
   <!-- WHO THEY ARE -->
@@ -3875,5 +3847,12 @@
   <div class="pull-quote">
     <p>The goal is not to compete with GARAIO REM in five years. The goal is to have made their market irrelevant by then — because the 300,000 private landlords and 4,000 small régies we serve will have become the new mainstream, and we will be their infrastructure.</p>
     <div class="p
+<script>
+(function(){
+  var d = new Date();
+  var label = d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  document.querySelectorAll('.dynamic-date').forEach(function(el){ el.textContent = label; });
+})();
+</script>
 </body>
 </html>
