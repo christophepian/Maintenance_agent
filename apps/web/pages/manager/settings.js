@@ -22,7 +22,6 @@ import AppearanceTab from "../../components/AppearanceTab";
 
 const SETTINGS_TABS = [
   { key: "ORG" },
-  { key: "BUILDINGS" },
   { key: "NOTIFICATIONS" },
   { key: "INTEGRATIONS" },
   { key: "LEGAL" },
@@ -31,7 +30,7 @@ const SETTINGS_TABS = [
   { key: "APPEARANCE" },
 ];
 
-const TAB_KEYS = ['organisation', 'buildings', 'notifications', 'integrations', 'legal', 'depreciation', 'categorymappings', 'appearance'];
+const TAB_KEYS = ['organisation', 'notifications', 'integrations', 'legal', 'depreciation', 'categorymappings', 'appearance'];
 
 const MANAGER_EVENT_GROUPS = [
   { groupKey: "requests", events: ["REQUEST_PENDING_REVIEW", "REQUEST_PENDING_OWNER_APPROVAL", "CONTRACTOR_REJECTED", "REJECTED"] },
@@ -64,9 +63,6 @@ export default function ManagerSettingsPage() {
       { shallow: true }
     );
   }, [router]);
-  const [buildings, setBuildings] = useState([]);
-  const [buildingsLoading, setBuildingsLoading] = useState(false);
-
   // ── Legal Sources state ────────────────────────────────────
   const [legalSources, setLegalSources] = useState([]);
   const [legalVariables, setLegalVariables] = useState([]);
@@ -79,33 +75,8 @@ export default function ManagerSettingsPage() {
   const [legalFormError, setLegalFormError] = useState("");
   const [scopeFilter, setScopeFilter] = useState("ALL");
 
-  const { sortField: bldSF, sortDir: bldSD, handleSort: handleBldSort } = useLocalSort("name", "asc");
-  const sortedBuildings = useMemo(() => clientSort(buildings, bldSF, bldSD, (b, f) => {
-    if (f === "name") return (b.name || "").toLowerCase();
-    if (f === "address") return (b.address || "").toLowerCase();
-    if (f === "canton") return (b.canton || "").toLowerCase();
-    return "";
-  }), [buildings, bldSF, bldSD]);
-
   const { sortField: lsSF, sortDir: lsSD, handleSort: handleLsSort } = useLocalSort("name", "asc");
   const { sortField: lvSF, sortDir: lvSD, handleSort: handleLvSort } = useLocalSort("key", "asc");
-
-  // Load buildings for the Buildings tab (lazy — on first tab switch)
-  const loadBuildings = useCallback(async () => {
-    if (buildings.length > 0) return; // already loaded
-    setBuildingsLoading(true);
-    try {
-      const r = await fetch("/api/buildings", { headers: authHeaders() });
-      const j = await r.json();
-      setBuildings(j?.data || []);
-    } catch (_) { /* silent */ }
-    finally { setBuildingsLoading(false); }
-  }, [buildings.length]);
-
-  // Trigger building load when buildings tab is active
-  useEffect(() => {
-    if (activeTab === 1) loadBuildings();
-  }, [activeTab, loadBuildings]);
 
   // ── Legal Sources data loading ─────────────────────────────
   const loadLegalData = useCallback(async () => {
@@ -141,7 +112,7 @@ export default function ManagerSettingsPage() {
 
   // Trigger legal data load when legal tab is active
   useEffect(() => {
-    if (activeTab === 4) loadLegalData();
+    if (activeTab === 3) loadLegalData();
   }, [activeTab, loadLegalData]);
 
   async function syncSources() {
@@ -410,12 +381,10 @@ export default function ManagerSettingsPage() {
 
           {/* Count + full-view link — outside the Panel card */}
           <span className="tab-panel-count">
-            {activeTab === 1 ? `${buildings.length} building${buildings.length !== 1 ? "s" : ""}` : null}
-            {activeTab === 4 ? `${legalSources.length} source${legalSources.length !== 1 ? "s" : ""} · ${legalVariables.length} variable${legalVariables.length !== 1 ? "s" : ""}` : null}
+            {activeTab === 3 ? `${legalSources.length} source${legalSources.length !== 1 ? "s" : ""} · ${legalVariables.length} variable${legalVariables.length !== 1 ? "s" : ""}` : null}
           </span>
-          {activeTab === 1 && <Link href="/admin-inventory/buildings" className="full-page-link">{t("manager:settings.text.manageBuildings")}</Link>}
 
-          {activeTab !== 5 && (
+          {activeTab !== 4 && (
           <>
 
           {/* Organisation tab */}
@@ -521,72 +490,8 @@ export default function ManagerSettingsPage() {
             </div>
           </div>
 
-          {/* Buildings tab */}
-          <div className={activeTab === 1 ? "tab-panel-active" : "tab-panel"}>
-            {buildingsLoading ? (
-              <p className="loading-text">{t("manager:settings.text.loadingBuildings")}</p>
-            ) : buildings.length === 0 ? (
-              <div className="empty-state">
-                <p className="empty-state-text">{t("manager:settings.text.noBuildingsConfiguredYetPerbuildingSettingsWillAppearOnceBuildingsAreAdded")}</p>
-              </div>
-            ) : (
-              <>
-                {/* Mobile card list — sm:hidden */}
-                <div className="sm:hidden overflow-hidden rounded-lg border border-table-border divide-y divide-table-divider">
-                  {buildings.map((b) => (
-                    <div
-                      key={b.id}
-                      className="table-card cursor-pointer hover:bg-surface-subtle/80 transition-colors"
-                      onClick={() => router.push(`/admin-inventory/buildings/${b.id}`)}
-                    >
-                      <p className="table-card-head">{b.name || "Unnamed"}</p>
-                      <div className="table-card-footer">
-                        <span>{b.address || "—"}</span>
-                        {b.canton && <span>{b.canton}</span>}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Wide table — hidden sm:block */}
-                <div className="hidden sm:block data-table-wrap">
-                  <table className="data-table">
-                    <thead>
-                      <tr>
-                        <SortableHeader label={t("manager:settings.prop.name")} field="name" sortField={bldSF} sortDir={bldSD} onSort={handleBldSort} />
-                        <SortableHeader label={t("manager:settings.prop.address")} field="address" sortField={bldSF} sortDir={bldSD} onSort={handleBldSort} />
-                        <SortableHeader label={t("manager:settings.prop.canton")} field="canton" sortField={bldSF} sortDir={bldSD} onSort={handleBldSort} />
-                        <th></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {sortedBuildings.map((b) => (
-                        <tr key={b.id} className="cursor-pointer hover:bg-surface-subtle/80" onClick={() => router.push(`/admin-inventory/buildings/${b.id}`)}>
-                          <td className="cell-bold">{b.name || "Unnamed"}</td>
-                          <td>{b.address || "—"}</td>
-                          <td>{b.canton || "—"}</td>
-                          <td>
-                            <button
-                              aria-label={t("manager:settings.ariaLabel.configureBuilding")}
-                              onClick={(e) => { e.stopPropagation(); router.push(`/admin-inventory/buildings/${b.id}`); }}
-                              className="inline-flex items-center justify-center rounded p-1 text-foreground-dim hover:text-muted-dark hover:bg-surface-hover transition-colors"
-                            >
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                              </svg>
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </>
-            )}
-          </div>
-
           {/* Notifications tab */}
-          <div className={activeTab === 2 ? "tab-panel-active" : "tab-panel"}>
+          <div className={activeTab === 1 ? "tab-panel-active" : "tab-panel"}>
             <NotificationPreferencesTab
               authHeaders={authHeaders}
               eventGroups={MANAGER_EVENT_GROUPS}
@@ -596,7 +501,7 @@ export default function ManagerSettingsPage() {
           </div>
 
           {/* Integrations tab */}
-          <div className={activeTab === 3 ? "tab-panel-active" : "tab-panel"}>
+          <div className={activeTab === 2 ? "tab-panel-active" : "tab-panel"}>
             <div className="px-4 py-4">
             <div className="coming-soon">
               <span className="coming-soon-badge">{t("manager:settings.text.comingSoon")}</span>
@@ -609,7 +514,7 @@ export default function ManagerSettingsPage() {
           </div>
 
           {/* Legal Sources tab */}
-          <div className={activeTab === 4 ? "tab-panel-active" : "tab-panel"}>
+          <div className={activeTab === 3 ? "tab-panel-active" : "tab-panel"}>
             <div className="px-4 py-4">
               <div className="flex items-center justify-between mb-3">
                 <div>
@@ -816,13 +721,13 @@ export default function ManagerSettingsPage() {
           )}
 
           {/* Depreciation tab — renders its own Panels internally */}
-          {activeTab === 5 && <DepreciationStandards />}
+          {activeTab === 4 && <DepreciationStandards />}
 
           {/* Category Mappings tab — maps expense categories to legal topics */}
-          {activeTab === 6 && <CategoryMappings />}
+          {activeTab === 5 && <CategoryMappings />}
 
           {/* Appearance tab — dark / light mode toggle */}
-          {activeTab === 7 && <AppearanceTab t={t} ns="manager" />}
+          {activeTab === 6 && <AppearanceTab t={t} ns="manager" />}
 
         </PageContent>
       </PageShell>
