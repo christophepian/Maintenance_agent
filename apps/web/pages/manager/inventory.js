@@ -432,81 +432,7 @@ export default function ManagerInventoryPage() {
                 </div>
               </form>
               )}
-              <div className="flex items-center gap-2">
-                <input
-                  type="search"
-                  placeholder={t("manager:inventory.placeholder.searchBuildings")}
-                  value={buildingSearch}
-                  onChange={(e) => setBuildingSearch(e.target.value)}
-                  className="filter-input flex-1 min-w-0 mb-0"
-                />
-                {/* Filter dropdown */}
-                <div className="relative shrink-0">
-                  <button
-                    type="button"
-                    aria-label={t("manager:inventory.ariaLabel.filterBuildings")}
-                    onClick={() => setBuildingFilterOpen((v) => !v)}
-                    className={cn(
-                      "flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
-                      buildingCantonFilter
-                        ? "border-brand bg-brand-light text-brand"
-                        : "border-surface-border bg-surface text-muted-text hover:bg-surface-subtle"
-                    )}
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4" aria-hidden="true">
-                      <path fillRule="evenodd" d="M2.628 1.601C5.028 1.206 7.49 1 10 1s4.973.206 7.372.601a.75.75 0 0 1 .628.74v2.288a2.25 2.25 0 0 1-.659 1.59l-4.682 4.683a2.25 2.25 0 0 0-.659 1.59v3.037c0 .684-.31 1.33-.844 1.757l-1.937 1.55A.75.75 0 0 1 8 18.25v-5.757a2.25 2.25 0 0 0-.659-1.591L2.659 6.22A2.25 2.25 0 0 1 2 4.629V2.34a.75.75 0 0 1 .628-.74Z" clipRule="evenodd" />
-                    </svg>
-                    <span className="hidden sm:inline">{t("manager:inventory.text.filter")}</span>
-                    {buildingCantonFilter && <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-brand text-white text-xs font-bold leading-none">1</span>}
-                  </button>
-                {buildingFilterOpen && (
-                    <>
-                    <div className="fixed inset-0 z-10" aria-hidden="true" onClick={() => setBuildingFilterOpen(false)} />
-                    <div className="absolute right-0 top-full mt-1.5 z-20 w-52 rounded-xl border border-surface-border bg-surface shadow-lg p-3 space-y-2">
-                      <p className="text-xs font-semibold uppercase tracking-wider text-foreground-dim">{t("manager:inventory.text.canton")}</p>
-                      <select
-                        className="filter-input w-full"
-                        value={buildingCantonFilter}
-                        onChange={(e) => setBuildingCantonFilter(e.target.value)}
-                        aria-label={t("manager:inventory.ariaLabel.filterByCanton")}
-                      >
-                        <option value="">{t("manager:inventory.text.allCantons")}</option>
-                        {[...new Set(buildings.map((b) => b.canton).filter(Boolean))].sort().map((c) => (
-                          <option key={c} value={c}>{c}</option>
-                        ))}
-                      </select>
-                      {buildingCantonFilter && (
-                        <button
-                          type="button"
-                          onClick={() => { setBuildingCantonFilter(""); setBuildingFilterOpen(false); }}
-                          className="w-full text-xs text-muted hover:text-red-600 transition-colors"
-                        >
-                          Clear filter
-                        </button>
-                      )}
-                    </div>
-                    </>
-                  )}
-                </div>
-                {/* Sort button — cycles: name → unitCount → canton */}
-                <button
-                  type="button"
-                  aria-label={t("manager:inventory.ariaLabel.sortBuildings")}
-                  onClick={() => {
-                    const cycle = ["name", "unitCount", "canton"];
-                    const next = cycle[(cycle.indexOf(sortField) + 1) % cycle.length];
-                    handleSort(next);
-                  }}
-                  className="flex shrink-0 items-center gap-1.5 rounded-lg border border-surface-border bg-surface px-3 py-2 text-sm font-medium text-muted-text hover:bg-surface-subtle transition-colors"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4" aria-hidden="true">
-                    <path fillRule="evenodd" d="M2 3.75A.75.75 0 0 1 2.75 3h11.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 3.75ZM2 7.5a.75.75 0 0 1 .75-.75h7.508a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 7.5ZM14 7a.75.75 0 0 1 .75.75v6.59l1.95-2.1a.75.75 0 1 1 1.1 1.02l-3.25 3.5a.75.75 0 0 1-1.1 0l-3.25-3.5a.75.75 0 1 1 1.1-1.02l1.95 2.1V7.75A.75.75 0 0 1 14 7ZM2 11.25a.75.75 0 0 1 .75-.75h4.562a.75.75 0 0 1 0 1.5H2.75a.75.75 0 0 1-.75-.75Z" clipRule="evenodd" />
-                  </svg>
-                  <span className="hidden sm:inline capitalize">{sortField === "unitCount" ? "Units" : sortField === "canton" ? "Canton" : "Name"}</span>
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className={cn("w-3 h-3 transition-transform", sortDir === "desc" && "rotate-180")} aria-hidden="true">
-                    <path fillRule="evenodd" d="M8 2a.75.75 0 0 1 .75.75v8.69l1.22-1.22a.75.75 0 1 1 1.06 1.06l-2.5 2.5a.75.75 0 0 1-1.06 0l-2.5-2.5a.75.75 0 0 1 1.06-1.06l1.22 1.22V2.75A.75.75 0 0 1 8 2Z" clipRule="evenodd" />
-                  </svg>
-                </button>
+              <div className="flex items-center justify-end">
                 {/* Add building button */}
                 <button
                   type="button"
@@ -529,6 +455,84 @@ export default function ManagerInventoryPage() {
                 columns={buildingColumns}
                 data={sortedBuildings}
                 rowKey={(b) => b.id}
+                toolbarSlot={
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <input
+                      type="search"
+                      placeholder={t("manager:inventory.placeholder.searchBuildings")}
+                      value={buildingSearch}
+                      onChange={(e) => setBuildingSearch(e.target.value)}
+                      className="filter-input flex-1 min-w-0 mb-0"
+                    />
+                    {/* Filter dropdown */}
+                    <div className="relative shrink-0">
+                      <button
+                        type="button"
+                        aria-label={t("manager:inventory.ariaLabel.filterBuildings")}
+                        onClick={() => setBuildingFilterOpen((v) => !v)}
+                        className={cn(
+                          "flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
+                          buildingCantonFilter
+                            ? "border-brand bg-brand-light text-brand"
+                            : "border-surface-border bg-surface text-muted-text hover:bg-surface-subtle"
+                        )}
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4" aria-hidden="true">
+                          <path fillRule="evenodd" d="M2.628 1.601C5.028 1.206 7.49 1 10 1s4.973.206 7.372.601a.75.75 0 0 1 .628.74v2.288a2.25 2.25 0 0 1-.659 1.59l-4.682 4.683a2.25 2.25 0 0 0-.659 1.59v3.037c0 .684-.31 1.33-.844 1.757l-1.937 1.55A.75.75 0 0 1 8 18.25v-5.757a2.25 2.25 0 0 0-.659-1.591L2.659 6.22A2.25 2.25 0 0 1 2 4.629V2.34a.75.75 0 0 1 .628-.74Z" clipRule="evenodd" />
+                        </svg>
+                        <span className="hidden sm:inline">{t("manager:inventory.text.filter")}</span>
+                        {buildingCantonFilter && <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-brand text-white text-xs font-bold leading-none">1</span>}
+                      </button>
+                      {buildingFilterOpen && (
+                        <>
+                          <div className="fixed inset-0 z-10" aria-hidden="true" onClick={() => setBuildingFilterOpen(false)} />
+                          <div className="absolute right-0 top-full mt-1.5 z-20 w-52 rounded-xl border border-surface-border bg-surface shadow-lg p-3 space-y-2">
+                            <p className="text-xs font-semibold uppercase tracking-wider text-foreground-dim">{t("manager:inventory.text.canton")}</p>
+                            <select
+                              className="filter-input w-full"
+                              value={buildingCantonFilter}
+                              onChange={(e) => setBuildingCantonFilter(e.target.value)}
+                              aria-label={t("manager:inventory.ariaLabel.filterByCanton")}
+                            >
+                              <option value="">{t("manager:inventory.text.allCantons")}</option>
+                              {[...new Set(buildings.map((b) => b.canton).filter(Boolean))].sort().map((c) => (
+                                <option key={c} value={c}>{c}</option>
+                              ))}
+                            </select>
+                            {buildingCantonFilter && (
+                              <button
+                                type="button"
+                                onClick={() => { setBuildingCantonFilter(""); setBuildingFilterOpen(false); }}
+                                className="w-full text-xs text-muted hover:text-red-600 transition-colors"
+                              >
+                                Clear filter
+                              </button>
+                            )}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                    {/* Sort button — cycles: name → unitCount → canton */}
+                    <button
+                      type="button"
+                      aria-label={t("manager:inventory.ariaLabel.sortBuildings")}
+                      onClick={() => {
+                        const cycle = ["name", "unitCount", "canton"];
+                        const next = cycle[(cycle.indexOf(sortField) + 1) % cycle.length];
+                        handleSort(next);
+                      }}
+                      className="flex shrink-0 items-center gap-1.5 rounded-lg border border-surface-border bg-surface px-3 py-2 text-sm font-medium text-muted-text hover:bg-surface-subtle transition-colors"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4" aria-hidden="true">
+                        <path fillRule="evenodd" d="M2 3.75A.75.75 0 0 1 2.75 3h11.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 3.75ZM2 7.5a.75.75 0 0 1 .75-.75h7.508a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 7.5ZM14 7a.75.75 0 0 1 .75.75v6.59l1.95-2.1a.75.75 0 1 1 1.1 1.02l-3.25 3.5a.75.75 0 0 1-1.1 0l-3.25-3.5a.75.75 0 0 1 1.1-1.02l1.95 2.1V7.75A.75.75 0 0 1 14 7ZM2 11.25a.75.75 0 0 1 .75-.75h4.562a.75.75 0 0 1 0 1.5H2.75a.75.75 0 0 1-.75-.75Z" clipRule="evenodd" />
+                      </svg>
+                      <span className="hidden sm:inline capitalize">{sortField === "unitCount" ? "Units" : sortField === "canton" ? "Canton" : "Name"}</span>
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className={cn("w-3 h-3 transition-transform", sortDir === "desc" && "rotate-180")} aria-hidden="true">
+                        <path fillRule="evenodd" d="M8 2a.75.75 0 0 1 .75.75v8.69l1.22-1.22a.75.75 0 1 1 1.06 1.06l-2.5 2.5a.75.75 0 0 1-1.06 0l-2.5-2.5a.75.75 0 0 1 1.06-1.06l1.22 1.22V2.75A.75.75 0 0 1 8 2Z" clipRule="evenodd" />
+                      </svg>
+                    </button>
+                  </div>
+                }
                 sortField={sortField}
                 sortDir={sortDir}
                 onSort={handleSort}
