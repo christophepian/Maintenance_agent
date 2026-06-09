@@ -957,7 +957,7 @@
 <script>
   function setActive(el){document.querySelectorAll('#sidenav a').forEach(a=>a.classList.remove('active'));el.classList.add('active');}
   const observer=new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting){const id=e.target.id;document.querySelectorAll('#sidenav a').forEach(a=>{a.classList.toggle('active',a.getAttribute('href')==='#'+id);});}});},{threshold:0.15});
-  document.querySelectorAll('.chapter-anchor').forEach(el=>observer.observe(el));
+  document.addEventListener('DOMContentLoaded',function(){document.querySelectorAll('.chapter-anchor').forEach(el=>observer.observe(el));});
 </script>
 
 <!-- ━━━━━━━━ COVER ━━━━━━━━ -->
@@ -1614,7 +1614,7 @@
       <ul style="font-size:0.82rem;line-height:1.75;color:var(--slate);padding-left:1.2rem;"><li class="d-mb-04">Product screenshots or UI mockups — to be added once UI exists</li><li class="d-mb-04">Track A user workflow: onboarding in 15 min, QR-invoice, Nebenkosten, maintenance ticketing</li><li class="d-mb-04">Track B user workflow: portfolio ingestion → AI analysis → advisor review → quarterly presentation</li><li class="d-mb-04">System architecture: operational layer → data pipeline → intelligence layer</li></ul>
     </div><!-- ━━━━━━━━ SECTION 3: PHASED ROADMAP ━━━━━━━━ -->
   <div class="section-header">
-    <span class="section-num">03</span>
+    <span class="section-num">06</span>
     <h2 class="section-title">The Five-Phase <em>Ascent</em></h2>
   </div>
 
@@ -2604,7 +2604,7 @@
 
 <!-- ━━━━━━━━ SECTION 4: COMPETITIVE DISPLACEMENT ━━━━━━━━ -->
   <div class="section-header">
-    <span class="section-num">04</span>
+    <span class="section-num">10</span>
     <h2 class="section-title">Competitive <em>Displacement</em> Map</h2>
   </div>
 
@@ -3019,7 +3019,7 @@
   </div>
   <!-- ━━━━━━━━ SECTION 6: MOATS ━━━━━━━━ -->
   <div class="section-header">
-    <span class="section-num">06</span>
+    <span class="section-num">12</span>
     <h2 class="section-title">Durable <em>Competitive Moats</em></h2>
   </div>
 
@@ -3072,7 +3072,7 @@
 
 <hr class="divider"><hr class="divider-light"><!-- ━━━━━━━━ SECTION 7: RISKS ━━━━━━━━ -->
   <div class="section-header">
-    <span class="section-num">07</span>
+    <span class="section-num">12</span>
     <h2 class="section-title">Risks &amp; <em>Mitigations</em></h2>
   </div>
 
