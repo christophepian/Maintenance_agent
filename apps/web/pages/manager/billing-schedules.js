@@ -10,7 +10,8 @@ import Button from "../../components/ui/Button";
 import Link from "next/link";
 import { authHeaders } from "../../lib/api";
 import ConfigurableTable from "../../components/ConfigurableTable";
-import { useTableSort, clientSort } from "../../lib/tableUtils";
+import { clientSort } from "../../lib/tableUtils";
+import { SortToggle, SortPanelBody, SortRow } from "../../components/ui/FilterPanel";
 import { formatChfCents, formatDate } from "../../lib/format";
 import { billingScheduleVariant } from "../../lib/statusVariants";
 import ScrollableTabs from "../../components/mobile/ScrollableTabs";
@@ -58,7 +59,14 @@ export default function BillingSchedulesPage() {
   const [error, setError] = useState(null);
   const [actionLoading, setActionLoading] = useState(null);
   const [search, setSearch] = useState("");
-  const { sortField, sortDir, handleSort } = useTableSort(router, BS_SORT_FIELDS, { defaultField: "tenant", defaultDir: "asc" });
+  const [sortField, setSortField] = useState("tenant");
+  const [sortDir, setSortDir] = useState("asc");
+  const [sortOpen, setSortOpen] = useState(false);
+  const handleSort = useCallback((field, dir) => {
+    setSortField(field);
+    setSortDir(dir !== undefined ? dir : (field === sortField ? (sortDir === "asc" ? "desc" : "asc") : "asc"));
+  }, [sortField, sortDir]);
+  const sortActive = sortField !== "tenant";
   const filteredSchedules = useMemo(() => {
     if (!search.trim()) return schedules;
     const q = search.toLowerCase();
@@ -134,35 +142,34 @@ export default function BillingSchedulesPage() {
             {loading ? "" : `${sortedSchedules.length} schedule${sortedSchedules.length !== 1 ? "s" : ""}`}
           </span>
 
-          {/* Toolbar */}
-          <div className="flex items-center gap-2">
-            <input
-              type="search"
-              placeholder={t("manager:billingSchedules.placeholder.searchByTenant")}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="filter-input flex-1 min-w-0 mb-0"
-            />
-            <button
-              type="button"
-              aria-label={t("manager:billingSchedules.ariaLabel.sortSchedules")}
-              onClick={() => {
-                const cycle = ["tenant", "total", "nextPeriod"];
-                const next = cycle[(cycle.indexOf(sortField) + 1) % cycle.length];
-                handleSort(next);
-              }}
-              className="flex shrink-0 items-center gap-1.5 rounded-lg border border-surface-border bg-surface px-3 py-2 text-sm font-medium text-muted-text hover:bg-surface-subtle transition-colors"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4" aria-hidden="true"><path fillRule="evenodd" d="M2 3.75A.75.75 0 0 1 2.75 3h11.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 3.75ZM2 7.5a.75.75 0 0 1 .75-.75h7.508a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 7.5ZM14 7a.75.75 0 0 1 .75.75v6.59l1.95-2.1a.75.75 0 1 1 1.1 1.02l-3.25 3.5a.75.75 0 0 1-1.1 0l-3.25-3.5a.75.75 0 0 1 1.1-1.02l1.95 2.1V7.75A.75.75 0 0 1 14 7ZM2 11.25a.75.75 0 0 1 .75-.75h4.562a.75.75 0 0 1 0 1.5H2.75a.75.75 0 0 1-.75-.75Z" clipRule="evenodd" /></svg>
-              <span className="hidden sm:inline capitalize">{sortField === "total" ? "Total" : sortField === "nextPeriod" ? "Next Period" : "Tenant"}</span>
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className={cn("w-3 h-3 transition-transform", sortDir === "desc" && "rotate-180")} aria-hidden="true"><path fillRule="evenodd" d="M8 2a.75.75 0 0 1 .75.75v8.69l1.22-1.22a.75.75 0 1 1 1.06 1.06l-2.5 2.5a.75.75 0 0 1-1.06 0l-2.5-2.5a.75.75 0 0 1 1.06-1.06l1.22 1.22V2.75A.75.75 0 0 1 8 2Z" clipRule="evenodd" /></svg>
-            </button>
-          </div>
-
           {loading ? (
             <p className="loading-text p-4">{t("manager:billing_Schedules.text.loadingSchedules")}</p>
           ) : (
             <ConfigurableTable
+                toolbarSlot={
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <input
+                      type="search"
+                      placeholder={t("manager:billingSchedules.placeholder.searchByTenant")}
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      className="filter-input flex-1 min-w-0 mb-0"
+                    />
+                    <SortToggle open={sortOpen} onToggle={() => setSortOpen((v) => !v)} active={sortActive} />
+                  </div>
+                }
+                toolbarPanel={
+                  <>
+                    {sortOpen && (
+                      <SortPanelBody>
+                        <SortRow active={sortField === "tenant"} dir={sortField === "tenant" ? sortDir : "asc"} label="Tenant" ascLabel="A → Z" descLabel="Z → A" onSelect={(dir) => handleSort("tenant", dir)} />
+                        <SortRow active={sortField === "total"} dir={sortField === "total" ? sortDir : "desc"} label="Total" descLabel="High → Low" ascLabel="Low → High" onSelect={(dir) => handleSort("total", dir)} />
+                        <SortRow active={sortField === "nextPeriod"} dir={sortField === "nextPeriod" ? sortDir : "asc"} label="Next Period" ascLabel="Soonest first" descLabel="Latest first" onSelect={(dir) => handleSort("nextPeriod", dir)} />
+                        <SortRow active={sortField === "status"} dir={sortField === "status" ? sortDir : "asc"} label="Status" ascLabel="A → Z" descLabel="Z → A" onSelect={(dir) => handleSort("status", dir)} />
+                      </SortPanelBody>
+                    )}
+                  </>
+                }
                 tableId="manager-billing-schedules"
                 columns={useMemo(() => [
                   {
