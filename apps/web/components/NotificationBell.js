@@ -254,7 +254,7 @@ export default function NotificationBell({ role }) {
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       <span className={cn("text-xs px-2 py-0.5 rounded", getTypeColor(notif.eventType))}>
-                        {(notif.eventType || notif.type || "").replace(/_/g, " ")}
+                        {t(`notifications.types.${notif.eventType || notif.type}`, { defaultValue: (notif.eventType || notif.type || "").replace(/_/g, " ") })}
                       </span>
                       {!isNotifRead(notif) && (
                         <>
@@ -263,7 +263,7 @@ export default function NotificationBell({ role }) {
                         </>
                       )}
                     </div>
-                    <p className="text-sm text-muted-dark mb-1">{notif.message}</p>
+                    <p className="text-sm text-muted-dark mb-1">{t(`notifications.messages.${notif.eventType}`, { defaultValue: notif.message })}</p>
                     <p className="text-xs text-foreground-dim">{formatDateTime(notif.createdAt)}</p>
                   </div>
                   <div className="flex flex-col gap-1 ml-2">
@@ -271,7 +271,7 @@ export default function NotificationBell({ role }) {
                       <button
                         onClick={(e) => { e.stopPropagation(); markAsRead(notif.id); }}
                         className="text-xs text-blue-600 hover:text-blue-700"
-                        aria-label="Mark as read"
+                        aria-label={t("notifications.markRead")}
                       >
                         ✓
                       </button>
@@ -279,7 +279,7 @@ export default function NotificationBell({ role }) {
                     <button
                       onClick={(e) => { e.stopPropagation(); deleteNotification(notif.id); }}
                       className="text-xs text-red-600 hover:text-red-700"
-                      aria-label="Delete notification"
+                      aria-label={t("notifications.delete")}
                     >
                       ✕
                     </button>
