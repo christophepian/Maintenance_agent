@@ -986,8 +986,8 @@
         <span class="meta-value">CHF 1.59B / yr</span>
       </div>
       <div class="meta-item">
-        <span class="meta-label">ARR at M36 (Track A model)</span>
-        <span class="meta-value">CHF 3.96M</span>
+        <span class="meta-label">ARR at M36 (Track A + B model)</span>
+        <span class="meta-value">CHF 4.47M</span>
       </div>
     </div>
     <div class="tag-row" style="margin-top:2rem;">
@@ -2223,13 +2223,13 @@
     <div class="d-dark-label">Shared Assumptions (both scenarios)</div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1.5rem;font-size:0.8rem;line-height:1.65;color:rgba(255,255,255,0.85);">
       <div><span style="color:var(--gold-light);font-family:'Inter',-apple-system,sans-serif;font-size:0.58rem;letter-spacing:0.1em;text-transform:uppercase;display:block;margin-bottom:0.3rem;">Revenue APRUs</span>
-        Landlord CHF 40/mo · Régie CHF 400/mo · AI add-on CHF 49/mo · NOI CHF 2,500/mo · ESG CHF 29/mo</div>
+        Track A — Landlord CHF 65/mo blended (39/79/149) · Régie CHF 399/mo · AI add-on CHF 49/mo · NOI Intelligence CHF 2,500/mo · Track B — Advisory CHF 9,600–60,000/yr (net 65% after FinSA partner)</div>
       <div><span style="color:var(--gold-light);font-family:'Inter',-apple-system,sans-serif;font-size:0.58rem;letter-spacing:0.1em;text-transform:uppercase;display:block;margin-bottom:0.3rem;">Client Ramp</span>
-        Landlords: 500 by M6 → 2K by M18 → 4K by M30 · Régies: 100 by M12 → 400 by M24 · AI subs follow régie base</div>
-      <div><span style="color:var(--gold-light);font-family:'Inter',-apple-system,sans-serif;font-size:0.58rem;letter-spacing:0.1em;text-transform:uppercase;display:block;margin-bottom:0.3rem;">Infra (Swiss-hosted)</span>
-        CHF 800–1.2K/mo early → CHF 4.5–7K/mo at scale · Exoscale for data residency (nLPD)</div>
+        Landlords: 500 by M6 → 2K by M18 → 4K by M30 · Régies: 100 by M12 → 400 by M24 · Track B: 5 clients M18 → 41 clients M36 · AI subs follow régie base</div>
+      <div><span style="color:var(--gold-light);font-family:'Inter',-apple-system,sans-serif;font-size:0.58rem;letter-spacing:0.1em;text-transform:uppercase;display:block;margin-bottom:0.3rem;">People costs</span>
+        2 founders × CHF 10K/mo + 13% benefits = CHF 22.6K/mo · RE expert hire M9 (+7K) · Tech/growth M15 (+9K) · Sales M22 (+12K) · Hires funded from revenue</div>
       <div><span style="color:var(--gold-light);font-family:'Inter',-apple-system,sans-serif;font-size:0.58rem;letter-spacing:0.1em;text-transform:uppercase;display:block;margin-bottom:0.3rem;">Key difference</span>
-        Bootstrapped: 2 founders M1–6, lean marketing, cash floor risk at M4 (CHF 59K). Funded: 3 FTE from M1, 2× marketing spend, faster régie ramp.</div>
+        Pre-seed (CHF 400K): lean, 2 founders, hires from revenue, breakeven from operations. Seed-funded (CHF 1.5M @ M8): faster hiring, 2× marketing, accelerated régie ramp.</div>
     </div>
   </div>
 
@@ -2288,36 +2288,45 @@
     const ink='#1a1f36',paper='#f8f9fc',gold='#4f46e5',forest='#059669',rust='#7c3aed',muted='#9ca3af',cream='#f1f3f9';
     function ramp(s,e,sv,ev,m){if(m<s)return 0;if(m>=e)return ev;return sv+(m-s)/(e-s)*(ev-sv);}
 
-    const llA=[],rgA=[],aiA=[],noA=[],esA=[],rev=[];
+    // ── Revenue arrays ──
+    // Track A: landlord ARPU CHF 65/mo (blended 39/79/149), régie CHF 399/mo
+    // Track B: net revenue after 35% FinSA partner split, starts M18
+    const llA=[],rgA=[],aiA=[],noA=[],tbA=[],rev=[];
     for(let i=0;i<36;i++){
       const m=i+1;
       const ll=m<=6?ramp(1,6,0,500,m):m<=18?ramp(6,18,500,2000,m):m<=30?ramp(18,30,2000,4000,m):ramp(30,36,4000,5500,m);
       const rg=m<4?0:m<=12?ramp(4,12,0,100,m):m<=24?ramp(12,24,100,400,m):ramp(24,36,400,600,m);
       const ai=m<10?0:m<=20?ramp(10,20,0,800,m):m<=30?ramp(20,30,800,1500,m):ramp(30,36,1500,2000,m);
       const no=m<18?0:m<=28?ramp(18,28,0,40,m):ramp(28,36,40,80,m);
-      const es=m<28?0:ramp(28,36,0,200,m);
-      llA.push(Math.round(ll*40)); rgA.push(Math.round(rg*400)); aiA.push(Math.round(ai*49));
-      noA.push(Math.round(no*2500)); esA.push(Math.round(es*29));
-      rev.push(Math.round(ll*40+rg*400+ai*49+no*2500+es*29));
+      // Track B net (5 clients @ M18 → 41 clients @ M36; gross mix 800/2000/5000 × 0.65 net)
+      const tb=m<18?0:ramp(18,36,2600,35800,m);
+      llA.push(Math.round(ll*65)); rgA.push(Math.round(rg*399)); aiA.push(Math.round(ai*49));
+      noA.push(Math.round(no*2500)); tbA.push(Math.round(tb));
+      rev.push(Math.round(ll*65+rg*399+ai*49+no*2500+tb));
     }
 
+    // ── Cost functions ──
+    // Bootstrapped: pre-seed CHF 400K; 2 founders × (10K + 13% benefits) = 22.6K/mo
+    // Hires funded from revenue: RE expert M9 (+7K), tech/growth M15 (+9K), sales M22 (+12K)
     function bsCost(m){
-      const hc=m<=6?12000:m<=12?18000:m<=18?26000:m<=24?38000:m<=30?55000:72000;
-      const infra=m<=6?800:m<=12?1500:m<=24?2500:4500;
-      const mkt=m<=3?1000:m<=9?3000:m<=18?6000:m<=30?12000:20000;
-      return hc+infra+mkt+(m<=12?2000:m<=24?4000:7000);
+      const sal=m<=8?22600:m<=14?29600:m<=21?38600:50600;
+      const infra=m<=6?1500:m<=12?2500:m<=24?4000:7000;
+      const mkt=m<=3?1500:m<=9?3500:m<=18?7000:m<=30?14000:22000;
+      return sal+infra+mkt+(m<=12?2000:m<=24?4000:7000);
     }
+    // Seed-funded: faster hiring, higher marketing spend
     function fdCost(m){
-      const hc=m<=3?18000:m<=9?28000:m<=15?45000:m<=24?75000:105000;
-      const infra=m<=6?1200:m<=12?2200:m<=24?4000:7000;
-      const mkt=m<=3?2000:m<=9?6000:m<=18?12000:m<=30?22000:35000;
-      return hc+infra+mkt+(m<=12?3000:m<=24?6500:11000);
+      const sal=m<=3?22600:m<=8?33600:m<=14?42600:m<=21?55600:70600;
+      const infra=m<=6?1500:m<=12?2500:m<=24?5000:9000;
+      const mkt=m<=3?3000:m<=9?8000:m<=18?16000:m<=30?30000:45000;
+      return sal+infra+mkt+(m<=12?3000:m<=24?6500:12000);
     }
 
     const bsCosts=M.map(bsCost), fdCosts=M.map(fdCost);
     const bsEb=rev.map((r,i)=>r-bsCosts[i]), fdEb=rev.map((r,i)=>r-fdCosts[i]);
     const bsCash=[],fdCash=[];
-    let bs=100000,fd=200000;
+    // Starting cash = pre-seed raise CHF 400K
+    let bs=400000,fd=400000;
     for(let i=0;i<36;i++){
       if(i+1===8) fd+=1500000;
       bs+=bsEb[i]; fd+=fdEb[i];
@@ -2325,7 +2334,7 @@
     }
 
     const sc={
-      bs:{costs:bsCosts,ebitda:bsEb,cash:bsCash,label:'Bootstrapped',
+      bs:{costs:bsCosts,ebitda:bsEb,cash:bsCash,label:'Pre-Seed (CHF 400K)',
           be:M[bsEb.findIndex(v=>v>=0)],minCash:Math.min(...bsCash)},
       fd:{costs:fdCosts,ebitda:fdEb,cash:fdCash,label:'Seed-Funded (CHF 1.5M @ M8)',
           be:M[fdEb.findIndex(v=>v>=0)],minCash:Math.min(...fdCash)}
@@ -2348,8 +2357,8 @@
         {label:'Private Landlords',data:llA,backgroundColor:'rgba(5,150,105,0.88)',stack:'s'},
         {label:'Small Régies',data:rgA,backgroundColor:'rgba(79,70,229,0.88)',stack:'s'},
         {label:'AI Add-on',data:aiA,backgroundColor:'rgba(124,58,237,0.78)',stack:'s'},
-        {label:'NOI Platform',data:noA,backgroundColor:'rgba(107,114,128,0.88)',stack:'s'},
-        {label:'ESG Layer',data:esA,backgroundColor:'rgba(156,163,175,0.75)',stack:'s'}
+        {label:'NOI Intelligence',data:noA,backgroundColor:'rgba(107,114,128,0.88)',stack:'s'},
+        {label:'Track B Advisory (net)',data:tbA,backgroundColor:'rgba(234,179,8,0.85)',stack:'s'}
       ]},
       options:{...baseOpts,
         plugins:{...baseOpts.plugins,legend:{display:true,position:'bottom',
@@ -3284,8 +3293,8 @@
   <div style="background:linear-gradient(135deg,var(--gold),var(--rust));color:#fff;padding:1.6rem 2rem;margin-bottom:2.5rem;">
     <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.58rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--gold-light);margin-bottom:0.9rem;">Model assumptions</div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:2rem;font-size:0.78rem;line-height:1.65;color:rgba(255,255,255,0.85);">
-      <div><span style="font-family:'Inter',-apple-system,sans-serif;font-size:0.56rem;color:var(--gold-light);display:block;margin-bottom:0.3rem;text-transform:uppercase;letter-spacing:0.08em;">Revenue</span>Landlords CHF 29–89/mo tiered (blended CHF 40) · Régies CHF 199–799/mo (blended CHF 399) · AI add-on CHF 49/mo from M12 at 40% attach · NOI platform CHF 2,500/mo from M20 · Churn not modelled (gross figures)</div>
-      <div><span style="font-family:'Inter',-apple-system,sans-serif;font-size:0.56rem;color:var(--gold-light);display:block;margin-bottom:0.3rem;text-transform:uppercase;letter-spacing:0.08em;">Costs</span>Founder CHF 140K/yr (market rate CHF 220–240K, CHF 80K annual discount) · Hire 1 M9 CHF 7K/mo · Hire 2 M15 CHF 9K/mo · GTM CHF 2.5–15K/mo ramping · One-time: GmbH CHF 3K + FinSA CHF 20K</div>
+      <div><span style="font-family:'Inter',-apple-system,sans-serif;font-size:0.56rem;color:var(--gold-light);display:block;margin-bottom:0.3rem;text-transform:uppercase;letter-spacing:0.08em;">Revenue</span>Track A landlords CHF 39/79/149/mo (blended CHF 65) · Régies CHF 399/mo · AI add-on CHF 49/mo from M12 at 40% attach · NOI intelligence CHF 2,500/mo from M20 · Track B net CHF 9,600–60,000/yr from M18 (5→41 clients, 35% FinSA split) · Churn not modelled</div>
+      <div><span style="font-family:'Inter',-apple-system,sans-serif;font-size:0.56rem;color:var(--gold-light);display:block;margin-bottom:0.3rem;text-transform:uppercase;letter-spacing:0.08em;">Costs</span>2 founders × CHF 10K/mo + 13% benefits = CHF 22.6K/mo · Hire 1 M9 CHF 7K/mo · Hire 2 M15 CHF 9K/mo · Hire 3 M22 CHF 12K/mo · GTM CHF 1.5–20K/mo ramping · One-time: GmbH CHF 3K + FinSA CHF 20K · Starting cash: CHF 400K pre-seed raise</div>
       <div><span style="font-family:'Inter',-apple-system,sans-serif;font-size:0.56rem;color:var(--gold-light);display:block;margin-bottom:0.3rem;text-transform:uppercase;letter-spacing:0.08em;">Accounting basis</div>Software intangible CHF 766K (replacement cost) · amortised 10yr straight-line · AR: 30-day régie billing lag · No debt · Swiss GAAP simplified · Tax not modelled (pre-profit Y1, loss carry-forward Y2+)</div>
     </div>
   </div>
@@ -3294,41 +3303,40 @@
   <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:2px;background:var(--rule);border:1px solid var(--rule);margin-bottom:2.5rem;">
     <div style="background:var(--paper);padding:0.9rem 0.6rem;text-align:center;">
       <div class="d-label-micro">Breakeven</div>
-      <div class="d-serif-130">Month 12</div>
-      <div class="d-inter-50-muted">incl. founder salary</div>
+      <div class="d-serif-130">~Month 14</div>
+      <div class="d-inter-50-muted">incl. 2 founder salaries</div>
     </div>
     <div style="background:var(--cream);padding:0.9rem 0.6rem;text-align:center;">
       <div class="d-label-micro">Y1 Revenue</div>
-      <div class="d-serif-130">CHF 132K</div>
-      <div class="d-inter-50-muted">ARR CHF 324K at M12</div>
+      <div class="d-serif-130">CHF 178K</div>
+      <div class="d-inter-50-muted">ARR CHF 415K at M12</div>
     </div>
     <div style="background:var(--paper);padding:0.9rem 0.6rem;text-align:center;">
       <div class="d-label-micro">Y2 Revenue</div>
-      <div class="d-serif-130">CHF 791K</div>
-      <div class="d-inter-50-muted">ARR CHF 1.5M at M24</div>
+      <div class="d-serif-130">CHF 1.05M</div>
+      <div class="d-inter-50-muted">ARR CHF 1.8M at M24</div>
     </div>
     <div style="background:var(--cream);padding:0.9rem 0.6rem;text-align:center;">
       <div class="d-label-micro">Y3 Revenue</div>
-      <div class="d-serif-130">CHF 2.77M</div>
-      <div class="d-inter-50-muted">ARR CHF 3.96M at M36</div>
+      <div class="d-serif-130">CHF 3.50M</div>
+      <div class="d-inter-50-muted">ARR CHF 4.47M at M36</div>
     </div>
     <div style="background:var(--paper);padding:0.9rem 0.6rem;text-align:center;">
       <div class="d-label-micro">Y3 EBITDA margin</div>
-      <div class="d-serif-130">75.2%</div>
-      <div class="d-inter-50-muted">CHF 2.08M EBITDA</div>
+      <div class="d-serif-130">76.7%</div>
+      <div class="d-inter-50-muted">CHF 2.69M EBITDA</div>
     </div>
     <div style="background:linear-gradient(135deg,var(--gold),var(--rust));color:#fff;padding:0.9rem 0.6rem;text-align:center;">
       <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.5rem;color:var(--gold-light);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:0.2rem;">Cash at M36</div>
-      <div style="font-family:'DM Serif Display',Georgia,serif;font-size:1.3rem;font-weight:700;color:var(--paper);">CHF 2.8M</div>
+      <div style="font-family:'DM Serif Display',Georgia,serif;font-size:1.3rem;font-weight:700;color:var(--paper);">CHF 3.38M</div>
       <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.5rem;color:var(--gold-light);">debt-free</div>
     </div>
   </div>
 
   <!-- ARR BRIDGE -->
   <div style="background:var(--cream);border:1px solid var(--rule);padding:1rem 1.4rem;margin-bottom:2rem;font-family:'Inter',-apple-system,sans-serif;font-size:0.72rem;color:var(--slate);line-height:1.7;">
-    <span style="font-weight:600;color:var(--ink);">How CHF 3.96M ARR at M36 is derived (Track A only):</span>
-    1,770 landlords × CHF 40/mo blended = CHF 70.8K/mo · + 219 régies × CHF 399/mo = CHF 87.4K/mo · + AI add-on (40% attach on régie base) + NOI platform clients from M20 = ~CHF 134K/mo · Total MRR at M36 ≈ CHF 330K → ARR CHF 3.96M.
-    Track B advisory (CHF 9,600–60,000/yr retainer) not included in this model — adds CHF 1–3M ARR from M18 depending on advisor capacity. See market sizing chapter for full SOM.
+    <span style="font-weight:600;color:var(--ink);">How CHF 4.47M ARR at M36 is derived:</span>
+    1,770 landlords × CHF 65/mo blended (39/79/149) = CHF 115K/mo · + 219 régies × CHF 399/mo = CHF 87.4K/mo · + AI add-on + NOI intelligence platform (from M20) = ~CHF 134K/mo · + Track B advisory 41 clients net ~CHF 35.8K/mo (after 35% FinSA split, from M18) · Total MRR at M36 ≈ CHF 372K → ARR CHF 4.47M.
   </div>
 
   <!-- CHART -->
@@ -3374,16 +3382,16 @@
 </tr></thead>
       <tbody><tr class="d-bg-cream"><td colspan="5" class="d-cell-header">Revenue</td></tr><tr style="">
       <td class="d-nav-text">Private landlords</td>
-      <td class="d-inter">73,200</td>
-      <td class="d-inter">322,800</td>
-      <td class="d-inter">685,200</td>
-      <td class="d-meta">CHF 29–89/mo tiered (blended CHF 40) · 15→330→1,770 clients</td>
+      <td class="d-inter">119,000</td>
+      <td class="d-inter">524,600</td>
+      <td class="d-inter">1,113,500</td>
+      <td class="d-meta">CHF 39/79/149/mo tiered (blended CHF 65) · 15→330→1,770 clients</td>
     </tr><tr style="">
       <td class="d-nav-text">Small régies</td>
-      <td class="d-inter">58,653</td>
-      <td class="d-inter">338,751</td>
-      <td class="d-inter">825,930</td>
-      <td class="d-meta">CHF 199–799/mo (blended CHF 399) · 0→33→219 clients</td>
+      <td class="d-inter">58,500</td>
+      <td class="d-inter">338,000</td>
+      <td class="d-inter">825,900</td>
+      <td class="d-meta">CHF 399/mo · 0→33→219 clients</td>
     </tr><tr style="">
       <td class="d-nav-text">AI add-on</td>
       <td class="d-inter">637</td>
@@ -3391,49 +3399,61 @@
       <td class="d-inter">40,327</td>
       <td class="d-meta">CHF 49/mo · from M12 · 40% attach on régie base</td>
     </tr><tr style="">
-      <td class="d-nav-text">NOI platform</td>
+      <td class="d-nav-text">NOI intelligence</td>
       <td class="d-inter">—</td>
       <td class="d-inter">112,500</td>
       <td class="d-inter">1,215,000</td>
-      <td class="d-meta">CHF 2,500/mo · enterprise motion · from M20</td>
+      <td class="d-meta">CHF 2,500/mo · enterprise analytics · from M20</td>
+    </tr><tr style="">
+      <td class="d-nav-text">Track B advisory (net)</td>
+      <td class="d-inter">—</td>
+      <td class="d-inter">57,000</td>
+      <td class="d-inter">308,000</td>
+      <td class="d-meta">CHF 9,600–60,000/yr retainer · net after 35% FinSA partner split · starts M18 · 5→41 clients</td>
     </tr><tr class="d-rule-top">
       <td class="d-inter-72-600">Total Revenue</td>
-      <td class="d-inter-600">132,490</td>
-      <td class="d-inter-600">790,515</td>
-      <td class="d-inter-600">2,766,457</td>
+      <td class="d-inter-600">178,137</td>
+      <td class="d-inter-600">1,048,564</td>
+      <td class="d-inter-600">3,502,727</td>
       <td class="d-meta"></td>
     </tr><tr class="d-h-bar"><td colspan="5"></td></tr><tr class="d-bg-cream"><td colspan="5" class="d-cell-header">Cost of Revenue</td></tr><tr style="">
       <td class="d-nav-text">Hosting / tooling (COGS)</td>
       <td class="d-inter-rust">(1,500)</td>
       <td class="d-inter-rust">(3,600)</td>
       <td class="d-inter-rust">(6,000)</td>
-      <td class="d-meta">Lovable Pro + Claude Pro + Exoscale · scales with users</td>
+      <td class="d-meta">Claude API + Exoscale (nLPD) + dev tooling · scales with users</td>
     </tr><tr class="d-rule-top">
       <td class="d-inter-72-600">Gross Profit</td>
-      <td class="d-inter-600-forest">130,990</td>
-      <td class="d-inter-600-forest">786,915</td>
-      <td class="d-inter-600-forest">2,760,457</td>
-      <td class="d-meta">Gross margin: 99% / 100% / 100% — asset-light model; see blended margin below</td>
+      <td class="d-inter-600-forest">176,637</td>
+      <td class="d-inter-600-forest">1,044,964</td>
+      <td class="d-inter-600-forest">3,496,727</td>
+      <td class="d-meta">Gross margin: 99% — asset-light SaaS model</td>
     </tr><tr class="d-h-bar"><td colspan="5"></td></tr><tr class="d-bg-cream"><td colspan="5" class="d-cell-header">Operating Expenses</td></tr><tr style="">
-      <td class="d-nav-text">Founder salary</td>
-      <td class="d-inter-rust">(140,000)</td>
-      <td class="d-inter-rust">(140,000)</td>
-      <td class="d-inter-rust">(140,000)</td>
-      <td class="d-meta">CHF 140K/yr gross · market rate CHF 220–240K · CHF 80K/yr founder discount</td>
+      <td class="d-nav-text">Founder salaries (2 × CHF 120K)</td>
+      <td class="d-inter-rust">(240,000)</td>
+      <td class="d-inter-rust">(240,000)</td>
+      <td class="d-inter-rust">(240,000)</td>
+      <td class="d-meta">2 founders × CHF 10K/mo gross · market rate CHF 220–240K each</td>
+    </tr><tr style="">
+      <td class="d-nav-text">Pension + insurance (13%)</td>
+      <td class="d-inter-rust">(31,200)</td>
+      <td class="d-inter-rust">(31,200)</td>
+      <td class="d-inter-rust">(31,200)</td>
+      <td class="d-meta">BVG occupational pension + accident/health insurance</td>
     </tr><tr style="">
       <td class="d-nav-text">Staff — hired employees</td>
       <td class="d-inter-rust">(28,000)</td>
-      <td class="d-inter-rust">(210,000)</td>
+      <td class="d-inter-rust">(174,000)</td>
       <td class="d-inter-rust">(336,000)</td>
-      <td class="d-meta">RE domain expert M9 (CHF 7K/mo) · Tech/growth M15 (CHF 9K/mo) · Sales M22 (CHF 12K/mo)</td>
+      <td class="d-meta">RE expert M9 (CHF 7K/mo) · tech/growth M15 (CHF 9K/mo) · sales M22 (CHF 12K/mo) · funded from revenue</td>
     </tr><tr style="">
       <td class="d-nav-text">GTM / marketing</td>
       <td class="d-inter-rust">(39,000)</td>
       <td class="d-inter-rust">(96,000)</td>
       <td class="d-inter-rust">(180,000)</td>
-      <td class="d-meta">SEO content · HEV Schweiz activation · régie outreach events · Salon de l'Immobilier</td>
+      <td class="d-meta">SEO content · HEV Schweiz activation · régie outreach · Salon de l'Immobilier</td>
     </tr><tr style="">
-      <td class="d-nav-text">G&A / miscellaneous</td>
+      <td class="d-nav-text">G&amp;A / miscellaneous</td>
       <td class="d-inter-rust">(9,000)</td>
       <td class="d-inter-rust">(18,000)</td>
       <td class="d-inter-rust">(24,000)</td>
@@ -3446,40 +3466,34 @@
       <td class="d-meta">Y1: GmbH formation CHF 3K + FinSA regulatory opinion CHF 20K</td>
     </tr><tr class="d-rule-top">
       <td class="d-inter-72-600">Total Operating Expenses</td>
-      <td class="d-inter-600-rust">(217,500)</td>
-      <td class="d-inter-600-rust">(467,600)</td>
-      <td class="d-inter-600-rust">(686,000)</td>
+      <td class="d-inter-600-rust">(370,200)</td>
+      <td class="d-inter-600-rust">(559,200)</td>
+      <td class="d-inter-600-rust">(811,200)</td>
       <td class="d-meta"></td>
     </tr><tr class="d-h-bar"><td colspan="5"></td></tr><tr class="d-rule-heavy">
       <td class="d-inter-72-600">EBITDA</td>
-      <td class="d-inter-600-rust">(108,010)</td>
-      <td class="d-inter-600">322,915</td>
-      <td class="d-inter-600">2,080,457</td>
-      <td class="d-meta">EBITDA margin: -82% / 41% / 75%</td>
+      <td class="d-inter-600-rust">(193,563)</td>
+      <td class="d-inter-600">485,764</td>
+      <td class="d-inter-600">2,685,527</td>
+      <td class="d-meta">EBITDA margin: −109% / 46% / 77%</td>
     </tr><tr style="">
-      <td class="d-nav-text">Blended margin (incl. founder salary)</td>
-      <td class="d-inter">-7%</td>
-      <td class="d-inter">82%</td>
-      <td class="d-inter">95%</td>
-      <td class="d-meta">Gross profit minus founder salary ÷ revenue — the economically meaningful margin</td>
-    </tr><tr style="">
-      <td class="d-nav-text">Depreciation & amortisation</td>
+      <td class="d-nav-text">Depreciation &amp; amortisation</td>
       <td class="d-inter-rust">(76,603)</td>
       <td class="d-inter-rust">(76,603)</td>
       <td class="d-inter-rust">(76,603)</td>
       <td class="d-meta">SW intangible CHF 766K amortised 10yr straight-line (CHF 76.6K/yr)</td>
     </tr><tr class="d-rule-top">
-      <td class="d-inter-72-600">EBIT (after D&A)</td>
-      <td class="d-inter-600-rust">(184,613)</td>
-      <td class="d-inter-600">246,312</td>
-      <td class="d-inter-600">2,003,854</td>
+      <td class="d-inter-72-600">EBIT (after D&amp;A)</td>
+      <td class="d-inter-600-rust">(270,166)</td>
+      <td class="d-inter-600">409,161</td>
+      <td class="d-inter-600">2,608,924</td>
       <td class="d-meta">Interest expense: nil (no debt). Tax: not modelled (pre-profit Y1).</td>
     </tr><tr class="d-h-bar"><td colspan="5"></td></tr><tr style="">
       <td class="d-inter-72">End-of-period ARR</td>
-      <td class="d-inter">324,048</td>
-      <td class="d-inter">1,482,540</td>
-      <td class="d-inter">3,959,328</td>
-      <td class="d-meta">Annualised recurring revenue at M12 / M24 / M36</td>
+      <td class="d-inter">415,000</td>
+      <td class="d-inter">1,795,000</td>
+      <td class="d-inter">4,470,000</td>
+      <td class="d-meta">Annualised recurring revenue at M12 / M24 / M36 — includes Track B from M18</td>
     </tr></tbody>
     </table>
   </div>
@@ -3668,9 +3682,9 @@
       <td class="d-meta">CHF 400K raise · SAFE converts to equity at seed round</td>
     </tr><tr style="">
       <td class="d-nav-text">Retained earnings / (accumulated deficit)</td>
-      <td class="d-inter-rust">(108,010)</td>
-      <td class="d-inter">214,905</td>
-      <td class="d-inter">2,295,362</td>
+      <td class="d-inter-rust">(193,563)</td>
+      <td class="d-inter">292,201</td>
+      <td class="d-inter">2,977,728</td>
       <td class="d-meta">Cumulative EBITDA Y1/Y2/Y3</td>
     </tr><tr class="d-rule-top">
       <td class="d-inter-72-600">Total equity</td>
