@@ -2465,45 +2465,100 @@
 <!-- ━━━━━━━━ CHAPTER 10 ━━━━━━━━ -->
 <div id="ch10" class="chapter-anchor"></div>
 <div class="content">
-  <div class="d-label-rust">How we acquire customers</div>
+  <div class="d-label-rust">How we enter without asking permission</div>
   <div class="section-header">
     <span class="section-num">10</span>
     <h2 class="section-title">Go-to-Market <em>Strategy</em></h2>
   </div>
 
-  <!-- TWO TRACKS, TWO MOTIONS -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px;background:var(--rule);border:1px solid var(--rule);margin-bottom:3rem;">
-    <div style="background:var(--forest);color:var(--paper);padding:1.8rem;">
-      <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.58rem;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.55);margin-bottom:0.5rem;">Track A — Product-led growth</div>
-      <div style="font-family:'DM Serif Display',Georgia,serif;font-size:1.1rem;font-weight:700;margin-bottom:0.8rem;">Find landlords where they search</div>
-      <p style="font-size:0.83rem;line-height:1.68;color:rgba(255,255,255,0.85);">Private landlords searching for help don't browse PropTech directories. They search Google. "Mietvertrag kostenlos", "QR-Rechnung Miete erstellen", "Nebenkosten Abrechnung Vorlage", "Kündigung Mietvertrag Formular VD". These are high-intent queries with almost no commercial competition. Ranking for 20 of them is a meaningful acquisition channel — and it compounds over time.</p>
-    </div>
-    <div style="background:linear-gradient(135deg,var(--gold),var(--rust));color:#fff;padding:1.8rem;">
-      <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.58rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--gold-light);margin-bottom:0.5rem;">Track B — Relationship-led sales</div>
-      <div style="font-family:'DM Serif Display',Georgia,serif;font-size:1.1rem;font-weight:700;margin-bottom:0.8rem;">Access through trusted intermediaries</div>
-      <p style="font-size:0.83rem;line-height:1.68;color:rgba(255,255,255,0.85);">Mid-market régies and family office advisors don't respond to cold outreach. They respond to referrals from people they already trust — USPI Suisse, notaries, fiduciaires, private bankers. Track B GTM is event-driven (Salon de l'Immobilier Geneva), association-backed (USPI, HEV), and warm-introduction led. One signed régie brings 5–10 owner clients simultaneously.</p>
+  <!-- THE STRATEGIC INSIGHT -->
+  <div style="background:var(--ink);color:var(--paper);padding:2rem;margin-bottom:3rem;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:3rem;align-items:start;">
+      <div>
+        <div class="d-dark-label">The constraint we are designing around</div>
+        <div style="font-family:'DM Serif Display',Georgia,serif;font-size:1.3rem;font-weight:700;line-height:1.2;margin-bottom:1rem;color:var(--paper);">Owners can't easily leave their régie — so we don't ask them to.</div>
+        <p style="font-size:0.85rem;line-height:1.7;color:rgba(255,255,255,0.75);">Discovery interviews confirm it: even dissatisfied owners hesitate to switch. Contract notice periods of 3–12 months, fear of operational gaps, and years of established inertia create real switching cost resistance. The conventional SaaS playbook — "sign up, migrate, cancel your old provider" — faces structural friction in this market.</p>
+      </div>
+      <div>
+        <div class="d-dark-label">The path of least resistance</div>
+        <div style="font-family:'DM Serif Display',Georgia,serif;font-size:1.3rem;font-weight:700;line-height:1.2;margin-bottom:1rem;color:var(--paper);">Enter where there is no friction: the owner's financial picture.</div>
+        <p style="font-size:0.85rem;line-height:1.7;color:rgba(255,255,255,0.75);">Régie reports are sent to owners monthly — dense PDFs that provide little clarity on actual performance. We ingest those reports, transform them into a financial dashboard with NOI analysis, benchmarks, and forward scenarios, and charge for that intelligence layer. The régie does not need to cooperate. The owner does not need to switch. We earn recurring revenue from day one.</p>
+      </div>
     </div>
   </div>
 
-  <!-- GTM CHANNELS -->
-  <div class="d-label-muted">Acquisition channels — Track A</div>
+  <!-- THREE-PHASE ENTRY -->
+  <div class="d-label-muted">The entry sequence — three phases</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:2px;background:var(--rule);border:1px solid var(--rule);margin-bottom:3rem;">
+
+    <div style="background:var(--paper);padding:1.8rem;display:flex;flex-direction:column;gap:1rem;">
+      <div style="display:flex;align-items:center;gap:0.6rem;">
+        <span style="font-family:'DM Serif Display',Georgia,serif;font-size:1.5rem;font-weight:900;color:#4f46e5;line-height:1;">00</span>
+        <span style="font-family:'Inter',-apple-system,sans-serif;font-size:0.55rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);">Enter</span>
+      </div>
+      <div class="d-serif-095">Owner intelligence layer</div>
+      <p class="d-body-82">Owner imports their régie's monthly statement. The platform extracts financial data, computes NOI, benchmarks against comparable buildings, and generates forward scenarios for major decisions — renovation, refinancing, sale. Charged at CHF 39–79/mo. Zero régie involvement. Zero operational migration. Immediate value on data the owner already has.</p>
+      <div style="margin-top:auto;padding:0.6rem 0.8rem;background:var(--cream);border-left:2px solid #4f46e5;font-family:'Inter',-apple-system,sans-serif;font-size:0.72rem;color:var(--slate);">Under OR 400 (Swiss mandate law) the régie is legally obligated to render accounts to the owner. If they obstruct access to their own reports, they accelerate the owner's decision to terminate the mandate.</div>
+    </div>
+
+    <div style="background:var(--cream);padding:1.8rem;display:flex;flex-direction:column;gap:1rem;">
+      <div style="display:flex;align-items:center;gap:0.6rem;">
+        <span style="font-family:'DM Serif Display',Georgia,serif;font-size:1.5rem;font-weight:900;color:#4f46e5;line-height:1;">01</span>
+        <span style="font-family:'Inter',-apple-system,sans-serif;font-size:0.55rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);">Convert</span>
+      </div>
+      <div class="d-serif-095">Advisory upsell</div>
+      <p class="d-body-82">Six months of dashboard data gives the owner a clear financial picture — and forward scenarios create felt questions a dashboard alone cannot answer. "My heating system needs replacement in three years. What is the right financing path?" This is the Track B entry moment: a warm, data-rich advisory conversation rather than a cold pitch. Target: 5–10% of dashboard subscribers convert to advisory within 12 months.</p>
+      <div style="margin-top:auto;padding:0.6rem 0.8rem;background:var(--paper);border-left:2px solid var(--gold);font-family:'Inter',-apple-system,sans-serif;font-size:0.72rem;color:var(--slate);">The private banking analogy: the portfolio review creates demand for the advisor relationship. We replicate that dynamic for real estate.</div>
+    </div>
+
+    <div style="background:linear-gradient(135deg,var(--gold),var(--rust));color:#fff;padding:1.8rem;display:flex;flex-direction:column;gap:1rem;">
+      <div style="display:flex;align-items:center;gap:0.6rem;">
+        <span style="font-family:'DM Serif Display',Georgia,serif;font-size:1.5rem;font-weight:900;color:var(--paper);line-height:1;">02</span>
+        <span style="font-family:'Inter',-apple-system,sans-serif;font-size:0.55rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--gold-light);">Fork</span>
+      </div>
+      <div style="font-family:'DM Serif Display',Georgia,serif;font-size:1rem;font-weight:700;">Substitution or partnership</div>
+      <p style="font-size:0.82rem;line-height:1.65;color:rgba(255,255,255,0.85);">As trust and data accumulate, two paths emerge. If régies engage proactively, white-label the dashboard and operational layer to them — faster scale, lower CAC. If owners self-initiate switching, activate direct operational onboarding as a neo-régie. The data already held makes either transition seamless: we know the building, the lease, the cost history.</p>
+      <div style="margin-top:auto;padding:0.6rem 0.8rem;background:rgba(255,255,255,0.12);font-family:'Inter',-apple-system,sans-serif;font-size:0.72rem;color:rgba(255,255,255,0.8);">The neo-bank playbook: enter as a supplementary card, earn trust through transparency, gradually displace the primary relationship.</div>
+    </div>
+
+  </div>
+
+  <!-- THE FORK IN DETAIL -->
+  <div class="d-label-muted">The fork — decision criteria</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px;background:var(--rule);border:1px solid var(--rule);margin-bottom:3rem;">
+    <div class="d-bg-paper-lg">
+      <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.58rem;color:var(--forest);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.5rem;">Path A — B2B2C · White-label to régies</div>
+      <div class="d-serif-095">If régies come to us</div>
+      <p class="d-body-82">If small régies begin approaching us — because their own clients are using the platform and asking questions the régie cannot answer — we offer to power their reporting. They retain the client relationship; we provide the intelligence infrastructure. Faster scale, lower CAC per end-owner, network effects through régie portfolios (one régie = 50–200 owner clients simultaneously).</p>
+      <div style="margin-top:1rem;font-family:'Inter',-apple-system,sans-serif;font-size:0.68rem;color:var(--forest);">Trigger: 3+ régies make inbound contact within 6 months of launch.</div>
+    </div>
+    <div class="d-bg-cream-lg">
+      <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.58rem;color:var(--rust);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.5rem;">Path B — B2C · Direct neo-régie substitution</div>
+      <div class="d-serif-095">If owners self-initiate switching</div>
+      <p class="d-body-82">If dashboard subscribers begin requesting full operational management — maintenance, compliance, contractor coordination, tenant communication — we activate the full platform as a direct régie substitute. Property management is not a federally regulated activity in Switzerland. Client money is handled via standard segregated trust accounts. FinSA coverage already in plan for the advisory layer.</p>
+      <div style="margin-top:1rem;font-family:'Inter',-apple-system,sans-serif;font-size:0.68rem;color:var(--rust);">Trigger: &gt;15% of dashboard subscribers self-initiate a switching conversation within 12 months.</div>
+    </div>
+  </div>
+
+  <!-- ACQUISITION CHANNELS -->
+  <div class="d-label-muted">Acquisition channels — reaching the régie-trapped owner</div>
   <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:2px;background:var(--rule);border:1px solid var(--rule);margin-bottom:2.5rem;">
     <div class="d-bg-paper">
       <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.58rem;color:var(--forest);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.4rem;">Channel 1 — Primary</div>
       <div class="d-serif-095">SEO / organic search</div>
-      <p class="d-body">Trilingual content targeting high-intent queries in DE/FR/IT. Landlord guides, cantonal form templates, reference rate trackers. Compounds over time. Zero incremental CAC per lead once ranking is established.</p>
+      <p class="d-body">Trilingual content targeting high-intent queries: "régie trop chère", "performance immeuble locatif", "rendement locatif net", "rapport gérance". Owners searching these terms already feel the friction. Compounds over time with zero incremental CAC per lead once ranking is established.</p>
       <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.58rem;color:var(--muted);margin-top:0.6rem;">CAC target: CHF 40–60</div>
     </div>
     <div class="d-bg-cream-sm">
       <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.58rem;color:var(--gold);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.4rem;">Channel 2</div>
-      <div class="d-serif-095">HEV Schweiz partnership</div>
-      <p class="d-body">HEV (Hauseigentümerverband) is the main Swiss landlord association with 340K+ members — a near-perfect distribution match for Track A. A newsletter feature, member discount, or co-branded tool reaches the exact cohort we need. Target: formal partnership activation in pre-seed phase.</p>
+      <div class="d-serif-095">HEV Schweiz + notaire network</div>
+      <p class="d-body">HEV (340K+ landlord members) reaches the exact cohort. Notaires and fiduciaires are a second high-quality channel: they advise owners at the moment of property acquisition or inheritance — exactly when the management decision is being made. A tool they can recommend reduces their own advisory friction.</p>
       <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.58rem;color:var(--muted);margin-top:0.6rem;">CAC target: CHF 20–40 via partner</div>
     </div>
     <div class="d-bg-paper">
       <div class="d-label-rust-sm">Channel 3</div>
       <div class="d-serif-095">Word of mouth + referral</div>
-      <p class="d-body">Landlords talk to each other — through HEV meetings, co-owner groups, family networks. A landlord who solves their QR-invoice problem in 15 minutes tells the person next to them who has the same problem. Structured referral incentive (1 month free) systematises this.</p>
+      <p class="d-body">Owners who discover their régie has been underperforming — visible through the dashboard benchmarks — are highly motivated advocates. "Your régie charges 5.2%, Swiss average for your building type is 4.1%" is a shareable moment. Structured referral incentive (1 month free) systematises this.</p>
       <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.58rem;color:var(--muted);margin-top:0.6rem;">CAC target: CHF 0–20</div>
     </div>
   </div>
@@ -2513,45 +2568,45 @@
   <div style="background:linear-gradient(135deg,var(--gold),var(--rust));color:#fff;padding:2rem;margin-bottom:2.5rem;">
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0;position:relative;">
       <div style="padding:1rem;text-align:center;border-right:1px solid rgba(255,255,255,0.1);">
-        <div style="font-family:'DM Serif Display',Georgia,serif;font-size:1rem;font-weight:700;margin-bottom:0.4rem;">Track A growth</div>
-        <div class="d-dark-body">More self-managing landlords onboard via SEO + HEV</div>
+        <div style="font-family:'DM Serif Display',Georgia,serif;font-size:1rem;font-weight:700;margin-bottom:0.4rem;">Owner imports régie report</div>
+        <div class="d-dark-body">Dashboard delivers immediate financial clarity at CHF 39–79/mo</div>
       </div>
       <div style="padding:1rem;text-align:center;border-right:1px solid rgba(255,255,255,0.1);">
         <div style="font-family:'DM Serif Display',Georgia,serif;font-size:1rem;font-weight:700;margin-bottom:0.4rem;color:var(--gold-light);">Dataset deepens</div>
-        <div class="d-dark-body">Every rent, maintenance event, and vacancy feeds the NOI intelligence engine</div>
+        <div class="d-dark-body">12 months of data creates benchmarks, forward models, and advisory triggers</div>
       </div>
       <div style="padding:1rem;text-align:center;border-right:1px solid rgba(255,255,255,0.1);">
-        <div style="font-family:'DM Serif Display',Georgia,serif;font-size:1rem;font-weight:700;margin-bottom:0.4rem;">Track B sharpens</div>
-        <div class="d-dark-body">Benchmarks become statistically meaningful. Advisory quality improves with scale</div>
+        <div style="font-family:'DM Serif Display',Georgia,serif;font-size:1rem;font-weight:700;margin-bottom:0.4rem;">Track B converts</div>
+        <div class="d-dark-body">Data-rich advisory upsell — 5–10% conversion, CHF 9,600/yr ARPU</div>
       </div>
       <div style="padding:1rem;text-align:center;">
-        <div style="font-family:'DM Serif Display',Georgia,serif;font-size:1rem;font-weight:700;margin-bottom:0.4rem;color:var(--gold-light);">Track B revenue</div>
-        <div class="d-dark-body">Funds faster Track A acquisition → more data → better Track B → repeat</div>
+        <div style="font-family:'DM Serif Display',Georgia,serif;font-size:1rem;font-weight:700;margin-bottom:0.4rem;color:var(--gold-light);">Operational switch or white-label</div>
+        <div class="d-dark-body">Fork activated — régie displaced or powered by Sencilo</div>
       </div>
     </div>
   </div>
 
-  <!-- SALES FUNNEL -->
-  <div class="d-label-muted">Sales model by segment</div>
+  <!-- SALES MODEL -->
+  <div class="d-label-muted">Sales model by entry point</div>
   <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:2px;background:var(--rule);border:1px solid var(--rule);margin-bottom:3rem;">
     <div class="d-bg-paper">
-      <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.55rem;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:0.3rem;">Private landlords</div>
-      <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.62rem;font-weight:500;color:var(--forest);margin-bottom:0.5rem;">Self-serve · zero touch</div>
-      <p class="d-body">Lands via SEO or HEV → signs up → onboards in 15 min → pays via credit card. No sales call, no demo, no friction. Product does the selling. Target: CHF 29–89/mo, CAC under CHF 80.</p>
+      <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.55rem;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:0.3rem;">Régie-trapped owner</div>
+      <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.62rem;font-weight:500;color:var(--forest);margin-bottom:0.5rem;">Self-serve · dashboard-first</div>
+      <p class="d-body">Finds us via SEO or HEV → imports first régie statement → sees their actual NOI → pays CHF 39–79/mo for ongoing intelligence. No migration required. CAC under CHF 80. Converts to full platform or Track B as trust builds over 6–12 months.</p>
     </div>
     <div class="d-bg-cream-sm">
-      <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.55rem;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:0.3rem;">Small régies</div>
-      <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.62rem;font-weight:500;color:var(--gold);margin-bottom:0.5rem;">Light touch · outbound</div>
-      <p class="d-body">Direct outreach to régie principals in VD/GE/ZH → 30-min demo → white-glove onboarding for first 20 clients → case study → referral. Target: CHF 199–799/mo, CAC under CHF 600.</p>
+      <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.55rem;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:0.3rem;">Self-managing landlord</div>
+      <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.62rem;font-weight:500;color:var(--gold);margin-bottom:0.5rem;">Self-serve · operations-first</div>
+      <p class="d-body">Already managing without a régie → signs up for QR-invoices, Nebenkosten, compliance tools → onboards in 15 min → pays CHF 39–149/mo. Product-led, no sales motion. Financial dashboard is a natural upsell once operations are stable.</p>
     </div>
     <div class="d-bg-paper">
-      <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.55rem;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:0.3rem;">Advisory clients</div>
-      <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.62rem;font-weight:500;color:var(--rust);margin-bottom:0.5rem;">High-touch · relationship</div>
-      <p class="d-body">Warm introductions via régie channel, HEV network, private bankers → multi-meeting discovery → bespoke proposal → named advisor onboarding. Target: CHF 8–60K/yr, CAC CHF 3–8K.</p>
+      <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.55rem;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:0.3rem;">Advisory client</div>
+      <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.62rem;font-weight:500;color:var(--rust);margin-bottom:0.5rem;">High-touch · relationship-led</div>
+      <p class="d-body">Warm introductions via HEV, notaires, private bankers → dashboard already in use → advisory conversation triggered by forward scenario → named advisor onboarding. CHF 9,600–24,000/yr. CAC CHF 3–8K. Track B revenue begins M18.</p>
     </div>
   </div>
 
-<!-- ━━━━━━━━ SECTION 4: COMPETITIVE DISPLACEMENT ━━━━━━━━ -->
+  <!-- COMPETITIVE DISPLACEMENT -->
   <div class="section-header">
     <span class="section-num">10</span>
     <h2 class="section-title">Competitive <em>Displacement</em> Map</h2>
