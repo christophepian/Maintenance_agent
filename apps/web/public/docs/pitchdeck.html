@@ -3814,32 +3814,118 @@
 
   <!-- UNIT ECONOMICS -->
   <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.62rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:1rem;">Unit economics</div>
-  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:2px;background:var(--rule);border:1px solid var(--rule);">
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:2px;background:var(--rule);border:1px solid var(--rule);margin-bottom:2px;">
     <div class="d-bg-paper">
       <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.58rem;color:var(--forest);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.5rem;">Track A · Landlords</div>
       <div style="display:flex;flex-direction:column;gap:0.3rem;font-size:0.8rem;color:var(--slate);">
-        <div><span class="d-inter-58-muted">ARPU </span>CHF 40/mo · CHF 480/yr</div>
+        <div><span class="d-inter-58-muted">ARPU </span>CHF 65/mo blended · CHF 780/yr</div>
+        <div><span class="d-inter-58-muted">Churn </span>1.5%/mo · 16.8% annual</div>
         <div><span class="d-inter-58-muted">CAC target </span>CHF 40–80 <span style="color:var(--rust);font-size:0.58rem;">⚑ unvalidated</span></div>
-        <div><span class="d-inter-58-muted">Payback </span>1–2 months</div>
-        <div><span class="d-inter-58-muted">LTV (3yr, 2%/mo churn) </span>~CHF 1,300</div>
-        <div><span class="d-inter-58-muted">LTV:CAC </span>~16–33×</div>
+        <div><span class="d-inter-58-muted">Payback </span>~1 month</div>
+        <div><span class="d-inter-58-muted">LTV (36mo) </span>CHF 1,830</div>
+        <div><span class="d-inter-58-muted">LTV:CAC </span>~23–46×</div>
       </div>
     </div>
     <div class="d-bg-cream-sm">
       <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.58rem;color:var(--gold);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.5rem;">Track A · Régies</div>
       <div style="display:flex;flex-direction:column;gap:0.3rem;font-size:0.8rem;color:var(--slate);">
         <div><span class="d-inter-58-muted">ARPU </span>CHF 399/mo · CHF 4,788/yr</div>
+        <div><span class="d-inter-58-muted">Churn </span>1.0%/mo · 11.4% annual</div>
         <div><span class="d-inter-58-muted">CAC target </span>CHF 400–800 <span style="color:var(--rust);font-size:0.58rem;">⚑ unvalidated</span></div>
-        <div><span class="d-inter-58-muted">Payback </span>1–2 months</div>
-        <div><span class="d-inter-58-muted">LTV (3yr, 1%/mo churn) </span>~CHF 13,000</div>
-        <div><span class="d-inter-58-muted">LTV:CAC </span>~16–33×</div>
+        <div><span class="d-inter-58-muted">Payback </span>~2 months</div>
+        <div><span class="d-inter-58-muted">LTV (36mo) </span>CHF 12,100</div>
+        <div><span class="d-inter-58-muted">LTV:CAC </span>~15–30×</div>
       </div>
     </div>
     <div class="d-bg-paper">
-      <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.58rem;color:var(--ink);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.5rem;">Gross margin note</div>
-      <div style="font-size:0.8rem;color:var(--slate);line-height:1.6;">Reported gross margin ~99% (hosting-only COGS on an asset-light SaaS). Blended margin including founder salary: <strong>−5% Y1 → 58% Y2 → 70% Y3</strong>. The margin inflects because founder salary is fixed while revenue compounds. At scale (M36), opex is ~25% of revenue.</div>
+      <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.58rem;color:var(--rust);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.5rem;">Track B · Advisory</div>
+      <div style="display:flex;flex-direction:column;gap:0.3rem;font-size:0.8rem;color:var(--slate);">
+        <div><span class="d-inter-58-muted">ARPU </span>CHF 800/mo individual · CHF 9,600/yr</div>
+        <div><span class="d-inter-58-muted">Churn </span>0.7%/mo · 8% annual</div>
+        <div><span class="d-inter-58-muted">CAC target </span>CHF 3,000–8,000</div>
+        <div><span class="d-inter-58-muted">Payback </span>~7 months</div>
+        <div><span class="d-inter-58-muted">LTV (36mo) </span>CHF 25,400</div>
+        <div><span class="d-inter-58-muted">LTV:CAC </span>~3–8×</div>
+      </div>
     </div>
   </div>
+
+  <!-- CHURN RATIONALE + SENSITIVITY -->
+  <div style="background:var(--cream);border:1px solid var(--rule);border-top:none;padding:1.2rem 1.5rem;margin-bottom:2.5rem;">
+    <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.55rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:0.6rem;">Churn rate rationale — publicly auditable sources</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.5rem;font-family:'Inter',-apple-system,sans-serif;font-size:0.72rem;color:var(--slate);line-height:1.6;">
+      <div>
+        <span style="color:var(--forest);font-weight:600;">1.5%/mo — landlords.</span> AppFolio (NASDAQ: APPF) discloses ~10% gross annual churn for professional property managers — a stickier, more professional buyer than an individual landlord. We apply an 8-point risk premium for our early-stage brand and individual buyer profile, arriving at ~18% annual. Compliance data lock-in (audit trail, documents, signed leases) caps the upper bound.
+        <div style="margin-top:0.3rem;font-size:0.62rem;color:var(--muted);">Source: AppFolio 2023 Annual Report (10-K); ProfitWell/Paddle 2023 SaaS Churn Benchmarks — SMB operational SaaS: 1.5–2.5%/mo</div>
+      </div>
+      <div>
+        <span style="color:var(--gold);font-weight:600;">1.0%/mo — régies.</span> Professional buyers with higher switching costs than individual landlords: onboarding their owner clients onto the platform creates B2B2C lock-in. Benchmark: mid-market SaaS with professional end-user (ProfitWell: 0.75–1.5%/mo). We use the upper half of that range given our early-stage status.
+        <div style="margin-top:0.3rem;font-size:0.62rem;color:var(--muted);">Source: ProfitWell/Paddle 2023 SaaS Churn Benchmarks — mid-market operational SaaS; OpenView Partners 2022 SaaS Benchmarks</div>
+      </div>
+      <div>
+        <span style="color:var(--rust);font-weight:600;">0.7%/mo — Track B advisory.</span> Financial advisory relationships churn at 5–8% annually (Capgemini World Wealth Report 2023: average annual client attrition in private banking 6%). We use 8% as a premium for our unestablished brand. Named advisor relationship and data richness suppresses further churn after onboarding.
+        <div style="margin-top:0.3rem;font-size:0.62rem;color:var(--muted);">Source: Capgemini World Wealth Report 2023 (publicly available at capgemini.com); private banking industry standard 5–8% annual attrition</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHURN SENSITIVITY -->
+  <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.62rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:0.8rem;">Churn sensitivity — impact on M36 ARR (cohort-weighted, gross revenue model)</div>
+  <div style="overflow-x:auto;margin-bottom:0.5rem;border:1px solid var(--rule);">
+  <table class="fin-table" style="font-size:0.78rem;">
+    <thead><tr style="background:var(--cream);">
+      <th style="text-align:left;color:var(--ink);">Scenario</th>
+      <th>Monthly churn</th>
+      <th>Annual equiv.</th>
+      <th>Retention factor at M36<br><span style="font-weight:400;font-size:0.6rem;">(avg customer age 18mo)</span></th>
+      <th>Churn-adjusted M36 ARR</th>
+      <th>vs. gross model</th>
+    </tr></thead>
+    <tbody>
+      <tr>
+        <td style="color:var(--muted);font-size:0.72rem;">Best case</td>
+        <td class="d-inter">0.5%</td>
+        <td class="d-inter">5.8%</td>
+        <td class="d-inter">91.4%</td>
+        <td class="d-inter-500">CHF 2,660K</td>
+        <td style="font-size:0.72rem;color:var(--forest);">−CHF 250K</td>
+      </tr>
+      <tr>
+        <td style="color:var(--muted);font-size:0.72rem;">Optimistic</td>
+        <td class="d-inter">1.0%</td>
+        <td class="d-inter">11.4%</td>
+        <td class="d-inter">83.5%</td>
+        <td class="d-inter-500">CHF 2,430K</td>
+        <td style="font-size:0.72rem;color:var(--forest);">−CHF 480K</td>
+      </tr>
+      <tr style="background:rgba(79,70,229,0.05);">
+        <td style="font-weight:600;font-size:0.72rem;">Base case ★</td>
+        <td class="d-inter-500">1.5%</td>
+        <td class="d-inter-500">16.8%</td>
+        <td class="d-inter-500">76.0%</td>
+        <td class="d-inter-500">CHF 2,210K</td>
+        <td style="font-size:0.72rem;color:var(--gold);font-weight:500;">−CHF 700K</td>
+      </tr>
+      <tr>
+        <td style="color:var(--muted);font-size:0.72rem;">Conservative</td>
+        <td class="d-inter">2.0%</td>
+        <td class="d-inter">21.5%</td>
+        <td class="d-inter">69.7%</td>
+        <td class="d-inter-500">CHF 2,030K</td>
+        <td style="font-size:0.72rem;color:var(--rust);">−CHF 880K</td>
+      </tr>
+      <tr>
+        <td style="color:var(--muted);font-size:0.72rem;">Stress test</td>
+        <td class="d-inter">3.0%</td>
+        <td class="d-inter">30.4%</td>
+        <td class="d-inter">57.7%</td>
+        <td class="d-inter-500">CHF 1,680K</td>
+        <td style="font-size:0.72rem;color:var(--rust);">−CHF 1,230K</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+  <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.62rem;color:var(--muted);line-height:1.5;margin-bottom:2.5rem;">Methodology: churn-adjusted ARR = gross M36 ARR × (1−c)^18, where 18 months is the cohort-weighted average customer age on a linear 36-month ramp. The gross model (no churn, CHF 2.91M ARR) represents the upper bound. Even at the 2.0%/mo stress case, the business remains cash-positive at M36.</div>
 
 </div>
 
