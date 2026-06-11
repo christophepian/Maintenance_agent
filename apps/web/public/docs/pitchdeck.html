@@ -987,7 +987,7 @@
       </div>
       <div class="meta-item">
         <span class="meta-label">ARR at M36 (Track A + B model)</span>
-        <span class="meta-value">CHF 4.47M</span>
+        <span class="meta-value">CHF 2.91M</span>
       </div>
     </div>
     <div class="tag-row" style="margin-top:2rem;">
@@ -1859,7 +1859,7 @@
           </div>
           <div class="pillar">
             <div class="pillar-title">Target ARR</div>
-            <div class="pillar-body">Track A model: ~CHF 3.5M ARR at M36 (1,770 landlords + 219 régies + NOI platform). Track B advisory modelled separately — adds CHF 1–3M ARR from M18 depending on advisor capacity. Series A readiness at CHF 4–5M combined ARR. Exit comparables: Matera (€66M+ raised), AppFolio (NYSE: APPF).</div>
+            <div class="pillar-body">Combined model: CHF 2.91M ARR at M36 (1,770 landlords + 219 régies + 41 Track B advisory clients). Financial intelligence included in Track A pricing. Series A readiness at CHF 3M+ ARR with visible growth trajectory. Exit comparables: Matera (€66M+ raised), AppFolio (NYSE: APPF).</div>
           </div>
         </div>
         <div class="theory-callout">
@@ -2408,18 +2408,18 @@
     // ── Revenue arrays ──
     // Track A: landlord ARPU CHF 65/mo (blended 39/79/149), régie CHF 399/mo
     // Track B: net revenue after 35% FinSA partner split, starts M18
-    const llA=[],rgA=[],aiA=[],noA=[],tbA=[],rev=[];
+    // NOI intelligence removed — financial dashboard included in Track A pricing (Path B)
+    const llA=[],rgA=[],aiA=[],tbA=[],rev=[];
     for(let i=0;i<36;i++){
       const m=i+1;
       const ll=m<=6?ramp(1,6,0,500,m):m<=18?ramp(6,18,500,2000,m):m<=30?ramp(18,30,2000,4000,m):ramp(30,36,4000,5500,m);
       const rg=m<4?0:m<=12?ramp(4,12,0,100,m):m<=24?ramp(12,24,100,400,m):ramp(24,36,400,600,m);
       const ai=m<10?0:m<=20?ramp(10,20,0,800,m):m<=30?ramp(20,30,800,1500,m):ramp(30,36,1500,2000,m);
-      const no=m<18?0:m<=28?ramp(18,28,0,40,m):ramp(28,36,40,80,m);
       // Track B net (5 clients @ M18 → 41 clients @ M36; gross mix 800/2000/5000 × 0.65 net)
       const tb=m<18?0:ramp(18,36,2600,35800,m);
       llA.push(Math.round(ll*65)); rgA.push(Math.round(rg*399)); aiA.push(Math.round(ai*49));
-      noA.push(Math.round(no*2500)); tbA.push(Math.round(tb));
-      rev.push(Math.round(ll*65+rg*399+ai*49+no*2500+tb));
+      tbA.push(Math.round(tb));
+      rev.push(Math.round(ll*65+rg*399+ai*49+tb));
     }
 
     // ── Cost functions ──
@@ -2474,7 +2474,6 @@
         {label:'Private Landlords',data:llA,backgroundColor:'rgba(5,150,105,0.88)',stack:'s'},
         {label:'Small Régies',data:rgA,backgroundColor:'rgba(79,70,229,0.88)',stack:'s'},
         {label:'AI Add-on',data:aiA,backgroundColor:'rgba(124,58,237,0.78)',stack:'s'},
-        {label:'NOI Intelligence',data:noA,backgroundColor:'rgba(107,114,128,0.88)',stack:'s'},
         {label:'Track B Advisory (net)',data:tbA,backgroundColor:'rgba(234,179,8,0.85)',stack:'s'}
       ]},
       options:{...baseOpts,
@@ -3410,7 +3409,7 @@
   <div style="background:linear-gradient(135deg,var(--gold),var(--rust));color:#fff;padding:1.6rem 2rem;margin-bottom:2.5rem;">
     <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.58rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--gold-light);margin-bottom:0.9rem;">Model assumptions</div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:2rem;font-size:0.78rem;line-height:1.65;color:rgba(255,255,255,0.85);">
-      <div><span style="font-family:'Inter',-apple-system,sans-serif;font-size:0.56rem;color:var(--gold-light);display:block;margin-bottom:0.3rem;text-transform:uppercase;letter-spacing:0.08em;">Revenue</span>Track A landlords CHF 39/79/149/mo (blended CHF 65) · Régies CHF 399/mo · AI add-on CHF 49/mo from M12 at 40% attach · NOI intelligence CHF 2,500/mo from M20 · Track B net CHF 9,600–60,000/yr from M18 (5→41 clients, 35% FinSA split) · Churn not modelled</div>
+      <div><span style="font-family:'Inter',-apple-system,sans-serif;font-size:0.56rem;color:var(--gold-light);display:block;margin-bottom:0.3rem;text-transform:uppercase;letter-spacing:0.08em;">Revenue</span>Track A landlords CHF 39/79/149/mo (blended CHF 65) · Régies CHF 399/mo · AI add-on CHF 49/mo from M12 at 40% attach · Track B net CHF 9,600–60,000/yr from M18 (5→41 clients, 35% FinSA split) · Churn not modelled · Financial intelligence dashboard included in Track A pricing</div>
       <div><span style="font-family:'Inter',-apple-system,sans-serif;font-size:0.56rem;color:var(--gold-light);display:block;margin-bottom:0.3rem;text-transform:uppercase;letter-spacing:0.08em;">Costs</span>2 founders × CHF 10K/mo + 13% benefits = CHF 22.6K/mo · Hire 1 M9 CHF 7K/mo · Hire 2 M15 CHF 9K/mo · Hire 3 M22 CHF 12K/mo · GTM CHF 1.5–20K/mo ramping · One-time: GmbH CHF 3K + FinSA CHF 20K · Starting cash: CHF 400K pre-seed raise</div>
       <div><span style="font-family:'Inter',-apple-system,sans-serif;font-size:0.56rem;color:var(--gold-light);display:block;margin-bottom:0.3rem;text-transform:uppercase;letter-spacing:0.08em;">Accounting basis</div>Software intangible CHF 766K (replacement cost) · amortised 10yr straight-line · AR: 30-day régie billing lag · No debt · Swiss GAAP simplified · Tax not modelled (pre-profit Y1, loss carry-forward Y2+)</div>
     </div>
@@ -3430,30 +3429,30 @@
     </div>
     <div style="background:var(--paper);padding:0.9rem 0.6rem;text-align:center;">
       <div class="d-label-micro">Y2 Revenue</div>
-      <div class="d-serif-130">CHF 1.05M</div>
-      <div class="d-inter-50-muted">ARR CHF 1.8M at M24</div>
+      <div class="d-serif-130">CHF 936K</div>
+      <div class="d-inter-50-muted">ARR CHF 1.6M at M24</div>
     </div>
     <div style="background:var(--cream);padding:0.9rem 0.6rem;text-align:center;">
       <div class="d-label-micro">Y3 Revenue</div>
-      <div class="d-serif-130">CHF 3.50M</div>
-      <div class="d-inter-50-muted">ARR CHF 4.47M at M36</div>
+      <div class="d-serif-130">CHF 2.29M</div>
+      <div class="d-inter-50-muted">ARR CHF 2.91M at M36</div>
     </div>
     <div style="background:var(--paper);padding:0.9rem 0.6rem;text-align:center;">
       <div class="d-label-micro">Y3 EBITDA margin</div>
-      <div class="d-serif-130">76.7%</div>
-      <div class="d-inter-50-muted">CHF 2.69M EBITDA</div>
+      <div class="d-serif-130">64%</div>
+      <div class="d-inter-50-muted">CHF 1.47M EBITDA</div>
     </div>
     <div style="background:linear-gradient(135deg,var(--gold),var(--rust));color:#fff;padding:0.9rem 0.6rem;text-align:center;">
       <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.5rem;color:var(--gold-light);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:0.2rem;">Cash at M36</div>
-      <div style="font-family:'DM Serif Display',Georgia,serif;font-size:1.3rem;font-weight:700;color:var(--paper);">CHF 3.38M</div>
+      <div style="font-family:'DM Serif Display',Georgia,serif;font-size:1.3rem;font-weight:700;color:var(--paper);">CHF 2.05M</div>
       <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.5rem;color:var(--gold-light);">debt-free</div>
     </div>
   </div>
 
   <!-- ARR BRIDGE -->
   <div style="background:var(--cream);border:1px solid var(--rule);padding:1rem 1.4rem;margin-bottom:2rem;font-family:'Inter',-apple-system,sans-serif;font-size:0.72rem;color:var(--slate);line-height:1.7;">
-    <span style="font-weight:600;color:var(--ink);">How CHF 4.47M ARR at M36 is derived:</span>
-    1,770 landlords × CHF 65/mo blended (39/79/149) = CHF 115K/mo · + 219 régies × CHF 399/mo = CHF 87.4K/mo · + AI add-on + NOI intelligence platform (from M20) = ~CHF 134K/mo · + Track B advisory 41 clients net ~CHF 35.8K/mo (after 35% FinSA split, from M18) · Total MRR at M36 ≈ CHF 372K → ARR CHF 4.47M.
+    <span style="font-weight:600;color:var(--ink);">How CHF 2.91M ARR at M36 is derived:</span>
+    1,770 landlords × CHF 65/mo blended (39/79/149) = CHF 115K/mo · + 219 régies × CHF 399/mo = CHF 87.4K/mo · + AI add-on ~CHF 4.3K/mo · + Track B advisory 41 clients net ~CHF 35.8K/mo (35% FinSA split, from M18) · Total MRR at M36 ≈ CHF 242K → ARR CHF 2.91M. Financial intelligence dashboard included in Track A pricing — not a separate revenue line.
   </div>
 
   <!-- CHART -->
@@ -3516,12 +3515,6 @@
       <td class="d-inter">40,327</td>
       <td class="d-meta">CHF 49/mo · from M12 · 40% attach on régie base</td>
     </tr><tr style="">
-      <td class="d-nav-text">NOI intelligence</td>
-      <td class="d-inter">—</td>
-      <td class="d-inter">112,500</td>
-      <td class="d-inter">1,215,000</td>
-      <td class="d-meta">CHF 2,500/mo · enterprise analytics · from M20</td>
-    </tr><tr style="">
       <td class="d-nav-text">Track B advisory (net)</td>
       <td class="d-inter">—</td>
       <td class="d-inter">57,000</td>
@@ -3530,8 +3523,8 @@
     </tr><tr class="d-rule-top">
       <td class="d-inter-72-600">Total Revenue</td>
       <td class="d-inter-600">178,137</td>
-      <td class="d-inter-600">1,048,564</td>
-      <td class="d-inter-600">3,502,727</td>
+      <td class="d-inter-600">936,064</td>
+      <td class="d-inter-600">2,287,727</td>
       <td class="d-meta"></td>
     </tr><tr class="d-h-bar"><td colspan="5"></td></tr><tr class="d-bg-cream"><td colspan="5" class="d-cell-header">Cost of Revenue</td></tr><tr style="">
       <td class="d-nav-text">Hosting / tooling (COGS)</td>
@@ -3542,8 +3535,8 @@
     </tr><tr class="d-rule-top">
       <td class="d-inter-72-600">Gross Profit</td>
       <td class="d-inter-600-forest">176,637</td>
-      <td class="d-inter-600-forest">1,044,964</td>
-      <td class="d-inter-600-forest">3,496,727</td>
+      <td class="d-inter-600-forest">932,464</td>
+      <td class="d-inter-600-forest">2,281,727</td>
       <td class="d-meta">Gross margin: 99% — asset-light SaaS model</td>
     </tr><tr class="d-h-bar"><td colspan="5"></td></tr><tr class="d-bg-cream"><td colspan="5" class="d-cell-header">Operating Expenses</td></tr><tr style="">
       <td class="d-nav-text">Founder salaries (2 × CHF 120K)</td>
@@ -3590,9 +3583,9 @@
     </tr><tr class="d-h-bar"><td colspan="5"></td></tr><tr class="d-rule-heavy">
       <td class="d-inter-72-600">EBITDA</td>
       <td class="d-inter-600-rust">(193,563)</td>
-      <td class="d-inter-600">485,764</td>
-      <td class="d-inter-600">2,685,527</td>
-      <td class="d-meta">EBITDA margin: −109% / 46% / 77%</td>
+      <td class="d-inter-600">373,264</td>
+      <td class="d-inter-600">1,470,527</td>
+      <td class="d-meta">EBITDA margin: −109% / 40% / 64%</td>
     </tr><tr style="">
       <td class="d-nav-text">Depreciation &amp; amortisation</td>
       <td class="d-inter-rust">(76,603)</td>
@@ -3602,14 +3595,14 @@
     </tr><tr class="d-rule-top">
       <td class="d-inter-72-600">EBIT (after D&amp;A)</td>
       <td class="d-inter-600-rust">(270,166)</td>
-      <td class="d-inter-600">409,161</td>
-      <td class="d-inter-600">2,608,924</td>
+      <td class="d-inter-600">296,661</td>
+      <td class="d-inter-600">1,393,924</td>
       <td class="d-meta">Interest expense: nil (no debt). Tax: not modelled (pre-profit Y1).</td>
     </tr><tr class="d-h-bar"><td colspan="5"></td></tr><tr style="">
       <td class="d-inter-72">End-of-period ARR</td>
       <td class="d-inter">415,000</td>
-      <td class="d-inter">1,795,000</td>
-      <td class="d-inter">4,470,000</td>
+      <td class="d-inter">1,600,000</td>
+      <td class="d-inter">2,910,000</td>
       <td class="d-meta">Annualised recurring revenue at M12 / M24 / M36 — includes Track B from M18</td>
     </tr></tbody>
     </table>
@@ -3800,8 +3793,8 @@
     </tr><tr style="">
       <td class="d-nav-text">Retained earnings / (accumulated deficit)</td>
       <td class="d-inter-rust">(193,563)</td>
-      <td class="d-inter">292,201</td>
-      <td class="d-inter">2,977,728</td>
+      <td class="d-inter">179,701</td>
+      <td class="d-inter">1,650,228</td>
       <td class="d-meta">Cumulative EBITDA Y1/Y2/Y3</td>
     </tr><tr class="d-rule-top">
       <td class="d-inter-72-600">Total equity</td>
@@ -3978,8 +3971,8 @@
     </div>
     <div style="background:linear-gradient(135deg,var(--gold),var(--rust));color:#fff;padding:1.2rem;text-align:center;">
       <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.52rem;color:var(--gold-light);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.3rem;">Series A target (SOM at full penetration)</div>
-      <div style="font-family:'DM Serif Display',Georgia,serif;font-size:1rem;font-weight:700;color:var(--paper);line-height:1.2;">CHF 4–5M ARR</div>
-      <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.55rem;color:var(--gold-light);margin-top:0.3rem;">Track A ~CHF 3.5M + early Track B · × 6–8× = CHF 24–40M</div>
+      <div style="font-family:'DM Serif Display',Georgia,serif;font-size:1rem;font-weight:700;color:var(--paper);line-height:1.2;">CHF 2.91M ARR</div>
+      <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.55rem;color:var(--gold-light);margin-top:0.3rem;">Track A + Track B · M36 model · × 6–8× = CHF 17–23M</div>
     </div>
   </div>
 
