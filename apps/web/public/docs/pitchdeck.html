@@ -1284,11 +1284,6 @@
 
   </div>
 
-  <!-- WHY CURRENT SOLUTIONS FAIL -->
-
-
-</div>
-
 <!-- ━━━━━━━━ SECTION 2: MARKET MAP ━━━━━━━━ -->
   <div class="section-header">
     <span class="section-num">02</span>
@@ -1298,7 +1293,7 @@
   <div class="market-map">
     <div class="market-quadrant target">
       <div class="quadrant-title">Private Landlords</div>
-      <div class="quadrant-sub">1–20 units · CHF 29–89/mo · Low-touch SaaS</div>
+      <div class="quadrant-sub">1–20 units · CHF 39–149/mo · Low-touch SaaS</div>
       <p class="quadrant-body">47% of Switzerland's 2.9M rental units are owned by private individuals — ~1.36M units across an estimated 341,000 landlords (OFS, 2024). Entirely underserved. QR-invoice generation, Nebenkostenabrechnung, cantonal lease forms, basic maintenance — nobody built this cleanly in three languages at a price they'll pay. Maximum WTP is low, which is precisely why incumbents ignore them.</p>
       <div class="quadrant-stat">
         <span class="stat-num">~341K</span>
@@ -1308,12 +1303,11 @@
 
     <div class="market-quadrant target">
       <div class="quadrant-title">Small Régies</div>
-      <div class="quadrant-sub">20–200 units · CHF 199–799/mo · Ops-first</div>
-      <p class="quadrant-body">The 53% of rental units managed professionally are split between thousands of boutique régies and large institutions. We estimate ~5,400 small régies managing 20–200 units — enough to have tenants calling and owners demanding reports, not enough to justify a CHF 50K ERP. They run on Excel and email. A modern ops layer wins here fast.</p>
-      <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.6rem;color:var(--rust);margin-top:0.5rem;">⚑ Source needed: LookMove Q3 2024 shows only ~1,000–1,100 rental-focused agencies of meaningful size (2,606 with any rental activity across all sizes). 5,400 is likely 4–5× too high. Triangulate with OFS / SVIT / USPI data before finalising.</div>
+      <div class="quadrant-sub">20–200 units · CHF 399/mo · Ops-first · LookMove Q3 2024</div>
+      <p class="quadrant-body">The 53% of rental units managed professionally are split between boutique régies and large institutions. LookMove Q3 2024 (140 portals monitored, 600K+ listings aggregated) identifies ~1,000–1,100 rental-focused agencies of meaningful size — enough to have tenants calling and owners demanding reports, not enough to justify a CHF 50K ERP. They run on Excel and email. A modern ops layer wins here fast.</p>
       <div class="quadrant-stat">
-        <span class="stat-num">~5,400</span>
-        <span class="stat-desc">small régies<br>below ERP threshold</span>
+        <span class="stat-num">~1,000</span>
+        <span class="stat-desc">small rental régies<br>below ERP threshold · LookMove Q3 2024</span>
       </div>
     </div>
 
@@ -1934,8 +1928,8 @@
           <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.55rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:0.3rem;">SAM — Serviceable Addressable Market</div>
           <div style="font-family:'DM Serif Display',Georgia,serif;font-size:1.4rem;font-weight:900;line-height:1;color:var(--forest);">CHF 412M</div>
           <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.58rem;color:var(--muted);margin-top:0.3rem;">bottoms-up · target segments · digitally reachable</div>
-          <div style="margin-top:0.7rem;font-size:0.78rem;line-height:1.6;color:var(--slate);">Bottoms-up from target segments: ~100K digitally-engaged landlords (1–15 units, smartphone-owning, under 65) × CHF 1,938/mo avg rent × avg 3 units × 5% gérance equivalent = CHF 348M; plus ~5,400 small régies × CHF 2,400/yr avg SaaS spend = CHF 13M; plus ~50K wealthy landlords (5+ props) addressable for Track B advisory at CHF 10K/yr = CHF 500M advisory SAM. Combined Track A SAM: CHF 361M. UBS (Dec 2025) confirms the self-management trend is growing — our SAM expands each year without us doing anything.</div>
-          <div style="margin-top:0.5rem;font-family:'Inter',-apple-system,sans-serif;font-size:0.6rem;color:var(--rust);">⚑ Two figures need sourcing before finalising: (1) ~100K landlords — derived from OFS total of 341K but portfolio-size distribution (the 2–10 unit sweet spot) is not yet triangulated; needs OFS housing survey / HEV / tax data. (2) ~5,400 small régies — LookMove Q3 2024 shows ~1,000–1,100 rental-focused agencies of meaningful size; 5,400 overstates by 4–5×. Both affect SAM calculation.</div>
+          <div style="margin-top:0.7rem;font-size:0.78rem;line-height:1.6;color:var(--slate);">Bottoms-up from target segments: ~100K digitally-engaged landlords (1–15 units, smartphone-owning, under 65) × CHF 1,938/mo avg rent × avg 3 units × 5% gérance equivalent = CHF 348M; plus ~1,000 small régies (LookMove Q3 2024) × CHF 399/mo × 12 = CHF 4.8M; plus ~50K wealthy landlords (5+ props) addressable for Track B advisory at CHF 9,600/yr = CHF 480M advisory SAM. Combined Track A SAM: CHF 353M. UBS (Dec 2025) confirms the self-management trend is growing — our SAM expands each year without us doing anything.</div>
+          <div style="margin-top:0.5rem;font-family:'Inter',-apple-system,sans-serif;font-size:0.6rem;color:var(--rust);">⚑ ~100K landlords in the 2–10 unit sweet spot still needs sourcing — derived from OFS total of 341K but portfolio-size distribution is not yet triangulated. Needs OFS housing survey / HEV / tax declaration data. Régie count (~1,000) is now sourced: LookMove Q3 2024, 140 portals, 600K+ listings.</div>
         </div>
 
         <div style="background:linear-gradient(135deg,var(--gold),var(--rust));color:#fff;padding:1.2rem 1.5rem;">
@@ -2288,9 +2282,8 @@
         <p style="font-size:0.78rem;color:var(--slate);line-height:1.55;">Private landlords, 1–20 units, managing alone. CHF 29–89/mo. Acquired via SEO + communities.</p>
       </div>
       <div class="d-mb-1">
-        <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.6rem;color:var(--gold);font-weight:500;margin-bottom:0.25rem;">② Ph II · ~5,400 ⚑</div>
-        <p style="font-size:0.78rem;color:var(--slate);line-height:1.55;">Small boutique régies, 20–200 units. CHF 199–799/mo. Direct outbound in VD/GE/ZH.</p>
-        <p style="font-size:0.68rem;color:var(--rust);margin-top:0.3rem;">⚑ Figure under review — likely ~1,000–1,500 based on LookMove Q3 2024 data.</p>
+        <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.6rem;color:var(--gold);font-weight:500;margin-bottom:0.25rem;">② Ph II · ~1,000</div>
+        <p style="font-size:0.78rem;color:var(--slate);line-height:1.55;">Small rental régies, 20–200 units. CHF 399/mo. Direct outbound in VD/GE/ZH. Source: LookMove Q3 2024 — 1,091 rental-only agencies of meaningful size across Switzerland.</p>
       </div>
       <div class="d-mb-1">
         <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.6rem;color:var(--rust);font-weight:500;margin-bottom:0.25rem;">③ Ph IV · ~800</div>
@@ -4127,8 +4120,7 @@
 <!-- ━━━━━━━━ PULL QUOTE ━━━━━━━━ -->
 <div class="content" style="padding-bottom:0; padding-top:0;">
   <div class="pull-quote">
-    <p>The goal is not to compete with GARAIO REM in five years. The goal is to have made their market irrelevant by then — because the 300,000 private landlords and 4,000 small régies we serve will have become the new mainstream, and we will be their infrastructure.</p>
-    <p style="font-family:'Inter',-apple-system,sans-serif;font-size:0.6rem;color:var(--rust);margin-top:0.4rem;">⚑ "4,000 small régies" — inconsistent with 5,400 used elsewhere; both figures need sourcing. Replace once triangulated.</p>
+    <p>The goal is not to compete with GARAIO REM in five years. The goal is to have made their market irrelevant by then — because the 300,000 private landlords and ~1,000 small régies we serve will have become the new mainstream, and we will be their infrastructure.</p>
     <div class="p
 <script>
 (function(){
