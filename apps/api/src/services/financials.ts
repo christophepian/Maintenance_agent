@@ -194,8 +194,14 @@ export async function getBuildingFinancials(
   if (from >= to)
     throw new ValidationError("'from' must be before 'to'.");
 
-  // 2b. Check snapshot cache (unless forceRefresh or groupByAccount)
-  if (!params.forceRefresh && !params.groupByAccount) {
+  // 2b. Check snapshot cache — bypass for any period that overlaps the current
+  //     calendar month so live payments are always reflected without a force-refresh.
+  const startOfCurrentMonth = new Date();
+  startOfCurrentMonth.setUTCDate(1);
+  startOfCurrentMonth.setUTCHours(0, 0, 0, 0);
+  const periodOverlapsCurrentMonth = to >= startOfCurrentMonth;
+
+  if (!params.forceRefresh && !params.groupByAccount && !periodOverlapsCurrentMonth) {
     const cached = await snapshotRepo.findBuildingFinancialSnapshotByPeriod(prisma, orgId, buildingId, from, to);
     if (cached) {
       return {
