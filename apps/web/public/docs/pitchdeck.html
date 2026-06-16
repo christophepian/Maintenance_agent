@@ -982,7 +982,7 @@
         <span class="meta-value">5</span>
       </div>
       <div class="meta-item">
-        <span class="meta-label">Total TAM (private landlord)</span>
+        <span class="meta-label">Track A TAM (private landlord)</span>
         <span class="meta-value">CHF 1.59B / yr</span>
       </div>
       <div class="meta-item">
@@ -995,9 +995,6 @@
       <span class="tag">Track A: Compliance SaaS</span>
       <span class="tag">Track B: RE Advisory</span>
       <span class="tag">Swiss-native · Trilingual</span>
-    </div>
-    <div style="margin-top:1.2rem;font-family:'Inter',-apple-system,sans-serif;font-size:0.75rem;color:var(--slate);">
-      Public Website: <a href="https://maintenance-agent-api-git-main-christophepians-projects.vercel.app/fr/website/index.html" target="_blank" style="color:var(--gold);text-decoration:none;border-bottom:1px solid rgba(79,70,229,0.3);">maintenance-agent-api-git-main-christophepians-projects.vercel.app</a>
     </div>
   </div>
 
@@ -1125,12 +1122,12 @@
 
     <div style="background:var(--cream);padding:1.8rem 2rem;display:flex;flex-direction:column;justify-content:space-between;">
       <p style="font-family:'DM Serif Display',Georgia,serif;font-size:1rem;font-style:italic;line-height:1.55;color:var(--ink);margin-bottom:1.2rem;">"We have the choice between a terrible and a horrible property manager."</p>
-      <span style="font-family:'Inter',-apple-system,sans-serif;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);">— Owner 2</span>
+      <span style="font-family:'Inter',-apple-system,sans-serif;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);">— Owner 1</span>
     </div>
 
     <div style="background:var(--paper);padding:1.8rem 2rem;display:flex;flex-direction:column;justify-content:space-between;">
       <p style="font-family:'DM Serif Display',Georgia,serif;font-size:1rem;font-style:italic;line-height:1.55;color:var(--ink);margin-bottom:1.2rem;">"They are worthless. I've been visiting one of my properties recently and I was wondering what I pay them for."</p>
-      <span style="font-family:'Inter',-apple-system,sans-serif;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);">— Owner 5</span>
+      <span style="font-family:'Inter',-apple-system,sans-serif;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);">— Owner 2</span>
     </div>
 
     <div style="background:var(--paper);padding:1.8rem 2rem;display:flex;flex-direction:column;justify-content:space-between;">
@@ -1140,12 +1137,12 @@
 
     <div style="background:var(--cream);padding:1.8rem 2rem;display:flex;flex-direction:column;justify-content:space-between;">
       <p style="font-family:'DM Serif Display',Georgia,serif;font-size:1rem;font-style:italic;line-height:1.55;color:var(--ink);margin-bottom:1.2rem;">"We don't feel we get much bang for our buck, but it's convenient — they do our tax statement at the end of the year. Come to think of it, that's quite expensive."</p>
-      <span style="font-family:'Inter',-apple-system,sans-serif;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);">— Owner 1</span>
+      <span style="font-family:'Inter',-apple-system,sans-serif;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);">— Owner 4 (via their régie)</span>
     </div>
 
     <div style="background:var(--paper);padding:1.8rem 2rem;display:flex;flex-direction:column;justify-content:space-between;grid-column:1/-1;">
       <p style="font-family:'DM Serif Display',Georgia,serif;font-size:1rem;font-style:italic;line-height:1.55;color:var(--ink);margin-bottom:1.2rem;">"We've never seen even a 12-month forward-looking plan from the property manager."</p>
-      <span style="font-family:'Inter',-apple-system,sans-serif;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);">— Owner 2</span>
+      <span style="font-family:'Inter',-apple-system,sans-serif;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);">— Owner 5</span>
     </div>
 
   </div>
@@ -2332,272 +2329,6 @@
 
   </div>
 
-  <hr class="divider"><hr class="divider-light"><!-- ━━━━━━━━ SECTION 8: 36-MONTH FINANCIALS ━━━━━━━━ -->
-<div class="content">
-
-  <div class="d-label-muted" style="margin-bottom:1.5rem;">36-Month Financial Model — Scenario Comparison</div>
-
-  <!-- SCENARIO TOGGLE -->
-  <div style="display:flex;gap:2px;margin-bottom:2rem;border:1px solid var(--rule);">
-    <button id="btn-bs" onclick="switchScenario('bs')"
-      style="flex:1;padding:0.8rem 1.2rem;font-family:'Inter',-apple-system,sans-serif;font-size:0.68rem;letter-spacing:0.1em;text-transform:uppercase;border:none;cursor:pointer;background:linear-gradient(135deg,var(--gold),var(--rust));color:#fff;transition:all 0.2s;">
-      Bootstrapped
-    </button>
-    <button id="btn-fd" onclick="switchScenario('fd')"
-      style="flex:1;padding:0.8rem 1.2rem;font-family:'Inter',-apple-system,sans-serif;font-size:0.68rem;letter-spacing:0.1em;text-transform:uppercase;border:none;cursor:pointer;background:var(--cream);color:var(--muted);transition:all 0.2s;">
-      Seed-Funded (CHF 1.5M at M8)
-    </button>
-  </div>
-
-  <!-- SHARED ASSUMPTIONS -->
-  <div style="background:linear-gradient(135deg,var(--gold),var(--rust));color:#fff;padding:1.5rem 2rem;margin-bottom:2rem;">
-    <div class="d-dark-label">Shared Assumptions (both scenarios)</div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1.5rem;font-size:0.8rem;line-height:1.65;color:rgba(255,255,255,0.85);">
-      <div><span style="color:var(--gold-light);font-family:'Inter',-apple-system,sans-serif;font-size:0.58rem;letter-spacing:0.1em;text-transform:uppercase;display:block;margin-bottom:0.3rem;">Revenue APRUs</span>
-        Track A — Landlord CHF 65/mo blended (39/79/149) · Régie CHF 399/mo · AI add-on CHF 49/mo · Track B — Advisory CHF 9,600–60,000/yr (net 65% after FinSA partner)</div>
-      <div><span style="color:var(--gold-light);font-family:'Inter',-apple-system,sans-serif;font-size:0.58rem;letter-spacing:0.1em;text-transform:uppercase;display:block;margin-bottom:0.3rem;">Client Ramp</span>
-        Landlords: 500 by M6 → 2K by M18 → 4K by M30 · Régies: 100 by M12 → 400 by M24 · Track B: 5 clients M18 → 41 clients M36 · AI subs follow régie base</div>
-      <div><span style="color:var(--gold-light);font-family:'Inter',-apple-system,sans-serif;font-size:0.58rem;letter-spacing:0.1em;text-transform:uppercase;display:block;margin-bottom:0.3rem;">People costs</span>
-        2 founders × CHF 10K/mo + 13% benefits = CHF 22.6K/mo · RE expert hire M9 (+7K) · Tech/growth M15 (+9K) · Sales M22 (+12K) · Hires funded from revenue</div>
-      <div><span style="color:var(--gold-light);font-family:'Inter',-apple-system,sans-serif;font-size:0.58rem;letter-spacing:0.1em;text-transform:uppercase;display:block;margin-bottom:0.3rem;">Key difference</span>
-        Pre-seed (CHF 400K): lean, 2 founders, hires from revenue, breakeven from operations. Seed-funded (CHF 1.5M @ M8): faster hiring, 2× marketing, accelerated régie ramp.</div>
-    </div>
-  </div>
-
-  <!-- KPI STRIP -->
-  <div id="kpi-strip" style="display:grid;grid-template-columns:repeat(6,1fr);gap:2px;background:var(--rule);border:1px solid var(--rule);margin-bottom:2.5rem;"></div>
-
-  <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-
-  <!-- CHART 1: Revenue stacked -->
-  <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.3rem;">Monthly Revenue by Stream — CHF (identical across scenarios)</div>
-  <div style="font-family:'DM Serif Display',Georgia,serif;font-size:1.05rem;font-weight:700;margin-bottom:1rem;">Revenue Stack &amp; Composition <em>M1–M36</em></div>
-  <div style="background:var(--cream);border:1px solid var(--rule);padding:1.5rem;height:300px;margin-bottom:2rem;">
-    <canvas id="chartRevStack"></canvas>
-  </div>
-
-  <!-- CHARTS 2+3 side by side -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:2rem;">
-    <div>
-      <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.3rem;">Monthly EBITDA — CHF</div>
-      <div style="font-family:'DM Serif Display',Georgia,serif;font-size:1rem;font-weight:700;margin-bottom:0.8rem;"><em>Profitability</em> · <span id="ebitda-label" style="font-style:normal;font-size:0.72rem;color:var(--muted);font-family:'Inter',-apple-system,sans-serif;text-transform:uppercase;letter-spacing:0.08em;">Bootstrapped</span></div>
-      <div style="background:var(--cream);border:1px solid var(--rule);padding:1.2rem;height:220px;"><canvas id="chartEbitda"></canvas></div>
-    </div>
-    <div>
-      <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.3rem;">Cumulative Cash — CHF (both scenarios overlaid)</div>
-      <div style="font-family:'DM Serif Display',Georgia,serif;font-size:1rem;font-weight:700;margin-bottom:0.8rem;"><em>Cash</em> Position</div>
-      <div style="background:var(--cream);border:1px solid var(--rule);padding:1.2rem;height:220px;"><canvas id="chartCash"></canvas></div>
-    </div>
-  </div>
-
-  <!-- COMPARISON TABLE -->
-  <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.8rem;">Scenario Comparison at Key Milestones</div>
-  <div style="overflow-x:auto;margin-bottom:2rem;">
-  <table class="displacement-table" style="font-size:0.78rem;">
-    <thead><tr>
-      <th>Month</th><th>ARR</th>
-      <th style="color:var(--forest);">BS EBITDA</th><th style="color:var(--forest);">BS Cash</th>
-      <th style="color:var(--rust);">FD EBITDA</th><th style="color:var(--rust);">FD Cash</th>
-    </tr></thead>
-    <tbody id="compare-table"></tbody>
-  </table>
-  </div>
-
-  <!-- DETAIL TABLE -->
-  <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.8rem;">Quarterly Detail — <span id="detail-label">Bootstrapped</span></div>
-  <div style="overflow-x:auto;">
-  <table class="displacement-table" style="font-size:0.78rem;">
-    <thead><tr><th>Month</th><th>Phase</th><th>Monthly Rev</th><th>Cost</th><th>EBITDA</th><th>ARR ×12</th><th>Cash</th><th>Note</th></tr></thead>
-    <tbody id="fin-table-body"></tbody>
-  </table>
-  </div>
-
-  <script>
-  (function(){
-    const M=Array.from({length:36},(_,i)=>i+1);
-    const labels=M.map(m=>`M${m}`);
-    const ink='#1a1f36',paper='#f8f9fc',gold='#4f46e5',forest='#059669',rust='#7c3aed',muted='#9ca3af',cream='#f1f3f9';
-    function ramp(s,e,sv,ev,m){if(m<s)return 0;if(m>=e)return ev;return sv+(m-s)/(e-s)*(ev-sv);}
-
-    // ── Revenue arrays ──
-    // Track A: landlord ARPU CHF 65/mo (blended 39/79/149), régie CHF 399/mo
-    // Track B: net revenue after 35% FinSA partner split, starts M18
-    // NOI intelligence removed — financial dashboard included in Track A pricing (Path B)
-    const llA=[],rgA=[],aiA=[],tbA=[],rev=[];
-    for(let i=0;i<36;i++){
-      const m=i+1;
-      const ll=m<=6?ramp(1,6,0,500,m):m<=18?ramp(6,18,500,2000,m):m<=30?ramp(18,30,2000,4000,m):ramp(30,36,4000,5500,m);
-      const rg=m<4?0:m<=12?ramp(4,12,0,100,m):m<=24?ramp(12,24,100,400,m):ramp(24,36,400,600,m);
-      const ai=m<10?0:m<=20?ramp(10,20,0,800,m):m<=30?ramp(20,30,800,1500,m):ramp(30,36,1500,2000,m);
-      // Track B net (5 clients @ M18 → 41 clients @ M36; gross mix 800/2000/5000 × 0.65 net)
-      const tb=m<18?0:ramp(18,36,2600,35800,m);
-      llA.push(Math.round(ll*65)); rgA.push(Math.round(rg*399)); aiA.push(Math.round(ai*49));
-      tbA.push(Math.round(tb));
-      rev.push(Math.round(ll*65+rg*399+ai*49+tb));
-    }
-
-    // ── Cost functions ──
-    // Bootstrapped: pre-seed CHF 400K; 2 founders × (10K + 13% benefits) = 22.6K/mo
-    // Hires funded from revenue: RE expert M9 (+7K), tech/growth M15 (+9K), sales M22 (+12K)
-    function bsCost(m){
-      const sal=m<=8?22600:m<=14?29600:m<=21?38600:50600;
-      const infra=m<=6?1500:m<=12?2500:m<=24?4000:7000;
-      const mkt=m<=3?1500:m<=9?3500:m<=18?7000:m<=30?14000:22000;
-      return sal+infra+mkt+(m<=12?2000:m<=24?4000:7000);
-    }
-    // Seed-funded: faster hiring, higher marketing spend
-    function fdCost(m){
-      const sal=m<=3?22600:m<=8?33600:m<=14?42600:m<=21?55600:70600;
-      const infra=m<=6?1500:m<=12?2500:m<=24?5000:9000;
-      const mkt=m<=3?3000:m<=9?8000:m<=18?16000:m<=30?30000:45000;
-      return sal+infra+mkt+(m<=12?3000:m<=24?6500:12000);
-    }
-
-    const bsCosts=M.map(bsCost), fdCosts=M.map(fdCost);
-    const bsEb=rev.map((r,i)=>r-bsCosts[i]), fdEb=rev.map((r,i)=>r-fdCosts[i]);
-    const bsCash=[],fdCash=[];
-    // Starting cash = pre-seed raise CHF 400K
-    let bs=400000,fd=400000;
-    for(let i=0;i<36;i++){
-      if(i+1===8) fd+=1500000;
-      bs+=bsEb[i]; fd+=fdEb[i];
-      bsCash.push(Math.round(bs)); fdCash.push(Math.round(fd));
-    }
-
-    const sc={
-      bs:{costs:bsCosts,ebitda:bsEb,cash:bsCash,label:'Pre-Seed (CHF 400K)',
-          be:M[bsEb.findIndex(v=>v>=0)],minCash:Math.min(...bsCash)},
-      fd:{costs:fdCosts,ebitda:fdEb,cash:fdCash,label:'Seed-Funded (CHF 1.5M @ M8)',
-          be:M[fdEb.findIndex(v=>v>=0)],minCash:Math.min(...fdCash)}
-    };
-
-    const baseOpts={
-      responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false,
-        backgroundColor:ink,titleColor:paper,bodyColor:'#ddd',
-        titleFont:{family:"'Inter',-apple-system,sans-serif",size:10},
-        bodyFont:{family:"'Inter',sans-serif",size:11}}},
-      scales:{
-        x:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{font:{family:"'Inter',-apple-system,sans-serif",size:9},color:muted,maxTicksLimit:12}},
-        y:{grid:{color:'rgba(0,0,0,0.05)'},ticks:{font:{family:"'Inter',-apple-system,sans-serif",size:9},color:muted}}
-      }
-    };
-
-    new Chart(document.getElementById('chartRevStack'),{type:'bar',
-      data:{labels,datasets:[
-        {label:'Private Landlords',data:llA,backgroundColor:'rgba(5,150,105,0.88)',stack:'s'},
-        {label:'Small Régies',data:rgA,backgroundColor:'rgba(79,70,229,0.88)',stack:'s'},
-        {label:'AI Add-on',data:aiA,backgroundColor:'rgba(124,58,237,0.78)',stack:'s'},
-        {label:'Track B Advisory (net)',data:tbA,backgroundColor:'rgba(234,179,8,0.85)',stack:'s'}
-      ]},
-      options:{...baseOpts,
-        plugins:{...baseOpts.plugins,legend:{display:true,position:'bottom',
-          labels:{font:{family:"'Inter',-apple-system,sans-serif",size:9},color:muted,boxWidth:10,padding:14}}},
-        scales:{...baseOpts.scales,
-          y:{...baseOpts.scales.y,stacked:true,ticks:{...baseOpts.scales.y.ticks,callback:v=>v>=1000?`${(v/1000).toFixed(0)}K`:v}},
-          x:{...baseOpts.scales.x,stacked:true}}
-      }
-    });
-
-    const ebitdaChart=new Chart(document.getElementById('chartEbitda'),{type:'bar',
-      data:{labels,datasets:[{label:'Monthly EBITDA',data:bsEb,
-        backgroundColor:bsEb.map(v=>v>=0?'rgba(5,150,105,0.8)':'rgba(239,68,68,0.72)'),borderWidth:0}]},
-      options:{...baseOpts,scales:{...baseOpts.scales,y:{...baseOpts.scales.y,
-        ticks:{...baseOpts.scales.y.ticks,callback:v=>{const a=Math.abs(v);return`${v<0?'−':''}${a>=1000?(a/1000).toFixed(0)+'K':a}`}}}}}
-    });
-
-    const cashChart=new Chart(document.getElementById('chartCash'),{type:'line',
-      data:{labels,datasets:[
-        {label:'Bootstrapped',data:bsCash,borderColor:ink,backgroundColor:'rgba(79,70,229,0.08)',
-          borderWidth:2.5,fill:true,tension:0.38,pointRadius:0,pointHoverRadius:4},
-        {label:'Seed-Funded',data:fdCash,borderColor:rust,backgroundColor:'rgba(124,58,237,0.05)',
-          borderWidth:1.5,fill:false,tension:0.38,pointRadius:0,pointHoverRadius:4,borderDash:[5,3]}
-      ]},
-      options:{...baseOpts,plugins:{...baseOpts.plugins,legend:{display:true,position:'bottom',
-        labels:{font:{family:"'Inter',-apple-system,sans-serif",size:9},color:muted,boxWidth:20,padding:14}}},
-        scales:{...baseOpts.scales,y:{...baseOpts.scales.y,
-          ticks:{...baseOpts.scales.y.ticks,callback:v=>`${v>=1e6?(v/1e6).toFixed(1)+'M':v>=1000?(v/1000).toFixed(0)+'K':v}`}}}}
-    });
-
-    function fmt(n){return n>=1e6?(n/1e6).toFixed(1)+'M':n>=1000?(n/1000).toFixed(0)+'K':n;}
-
-    function renderKPI(s){
-      const x=sc[s];
-      document.getElementById('kpi-strip').innerHTML=
-        [`ARR M12|CHF ${fmt(rev[11]*12)}|false`,
-         `ARR M24|CHF ${fmt(rev[23]*12)}|false`,
-         `ARR M36|CHF ${fmt(rev[35]*12)}|false`,
-         `BS Breakeven|Month ${sc.bs.be}|false`,
-         `Min Cash (${s.toUpperCase()})|CHF ${fmt(x.minCash)}|false`,
-         `Cash M36 (${s.toUpperCase()})|CHF ${fmt(x.cash[35])}|true`
-        ].map(row=>{const[lbl,val,dark]=row.split('|');
-          return`<div style="background:${dark==='true'?ink:'var(--paper)'};padding:1rem 0.6rem;text-align:center;">
-            <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.52rem;color:${dark==='true'?'var(--gold-light)':'var(--muted)'};letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.4rem;">${lbl}</div>
-            <div style="font-family:'DM Serif Display',Georgia,serif;font-size:1.3rem;font-weight:700;color:${dark==='true'?paper:ink};">${val}</div>
-          </div>`;}).join('');
-    }
-
-    const phMap={6:'I',12:'II',18:'III',24:'IV',30:'IV',36:'V'};
-    const ptClass={'I':'foothold','II':'expand','III':'disrupt','IV':'dominate','V':'platform'};
-    function phTag(m){const p=phMap[m];return`<span class="phase-tag ${ptClass[p]}" style="margin:0;font-size:0.52rem;">${p}</span>`;}
-
-    const ct=document.getElementById('compare-table');
-    [6,12,18,24,30,36].forEach(m=>{
-      const i=m-1;
-      const bsE=bsEb[i],fdE=fdEb[i],bc=bsCash[i],fc=fdCash[i];
-      ct.innerHTML+=`<tr>
-        <td style="font-family:'Inter',-apple-system,sans-serif;font-size:0.73rem;">M${m} ${phTag(m)}</td>
-        <td class="d-inter-500">${(rev[i]*12).toLocaleString('de-CH')}</td>
-        <td style="color:${bsE>=0?'var(--forest)':'var(--rust)'};">${bsE>=0?'+':''}${bsE.toLocaleString('de-CH')}</td>
-        <td style="color:${bc<150000?'var(--rust)':'inherit'};">${bc.toLocaleString('de-CH')}${bc<150000?' ⚠':''}</td>
-        <td style="color:${fdE>=0?'var(--forest)':'var(--rust)'};">${fdE>=0?'+':''}${fdE.toLocaleString('de-CH')}</td>
-        <td>${fc.toLocaleString('de-CH')}</td>
-      </tr>`;
-    });
-
-    const phMapAll={3:'I',6:'I',9:'II',12:'II',15:'II',18:'III',21:'III',24:'IV',27:'IV',30:'IV',33:'V',36:'V'};
-    function renderDetail(s){
-      const x=sc[s];
-      const tb=document.getElementById('fin-table-body');
-      tb.innerHTML='';
-      [3,6,9,12,15,18,21,24,27,30,33,36].forEach(m=>{
-        const i=m-1,ph=phMapAll[m],eb=x.ebitda[i],ca=x.cash[i];
-        const note=(m===8&&s==='fd')?'◀ Seed raise':ca<150000?'⚠ Low cash':m===8?'pre-seed floor':'';
-        tb.innerHTML+=`<tr>
-          <td style="font-family:'Inter',-apple-system,sans-serif;font-size:0.73rem;">M${m}</td>
-          <td><span class="phase-tag ${ptClass[ph]}" style="margin:0;font-size:0.52rem;">${ph}</span></td>
-          <td class="d-inter">${rev[i].toLocaleString('de-CH')}</td>
-          <td class="d-inter">${x.costs[i].toLocaleString('de-CH')}</td>
-          <td style="color:${eb>=0?'var(--forest)':'var(--rust)'};">${eb>=0?'+':''}${eb.toLocaleString('de-CH')}</td>
-          <td style="font-weight:500;">${(rev[i]*12).toLocaleString('de-CH')}</td>
-          <td style="color:${ca<150000?'var(--rust)':'inherit'};">${ca.toLocaleString('de-CH')}</td>
-          <td style="font-family:'Inter',-apple-system,sans-serif;font-size:0.6rem;color:${note.includes('⚠')?'var(--rust)':'var(--gold)'};">${note}</td>
-        </tr>`;
-      });
-    }
-
-    window.switchScenario=function(s){
-      document.getElementById('btn-bs').style.cssText=`flex:1;padding:0.8rem 1.2rem;font-family:'Inter',-apple-system,sans-serif;font-size:0.68rem;letter-spacing:0.1em;text-transform:uppercase;border:none;cursor:pointer;background:${s==='bs'?ink:'var(--cream)'};color:${s==='bs'?paper:'var(--muted)'};transition:all 0.2s;`;
-      document.getElementById('btn-fd').style.cssText=`flex:1;padding:0.8rem 1.2rem;font-family:'Inter',-apple-system,sans-serif;font-size:0.68rem;letter-spacing:0.1em;text-transform:uppercase;border:none;cursor:pointer;background:${s==='fd'?ink:'var(--cream)'};color:${s==='fd'?paper:'var(--muted)'};transition:all 0.2s;`;
-      document.getElementById('ebitda-label').textContent=sc[s].label;
-      document.getElementById('detail-label').textContent=sc[s].label;
-      ebitdaChart.data.datasets[0].data=sc[s].ebitda;
-      ebitdaChart.data.datasets[0].backgroundColor=sc[s].ebitda.map(v=>v>=0?'rgba(5,150,105,0.8)':'rgba(239,68,68,0.72)');
-      ebitdaChart.update();
-      cashChart.data.datasets[0].borderWidth=s==='bs'?2.5:1;
-      cashChart.data.datasets[1].borderWidth=s==='fd'?2.5:1;
-      cashChart.data.datasets[0].borderDash=s==='bs'?[]:[4,3];
-      cashChart.data.datasets[1].borderDash=s==='fd'?[]:[4,3];
-      cashChart.update();
-      renderKPI(s); renderDetail(s);
-    };
-
-    renderKPI('bs'); renderDetail('bs');
-  })();
-  </script>
-
-  <hr class="divider">
-</div>
 
 
 
@@ -3096,7 +2827,7 @@
       <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.62rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--forest);margin-bottom:0.9rem;display:flex;align-items:center;gap:0.5rem;"><span style="width:8px;height:8px;background:var(--forest);border-radius:50%;display:inline-block;flex-shrink:0;"></span>Strengths</div>
       <div style="display:flex;flex-direction:column;gap:0.65rem;font-size:0.82rem;color:var(--slate);line-height:1.6;">
         <div><span class="d-label-ink">Trilingual architecture from day one</span>DE/FR/IT across all 26 cantons — LIMMOBI is German-only, Pepsimmo and eBail are French-first. No competitor covers the full Swiss linguistic market.</div>
-        <div><span class="d-label-ink">Working prototype at pre-seed stage</span>72K LOC, 48 DB models, 209 API routes, 493 tests, CI pipeline. Replacement cost ~CHF 766K. No competitor launched at this build depth at pre-revenue.</div>
+        <div><span class="d-label-ink">Production platform at pre-revenue stage</span>72K LOC, 48 DB models, 291 API operations, 493 tests, CI pipeline. Replacement cost ~CHF 766K. No competitor launched at this build depth at pre-revenue.</div>
         <div><span class="d-label-ink">Dual-track architecture (A + B)</span>Track A feeds Track B with data. No competitor has an advisory ambition — they stop at operational admin. This is the structural gap that compounds over time.</div>
         <div><span class="d-label-ink">Founder profile: UX + finance + Swiss RE</span>Pictet WM front-office redesign, Credit Suisse Design Thinking lead, EPFL MBA top of class. Rare combination for a PropTech founder — directly relevant to Track B positioning.</div>
         <div><span class="d-label-ink">QR-invoice mandatory compliance entry point</span>Mandatory since 2022. Every Swiss landlord needs this now. Creates a forcing function for platform adoption with no market education required.</div>
@@ -3354,7 +3085,7 @@
     <div style="background:var(--paper);padding:1.4rem 1.2rem;border:1px solid var(--rule);">
       <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.55rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:0.4rem;">Milestone 3 — M9–15</div>
       <div style="font-family:'DM Serif Display',Georgia,serif;font-size:1rem;font-weight:700;margin-bottom:0.5rem;">Seed-ready metrics</div>
-      <p style="font-size:0.8rem;line-height:1.65;color:var(--slate);">CHF 100–300K ARR with visible growth trajectory. 50+ paying landlords, 10+ régie clients, FinSA opinion in hand, advisory partner identified. Series A positioning begins.</p>
+      <p style="font-size:0.8rem;line-height:1.65;color:var(--slate);">CHF 100–300K ARR with visible growth trajectory. 50+ paying landlords, 10+ régie clients, FinSA opinion in hand, advisory partner identified. Seed round positioning begins.</p>
     </div>
   </div>
 
@@ -3405,8 +3136,8 @@
   <div style="background:linear-gradient(135deg,var(--gold),var(--rust));color:#fff;padding:1.6rem 2rem;margin-bottom:2.5rem;">
     <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.58rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--gold-light);margin-bottom:0.9rem;">Model assumptions</div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:2rem;font-size:0.78rem;line-height:1.65;color:rgba(255,255,255,0.85);">
-      <div><span style="font-family:'Inter',-apple-system,sans-serif;font-size:0.56rem;color:var(--gold-light);display:block;margin-bottom:0.3rem;text-transform:uppercase;letter-spacing:0.08em;">Revenue</span>Track A landlords CHF 39/79/149/mo (blended CHF 65) · Régies CHF 399/mo · AI add-on CHF 49/mo from M12 at 40% attach · Track B net CHF 9,600–60,000/yr from M18 (5→41 clients, 35% FinSA split) · Churn not modelled · Financial intelligence dashboard included in Track A pricing</div>
-      <div><span style="font-family:'Inter',-apple-system,sans-serif;font-size:0.56rem;color:var(--gold-light);display:block;margin-bottom:0.3rem;text-transform:uppercase;letter-spacing:0.08em;">Costs</span>2 founders × CHF 10K/mo + 13% benefits = CHF 22.6K/mo · Hire 1 M9 CHF 7K/mo · Hire 2 M15 CHF 9K/mo · Hire 3 M22 CHF 12K/mo · GTM CHF 1.5–10K/mo ramping (digital/SEO/content — product-led, no paid field sales) · One-time: GmbH CHF 3K + FinSA CHF 20K · Starting cash: CHF 400K pre-seed raise</div>
+      <div><span style="font-family:'Inter',-apple-system,sans-serif;font-size:0.56rem;color:var(--gold-light);display:block;margin-bottom:0.3rem;text-transform:uppercase;letter-spacing:0.08em;">Revenue</span>Track A landlords CHF 39/79/149/mo (blended CHF 65) · Régies CHF 399/mo · AI add-on CHF 49/mo from M12 at 40% attach · Track B net CHF 9,600–60,000/yr from M18 (5→41 clients, 35% FinSA split) · Churn not applied to ARR ramp model (see sensitivity table below for churn-adjusted scenarios) · Financial intelligence dashboard included in Track A pricing</div>
+      <div><span style="font-family:'Inter',-apple-system,sans-serif;font-size:0.56rem;color:var(--gold-light);display:block;margin-bottom:0.3rem;text-transform:uppercase;letter-spacing:0.08em;">Costs</span>2 founders × CHF 10K/mo + 13% benefits = CHF 22.6K/mo · Hire 1 M9 CHF 7K/mo (Swiss RE domain) · Hire 2 M15 CHF 9K/mo (tech/growth) · Hire 3 M22 CHF 12K/mo (sales) · FinSA-licensed advisor hire (Track B gate, target M12–15): cost TBD — not yet in this model; will be sized at seed round · GTM CHF 1.5–10K/mo ramping (digital/SEO/content — product-led, no paid field sales) · One-time: GmbH CHF 3K + FinSA legal opinion CHF 20K · Starting cash: CHF 400K pre-seed raise</div>
       <div><span style="font-family:'Inter',-apple-system,sans-serif;font-size:0.56rem;color:var(--gold-light);display:block;margin-bottom:0.3rem;text-transform:uppercase;letter-spacing:0.08em;">Accounting basis</div>Software intangible CHF 766K (replacement cost) · amortised 10yr straight-line · AR: 30-day régie billing lag · No debt · Swiss GAAP simplified · Tax not modelled (pre-profit Y1, loss carry-forward Y2+)</div>
     </div>
   </div>
@@ -3453,7 +3184,7 @@
 
   <!-- CHART -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-  <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.4rem;">Monthly Revenue &amp; EBITDA — M1–M36</div>
+  <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.4rem;">Monthly Revenue &amp; EBITDA — M1–M36 <span style="font-size:0.55rem;letter-spacing:0;text-transform:none;color:var(--muted);font-weight:400;">(illustrative monthly shape — see income statement below for authoritative annual figures)</span></div>
   <div style="background:var(--cream);border:1px solid var(--rule);padding:1.5rem;height:240px;margin-bottom:3rem;">
     <canvas id="chartFinancials"></canvas>
   </div>
@@ -3737,7 +3468,7 @@
       <td class="d-inter">766,032</td>
       <td class="d-inter">766,032</td>
       <td class="d-inter">766,032</td>
-      <td class="d-meta">Replacement cost of prototype: 72K LOC · 48 DB models · 209 API routes · 493 tests · CI pipeline</td>
+      <td class="d-meta">Replacement cost of production platform: 72K LOC · 48 DB models · 291 API operations · 493 tests · CI pipeline</td>
     </tr><tr style="">
       <td class="d-nav-text">Accumulated amortisation</td>
       <td class="d-inter-rust">(76,603)</td>
@@ -3986,7 +3717,7 @@
     <div class="d-bg-cream-lg">
       <div class="d-label-rust-sm">Method 2 — Swiss comparables</div>
       <div style="font-family:'DM Serif Display',Georgia,serif;font-size:1.2rem;font-weight:700;margin-bottom:0.4rem;">CHF 800K–2.5M range</div>
-      <p class="d-body">Swiss pre-seed SaaS with working prototype: CHF 800K–2M pre-money observed range. This build — with compliance IP, 4-portal architecture, 493 automated tests, and a CI pipeline — places clearly in the upper half. CHF 2M is at the top of the range but supported by prototype quality and market timing.</p>
+      <p class="d-body">Swiss pre-seed SaaS with production platform at pre-revenue: CHF 800K–2M pre-money observed range. This build — with compliance IP, 4-portal architecture, 493 automated tests, and a CI pipeline — places clearly in the upper half. CHF 2M is at the top of the range but supported by prototype quality and market timing.</p>
     </div>
   </div>
 
@@ -4093,7 +3824,7 @@
         <div>✓ Advisory partner identified or in term sheet</div>
         <div>✓ First hire productive and contributing to GTM</div>
       </div>
-      <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.6rem;color:var(--muted);line-height:1.5;border-top:1px solid var(--rule);padding-top:0.8rem;">Seed ask: CHF 1.5M · Target pre-money: CHF 5–10M (15–20× M12–18 ARR) · Use: Phase II–III acceleration, régie sales team, Track B advisory launch, second tech hire</div>
+      <div style="font-family:'Inter',-apple-system,sans-serif;font-size:0.6rem;color:var(--muted);line-height:1.5;border-top:1px solid var(--rule);padding-top:0.8rem;">Seed ask: CHF 1.5M · Target pre-money: CHF 5–7.5M (12–18× M12–18 ARR) · Use: Phase II–III acceleration, régie sales team, Track B advisory launch, second tech hire</div>
     </div>
   </div>
 
