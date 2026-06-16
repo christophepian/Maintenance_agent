@@ -493,6 +493,8 @@ export default function OwnerReportingPage() {
   const collRate      = currData?.avgCollectionRate ?? 0;
   const prevCollRate  = prevData?.avgCollectionRate ?? 0;
   const totalUnits    = currData?.totalActiveUnits ?? 0;
+  // Outstanding rent invoices issued but not yet reconciled (receivables)
+  const receivables   = currData?.totalReceivablesCents ?? 0;
 
   const netDelta      = (currData && prevData) ? delta(netIncome, prevNet, t) : null;
   const expDelta      = (currData && prevData) ? delta(expenses, prevExpenses, t) : null;
@@ -581,13 +583,23 @@ export default function OwnerReportingPage() {
                   <div className={cn("mt-1 text-xs", netDelta.tone)}>{netDelta.label}</div>
                 )}
               </div>
-              <div className="rounded-2xl border border-surface-border bg-surface p-4">
-                <div className="text-xs text-foreground-dim">{t("reporting.text.accruedPayables")}</div>
+              <div className={cn(
+                "rounded-2xl border p-4",
+                !loading && receivables > 0
+                  ? "border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800"
+                  : "border-surface-border bg-surface"
+              )}>
+                <div className={cn("text-xs", !loading && receivables > 0 ? "text-amber-700 dark:text-amber-400" : "text-foreground-dim")}>
+                  Rent outstanding
+                </div>
                 {loading
                   ? <div className="mt-2 h-7 w-20 animate-pulse rounded bg-surface-hover" />
-                  : <div className="mt-2 text-2xl font-semibold text-foreground">{fmtChf(currData?.totalPayablesCents ?? 0)}</div>}
-                {!loading && (currData?.totalPayablesCents ?? 0) > 0 && (
-                  <div className="mt-1 text-xs text-foreground-dim">{t("reporting.text.periodendBalance")}</div>
+                  : <div className={cn("mt-2 text-2xl font-semibold", receivables > 0 ? "text-amber-700 dark:text-amber-400" : "text-foreground")}>{fmtChf(receivables)}</div>}
+                {!loading && receivables > 0 && (
+                  <div className="mt-1 text-xs text-amber-600 dark:text-amber-500">Invoiced, not yet paid</div>
+                )}
+                {!loading && receivables === 0 && (
+                  <div className="mt-1 text-xs text-foreground-dim">All rents cleared</div>
                 )}
               </div>
             </div>
@@ -595,12 +607,36 @@ export default function OwnerReportingPage() {
         </header>
 
         {/* ── KPI ROW ──────────────────────────────────────────── */}
-        <section className="kpi-grid mb-8 gap-4 xl:grid-cols-4">
+        <section className="kpi-grid mb-4 gap-4 xl:grid-cols-4">
           <KpiCard label={t("reporting.prop.netIncome")}       value={fmtChf(netIncome)}     delta={netDelta}    isLoading={loading} />
           <KpiCard label={t("reporting.prop.rentCollected")}   value={fmtChf(earned)}        delta={earnedDelta} isLoading={loading} />
           <KpiCard label={t("reporting.prop.totalExpenses")}   value={fmtChf(expenses)}      delta={expDelta}    isLoading={loading} />
           <KpiCard label={t("reporting.prop.collectionRate")}  value={fmtPct(collRate)}      delta={collDelta}   isLoading={loading} />
         </section>
+
+        {/* ── OUTSTANDING RECEIVABLES ALERT ────────────────────── */}
+        {!loading && receivables > 0 && (
+          <section className="mb-8">
+            <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800 px-5 py-4">
+              <span className="mt-0.5 text-amber-500 text-lg shrink-0">⚠</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-amber-800 dark:text-amber-300 mb-0.5">
+                  {fmtChf(receivables)} in rent invoices not yet reconciled
+                </p>
+                <p className="text-xs text-amber-700 dark:text-amber-400">
+                  Rent invoices have been sent to tenants but no payment has been recorded in the system.
+                  Once the rent arrives in your bank, open the invoice in Finance → Outgoing and click <strong>Mark Paid</strong> to update the ledger and unlock income reporting.
+                </p>
+              </div>
+              <a
+                href="/manager/finance/invoices"
+                className="shrink-0 rounded-lg bg-amber-600 hover:bg-amber-700 px-3 py-1.5 text-xs font-semibold text-white transition-colors no-underline"
+              >
+                Go to invoices →
+              </a>
+            </div>
+          </section>
+        )}
 
         {/* ── HIGHLIGHT ────────────────────────────────────────── */}
         {!loading && highlight && (

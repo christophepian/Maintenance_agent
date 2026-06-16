@@ -313,7 +313,7 @@ export default function InvoiceDetailPage() {
                           ✓ Approve
                         </button>
                       )}
-                      {inv.status === "APPROVED" && (
+                      {(inv.status === "APPROVED" || (inv.status === "ISSUED" && inv.direction === "OUTGOING")) && (
                         <button
                           onClick={() => invoiceAction("mark-paid")}
                           disabled={actionLoading}

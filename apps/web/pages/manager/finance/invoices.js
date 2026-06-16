@@ -734,7 +734,7 @@ export function InvoicesContent() {
       });
     }
 
-    // Approve — for ISSUED invoices
+    // Approve — for ISSUED invoices (cost/incoming invoices go through approval before payment)
     if (inv.status === "ISSUED") {
       actions.push({
         label: "✓ Approve",
@@ -744,8 +744,9 @@ export function InvoicesContent() {
       });
     }
 
-    // Mark Paid — for APPROVED invoices
-    if (inv.status === "APPROVED") {
+    // Mark Paid — for APPROVED invoices, or for ISSUED outgoing rent invoices (skip approve step)
+    const isOutgoingIssued = inv.status === "ISSUED" && inv.direction === "OUTGOING";
+    if (inv.status === "APPROVED" || isOutgoingIssued) {
       actions.push({
         label: "✓ Mark Paid",
         className: "text-green-700 font-medium",
