@@ -47,6 +47,56 @@ export async function findExpenseLedgerEntries(
   return rows as ExpenseLedgerRow[];
 }
 
+/**
+ * Collection rate helpers — invoice-based, scoped to billing period.
+ *
+ * Using billing period (not payment date) prevents backlog catch-up payments
+ * from inflating the rate above 100 %.
+ *
+ * Returns totals in cents (Invoice.totalAmount stores cents).
+ */
+export async function aggregateInvoicedRentForPeriod(
+  prisma: PrismaClient,
+  orgId: string,
+  buildingId: string,
+  from: Date,
+  to: Date,
+): Promise<number> {
+  const agg = await prisma.invoice.aggregate({
+    where: {
+      orgId,
+      direction: "OUTGOING",
+      leaseId: { not: null },
+      billingPeriodStart: { gte: from, lte: endOfDayUTC(to) },
+      status: { not: "DRAFT" }, // exclude invoices that were never issued
+      lease: { unit: { buildingId } },
+    },
+    _sum: { totalAmount: true },
+  });
+  return agg._sum.totalAmount ?? 0;
+}
+
+export async function aggregatePaidRentForPeriod(
+  prisma: PrismaClient,
+  orgId: string,
+  buildingId: string,
+  from: Date,
+  to: Date,
+): Promise<number> {
+  const agg = await prisma.invoice.aggregate({
+    where: {
+      orgId,
+      direction: "OUTGOING",
+      leaseId: { not: null },
+      billingPeriodStart: { gte: from, lte: endOfDayUTC(to) },
+      status: "PAID",
+      lease: { unit: { buildingId } },
+    },
+    _sum: { totalAmount: true },
+  });
+  return agg._sum.totalAmount ?? 0;
+}
+
 /** Sum of rent payments received (bank debit on INVOICE_PAID) for a building in a period. */
 export async function aggregateLedgerIncome(
   prisma: PrismaClient,

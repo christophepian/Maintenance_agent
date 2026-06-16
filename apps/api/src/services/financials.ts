@@ -314,13 +314,24 @@ export async function getBuildingFinancials(
     getPayables(orgId, buildingId),
   ]);
 
+  // 9b. Invoice-based collection rate — scoped to billing period, not payment date.
+  //     Comparing paid/invoiced by billing period means catching up 3 months of
+  //     backlogged payments in one go doesn't push the rate above 100 %.
+  const [invoicedForPeriodCents, paidForPeriodCents] = await Promise.all([
+    financialsRepo.aggregateInvoicedRentForPeriod(prisma, orgId, buildingId, from, to),
+    financialsRepo.aggregatePaidRentForPeriod(prisma, orgId, buildingId, from, to),
+  ]);
+
   // 10. Derived totals and KPIs
   const operatingTotalCents = expensesTotalCents - capexTotalCents;
   const netIncomeCents = earnedIncomeCents - expensesTotalCents;
   const netOperatingIncomeCents = earnedIncomeCents - operatingTotalCents;
   const maintenanceRatio = safeDivide(maintenanceTotalCents, earnedIncomeCents);
   const costPerUnitCents = Math.round(safeDivide(expensesTotalCents, activeUnitsCount));
-  const collectionRate = safeDivide(earnedIncomeCents, incomeBreakdown.projectedIncomeCents);
+  // Use invoice-billing-period rate; fall back to ledger/projected if no invoices exist yet
+  const collectionRate = invoicedForPeriodCents > 0
+    ? safeDivide(paidForPeriodCents, invoicedForPeriodCents)
+    : safeDivide(earnedIncomeCents, incomeBreakdown.projectedIncomeCents);
 
   // 11. Format breakdown arrays
   const expensesByCategory: ExpenseCategoryTotalDTO[] = Array.from(categoryTotals.entries())
