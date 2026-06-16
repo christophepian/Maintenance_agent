@@ -304,32 +304,48 @@ export default function InvoiceDetailPage() {
                           </button>
                         );
                       })()}
-                      {inv.status === "ISSUED" && (
-                        <button
-                          onClick={() => invoiceAction("approve")}
-                          disabled={actionLoading}
-                          className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 transition disabled:opacity-50"
-                        >
-                          ✓ Approve
-                        </button>
-                      )}
-                      {(inv.status === "APPROVED" || (inv.status === "ISSUED" && inv.direction === "OUTGOING")) && (
-                        <button
-                          onClick={() => invoiceAction("mark-paid")}
-                          disabled={actionLoading}
-                          className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 transition disabled:opacity-50"
-                        >
-                          ✓ Mark Paid
-                        </button>
-                      )}
-                      {["ISSUED", "APPROVED"].includes(inv.status) && (
-                        <button
-                          onClick={() => invoiceAction("dispute")}
-                          disabled={actionLoading}
-                          className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-100 transition disabled:opacity-50"
-                        >
-                          ✗ Dispute
-                        </button>
+                      {inv.direction === "OUTGOING" ? (
+                        // Outgoing (rent): no approval or dispute — just mark paid when money arrives
+                        ["ISSUED", "APPROVED"].includes(inv.status) && (
+                          <button
+                            onClick={() => invoiceAction("mark-paid")}
+                            disabled={actionLoading}
+                            className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 transition disabled:opacity-50"
+                          >
+                            ✓ Mark Paid
+                          </button>
+                        )
+                      ) : (
+                        // Incoming (contractor/cost): approve → mark paid, with dispute
+                        <>
+                          {inv.status === "ISSUED" && (
+                            <button
+                              onClick={() => invoiceAction("approve")}
+                              disabled={actionLoading}
+                              className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 transition disabled:opacity-50"
+                            >
+                              ✓ Approve
+                            </button>
+                          )}
+                          {inv.status === "APPROVED" && (
+                            <button
+                              onClick={() => invoiceAction("mark-paid")}
+                              disabled={actionLoading}
+                              className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 transition disabled:opacity-50"
+                            >
+                              ✓ Mark Paid
+                            </button>
+                          )}
+                          {["ISSUED", "APPROVED"].includes(inv.status) && (
+                            <button
+                              onClick={() => invoiceAction("dispute")}
+                              disabled={actionLoading}
+                              className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-100 transition disabled:opacity-50"
+                            >
+                              ✗ Dispute
+                            </button>
+                          )}
+                        </>
                       )}
                       <button
                         type="button"

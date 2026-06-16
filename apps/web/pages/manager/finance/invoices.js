@@ -734,35 +734,44 @@ export function InvoicesContent() {
       });
     }
 
-    // Approve — for ISSUED invoices (cost/incoming invoices go through approval before payment)
-    if (inv.status === "ISSUED") {
-      actions.push({
-        label: "✓ Approve",
-        className: "text-green-700 font-medium",
-        disabled: actionLoading === inv.id,
-        onClick: () => invoiceAction(inv.id, "approve"),
-      });
-    }
+    const isOutgoing = inv.direction === "OUTGOING";
 
-    // Mark Paid — for APPROVED invoices, or for ISSUED outgoing rent invoices (skip approve step)
-    const isOutgoingIssued = inv.status === "ISSUED" && inv.direction === "OUTGOING";
-    if (inv.status === "APPROVED" || isOutgoingIssued) {
-      actions.push({
-        label: "✓ Mark Paid",
-        className: "text-green-700 font-medium",
-        disabled: actionLoading === inv.id,
-        onClick: () => invoiceAction(inv.id, "mark-paid"),
-      });
-    }
-
-    // Dispute — for ISSUED or APPROVED
-    if (["ISSUED", "APPROVED"].includes(inv.status)) {
-      actions.push({
-        label: "✗ Dispute",
-        className: "text-red-600 font-medium",
-        disabled: actionLoading === inv.id,
-        onClick: () => setDisputeInvoiceId(inv.id),
-      });
+    if (isOutgoing) {
+      // Outgoing (rent) invoices: no approval or dispute — just mark paid when money arrives
+      if (["ISSUED", "APPROVED"].includes(inv.status)) {
+        actions.push({
+          label: "✓ Mark Paid",
+          className: "text-green-700 font-medium",
+          disabled: actionLoading === inv.id,
+          onClick: () => invoiceAction(inv.id, "mark-paid"),
+        });
+      }
+    } else {
+      // Incoming (cost/contractor) invoices: approve → mark paid, with dispute option
+      if (inv.status === "ISSUED") {
+        actions.push({
+          label: "✓ Approve",
+          className: "text-green-700 font-medium",
+          disabled: actionLoading === inv.id,
+          onClick: () => invoiceAction(inv.id, "approve"),
+        });
+      }
+      if (inv.status === "APPROVED") {
+        actions.push({
+          label: "✓ Mark Paid",
+          className: "text-green-700 font-medium",
+          disabled: actionLoading === inv.id,
+          onClick: () => invoiceAction(inv.id, "mark-paid"),
+        });
+      }
+      if (["ISSUED", "APPROVED"].includes(inv.status)) {
+        actions.push({
+          label: "✗ Dispute",
+          className: "text-red-600 font-medium",
+          disabled: actionLoading === inv.id,
+          onClick: () => setDisputeInvoiceId(inv.id),
+        });
+      }
     }
 
     return actions;
