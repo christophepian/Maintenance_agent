@@ -78,7 +78,8 @@ export default async function handler(req, res) {
   // there is no password to set. Go straight to the app.
   const isFirstLogin = !userMeta.password_set;
 
-  if (isFirstLogin && process.env.NEXT_PUBLIC_SANDBOX !== "true") {
+  // DOCS_INVESTOR never sets a password — skip straight to the pitchdeck.
+  if (isFirstLogin && process.env.NEXT_PUBLIC_SANDBOX !== "true" && accessLevel !== "DOCS_INVESTOR") {
     const dest = next ? `/set-password?next=${encodeURIComponent(next)}` : "/set-password";
     return res.redirect(302, dest);
   }

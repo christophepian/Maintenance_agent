@@ -126,6 +126,13 @@ export async function middleware(request) {
     return NextResponse.redirect(loginUrl);
   }
 
+  // ── DOCS_INVESTOR — pitchdeck only, no app access ────────────────────────
+  // Redirect any non-docs path back to the pitchdeck so the investor never
+  // sees the app navigation or other pages.
+  if (accessLevel === "DOCS_INVESTOR" && !isDocsPath(pathname)) {
+    return NextResponse.redirect(new URL("/docs/pitchdeck.html", request.url));
+  }
+
   // ── /admin/* — require ADMIN ───────────────────────────────────────────────
   if (isAdminPath(pathname)) {
     if (accessLevel !== "ADMIN") {
