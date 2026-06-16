@@ -97,6 +97,7 @@ export default function SetPasswordPage() {
       setTimeout(() => {
         const target =
           (typeof next === "string" && next.startsWith("/") ? next : null) ||
+          (appMeta.accessLevel === "DOCS_INVESTOR" ? "/docs/pitchdeck.html" : null) ||
           (appMeta.appRole ? ROLE_HOME[appMeta.appRole] : null) ||
           "/manager";
         router.push(target);
@@ -114,6 +115,7 @@ export default function SetPasswordPage() {
     }
     const target =
       (typeof next === "string" && next.startsWith("/") ? next : null) ||
+      (appMeta.accessLevel === "DOCS_INVESTOR" ? "/docs/pitchdeck.html" : null) ||
       (appMeta.appRole ? ROLE_HOME[appMeta.appRole] : null) ||
       "/manager";
     router.push(target);

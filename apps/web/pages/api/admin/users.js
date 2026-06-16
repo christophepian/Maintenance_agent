@@ -81,14 +81,24 @@ export default async function handler(req, res) {
       orgId: DEFAULT_ORG_ID,
     };
 
-    // Supabase inviteUserByEmail sends a single-use magic link.
-    // The user must click within 24h (configurable in Supabase Auth settings).
+    // Step 1: invite — sends the single-use magic link email.
+    // Note: inviteUserByEmail stores `data` as user_metadata, NOT app_metadata.
+    // The callback reads app_metadata, so we must set it explicitly in step 2.
     const { data, error } = await admin.auth.admin.inviteUserByEmail(email, {
-      data: appMeta, // stored in app_metadata
+      data: appMeta,
       redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/callback`,
     });
 
     if (error) return res.status(500).json({ error: error.message });
+
+    // Step 2: write app_metadata so the callback and middleware can read the
+    // access level immediately when the user clicks the link.
+    const { error: metaError } = await admin.auth.admin.updateUserById(
+      data.user.id,
+      { app_metadata: appMeta }
+    );
+
+    if (metaError) return res.status(500).json({ error: metaError.message });
 
     return res.status(201).json({ user: data.user });
   }
