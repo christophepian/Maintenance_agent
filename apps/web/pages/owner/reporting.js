@@ -11,6 +11,25 @@ import { useTranslation } from "next-i18next";
 
 const PREVIEW = 3;
 
+// One gradient per calendar month (0 = Jan … 11 = Dec).
+// All stops use Tailwind's *-50 palette (~96-98 % lightness) so that
+// foreground text (#111827 / gray-900) achieves ≥ 12:1 contrast and
+// muted text (~#6B7280 / gray-500) achieves ≥ 4.5:1 — both WCAG AA.
+const MONTH_HERO_GRADIENTS = [
+  "from-slate-50  via-blue-50   to-cyan-50",    // Jan — cold, crisp
+  "from-rose-50   via-pink-50   to-fuchsia-50", // Feb — soft warmth
+  "from-emerald-50 via-green-50 to-teal-50",    // Mar — spring
+  "from-green-50  via-lime-50   to-yellow-50",  // Apr — fresh growth
+  "from-pink-50   via-rose-50   to-orange-50",  // May — blossom
+  "from-sky-50    via-blue-50   to-indigo-50",  // Jun — summer sky
+  "from-yellow-50 via-amber-50  to-orange-50",  // Jul — peak heat
+  "from-amber-50  via-yellow-50 to-lime-50",    // Aug — late summer
+  "from-orange-50 via-amber-50  to-red-50",     // Sep — early autumn
+  "from-red-50    via-orange-50 to-amber-50",   // Oct — deep autumn
+  "from-stone-50  via-gray-50   to-slate-50",   // Nov — bare, neutral
+  "from-indigo-50 via-blue-50   to-violet-50",  // Dec — winter night
+];
+
 function lastDayOfMonth(year, month) {
   return new Date(year, month + 1, 0).getDate();
 }
@@ -221,16 +240,16 @@ function KpiCard({ label, value, delta, isLoading }) {
 
 function DriverItem({ number, title, body, impact }) {
   return (
-    <div className="flex gap-3">
-      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-green-100 text-xs font-semibold text-green-700">
+    <div className="flex gap-4 py-4 border-b border-surface-divider last:border-0 last:pb-0 first:pt-0">
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-green-100 text-sm font-semibold text-green-700">
         {number}
       </div>
-      <div className="flex-1 min-w-0 pb-3 border-b border-surface-divider last:border-0 last:pb-0">
-        <div className="flex items-start justify-between gap-3">
-          <span className="text-sm font-semibold text-foreground">{title}</span>
-          {impact && <span className="shrink-0 text-xs text-foreground-dim">{impact}</span>}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-start justify-between gap-4">
+          <span className="text-sm font-semibold text-foreground leading-snug">{title}</span>
+          {impact && <span className="shrink-0 text-xs text-foreground-dim whitespace-nowrap">{impact}</span>}
         </div>
-        <p className="mt-1 text-sm text-muted-text leading-relaxed">{body}</p>
+        <p className="mt-1.5 text-sm text-muted-text leading-relaxed">{body}</p>
       </div>
     </div>
   );
@@ -244,13 +263,11 @@ function WatchItem({ number, text, severity }) {
   };
   const { bg, text: tc } = colors[severity] ?? colors.violet;
   return (
-    <div className="flex gap-3">
-      <div className={cn("flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold", bg, tc)}>
+    <div className="flex gap-4 py-4 border-b border-surface-divider last:border-0 last:pb-0 first:pt-0">
+      <div className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold", bg, tc)}>
         {number}
       </div>
-      <div className="flex-1 min-w-0 pb-3 border-b border-surface-divider last:border-0 last:pb-0">
-        <p className="text-sm leading-relaxed text-muted-dark">{text}</p>
-      </div>
+      <p className="flex-1 min-w-0 text-sm leading-relaxed text-muted-dark self-center">{text}</p>
     </div>
   );
 }
@@ -637,10 +654,14 @@ export default function OwnerReportingPage() {
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
 
         {/* ── HERO ─────────────────────────────────────────────── */}
-        <header className="mb-6 rounded-3xl border border-surface-border bg-gradient-to-br from-violet-50 via-sky-50 to-green-50 dark:from-brand-light dark:via-info-light dark:to-transparent p-6 shadow-sm">
+        <header className={cn(
+          "mb-6 rounded-3xl border border-surface-border bg-gradient-to-br p-6 shadow-sm",
+          "dark:from-brand-light dark:via-info-light dark:to-transparent",
+          ytdMode ? "from-violet-50 via-sky-50 to-green-50" : MONTH_HERO_GRADIENTS[selMonth]
+        )}>
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-2xl">
-              <Badge variant="default" size="lg" className="mb-3">
+              <Badge variant="default" size="lg" className="mb-3 bg-transparent border-black/20 dark:border-white/20 text-foreground/70">
                 {periodLabel} · {t("reporting.text.monthlyReport")}
               </Badge>
               <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
@@ -662,32 +683,34 @@ export default function OwnerReportingPage() {
             </div>
 
             <div className="grid min-w-[260px] grid-cols-2 gap-3">
-              <div className="rounded-2xl border border-surface-border bg-surface p-4">
-                <div className="text-xs text-foreground-dim">{t("reporting.text.netResult")}</div>
+              {/* Net result — transparent so gradient shows through, black stroke */}
+              <div className="rounded-2xl border border-black/20 dark:border-white/20 bg-transparent p-4">
+                <div className="text-xs font-medium text-foreground/60">{t("reporting.text.netResult")}</div>
                 {loading
-                  ? <div className="mt-2 h-7 w-20 animate-pulse rounded bg-surface-hover" />
+                  ? <div className="mt-2 h-7 w-20 animate-pulse rounded bg-black/10" />
                   : <div className="mt-2 text-2xl font-semibold text-foreground">{fmtChf(netIncome)}</div>}
                 {!loading && netDelta && (
                   <div className={cn("mt-1 text-xs", netDelta.tone)}>{netDelta.label}</div>
                 )}
               </div>
+              {/* Rent outstanding — amber tint when overdue, transparent otherwise */}
               <div className={cn(
                 "rounded-2xl border p-4",
                 !loading && receivables > 0
-                  ? "border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800"
-                  : "border-surface-border bg-surface"
+                  ? "border-amber-500/40 bg-amber-400/20 dark:border-amber-700/50 dark:bg-amber-900/20"
+                  : "border-black/20 dark:border-white/20 bg-transparent"
               )}>
-                <div className={cn("text-xs", !loading && receivables > 0 ? "text-amber-700 dark:text-amber-400" : "text-foreground-dim")}>
+                <div className={cn("text-xs font-medium", !loading && receivables > 0 ? "text-amber-800 dark:text-amber-400" : "text-foreground/60")}>
                   Rent outstanding
                 </div>
                 {loading
-                  ? <div className="mt-2 h-7 w-20 animate-pulse rounded bg-surface-hover" />
-                  : <div className={cn("mt-2 text-2xl font-semibold", receivables > 0 ? "text-amber-700 dark:text-amber-400" : "text-foreground")}>{fmtChf(receivables)}</div>}
+                  ? <div className="mt-2 h-7 w-20 animate-pulse rounded bg-black/10" />
+                  : <div className={cn("mt-2 text-2xl font-semibold", receivables > 0 ? "text-amber-800 dark:text-amber-400" : "text-foreground")}>{fmtChf(receivables)}</div>}
                 {!loading && receivables > 0 && (
-                  <div className="mt-1 text-xs text-amber-600 dark:text-amber-500">Invoiced, not yet paid</div>
+                  <div className="mt-1 text-xs text-amber-700 dark:text-amber-500">Invoiced, not yet paid</div>
                 )}
                 {!loading && receivables === 0 && (
-                  <div className="mt-1 text-xs text-foreground-dim">All rents cleared</div>
+                  <div className="mt-1 text-xs text-foreground/50">All rents cleared</div>
                 )}
               </div>
             </div>
@@ -791,48 +814,58 @@ export default function OwnerReportingPage() {
             <div className="grid lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-surface-border">
 
               {/* Left — What drove it */}
-              <div className="p-6">
-                <div className="flex items-center gap-2 mb-5">
-                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-100 text-xs text-green-700">↑</div>
-                  <h2 className="text-base font-semibold text-foreground">{t("reporting.heading.whatDrovePerformance")}</h2>
+              <div className="flex flex-col">
+                <div className="px-7 py-4 bg-green-50 dark:bg-green-950/20 border-b border-green-100 dark:border-green-900">
+                  <div className="flex items-center gap-2.5 mb-0.5">
+                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-100 dark:bg-green-900 text-xs font-bold text-green-700 dark:text-green-400">↑</div>
+                    <h2 className="text-sm font-semibold text-green-900 dark:text-green-200">{t("reporting.heading.whatDrovePerformance")}</h2>
+                  </div>
+                  <p className="text-xs text-green-700/70 dark:text-green-400/70 ml-[34px]">{t("reporting.text.theMainForcesBehindThisMonthsNumbers")}</p>
                 </div>
-                {loading ? (
-                  <div className="space-y-4">
-                    {[1, 2].map((i) => <div key={i} className="h-14 animate-pulse rounded-xl bg-surface-hover" />)}
-                  </div>
-                ) : (
-                  <div className="space-y-0">
-                    {drivers.map((d, i) => (
-                      <DriverItem key={i} number={i + 1} title={d.title} body={d.body} impact={d.impact} />
-                    ))}
-                  </div>
-                )}
+                <div className="px-7 py-5 flex-1">
+                  {loading ? (
+                    <div className="space-y-4">
+                      {[1, 2].map((i) => <div key={i} className="h-16 animate-pulse rounded-xl bg-surface-hover" />)}
+                    </div>
+                  ) : (
+                    <div>
+                      {drivers.map((d, i) => (
+                        <DriverItem key={i} number={i + 1} title={d.title} body={d.body} impact={d.impact} />
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Right — What to watch */}
-              <div className="p-6">
-                <div className="flex items-center gap-2 mb-5">
-                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-amber-100 text-xs text-amber-700">!</div>
-                  <h2 className="text-base font-semibold text-foreground">What to watch</h2>
+              <div className="flex flex-col">
+                <div className="px-7 py-4 bg-amber-50 dark:bg-amber-950/20 border-b border-amber-100 dark:border-amber-900">
+                  <div className="flex items-center gap-2.5 mb-0.5">
+                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900 text-xs font-bold text-amber-700 dark:text-amber-400">!</div>
+                    <h2 className="text-sm font-semibold text-amber-900 dark:text-amber-200">What to watch</h2>
+                  </div>
+                  <p className="text-xs text-amber-700/70 dark:text-amber-400/70 ml-[34px]">Flags and action items for this period</p>
                 </div>
-                {loading ? (
-                  <div className="space-y-4">
-                    {[1, 2].map((i) => <div key={i} className="h-14 animate-pulse rounded-xl bg-surface-hover" />)}
-                  </div>
-                ) : watchItems.length > 0 ? (
-                  <div className="space-y-0">
-                    {watchItems.map((item, i) => (
-                      <WatchItem key={i} number={i + 1} text={item.text} severity={item.severity} />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-start gap-2 pt-1">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-100 text-green-700 text-base">✓</div>
-                    <p className="text-sm text-muted-text">
-                      No flags for this period. Collection is on track, occupancy looks healthy, and no overdue invoices are outstanding.
-                    </p>
-                  </div>
-                )}
+                <div className="px-7 py-5 flex-1">
+                  {loading ? (
+                    <div className="space-y-4">
+                      {[1, 2].map((i) => <div key={i} className="h-16 animate-pulse rounded-xl bg-surface-hover" />)}
+                    </div>
+                  ) : watchItems.length > 0 ? (
+                    <div>
+                      {watchItems.map((item, i) => (
+                        <WatchItem key={i} number={i + 1} text={item.text} severity={item.severity} />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex items-start gap-4 pt-2">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-700">✓</div>
+                      <p className="text-sm text-muted-text leading-relaxed self-center">
+                        No flags this period — collection on track, occupancy healthy, no overdue invoices.
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
