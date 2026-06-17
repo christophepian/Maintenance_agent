@@ -538,6 +538,7 @@
       "moveOuts": "Move-outs",
       "financeDetail": "Drill into ledger entries, trial balance, and per-building financials in the Finance section.",
       "monthlyReport": "Monthly Owner Report",
+      "yearButton": "Year",
       "yearToDateReport": "Year-to-Date Summary",
       "fullYearReport": "Full Year Summary",
       "theMainForcesBehindThisYearsNumbers": "The main forces behind this year's performance.",

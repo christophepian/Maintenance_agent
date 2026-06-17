@@ -245,7 +245,7 @@ function TimelineHeader({ year, month, mode, onSelect, onYearNav, onModeToggle, 
                 : "text-muted-text hover:bg-surface-hover",
             ].join(" ")}
           >
-            Year
+            {t("reporting.text.yearButton")}
           </button>
 
           <div className="w-px h-5 bg-surface-border shrink-0" />
