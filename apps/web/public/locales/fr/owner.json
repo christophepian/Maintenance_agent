@@ -483,6 +483,7 @@
     "heading": {
       "whatDrovePerformance": "Ce qui a influencé la performance",
       "whatToWatch": "Points de vigilance",
+      "monthlyNoi": "NOI mensuel",
       "byProperty": "Par bien",
       "tenantMovements": "Mouvements de locataires",
       "periodInsights": "Analyses de la période",
@@ -536,6 +537,10 @@
       "moveOuts": "Sorties",
       "financeDetail": "Consultez les écritures du grand livre, la balance de vérification et les données financières par immeuble dans la section Finance.",
       "monthlyReport": "Rapport mensuel propriétaire",
+      "yearToDateReport": "Résumé annuel en cours",
+      "theMainForcesBehindThisYearsNumbers": "Les principaux facteurs de la performance de cette année.",
+      "noiPerMonth": "Résultat opérationnel net par mois, {{year}}",
+      "bestMonth": "Meilleur mois",
       "flagsAndActionItems": "Alertes et actions pour cette période",
       "unpaidInvoicesByDaysOverdue": "Factures sortantes impayées par ancienneté",
       "rentInvoicesNotReconciled": "{{amount}} de factures de loyer non réconciliées",
@@ -570,6 +575,44 @@
       "viewUnpaidInvoices": "Voir les factures impayées",
       "viewFinanceOverview": "Voir les finances",
       "viewExpenses": "Voir les dépenses"
+    },
+    "appraisalYtd": {
+      "ahead": "En avance sur l'année précédente.",
+      "onpar": "Dans la lignée de l'année précédente.",
+      "behind": "En retard sur le rythme de l'année précédente.",
+      "reason": {
+        "noiAhead": "Le NOI est en hausse de {{pct}}% par rapport à la même période l'an dernier.",
+        "noiBehind": "Le NOI est en baisse de {{pct}}% par rapport à la même période l'an dernier.",
+        "noiOnPar": "Le NOI et le recouvrement ({{rate}}) sont en ligne avec l'année précédente."
+      }
+    },
+    "appraisal": {
+      "strong": {
+        "improving": "Votre portefeuille est sur une excellente lancée.",
+        "stable": "Un excellent mois.",
+        "declining": "Un bon mois — à surveiller de près."
+      },
+      "mixed": {
+        "improving": "Un mois mitigé, mais la tendance s'améliore.",
+        "stable": "Un mois mitigé.",
+        "declining": "Un mois mitigé — certains indicateurs se dégradent."
+      },
+      "challenging": {
+        "improving": "Une période difficile, mais en amélioration.",
+        "stable": "Un mois difficile — action requise.",
+        "declining": "Un mois difficile — attention immédiate nécessaire."
+      },
+      "reason": {
+        "strongCollectionAllGreen": "Taux de recouvrement à {{rate}} — tous les biens dans le vert.",
+        "strongCollectionSomeRed_one": "Taux de recouvrement à {{rate}} — {{count}} bien en perte.",
+        "strongCollectionSomeRed_other": "Taux de recouvrement à {{rate}} — {{count}} biens en perte.",
+        "mixedCollection": "Taux de recouvrement à {{rate}} — certaines factures restent impayées.",
+        "buildingsInRed_one": "{{count}} bien en perte nette cette période.",
+        "buildingsInRed_other": "{{count}} biens en perte nette cette période.",
+        "hardArrears": "{{amount}} de loyers en retard de plus de 60 jours.",
+        "lowCollection": "Le taux de recouvrement a chuté à {{rate}} cette période.",
+        "negativeNoi": "Le portefeuille a enregistré une perte nette de {{amount}}."
+      }
     },
     "cta": {
       "financeOverview": "Aperçu finances",

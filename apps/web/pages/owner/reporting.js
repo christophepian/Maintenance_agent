@@ -68,6 +68,83 @@ function delta(curr, prev) {
   return { tone };
 }
 
+/* ─── Portfolio appraisal ────────────────────────────────────── */
+
+function deriveYtdAppraisal({ noi, prevNoi, collRate, t }) {
+  let tier;
+  if (!Number.isFinite(prevNoi) || prevNoi === 0) {
+    tier = noi > 0 ? "ahead" : noi < 0 ? "behind" : "onpar";
+  } else {
+    const d = (noi - prevNoi) / Math.abs(prevNoi);
+    tier = d > 0.10 ? "ahead" : d < -0.10 ? "behind" : "onpar";
+  }
+
+  const headline = t(`reporting.appraisalYtd.${tier}`);
+
+  let reason;
+  if (tier === "ahead" && prevNoi !== 0 && Number.isFinite(prevNoi)) {
+    const pct = Math.round(Math.abs((noi - prevNoi) / prevNoi) * 100);
+    reason = t("reporting.appraisalYtd.reason.noiAhead", { pct });
+  } else if (tier === "behind" && prevNoi !== 0 && Number.isFinite(prevNoi)) {
+    const pct = Math.round(Math.abs((noi - prevNoi) / prevNoi) * 100);
+    reason = t("reporting.appraisalYtd.reason.noiBehind", { pct });
+  } else {
+    reason = t("reporting.appraisalYtd.reason.noiOnPar", { rate: fmtPct(collRate) });
+  }
+
+  return { headline, reason };
+}
+
+function computeAppraisalScore(collRate, noi, occupancyRate, arrears) {
+  const collScore = collRate >= 0.95 ? 1 : collRate >= 0.80 ? 0.5 : 0;
+  const noiScore  = noi > 0 ? 1 : noi === 0 ? 0.5 : 0;
+  const occScore  = occupancyRate === null ? 0.5 : occupancyRate >= 0.90 ? 1 : occupancyRate >= 0.75 ? 0.5 : 0;
+  const arrScore  = !arrears || (arrears.overdue61plusCents === 0 && arrears.overdue31to60Cents === 0) ? 1
+    : arrears.overdue61plusCents === 0 ? 0.5 : 0;
+  return 0.4 * collScore + 0.3 * noiScore + 0.2 * occScore + 0.1 * arrScore;
+}
+
+function deriveAppraisal({ collRate, noi, occupancyRate, arrears, activeBuildings, prevScore, prevNoi, t, ytdMode }) {
+  if (ytdMode) return deriveYtdAppraisal({ noi, prevNoi, collRate, t });
+  const score = computeAppraisalScore(collRate, noi, occupancyRate, arrears);
+  const tier  = score >= 0.75 ? "strong" : score >= 0.40 ? "mixed" : "challenging";
+
+  let trajectory = "stable";
+  if (prevScore !== null) {
+    if (score > prevScore + 0.10) trajectory = "improving";
+    else if (score < prevScore - 0.10) trajectory = "declining";
+  }
+
+  const headline = t(`reporting.appraisal.${tier}.${trajectory}`);
+
+  const buildingsInRed = (activeBuildings ?? []).filter((b) => b.netIncomeCents < 0);
+  let reason;
+
+  if (tier === "strong") {
+    if (buildingsInRed.length === 0) {
+      reason = t("reporting.appraisal.reason.strongCollectionAllGreen", { rate: fmtPct(collRate) });
+    } else {
+      reason = t("reporting.appraisal.reason.strongCollectionSomeRed", { rate: fmtPct(collRate), count: buildingsInRed.length });
+    }
+  } else if (tier === "mixed") {
+    if (buildingsInRed.length > 0) {
+      reason = t("reporting.appraisal.reason.buildingsInRed", { count: buildingsInRed.length });
+    } else {
+      reason = t("reporting.appraisal.reason.mixedCollection", { rate: fmtPct(collRate) });
+    }
+  } else {
+    if (arrears?.overdue61plusCents > 0) {
+      reason = t("reporting.appraisal.reason.hardArrears", { amount: fmtChf(arrears.overdue61plusCents) });
+    } else if (collRate < 0.80) {
+      reason = t("reporting.appraisal.reason.lowCollection", { rate: fmtPct(collRate) });
+    } else {
+      reason = t("reporting.appraisal.reason.negativeNoi", { amount: fmtChf(Math.abs(noi)) });
+    }
+  }
+
+  return { headline, reason };
+}
+
 /* ─── Shared expand toggle ───────────────────────────────────── */
 
 function ExpandToggle({ expanded, total, onToggle, label }) {
@@ -324,7 +401,7 @@ function BuildingRow({ name, earned, expenses, net, collectionRate, occupancy, h
         </div>
         {occupancy !== null && (
           <div className="hidden lg:block">
-            <div className="text-xs text-foreground-dim">Occupancy</div>
+            <div className="text-xs text-foreground-dim">{t("reporting.prop.occupancy")}</div>
             <div className={cn("text-sm font-medium", occupancy < 0.9 ? "text-amber-600" : "text-muted-dark")}>
               {fmtPct(occupancy)}
             </div>
@@ -332,6 +409,44 @@ function BuildingRow({ name, earned, expenses, net, collectionRate, occupancy, h
         )}
       </div>
     </Wrapper>
+  );
+}
+
+function MonthlyTrendChart({ data, locale }) {
+  if (!data || data.length === 0) return null;
+
+  const CHART_H = 80;
+  const LABEL_H = 18;
+  const BAR_W   = 28;
+  const GAP      = 6;
+  const TOTAL_H  = CHART_H + LABEL_H;
+  const WIDTH    = data.length * (BAR_W + GAP) - GAP;
+  const ZERO_Y   = CHART_H / 2;
+
+  const maxAbs = Math.max(...data.map((d) => Math.abs(d.noiCents)), 1);
+  const monthLabel = (m) =>
+    new Intl.DateTimeFormat(locale ?? "fr-CH", { month: "short" }).format(new Date(2024, m - 1, 1));
+
+  return (
+    <svg viewBox={`0 0 ${WIDTH} ${TOTAL_H}`} className="w-full" style={{ maxHeight: 98 }}>
+      <line x1="0" y1={ZERO_Y} x2={WIDTH} y2={ZERO_Y} stroke="#e5e7eb" strokeWidth="1" />
+      {data.map((d, i) => {
+        const x    = i * (BAR_W + GAP);
+        const barH = Math.max(2, (Math.abs(d.noiCents) / maxAbs) * (ZERO_Y - 6));
+        const isPos = d.noiCents >= 0;
+        const barY  = isPos ? ZERO_Y - barH : ZERO_Y;
+        return (
+          <g key={d.month}>
+            <rect x={x} y={barY} width={BAR_W} height={barH} rx="3"
+              fill={isPos ? "#16a34a" : "#dc2626"} fillOpacity="0.72" />
+            <text x={x + BAR_W / 2} y={TOTAL_H - 2}
+              textAnchor="middle" fontSize="8" fill="#9ca3af">
+              {monthLabel(d.month)}
+            </text>
+          </g>
+        );
+      })}
+    </svg>
   );
 }
 
@@ -528,8 +643,9 @@ export default function OwnerReportingPage() {
   const [prevData, setPrevData] = useState(null);
   const [loading, setLoading]   = useState(true);
 
-  const [moveIns, setMoveIns]   = useState([]);
-  const [moveOuts, setMoveOuts] = useState([]);
+  const [moveIns, setMoveIns]       = useState([]);
+  const [moveOuts, setMoveOuts]     = useState([]);
+  const [monthlyData, setMonthlyData] = useState(null);
 
   const [insExpanded,   setInsExpanded]   = useState(false);
   const [outsExpanded,  setOutsExpanded]  = useState(false);
@@ -589,22 +705,30 @@ export default function OwnerReportingPage() {
       return json?.data ?? [];
     };
 
+    const fetchMonthly = ytdMode
+      ? fetch(`/api/financials/portfolio-monthly?year=${selYear}`, { headers: authHeaders() })
+          .then((r) => r.ok ? r.json() : null)
+          .then((d) => d?.data ?? null)
+      : Promise.resolve(null);
+
     Promise.all([
       fetchPeriod(from, to),
       fetchPeriod(prevFrom, prevTo),
       fetchLeases({ startDateFrom: from, startDateTo: to, limit: 50 }),
       fetchLeases({ endDateFrom: from, endDateTo: to, limit: 50 }),
-    ]).then(([curr, prev, ins, outs]) => {
+      fetchMonthly,
+    ]).then(([curr, prev, ins, outs, monthly]) => {
       if (!cancelled) {
         setCurrData(curr);
         setPrevData(prev);
         setMoveIns(ins);
         setMoveOuts(outs);
+        setMonthlyData(monthly);
         setLoading(false);
       }
     });
     return () => { cancelled = true; };
-  }, [from, to, prevFrom, prevTo, fetchPeriod]);
+  }, [from, to, prevFrom, prevTo, fetchPeriod, ytdMode, selYear]);
 
   // Core values
   const netIncome   = currData?.totalNetIncomeCents ?? 0;
@@ -674,11 +798,14 @@ export default function OwnerReportingPage() {
     ? activeBuildings
     : activeBuildings.slice(0, PREVIEW);
 
-  const heroMessage = loading
-    ? t("reporting.text.loadingReport")
-    : netIncome > 0
-      ? (activeBuildings.every((b) => b.netIncomeCents >= 0) ? t("reporting.text.strongMonth") : t("reporting.text.mixedMonth"))
-      : t("reporting.text.portfolioSummary");
+  const prevAppraisalScore = (currData && prevData)
+    ? computeAppraisalScore(prevCollRate, prevNoi, prevOccupancyRate, null)
+    : null;
+
+  const appraisal = useMemo(() => {
+    if (loading || !currData) return { headline: t("reporting.text.loadingReport"), reason: null };
+    return deriveAppraisal({ collRate, noi, occupancyRate, arrears, activeBuildings, prevScore: prevAppraisalScore, prevNoi, t, ytdMode });
+  }, [loading, currData, collRate, noi, occupancyRate, arrears, activeBuildings, prevAppraisalScore, prevNoi, t, ytdMode]);
 
   return (
     <AppShell role="OWNER">
@@ -703,13 +830,18 @@ export default function OwnerReportingPage() {
         )}>
           <div className="max-w-2xl">
               <Badge variant="default" size="lg" className="mb-3 bg-transparent border-black/20 dark:border-white/20 text-foreground/70">
-                {periodLabel} · {t("reporting.text.monthlyReport")}
+                {periodLabel} · {ytdMode ? t("reporting.text.yearToDateReport") : t("reporting.text.monthlyReport")}
               </Badge>
               <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-                {heroMessage}
+                {appraisal.headline}
               </h1>
+              {!loading && appraisal.reason && (
+                <p className="mt-2 text-sm font-medium text-muted-dark">
+                  {appraisal.reason}
+                </p>
+              )}
               {!loading && currData && (
-                <p className="mt-3 text-sm leading-6 text-muted-text sm:text-base">
+                <p className="mt-2 text-sm leading-6 text-muted-text sm:text-base">
                   {earned > 0
                     ? <>{t("reporting.text.rentCollected")} <span className="font-semibold text-foreground">{fmtChf(earned)}</span>. </>
                     : ""}
@@ -759,6 +891,30 @@ export default function OwnerReportingPage() {
             isLoading={loading}
           />
         </section>
+
+        {/* ── MONTHLY NOI TRENDLINES (YTD only) ───────────────── */}
+        {ytdMode && !loading && monthlyData && monthlyData.length > 0 && (
+          <section className="mb-6">
+            <div className="rounded-3xl border border-surface-border bg-surface p-5">
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <h2 className="text-base font-semibold text-foreground">{t("reporting.heading.monthlyNoi")}</h2>
+                  <p className="text-xs text-foreground-dim mt-0.5">{t("reporting.text.noiPerMonth", { year: selYear })}</p>
+                </div>
+                <div className="text-right">
+                  <div className="text-xs text-foreground-dim">{t("reporting.text.bestMonth")}</div>
+                  <div className="text-sm font-semibold text-green-700">
+                    {(() => {
+                      const best = [...monthlyData].sort((a, b) => b.noiCents - a.noiCents)[0];
+                      return best ? fmtChf(best.noiCents) : "—";
+                    })()}
+                  </div>
+                </div>
+              </div>
+              <MonthlyTrendChart data={monthlyData} locale={locale} />
+            </div>
+          </section>
+        )}
 
         {/* ── ALERTS (receivables + arrears aging) ─────────────── */}
         {!loading && receivables > 0 && (
@@ -828,7 +984,7 @@ export default function OwnerReportingPage() {
                     <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-100 dark:bg-green-900 text-xs font-bold text-green-700 dark:text-green-400">↑</div>
                     <h2 className="text-sm font-semibold text-green-900 dark:text-green-200">{t("reporting.heading.whatDrovePerformance")}</h2>
                   </div>
-                  <p className="text-xs text-green-700/70 dark:text-green-400/70 ml-[34px]">{t("reporting.text.theMainForcesBehindThisMonthsNumbers")}</p>
+                  <p className="text-xs text-green-700/70 dark:text-green-400/70 ml-[34px]">{ytdMode ? t("reporting.text.theMainForcesBehindThisYearsNumbers") : t("reporting.text.theMainForcesBehindThisMonthsNumbers")}</p>
                 </div>
                 <div className="px-7 py-5 flex-1">
                   {loading ? (

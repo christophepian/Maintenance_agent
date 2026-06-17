@@ -7,6 +7,7 @@ import { requireRole, requireAuth, getAuthUser } from "../authz";
 import {
   getBuildingFinancials,
   getPortfolioSummary,
+  getPortfolioMonthlyBreakdown,
   setInvoiceExpenseCategory,
   listBuildingSnapshots,
   computeAnnualSnapshots,
@@ -217,6 +218,32 @@ export function registerFinancialRoutes(router: Router) {
         }
         console.error("[POST /buildings/:id/financial-snapshots/refresh]", e);
         sendError(res, 500, "INTERNAL_ERROR", "Failed to refresh snapshots");
+      }
+    },
+  );
+
+  // ── GET /financials/portfolio-monthly ──────────────────────
+  router.get(
+    "/financials/portfolio-monthly",
+    async ({ req, res, query, orgId }) => {
+      if (!requireAuth(req, res)) return;
+      if (!requireOrgViewer(req, res)) return;
+
+      const yearRaw = first(query, "year");
+      const year = yearRaw ? parseInt(yearRaw, 10) : new Date().getFullYear();
+
+      if (isNaN(year) || year < 2000 || year > 2100) {
+        return sendError(res, 400, "VALIDATION_ERROR", "Invalid year parameter");
+      }
+
+      try {
+        const user = getAuthUser(req);
+        const ownerId = (user?.role === "OWNER" || user?.ownerId) ? (user.ownerId || user.userId) : undefined;
+        const data = await getPortfolioMonthlyBreakdown(orgId, year, ownerId);
+        sendJson(res, 200, { data });
+      } catch (e: any) {
+        console.error("[GET /financials/portfolio-monthly]", e);
+        sendError(res, 500, "INTERNAL_ERROR", "Failed to load monthly breakdown");
       }
     },
   );

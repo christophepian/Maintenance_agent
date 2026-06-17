@@ -429,6 +429,14 @@ export interface BuildingSummaryDTO {
   payablesCents: number;
 }
 
+export interface MonthlyBreakdownDTO {
+  month: number; // 1–12
+  earnedIncomeCents: number;
+  expensesTotalCents: number;
+  noiCents: number;
+  collectionRate: number;
+}
+
 export interface PortfolioSummaryDTO {
   from: string;
   to: string;
@@ -532,6 +540,43 @@ export async function getPortfolioSummary(
     arrears,
     buildings: summaries,
   };
+}
+
+// ==========================================
+// Monthly breakdown for YTD trendlines
+// ==========================================
+
+export async function getPortfolioMonthlyBreakdown(
+  orgId: string,
+  year: number,
+  ownerId?: string,
+): Promise<MonthlyBreakdownDTO[]> {
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const lastMonth = year < currentYear ? 12 : now.getMonth() + 1;
+
+  const results: MonthlyBreakdownDTO[] = [];
+
+  for (let m = 1; m <= lastMonth; m++) {
+    const from = `${year}-${String(m).padStart(2, "0")}-01`;
+    const lastDay = new Date(year, m, 0).getDate();
+    const to   = `${year}-${String(m).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+
+    try {
+      const summary = await getPortfolioSummary(orgId, { from, to }, ownerId);
+      results.push({
+        month: m,
+        earnedIncomeCents: summary.totalEarnedIncomeCents,
+        expensesTotalCents: summary.totalExpensesCents,
+        noiCents: summary.totalNetOperatingIncomeCents,
+        collectionRate: summary.avgCollectionRate,
+      });
+    } catch {
+      results.push({ month: m, earnedIncomeCents: 0, expensesTotalCents: 0, noiCents: 0, collectionRate: 0 });
+    }
+  }
+
+  return results;
 }
 
 // ==========================================

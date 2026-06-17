@@ -483,6 +483,7 @@
     "heading": {
       "whatDrovePerformance": "What drove performance",
       "whatToWatch": "What to watch",
+      "monthlyNoi": "Monthly NOI",
       "byProperty": "By property",
       "tenantMovements": "Tenant movements",
       "periodInsights": "Period insights",
@@ -536,6 +537,10 @@
       "moveOuts": "Move-outs",
       "financeDetail": "Drill into ledger entries, trial balance, and per-building financials in the Finance section.",
       "monthlyReport": "Monthly Owner Report",
+      "yearToDateReport": "Year-to-Date Summary",
+      "theMainForcesBehindThisYearsNumbers": "The main forces behind this year's performance.",
+      "noiPerMonth": "Net operating income per month, {{year}}",
+      "bestMonth": "Best month",
       "flagsAndActionItems": "Flags and action items for this period",
       "unpaidInvoicesByDaysOverdue": "Unpaid outgoing invoices by days overdue",
       "rentInvoicesNotReconciled": "{{amount}} in rent invoices not yet reconciled",
@@ -570,6 +575,44 @@
       "viewUnpaidInvoices": "View unpaid invoices",
       "viewFinanceOverview": "View finance overview",
       "viewExpenses": "View expenses"
+    },
+    "appraisalYtd": {
+      "ahead": "Ahead of last year.",
+      "onpar": "On par with last year.",
+      "behind": "Behind last year's pace.",
+      "reason": {
+        "noiAhead": "NOI is up {{pct}}% vs the same period last year.",
+        "noiBehind": "NOI is down {{pct}}% vs the same period last year.",
+        "noiOnPar": "NOI and collection ({{rate}}) are in line with last year."
+      }
+    },
+    "appraisal": {
+      "strong": {
+        "improving": "Your portfolio is on a roll.",
+        "stable": "A strong month.",
+        "declining": "A strong month — but watch the trend."
+      },
+      "mixed": {
+        "improving": "A mixed period, trending in the right direction.",
+        "stable": "A mixed month.",
+        "declining": "A mixed month — some metrics are slipping."
+      },
+      "challenging": {
+        "improving": "A difficult period, but improving.",
+        "stable": "A challenging month — action needed.",
+        "declining": "A difficult month — immediate attention required."
+      },
+      "reason": {
+        "strongCollectionAllGreen": "Collection came in at {{rate}} — all properties in the black.",
+        "strongCollectionSomeRed_one": "Collection came in at {{rate}} — {{count}} property posted a loss.",
+        "strongCollectionSomeRed_other": "Collection came in at {{rate}} — {{count}} properties posted losses.",
+        "mixedCollection": "Collection at {{rate}} — some invoices remain outstanding.",
+        "buildingsInRed_one": "{{count}} property posted a net loss this period.",
+        "buildingsInRed_other": "{{count}} properties posted a net loss this period.",
+        "hardArrears": "{{amount}} in rent arrears is more than 60 days overdue.",
+        "lowCollection": "Collection fell to {{rate}} this period.",
+        "negativeNoi": "The portfolio posted a net loss of {{amount}}."
+      }
     },
     "cta": {
       "financeOverview": "Finance overview",
