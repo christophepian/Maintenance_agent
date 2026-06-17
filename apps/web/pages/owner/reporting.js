@@ -255,7 +255,7 @@ function DriverItem({ number, title, body, impact }) {
   );
 }
 
-function WatchItem({ number, text, severity }) {
+function WatchItem({ number, text, severity, action }) {
   const colors = {
     red:    { bg: "bg-red-100",    text: "text-red-700" },
     amber:  { bg: "bg-amber-100",  text: "text-amber-700" },
@@ -267,7 +267,17 @@ function WatchItem({ number, text, severity }) {
       <div className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold", bg, tc)}>
         {number}
       </div>
-      <p className="flex-1 min-w-0 text-sm leading-relaxed text-muted-dark self-center">{text}</p>
+      <div className="flex-1 min-w-0 self-center">
+        <p className="text-sm leading-relaxed text-muted-dark">{text}</p>
+        {action && (
+          <a
+            href={action.href}
+            className="mt-1.5 inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-800 transition-colors no-underline"
+          >
+            {action.label} →
+          </a>
+        )}
+      </div>
     </div>
   );
 }
@@ -392,7 +402,7 @@ function buildDrivers(curr, prev, t) {
   return drivers;
 }
 
-function buildWatchItems(curr, prev, moveIns, moveOuts, { arrears, occupancyRate, allUnits, totalUnits, incomeVariance, projected } = {}) {
+function buildWatchItems(curr, prev, moveIns, moveOuts, { arrears, occupancyRate, allUnits, totalUnits, incomeVariance, projected, receivables, activeBuildings } = {}) {
   const items = [];
 
   // Arrears 61+ days — highest severity
@@ -400,6 +410,7 @@ function buildWatchItems(curr, prev, moveIns, moveOuts, { arrears, occupancyRate
     items.push({
       text: `${fmtChf(arrears.overdue61plusCents)} in rent is over 60 days overdue — consider initiating a formal debt collection notice.`,
       severity: "red",
+      action: { label: "View overdue invoices", href: "/manager/finance/invoices" },
     });
   }
 
@@ -408,6 +419,7 @@ function buildWatchItems(curr, prev, moveIns, moveOuts, { arrears, occupancyRate
     items.push({
       text: `${fmtChf(arrears.overdue31to60Cents)} in rent is 31–60 days overdue. Send a formal payment reminder to the tenants concerned.`,
       severity: "amber",
+      action: { label: "View overdue invoices", href: "/manager/finance/invoices" },
     });
   }
 
@@ -415,8 +427,9 @@ function buildWatchItems(curr, prev, moveIns, moveOuts, { arrears, occupancyRate
   if (curr?.avgCollectionRate < 0.95 && curr?.avgCollectionRate > 0) {
     const shortfall = 0.95 - curr.avgCollectionRate;
     items.push({
-      text: `Collection rate is ${fmtPct(curr.avgCollectionRate)}, ${fmtPct(shortfall)} below the 95% target. Some invoices for this period remain unpaid.`,
+      text: `Collection rate is ${fmtPct(curr.avgCollectionRate)}, ${fmtPct(shortfall)} below the 95% target.`,
       severity: "amber",
+      action: { label: "View unpaid invoices", href: "/manager/finance/invoices" },
     });
   }
 
@@ -429,19 +442,35 @@ function buildWatchItems(curr, prev, moveIns, moveOuts, { arrears, occupancyRate
     });
   }
 
-  // Income below projection
+  // Income below projection — precise cause derived from receivables vs gap
   if (incomeVariance !== null && projected > 0 && incomeVariance < -(projected * 0.05)) {
+    const gap = Math.abs(incomeVariance);
+    const awaitingPayment = Math.min(receivables ?? 0, gap);
+    const uninvoiced = gap - awaitingPayment;
+    let text;
+    if (uninvoiced <= 0) {
+      text = `${fmtChf(gap)} in rent invoices for this period are awaiting payment — all expected income has been invoiced but not yet marked paid.`;
+    } else if (awaitingPayment > 0) {
+      text = `${fmtChf(awaitingPayment)} awaiting payment; ${fmtChf(uninvoiced)} in expected rent was not invoiced this period (likely a mid-month move-in).`;
+    } else {
+      text = `${fmtChf(gap)} in expected rent was not invoiced this period.`;
+    }
     items.push({
-      text: `Rent collected was ${fmtChf(Math.abs(incomeVariance))} below what active lease terms project — likely from invoices not yet marked paid or a partial-month move-in.`,
+      text,
       severity: "amber",
+      action: { label: "View unpaid invoices", href: "/manager/finance/invoices" },
     });
   }
 
-  // Buildings in red
-  if (curr?.buildingsInRed > 0) {
+  // Buildings in red — computed from the visible activeBuildings array so count always matches the table
+  const buildingsInRedList = (activeBuildings ?? []).filter((b) => b.netIncomeCents < 0);
+  if (buildingsInRedList.length > 0) {
+    const names = buildingsInRedList.map((b) => b.buildingName).join(", ");
+    const verb = buildingsInRedList.length === 1 ? "is" : "are";
     items.push({
-      text: `${curr.buildingsInRed} ${curr.buildingsInRed === 1 ? "property is" : "properties are"} running at a net loss this period.`,
+      text: `${names} ${verb} running at a net loss this period.`,
       severity: "red",
+      action: { label: "View finance overview", href: "/manager/finance" },
     });
   }
 
@@ -454,6 +483,7 @@ function buildWatchItems(curr, prev, moveIns, moveOuts, { arrears, occupancyRate
     items.push({
       text: `${fmtChf(curr.totalPayablesCents)} in contractor invoices remain unpaid — more than half of this period's expense spend.`,
       severity: "amber",
+      action: { label: "View unpaid invoices", href: "/manager/finance/invoices" },
     });
   }
 
@@ -466,6 +496,7 @@ function buildWatchItems(curr, prev, moveIns, moveOuts, { arrears, occupancyRate
       items.push({
         text: `Operating costs are ${fmtPct(ratio - 1)} higher than last period — review the expense breakdown to identify the driver.`,
         severity: "amber",
+        action: { label: "View expenses", href: "/manager/finance/expenses" },
       });
     }
   }
@@ -614,8 +645,9 @@ export default function OwnerReportingPage() {
   const watchItems = useMemo(
     () => buildWatchItems(currData, prevData, moveIns, moveOuts, {
       arrears, occupancyRate, allUnits, totalUnits, incomeVariance, projected,
+      receivables, activeBuildings,
     }),
-    [currData, prevData, moveIns, moveOuts, arrears, occupancyRate, allUnits, totalUnits, incomeVariance, projected]
+    [currData, prevData, moveIns, moveOuts, arrears, occupancyRate, allUnits, totalUnits, incomeVariance, projected, receivables, activeBuildings]
   );
 
   // By-property list — sorted by net income desc, auto-collapsed when > 3
@@ -854,7 +886,7 @@ export default function OwnerReportingPage() {
                   ) : watchItems.length > 0 ? (
                     <div>
                       {watchItems.map((item, i) => (
-                        <WatchItem key={i} number={i + 1} text={item.text} severity={item.severity} />
+                        <WatchItem key={i} number={i + 1} text={item.text} severity={item.severity} action={item.action} />
                       ))}
                     </div>
                   ) : (
