@@ -482,10 +482,12 @@
   "reporting": {
     "heading": {
       "whatDrovePerformance": "Ce qui a influencé la performance",
+      "whatToWatch": "Points de vigilance",
       "byProperty": "Par bien",
       "tenantMovements": "Mouvements de locataires",
       "periodInsights": "Analyses de la période",
-      "fullFinancialDetail": "Détail financier complet"
+      "fullFinancialDetail": "Détail financier complet",
+      "rentArrearsAging": "Ancienneté des loyers impayés"
     },
     "ariaLabel": {
       "previousYear": "Année précédente",
@@ -493,9 +495,14 @@
     },
     "prop": {
       "netIncome": "Revenu net",
+      "netOperatingIncome": "Revenu opérationnel net",
       "rentCollected": "Loyer encaissé",
       "totalExpenses": "Total des dépenses",
-      "collectionRate": "Taux de recouvrement"
+      "collectionRate": "Taux de recouvrement",
+      "noiMargin": "Marge NOI",
+      "opexRatio": "Ratio charges d'exploitation",
+      "occupancy": "Taux d'occupation",
+      "rentOutstanding": "Loyers en attente"
     },
     "text": {
       "income": "Revenus",
@@ -529,7 +536,40 @@
       "moveOuts": "Sorties",
       "financeDetail": "Consultez les écritures du grand livre, la balance de vérification et les données financières par immeuble dans la section Finance.",
       "monthlyReport": "Rapport mensuel propriétaire",
-      "vsPrevMonth": "{{delta}}% vs mois préc."
+      "flagsAndActionItems": "Alertes et actions pour cette période",
+      "unpaidInvoicesByDaysOverdue": "Factures sortantes impayées par ancienneté",
+      "rentInvoicesNotReconciled": "{{amount}} de factures de loyer non réconciliées",
+      "rentInvoicesMarkPaidInstruction": "Des factures de loyer ont été envoyées aux locataires mais aucun paiement n'a été enregistré. Une fois le loyer reçu sur votre compte, ouvrez la facture dans Finance → Sortant et cliquez sur Marquer comme payé.",
+      "goToInvoices": "Voir les factures →",
+      "noFlags": "Aucune alerte cette période — recouvrement en ordre, occupation saine, aucune facture en retard.",
+      "collapseProps": "Réduire ↑",
+      "showAllProps": "Afficher les {{count}} biens ↓",
+      "arrearsCurrentLabel": "En cours",
+      "arrears1to30Label": "1–30 jours",
+      "arrears31to60Label": "31–60 jours",
+      "arrears61plusLabel": "61+ jours",
+      "overdueLabel": "en retard"
+    },
+    "watch": {
+      "arrears61plus": "{{amount}} de loyers sont en retard de plus de 60 jours — envisagez d'entamer une procédure de recouvrement formelle.",
+      "arrears31to60": "{{amount}} de loyers sont en retard de 31 à 60 jours. Envoyez une relance formelle aux locataires concernés.",
+      "collectionRate": "Le taux de recouvrement est de {{rate}}, soit {{shortfall}} en dessous de l'objectif de 95 %.",
+      "vacancy": "{{vacantCount}} logements sur {{allUnits}} sont actuellement vacants ({{rate}} d'occupation). Chaque logement vide représente un manque à gagner.",
+      "awaitingPayment": "{{amount}} de factures de loyer pour cette période sont en attente de paiement — tous les revenus attendus ont été facturés mais pas encore marqués comme payés.",
+      "awaitingAndUninvoiced": "{{awaitingPayment}} en attente de paiement ; {{uninvoiced}} de loyers attendus n'ont pas été facturés cette période (probablement une entrée en cours de mois).",
+      "notInvoiced": "{{amount}} de loyers attendus n'ont pas été facturés cette période.",
+      "buildingsInRedSingle": "{{names}} est en perte nette cette période.",
+      "buildingsInRedMultiple": "{{names}} sont en perte nette cette période.",
+      "payablesConcentration": "{{amount}} de factures prestataires restent impayées — plus de la moitié des dépenses de la période.",
+      "expenseSpike": "Les charges d'exploitation sont {{pct}} plus élevées que la période précédente — vérifiez le détail des dépenses.",
+      "tenantChurn_one": "{{count}} mouvement de locataire cette période — vérifiez les éventuelles périodes de vacance entre une sortie et la prochaine prise de bail.",
+      "tenantChurn_other": "{{count}} mouvements de locataires cette période — vérifiez les éventuelles périodes de vacance entre une sortie et la prochaine prise de bail."
+    },
+    "action": {
+      "viewOverdueInvoices": "Voir les factures en retard",
+      "viewUnpaidInvoices": "Voir les factures impayées",
+      "viewFinanceOverview": "Voir les finances",
+      "viewExpenses": "Voir les dépenses"
     },
     "cta": {
       "financeOverview": "Aperçu finances",

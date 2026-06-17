@@ -61,15 +61,11 @@ function fmtPct(rate) {
   return `${Math.round(rate * 100)}%`;
 }
 
-function delta(curr, prev, t) {
-  if (!Number.isFinite(curr) || !Number.isFinite(prev) || prev === 0) return null;
-  const pct = ((curr - prev) / Math.abs(prev)) * 100;
-  const sign = pct >= 0 ? "+" : "";
-  const tone = pct >= 0 ? "text-green-600" : "text-red-500";
-  const label = t
-    ? t("reporting.text.vsPrevMonth", { delta: `${sign}${pct.toFixed(1)}` })
-    : `${sign}${pct.toFixed(1)}% vs prev month`;
-  return { label, tone };
+function delta(curr, prev) {
+  if (!Number.isFinite(curr) || !Number.isFinite(prev)) return null;
+  if (curr === 0 && prev === 0) return null;
+  const tone = curr > prev ? "text-green-600" : curr < prev ? "text-red-500" : "text-foreground-dim";
+  return { tone };
 }
 
 /* ─── Shared expand toggle ───────────────────────────────────── */
@@ -421,110 +417,95 @@ function buildDrivers(curr, prev, t) {
   return drivers;
 }
 
-function buildWatchItems(curr, prev, moveIns, moveOuts, { arrears, occupancyRate, allUnits, totalUnits, incomeVariance, projected, receivables, activeBuildings } = {}) {
+function buildWatchItems(curr, prev, moveIns, moveOuts, { arrears, occupancyRate, allUnits, totalUnits, incomeVariance, projected, receivables, activeBuildings } = {}, t) {
   const items = [];
 
-  // Arrears 61+ days — highest severity
   if (arrears?.overdue61plusCents > 0) {
     items.push({
-      text: `${fmtChf(arrears.overdue61plusCents)} in rent is over 60 days overdue — consider initiating a formal debt collection notice.`,
+      text: t("reporting.watch.arrears61plus", { amount: fmtChf(arrears.overdue61plusCents) }),
       severity: "red",
-      action: { label: "View overdue invoices", href: "/manager/finance/invoices" },
+      action: { label: t("reporting.action.viewOverdueInvoices"), href: "/manager/finance/invoices" },
     });
   }
 
-  // Arrears 31–60 days
   if (arrears?.overdue31to60Cents > 0) {
     items.push({
-      text: `${fmtChf(arrears.overdue31to60Cents)} in rent is 31–60 days overdue. Send a formal payment reminder to the tenants concerned.`,
+      text: t("reporting.watch.arrears31to60", { amount: fmtChf(arrears.overdue31to60Cents) }),
       severity: "amber",
-      action: { label: "View overdue invoices", href: "/manager/finance/invoices" },
+      action: { label: t("reporting.action.viewOverdueInvoices"), href: "/manager/finance/invoices" },
     });
   }
 
-  // Collection rate below threshold
   if (curr?.avgCollectionRate < 0.95 && curr?.avgCollectionRate > 0) {
     const shortfall = 0.95 - curr.avgCollectionRate;
     items.push({
-      text: `Collection rate is ${fmtPct(curr.avgCollectionRate)}, ${fmtPct(shortfall)} below the 95% target.`,
+      text: t("reporting.watch.collectionRate", { rate: fmtPct(curr.avgCollectionRate), shortfall: fmtPct(shortfall) }),
       severity: "amber",
-      action: { label: "View unpaid invoices", href: "/manager/finance/invoices" },
+      action: { label: t("reporting.action.viewUnpaidInvoices"), href: "/manager/finance/invoices" },
     });
   }
 
-  // Vacancy
   if (occupancyRate !== null && occupancyRate < 0.9 && allUnits > 0) {
     const vacantCount = allUnits - totalUnits;
     items.push({
-      text: `${vacantCount} of ${allUnits} units are currently vacant (${fmtPct(occupancyRate)} occupancy). Each empty unit represents forgone rental income.`,
+      text: t("reporting.watch.vacancy", { vacantCount, allUnits, rate: fmtPct(occupancyRate) }),
       severity: "amber",
     });
   }
 
-  // Income below projection — precise cause derived from receivables vs gap
   if (incomeVariance !== null && projected > 0 && incomeVariance < -(projected * 0.05)) {
     const gap = Math.abs(incomeVariance);
     const awaitingPayment = Math.min(receivables ?? 0, gap);
     const uninvoiced = gap - awaitingPayment;
     let text;
     if (uninvoiced <= 0) {
-      text = `${fmtChf(gap)} in rent invoices for this period are awaiting payment — all expected income has been invoiced but not yet marked paid.`;
+      text = t("reporting.watch.awaitingPayment", { amount: fmtChf(gap) });
     } else if (awaitingPayment > 0) {
-      text = `${fmtChf(awaitingPayment)} awaiting payment; ${fmtChf(uninvoiced)} in expected rent was not invoiced this period (likely a mid-month move-in).`;
+      text = t("reporting.watch.awaitingAndUninvoiced", { awaitingPayment: fmtChf(awaitingPayment), uninvoiced: fmtChf(uninvoiced) });
     } else {
-      text = `${fmtChf(gap)} in expected rent was not invoiced this period.`;
+      text = t("reporting.watch.notInvoiced", { amount: fmtChf(gap) });
     }
     items.push({
       text,
       severity: "amber",
-      action: { label: "View unpaid invoices", href: "/manager/finance/invoices" },
+      action: { label: t("reporting.action.viewUnpaidInvoices"), href: "/manager/finance/invoices" },
     });
   }
 
-  // Buildings in red — computed from the visible activeBuildings array so count always matches the table
   const buildingsInRedList = (activeBuildings ?? []).filter((b) => b.netIncomeCents < 0);
   if (buildingsInRedList.length > 0) {
     const names = buildingsInRedList.map((b) => b.buildingName).join(", ");
-    const verb = buildingsInRedList.length === 1 ? "is" : "are";
+    const key = buildingsInRedList.length === 1 ? "reporting.watch.buildingsInRedSingle" : "reporting.watch.buildingsInRedMultiple";
     items.push({
-      text: `${names} ${verb} running at a net loss this period.`,
+      text: t(key, { names }),
       severity: "red",
-      action: { label: "View finance overview", href: "/manager/finance" },
+      action: { label: t("reporting.action.viewFinanceOverview"), href: "/manager/finance" },
     });
   }
 
-  // Payables concentration
-  if (
-    curr?.totalPayablesCents > 0 &&
-    curr?.totalExpensesCents > 0 &&
-    curr.totalPayablesCents / curr.totalExpensesCents > 0.5
-  ) {
+  if (curr?.totalPayablesCents > 0 && curr?.totalExpensesCents > 0 && curr.totalPayablesCents / curr.totalExpensesCents > 0.5) {
     items.push({
-      text: `${fmtChf(curr.totalPayablesCents)} in contractor invoices remain unpaid — more than half of this period's expense spend.`,
+      text: t("reporting.watch.payablesConcentration", { amount: fmtChf(curr.totalPayablesCents) }),
       severity: "amber",
-      action: { label: "View unpaid invoices", href: "/manager/finance/invoices" },
+      action: { label: t("reporting.action.viewUnpaidInvoices"), href: "/manager/finance/invoices" },
     });
   }
 
-  // Expense spike vs prior period
   if (prev && curr?.totalExpensesCents > 0) {
-    const ratio = prev.totalExpensesCents > 0
-      ? curr.totalExpensesCents / prev.totalExpensesCents
-      : null;
+    const ratio = prev.totalExpensesCents > 0 ? curr.totalExpensesCents / prev.totalExpensesCents : null;
     if (ratio !== null && ratio > 1.3) {
       items.push({
-        text: `Operating costs are ${fmtPct(ratio - 1)} higher than last period — review the expense breakdown to identify the driver.`,
+        text: t("reporting.watch.expenseSpike", { pct: fmtPct(ratio - 1) }),
         severity: "amber",
-        action: { label: "View expenses", href: "/manager/finance/expenses" },
+        action: { label: t("reporting.action.viewExpenses"), href: "/manager/finance/expenses" },
       });
     }
   }
 
-  // Tenant churn
   const totalChurn = (moveIns?.length ?? 0) + (moveOuts?.length ?? 0);
   if (totalChurn > 0) {
     items.push({
-      text: `${totalChurn} tenant ${totalChurn === 1 ? "movement" : "movements"} this period — check for any gap between a move-out and the next lease start to minimise vacancy loss.`,
+      text: t("reporting.watch.tenantChurn", { count: totalChurn }),
       severity: "violet",
     });
   }
@@ -658,15 +639,15 @@ export default function OwnerReportingPage() {
   const prevNoiMargin     = prevEarnedForRatio > 0 ? (prevData?.totalNetOperatingIncomeCents ?? 0) / prevEarnedForRatio : null;
 
   // Deltas vs prior period
-  const noiDelta        = (currData && prevData) ? delta(noi, prevNoi, t) : null;
-  const expDelta        = (currData && prevData) ? delta(expenses, prevExpenses, t) : null;
-  const earnedDelta     = (currData && prevData) ? delta(earned, prevEarned, t) : null;
-  const collDelta       = (currData && prevData) ? delta(collRate, prevCollRate, t) : null;
-  const netDelta        = (currData && prevData) ? delta(netIncome, prevNet, t) : null;
-  const occupancyDelta  = (currData && prevData && occupancyRate !== null && prevOccupancyRate !== null) ? delta(occupancyRate, prevOccupancyRate, t) : null;
-  // OpEx ratio: lower is better — invert sign so ↑ means cost went up (bad)
-  const opexDelta       = (currData && prevData && opexRatio !== null && prevOpexRatio !== null) ? delta(prevOpexRatio, opexRatio, t) : null;
-  const noiMarginDelta  = (currData && prevData && noiMargin !== null && prevNoiMargin !== null) ? delta(noiMargin, prevNoiMargin, t) : null;
+  const noiDelta        = (currData && prevData) ? delta(noi, prevNoi) : null;
+  const expDelta        = (currData && prevData) ? delta(expenses, prevExpenses) : null;
+  const earnedDelta     = (currData && prevData) ? delta(earned, prevEarned) : null;
+  const collDelta       = (currData && prevData) ? delta(collRate, prevCollRate) : null;
+  const netDelta        = (currData && prevData) ? delta(netIncome, prevNet) : null;
+  const occupancyDelta  = (currData && prevData && occupancyRate !== null && prevOccupancyRate !== null) ? delta(occupancyRate, prevOccupancyRate) : null;
+  // OpEx ratio: lower is better — invert args so ↑ (green) means cost went up (bad direction shown correctly)
+  const opexDelta       = (currData && prevData && opexRatio !== null && prevOpexRatio !== null) ? delta(prevOpexRatio, opexRatio) : null;
+  const noiMarginDelta  = (currData && prevData && noiMargin !== null && prevNoiMargin !== null) ? delta(noiMargin, prevNoiMargin) : null;
 
   const drivers = useMemo(
     () => buildDrivers(currData, prevData, t),
@@ -683,8 +664,8 @@ export default function OwnerReportingPage() {
     () => buildWatchItems(currData, prevData, moveIns, moveOuts, {
       arrears, occupancyRate, allUnits, totalUnits, incomeVariance, projected,
       receivables, activeBuildings,
-    }),
-    [currData, prevData, moveIns, moveOuts, arrears, occupancyRate, allUnits, totalUnits, incomeVariance, projected, receivables, activeBuildings]
+    }, t),
+    [currData, prevData, moveIns, moveOuts, arrears, occupancyRate, allUnits, totalUnits, incomeVariance, projected, receivables, activeBuildings, t]
   );
 
   // Auto-expand when ≤ 3 buildings
@@ -745,34 +726,34 @@ export default function OwnerReportingPage() {
 
         {/* ── KPI ROW 1 ────────────────────────────────────────── */}
         <section className="grid grid-cols-2 lg:grid-cols-4 mb-2 gap-4">
-          <KpiCard label="Net Operating Income"                value={fmtChf(noi)}      delta={noiDelta}    isLoading={loading} />
-          <KpiCard label={t("reporting.prop.rentCollected")}  value={fmtChf(earned)}   delta={earnedDelta} isLoading={loading} />
-          <KpiCard label={t("reporting.prop.totalExpenses")}  value={fmtChf(expenses)} delta={expDelta}    isLoading={loading} />
-          <KpiCard label={t("reporting.prop.collectionRate")} value={fmtPct(collRate)} delta={collDelta}   isLoading={loading} />
+          <KpiCard label={t("reporting.prop.netOperatingIncome")} value={fmtChf(noi)}      delta={noiDelta}    isLoading={loading} />
+          <KpiCard label={t("reporting.prop.rentCollected")}    value={fmtChf(earned)}   delta={earnedDelta} isLoading={loading} />
+          <KpiCard label={t("reporting.prop.totalExpenses")}    value={fmtChf(expenses)} delta={expDelta}    isLoading={loading} />
+          <KpiCard label={t("reporting.prop.collectionRate")}   value={fmtPct(collRate)} delta={collDelta}   isLoading={loading} />
         </section>
 
         {/* ── KPI ROW 2 ────────────────────────────────────────── */}
         <section className="grid grid-cols-2 lg:grid-cols-4 mb-6 gap-4">
           <KpiCard
-            label="NOI margin"
+            label={t("reporting.prop.noiMargin")}
             value={!loading && noiMargin !== null ? fmtPct(noiMargin) : "—"}
             delta={noiMarginDelta}
             isLoading={loading}
           />
           <KpiCard
-            label="OpEx ratio"
+            label={t("reporting.prop.opexRatio")}
             value={!loading && opexRatio !== null ? fmtPct(opexRatio) : "—"}
             delta={opexDelta}
             isLoading={loading}
           />
           <KpiCard
-            label="Occupancy"
+            label={t("reporting.prop.occupancy")}
             value={!loading && occupancyRate !== null ? fmtPct(occupancyRate) : "—"}
             delta={occupancyDelta}
             isLoading={loading}
           />
           <KpiCard
-            label="Rent outstanding"
+            label={t("reporting.prop.rentOutstanding")}
             value={!loading ? (receivables > 0 ? fmtChf(receivables) : "—") : "—"}
             delta={null}
             isLoading={loading}
@@ -786,18 +767,17 @@ export default function OwnerReportingPage() {
               <span className="mt-0.5 text-amber-500 text-lg shrink-0">⚠</span>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-amber-800 dark:text-amber-300 mb-0.5">
-                  {fmtChf(receivables)} in rent invoices not yet reconciled
+                  {t("reporting.text.rentInvoicesNotReconciled", { amount: fmtChf(receivables) })}
                 </p>
                 <p className="text-xs text-amber-700 dark:text-amber-400">
-                  Rent invoices have been sent to tenants but no payment has been recorded.
-                  Once the rent arrives in your bank, open the invoice in Finance → Outgoing and click <strong>Mark Paid</strong>.
+                  {t("reporting.text.rentInvoicesMarkPaidInstruction")}
                 </p>
               </div>
               <a
                 href="/manager/finance/invoices"
                 className="shrink-0 rounded-lg bg-amber-600 hover:bg-amber-700 px-3 py-1.5 text-xs font-semibold text-white transition-colors no-underline"
               >
-                Go to invoices →
+                {t("reporting.text.goToInvoices")}
               </a>
             </div>
           </section>
@@ -808,24 +788,24 @@ export default function OwnerReportingPage() {
             <div className="rounded-2xl border border-surface-border bg-surface p-5">
               <div className="mb-4 flex items-center justify-between">
                 <div>
-                  <h2 className="text-base font-semibold text-foreground">Rent arrears aging</h2>
-                  <p className="text-xs text-foreground-dim mt-0.5">Unpaid outgoing invoices by days overdue</p>
+                  <h2 className="text-base font-semibold text-foreground">{t("reporting.heading.rentArrearsAging")}</h2>
+                  <p className="text-xs text-foreground-dim mt-0.5">{t("reporting.text.unpaidInvoicesByDaysOverdue")}</p>
                 </div>
                 {arrears.totalOverdueCents > 0 && (
                   <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700">
-                    {fmtChf(arrears.totalOverdueCents)} overdue
+                    {fmtChf(arrears.totalOverdueCents)} {t("reporting.text.overdueLabel")}
                   </span>
                 )}
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {[
-                  { label: "Current",    cents: arrears.currentCents,        color: "text-green-700",  bg: "bg-green-50 border-green-200" },
-                  { label: "1–30 days",  cents: arrears.overdue1to30Cents,   color: "text-amber-700",  bg: "bg-amber-50 border-amber-200" },
-                  { label: "31–60 days", cents: arrears.overdue31to60Cents,  color: "text-orange-700", bg: "bg-orange-50 border-orange-200" },
-                  { label: "61+ days",   cents: arrears.overdue61plusCents,  color: "text-red-700",    bg: "bg-red-50 border-red-200" },
-                ].map(({ label, cents, color, bg }) => (
-                  <div key={label} className={cn("rounded-xl border p-4", cents > 0 ? bg : "border-surface-border bg-surface-subtle")}>
-                    <div className="text-xs text-foreground-dim">{label}</div>
+                  { labelKey: "reporting.text.arrearsCurrentLabel", cents: arrears.currentCents,        color: "text-green-700",  bg: "bg-green-50 border-green-200" },
+                  { labelKey: "reporting.text.arrears1to30Label",   cents: arrears.overdue1to30Cents,   color: "text-amber-700",  bg: "bg-amber-50 border-amber-200" },
+                  { labelKey: "reporting.text.arrears31to60Label",  cents: arrears.overdue31to60Cents,  color: "text-orange-700", bg: "bg-orange-50 border-orange-200" },
+                  { labelKey: "reporting.text.arrears61plusLabel",  cents: arrears.overdue61plusCents,  color: "text-red-700",    bg: "bg-red-50 border-red-200" },
+                ].map(({ labelKey, cents, color, bg }) => (
+                  <div key={labelKey} className={cn("rounded-xl border p-4", cents > 0 ? bg : "border-surface-border bg-surface-subtle")}>
+                    <div className="text-xs text-foreground-dim">{t(labelKey)}</div>
                     <div className={cn("mt-2 text-lg font-semibold", cents > 0 ? color : "text-foreground-dim")}>
                       {cents > 0 ? fmtChf(cents) : "—"}
                     </div>
@@ -870,9 +850,9 @@ export default function OwnerReportingPage() {
                 <div className="px-7 py-4 bg-amber-50 dark:bg-amber-950/20 border-b border-amber-100 dark:border-amber-900">
                   <div className="flex items-center gap-2.5 mb-0.5">
                     <div className="flex h-6 w-6 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900 text-xs font-bold text-amber-700 dark:text-amber-400">!</div>
-                    <h2 className="text-sm font-semibold text-amber-900 dark:text-amber-200">What to watch</h2>
+                    <h2 className="text-sm font-semibold text-amber-900 dark:text-amber-200">{t("reporting.heading.whatToWatch")}</h2>
                   </div>
-                  <p className="text-xs text-amber-700/70 dark:text-amber-400/70 ml-[34px]">Flags and action items for this period</p>
+                  <p className="text-xs text-amber-700/70 dark:text-amber-400/70 ml-[34px]">{t("reporting.text.flagsAndActionItems")}</p>
                 </div>
                 <div className="px-7 py-5 flex-1">
                   {loading ? (
@@ -889,7 +869,7 @@ export default function OwnerReportingPage() {
                     <div className="flex items-start gap-4 pt-2">
                       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-700">✓</div>
                       <p className="text-sm text-muted-text leading-relaxed self-center">
-                        No flags this period — collection on track, occupancy healthy, no overdue invoices.
+                        {t("reporting.text.noFlags")}
                       </p>
                     </div>
                   )}
@@ -913,7 +893,7 @@ export default function OwnerReportingPage() {
                     onClick={() => setPropsExpanded((x) => !x)}
                     className="text-xs font-medium text-muted-dark hover:text-foreground transition-colors"
                   >
-                    {propsExpanded ? "Collapse ↑" : `Show all ${activeBuildings.length} ↓`}
+                    {propsExpanded ? t("reporting.text.collapseProps") : t("reporting.text.showAllProps", { count: activeBuildings.length })}
                   </button>
                 )}
               </div>

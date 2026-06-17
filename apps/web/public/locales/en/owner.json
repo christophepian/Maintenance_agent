@@ -482,10 +482,12 @@
   "reporting": {
     "heading": {
       "whatDrovePerformance": "What drove performance",
+      "whatToWatch": "What to watch",
       "byProperty": "By property",
       "tenantMovements": "Tenant movements",
       "periodInsights": "Period insights",
-      "fullFinancialDetail": "Full financial detail"
+      "fullFinancialDetail": "Full financial detail",
+      "rentArrearsAging": "Rent arrears aging"
     },
     "ariaLabel": {
       "previousYear": "Previous year",
@@ -493,9 +495,14 @@
     },
     "prop": {
       "netIncome": "Net Income",
+      "netOperatingIncome": "Net Operating Income",
       "rentCollected": "Rent Collected",
       "totalExpenses": "Total Expenses",
-      "collectionRate": "Collection Rate"
+      "collectionRate": "Collection Rate",
+      "noiMargin": "NOI Margin",
+      "opexRatio": "OpEx Ratio",
+      "occupancy": "Occupancy",
+      "rentOutstanding": "Rent Outstanding"
     },
     "text": {
       "income": "Income",
@@ -529,7 +536,40 @@
       "moveOuts": "Move-outs",
       "financeDetail": "Drill into ledger entries, trial balance, and per-building financials in the Finance section.",
       "monthlyReport": "Monthly Owner Report",
-      "vsPrevMonth": "{{delta}}% vs prev month"
+      "flagsAndActionItems": "Flags and action items for this period",
+      "unpaidInvoicesByDaysOverdue": "Unpaid outgoing invoices by days overdue",
+      "rentInvoicesNotReconciled": "{{amount}} in rent invoices not yet reconciled",
+      "rentInvoicesMarkPaidInstruction": "Rent invoices have been sent to tenants but no payment has been recorded. Once the rent arrives in your bank, open the invoice in Finance → Outgoing and click Mark Paid.",
+      "goToInvoices": "Go to invoices →",
+      "noFlags": "No flags this period — collection on track, occupancy healthy, no overdue invoices.",
+      "collapseProps": "Collapse ↑",
+      "showAllProps": "Show all {{count}} ↓",
+      "arrearsCurrentLabel": "Current",
+      "arrears1to30Label": "1–30 days",
+      "arrears31to60Label": "31–60 days",
+      "arrears61plusLabel": "61+ days",
+      "overdueLabel": "overdue"
+    },
+    "watch": {
+      "arrears61plus": "{{amount}} in rent is over 60 days overdue — consider initiating a formal debt collection notice.",
+      "arrears31to60": "{{amount}} in rent is 31–60 days overdue. Send a formal payment reminder to the tenants concerned.",
+      "collectionRate": "Collection rate is {{rate}}, {{shortfall}} below the 95% target.",
+      "vacancy": "{{vacantCount}} of {{allUnits}} units are currently vacant ({{rate}} occupancy). Each empty unit represents forgone rental income.",
+      "awaitingPayment": "{{amount}} in rent invoices for this period are awaiting payment — all expected income has been invoiced but not yet marked paid.",
+      "awaitingAndUninvoiced": "{{awaitingPayment}} awaiting payment; {{uninvoiced}} in expected rent was not invoiced this period (likely a mid-month move-in).",
+      "notInvoiced": "{{amount}} in expected rent was not invoiced this period.",
+      "buildingsInRedSingle": "{{names}} is running at a net loss this period.",
+      "buildingsInRedMultiple": "{{names}} are running at a net loss this period.",
+      "payablesConcentration": "{{amount}} in contractor invoices remain unpaid — more than half of this period's expense spend.",
+      "expenseSpike": "Operating costs are {{pct}} higher than last period — review the expense breakdown to identify the driver.",
+      "tenantChurn_one": "{{count}} tenant movement this period — check for any gap between a move-out and the next lease start to minimise vacancy loss.",
+      "tenantChurn_other": "{{count}} tenant movements this period — check for any gap between a move-out and the next lease start to minimise vacancy loss."
+    },
+    "action": {
+      "viewOverdueInvoices": "View overdue invoices",
+      "viewUnpaidInvoices": "View unpaid invoices",
+      "viewFinanceOverview": "View finance overview",
+      "viewExpenses": "View expenses"
     },
     "cta": {
       "financeOverview": "Finance overview",
