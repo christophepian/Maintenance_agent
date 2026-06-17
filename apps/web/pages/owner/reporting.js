@@ -222,6 +222,15 @@ function TimelineHeader({ year, month, mode, onSelect, onYearNav, onModeToggle, 
 
 /* ─── Small components ───────────────────────────────────────── */
 
+function TrendArrow({ delta }) {
+  if (!delta) return null;
+  const up   = delta.tone === "text-green-600";
+  const down = delta.tone === "text-red-500";
+  const arrow = up ? "↑" : down ? "↓" : "→";
+  const cls   = up ? "text-green-600" : down ? "text-red-500" : "text-foreground-dim";
+  return <span className={cn("text-sm font-semibold leading-none", cls)}>{arrow}</span>;
+}
+
 function KpiCard({ label, value, delta, isLoading }) {
   return (
     <div className="rounded-2xl border border-surface-border bg-surface p-5 shadow-sm">
@@ -229,10 +238,10 @@ function KpiCard({ label, value, delta, isLoading }) {
       {isLoading ? (
         <div className="mt-3 h-8 w-24 animate-pulse rounded bg-surface-hover" />
       ) : (
-        <div className="mt-3 text-2xl font-semibold tracking-tight text-foreground">{value}</div>
-      )}
-      {!isLoading && delta && (
-        <div className={cn("mt-1.5 text-xs", delta.tone)}>{delta.label}</div>
+        <div className="mt-3 flex items-end justify-between gap-2">
+          <div className="text-2xl font-semibold tracking-tight text-foreground">{value}</div>
+          <TrendArrow delta={delta} />
+        </div>
       )}
     </div>
   );
@@ -640,12 +649,24 @@ export default function OwnerReportingPage() {
   const noiMargin      = earned > 0 ? noi / earned : null;
   const incomeVariance = projected > 0 ? earned - projected : null;
 
+  // Prev-period derived ratios (for row-2 KPI deltas)
+  const prevAllUnits      = prevData?.totalUnits ?? 0;
+  const prevActiveUnits   = prevData?.totalActiveUnits ?? 0;
+  const prevEarnedForRatio = prevData?.totalEarnedIncomeCents ?? 0;
+  const prevOccupancyRate = prevAllUnits > 0 ? prevActiveUnits / prevAllUnits : null;
+  const prevOpexRatio     = prevEarnedForRatio > 0 ? (prevData?.totalOperatingCents ?? 0) / prevEarnedForRatio : null;
+  const prevNoiMargin     = prevEarnedForRatio > 0 ? (prevData?.totalNetOperatingIncomeCents ?? 0) / prevEarnedForRatio : null;
+
   // Deltas vs prior period
-  const noiDelta    = (currData && prevData) ? delta(noi, prevNoi, t) : null;
-  const expDelta    = (currData && prevData) ? delta(expenses, prevExpenses, t) : null;
-  const earnedDelta = (currData && prevData) ? delta(earned, prevEarned, t) : null;
-  const collDelta   = (currData && prevData) ? delta(collRate, prevCollRate, t) : null;
-  const netDelta    = (currData && prevData) ? delta(netIncome, prevNet, t) : null;
+  const noiDelta        = (currData && prevData) ? delta(noi, prevNoi, t) : null;
+  const expDelta        = (currData && prevData) ? delta(expenses, prevExpenses, t) : null;
+  const earnedDelta     = (currData && prevData) ? delta(earned, prevEarned, t) : null;
+  const collDelta       = (currData && prevData) ? delta(collRate, prevCollRate, t) : null;
+  const netDelta        = (currData && prevData) ? delta(netIncome, prevNet, t) : null;
+  const occupancyDelta  = (currData && prevData && occupancyRate !== null && prevOccupancyRate !== null) ? delta(occupancyRate, prevOccupancyRate, t) : null;
+  // OpEx ratio: lower is better — invert sign so ↑ means cost went up (bad)
+  const opexDelta       = (currData && prevData && opexRatio !== null && prevOpexRatio !== null) ? delta(prevOpexRatio, opexRatio, t) : null;
+  const noiMarginDelta  = (currData && prevData && noiMargin !== null && prevNoiMargin !== null) ? delta(noiMargin, prevNoiMargin, t) : null;
 
   const drivers = useMemo(
     () => buildDrivers(currData, prevData, t),
@@ -699,8 +720,7 @@ export default function OwnerReportingPage() {
           "dark:from-brand-light dark:via-info-light dark:to-transparent",
           ytdMode ? "from-violet-50 via-sky-50 to-green-50" : MONTH_HERO_GRADIENTS[selMonth]
         )}>
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-2xl">
+          <div className="max-w-2xl">
               <Badge variant="default" size="lg" className="mb-3 bg-transparent border-black/20 dark:border-white/20 text-foreground/70">
                 {periodLabel} · {t("reporting.text.monthlyReport")}
               </Badge>
@@ -721,45 +741,11 @@ export default function OwnerReportingPage() {
                 </p>
               )}
             </div>
-
-            <div className="grid min-w-[260px] grid-cols-2 gap-3">
-              {/* Net result — transparent so gradient shows through, black stroke */}
-              <div className="rounded-2xl border border-black/20 dark:border-white/20 bg-transparent p-4">
-                <div className="text-xs font-medium text-foreground/60">{t("reporting.text.netResult")}</div>
-                {loading
-                  ? <div className="mt-2 h-7 w-20 animate-pulse rounded bg-black/10" />
-                  : <div className="mt-2 text-2xl font-semibold text-foreground">{fmtChf(netIncome)}</div>}
-                {!loading && netDelta && (
-                  <div className={cn("mt-1 text-xs", netDelta.tone)}>{netDelta.label}</div>
-                )}
-              </div>
-              {/* Rent outstanding — amber tint when overdue, transparent otherwise */}
-              <div className={cn(
-                "rounded-2xl border p-4",
-                !loading && receivables > 0
-                  ? "border-amber-500/40 bg-amber-400/20 dark:border-amber-700/50 dark:bg-amber-900/20"
-                  : "border-black/20 dark:border-white/20 bg-transparent"
-              )}>
-                <div className={cn("text-xs font-medium", !loading && receivables > 0 ? "text-amber-800 dark:text-amber-400" : "text-foreground/60")}>
-                  Rent outstanding
-                </div>
-                {loading
-                  ? <div className="mt-2 h-7 w-20 animate-pulse rounded bg-black/10" />
-                  : <div className={cn("mt-2 text-2xl font-semibold", receivables > 0 ? "text-amber-800 dark:text-amber-400" : "text-foreground")}>{fmtChf(receivables)}</div>}
-                {!loading && receivables > 0 && (
-                  <div className="mt-1 text-xs text-amber-700 dark:text-amber-500">Invoiced, not yet paid</div>
-                )}
-                {!loading && receivables === 0 && (
-                  <div className="mt-1 text-xs text-foreground/50">All rents cleared</div>
-                )}
-              </div>
-            </div>
-          </div>
         </header>
 
         {/* ── KPI ROW 1 ────────────────────────────────────────── */}
         <section className="grid grid-cols-2 lg:grid-cols-4 mb-2 gap-4">
-          <KpiCard label="NOI"                                 value={fmtChf(noi)}      delta={noiDelta}    isLoading={loading} />
+          <KpiCard label="Net Operating Income"                value={fmtChf(noi)}      delta={noiDelta}    isLoading={loading} />
           <KpiCard label={t("reporting.prop.rentCollected")}  value={fmtChf(earned)}   delta={earnedDelta} isLoading={loading} />
           <KpiCard label={t("reporting.prop.totalExpenses")}  value={fmtChf(expenses)} delta={expDelta}    isLoading={loading} />
           <KpiCard label={t("reporting.prop.collectionRate")} value={fmtPct(collRate)} delta={collDelta}   isLoading={loading} />
@@ -770,23 +756,25 @@ export default function OwnerReportingPage() {
           <KpiCard
             label="NOI margin"
             value={!loading && noiMargin !== null ? fmtPct(noiMargin) : "—"}
+            delta={noiMarginDelta}
             isLoading={loading}
           />
           <KpiCard
             label="OpEx ratio"
             value={!loading && opexRatio !== null ? fmtPct(opexRatio) : "—"}
+            delta={opexDelta}
             isLoading={loading}
           />
           <KpiCard
             label="Occupancy"
             value={!loading && occupancyRate !== null ? fmtPct(occupancyRate) : "—"}
+            delta={occupancyDelta}
             isLoading={loading}
           />
           <KpiCard
-            label="Rent vs projected"
-            value={!loading && incomeVariance !== null
-              ? (incomeVariance >= 0 ? `+${fmtChf(incomeVariance)}` : fmtChf(incomeVariance))
-              : "—"}
+            label="Rent outstanding"
+            value={!loading ? (receivables > 0 ? fmtChf(receivables) : "—") : "—"}
+            delta={null}
             isLoading={loading}
           />
         </section>
