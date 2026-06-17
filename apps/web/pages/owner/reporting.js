@@ -282,12 +282,22 @@ function WatchItem({ number, text, severity, action }) {
   );
 }
 
-function BuildingRow({ name, earned, expenses, net, collectionRate, occupancy }) {
+function BuildingRow({ name, earned, expenses, net, collectionRate, occupancy, href }) {
   const { t } = useTranslation("owner");
   const netPositive = net >= 0;
+  const Wrapper = href ? "a" : "div";
   return (
-    <div className="flex items-center justify-between rounded-2xl border border-surface-border bg-surface-subtle px-4 py-3">
-      <div className="text-sm font-medium text-foreground truncate mr-4">{name}</div>
+    <Wrapper
+      href={href}
+      className={cn(
+        "flex items-center justify-between rounded-2xl border border-surface-border bg-surface-subtle px-4 py-3",
+        href && "hover:bg-surface-hover transition-colors cursor-pointer no-underline"
+      )}
+    >
+      <div className="flex items-center gap-2 mr-4 min-w-0">
+        <div className="text-sm font-medium text-foreground truncate">{name}</div>
+        {href && <span className="shrink-0 text-xs text-foreground-dim">↗</span>}
+      </div>
       <div className="flex items-center gap-5 shrink-0 text-right">
         <div className="hidden sm:block">
           <div className="text-xs text-foreground-dim">{t("reporting.text.income")}</div>
@@ -316,7 +326,7 @@ function BuildingRow({ name, earned, expenses, net, collectionRate, occupancy })
           </div>
         )}
       </div>
-    </div>
+    </Wrapper>
   );
 }
 
@@ -929,6 +939,7 @@ export default function OwnerReportingPage() {
                     net={b.netIncomeCents}
                     collectionRate={b.collectionRate}
                     occupancy={b.totalUnitsCount > 0 ? b.activeUnitsCount / b.totalUnitsCount : null}
+                    href={`/admin-inventory/buildings/${b.buildingId}?from=/owner/properties&role=owner`}
                   />
                 ))}
               </div>

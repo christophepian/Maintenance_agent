@@ -755,6 +755,21 @@ export async function countTotalUnitsByBuilding(
   return prisma.unit.count({ where: { buildingId, orgId } });
 }
 
+/** Count units that have a currently ACTIVE lease. Used for occupancy rate numerator. */
+export async function countLeasedUnitsByBuilding(
+  prisma: PrismaClient,
+  orgId: string,
+  buildingId: string,
+): Promise<number> {
+  return prisma.lease.count({
+    where: {
+      orgId,
+      status: "ACTIVE",
+      unit: { buildingId },
+    },
+  });
+}
+
 /** Find a building config by building ID. */
 export async function findBuildingConfigById(
   prisma: PrismaClient,

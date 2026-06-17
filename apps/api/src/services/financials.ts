@@ -234,11 +234,11 @@ export async function getBuildingFinancials(
     }
   }
 
-  const [unitIds, totalUnitsCount] = await Promise.all([
+  const [unitIds, totalUnitsCount, activeUnitsCount] = await Promise.all([
     inventoryRepo.findActiveUnitIdsByBuilding(prisma, orgId, buildingId),
     inventoryRepo.countTotalUnitsByBuilding(prisma, orgId, buildingId),
+    inventoryRepo.countLeasedUnitsByBuilding(prisma, orgId, buildingId),
   ]);
-  const activeUnitsCount = unitIds.length;
 
   // 4. Expense ledger entries — INVOICE_ISSUED debit legs on EXPENSE accounts
   const expenseEntries = await getExpenseLedgerEntries(orgId, buildingId, from, to);
