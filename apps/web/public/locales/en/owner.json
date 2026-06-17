@@ -483,6 +483,7 @@
     "heading": {
       "whatDrovePerformance": "What drove performance",
       "whatToWatch": "What to watch",
+      "periodNotes": "Period notes",
       "monthlyNoi": "Monthly NOI",
       "byProperty": "By property",
       "tenantMovements": "Tenant movements",
@@ -549,6 +550,8 @@
       "rentInvoicesMarkPaidInstruction": "Rent invoices have been sent to tenants but no payment has been recorded. Once the rent arrives in your bank, open the invoice in Finance → Outgoing and click Mark Paid.",
       "goToInvoices": "Go to invoices →",
       "noFlags": "No flags this period — collection on track, occupancy healthy, no overdue invoices.",
+      "observationsOverPeriod": "Observations and analytics for this period.",
+      "noPeriodNotes": "No notable events this period.",
       "collapseProps": "Collapse ↑",
       "showAllProps": "Show all {{count}} ↓",
       "arrearsCurrentLabel": "Current",
@@ -571,6 +574,21 @@
       "expenseSpike": "Operating costs are {{pct}} higher than last period — review the expense breakdown to identify the driver.",
       "tenantChurn_one": "{{count}} tenant movement this period — check for any gap between a move-out and the next lease start to minimise vacancy loss.",
       "tenantChurn_other": "{{count}} tenant movements this period — check for any gap between a move-out and the next lease start to minimise vacancy loss."
+    },
+    "note": {
+      "arrears61plus": "{{amount}} in rent was over 60 days overdue at period end.",
+      "arrears31to60": "{{amount}} in rent was 31–60 days overdue at period end.",
+      "collectionRate": "Collection averaged {{rate}} this period — {{shortfall}} below the 95% benchmark.",
+      "vacancy": "Occupancy was {{rate}} — {{vacantCount}} of {{allUnits}} units were unoccupied.",
+      "awaitingPayment": "{{amount}} in rent invoices for this period closed unpaid.",
+      "awaitingAndUninvoiced": "{{awaitingPayment}} closed unpaid; {{uninvoiced}} in expected rent was never invoiced.",
+      "notInvoiced": "{{amount}} in expected rent was not invoiced.",
+      "buildingsInRedSingle": "{{names}} posted a net loss.",
+      "buildingsInRedMultiple": "{{names}} posted net losses.",
+      "payablesConcentration": "{{amount}} in contractor invoices remained unpaid at period end.",
+      "expenseSpike": "Operating costs were {{pct}} higher than the prior period.",
+      "tenantChurn_one": "{{count}} tenant movement recorded this period.",
+      "tenantChurn_other": "{{count}} tenant movements recorded this period."
     },
     "action": {
       "viewOverdueInvoices": "View overdue invoices",

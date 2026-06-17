@@ -165,7 +165,7 @@ function ExpandToggle({ expanded, total, onToggle, label }) {
 
 /* ─── Timeline header ────────────────────────────────────────── */
 
-function TimelineHeader({ year, month, mode, onSelect, onYearNav, onModeToggle, ytdActive, onYtdToggle }) {
+function TimelineHeader({ year, month, mode, onSelect, onYearNav, onModeToggle, ytdActive, onYtdToggle, yearActive, onYearToggle }) {
   const { t } = useTranslation("owner");
   const { locale } = useRouter();
   const scrollRef = useRef(null);
@@ -235,6 +235,17 @@ function TimelineHeader({ year, month, mode, onSelect, onYearNav, onModeToggle, 
             ].join(" ")}
           >
             YTD
+          </button>
+          <button
+            onClick={onYearToggle}
+            className={[
+              "shrink-0 rounded-full px-3 py-1 text-sm font-semibold transition-colors",
+              yearActive
+                ? "bg-violet-600 text-white"
+                : "text-muted-text hover:bg-surface-hover",
+            ].join(" ")}
+          >
+            Year
           </button>
 
           <div className="w-px h-5 bg-surface-border shrink-0" />
@@ -629,6 +640,55 @@ function buildWatchItems(curr, prev, moveIns, moveOuts, { arrears, occupancyRate
   return items;
 }
 
+function buildPeriodNotes(curr, prev, moveIns, moveOuts, { arrears, occupancyRate, allUnits, totalUnits, incomeVariance, projected, receivables, activeBuildings } = {}, t) {
+  const items = [];
+
+  if (arrears?.overdue61plusCents > 0) {
+    items.push({ text: t("reporting.note.arrears61plus", { amount: fmtChf(arrears.overdue61plusCents) }), severity: "red" });
+  }
+  if (arrears?.overdue31to60Cents > 0) {
+    items.push({ text: t("reporting.note.arrears31to60", { amount: fmtChf(arrears.overdue31to60Cents) }), severity: "amber" });
+  }
+  if (curr?.avgCollectionRate < 0.95 && curr?.avgCollectionRate > 0) {
+    const shortfall = 0.95 - curr.avgCollectionRate;
+    items.push({ text: t("reporting.note.collectionRate", { rate: fmtPct(curr.avgCollectionRate), shortfall: fmtPct(shortfall) }), severity: "amber" });
+  }
+  if (occupancyRate !== null && occupancyRate < 0.9 && allUnits > 0) {
+    const vacantCount = allUnits - totalUnits;
+    items.push({ text: t("reporting.note.vacancy", { vacantCount, allUnits, rate: fmtPct(occupancyRate) }), severity: "amber" });
+  }
+  if (incomeVariance !== null && projected > 0 && incomeVariance < -(projected * 0.05)) {
+    const gap = Math.abs(incomeVariance);
+    const awaitingPayment = Math.min(receivables ?? 0, gap);
+    const uninvoiced = gap - awaitingPayment;
+    let text;
+    if (uninvoiced <= 0)       text = t("reporting.note.awaitingPayment", { amount: fmtChf(gap) });
+    else if (awaitingPayment > 0) text = t("reporting.note.awaitingAndUninvoiced", { awaitingPayment: fmtChf(awaitingPayment), uninvoiced: fmtChf(uninvoiced) });
+    else                       text = t("reporting.note.notInvoiced", { amount: fmtChf(gap) });
+    items.push({ text, severity: "amber" });
+  }
+  const buildingsInRedList = (activeBuildings ?? []).filter((b) => b.netIncomeCents < 0);
+  if (buildingsInRedList.length > 0) {
+    const names = buildingsInRedList.map((b) => b.buildingName).join(", ");
+    const key = buildingsInRedList.length === 1 ? "reporting.note.buildingsInRedSingle" : "reporting.note.buildingsInRedMultiple";
+    items.push({ text: t(key, { names }), severity: "red" });
+  }
+  if (curr?.totalPayablesCents > 0 && curr?.totalExpensesCents > 0 && curr.totalPayablesCents / curr.totalExpensesCents > 0.5) {
+    items.push({ text: t("reporting.note.payablesConcentration", { amount: fmtChf(curr.totalPayablesCents) }), severity: "amber" });
+  }
+  if (prev && curr?.totalExpensesCents > 0) {
+    const ratio = prev.totalExpensesCents > 0 ? curr.totalExpensesCents / prev.totalExpensesCents : null;
+    if (ratio !== null && ratio > 1.3) {
+      items.push({ text: t("reporting.note.expenseSpike", { pct: fmtPct(ratio - 1) }), severity: "amber" });
+    }
+  }
+  const totalChurn = (moveIns?.length ?? 0) + (moveOuts?.length ?? 0);
+  if (totalChurn > 0) {
+    items.push({ text: t("reporting.note.tenantChurn", { count: totalChurn }), severity: "violet" });
+  }
+  return items;
+}
+
 /* ─── Main page ──────────────────────────────────────────────── */
 
 export default function OwnerReportingPage() {
@@ -651,38 +711,42 @@ export default function OwnerReportingPage() {
   const [insExpanded,   setInsExpanded]   = useState(false);
   const [outsExpanded,  setOutsExpanded]  = useState(false);
   const [propsExpanded, setPropsExpanded] = useState(false);
+  const [yearMode, setYearMode] = useState(false);
 
-  const isFullYear = ytdMode && selYear < today.getFullYear();
+  // yearMode = explicit full Jan–Dec view; ytdMode = Jan–today
+  const isFullYear = yearMode;
 
   const { from, to, prevFrom, prevTo } = useMemo(() => {
+    if (yearMode) {
+      return {
+        from: `${selYear}-01-01`,
+        to: `${selYear}-12-31`,
+        prevFrom: `${selYear - 1}-01-01`,
+        prevTo: `${selYear - 1}-12-31`,
+      };
+    }
     if (ytdMode) {
-      const y = selYear;
-      if (y < today.getFullYear()) {
-        // Completed past year — full Jan 1→Dec 31 vs prior full year
-        return {
-          from: `${y}-01-01`,
-          to: `${y}-12-31`,
-          prevFrom: `${y - 1}-01-01`,
-          prevTo: `${y - 1}-12-31`,
-        };
-      }
-      // Current year — YTD to today vs same window prior year
       const m = String(today.getMonth() + 1).padStart(2, "0");
       const d = String(today.getDate()).padStart(2, "0");
       return {
-        from: `${y}-01-01`,
-        to: `${y}-${m}-${d}`,
-        prevFrom: `${y - 1}-01-01`,
-        prevTo: `${y - 1}-${m}-${d}`,
+        from: `${selYear}-01-01`,
+        to: `${selYear}-${m}-${d}`,
+        prevFrom: `${selYear - 1}-01-01`,
+        prevTo: `${selYear - 1}-${m}-${d}`,
       };
     }
     return periodStrings(selYear, selMonth);
-  }, [selYear, selMonth, ytdMode]);
+  }, [selYear, selMonth, ytdMode, yearMode]);
+
+  // A period is historical when its end date is strictly before today
+  const todayStr = today.toISOString().slice(0, 10);
+  const isHistorical = to < todayStr;
 
   const periodLabel = useMemo(() => {
-    if (ytdMode) return isFullYear ? String(selYear) : `YTD ${selYear}`;
+    if (yearMode) return String(selYear);
+    if (ytdMode) return `YTD ${selYear}`;
     return new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(new Date(selYear, selMonth, 1));
-  }, [locale, selYear, selMonth, ytdMode, isFullYear]);
+  }, [locale, selYear, selMonth, ytdMode, yearMode]);
 
   const monthFull = useMemo(() =>
     new Intl.DateTimeFormat(locale, { month: "long" }).format(new Date(selYear, selMonth, 1)),
@@ -718,7 +782,7 @@ export default function OwnerReportingPage() {
       return json?.data ?? [];
     };
 
-    const fetchMonthly = ytdMode
+    const fetchMonthly = (ytdMode || yearMode)
       ? fetch(`/api/financials/portfolio-monthly?year=${selYear}`, { headers: authHeaders() })
           .then((r) => r.ok ? r.json() : null)
           .then((d) => d?.data ?? null)
@@ -741,7 +805,7 @@ export default function OwnerReportingPage() {
       }
     });
     return () => { cancelled = true; };
-  }, [from, to, prevFrom, prevTo, fetchPeriod, ytdMode, selYear]);
+  }, [from, to, prevFrom, prevTo, fetchPeriod, ytdMode, yearMode, selYear]);
 
   // Core values
   const netIncome   = currData?.totalNetIncomeCents ?? 0;
@@ -805,6 +869,14 @@ export default function OwnerReportingPage() {
     [currData, prevData, moveIns, moveOuts, arrears, occupancyRate, allUnits, totalUnits, incomeVariance, projected, receivables, activeBuildings, t]
   );
 
+  const periodNotes = useMemo(
+    () => isHistorical ? buildPeriodNotes(currData, prevData, moveIns, moveOuts, {
+      arrears, occupancyRate, allUnits, totalUnits, incomeVariance, projected,
+      receivables, activeBuildings,
+    }, t) : [],
+    [isHistorical, currData, prevData, moveIns, moveOuts, arrears, occupancyRate, allUnits, totalUnits, incomeVariance, projected, receivables, activeBuildings, t]
+  );
+
   // Auto-expand when ≤ 3 buildings
   const autoExpanded = activeBuildings.length <= 3;
   const visibleBuildings = (propsExpanded || autoExpanded)
@@ -826,11 +898,13 @@ export default function OwnerReportingPage() {
         year={selYear}
         month={selMonth}
         mode={tlMode}
-        onSelect={(y, m) => { setSelYear(y); setSelMonth(m); setYtdMode(false); }}
+        onSelect={(y, m) => { setSelYear(y); setSelMonth(m); setYtdMode(false); setYearMode(false); }}
         onYearNav={(dir) => setSelYear((y) => y + dir)}
         onModeToggle={() => setTlMode((m) => (m === "month" ? "year" : "month"))}
         ytdActive={ytdMode}
-        onYtdToggle={() => setYtdMode((v) => !v)}
+        onYtdToggle={() => { setYtdMode((v) => !v); setYearMode(false); }}
+        yearActive={yearMode}
+        onYearToggle={() => { setYearMode((v) => !v); setYtdMode(false); }}
       />
 
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
@@ -839,12 +913,12 @@ export default function OwnerReportingPage() {
         <header className={cn(
           "mb-6 rounded-3xl border border-surface-border bg-gradient-to-br p-6 shadow-sm",
           "dark:from-brand-light dark:via-info-light dark:to-transparent",
-          ytdMode ? "from-violet-50 via-sky-50 to-green-50" : MONTH_HERO_GRADIENTS[selMonth]
+          (ytdMode || yearMode) ? "from-violet-50 via-sky-50 to-green-50" : MONTH_HERO_GRADIENTS[selMonth]
         )}>
           <div>
               <div className="max-w-2xl">
                 <Badge variant="default" size="lg" className="mb-3 bg-transparent border-black/20 dark:border-white/20 text-foreground/70">
-                  {periodLabel} · {isFullYear ? t("reporting.text.fullYearReport") : ytdMode ? t("reporting.text.yearToDateReport") : t("reporting.text.monthlyReport")}
+                  {periodLabel} · {yearMode ? t("reporting.text.fullYearReport") : ytdMode ? t("reporting.text.yearToDateReport") : t("reporting.text.monthlyReport")}
                 </Badge>
               </div>
               <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground whitespace-nowrap">
@@ -908,7 +982,7 @@ export default function OwnerReportingPage() {
         </section>
 
         {/* ── MONTHLY NOI TRENDLINES (YTD only) ───────────────── */}
-        {ytdMode && !loading && monthlyData && monthlyData.length > 0 && (
+        {(ytdMode || yearMode) && !loading && monthlyData && monthlyData.length > 0 && (
           <section className="mb-6">
             <div className="rounded-3xl border border-surface-border bg-surface p-5">
               <div className="mb-4 flex items-center justify-between">
@@ -999,8 +1073,8 @@ export default function OwnerReportingPage() {
                     <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-100 dark:bg-green-900 text-xs font-bold text-green-700 dark:text-green-400">↑</div>
                     <h2 className="text-sm font-semibold text-green-900 dark:text-green-200">{t("reporting.heading.whatDrovePerformance")}</h2>
                   </div>
-                  <p className="text-xs text-green-700/70 dark:text-green-400/70 ml-[34px]">{ytdMode ? t("reporting.text.theMainForcesBehindThisYearsNumbers") : t("reporting.text.theMainForcesBehindThisMonthsNumbers")}</p>
-                  {isFullYear && <p className="text-xs text-green-600/60 dark:text-green-500/50 ml-[34px] mt-0.5">{t("reporting.text.fullYearComparison", { year: selYear, prevYear: selYear - 1 })}</p>}
+                  <p className="text-xs text-green-700/70 dark:text-green-400/70 ml-[34px]">{(ytdMode || yearMode) ? t("reporting.text.theMainForcesBehindThisYearsNumbers") : t("reporting.text.theMainForcesBehindThisMonthsNumbers")}</p>
+                  {yearMode && <p className="text-xs text-green-600/60 dark:text-green-500/50 ml-[34px] mt-0.5">{t("reporting.text.fullYearComparison", { year: selYear, prevYear: selYear - 1 })}</p>}
                 </div>
                 <div className="px-7 py-5 flex-1">
                   {loading ? (
@@ -1017,20 +1091,39 @@ export default function OwnerReportingPage() {
                 </div>
               </div>
 
-              {/* Right — What to watch */}
+              {/* Right — What to watch (current) / Period notes (historical) */}
               <div className="flex flex-col">
                 <div className="px-7 py-4 bg-amber-50 dark:bg-amber-950/20 border-b border-amber-100 dark:border-amber-900">
                   <div className="flex items-center gap-2.5 mb-0.5">
-                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900 text-xs font-bold text-amber-700 dark:text-amber-400">!</div>
-                    <h2 className="text-sm font-semibold text-amber-900 dark:text-amber-200">{t("reporting.heading.whatToWatch")}</h2>
+                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900 text-xs font-bold text-amber-700 dark:text-amber-400">
+                      {isHistorical ? "◎" : "!"}
+                    </div>
+                    <h2 className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+                      {isHistorical ? t("reporting.heading.periodNotes") : t("reporting.heading.whatToWatch")}
+                    </h2>
                   </div>
-                  <p className="text-xs text-amber-700/70 dark:text-amber-400/70 ml-[34px]">{t("reporting.text.flagsAndActionItems")}</p>
+                  <p className="text-xs text-amber-700/70 dark:text-amber-400/70 ml-[34px]">
+                    {isHistorical ? t("reporting.text.observationsOverPeriod") : t("reporting.text.flagsAndActionItems")}
+                  </p>
                 </div>
                 <div className="px-7 py-5 flex-1">
                   {loading ? (
                     <div className="space-y-4">
                       {[1, 2].map((i) => <div key={i} className="h-16 animate-pulse rounded-xl bg-surface-hover" />)}
                     </div>
+                  ) : isHistorical ? (
+                    periodNotes.length > 0 ? (
+                      <div>
+                        {periodNotes.map((item, i) => (
+                          <WatchItem key={i} number={i + 1} text={item.text} severity={item.severity} />
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="flex items-start gap-4 pt-2">
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-700">✓</div>
+                        <p className="text-sm text-muted-text leading-relaxed self-center">{t("reporting.text.noPeriodNotes")}</p>
+                      </div>
+                    )
                   ) : watchItems.length > 0 ? (
                     <div>
                       {watchItems.map((item, i) => (
@@ -1040,9 +1133,7 @@ export default function OwnerReportingPage() {
                   ) : (
                     <div className="flex items-start gap-4 pt-2">
                       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-700">✓</div>
-                      <p className="text-sm text-muted-text leading-relaxed self-center">
-                        {t("reporting.text.noFlags")}
-                      </p>
+                      <p className="text-sm text-muted-text leading-relaxed self-center">{t("reporting.text.noFlags")}</p>
                     </div>
                   )}
                 </div>

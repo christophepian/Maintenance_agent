@@ -483,6 +483,7 @@
     "heading": {
       "whatDrovePerformance": "Ce qui a influencé la performance",
       "whatToWatch": "Points de vigilance",
+      "periodNotes": "Notes de période",
       "monthlyNoi": "NOI mensuel",
       "byProperty": "Par bien",
       "tenantMovements": "Mouvements de locataires",
@@ -549,6 +550,8 @@
       "rentInvoicesMarkPaidInstruction": "Des factures de loyer ont été envoyées aux locataires mais aucun paiement n'a été enregistré. Une fois le loyer reçu sur votre compte, ouvrez la facture dans Finance → Sortant et cliquez sur Marquer comme payé.",
       "goToInvoices": "Voir les factures →",
       "noFlags": "Aucune alerte cette période — recouvrement en ordre, occupation saine, aucune facture en retard.",
+      "observationsOverPeriod": "Observations et analyses pour cette période.",
+      "noPeriodNotes": "Aucun événement notable cette période.",
       "collapseProps": "Réduire ↑",
       "showAllProps": "Afficher les {{count}} biens ↓",
       "arrearsCurrentLabel": "En cours",
@@ -571,6 +574,21 @@
       "expenseSpike": "Les charges d'exploitation sont {{pct}} plus élevées que la période précédente — vérifiez le détail des dépenses.",
       "tenantChurn_one": "{{count}} mouvement de locataire cette période — vérifiez les éventuelles périodes de vacance entre une sortie et la prochaine prise de bail.",
       "tenantChurn_other": "{{count}} mouvements de locataires cette période — vérifiez les éventuelles périodes de vacance entre une sortie et la prochaine prise de bail."
+    },
+    "note": {
+      "arrears61plus": "{{amount}} de loyers étaient en retard de plus de 60 jours en fin de période.",
+      "arrears31to60": "{{amount}} de loyers étaient en retard de 31 à 60 jours en fin de période.",
+      "collectionRate": "Le recouvrement a atteint {{rate}} cette période — {{shortfall}} en dessous du seuil de 95 %.",
+      "vacancy": "Le taux d'occupation était de {{rate}} — {{vacantCount}} logements sur {{allUnits}} étaient inoccupés.",
+      "awaitingPayment": "{{amount}} de factures de loyer ont clôturé impayées cette période.",
+      "awaitingAndUninvoiced": "{{awaitingPayment}} ont clôturé impayées ; {{uninvoiced}} de loyers attendus n'ont pas été facturés.",
+      "notInvoiced": "{{amount}} de loyers attendus n'ont pas été facturés.",
+      "buildingsInRedSingle": "{{names}} a enregistré une perte nette.",
+      "buildingsInRedMultiple": "{{names}} ont enregistré des pertes nettes.",
+      "payablesConcentration": "{{amount}} de factures prestataires sont restées impayées en fin de période.",
+      "expenseSpike": "Les charges d'exploitation étaient {{pct}} plus élevées que la période précédente.",
+      "tenantChurn_one": "{{count}} mouvement de locataire enregistré cette période.",
+      "tenantChurn_other": "{{count}} mouvements de locataires enregistrés cette période."
     },
     "action": {
       "viewOverdueInvoices": "Voir les factures en retard",
