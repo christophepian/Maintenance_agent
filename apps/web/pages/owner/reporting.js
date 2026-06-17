@@ -73,7 +73,7 @@ function ExpandToggle({ expanded, total, onToggle }) {
 
 /* ─── Timeline header ────────────────────────────────────────── */
 
-function TimelineHeader({ year, month, mode, onSelect, onYearNav, onModeToggle }) {
+function TimelineHeader({ year, month, mode, onSelect, onYearNav, onModeToggle, ytdActive, onYtdToggle }) {
   const { t } = useTranslation("owner");
   const { locale } = useRouter();
   const scrollRef = useRef(null);
@@ -134,6 +134,21 @@ function TimelineHeader({ year, month, mode, onSelect, onYearNav, onModeToggle }
               {t("reporting.text.backToMonths")}
             </button>
           )}
+
+          <div className="w-px h-5 bg-surface-border shrink-0" />
+
+          {/* YTD toggle */}
+          <button
+            onClick={onYtdToggle}
+            className={[
+              "shrink-0 rounded-full px-3 py-1 text-sm font-semibold transition-colors",
+              ytdActive
+                ? "bg-violet-600 text-white"
+                : "text-muted-text hover:bg-surface-hover",
+            ].join(" ")}
+          >
+            YTD
+          </button>
 
           <div className="w-px h-5 bg-surface-border shrink-0" />
 
@@ -408,6 +423,7 @@ export default function OwnerReportingPage() {
   const [tlMode, setTlMode]   = useState("month");
   const [selYear, setSelYear]  = useState(today.getFullYear());
   const [selMonth, setSelMonth] = useState(today.getMonth());
+  const [ytdMode, setYtdMode]  = useState(false);
 
   const [currData, setCurrData] = useState(null);
   const [prevData, setPrevData] = useState(null);
@@ -420,16 +436,26 @@ export default function OwnerReportingPage() {
   const [outsExpanded,  setOutsExpanded]  = useState(false);
   const [propsExpanded, setPropsExpanded] = useState(false);
 
-  const { from, to, prevFrom, prevTo } = useMemo(
-    () => periodStrings(selYear, selMonth),
-    [selYear, selMonth]
-  );
+  const { from, to, prevFrom, prevTo } = useMemo(() => {
+    if (ytdMode) {
+      const y = selYear;
+      const m = String(today.getMonth() + 1).padStart(2, "0");
+      const d = String(today.getDate()).padStart(2, "0");
+      const from = `${y}-01-01`;
+      const to   = `${y}-${m}-${d}`;
+      // prev = same YTD window last year
+      const prevFrom = `${y - 1}-01-01`;
+      const prevTo   = `${y - 1}-${m}-${d}`;
+      return { from, to, prevFrom, prevTo };
+    }
+    return periodStrings(selYear, selMonth);
+  }, [selYear, selMonth, ytdMode]);
 
-  // Localized period label (e.g. "juin 2026" in French)
-  const periodLabel = useMemo(() =>
-    new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(new Date(selYear, selMonth, 1)),
-    [locale, selYear, selMonth]
-  );
+  // Localized period label (e.g. "juin 2026" in French, or "YTD 2026")
+  const periodLabel = useMemo(() => {
+    if (ytdMode) return `YTD ${selYear}`;
+    return new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(new Date(selYear, selMonth, 1));
+  }, [locale, selYear, selMonth, ytdMode]);
 
   // Localized full month name for highlight body
   const monthFull = useMemo(() =>
@@ -486,17 +512,31 @@ export default function OwnerReportingPage() {
   // Derived values
   const netIncome     = currData?.totalNetIncomeCents ?? 0;
   const prevNet       = prevData?.totalNetIncomeCents ?? 0;
+  const noi           = currData?.totalNetOperatingIncomeCents ?? 0;
+  const prevNoi       = prevData?.totalNetOperatingIncomeCents ?? 0;
   const expenses      = currData?.totalExpensesCents ?? 0;
   const prevExpenses  = prevData?.totalExpensesCents ?? 0;
   const earned        = currData?.totalEarnedIncomeCents ?? 0;
   const prevEarned    = prevData?.totalEarnedIncomeCents ?? 0;
+  const projected     = currData?.totalProjectedIncomeCents ?? 0;
+  const operating     = currData?.totalOperatingCents ?? 0;
   const collRate      = currData?.avgCollectionRate ?? 0;
   const prevCollRate  = prevData?.avgCollectionRate ?? 0;
   const totalUnits    = currData?.totalActiveUnits ?? 0;
+  const allUnits      = currData?.totalUnits ?? 0;
   // Outstanding rent invoices issued but not yet reconciled (receivables)
   const receivables   = currData?.totalReceivablesCents ?? 0;
+  // Arrears aging
+  const arrears       = currData?.arrears ?? null;
+
+  // Derived ratios
+  const occupancyRate  = allUnits > 0 ? totalUnits / allUnits : null;
+  const opexRatio      = earned > 0 ? operating / earned : null;
+  const noiMargin      = earned > 0 ? noi / earned : null;
+  const incomeVariance = projected > 0 ? earned - projected : null; // positive = ahead, negative = behind
 
   const netDelta      = (currData && prevData) ? delta(netIncome, prevNet, t) : null;
+  const noiDelta      = (currData && prevData) ? delta(noi, prevNoi, t) : null;
   const expDelta      = (currData && prevData) ? delta(expenses, prevExpenses, t) : null;
   const earnedDelta   = (currData && prevData) ? delta(earned, prevEarned, t) : null;
   const collDelta     = (currData && prevData) ? delta(collRate, prevCollRate, t) : null;
@@ -541,9 +581,11 @@ export default function OwnerReportingPage() {
         year={selYear}
         month={selMonth}
         mode={tlMode}
-        onSelect={(y, m) => { setSelYear(y); setSelMonth(m); }}
+        onSelect={(y, m) => { setSelYear(y); setSelMonth(m); setYtdMode(false); }}
         onYearNav={(dir) => setSelYear((y) => y + dir)}
         onModeToggle={() => setTlMode((m) => (m === "month" ? "year" : "month"))}
+        ytdActive={ytdMode}
+        onYtdToggle={() => setYtdMode((v) => !v)}
       />
 
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
@@ -607,11 +649,37 @@ export default function OwnerReportingPage() {
         </header>
 
         {/* ── KPI ROW ──────────────────────────────────────────── */}
-        <section className="kpi-grid mb-4 gap-4 xl:grid-cols-4">
-          <KpiCard label={t("reporting.prop.netIncome")}       value={fmtChf(netIncome)}     delta={netDelta}    isLoading={loading} />
+        <section className="grid grid-cols-2 lg:grid-cols-4 mb-2 gap-4">
+          <KpiCard label="NOI"                                  value={fmtChf(noi)}           delta={noiDelta}    isLoading={loading} />
           <KpiCard label={t("reporting.prop.rentCollected")}   value={fmtChf(earned)}        delta={earnedDelta} isLoading={loading} />
           <KpiCard label={t("reporting.prop.totalExpenses")}   value={fmtChf(expenses)}      delta={expDelta}    isLoading={loading} />
           <KpiCard label={t("reporting.prop.collectionRate")}  value={fmtPct(collRate)}      delta={collDelta}   isLoading={loading} />
+        </section>
+
+        {/* ── SECONDARY KPI ROW ────────────────────────────────── */}
+        <section className="grid grid-cols-2 lg:grid-cols-4 mb-4 gap-4">
+          <KpiCard
+            label="NOI margin"
+            value={!loading && noiMargin !== null ? fmtPct(noiMargin) : "—"}
+            isLoading={loading}
+          />
+          <KpiCard
+            label="OpEx ratio"
+            value={!loading && opexRatio !== null ? fmtPct(opexRatio) : "—"}
+            isLoading={loading}
+          />
+          <KpiCard
+            label="Occupancy"
+            value={!loading && occupancyRate !== null ? fmtPct(occupancyRate) : "—"}
+            isLoading={loading}
+          />
+          <KpiCard
+            label="Rent vs projected"
+            value={!loading && incomeVariance !== null
+              ? (incomeVariance >= 0 ? `+${fmtChf(incomeVariance)}` : fmtChf(incomeVariance))
+              : "—"}
+            isLoading={loading}
+          />
         </section>
 
         {/* ── OUTSTANDING RECEIVABLES ALERT ────────────────────── */}
@@ -634,6 +702,40 @@ export default function OwnerReportingPage() {
               >
                 Go to invoices →
               </a>
+            </div>
+          </section>
+        )}
+
+        {/* ── ARREARS AGING ────────────────────────────────────── */}
+        {!loading && arrears && (arrears.totalOverdueCents > 0 || arrears.currentCents > 0) && (
+          <section className="mb-8">
+            <div className="rounded-2xl border border-surface-border bg-surface p-5">
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <h2 className="text-base font-semibold text-foreground">Rent arrears aging</h2>
+                  <p className="text-xs text-foreground-dim mt-0.5">Unpaid outgoing invoices by days overdue</p>
+                </div>
+                {arrears.totalOverdueCents > 0 && (
+                  <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700">
+                    {fmtChf(arrears.totalOverdueCents)} overdue
+                  </span>
+                )}
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {[
+                  { label: "Current", cents: arrears.currentCents, color: "text-green-700", bg: "bg-green-50 border-green-200" },
+                  { label: "1–30 days", cents: arrears.overdue1to30Cents, color: "text-amber-700", bg: "bg-amber-50 border-amber-200" },
+                  { label: "31–60 days", cents: arrears.overdue31to60Cents, color: "text-orange-700", bg: "bg-orange-50 border-orange-200" },
+                  { label: "61+ days", cents: arrears.overdue61plusCents, color: "text-red-700", bg: "bg-red-50 border-red-200" },
+                ].map(({ label, cents, color, bg }) => (
+                  <div key={label} className={cn("rounded-xl border p-4", cents > 0 ? bg : "border-surface-border bg-surface-subtle")}>
+                    <div className="text-xs text-foreground-dim">{label}</div>
+                    <div className={cn("mt-2 text-lg font-semibold", cents > 0 ? color : "text-foreground-dim")}>
+                      {cents > 0 ? fmtChf(cents) : "—"}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </section>
         )}

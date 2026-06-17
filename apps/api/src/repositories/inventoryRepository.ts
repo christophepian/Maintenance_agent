@@ -746,6 +746,15 @@ export async function findActiveUnitIdsByBuilding(
   return units.map((u) => u.id);
 }
 
+/** Count all units for a building (active + inactive). Used for occupancy rate denominator. */
+export async function countTotalUnitsByBuilding(
+  prisma: PrismaClient,
+  orgId: string,
+  buildingId: string,
+): Promise<number> {
+  return prisma.unit.count({ where: { buildingId, orgId } });
+}
+
 /** Find a building config by building ID. */
 export async function findBuildingConfigById(
   prisma: PrismaClient,

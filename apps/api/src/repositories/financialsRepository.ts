@@ -97,6 +97,64 @@ export async function aggregatePaidRentForPeriod(
   return agg._sum.totalAmount ?? 0;
 }
 
+/**
+ * Arrears aging for a portfolio (all buildings in org).
+ *
+ * Returns OUTGOING rent invoices that are ISSUED (unpaid), grouped into
+ * aging buckets based on how many days past their dueDate they are.
+ * Invoices with no dueDate are treated as current.
+ */
+export interface ArrearsAgingDTO {
+  currentCents: number;      // not yet due
+  overdue1to30Cents: number;
+  overdue31to60Cents: number;
+  overdue61plusCents: number;
+  totalOverdueCents: number;
+}
+
+export async function getArrearsAging(
+  prisma: PrismaClient,
+  orgId: string,
+  today: Date = new Date(),
+): Promise<ArrearsAgingDTO> {
+  const invoices = await prisma.invoice.findMany({
+    where: {
+      orgId,
+      direction: "OUTGOING",
+      leaseId: { not: null },
+      status: "ISSUED",
+    },
+    select: { totalAmount: true, dueDate: true },
+  });
+
+  let currentCents = 0;
+  let overdue1to30Cents = 0;
+  let overdue31to60Cents = 0;
+  let overdue61plusCents = 0;
+
+  const todayMs = today.getTime();
+  for (const inv of invoices) {
+    const amount = inv.totalAmount ?? 0;
+    if (!inv.dueDate) {
+      currentCents += amount;
+      continue;
+    }
+    const daysOverdue = Math.floor((todayMs - inv.dueDate.getTime()) / (1000 * 60 * 60 * 24));
+    if (daysOverdue <= 0) currentCents += amount;
+    else if (daysOverdue <= 30) overdue1to30Cents += amount;
+    else if (daysOverdue <= 60) overdue31to60Cents += amount;
+    else overdue61plusCents += amount;
+  }
+
+  return {
+    currentCents,
+    overdue1to30Cents,
+    overdue31to60Cents,
+    overdue61plusCents,
+    totalOverdueCents: overdue1to30Cents + overdue31to60Cents + overdue61plusCents,
+  };
+}
+
 /** Sum of rent payments received (bank debit on INVOICE_PAID) for a building in a period. */
 export async function aggregateLedgerIncome(
   prisma: PrismaClient,

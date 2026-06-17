@@ -5,7 +5,7 @@ import * as inventoryRepo from "../repositories/inventoryRepository";
 import * as leaseRepo from "../repositories/leaseRepository";
 import * as snapshotRepo from "../repositories/buildingFinancialSnapshotRepository";
 import * as financialsRepo from "../repositories/financialsRepository";
-import type { ExpenseLedgerRow } from "../repositories/financialsRepository";
+import type { ExpenseLedgerRow, ArrearsAgingDTO } from "../repositories/financialsRepository";
 
 // ==========================================
 // DTOs
@@ -59,6 +59,7 @@ export interface BuildingFinancialsDTO {
 
   // Breakdowns
   activeUnitsCount: number;
+  totalUnitsCount: number;
   expensesByCategory: ExpenseCategoryTotalDTO[];
   topContractorsBySpend: ContractorSpendDTO[];
   expensesByAccount?: AccountTotalDTO[];
@@ -204,6 +205,7 @@ export async function getBuildingFinancials(
   if (!params.forceRefresh && !params.groupByAccount && !periodOverlapsCurrentMonth) {
     const cached = await snapshotRepo.findBuildingFinancialSnapshotByPeriod(prisma, orgId, buildingId, from, to);
     if (cached) {
+      const cachedTotalUnits = await inventoryRepo.countTotalUnitsByBuilding(prisma, orgId, buildingId);
       return {
         buildingId,
         buildingName: building.name,
@@ -225,13 +227,17 @@ export async function getBuildingFinancials(
         costPerUnitCents: 0,
         collectionRate: 0,
         activeUnitsCount: cached.activeUnitsCount,
+        totalUnitsCount: cachedTotalUnits,
         expensesByCategory: [],
         topContractorsBySpend: [],
       };
     }
   }
 
-  const unitIds = await inventoryRepo.findActiveUnitIdsByBuilding(prisma, orgId, buildingId);
+  const [unitIds, totalUnitsCount] = await Promise.all([
+    inventoryRepo.findActiveUnitIdsByBuilding(prisma, orgId, buildingId),
+    inventoryRepo.countTotalUnitsByBuilding(prisma, orgId, buildingId),
+  ]);
   const activeUnitsCount = unitIds.length;
 
   // 4. Expense ledger entries — INVOICE_ISSUED debit legs on EXPENSE accounts
@@ -393,6 +399,7 @@ export async function getBuildingFinancials(
     costPerUnitCents,
     collectionRate: Math.round(collectionRate * 10000) / 10000,
     activeUnitsCount,
+    totalUnitsCount,
     expensesByCategory,
     topContractorsBySpend,
     ...(expensesByAccount !== undefined && { expensesByAccount }),
@@ -408,11 +415,16 @@ export interface BuildingSummaryDTO {
   buildingName: string;
   health: "green" | "amber" | "red";
   earnedIncomeCents: number;
+  projectedIncomeCents: number;
   expensesTotalCents: number;
+  operatingTotalCents: number;
+  capexTotalCents: number;
   netIncomeCents: number;
+  netOperatingIncomeCents: number;
   collectionRate: number;
   maintenanceRatio: number;
   activeUnitsCount: number;
+  totalUnitsCount: number;
   receivablesCents: number;
   payablesCents: number;
 }
@@ -421,15 +433,21 @@ export interface PortfolioSummaryDTO {
   from: string;
   to: string;
   totalEarnedIncomeCents: number;
+  totalProjectedIncomeCents: number;
   totalExpensesCents: number;
+  totalOperatingCents: number;
+  totalCapexCents: number;
   totalNetIncomeCents: number;
+  totalNetOperatingIncomeCents: number;
   avgCollectionRate: number;
   avgMaintenanceRatio: number;
   totalActiveUnits: number;
+  totalUnits: number;
   buildingsInRed: number;
   buildingCount: number;
   totalReceivablesCents: number;
   totalPayablesCents: number;
+  arrears: ArrearsAgingDTO;
   buildings: BuildingSummaryDTO[];
 }
 
@@ -458,11 +476,16 @@ export async function getPortfolioSummary(
         buildingName: dto.buildingName,
         health: deriveHealth(dto.netIncomeCents, dto.collectionRate),
         earnedIncomeCents: dto.earnedIncomeCents,
+        projectedIncomeCents: dto.projectedIncomeCents,
         expensesTotalCents: dto.expensesTotalCents,
+        operatingTotalCents: dto.operatingTotalCents,
+        capexTotalCents: dto.capexTotalCents,
         netIncomeCents: dto.netIncomeCents,
+        netOperatingIncomeCents: dto.netOperatingIncomeCents,
         collectionRate: dto.collectionRate,
         maintenanceRatio: dto.maintenanceRatio,
         activeUnitsCount: dto.activeUnitsCount,
+        totalUnitsCount: dto.totalUnitsCount,
         receivablesCents: dto.receivablesCents,
         payablesCents: dto.payablesCents,
       });
@@ -471,10 +494,17 @@ export async function getPortfolioSummary(
     }
   }
 
+  const arrears = await financialsRepo.getArrearsAging(prisma, orgId);
+
   const totalEarned = summaries.reduce((s, b) => s + b.earnedIncomeCents, 0);
+  const totalProjected = summaries.reduce((s, b) => s + b.projectedIncomeCents, 0);
   const totalExpenses = summaries.reduce((s, b) => s + b.expensesTotalCents, 0);
+  const totalOperating = summaries.reduce((s, b) => s + b.operatingTotalCents, 0);
+  const totalCapex = summaries.reduce((s, b) => s + b.capexTotalCents, 0);
   const totalNet = summaries.reduce((s, b) => s + b.netIncomeCents, 0);
-  const totalUnits = summaries.reduce((s, b) => s + b.activeUnitsCount, 0);
+  const totalNOI = summaries.reduce((s, b) => s + b.netOperatingIncomeCents, 0);
+  const totalActive = summaries.reduce((s, b) => s + b.activeUnitsCount, 0);
+  const totalAllUnits = summaries.reduce((s, b) => s + b.totalUnitsCount, 0);
   const active = summaries.filter((b) => b.earnedIncomeCents > 0 || b.expensesTotalCents > 0);
   const avgCollection = active.length > 0
     ? active.reduce((s, b) => s + b.collectionRate, 0) / active.length : 0;
@@ -485,15 +515,21 @@ export async function getPortfolioSummary(
     from: params.from,
     to: params.to,
     totalEarnedIncomeCents: totalEarned,
+    totalProjectedIncomeCents: totalProjected,
     totalExpensesCents: totalExpenses,
+    totalOperatingCents: totalOperating,
+    totalCapexCents: totalCapex,
     totalNetIncomeCents: totalNet,
+    totalNetOperatingIncomeCents: totalNOI,
     avgCollectionRate: Math.round(avgCollection * 10000) / 10000,
     avgMaintenanceRatio: Math.round(avgMaintenance * 10000) / 10000,
-    totalActiveUnits: totalUnits,
+    totalActiveUnits: totalActive,
+    totalUnits: totalAllUnits,
     buildingsInRed: summaries.filter((b) => b.health === "red").length,
     buildingCount: summaries.length,
     totalReceivablesCents: summaries.reduce((s, b) => s + b.receivablesCents, 0),
     totalPayablesCents: summaries.reduce((s, b) => s + b.payablesCents, 0),
+    arrears,
     buildings: summaries,
   };
 }
