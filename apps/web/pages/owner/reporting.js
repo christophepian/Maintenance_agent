@@ -165,7 +165,7 @@ function ExpandToggle({ expanded, total, onToggle, label }) {
 
 /* ─── Timeline header ────────────────────────────────────────── */
 
-function TimelineHeader({ year, month, mode, onSelect, onYearNav, onModeToggle, ytdActive, onYtdToggle, yearActive, onYearToggle }) {
+function TimelineHeader({ year, month, mode, onSelect, onYearNav, onModeToggle, ytdActive, onYtdToggle }) {
   const { t } = useTranslation("owner");
   const { locale } = useRouter();
   const scrollRef = useRef(null);
@@ -230,17 +230,6 @@ function TimelineHeader({ year, month, mode, onSelect, onYearNav, onModeToggle, 
             className={[
               "shrink-0 rounded-full px-3 py-1 text-sm font-semibold transition-colors",
               ytdActive
-                ? "bg-violet-600 text-white"
-                : "text-muted-text hover:bg-surface-hover",
-            ].join(" ")}
-          >
-            YTD
-          </button>
-          <button
-            onClick={onYearToggle}
-            className={[
-              "shrink-0 rounded-full px-3 py-1 text-sm font-semibold transition-colors",
-              yearActive
                 ? "bg-violet-600 text-white"
                 : "text-muted-text hover:bg-surface-hover",
             ].join(" ")}
@@ -711,42 +700,41 @@ export default function OwnerReportingPage() {
   const [insExpanded,   setInsExpanded]   = useState(false);
   const [outsExpanded,  setOutsExpanded]  = useState(false);
   const [propsExpanded, setPropsExpanded] = useState(false);
-  const [yearMode, setYearMode] = useState(false);
 
-  // yearMode = explicit full Jan–Dec view; ytdMode = Jan–today
-  const isFullYear = yearMode;
+  // Annual mode auto-adapts: past year → full Jan–Dec; current year → Jan–today
+  const isFullYear = ytdMode && selYear < today.getFullYear();
 
   const { from, to, prevFrom, prevTo } = useMemo(() => {
-    if (yearMode) {
-      return {
-        from: `${selYear}-01-01`,
-        to: `${selYear}-12-31`,
-        prevFrom: `${selYear - 1}-01-01`,
-        prevTo: `${selYear - 1}-12-31`,
-      };
-    }
     if (ytdMode) {
+      const y = selYear;
+      if (y < today.getFullYear()) {
+        return {
+          from: `${y}-01-01`,
+          to: `${y}-12-31`,
+          prevFrom: `${y - 1}-01-01`,
+          prevTo: `${y - 1}-12-31`,
+        };
+      }
       const m = String(today.getMonth() + 1).padStart(2, "0");
       const d = String(today.getDate()).padStart(2, "0");
       return {
-        from: `${selYear}-01-01`,
-        to: `${selYear}-${m}-${d}`,
-        prevFrom: `${selYear - 1}-01-01`,
-        prevTo: `${selYear - 1}-${m}-${d}`,
+        from: `${y}-01-01`,
+        to: `${y}-${m}-${d}`,
+        prevFrom: `${y - 1}-01-01`,
+        prevTo: `${y - 1}-${m}-${d}`,
       };
     }
     return periodStrings(selYear, selMonth);
-  }, [selYear, selMonth, ytdMode, yearMode]);
+  }, [selYear, selMonth, ytdMode]);
 
   // A period is historical when its end date is strictly before today
   const todayStr = today.toISOString().slice(0, 10);
   const isHistorical = to < todayStr;
 
   const periodLabel = useMemo(() => {
-    if (yearMode) return String(selYear);
-    if (ytdMode) return `YTD ${selYear}`;
+    if (ytdMode) return isFullYear ? String(selYear) : `YTD ${selYear}`;
     return new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(new Date(selYear, selMonth, 1));
-  }, [locale, selYear, selMonth, ytdMode, yearMode]);
+  }, [locale, selYear, selMonth, ytdMode, isFullYear]);
 
   const monthFull = useMemo(() =>
     new Intl.DateTimeFormat(locale, { month: "long" }).format(new Date(selYear, selMonth, 1)),
@@ -782,7 +770,7 @@ export default function OwnerReportingPage() {
       return json?.data ?? [];
     };
 
-    const fetchMonthly = (ytdMode || yearMode)
+    const fetchMonthly = ytdMode
       ? fetch(`/api/financials/portfolio-monthly?year=${selYear}`, { headers: authHeaders() })
           .then((r) => r.ok ? r.json() : null)
           .then((d) => d?.data ?? null)
@@ -805,7 +793,7 @@ export default function OwnerReportingPage() {
       }
     });
     return () => { cancelled = true; };
-  }, [from, to, prevFrom, prevTo, fetchPeriod, ytdMode, yearMode, selYear]);
+  }, [from, to, prevFrom, prevTo, fetchPeriod, ytdMode, selYear]);
 
   // Core values
   const netIncome   = currData?.totalNetIncomeCents ?? 0;
@@ -898,13 +886,11 @@ export default function OwnerReportingPage() {
         year={selYear}
         month={selMonth}
         mode={tlMode}
-        onSelect={(y, m) => { setSelYear(y); setSelMonth(m); setYtdMode(false); setYearMode(false); }}
+        onSelect={(y, m) => { setSelYear(y); setSelMonth(m); setYtdMode(false); }}
         onYearNav={(dir) => setSelYear((y) => y + dir)}
         onModeToggle={() => setTlMode((m) => (m === "month" ? "year" : "month"))}
         ytdActive={ytdMode}
-        onYtdToggle={() => { setYtdMode((v) => !v); setYearMode(false); }}
-        yearActive={yearMode}
-        onYearToggle={() => { setYearMode((v) => !v); setYtdMode(false); }}
+        onYtdToggle={() => setYtdMode((v) => !v)}
       />
 
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
@@ -913,12 +899,12 @@ export default function OwnerReportingPage() {
         <header className={cn(
           "mb-6 rounded-3xl border border-surface-border bg-gradient-to-br p-6 shadow-sm",
           "dark:from-brand-light dark:via-info-light dark:to-transparent",
-          (ytdMode || yearMode) ? "from-violet-50 via-sky-50 to-green-50" : MONTH_HERO_GRADIENTS[selMonth]
+          ytdMode ? "from-violet-50 via-sky-50 to-green-50" : MONTH_HERO_GRADIENTS[selMonth]
         )}>
           <div>
               <div className="max-w-2xl">
                 <Badge variant="default" size="lg" className="mb-3 bg-transparent border-black/20 dark:border-white/20 text-foreground/70">
-                  {periodLabel} · {yearMode ? t("reporting.text.fullYearReport") : ytdMode ? t("reporting.text.yearToDateReport") : t("reporting.text.monthlyReport")}
+                  {periodLabel} · {isFullYear ? t("reporting.text.fullYearReport") : ytdMode ? t("reporting.text.yearToDateReport") : t("reporting.text.monthlyReport")}
                 </Badge>
               </div>
               <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground whitespace-nowrap">
@@ -982,7 +968,7 @@ export default function OwnerReportingPage() {
         </section>
 
         {/* ── MONTHLY NOI TRENDLINES (YTD only) ───────────────── */}
-        {(ytdMode || yearMode) && !loading && monthlyData && monthlyData.length > 0 && (
+        {ytdMode && !loading && monthlyData && monthlyData.length > 0 && (
           <section className="mb-6">
             <div className="rounded-3xl border border-surface-border bg-surface p-5">
               <div className="mb-4 flex items-center justify-between">
@@ -1073,8 +1059,8 @@ export default function OwnerReportingPage() {
                     <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-100 dark:bg-green-900 text-xs font-bold text-green-700 dark:text-green-400">↑</div>
                     <h2 className="text-sm font-semibold text-green-900 dark:text-green-200">{t("reporting.heading.whatDrovePerformance")}</h2>
                   </div>
-                  <p className="text-xs text-green-700/70 dark:text-green-400/70 ml-[34px]">{(ytdMode || yearMode) ? t("reporting.text.theMainForcesBehindThisYearsNumbers") : t("reporting.text.theMainForcesBehindThisMonthsNumbers")}</p>
-                  {yearMode && <p className="text-xs text-green-600/60 dark:text-green-500/50 ml-[34px] mt-0.5">{t("reporting.text.fullYearComparison", { year: selYear, prevYear: selYear - 1 })}</p>}
+                  <p className="text-xs text-green-700/70 dark:text-green-400/70 ml-[34px]">{ytdMode ? t("reporting.text.theMainForcesBehindThisYearsNumbers") : t("reporting.text.theMainForcesBehindThisMonthsNumbers")}</p>
+                  {isFullYear && <p className="text-xs text-green-600/60 dark:text-green-500/50 ml-[34px] mt-0.5">{t("reporting.text.fullYearComparison", { year: selYear, prevYear: selYear - 1 })}</p>}
                 </div>
                 <div className="px-7 py-5 flex-1">
                   {loading ? (
