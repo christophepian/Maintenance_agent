@@ -538,7 +538,9 @@
       "financeDetail": "Consultez les écritures du grand livre, la balance de vérification et les données financières par immeuble dans la section Finance.",
       "monthlyReport": "Rapport mensuel propriétaire",
       "yearToDateReport": "Résumé annuel en cours",
+      "fullYearReport": "Résumé de l'année complète",
       "theMainForcesBehindThisYearsNumbers": "Les principaux facteurs de la performance de cette année.",
+      "fullYearComparison": "Année complète {{year}} vs {{prevYear}}",
       "noiPerMonth": "Résultat opérationnel net par mois, {{year}}",
       "bestMonth": "Meilleur mois",
       "flagsAndActionItems": "Alertes et actions pour cette période",
@@ -575,6 +577,16 @@
       "viewUnpaidInvoices": "Voir les factures impayées",
       "viewFinanceOverview": "Voir les finances",
       "viewExpenses": "Voir les dépenses"
+    },
+    "appraisalFullYear": {
+      "ahead": "Une bonne année.",
+      "onpar": "Une année stable.",
+      "behind": "Une année difficile.",
+      "reason": {
+        "noiAhead": "Le NOI a terminé {{pct}}% au-dessus de l'année précédente.",
+        "noiBehind": "Le NOI a terminé {{pct}}% en dessous de l'année précédente.",
+        "noiOnPar": "Le NOI et le recouvrement ({{rate}}) sont restés globalement en ligne avec l'année précédente."
+      }
     },
     "appraisalYtd": {
       "ahead": "En avance sur l'année précédente.",

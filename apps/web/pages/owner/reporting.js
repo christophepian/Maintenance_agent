@@ -70,7 +70,7 @@ function delta(curr, prev) {
 
 /* ─── Portfolio appraisal ────────────────────────────────────── */
 
-function deriveYtdAppraisal({ noi, prevNoi, collRate, t }) {
+function deriveYtdAppraisal({ noi, prevNoi, collRate, t, isFullYear }) {
   let tier;
   if (!Number.isFinite(prevNoi) || prevNoi === 0) {
     tier = noi > 0 ? "ahead" : noi < 0 ? "behind" : "onpar";
@@ -79,17 +79,18 @@ function deriveYtdAppraisal({ noi, prevNoi, collRate, t }) {
     tier = d > 0.10 ? "ahead" : d < -0.10 ? "behind" : "onpar";
   }
 
-  const headline = t(`reporting.appraisalYtd.${tier}`);
+  const ns = isFullYear ? "reporting.appraisalFullYear" : "reporting.appraisalYtd";
+  const headline = t(`${ns}.${tier}`);
 
   let reason;
   if (tier === "ahead" && prevNoi !== 0 && Number.isFinite(prevNoi)) {
     const pct = Math.round(Math.abs((noi - prevNoi) / prevNoi) * 100);
-    reason = t("reporting.appraisalYtd.reason.noiAhead", { pct });
+    reason = t(`${ns}.reason.noiAhead`, { pct });
   } else if (tier === "behind" && prevNoi !== 0 && Number.isFinite(prevNoi)) {
     const pct = Math.round(Math.abs((noi - prevNoi) / prevNoi) * 100);
-    reason = t("reporting.appraisalYtd.reason.noiBehind", { pct });
+    reason = t(`${ns}.reason.noiBehind`, { pct });
   } else {
-    reason = t("reporting.appraisalYtd.reason.noiOnPar", { rate: fmtPct(collRate) });
+    reason = t(`${ns}.reason.noiOnPar`, { rate: fmtPct(collRate) });
   }
 
   return { headline, reason };
@@ -104,8 +105,8 @@ function computeAppraisalScore(collRate, noi, occupancyRate, arrears) {
   return 0.4 * collScore + 0.3 * noiScore + 0.2 * occScore + 0.1 * arrScore;
 }
 
-function deriveAppraisal({ collRate, noi, occupancyRate, arrears, activeBuildings, prevScore, prevNoi, t, ytdMode }) {
-  if (ytdMode) return deriveYtdAppraisal({ noi, prevNoi, collRate, t });
+function deriveAppraisal({ collRate, noi, occupancyRate, arrears, activeBuildings, prevScore, prevNoi, t, ytdMode, isFullYear }) {
+  if (ytdMode || isFullYear) return deriveYtdAppraisal({ noi, prevNoi, collRate, t, isFullYear });
   const score = computeAppraisalScore(collRate, noi, occupancyRate, arrears);
   const tier  = score >= 0.75 ? "strong" : score >= 0.40 ? "mixed" : "challenging";
 
@@ -651,9 +652,21 @@ export default function OwnerReportingPage() {
   const [outsExpanded,  setOutsExpanded]  = useState(false);
   const [propsExpanded, setPropsExpanded] = useState(false);
 
+  const isFullYear = ytdMode && selYear < today.getFullYear();
+
   const { from, to, prevFrom, prevTo } = useMemo(() => {
     if (ytdMode) {
       const y = selYear;
+      if (y < today.getFullYear()) {
+        // Completed past year — full Jan 1→Dec 31 vs prior full year
+        return {
+          from: `${y}-01-01`,
+          to: `${y}-12-31`,
+          prevFrom: `${y - 1}-01-01`,
+          prevTo: `${y - 1}-12-31`,
+        };
+      }
+      // Current year — YTD to today vs same window prior year
       const m = String(today.getMonth() + 1).padStart(2, "0");
       const d = String(today.getDate()).padStart(2, "0");
       return {
@@ -667,9 +680,9 @@ export default function OwnerReportingPage() {
   }, [selYear, selMonth, ytdMode]);
 
   const periodLabel = useMemo(() => {
-    if (ytdMode) return `YTD ${selYear}`;
+    if (ytdMode) return isFullYear ? String(selYear) : `YTD ${selYear}`;
     return new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(new Date(selYear, selMonth, 1));
-  }, [locale, selYear, selMonth, ytdMode]);
+  }, [locale, selYear, selMonth, ytdMode, isFullYear]);
 
   const monthFull = useMemo(() =>
     new Intl.DateTimeFormat(locale, { month: "long" }).format(new Date(selYear, selMonth, 1)),
@@ -804,8 +817,8 @@ export default function OwnerReportingPage() {
 
   const appraisal = useMemo(() => {
     if (loading || !currData) return { headline: t("reporting.text.loadingReport"), reason: null };
-    return deriveAppraisal({ collRate, noi, occupancyRate, arrears, activeBuildings, prevScore: prevAppraisalScore, prevNoi, t, ytdMode });
-  }, [loading, currData, collRate, noi, occupancyRate, arrears, activeBuildings, prevAppraisalScore, prevNoi, t, ytdMode]);
+    return deriveAppraisal({ collRate, noi, occupancyRate, arrears, activeBuildings, prevScore: prevAppraisalScore, prevNoi, t, ytdMode: ytdMode && !isFullYear, isFullYear });
+  }, [loading, currData, collRate, noi, occupancyRate, arrears, activeBuildings, prevAppraisalScore, prevNoi, t, ytdMode, isFullYear]);
 
   return (
     <AppShell role="OWNER">
@@ -831,7 +844,7 @@ export default function OwnerReportingPage() {
           <div>
               <div className="max-w-2xl">
                 <Badge variant="default" size="lg" className="mb-3 bg-transparent border-black/20 dark:border-white/20 text-foreground/70">
-                  {periodLabel} · {ytdMode ? t("reporting.text.yearToDateReport") : t("reporting.text.monthlyReport")}
+                  {periodLabel} · {isFullYear ? t("reporting.text.fullYearReport") : ytdMode ? t("reporting.text.yearToDateReport") : t("reporting.text.monthlyReport")}
                 </Badge>
               </div>
               <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground whitespace-nowrap">
@@ -987,6 +1000,7 @@ export default function OwnerReportingPage() {
                     <h2 className="text-sm font-semibold text-green-900 dark:text-green-200">{t("reporting.heading.whatDrovePerformance")}</h2>
                   </div>
                   <p className="text-xs text-green-700/70 dark:text-green-400/70 ml-[34px]">{ytdMode ? t("reporting.text.theMainForcesBehindThisYearsNumbers") : t("reporting.text.theMainForcesBehindThisMonthsNumbers")}</p>
+                  {isFullYear && <p className="text-xs text-green-600/60 dark:text-green-500/50 ml-[34px] mt-0.5">{t("reporting.text.fullYearComparison", { year: selYear, prevYear: selYear - 1 })}</p>}
                 </div>
                 <div className="px-7 py-5 flex-1">
                   {loading ? (

@@ -538,7 +538,9 @@
       "financeDetail": "Drill into ledger entries, trial balance, and per-building financials in the Finance section.",
       "monthlyReport": "Monthly Owner Report",
       "yearToDateReport": "Year-to-Date Summary",
+      "fullYearReport": "Full Year Summary",
       "theMainForcesBehindThisYearsNumbers": "The main forces behind this year's performance.",
+      "fullYearComparison": "Full year {{year}} vs {{prevYear}}",
       "noiPerMonth": "Net operating income per month, {{year}}",
       "bestMonth": "Best month",
       "flagsAndActionItems": "Flags and action items for this period",
@@ -575,6 +577,16 @@
       "viewUnpaidInvoices": "View unpaid invoices",
       "viewFinanceOverview": "View finance overview",
       "viewExpenses": "View expenses"
+    },
+    "appraisalFullYear": {
+      "ahead": "A strong year.",
+      "onpar": "A steady year.",
+      "behind": "A difficult year.",
+      "reason": {
+        "noiAhead": "NOI finished {{pct}}% ahead of the prior year.",
+        "noiBehind": "NOI finished {{pct}}% below the prior year.",
+        "noiOnPar": "NOI and collection ({{rate}}) were broadly in line with the prior year."
+      }
     },
     "appraisalYtd": {
       "ahead": "Ahead of last year.",
