@@ -39,6 +39,7 @@ function invoiceFieldExtractor(inv, field) {
 
 const INCOMING_STATUS_TABS = [
   { key: "ALL" },
+  { key: "UNPAID", label: "Unpaid" },
   { key: "DRAFT" },
   { key: "ISSUED" },
   { key: "APPROVED" },
@@ -48,6 +49,7 @@ const INCOMING_STATUS_TABS = [
 
 const OUTGOING_STATUS_TABS = [
   { key: "ALL" },
+  { key: "UNPAID", label: "Unpaid" },
   { key: "DRAFT" },
   { key: "ISSUED" },
   { key: "APPROVED" },
@@ -610,7 +612,11 @@ export function InvoicesContent() {
       } else {
         params.set("direction", direction === "outgoing" ? "OUTGOING" : "INCOMING");
       }
-      if (statusFilter !== "ALL") params.set("status", statusFilter);
+      if (statusFilter === "UNPAID") {
+        params.set("statusIn", "ISSUED,APPROVED");
+      } else if (statusFilter !== "ALL") {
+        params.set("status", statusFilter);
+      }
       if (categoryFilter) params.set("expenseCategory", categoryFilter);
       if (searchTerm.trim()) params.set("search", searchTerm.trim());
       params.set("sortField", toServerSortField(sortField));
@@ -680,6 +686,8 @@ export function InvoicesContent() {
     statusFilter !== "ALL",
     !!categoryFilter,
   ].filter(Boolean).length;
+
+  const isUnpaidFilter = statusFilter === "UNPAID";
 
   /* ─── Actions ─── */
 
@@ -991,11 +999,11 @@ export function InvoicesContent() {
                   className={cn(
                     "rounded-lg px-3 py-1.5 text-sm font-medium border transition-colors",
                     statusFilter === key
-                      ? "bg-brand text-white border-brand"
+                      ? key === "UNPAID" ? "bg-amber-500 text-white border-amber-500" : "bg-brand text-white border-brand"
                       : "bg-surface text-muted-text border-surface-border hover:bg-surface-subtle"
                   )}
                 >
-                  {label}
+                  {label ?? key}
                 </button>
               ))}
             </div>

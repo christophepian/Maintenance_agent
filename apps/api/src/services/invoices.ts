@@ -482,6 +482,7 @@ export async function listInvoices(
   filters?: {
     jobId?: string;
     status?: InvoiceStatus;
+    statusIn?: InvoiceStatus[];
     view?: "summary" | "full";
     contractorId?: string;
     expenseCategory?: string;
@@ -510,7 +511,7 @@ export async function listInvoices(
   const where: any = {
     orgId,
     ...(filters?.jobId && { jobId: filters.jobId }),
-    ...(filters?.status && { status: filters.status }),
+    ...(filters?.statusIn?.length ? { status: { in: filters.statusIn } } : filters?.status ? { status: filters.status } : {}),
     ...(filters?.expenseCategory && { expenseCategory: filters.expenseCategory }),
     ...(filters?.expenseTypeId && { expenseTypeId: filters.expenseTypeId }),
     ...(filters?.accountId && { accountId: filters.accountId }),
