@@ -755,17 +755,25 @@ export async function countTotalUnitsByBuilding(
   return prisma.unit.count({ where: { buildingId, orgId } });
 }
 
-/** Count units that have a currently ACTIVE lease. Used for occupancy rate numerator. */
+/**
+ * Count units that had an active lease during the given period.
+ * Includes TERMINATED leases whose tenure overlapped the period so that
+ * historical reports reflect true occupancy rather than current-state leases.
+ */
 export async function countLeasedUnitsByBuilding(
   prisma: PrismaClient,
   orgId: string,
   buildingId: string,
+  from: Date,
+  to: Date,
 ): Promise<number> {
   return prisma.lease.count({
     where: {
       orgId,
-      status: "ACTIVE",
+      status: { in: ["ACTIVE", "SIGNED", "TERMINATED"] },
       unit: { buildingId },
+      startDate: { lt: to },
+      OR: [{ endDate: null }, { endDate: { gte: from } }],
     },
   });
 }

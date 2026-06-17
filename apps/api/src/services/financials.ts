@@ -205,7 +205,11 @@ export async function getBuildingFinancials(
   if (!params.forceRefresh && !params.groupByAccount && !periodOverlapsCurrentMonth) {
     const cached = await snapshotRepo.findBuildingFinancialSnapshotByPeriod(prisma, orgId, buildingId, from, to);
     if (cached) {
-      const cachedTotalUnits = await inventoryRepo.countTotalUnitsByBuilding(prisma, orgId, buildingId);
+      const [cachedTotalUnits, cachedActiveUnits] = await Promise.all([
+        inventoryRepo.countTotalUnitsByBuilding(prisma, orgId, buildingId),
+        inventoryRepo.countLeasedUnitsByBuilding(prisma, orgId, buildingId, from, to),
+      ]);
+      const cachedCollectionRate = Math.min(1, safeDivide(cached.earnedIncomeCents, cached.projectedIncomeCents));
       return {
         buildingId,
         buildingName: building.name,
@@ -225,8 +229,8 @@ export async function getBuildingFinancials(
         payablesCents: 0,
         maintenanceRatio: 0,
         costPerUnitCents: 0,
-        collectionRate: 0,
-        activeUnitsCount: cached.activeUnitsCount,
+        collectionRate: cachedCollectionRate,
+        activeUnitsCount: cachedActiveUnits,
         totalUnitsCount: cachedTotalUnits,
         expensesByCategory: [],
         topContractorsBySpend: [],
@@ -237,7 +241,7 @@ export async function getBuildingFinancials(
   const [unitIds, totalUnitsCount, activeUnitsCount] = await Promise.all([
     inventoryRepo.findActiveUnitIdsByBuilding(prisma, orgId, buildingId),
     inventoryRepo.countTotalUnitsByBuilding(prisma, orgId, buildingId),
-    inventoryRepo.countLeasedUnitsByBuilding(prisma, orgId, buildingId),
+    inventoryRepo.countLeasedUnitsByBuilding(prisma, orgId, buildingId, from, to),
   ]);
 
   // 4. Expense ledger entries — INVOICE_ISSUED debit legs on EXPENSE accounts
@@ -334,10 +338,11 @@ export async function getBuildingFinancials(
   const netOperatingIncomeCents = earnedIncomeCents - operatingTotalCents;
   const maintenanceRatio = safeDivide(maintenanceTotalCents, earnedIncomeCents);
   const costPerUnitCents = Math.round(safeDivide(expensesTotalCents, activeUnitsCount));
-  // Use invoice-billing-period rate; fall back to ledger/projected if no invoices exist yet
-  const collectionRate = invoicedForPeriodCents > 0
+  // Invoice-billing-period rate capped at 100% to prevent catch-up payments
+  // inflating the rate above 1.0 when the fallback formula fires.
+  const collectionRate = Math.min(1, invoicedForPeriodCents > 0
     ? safeDivide(paidForPeriodCents, invoicedForPeriodCents)
-    : safeDivide(earnedIncomeCents, incomeBreakdown.projectedIncomeCents);
+    : safeDivide(earnedIncomeCents, incomeBreakdown.projectedIncomeCents));
 
   // 11. Format breakdown arrays
   const expensesByCategory: ExpenseCategoryTotalDTO[] = Array.from(categoryTotals.entries())
@@ -514,8 +519,13 @@ export async function getPortfolioSummary(
   const totalActive = summaries.reduce((s, b) => s + b.activeUnitsCount, 0);
   const totalAllUnits = summaries.reduce((s, b) => s + b.totalUnitsCount, 0);
   const active = summaries.filter((b) => b.earnedIncomeCents > 0 || b.expensesTotalCents > 0);
-  const avgCollection = active.length > 0
-    ? active.reduce((s, b) => s + b.collectionRate, 0) / active.length : 0;
+  // Weighted collection rate: total earned / total projected avoids one building's
+  // rate dominating the average when portfolio sizes differ.
+  const totalEarnedActive    = active.reduce((s, b) => s + b.earnedIncomeCents, 0);
+  const totalProjectedActive = active.reduce((s, b) => s + b.projectedIncomeCents, 0);
+  const avgCollection = Math.min(1, totalProjectedActive > 0
+    ? safeDivide(totalEarnedActive, totalProjectedActive)
+    : (active.length > 0 ? active.reduce((s, b) => s + b.collectionRate, 0) / active.length : 0));
   const avgMaintenance = active.length > 0
     ? active.reduce((s, b) => s + b.maintenanceRatio, 0) / active.length : 0;
 

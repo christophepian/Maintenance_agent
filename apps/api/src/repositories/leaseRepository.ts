@@ -546,7 +546,9 @@ export async function findActiveLeasesForProjection(
     where: {
       orgId,
       unitId: { in: unitIds },
-      status: { in: ["ACTIVE", "SIGNED"] },
+      // Include TERMINATED leases whose tenure overlapped the period — required for
+      // correct historical projection (otherwise terminated leases collapse projected = 0)
+      status: { in: ["ACTIVE", "SIGNED", "TERMINATED"] },
       startDate: { lt: to },
       OR: [{ endDate: null }, { endDate: { gte: from } }],
       deletedAt: null,
