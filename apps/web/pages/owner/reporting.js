@@ -642,12 +642,10 @@ export default function OwnerReportingPage() {
     [currData, prevData, t]
   );
 
-  // By-property list — sorted by net income desc, auto-collapsed when > 3
+  // By-property list — sorted by net income desc; all buildings shown regardless of activity
   const activeBuildings = useMemo(() => {
     if (!currData?.buildings) return [];
-    return currData.buildings
-      .filter((b) => b.expensesTotalCents > 0 || b.earnedIncomeCents > 0)
-      .sort((a, b) => b.netIncomeCents - a.netIncomeCents);
+    return [...currData.buildings].sort((a, b) => b.netIncomeCents - a.netIncomeCents);
   }, [currData]);
 
   const watchItems = useMemo(
