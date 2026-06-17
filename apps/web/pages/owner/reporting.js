@@ -667,7 +667,7 @@ export default function OwnerReportingPage() {
   const heroMessage = loading
     ? t("reporting.text.loadingReport")
     : netIncome > 0
-      ? (currData?.buildingsInRed === 0 ? t("reporting.text.strongMonth") : t("reporting.text.mixedMonth"))
+      ? (activeBuildings.every((b) => b.netIncomeCents >= 0) ? t("reporting.text.strongMonth") : t("reporting.text.mixedMonth"))
       : t("reporting.text.portfolioSummary");
 
   return (
@@ -708,7 +708,7 @@ export default function OwnerReportingPage() {
                     ? <>{t("reporting.text.operatingCosts")} <span className="font-semibold text-foreground">{fmtChf(expenses)}</span>. </>
                     : ""}
                   {totalUnits > 0
-                    ? t("reporting.text.unitsLeased", { count: totalUnits, units: totalUnits, allUnits, buildings: currData.buildingCount })
+                    ? t("reporting.text.unitsLeased", { count: totalUnits, units: totalUnits, allUnits, buildings: activeBuildings.length })
                     : ""}
                 </p>
               )}
