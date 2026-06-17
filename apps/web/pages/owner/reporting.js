@@ -708,7 +708,7 @@ export default function OwnerReportingPage() {
                     ? <>{t("reporting.text.operatingCosts")} <span className="font-semibold text-foreground">{fmtChf(expenses)}</span>. </>
                     : ""}
                   {totalUnits > 0
-                    ? t("reporting.text.unitsLeased", { count: totalUnits, units: totalUnits, buildings: currData.buildingCount })
+                    ? t("reporting.text.unitsLeased", { count: totalUnits, units: totalUnits, allUnits, buildings: currData.buildingCount })
                     : ""}
                 </p>
               )}
