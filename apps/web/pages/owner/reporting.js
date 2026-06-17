@@ -642,14 +642,6 @@ export default function OwnerReportingPage() {
     [currData, prevData, t]
   );
 
-  const watchItems = useMemo(
-    () => buildWatchItems(currData, prevData, moveIns, moveOuts, {
-      arrears, occupancyRate, allUnits, totalUnits, incomeVariance, projected,
-      receivables, activeBuildings,
-    }),
-    [currData, prevData, moveIns, moveOuts, arrears, occupancyRate, allUnits, totalUnits, incomeVariance, projected, receivables, activeBuildings]
-  );
-
   // By-property list — sorted by net income desc, auto-collapsed when > 3
   const activeBuildings = useMemo(() => {
     if (!currData?.buildings) return [];
@@ -657,6 +649,14 @@ export default function OwnerReportingPage() {
       .filter((b) => b.expensesTotalCents > 0 || b.earnedIncomeCents > 0)
       .sort((a, b) => b.netIncomeCents - a.netIncomeCents);
   }, [currData]);
+
+  const watchItems = useMemo(
+    () => buildWatchItems(currData, prevData, moveIns, moveOuts, {
+      arrears, occupancyRate, allUnits, totalUnits, incomeVariance, projected,
+      receivables, activeBuildings,
+    }),
+    [currData, prevData, moveIns, moveOuts, arrears, occupancyRate, allUnits, totalUnits, incomeVariance, projected, receivables, activeBuildings]
+  );
 
   // Auto-expand when ≤ 3 buildings
   const autoExpanded = activeBuildings.length <= 3;
