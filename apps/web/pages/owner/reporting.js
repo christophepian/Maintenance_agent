@@ -828,20 +828,22 @@ export default function OwnerReportingPage() {
           "dark:from-brand-light dark:via-info-light dark:to-transparent",
           ytdMode ? "from-violet-50 via-sky-50 to-green-50" : MONTH_HERO_GRADIENTS[selMonth]
         )}>
-          <div className="max-w-2xl">
-              <Badge variant="default" size="lg" className="mb-3 bg-transparent border-black/20 dark:border-white/20 text-foreground/70">
-                {periodLabel} · {ytdMode ? t("reporting.text.yearToDateReport") : t("reporting.text.monthlyReport")}
-              </Badge>
-              <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+          <div>
+              <div className="max-w-2xl">
+                <Badge variant="default" size="lg" className="mb-3 bg-transparent border-black/20 dark:border-white/20 text-foreground/70">
+                  {periodLabel} · {ytdMode ? t("reporting.text.yearToDateReport") : t("reporting.text.monthlyReport")}
+                </Badge>
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground whitespace-nowrap">
                 {appraisal.headline}
               </h1>
               {!loading && appraisal.reason && (
-                <p className="mt-2 text-sm font-medium text-muted-dark">
+                <p className="mt-2 text-sm font-medium text-muted-dark max-w-2xl">
                   {appraisal.reason}
                 </p>
               )}
               {!loading && currData && (
-                <p className="mt-2 text-sm leading-6 text-muted-text sm:text-base">
+                <p className="mt-2 text-sm leading-6 text-muted-text sm:text-base max-w-2xl">
                   {earned > 0
                     ? <>{t("reporting.text.rentCollected")} <span className="font-semibold text-foreground">{fmtChf(earned)}</span>. </>
                     : ""}
