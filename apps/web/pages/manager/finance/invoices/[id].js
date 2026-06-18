@@ -90,6 +90,14 @@ export default function InvoiceDetailPage() {
   const [sourceBlobUrl, setSourceBlobUrl] = useState(null);
   const pdfBlobRef = useRef(null);
   const sourceBlobRef = useRef(null);
+  // Building/unit attribution
+  const [buildings, setBuildings] = useState([]);
+  const [units, setUnits] = useState([]);
+  const [selectedBuildingId, setSelectedBuildingId] = useState("");
+  const [selectedUnitId, setSelectedUnitId] = useState("");
+  const [attributionSaving, setAttributionSaving] = useState(false);
+  // Swap state
+  const [swapLoading, setSwapLoading] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!id) return;
@@ -113,11 +121,26 @@ export default function InvoiceDetailPage() {
   useEffect(() => {
     fetch("/api/billing-entities", { headers: authHeaders() })
       .then((r) => r.ok ? r.json() : null)
-      .then((d) => {
-        if (d?.data) setBillingEntities(d.data);
-      })
+      .then((d) => { if (d?.data) setBillingEntities(d.data); })
       .catch(() => {});
   }, []);
+
+  // Load buildings
+  useEffect(() => {
+    fetch("/api/buildings", { headers: authHeaders() })
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => { if (d?.data) setBuildings(d.data); })
+      .catch(() => {});
+  }, []);
+
+  // Load units when building changes
+  useEffect(() => {
+    if (!selectedBuildingId) { setUnits([]); setSelectedUnitId(""); return; }
+    fetch(`/api/buildings/${selectedBuildingId}/units`, { headers: authHeaders() })
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => { if (d?.data) setUnits(d.data); })
+      .catch(() => {});
+  }, [selectedBuildingId]);
 
   // Sync selected billing entity when invoice loads
   useEffect(() => {
@@ -125,6 +148,12 @@ export default function InvoiceDetailPage() {
       setSelectedBillingEntityId(invoice.issuerBillingEntityId);
     }
   }, [invoice?.issuerBillingEntityId]);
+
+  // Sync attribution from invoice
+  useEffect(() => {
+    if (invoice?.buildingId) setSelectedBuildingId(invoice.buildingId);
+    if (invoice?.unitId) setSelectedUnitId(invoice.unitId);
+  }, [invoice?.buildingId, invoice?.unitId]);
 
   // Fetch PDF + source file with auth headers → blob URLs for iframe/img
   useEffect(() => {
@@ -226,6 +255,42 @@ export default function InvoiceDetailPage() {
       setError(String(e?.message || e));
     } finally {
       setBeSaving(false);
+    }
+  }
+
+  async function saveAttribution() {
+    setAttributionSaving(true);
+    try {
+      const res = await fetch(`/api/invoices/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({
+          buildingId: selectedBuildingId || null,
+          unitId: selectedUnitId || null,
+        }),
+      });
+      if (!res.ok) { const d = await res.json(); throw new Error(d?.error?.message || "Failed to save"); }
+      await loadData();
+    } catch (e) {
+      setError(String(e?.message || e));
+    } finally {
+      setAttributionSaving(false);
+    }
+  }
+
+  async function swapParties() {
+    setSwapLoading(true);
+    try {
+      const res = await fetch(`/api/invoices/${id}/swap-parties`, {
+        method: "POST",
+        headers: authHeaders(),
+      });
+      if (!res.ok) { const d = await res.json(); throw new Error(d?.error?.message || "Swap failed"); }
+      await loadData();
+    } catch (e) {
+      setError(String(e?.message || e));
+    } finally {
+      setSwapLoading(false);
     }
   }
 
@@ -347,6 +412,17 @@ export default function InvoiceDetailPage() {
                           )}
                         </>
                       )}
+                      {(isIngested || inv.issuerName) && (
+                        <button
+                          type="button"
+                          onClick={swapParties}
+                          disabled={swapLoading || actionLoading}
+                          title="Swap issuer and recipient if OCR mixed them up"
+                          className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-700 hover:bg-amber-100 transition disabled:opacity-50"
+                        >
+                          {swapLoading ? "Swapping…" : "⇅ Swap parties"}
+                        </button>
+                      )}
                       <button
                         type="button"
                         disabled={!pdfBlobUrl}
@@ -397,6 +473,20 @@ export default function InvoiceDetailPage() {
                     <Field label={t("manager:financeInvoicesId.prop.country")} value={inv.recipientCountry} />
                   </dl>
                 </Panel>
+
+                {/* Issuer raw text (from OCR) */}
+                {(inv.issuerName || inv.issuerAddressLine1) && (
+                  <Panel title="Issuer (extracted)">
+                    <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-4">
+                      {inv.issuerName && <Field label="Name" value={inv.issuerName} />}
+                      {inv.issuerAddressLine1 && <Field label="Address" value={inv.issuerAddressLine1} />}
+                      {inv.issuerPostalCode && inv.issuerCity && (
+                        <Field label="City" value={`${inv.issuerPostalCode} ${inv.issuerCity}`} />
+                      )}
+                      {inv.issuerCountry && <Field label="Country" value={inv.issuerCountry} />}
+                    </dl>
+                  </Panel>
+                )}
 
                 {/* Issuer / Billing Entity */}
                 <Panel title={t("manager:financeInvoicesId.title.issuerBillingEntity")}>
@@ -604,6 +694,62 @@ export default function InvoiceDetailPage() {
                     <dl className="grid grid-cols-2 gap-x-6 gap-y-4">
                       {inv.expenseType && <Field label={t("manager:financeInvoicesId.prop.expenseType")} value={`${inv.expenseType.name}${inv.expenseType.code ? ` (${inv.expenseType.code})` : ""}`} />}
                       {inv.account && <Field label={t("manager:financeInvoicesId.prop.account")} value={`${inv.account.name}${inv.account.code ? ` (${inv.account.code})` : ""}`} />}
+                    </dl>
+                  </Panel>
+                )}
+
+                {/* Building / Unit attribution */}
+                {inv.status !== "PAID" && (
+                  <Panel title="Building / Unit Attribution">
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-medium text-muted mb-1">Building</label>
+                          <select
+                            value={selectedBuildingId}
+                            onChange={(e) => { setSelectedBuildingId(e.target.value); setSelectedUnitId(""); }}
+                            className="w-full rounded-lg border border-muted-ring bg-surface px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          >
+                            <option value="">— None —</option>
+                            {buildings.map((b) => (
+                              <option key={b.id} value={b.id}>{b.name || b.address || b.id.slice(0, 8)}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-muted mb-1">Unit</label>
+                          <select
+                            value={selectedUnitId}
+                            onChange={(e) => setSelectedUnitId(e.target.value)}
+                            disabled={!selectedBuildingId || units.length === 0}
+                            className="w-full rounded-lg border border-muted-ring bg-surface px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50"
+                          >
+                            <option value="">— None —</option>
+                            {units.map((u) => (
+                              <option key={u.id} value={u.id}>{u.unitNumber}{u.floor ? ` (floor ${u.floor})` : ""}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                      <button
+                        onClick={saveAttribution}
+                        disabled={attributionSaving}
+                        className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition disabled:opacity-50"
+                      >
+                        {attributionSaving ? "Saving…" : "Save attribution"}
+                      </button>
+                    </div>
+                  </Panel>
+                )}
+                {inv.status === "PAID" && (inv.buildingId || inv.unitId) && (
+                  <Panel title="Building / Unit Attribution">
+                    <dl className="grid grid-cols-2 gap-x-6 gap-y-4">
+                      {inv.buildingId && (
+                        <Field label="Building" value={buildings.find((b) => b.id === inv.buildingId)?.name || inv.buildingId.slice(0, 8)} />
+                      )}
+                      {inv.unitId && (
+                        <Field label="Unit" value={units.find((u) => u.id === inv.unitId)?.unitNumber || inv.unitId.slice(0, 8)} />
+                      )}
                     </dl>
                   </Panel>
                 )}

@@ -51,6 +51,11 @@ export const UpdateInvoiceSchema = z.object({
   amount: z.number().min(0).max(100000).optional(),
   description: z.string().max(500).optional(),
   issuerBillingEntityId: z.string().uuid().nullable().optional(),
+  issuerName: z.string().max(255).nullable().optional(),
+  issuerAddressLine1: z.string().max(255).nullable().optional(),
+  issuerPostalCode: z.string().max(20).nullable().optional(),
+  issuerCity: z.string().max(100).nullable().optional(),
+  issuerCountry: z.string().max(10).nullable().optional(),
   recipientName: z.string().min(1).optional(),
   recipientAddressLine1: z.string().min(1).optional(),
   recipientAddressLine2: z.string().nullable().optional(),
@@ -63,6 +68,8 @@ export const UpdateInvoiceSchema = z.object({
   expenseTypeId: z.string().uuid().nullable().optional(),
   accountId: z.string().uuid().nullable().optional(),
   lineItems: z.array(LineItemSchema).optional(),
+  buildingId: z.string().uuid().nullable().optional(),
+  unitId: z.string().uuid().nullable().optional(),
 });
 
 export type CreateInvoicePayload = z.infer<typeof CreateInvoiceSchema>;

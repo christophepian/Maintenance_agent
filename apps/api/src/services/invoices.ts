@@ -22,6 +22,12 @@ export interface CreateInvoiceParams {
   amount?: number; // CHF (legacy)
   description?: string;
   issuerBillingEntityId?: string;
+  // Raw issuer text (from OCR)
+  issuerName?: string;
+  issuerAddressLine1?: string;
+  issuerPostalCode?: string;
+  issuerCity?: string;
+  issuerCountry?: string;
   recipientName?: string;
   recipientAddressLine1?: string;
   recipientAddressLine2?: string;
@@ -60,6 +66,12 @@ export interface UpdateInvoiceParams {
   amount?: number; // CHF (legacy)
   description?: string;
   issuerBillingEntityId?: string | null;
+  // Raw issuer text fields
+  issuerName?: string | null;
+  issuerAddressLine1?: string | null;
+  issuerPostalCode?: string | null;
+  issuerCity?: string | null;
+  issuerCountry?: string | null;
   recipientName?: string;
   recipientAddressLine1?: string;
   recipientAddressLine2?: string | null;
@@ -80,6 +92,9 @@ export interface UpdateInvoiceParams {
   submittedAt?: Date;
   approvedAt?: Date;
   paidAt?: Date;
+  // Building/unit attribution
+  buildingId?: string | null;
+  unitId?: string | null;
 }
 
 export interface InvoiceLineItemDTO {
@@ -99,6 +114,12 @@ export interface InvoiceDTO {
   amount: number; // CHF (legacy)
   description?: string;
   issuerBillingEntityId?: string;
+  // Raw issuer text (OCR-extracted or manually entered)
+  issuerName?: string | null;
+  issuerAddressLine1?: string | null;
+  issuerPostalCode?: string | null;
+  issuerCity?: string | null;
+  issuerCountry?: string | null;
   recipientName: string;
   recipientAddressLine1: string;
   recipientAddressLine2?: string;
@@ -453,6 +474,11 @@ export async function createInvoice(params: CreateInvoiceParams): Promise<Invoic
       ...(params.matchedJobId ? { matchedJobId: params.matchedJobId } : {}),
       ...(params.matchedLeaseId ? { matchedLeaseId: params.matchedLeaseId } : {}),
       ...(params.matchedBuildingId ? { matchedBuildingId: params.matchedBuildingId } : {}),
+      ...(params.issuerName ? { issuerName: params.issuerName } : {}),
+      ...(params.issuerAddressLine1 ? { issuerAddressLine1: params.issuerAddressLine1 } : {}),
+      ...(params.issuerPostalCode ? { issuerPostalCode: params.issuerPostalCode } : {}),
+      ...(params.issuerCity ? { issuerCity: params.issuerCity } : {}),
+      ...(params.issuerCountry ? { issuerCountry: params.issuerCountry } : {}),
       lineItems: normalizedLineItems.length
         ? {
             create: normalizedLineItems,
@@ -654,6 +680,11 @@ export async function updateInvoice(
     params.amount !== undefined ||
     params.description !== undefined ||
     params.issuerBillingEntityId !== undefined ||
+    params.issuerName !== undefined ||
+    params.issuerAddressLine1 !== undefined ||
+    params.issuerPostalCode !== undefined ||
+    params.issuerCity !== undefined ||
+    params.issuerCountry !== undefined ||
     params.recipientName !== undefined ||
     params.recipientAddressLine1 !== undefined ||
     params.recipientAddressLine2 !== undefined ||
@@ -664,7 +695,13 @@ export async function updateInvoice(
     params.dueDate !== undefined ||
     params.vatRate !== undefined;
 
-  if (existing.lockedAt && mutatingFields) {
+  // building/unit attribution and expenseType/account never lock — they're metadata
+  const isAttributionOnly =
+    !mutatingFields &&
+    (params.buildingId !== undefined || params.unitId !== undefined ||
+     params.expenseTypeId !== undefined || params.accountId !== undefined);
+
+  if (existing.lockedAt && mutatingFields && !isAttributionOnly) {
     throw new Error('INVOICE_LOCKED');
   }
 
@@ -688,6 +725,13 @@ export async function updateInvoice(
         ...(params.issuerBillingEntityId !== undefined && {
           issuerBillingEntityId: params.issuerBillingEntityId === null ? null : params.issuerBillingEntityId,
         }),
+        ...(params.issuerName !== undefined && { issuerName: params.issuerName }),
+        ...(params.issuerAddressLine1 !== undefined && { issuerAddressLine1: params.issuerAddressLine1 }),
+        ...(params.issuerPostalCode !== undefined && { issuerPostalCode: params.issuerPostalCode }),
+        ...(params.issuerCity !== undefined && { issuerCity: params.issuerCity }),
+        ...(params.issuerCountry !== undefined && { issuerCountry: params.issuerCountry }),
+        ...(params.buildingId !== undefined && { buildingId: params.buildingId }),
+        ...(params.unitId !== undefined && { unitId: params.unitId }),
         ...(params.recipientName !== undefined && { recipientName: params.recipientName }),
         ...(params.recipientAddressLine1 !== undefined && { recipientAddressLine1: params.recipientAddressLine1 }),
         ...(params.recipientAddressLine2 !== undefined && {
@@ -736,6 +780,37 @@ export async function updateInvoice(
     }
 
     return invoice;
+  });
+
+  return mapInvoiceToDTO(updated);
+}
+
+/**
+ * Swap issuer ↔ recipient raw text fields.
+ * Clears issuerBillingEntityId so the manager re-links the correct billing entity.
+ */
+export async function swapInvoiceParties(invoiceId: string): Promise<InvoiceDTO> {
+  const existing = await invoiceRepo.findInvoiceById(prisma, invoiceId);
+  if (!existing) throw new Error('INVOICE_NOT_FOUND');
+
+  const inv = existing as any;
+
+  const updated = await prisma.invoice.update({
+    where: { id: invoiceId },
+    data: {
+      issuerBillingEntityId: null,
+      issuerName:         inv.recipientName         || null,
+      issuerAddressLine1: inv.recipientAddressLine1 || null,
+      issuerPostalCode:   inv.recipientPostalCode   || null,
+      issuerCity:         inv.recipientCity         || null,
+      issuerCountry:      inv.recipientCountry      || null,
+      recipientName:         inv.issuerName         || 'Unknown',
+      recipientAddressLine1: inv.issuerAddressLine1 || 'Unknown',
+      recipientPostalCode:   inv.issuerPostalCode   || '0000',
+      recipientCity:         inv.issuerCity         || 'Unknown',
+      recipientCountry:      inv.issuerCountry      || 'CH',
+    },
+    include: INVOICE_INCLUDE,
   });
 
   return mapInvoiceToDTO(updated);
@@ -835,6 +910,11 @@ function mapInvoiceToDTO(invoice: InvoiceWithFullInclude): InvoiceDTO {
         : fromCents(totalAmount),
     description: invoice.description || undefined,
     issuerBillingEntityId: invoice.issuerBillingEntityId || undefined,
+    issuerName: (invoice as any).issuerName ?? null,
+    issuerAddressLine1: (invoice as any).issuerAddressLine1 ?? null,
+    issuerPostalCode: (invoice as any).issuerPostalCode ?? null,
+    issuerCity: (invoice as any).issuerCity ?? null,
+    issuerCountry: (invoice as any).issuerCountry ?? null,
     recipientName: invoice.recipientName,
     recipientAddressLine1: invoice.recipientAddressLine1,
     recipientAddressLine2: invoice.recipientAddressLine2 || undefined,
@@ -888,6 +968,8 @@ function mapInvoiceToDTO(invoice: InvoiceWithFullInclude): InvoiceDTO {
       ? (invoice as any).billingPeriodEnd.toISOString()
       : null,
     billingScheduleId: (invoice as any).billingScheduleId ?? null,
+    buildingId: (invoice as any).buildingId ?? null,
+    unitId: (invoice as any).unitId ?? null,
   };
 }
 

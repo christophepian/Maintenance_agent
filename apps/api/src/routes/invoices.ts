@@ -181,8 +181,15 @@ export function registerInvoiceRoutes(router: Router) {
       const { updateInvoice } = await import("../services/invoices");
       const updated = await updateInvoice(params.id, {
         ...(body.issuerBillingEntityId !== undefined ? { issuerBillingEntityId: body.issuerBillingEntityId } : {}),
+        ...(body.issuerName !== undefined ? { issuerName: body.issuerName } : {}),
+        ...(body.issuerAddressLine1 !== undefined ? { issuerAddressLine1: body.issuerAddressLine1 } : {}),
+        ...(body.issuerPostalCode !== undefined ? { issuerPostalCode: body.issuerPostalCode } : {}),
+        ...(body.issuerCity !== undefined ? { issuerCity: body.issuerCity } : {}),
+        ...(body.issuerCountry !== undefined ? { issuerCountry: body.issuerCountry } : {}),
         ...(body.recipientName !== undefined ? { recipientName: body.recipientName } : {}),
         ...(body.description !== undefined ? { description: body.description } : {}),
+        ...(body.buildingId !== undefined ? { buildingId: body.buildingId } : {}),
+        ...(body.unitId !== undefined ? { unitId: body.unitId } : {}),
       });
       sendJson(res, 200, { data: updated });
     } catch (e: any) {
@@ -279,6 +286,21 @@ export function registerInvoiceRoutes(router: Router) {
       if (e instanceof InvalidTransitionError) return sendError(res, 409, "INVALID_TRANSITION", e.message);
       if (e.code === "NOT_FOUND") return sendError(res, 404, "NOT_FOUND", e.message);
       sendError(res, 500, "DB_ERROR", "Failed to dispute invoice", String(e));
+    }
+  });
+
+  // POST /invoices/:id/swap-parties — swap issuer ↔ recipient text fields
+  router.post("/invoices/:id/swap-parties", async ({ req, res, params, orgId }) => {
+    if (!requireAnyRole(req, res, ["MANAGER", "OWNER"])) return;
+    try {
+      const { swapInvoiceParties } = await import("../services/invoices");
+      const invoice = await (await import("../services/invoices")).swapInvoiceParties(params.id);
+      if (!invoice || (invoice as any).orgId !== orgId) return sendError(res, 404, "NOT_FOUND", "Invoice not found");
+      sendJson(res, 200, { data: invoice });
+    } catch (e: any) {
+      const msg = String(e?.message || e);
+      if (msg === "INVOICE_NOT_FOUND") return sendError(res, 404, "NOT_FOUND", "Invoice not found");
+      sendError(res, 500, "DB_ERROR", "Failed to swap invoice parties", String(e));
     }
   });
 

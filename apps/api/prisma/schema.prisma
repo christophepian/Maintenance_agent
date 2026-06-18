@@ -400,6 +400,7 @@ model Building {
   strategyProfile    BuildingStrategyProfile?
   importedStatements ImportedStatement[]
   assets             Asset[]
+  attributedInvoices Invoice[]             @relation("InvoiceBuildingAttribution")
 
   @@index([orgId])
   @@index([managerId])
@@ -501,6 +502,7 @@ model Unit {
   rfps                   Rfp[]
   ledgerEntries          LedgerEntry[]
   conditionReports       UnitConditionReport[]
+  attributedInvoices     Invoice[]             @relation("InvoiceUnitAttribution")
 
   @@unique([buildingId, unitNumber])
   @@index([buildingId])
@@ -682,12 +684,23 @@ model Invoice {
   billingScheduleId     String?               /// FK to the lease billing schedule that generated this invoice
   contractorId          String?               /// FK to contractor (for recurring contractor invoices)
   contractorBillingScheduleId String?          /// FK to contractor billing schedule
+  // ── Building/unit attribution (manual) ──────────────────
+  buildingId            String?
+  unitId                String?
+  // ── Raw issuer text (OCR-extracted; editable for swap) ──
+  issuerName            String?
+  issuerAddressLine1    String?
+  issuerPostalCode      String?
+  issuerCity            String?
+  issuerCountry         String?
   // ── Relations ────────────────────────────────────────────
   issuer                BillingEntity?        @relation(fields: [issuerBillingEntityId], references: [id])
   job                   Job?                  @relation(fields: [jobId], references: [id], onDelete: Cascade)
   org                   Org                   @relation(fields: [orgId], references: [id], onDelete: Cascade)
   lease                 Lease?                @relation(fields: [leaseId], references: [id], onDelete: SetNull)
   contractor            Contractor?           @relation(fields: [contractorId], references: [id], onDelete: SetNull)
+  attributedBuilding    Building?             @relation("InvoiceBuildingAttribution", fields: [buildingId], references: [id], onDelete: SetNull)
+  attributedUnit        Unit?                 @relation("InvoiceUnitAttribution", fields: [unitId], references: [id], onDelete: SetNull)
   classifiedExpenseType ExpenseType?          @relation(fields: [expenseTypeId], references: [id], onDelete: SetNull)
   classifiedAccount     Account?              @relation(fields: [accountId], references: [id], onDelete: SetNull)
   billingSchedule       RecurringBillingSchedule? @relation(fields: [billingScheduleId], references: [id], onDelete: SetNull)
@@ -707,6 +720,8 @@ model Invoice {
   @@index([billingScheduleId])
   @@index([contractorId])
   @@index([contractorBillingScheduleId])
+  @@index([buildingId])
+  @@index([unitId])
 }
 
 model InvoiceLineItem {
