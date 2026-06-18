@@ -305,18 +305,30 @@ function TrendArrow({ delta }) {
   return <span className={cn("text-sm font-semibold leading-none", cls)}>{arrow}</span>;
 }
 
-function KpiCard({ label, value, delta, isLoading }) {
+function KpiRow({ label, value, delta, isLoading }) {
   return (
-    <div className="rounded-2xl border border-surface-border bg-surface p-5 shadow-sm">
-      <div className="text-xs font-medium text-foreground-dim uppercase tracking-wide">{label}</div>
+    <div className="flex items-center justify-between gap-4 py-3.5 px-4">
+      <span className="text-sm text-foreground-dim">{label}</span>
       {isLoading ? (
-        <div className="mt-3 h-8 w-24 animate-pulse rounded bg-surface-hover" />
+        <div className="h-4 w-20 animate-pulse rounded bg-surface-hover" />
       ) : (
-        <div className="mt-3 flex items-end justify-between gap-2">
-          <div className="text-2xl font-semibold tracking-tight text-foreground">{value}</div>
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-semibold text-foreground tabular-nums">{value}</span>
           <TrendArrow delta={delta} />
         </div>
       )}
+    </div>
+  );
+}
+
+function KpiTable({ rows, isLoading }) {
+  return (
+    <div className="rounded-2xl border border-surface-border bg-surface shadow-sm overflow-hidden">
+      {rows.map((row, i) => (
+        <div key={row.label} className={cn(i > 0 && "border-t border-surface-divider")}>
+          <KpiRow label={row.label} value={row.value} delta={row.delta} isLoading={isLoading} />
+        </div>
+      ))}
     </div>
   );
 }
@@ -931,39 +943,25 @@ export default function OwnerReportingPage() {
             </div>
         </header>
 
-        {/* ── KPI ROW 1 ────────────────────────────────────────── */}
-        <section className="grid grid-cols-2 lg:grid-cols-4 mb-2 gap-4">
-          <KpiCard label={t("reporting.prop.netOperatingIncome")} value={fmtChf(noi)}      delta={noiDelta}    isLoading={loading} />
-          <KpiCard label={t("reporting.prop.rentCollected")}    value={fmtChf(earned)}   delta={earnedDelta} isLoading={loading} />
-          <KpiCard label={t("reporting.prop.totalExpenses")}    value={fmtChf(expenses)} delta={expDelta}    isLoading={loading} />
-          <KpiCard label={t("reporting.prop.collectionRate")}   value={fmtPct(collRate)} delta={collDelta}   isLoading={loading} />
-        </section>
-
-        {/* ── KPI ROW 2 ────────────────────────────────────────── */}
-        <section className="grid grid-cols-2 lg:grid-cols-4 mb-6 gap-4">
-          <KpiCard
-            label={t("reporting.prop.noiMargin")}
-            value={!loading && noiMargin !== null ? fmtPct(noiMargin) : "—"}
-            delta={noiMarginDelta}
+        {/* ── KPI TABLES ───────────────────────────────────────── */}
+        <section className="grid grid-cols-1 sm:grid-cols-2 mb-6 gap-4">
+          <KpiTable
             isLoading={loading}
+            rows={[
+              { label: t("reporting.prop.netOperatingIncome"), value: fmtChf(noi),      delta: noiDelta    },
+              { label: t("reporting.prop.rentCollected"),       value: fmtChf(earned),   delta: earnedDelta },
+              { label: t("reporting.prop.totalExpenses"),       value: fmtChf(expenses), delta: expDelta    },
+              { label: t("reporting.prop.collectionRate"),      value: fmtPct(collRate), delta: collDelta   },
+            ]}
           />
-          <KpiCard
-            label={t("reporting.prop.opexRatio")}
-            value={!loading && opexRatio !== null ? fmtPct(opexRatio) : "—"}
-            delta={opexDelta}
+          <KpiTable
             isLoading={loading}
-          />
-          <KpiCard
-            label={t("reporting.prop.occupancy")}
-            value={!loading && occupancyRate !== null ? fmtPct(occupancyRate) : "—"}
-            delta={occupancyDelta}
-            isLoading={loading}
-          />
-          <KpiCard
-            label={t("reporting.prop.rentOutstanding")}
-            value={!loading ? (receivables > 0 ? fmtChf(receivables) : "—") : "—"}
-            delta={null}
-            isLoading={loading}
+            rows={[
+              { label: t("reporting.prop.noiMargin"),      value: !loading && noiMargin    !== null ? fmtPct(noiMargin)    : "—", delta: noiMarginDelta },
+              { label: t("reporting.prop.opexRatio"),      value: !loading && opexRatio    !== null ? fmtPct(opexRatio)    : "—", delta: opexDelta      },
+              { label: t("reporting.prop.occupancy"),      value: !loading && occupancyRate !== null ? fmtPct(occupancyRate) : "—", delta: occupancyDelta },
+              { label: t("reporting.prop.rentOutstanding"), value: !loading ? (receivables > 0 ? fmtChf(receivables) : "—") : "—", delta: null           },
+            ]}
           />
         </section>
 
