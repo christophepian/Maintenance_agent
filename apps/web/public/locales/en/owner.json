@@ -526,6 +526,8 @@
       "backToMonths": "← Months",
       "movingIn": "Moving in",
       "movingOut": "Moving out",
+      "viewDetails": "View details",
+      "hideDetails": "Hide details",
       "loadingReport": "Loading your report…",
       "strongMonth": "Your portfolio had a strong month.",
       "mixedMonth": "Your portfolio had a mixed month.",

@@ -3,7 +3,7 @@ import { useRouter } from "next/router";
 import AppShell from "../../components/AppShell";
 import Badge from "../../components/ui/Badge";
 import { authHeaders } from "../../lib/api";
-
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { withTranslations } from "../../lib/i18n";
 import { useTranslation } from "next-i18next";
@@ -321,9 +321,12 @@ function KpiRow({ label, value, delta, isLoading }) {
   );
 }
 
-function KpiTable({ left, right, isLoading }) {
+function KpiTable({ left, right, isLoading, attached = false }) {
   return (
-    <div className="rounded-2xl border border-surface-border bg-surface shadow-sm overflow-hidden">
+    <div className={cn(
+      "border border-surface-border bg-surface shadow-sm overflow-hidden",
+      attached ? "rounded-b-2xl rounded-t-none border-t-0" : "rounded-2xl"
+    )}>
       <div className="grid grid-cols-1 sm:grid-cols-2 sm:divide-x sm:divide-surface-divider">
         <div>
           {left.map((row, i) => (
@@ -726,6 +729,7 @@ export default function OwnerReportingPage() {
   const [insExpanded,   setInsExpanded]   = useState(false);
   const [outsExpanded,  setOutsExpanded]  = useState(false);
   const [propsExpanded, setPropsExpanded] = useState(false);
+  const [kpiOpen,       setKpiOpen]       = useState(false);
 
   // Annual mode auto-adapts: past year → full Jan–Dec; current year → Jan–today
   const isFullYear = ytdMode && selYear < today.getFullYear();
@@ -921,60 +925,71 @@ export default function OwnerReportingPage() {
 
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
 
-        {/* ── HERO ─────────────────────────────────────────────── */}
-        <header className={cn(
-          "mb-6 rounded-3xl border border-surface-border bg-gradient-to-br p-6 shadow-sm",
-          "dark:from-brand-light dark:via-info-light dark:to-transparent",
-          ytdMode ? "from-violet-50 via-sky-50 to-green-50" : MONTH_HERO_GRADIENTS[selMonth]
-        )}>
-          <div>
-              <div className="max-w-2xl">
-                <Badge variant="default" size="lg" className="mb-3 bg-transparent border-black/20 dark:border-white/20 text-foreground/70">
-                  {periodLabel} · {isFullYear ? t("reporting.text.fullYearReport") : ytdMode ? t("reporting.text.yearToDateReport") : t("reporting.text.monthlyReport")}
-                </Badge>
-              </div>
-              <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground whitespace-nowrap">
-                {appraisal.headline}
-              </h1>
-              {!loading && appraisal.reason && (
-                <p className="mt-2 text-sm font-medium text-muted-dark max-w-2xl">
-                  {appraisal.reason}
-                </p>
-              )}
-              {!loading && currData && (
-                <p className="mt-2 text-sm leading-6 text-muted-text sm:text-base max-w-2xl">
-                  {earned > 0
-                    ? <>{t("reporting.text.rentCollected")} <span className="font-semibold text-foreground">{fmtChf(earned)}</span>. </>
-                    : ""}
-                  {expenses > 0
-                    ? <>{t("reporting.text.operatingCosts")} <span className="font-semibold text-foreground">{fmtChf(expenses)}</span>. </>
-                    : ""}
-                  {totalUnits > 0
-                    ? t("reporting.text.unitsLeased", { count: totalUnits, units: totalUnits, allUnits, buildings: activeBuildings.length })
-                    : ""}
-                </p>
-              )}
+        {/* ── HERO + KPI (expandable) ──────────────────────────── */}
+        <div className="mb-6">
+          <header className={cn(
+            "border border-surface-border bg-gradient-to-br p-6 shadow-sm",
+            "dark:from-brand-light dark:via-info-light dark:to-transparent",
+            ytdMode ? "from-violet-50 via-sky-50 to-green-50" : MONTH_HERO_GRADIENTS[selMonth],
+            kpiOpen ? "rounded-t-3xl" : "rounded-3xl"
+          )}>
+            <div className="max-w-2xl">
+              <Badge variant="default" size="lg" className="mb-3 bg-transparent border-black/20 dark:border-white/20 text-foreground/70">
+                {periodLabel} · {isFullYear ? t("reporting.text.fullYearReport") : ytdMode ? t("reporting.text.yearToDateReport") : t("reporting.text.monthlyReport")}
+              </Badge>
             </div>
-        </header>
+            <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground whitespace-nowrap">
+              {appraisal.headline}
+            </h1>
+            {!loading && appraisal.reason && (
+              <p className="mt-2 text-sm font-medium text-muted-dark max-w-2xl">
+                {appraisal.reason}
+              </p>
+            )}
+            {!loading && currData && (
+              <p className="mt-2 text-sm leading-6 text-muted-text sm:text-base max-w-2xl">
+                {earned > 0
+                  ? <>{t("reporting.text.rentCollected")} <span className="font-semibold text-foreground">{fmtChf(earned)}</span>. </>
+                  : ""}
+                {expenses > 0
+                  ? <>{t("reporting.text.operatingCosts")} <span className="font-semibold text-foreground">{fmtChf(expenses)}</span>. </>
+                  : ""}
+                {totalUnits > 0
+                  ? t("reporting.text.unitsLeased", { count: totalUnits, units: totalUnits, allUnits, buildings: activeBuildings.length })
+                  : ""}
+              </p>
+            )}
+            <button
+              onClick={() => setKpiOpen((v) => !v)}
+              className="mt-4 flex items-center gap-1.5 text-sm font-medium text-foreground/60 hover:text-foreground transition-colors"
+              aria-expanded={kpiOpen}
+            >
+              {kpiOpen
+                ? <><ChevronUp className="w-4 h-4" /> {t("reporting.text.hideDetails")}</>
+                : <><ChevronDown className="w-4 h-4" /> {t("reporting.text.viewDetails")}</>
+              }
+            </button>
+          </header>
 
-        {/* ── KPI TABLE ────────────────────────────────────────── */}
-        <section className="mb-6">
-          <KpiTable
-            isLoading={loading}
-            left={[
-              { label: t("reporting.prop.netOperatingIncome"), value: fmtChf(noi),      delta: noiDelta    },
-              { label: t("reporting.prop.rentCollected"),       value: fmtChf(earned),   delta: earnedDelta },
-              { label: t("reporting.prop.totalExpenses"),       value: fmtChf(expenses), delta: expDelta    },
-              { label: t("reporting.prop.collectionRate"),      value: fmtPct(collRate), delta: collDelta   },
-            ]}
-            right={[
-              { label: t("reporting.prop.noiMargin"),       value: !loading && noiMargin     !== null ? fmtPct(noiMargin)     : "—", delta: noiMarginDelta },
-              { label: t("reporting.prop.opexRatio"),       value: !loading && opexRatio     !== null ? fmtPct(opexRatio)     : "—", delta: opexDelta      },
-              { label: t("reporting.prop.occupancy"),       value: !loading && occupancyRate !== null ? fmtPct(occupancyRate) : "—", delta: occupancyDelta },
-              { label: t("reporting.prop.rentOutstanding"), value: !loading ? (receivables > 0 ? fmtChf(receivables) : "—") : "—",  delta: null           },
-            ]}
-          />
-        </section>
+          {kpiOpen && (
+            <KpiTable
+              attached
+              isLoading={loading}
+              left={[
+                { label: t("reporting.prop.netOperatingIncome"), value: fmtChf(noi),      delta: noiDelta    },
+                { label: t("reporting.prop.rentCollected"),       value: fmtChf(earned),   delta: earnedDelta },
+                { label: t("reporting.prop.totalExpenses"),       value: fmtChf(expenses), delta: expDelta    },
+                { label: t("reporting.prop.collectionRate"),      value: fmtPct(collRate), delta: collDelta   },
+              ]}
+              right={[
+                { label: t("reporting.prop.noiMargin"),       value: !loading && noiMargin     !== null ? fmtPct(noiMargin)     : "—", delta: noiMarginDelta },
+                { label: t("reporting.prop.opexRatio"),       value: !loading && opexRatio     !== null ? fmtPct(opexRatio)     : "—", delta: opexDelta      },
+                { label: t("reporting.prop.occupancy"),       value: !loading && occupancyRate !== null ? fmtPct(occupancyRate) : "—", delta: occupancyDelta },
+                { label: t("reporting.prop.rentOutstanding"), value: !loading ? (receivables > 0 ? fmtChf(receivables) : "—") : "—",  delta: null           },
+              ]}
+            />
+          )}
+        </div>
 
         {/* ── MONTHLY NOI TRENDLINES (YTD only) ───────────────── */}
         {ytdMode && !loading && monthlyData && monthlyData.length > 0 && (

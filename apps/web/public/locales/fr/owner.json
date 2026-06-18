@@ -526,6 +526,8 @@
       "backToMonths": "← Mois",
       "movingIn": "Entrée",
       "movingOut": "Sortie",
+      "viewDetails": "Voir les détails",
+      "hideDetails": "Masquer les détails",
       "loadingReport": "Chargement du rapport…",
       "strongMonth": "Votre portefeuille a eu un excellent mois.",
       "mixedMonth": "Votre portefeuille a eu un mois mitigé.",
