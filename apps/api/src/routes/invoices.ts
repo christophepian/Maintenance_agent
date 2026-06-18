@@ -409,18 +409,22 @@ export function registerInvoiceRoutes(router: Router) {
       const sourceKey = (invoice as any).sourceFileUrl as string | null;
       const isPdfSource = sourceKey?.toLowerCase().endsWith(".pdf");
       if (isPdfSource && sourceKey) {
-        const exists = await storage.exists(sourceKey);
-        if (exists) {
-          const buffer = await storage.get(sourceKey);
-          const fileName = sourceKey.split("/").pop() || "invoice.pdf";
-          res.writeHead(200, {
-            "Content-Type": "application/pdf",
-            "Content-Length": buffer.length,
-            "Content-Disposition": `inline; filename="${encodeURIComponent(fileName)}"`,
-            "Cache-Control": "private, max-age=3600",
-          });
-          res.end(buffer);
-          return;
+        try {
+          const exists = await storage.exists(sourceKey);
+          if (exists) {
+            const buffer = await storage.get(sourceKey);
+            const fileName = sourceKey.split("/").pop() || "invoice.pdf";
+            res.writeHead(200, {
+              "Content-Type": "application/pdf",
+              "Content-Length": buffer.length,
+              "Content-Disposition": `inline; filename="${encodeURIComponent(fileName)}"`,
+              "Cache-Control": "private, max-age=3600",
+            });
+            res.end(buffer);
+            return;
+          }
+        } catch (storageErr) {
+          console.warn(`[PDF] Storage check failed for ${sourceKey}, falling back to generated PDF:`, storageErr);
         }
       }
 
