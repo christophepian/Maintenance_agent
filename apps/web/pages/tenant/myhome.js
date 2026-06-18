@@ -8,6 +8,7 @@ import { formatDate, formatChf } from "../../lib/format";
 import { tenantFetch } from "../../lib/api";
 import { withTranslations } from "../../lib/i18n";
 import { useTranslation } from "next-i18next";
+import InlineChatSection from "../../components/InlineChatSection";
 
 const LEASE_STATUS_LABELS = {
   DRAFT: "Draft",
@@ -268,6 +269,7 @@ export default function MyHomePage() {
             ))}
           </div>
         )}
+        <InlineChatSection />
       </div>
     </AppShell>
   );
