@@ -96,6 +96,7 @@ export default function InvoiceDetailPage() {
   const [selectedBuildingId, setSelectedBuildingId] = useState("");
   const [selectedUnitId, setSelectedUnitId] = useState("");
   const [attributionSaving, setAttributionSaving] = useState(false);
+  const [attributionMsg, setAttributionMsg] = useState(null); // { type: "ok"|"err", text }
   // Swap state
   const [swapLoading, setSwapLoading] = useState(false);
 
@@ -260,6 +261,7 @@ export default function InvoiceDetailPage() {
 
   async function saveAttribution() {
     setAttributionSaving(true);
+    setAttributionMsg(null);
     try {
       const res = await fetch(`/api/invoices/${id}`, {
         method: "PATCH",
@@ -269,10 +271,15 @@ export default function InvoiceDetailPage() {
           unitId: selectedUnitId || null,
         }),
       });
-      if (!res.ok) { const d = await res.json(); throw new Error(d?.error?.message || "Failed to save"); }
+      if (!res.ok) {
+        const d = await res.json();
+        throw new Error(d?.error?.message || "Failed to save attribution");
+      }
       await loadData();
+      setAttributionMsg({ type: "ok", text: "Attribution saved" });
+      setTimeout(() => setAttributionMsg(null), 3000);
     } catch (e) {
-      setError(String(e?.message || e));
+      setAttributionMsg({ type: "err", text: String(e?.message || e) });
     } finally {
       setAttributionSaving(false);
     }
@@ -731,13 +738,20 @@ export default function InvoiceDetailPage() {
                           </select>
                         </div>
                       </div>
-                      <button
-                        onClick={saveAttribution}
-                        disabled={attributionSaving}
-                        className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition disabled:opacity-50"
-                      >
-                        {attributionSaving ? "Saving…" : "Save attribution"}
-                      </button>
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={saveAttribution}
+                          disabled={attributionSaving}
+                          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition disabled:opacity-50"
+                        >
+                          {attributionSaving ? "Saving…" : "Save attribution"}
+                        </button>
+                        {attributionMsg && (
+                          <span className={attributionMsg.type === "ok" ? "text-sm text-green-600 font-medium" : "text-sm text-red-600 font-medium"}>
+                            {attributionMsg.type === "ok" ? "✓ " : "✗ "}{attributionMsg.text}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </Panel>
                 )}
