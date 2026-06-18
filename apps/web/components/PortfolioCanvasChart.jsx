@@ -1,16 +1,7 @@
 import { useRef, useEffect } from "react";
-import {
-  Chart,
-  LineElement,
-  PointElement,
-  LinearScale,
-  CategoryScale,
-  Tooltip,
-  Legend,
-  Filler,
-} from "chart.js";
+import { Chart, registerables } from "chart.js";
 
-Chart.register(LineElement, PointElement, LinearScale, CategoryScale, Tooltip, Legend, Filler);
+Chart.register(...registerables);
 
 // Fixed metric definitions matching the KPI table
 const METRICS = [
