@@ -321,14 +321,28 @@ function KpiRow({ label, value, delta, isLoading }) {
   );
 }
 
-function KpiTable({ rows, isLoading }) {
+function KpiTable({ left, right, isLoading }) {
   return (
     <div className="rounded-2xl border border-surface-border bg-surface shadow-sm overflow-hidden">
-      {rows.map((row, i) => (
-        <div key={row.label} className={cn(i > 0 && "border-t border-surface-divider")}>
-          <KpiRow label={row.label} value={row.value} delta={row.delta} isLoading={isLoading} />
+      <div className="grid grid-cols-1 sm:grid-cols-2 sm:divide-x sm:divide-surface-divider">
+        <div>
+          {left.map((row, i) => (
+            <div key={row.label} className={cn(i > 0 && "border-t border-surface-divider")}>
+              <KpiRow label={row.label} value={row.value} delta={row.delta} isLoading={isLoading} />
+            </div>
+          ))}
         </div>
-      ))}
+        <div>
+          {right.map((row, i) => (
+            <div key={row.label} className={cn(
+              "border-t border-surface-divider",
+              i === 0 && "sm:border-t-0"
+            )}>
+              <KpiRow label={row.label} value={row.value} delta={row.delta} isLoading={isLoading} />
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -943,24 +957,21 @@ export default function OwnerReportingPage() {
             </div>
         </header>
 
-        {/* ── KPI TABLES ───────────────────────────────────────── */}
-        <section className="grid grid-cols-1 sm:grid-cols-2 mb-6 gap-4">
+        {/* ── KPI TABLE ────────────────────────────────────────── */}
+        <section className="mb-6">
           <KpiTable
             isLoading={loading}
-            rows={[
+            left={[
               { label: t("reporting.prop.netOperatingIncome"), value: fmtChf(noi),      delta: noiDelta    },
               { label: t("reporting.prop.rentCollected"),       value: fmtChf(earned),   delta: earnedDelta },
               { label: t("reporting.prop.totalExpenses"),       value: fmtChf(expenses), delta: expDelta    },
               { label: t("reporting.prop.collectionRate"),      value: fmtPct(collRate), delta: collDelta   },
             ]}
-          />
-          <KpiTable
-            isLoading={loading}
-            rows={[
-              { label: t("reporting.prop.noiMargin"),      value: !loading && noiMargin    !== null ? fmtPct(noiMargin)    : "—", delta: noiMarginDelta },
-              { label: t("reporting.prop.opexRatio"),      value: !loading && opexRatio    !== null ? fmtPct(opexRatio)    : "—", delta: opexDelta      },
-              { label: t("reporting.prop.occupancy"),      value: !loading && occupancyRate !== null ? fmtPct(occupancyRate) : "—", delta: occupancyDelta },
-              { label: t("reporting.prop.rentOutstanding"), value: !loading ? (receivables > 0 ? fmtChf(receivables) : "—") : "—", delta: null           },
+            right={[
+              { label: t("reporting.prop.noiMargin"),       value: !loading && noiMargin     !== null ? fmtPct(noiMargin)     : "—", delta: noiMarginDelta },
+              { label: t("reporting.prop.opexRatio"),       value: !loading && opexRatio     !== null ? fmtPct(opexRatio)     : "—", delta: opexDelta      },
+              { label: t("reporting.prop.occupancy"),       value: !loading && occupancyRate !== null ? fmtPct(occupancyRate) : "—", delta: occupancyDelta },
+              { label: t("reporting.prop.rentOutstanding"), value: !loading ? (receivables > 0 ? fmtChf(receivables) : "—") : "—",  delta: null           },
             ]}
           />
         </section>
