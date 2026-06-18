@@ -742,7 +742,6 @@ export default function OwnerReportingPage() {
   // Canvas tab state
   const [activeTab,      setActiveTab]      = useState(0); // 0 = Period Analysis, 1 = Performance Canvas
   const [canvasRange,    setCanvasRange]    = useState("1Y");
-  const CANVAS_ACTIVE_METRICS = ["noiCents", "earnedIncomeCents", "expensesCents", "collectionRate", "noiMarginPct", "opexRatioPct", "occupancyRate"];
 
   const { data: canvasData, loading: canvasLoading } = useDetailResource(
     activeTab === 1 ? `/api/financials/portfolio-timeseries?range=${canvasRange}` : null,
@@ -1025,8 +1024,7 @@ export default function OwnerReportingPage() {
                 <PortfolioCanvasChart
                   points={canvasData?.points ?? []}
                   range={canvasRange}
-                  activeMetrics={CANVAS_ACTIVE_METRICS}
-                  t={t}
+t={t}
                 />
               )}
             </div>

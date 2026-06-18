@@ -659,6 +659,8 @@
       "heading": "Performance du portefeuille",
       "subheading": "Série temporelle {{range}} — tous les indicateurs clés",
       "noData": "Aucune donnée pour cette période. Les instantanés sont calculés chaque nuit.",
+      "chfPanel": "Performance CHF",
+      "pctPanel": "Santé du portefeuille %",
       "metric": {
         "noiCents":          "RNE",
         "earnedIncomeCents": "Loyers encaissés",

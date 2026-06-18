@@ -659,6 +659,8 @@
       "heading": "Portfolio Performance",
       "subheading": "{{range}} time-series — all key metrics",
       "noData": "No data for this range yet. Snapshots are computed nightly.",
+      "chfPanel": "CHF Performance",
+      "pctPanel": "Portfolio Health %",
       "metric": {
         "noiCents":          "NOI",
         "earnedIncomeCents": "Rent Collected",

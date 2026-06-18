@@ -3,21 +3,13 @@ import { Chart, registerables } from "chart.js";
 
 Chart.register(...registerables);
 
-// Fixed metric definitions matching the KPI table
-const METRICS = [
-  { key: "noiCents",          label: "NOI",             format: "chf",  color: "59,130,246"  }, // blue-500
-  { key: "earnedIncomeCents", label: "Rent Collected",  format: "chf",  color: "16,185,129"  }, // emerald-500
-  { key: "expensesCents",     label: "Total Expenses",  format: "chf",  color: "239,68,68"   }, // red-500
-  { key: "collectionRate",    label: "Collection Rate", format: "pct",  color: "168,85,247"  }, // purple-500
-  { key: "noiMarginPct",      label: "NOI Margin",      format: "pct",  color: "20,184,166"  }, // teal-500
-  { key: "opexRatioPct",      label: "OpEx Ratio",      format: "pct",  color: "249,115,22"  }, // orange-500
-  { key: "occupancyRate",     label: "Occupancy",       format: "pct",  color: "99,102,241"  }, // indigo-500
-];
+// ── Helpers ──────────────────────────────────────────────────
 
 function fmtChf(cents) {
   if (cents == null) return "—";
   const chf = cents / 100;
-  if (Math.abs(chf) >= 1000) return `CHF ${(chf / 1000).toFixed(1)}k`;
+  if (Math.abs(chf) >= 1_000_000) return `CHF ${(chf / 1_000_000).toFixed(1)}M`;
+  if (Math.abs(chf) >= 1_000)     return `CHF ${(chf / 1_000).toFixed(0)}k`;
   return `CHF ${chf.toFixed(0)}`;
 }
 
@@ -26,77 +18,76 @@ function fmtPct(val) {
   return `${(val * 100).toFixed(1)}%`;
 }
 
-function formatValue(val, format) {
-  if (format === "chf") return fmtChf(val);
-  return fmtPct(val);
+// ── Legend component ─────────────────────────────────────────
+
+function ChartLegend({ items }) {
+  return (
+    <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-3">
+      {items.map(({ label, color, type }) => (
+        <div key={label} className="flex items-center gap-1.5">
+          {type === "bar" ? (
+            <span
+              className="inline-block w-3 h-3 rounded-sm shrink-0"
+              style={{ backgroundColor: color }}
+            />
+          ) : (
+            <span
+              className="inline-block w-5 h-0.5 rounded-full shrink-0"
+              style={{ backgroundColor: color }}
+            />
+          )}
+          <span className="text-xs text-foreground-dim">{label}</span>
+        </div>
+      ))}
+    </div>
+  );
 }
 
-export default function PortfolioCanvasChart({ points = [], range, activeMetrics, t }) {
-  const canvasRef = useRef(null);
-  const chartRef  = useRef(null);
+// ── Panel: CHF grouped bar chart ─────────────────────────────
 
-  const metrics = METRICS.filter((m) => activeMetrics.includes(m.key));
+const CHF_SERIES = [
+  { key: "noiCents",          label: "NOI",            color: "rgba(59,130,246,0.85)"  },
+  { key: "earnedIncomeCents", label: "Rent Collected", color: "rgba(16,185,129,0.85)"  },
+  { key: "expensesCents",     label: "Expenses",       color: "rgba(239,68,68,0.75)"   },
+];
+
+function ChfPanel({ points, t }) {
+  const ref  = useRef(null);
+  const inst = useRef(null);
 
   useEffect(() => {
-    if (!canvasRef.current || points.length === 0) return;
+    if (!ref.current) return;
+    inst.current?.destroy();
 
-    const labels = points.map((p) => p.label);
-
-    const datasets = metrics.map((m) => ({
-      label:           t ? t(`reporting.canvas.metric.${m.key}`, { defaultValue: m.label }) : m.label,
-      data:            points.map((p) => {
-        const v = p[m.key];
-        if (v == null) return null;
-        // Convert cents to CHF for display, keep ratios as 0-100 %
-        return m.format === "chf" ? v / 100 : v * 100;
-      }),
-      borderColor:     `rgba(${m.color},1)`,
-      backgroundColor: `rgba(${m.color},0.08)`,
-      pointBackgroundColor: `rgba(${m.color},1)`,
-      borderWidth:     2,
-      pointRadius:     points.length <= 14 ? 4 : 2,
-      pointHoverRadius: 6,
-      tension:         0.35,
-      fill:            false,
-      spanGaps:        true,
-    }));
-
-    if (chartRef.current) {
-      chartRef.current.destroy();
-    }
-
-    chartRef.current = new Chart(canvasRef.current, {
-      type: "line",
-      data: { labels, datasets },
+    inst.current = new Chart(ref.current, {
+      type: "bar",
+      data: {
+        labels: points.map((p) => p.label),
+        datasets: CHF_SERIES.map((s) => ({
+          label:           t ? t(`reporting.canvas.metric.${s.key}`, { defaultValue: s.label }) : s.label,
+          data:            points.map((p) => p[s.key] != null ? p[s.key] / 100 : null),
+          backgroundColor: s.color,
+          borderRadius:    3,
+          borderSkipped:   false,
+        })),
+      },
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        interaction: { mode: "index", intersect: false },
         plugins: {
-          legend: {
-            position: "top",
-            labels: {
-              usePointStyle: true,
-              pointStyleWidth: 8,
-              font: { size: 12 },
-              color: "#64748b",
-              padding: 16,
-            },
-          },
+          legend: { display: false },
           tooltip: {
             callbacks: {
               label(ctx) {
-                const m = metrics[ctx.datasetIndex];
-                if (ctx.parsed.y == null) return `${ctx.dataset.label}: —`;
-                const raw = points[ctx.dataIndex][m.key];
-                return `${ctx.dataset.label}: ${formatValue(raw, m.format)}`;
+                const raw = points[ctx.dataIndex][CHF_SERIES[ctx.datasetIndex].key];
+                return `${ctx.dataset.label}: ${fmtChf(raw)}`;
               },
             },
           },
         },
         scales: {
           x: {
-            grid: { color: "rgba(0,0,0,0.04)" },
+            grid: { display: false },
             ticks: { color: "#94a3b8", font: { size: 11 }, maxRotation: 45 },
           },
           y: {
@@ -104,38 +95,142 @@ export default function PortfolioCanvasChart({ points = [], range, activeMetrics
             ticks: {
               color: "#94a3b8",
               font: { size: 11 },
-              callback(val) {
-                // Mixed axes: if any active metric is CHF show k suffix, else %
-                const hasChf = metrics.some((m) => m.format === "chf");
-                if (hasChf) return val >= 1000 ? `${(val / 1000).toFixed(0)}k` : val;
-                return `${val.toFixed(0)}%`;
-              },
+              callback: (v) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v,
             },
           },
         },
       },
     });
 
-    return () => {
-      chartRef.current?.destroy();
-      chartRef.current = null;
-    };
+    return () => { inst.current?.destroy(); inst.current = null; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [points, activeMetrics]);
+  }, [points]);
 
+  return (
+    <div className="rounded-2xl border border-surface-border bg-surface shadow-sm p-5 mb-4">
+      <div className="text-sm font-semibold text-foreground mb-1">
+        {t ? t("reporting.canvas.chfPanel") : "CHF Performance"}
+      </div>
+      <div className="relative h-52">
+        <canvas ref={ref} />
+      </div>
+      <ChartLegend
+        items={CHF_SERIES.map((s) => ({
+          label: t ? t(`reporting.canvas.metric.${s.key}`, { defaultValue: s.label }) : s.label,
+          color: s.color,
+          type:  "bar",
+        }))}
+      />
+    </div>
+  );
+}
+
+// ── Panel: % line chart ──────────────────────────────────────
+
+const PCT_SERIES = [
+  { key: "collectionRate", label: "Collection Rate", color: "rgba(168,85,247,1)"  },
+  { key: "noiMarginPct",   label: "NOI Margin",      color: "rgba(20,184,166,1)"  },
+  { key: "opexRatioPct",   label: "OpEx Ratio",      color: "rgba(249,115,22,1)"  },
+  { key: "occupancyRate",  label: "Occupancy",        color: "rgba(99,102,241,1)"  },
+];
+
+function PctPanel({ points, t }) {
+  const ref  = useRef(null);
+  const inst = useRef(null);
+
+  useEffect(() => {
+    if (!ref.current) return;
+    inst.current?.destroy();
+
+    inst.current = new Chart(ref.current, {
+      type: "line",
+      data: {
+        labels: points.map((p) => p.label),
+        datasets: PCT_SERIES.map((s) => ({
+          label:               t ? t(`reporting.canvas.metric.${s.key}`, { defaultValue: s.label }) : s.label,
+          data:                points.map((p) => p[s.key] != null ? p[s.key] * 100 : null),
+          borderColor:         s.color,
+          backgroundColor:     "transparent",
+          pointBackgroundColor: s.color,
+          borderWidth:         2,
+          pointRadius:         points.length <= 14 ? 3 : 1.5,
+          pointHoverRadius:    5,
+          tension:             0.35,
+          spanGaps:            true,
+        })),
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: "index", intersect: false },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label(ctx) {
+                const raw = points[ctx.dataIndex][PCT_SERIES[ctx.datasetIndex].key];
+                return `${ctx.dataset.label}: ${fmtPct(raw)}`;
+              },
+            },
+          },
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: { color: "#94a3b8", font: { size: 11 }, maxRotation: 45 },
+          },
+          y: {
+            min: 0,
+            max: 100,
+            grid: { color: "rgba(0,0,0,0.04)" },
+            ticks: {
+              color: "#94a3b8",
+              font: { size: 11 },
+              callback: (v) => `${v}%`,
+            },
+          },
+        },
+      },
+    });
+
+    return () => { inst.current?.destroy(); inst.current = null; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [points]);
+
+  return (
+    <div className="rounded-2xl border border-surface-border bg-surface shadow-sm p-5">
+      <div className="text-sm font-semibold text-foreground mb-1">
+        {t ? t("reporting.canvas.pctPanel") : "Portfolio Health %"}
+      </div>
+      <div className="relative h-52">
+        <canvas ref={ref} />
+      </div>
+      <ChartLegend
+        items={PCT_SERIES.map((s) => ({
+          label: t ? t(`reporting.canvas.metric.${s.key}`, { defaultValue: s.label }) : s.label,
+          color: s.color,
+          type:  "line",
+        }))}
+      />
+    </div>
+  );
+}
+
+// ── Root export ──────────────────────────────────────────────
+
+export default function PortfolioCanvasChart({ points = [], range, t }) {
   if (points.length === 0) {
     return (
-      <div className="flex items-center justify-center h-64 text-sm text-foreground-dim">
+      <div className="flex items-center justify-center h-32 text-sm text-foreground-dim">
         {t ? t("reporting.canvas.noData") : "No data for this range yet."}
       </div>
     );
   }
 
   return (
-    <div className="relative h-64 sm:h-80">
-      <canvas ref={canvasRef} />
+    <div>
+      <ChfPanel points={points} t={t} />
+      <PctPanel points={points} t={t} />
     </div>
   );
 }
-
-export { METRICS };
