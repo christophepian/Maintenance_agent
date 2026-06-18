@@ -5,6 +5,7 @@ import * as inventoryRepo from "../repositories/inventoryRepository";
 import * as leaseRepo from "../repositories/leaseRepository";
 import * as snapshotRepo from "../repositories/buildingFinancialSnapshotRepository";
 import * as financialsRepo from "../repositories/financialsRepository";
+import * as dailySnapshotRepo from "../repositories/portfolioDailySnapshotRepository";
 import type { ExpenseLedgerRow, ArrearsAgingDTO } from "../repositories/financialsRepository";
 
 // ==========================================
@@ -685,6 +686,274 @@ export async function computeAnnualSnapshots(
   }
 
   return listBuildingSnapshots(orgId, buildingId);
+}
+
+// ==========================================
+// Portfolio time-series
+// ==========================================
+
+export type TimeSeriesRange = "1W" | "1M" | "6M" | "1Y" | "2Y" | "5Y" | "10Y";
+
+export interface TimeSeriesPoint {
+  periodStart:       string;   // ISO date YYYY-MM-DD
+  periodEnd:         string;
+  label:             string;   // display label: "Jun", "Q2 2024", "2023", etc.
+  noiCents:          number;
+  earnedIncomeCents: number;
+  expensesCents:     number;
+  collectionRate:    number;
+  noiMarginPct:      number | null;
+  opexRatioPct:      number | null;
+  occupancyRate:     number | null;
+}
+
+export interface PortfolioTimeSeriesDTO {
+  range:          TimeSeriesRange;
+  points:         TimeSeriesPoint[];
+  earliestDate:   string | null;  // ISO date of earliest available data (for auto-detect)
+}
+
+function isoDate(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+
+function monthLabel(year: number, month: number, locale = "en"): string {
+  return new Intl.DateTimeFormat(locale, { month: "short" }).format(
+    new Date(year, month - 1, 1),
+  );
+}
+
+function safePct(num: number, den: number): number | null {
+  if (den === 0) return null;
+  return Math.round((num / den) * 10000) / 10000;
+}
+
+function summaryToPoint(
+  summary: Awaited<ReturnType<typeof getPortfolioSummary>>,
+  periodStart: string,
+  periodEnd: string,
+  label: string,
+): TimeSeriesPoint {
+  const noi      = summary.totalNetOperatingIncomeCents;
+  const earned   = summary.totalEarnedIncomeCents;
+  const expenses = summary.totalExpensesCents;
+  return {
+    periodStart,
+    periodEnd,
+    label,
+    noiCents:          noi,
+    earnedIncomeCents: earned,
+    expensesCents:     expenses,
+    collectionRate:    summary.avgCollectionRate,
+    noiMarginPct:      safePct(noi, earned),
+    opexRatioPct:      safePct(expenses, earned),
+    occupancyRate:
+      summary.totalUnits > 0
+        ? Math.round((summary.totalActiveUnits / summary.totalUnits) * 10000) / 10000
+        : null,
+  };
+}
+
+async function getPortfolioMonthlyPoints(
+  orgId: string,
+  fromYear: number,
+  fromMonth: number,
+  toYear: number,
+  toMonth: number,
+  ownerId?: string,
+): Promise<TimeSeriesPoint[]> {
+  const points: TimeSeriesPoint[] = [];
+  let y = fromYear;
+  let m = fromMonth;
+  const now = new Date();
+
+  while (y < toYear || (y === toYear && m <= toMonth)) {
+    if (new Date(y, m - 1, 1) > now) break;
+    const from   = `${y}-${String(m).padStart(2, "0")}-01`;
+    const lastDay = new Date(y, m, 0).getDate();
+    const to     = `${y}-${String(m).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+    const label  = `${monthLabel(y, m)} ${toYear - fromYear >= 1 ? y : ""}`.trim();
+    try {
+      const summary = await getPortfolioSummary(orgId, { from, to }, ownerId);
+      points.push(summaryToPoint(summary, from, to, label));
+    } catch {
+      // skip months with no data
+    }
+    m++;
+    if (m > 12) { m = 1; y++; }
+  }
+  return points;
+}
+
+async function getPortfolioQuarterlyPoints(
+  orgId: string,
+  fromYear: number,
+  toYear: number,
+  ownerId?: string,
+): Promise<TimeSeriesPoint[]> {
+  const points: TimeSeriesPoint[] = [];
+  const now = new Date();
+
+  for (let y = fromYear; y <= toYear; y++) {
+    for (let q = 1; q <= 4; q++) {
+      const qStart = (q - 1) * 3 + 1;
+      const qEnd   = q * 3;
+      const from   = `${y}-${String(qStart).padStart(2, "0")}-01`;
+      const lastDay = new Date(y, qEnd, 0).getDate();
+      const to     = `${y}-${String(qEnd).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+      if (new Date(y, qStart - 1, 1) > now) break;
+      try {
+        const summary = await getPortfolioSummary(orgId, { from, to }, ownerId);
+        points.push(summaryToPoint(summary, from, to, `Q${q} ${y}`));
+      } catch {
+        // skip quarters with no data
+      }
+    }
+  }
+  return points;
+}
+
+async function getPortfolioAnnualPoints(
+  orgId: string,
+  fromYear: number,
+  toYear: number,
+  ownerId?: string,
+): Promise<TimeSeriesPoint[]> {
+  const points: TimeSeriesPoint[] = [];
+  const now = new Date();
+
+  for (let y = fromYear; y <= toYear; y++) {
+    if (y > now.getFullYear()) break;
+    const from = `${y}-01-01`;
+    const to   = y < now.getFullYear() ? `${y}-12-31` : isoDate(now);
+    try {
+      const summary = await getPortfolioSummary(orgId, { from, to }, ownerId);
+      points.push(summaryToPoint(summary, from, to, String(y)));
+    } catch {
+      // skip years with no data
+    }
+  }
+  return points;
+}
+
+async function getDailyPoints(
+  orgId: string,
+  from: Date,
+  to: Date,
+): Promise<TimeSeriesPoint[]> {
+  const rows = await dailySnapshotRepo.findDailySnapshotsInRange(prisma, orgId, from, to);
+  return rows.map((r) => ({
+    periodStart:       isoDate(r.date),
+    periodEnd:         isoDate(r.date),
+    label:             new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(r.date),
+    noiCents:          r.noiCents,
+    earnedIncomeCents: r.earnedIncomeCents,
+    expensesCents:     r.expensesCents,
+    collectionRate:    r.collectionRate,
+    noiMarginPct:      r.noiMarginPct,
+    opexRatioPct:      r.opexRatioPct,
+    occupancyRate:     r.occupancyRate,
+  }));
+}
+
+export async function getPortfolioTimeSeries(
+  orgId: string,
+  range: TimeSeriesRange,
+  ownerId?: string,
+): Promise<PortfolioTimeSeriesDTO> {
+  const now   = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  let points: TimeSeriesPoint[] = [];
+
+  if (range === "1W") {
+    const from = new Date(today); from.setDate(today.getDate() - 6);
+    points = await getDailyPoints(orgId, from, today);
+  } else if (range === "1M") {
+    const from = new Date(today); from.setDate(today.getDate() - 29);
+    points = await getDailyPoints(orgId, from, today);
+  } else if (range === "6M") {
+    const from = new Date(today); from.setMonth(today.getMonth() - 5); from.setDate(1);
+    points = await getPortfolioMonthlyPoints(
+      orgId,
+      from.getFullYear(), from.getMonth() + 1,
+      now.getFullYear(), now.getMonth() + 1,
+      ownerId,
+    );
+  } else if (range === "1Y") {
+    const from = new Date(today); from.setFullYear(today.getFullYear() - 1); from.setDate(1);
+    points = await getPortfolioMonthlyPoints(
+      orgId,
+      from.getFullYear(), from.getMonth() + 1,
+      now.getFullYear(), now.getMonth() + 1,
+      ownerId,
+    );
+  } else if (range === "2Y") {
+    const from = new Date(today); from.setFullYear(today.getFullYear() - 2); from.setDate(1);
+    points = await getPortfolioMonthlyPoints(
+      orgId,
+      from.getFullYear(), from.getMonth() + 1,
+      now.getFullYear(), now.getMonth() + 1,
+      ownerId,
+    );
+  } else if (range === "5Y") {
+    const toYear   = now.getFullYear();
+    const fromYear = toYear - 4;
+    points = await getPortfolioQuarterlyPoints(orgId, fromYear, toYear, ownerId);
+  } else {
+    // 10Y
+    const toYear   = now.getFullYear();
+    const fromYear = toYear - 9;
+    points = await getPortfolioAnnualPoints(orgId, fromYear, toYear, ownerId);
+  }
+
+  // Auto-detect earliest available data
+  const earliest = await dailySnapshotRepo.findEarliestDailySnapshot(prisma, orgId);
+
+  return {
+    range,
+    points,
+    earliestDate: earliest ? isoDate(earliest) : (points[0]?.periodStart ?? null),
+  };
+}
+
+// ==========================================
+// Daily snapshot computation (called by background job)
+// ==========================================
+
+export async function computeAndStoreDailyPortfolioSnapshot(
+  orgId: string,
+  ownerId?: string,
+): Promise<boolean> {
+  const now       = new Date();
+  const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+
+  const alreadyDone = await dailySnapshotRepo.findDailySnapshotExists(
+    prisma, orgId, yesterday,
+  );
+  if (alreadyDone) return false;
+
+  const from = isoDate(yesterday);
+  const to   = isoDate(yesterday);
+
+  const summary = await getPortfolioSummary(orgId, { from, to }, ownerId);
+  const noi     = summary.totalNetOperatingIncomeCents;
+  const earned  = summary.totalEarnedIncomeCents;
+  const expenses = summary.totalExpensesCents;
+
+  await dailySnapshotRepo.upsertPortfolioDailySnapshot(prisma, orgId, yesterday, {
+    noiCents:          noi,
+    earnedIncomeCents: earned,
+    expensesCents:     expenses,
+    collectionRate:    summary.avgCollectionRate,
+    noiMarginPct:      safePct(noi, earned),
+    opexRatioPct:      safePct(expenses, earned),
+    occupancyRate:
+      summary.totalUnits > 0
+        ? Math.round((summary.totalActiveUnits / summary.totalUnits) * 10000) / 10000
+        : null,
+    activeUnitsCount: summary.totalActiveUnits,
+  });
+  return true;
 }
 
 // ==========================================

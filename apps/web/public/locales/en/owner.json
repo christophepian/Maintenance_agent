@@ -651,6 +651,24 @@
       "financeOverview": "Finance overview",
       "openLedger": "Open ledger"
     },
+    "canvas": {
+      "tab": {
+        "periodAnalysis": "Period Analysis",
+        "performanceCanvas": "Performance Canvas"
+      },
+      "heading": "Portfolio Performance",
+      "subheading": "{{range}} time-series — all key metrics",
+      "noData": "No data for this range yet. Snapshots are computed nightly.",
+      "metric": {
+        "noiCents":          "NOI",
+        "earnedIncomeCents": "Rent Collected",
+        "expensesCents":     "Total Expenses",
+        "collectionRate":    "Collection Rate",
+        "noiMarginPct":      "NOI Margin",
+        "opexRatioPct":      "OpEx Ratio",
+        "occupancyRate":     "Occupancy"
+      }
+    },
     "highlight": {
       "allGreen": {
         "title": "All properties in the green",

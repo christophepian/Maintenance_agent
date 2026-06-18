@@ -1,12 +1,20 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/router";
 import AppShell from "../../components/AppShell";
 import Badge from "../../components/ui/Badge";
+import ScrollableTabs from "../../components/mobile/ScrollableTabs";
 import { authHeaders } from "../../lib/api";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { withTranslations } from "../../lib/i18n";
 import { useTranslation } from "next-i18next";
+import { useDetailResource } from "../../lib/hooks/useDetailResource";
+
+const PortfolioCanvasChart = dynamic(
+  () => import("../../components/PortfolioCanvasChart"),
+  { ssr: false },
+);
 /* ─── Constants ──────────────────────────────────────────────── */
 
 const PREVIEW = 3;
@@ -731,6 +739,15 @@ export default function OwnerReportingPage() {
   const [propsExpanded, setPropsExpanded] = useState(false);
   const [kpiOpen,       setKpiOpen]       = useState(false);
 
+  // Canvas tab state
+  const [activeTab,      setActiveTab]      = useState(0); // 0 = Period Analysis, 1 = Performance Canvas
+  const [canvasRange,    setCanvasRange]    = useState("1Y");
+  const CANVAS_ACTIVE_METRICS = ["noiCents", "earnedIncomeCents", "expensesCents", "collectionRate", "noiMarginPct", "opexRatioPct", "occupancyRate"];
+
+  const { data: canvasData, loading: canvasLoading } = useDetailResource(
+    activeTab === 1 ? `/api/financials/portfolio-timeseries?range=${canvasRange}` : null,
+  );
+
   // Annual mode auto-adapts: past year → full Jan–Dec; current year → Jan–today
   const isFullYear = ytdMode && selYear < today.getFullYear();
 
@@ -923,7 +940,101 @@ export default function OwnerReportingPage() {
         onYtdToggle={() => setYtdMode((v) => !v)}
       />
 
+      {/* ── TAB STRIP ──────────────────────────────────────────── */}
+      <div className="border-b border-surface-border bg-surface px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl">
+          <ScrollableTabs activeIndex={activeTab}>
+            <button
+              type="button"
+              onClick={() => setActiveTab(0)}
+              className={cn("tab-btn", activeTab === 0 && "tab-btn-active")}
+            >
+              {t("reporting.canvas.tab.periodAnalysis")}
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab(1)}
+              className={cn("tab-btn", activeTab === 1 && "tab-btn-active")}
+            >
+              {t("reporting.canvas.tab.performanceCanvas")}
+            </button>
+          </ScrollableTabs>
+        </div>
+      </div>
+
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+
+        {/* ── PERFORMANCE CANVAS TAB ───────────────────────────── */}
+        {activeTab === 1 && (
+          <div>
+            {/* Range picker */}
+            {(() => {
+              const earliest = canvasData?.earliestDate;
+              const now = new Date();
+              const RANGES = [
+                { key: "1W",  minDays: 7   },
+                { key: "1M",  minDays: 30  },
+                { key: "6M",  minDays: 180 },
+                { key: "1Y",  minDays: 365 },
+                { key: "2Y",  minDays: 730 },
+                { key: "5Y",  minDays: 1825},
+                { key: "10Y", minDays: 3650},
+              ];
+              const daysSinceEarliest = earliest
+                ? Math.floor((now - new Date(earliest)) / 86400000)
+                : 0;
+              return (
+                <div className="mb-5 flex items-center gap-1.5 flex-wrap">
+                  {RANGES.map(({ key, minDays }) => {
+                    const hasData = !earliest || daysSinceEarliest >= minDays * 0.2;
+                    return (
+                      <button
+                        key={key}
+                        disabled={!hasData}
+                        onClick={() => setCanvasRange(key)}
+                        className={cn(
+                          "rounded-full px-3 py-1 text-sm font-semibold transition-colors",
+                          canvasRange === key
+                            ? "bg-slate-900 text-white"
+                            : hasData
+                            ? "text-muted-text hover:bg-surface-hover"
+                            : "text-foreground-dim cursor-not-allowed opacity-40",
+                        )}
+                      >
+                        {key}
+                      </button>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+
+            {/* Chart card */}
+            <div className="rounded-2xl border border-surface-border bg-surface shadow-sm p-5">
+              <div className="mb-4">
+                <h2 className="text-base font-semibold text-foreground">
+                  {t("reporting.canvas.heading")}
+                </h2>
+                <p className="text-xs text-foreground-dim mt-0.5">
+                  {t("reporting.canvas.subheading", { range: canvasRange })}
+                </p>
+              </div>
+              {canvasLoading ? (
+                <div className="h-64 sm:h-80 animate-pulse rounded-xl bg-surface-hover" />
+              ) : (
+                <PortfolioCanvasChart
+                  points={canvasData?.points ?? []}
+                  range={canvasRange}
+                  activeMetrics={CANVAS_ACTIVE_METRICS}
+                  t={t}
+                />
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── PERIOD ANALYSIS TAB ──────────────────────────────── */}
+        {activeTab === 0 && <>
 
         {/* ── HERO + KPI (expandable) ──────────────────────────── */}
         <div className="mb-6">
@@ -1285,6 +1396,8 @@ export default function OwnerReportingPage() {
             </div>
           </div>
         </section>
+
+        </>}
 
       </div>
     </AppShell>

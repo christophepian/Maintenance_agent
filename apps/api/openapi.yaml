@@ -236,6 +236,29 @@ components:
               capitalizedChf: { type: number }
               assetCount: { type: integer }
 
+    TimeSeriesPoint:
+      type: object
+      required: [periodStart, periodEnd, label, noiCents, earnedIncomeCents, expensesCents, collectionRate]
+      properties:
+        periodStart:       { type: string, format: date }
+        periodEnd:         { type: string, format: date }
+        label:             { type: string }
+        noiCents:          { type: integer }
+        earnedIncomeCents: { type: integer }
+        expensesCents:     { type: integer }
+        collectionRate:    { type: number }
+        noiMarginPct:      { type: number, nullable: true }
+        opexRatioPct:      { type: number, nullable: true }
+        occupancyRate:     { type: number, nullable: true }
+
+    PortfolioTimeSeriesDTO:
+      type: object
+      required: [range, points]
+      properties:
+        range:        { type: string, enum: [1W, 1M, 6M, 1Y, 2Y, 5Y, 10Y] }
+        points:       { type: array, items: { $ref: '#/components/schemas/TimeSeriesPoint' } }
+        earliestDate: { type: string, format: date, nullable: true }
+
     AnnualSnapshotDTO:
       type: object
       required:
@@ -6235,6 +6258,33 @@ paths:
           $ref: '#/components/responses/ValidationError'
 
   # ── Financial Performance ──────────────────────────────────
+
+  /financials/portfolio-timeseries:
+    get:
+      tags: [Financials]
+      summary: Get portfolio KPI time series for the Performance Canvas
+      operationId: getPortfolioTimeSeries
+      parameters:
+        - name: range
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [1W, 1M, 6M, 1Y, 2Y, 5Y, 10Y]
+            default: 1Y
+          description: Time window for the series
+      responses:
+        '200':
+          description: Portfolio time-series data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PortfolioTimeSeriesDTO'
+        '400':
+          $ref: '#/components/responses/ValidationError'
 
   /financials/portfolio-summary:
     get:

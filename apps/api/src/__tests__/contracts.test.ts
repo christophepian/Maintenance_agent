@@ -438,6 +438,31 @@ describe('G10: API Contract Tests', () => {
     });
   });
 
+  describe('GET /financials/portfolio-timeseries', () => {
+    it('returns PortfolioTimeSeriesDTO with points array and range', async () => {
+      const body = await fetchJson('/financials/portfolio-timeseries?range=1Y');
+      expect(body).toHaveProperty('data');
+      const dto = body.data;
+      expectKeys(dto, ['range', 'points'], 'PortfolioTimeSeriesDTO');
+      expect(dto.range).toBe('1Y');
+      expect(Array.isArray(dto.points)).toBe(true);
+      if (dto.points.length > 0) {
+        const pt = dto.points[0];
+        expectKeys(pt, [
+          'periodStart', 'periodEnd', 'label',
+          'noiCents', 'earnedIncomeCents', 'expensesCents', 'collectionRate',
+        ], 'TimeSeriesPoint');
+        expect(typeof pt.noiCents).toBe('number');
+        expect(typeof pt.collectionRate).toBe('number');
+      }
+    });
+
+    it('returns 400 for invalid range', async () => {
+      const res = await fetch(`${API_BASE}/financials/portfolio-timeseries?range=INVALID`);
+      expect(res.status).toBe(400);
+    });
+  });
+
   // ── RFPs ──
   describe('GET /rfps?limit=1', () => {
     it('returns envelope with data array and total', async () => {

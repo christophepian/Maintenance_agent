@@ -55,6 +55,7 @@ import { processSchedulingEscalations } from "./workflows/schedulingWorkflow";
 import { flushPendingEmails } from "./services/emailTransport";
 import { drainOutbox as drainWhatsAppOutbox } from "./services/whatsAppService";
 import { processRecurringBilling } from "./services/recurringBillingService";
+import { computeAndStoreDailyPortfolioSnapshot } from "./services/financials";
 import { processOverdueInvoices } from "./services/overdueInvoiceService";
 import { flushLegalVariableIngestion } from "./services/legalVariableIngestion";
 
@@ -532,6 +533,21 @@ async function runBackgroundJobsInner() {
     }
   } catch (e) {
     console.error("[BG-JOBS] Overdue invoice error:", e);
+  }
+
+  try {
+    // Compute yesterday's portfolio daily snapshot for all orgs (idempotent — skips if already done)
+    const orgs = await prisma.org.findMany({ select: { id: true } });
+    let dailyComputed = 0;
+    for (const org of orgs) {
+      const stored = await computeAndStoreDailyPortfolioSnapshot(org.id);
+      if (stored) dailyComputed++;
+    }
+    if (dailyComputed > 0) {
+      console.log(`[BG-JOBS] Stored daily portfolio snapshots for ${dailyComputed} org(s)`);
+    }
+  } catch (e) {
+    console.error("[BG-JOBS] Daily portfolio snapshot error:", e);
   }
 
   try {

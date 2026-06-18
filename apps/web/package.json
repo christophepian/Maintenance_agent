@@ -13,6 +13,7 @@
     "@supabase/ssr": "^0.10.2",
     "@supabase/supabase-js": "^2.105.3",
     "@tailwindcss/postcss": "^4.1.18",
+    "chart.js": "^4.5.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "i18next": "^24.2.3",
@@ -21,6 +22,7 @@
     "next-i18next": "^15.4.3",
     "qrcode.react": "^4.2.0",
     "react": "^19.2.5",
+    "react-chartjs-2": "^5.3.1",
     "react-dom": "^19.2.5",
     "react-i18next": "^15.7.4",
     "tailwind-merge": "^2.6.0"

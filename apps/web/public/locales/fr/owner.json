@@ -651,6 +651,24 @@
       "financeOverview": "Aperçu finances",
       "openLedger": "Ouvrir le grand livre"
     },
+    "canvas": {
+      "tab": {
+        "periodAnalysis": "Analyse de période",
+        "performanceCanvas": "Canvas de performance"
+      },
+      "heading": "Performance du portefeuille",
+      "subheading": "Série temporelle {{range}} — tous les indicateurs clés",
+      "noData": "Aucune donnée pour cette période. Les instantanés sont calculés chaque nuit.",
+      "metric": {
+        "noiCents":          "RNE",
+        "earnedIncomeCents": "Loyers encaissés",
+        "expensesCents":     "Charges totales",
+        "collectionRate":    "Taux de recouvrement",
+        "noiMarginPct":      "Marge RNE",
+        "opexRatioPct":      "Ratio charges/loyers",
+        "occupancyRate":     "Taux d'occupation"
+      }
+    },
     "highlight": {
       "allGreen": {
         "title": "Tous les biens dans le vert",

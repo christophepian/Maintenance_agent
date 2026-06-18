@@ -8,6 +8,7 @@ import {
   getBuildingFinancials,
   getPortfolioSummary,
   getPortfolioMonthlyBreakdown,
+  getPortfolioTimeSeries,
   setInvoiceExpenseCategory,
   listBuildingSnapshots,
   computeAnnualSnapshots,
@@ -15,6 +16,7 @@ import {
   ValidationError,
   ConflictError,
 } from "../services/financials";
+import type { TimeSeriesRange } from "../services/financials";
 import {
   GetBuildingFinancialsSchema,
   PortfolioSummarySchema,
@@ -244,6 +246,32 @@ export function registerFinancialRoutes(router: Router) {
       } catch (e: any) {
         console.error("[GET /financials/portfolio-monthly]", e);
         sendError(res, 500, "INTERNAL_ERROR", "Failed to load monthly breakdown");
+      }
+    },
+  );
+
+  // ── GET /financials/portfolio-timeseries ───────────────────
+  router.get(
+    "/financials/portfolio-timeseries",
+    async ({ req, res, query, orgId }) => {
+      if (!requireAuth(req, res)) return;
+      if (!requireOrgViewer(req, res)) return;
+
+      const VALID_RANGES = ["1W", "1M", "6M", "1Y", "2Y", "5Y", "10Y"] as const;
+      const rangeRaw = first(query, "range") ?? "1Y";
+      if (!VALID_RANGES.includes(rangeRaw as TimeSeriesRange)) {
+        return sendError(res, 400, "VALIDATION_ERROR", `range must be one of: ${VALID_RANGES.join(", ")}`);
+      }
+      const range = rangeRaw as TimeSeriesRange;
+
+      try {
+        const user = getAuthUser(req);
+        const ownerId = (user?.role === "OWNER" || user?.ownerId) ? (user.ownerId || user.userId) : undefined;
+        const data = await getPortfolioTimeSeries(orgId, range, ownerId);
+        sendJson(res, 200, { data });
+      } catch (e: any) {
+        console.error("[GET /financials/portfolio-timeseries]", e);
+        sendError(res, 500, "INTERNAL_ERROR", "Failed to load portfolio time series");
       }
     },
   );

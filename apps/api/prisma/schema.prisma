@@ -157,7 +157,8 @@ model Org {
   rentalApplications    RentalApplication[]
   emailOutbox           EmailOutbox[]
   rentEstimationConfigs RentEstimationConfig[]
-  financialSnapshots    BuildingFinancialSnapshot[]
+  financialSnapshots        BuildingFinancialSnapshot[]
+  portfolioDailySnapshots   PortfolioDailySnapshot[]
   requests              Request[]
   // Legal engine relations
   legalEvaluationLogs   LegalEvaluationLog[]
@@ -2775,4 +2776,29 @@ model WhatsAppOutbox {
   sentAt       DateTime?
 
   @@index([status, createdAt])
+}
+
+// ── Portfolio Daily Snapshot ─────────────────────────────────
+// Pre-computed daily portfolio rollup for short-range (1W / 1M)
+// time-series charts in owner reporting. Written once per day by
+// the hourly background job (skipped if today's row already exists).
+
+model PortfolioDailySnapshot {
+  id                 String   @id @default(cuid())
+  orgId              String
+  date               DateTime @db.Date
+  noiCents           Int
+  earnedIncomeCents  Int
+  expensesCents      Int
+  collectionRate     Float
+  noiMarginPct       Float?
+  opexRatioPct       Float?
+  occupancyRate      Float?
+  activeUnitsCount   Int
+  computedAt         DateTime @default(now())
+
+  org Org @relation(fields: [orgId], references: [id])
+
+  @@unique([orgId, date])
+  @@index([orgId, date])
 }
