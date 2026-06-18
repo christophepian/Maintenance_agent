@@ -939,9 +939,10 @@ export default function OwnerReportingPage() {
         onYtdToggle={() => setYtdMode((v) => !v)}
       />
 
-      {/* ── TAB STRIP ──────────────────────────────────────────── */}
-      <div className="border-b border-surface-border bg-surface px-4 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-7xl">
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+
+        {/* ── TAB STRIP ────────────────────────────────────────── */}
+        <div className="mb-6">
           <ScrollableTabs activeIndex={activeTab}>
             <button
               type="button"
@@ -959,9 +960,6 @@ export default function OwnerReportingPage() {
             </button>
           </ScrollableTabs>
         </div>
-      </div>
-
-      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
 
         {/* ── PERFORMANCE CANVAS TAB ───────────────────────────── */}
         {activeTab === 1 && (
