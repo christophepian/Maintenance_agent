@@ -41,6 +41,7 @@ import { registerContractorBillingRoutes } from "./routes/contractorBillingSched
 import { registerStrategyRoutes } from "./routes/strategy";
 import { registerRecommendationRoutes } from "./routes/recommendations";
 import { registerTenantConversationRoutes } from "./routes/tenantConversation";
+import { registerTwilioWebhookRoutes } from "./routes/twilioWebhook";
 import { registerImportedStatementRoutes } from "./routes/importedStatements";
 import { registerSandboxRoutes } from "./routes/sandbox";
 import { registerCorrespondenceRoutes } from "./routes/correspondence";
@@ -52,6 +53,7 @@ import {
 } from "./services/ownerSelection";
 import { processSchedulingEscalations } from "./workflows/schedulingWorkflow";
 import { flushPendingEmails } from "./services/emailTransport";
+import { drainOutbox as drainWhatsAppOutbox } from "./services/whatsAppService";
 import { processRecurringBilling } from "./services/recurringBillingService";
 import { processOverdueInvoices } from "./services/overdueInvoiceService";
 import { flushLegalVariableIngestion } from "./services/legalVariableIngestion";
@@ -183,6 +185,7 @@ registerContractorBillingRoutes(router);
 registerStrategyRoutes(router);
 registerRecommendationRoutes(router);
 registerTenantConversationRoutes(router);
+registerTwilioWebhookRoutes(router);
 registerImportedStatementRoutes(router);
 registerSandboxRoutes(router);
 registerCorrespondenceRoutes(router);
@@ -435,6 +438,13 @@ const server = http.createServer(async (req: AuthedRequest, res) => {
       return;
     }
 
+    /* ── Twilio webhook — signature-validated internally, no Supabase session ── */
+    if (path === "/webhooks/twilio/whatsapp" && req.method === "POST") {
+      const handled = await router.dispatch(req, res, path, query, DEFAULT_ORG_ID, prisma);
+      if (!handled) sendError(res, 404, "NOT_FOUND", "Not found");
+      return;
+    }
+
     /* ── Public capture session routes — token-gated internally, no Supabase session ── */
     // These are called by the phone after scanning the QR code. Auth is enforced
     // by the signed JWT embedded in the session token, not by our Supabase auth.
@@ -475,6 +485,11 @@ let isShuttingDown = false;
 const BG_JOB_INTERVAL_MS = Number(process.env.BG_JOB_INTERVAL_MS) || 60 * 60 * 1000; // default: 1 hour
 const BG_JOBS_ENABLED = process.env.BG_JOBS_ENABLED !== "false"; // enabled by default
 let bgJobTimer: ReturnType<typeof setInterval> | null = null;
+
+// WhatsApp outbox drain runs on a short interval (30s) independent of the hourly
+// background job — replies to tenant messages must arrive in near-real-time.
+const WA_DRAIN_INTERVAL_MS = 30_000;
+let waDrainTimer: ReturnType<typeof setInterval> | null = null;
 
 // Slice 4: Postgres advisory-lock key so only ONE instance runs the scheduler
 // at a time. Protects the deploy-overlap window (old + new instance both live)
@@ -597,6 +612,17 @@ async function start() {
         `[BG-JOBS] Scheduler started (interval: ${BG_JOB_INTERVAL_MS / 1000}s)`,
       );
     }
+
+    /* Start WhatsApp outbox drain (30s — independent of hourly job) */
+    waDrainTimer = setInterval(async () => {
+      try {
+        const sent = await drainWhatsAppOutbox(prisma);
+        if (sent > 0) console.log(`[WA-DRAIN] Sent ${sent} WhatsApp message(s)`);
+      } catch (e) {
+        console.error("[WA-DRAIN] Error:", e);
+      }
+    }, WA_DRAIN_INTERVAL_MS);
+    console.log("[WA-DRAIN] WhatsApp outbox drain started (interval: 30s)");
   } catch (e) {
     console.error("Failed to start API:", e);
     process.exit(1);
@@ -618,6 +644,7 @@ async function shutdown() {
   hardExit.unref();
 
   if (bgJobTimer) clearInterval(bgJobTimer);
+  if (waDrainTimer) clearInterval(waDrainTimer);
   server.close();
 
   /* Give in-flight requests time to finish */

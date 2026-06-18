@@ -2751,3 +2751,28 @@ model UnitConditionReportPhoto {
 
   @@index([itemId])
 }
+
+// ── WhatsApp Outbox ──────────────────────────────────────────
+// Async delivery queue for outbound WhatsApp messages.
+// Mirrors the EmailOutbox pattern — a drain job processes PENDING
+// records every 30 seconds and marks them SENT or FAILED (max 3 retries).
+
+enum OutboxStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+model WhatsAppOutbox {
+  id           String       @id @default(cuid())
+  orgId        String
+  toPhone      String       // E.164, e.g. +41791234567
+  body         String       @db.Text
+  status       OutboxStatus @default(PENDING)
+  retryCount   Int          @default(0)
+  errorMessage String?
+  createdAt    DateTime     @default(now())
+  sentAt       DateTime?
+
+  @@index([status, createdAt])
+}
