@@ -122,6 +122,9 @@ export default function BuildingDetail() {
   const [buildingRequests, setBuildingRequests] = useState([]);
   const [requestsLoading, setRequestsLoading] = useState(false);
   const [requestsLoaded, setRequestsLoaded] = useState(false);
+  const [buildingInvoices, setBuildingInvoices] = useState([]);
+  const [invoicesLoading, setInvoicesLoading] = useState(false);
+  const [invoicesLoaded, setInvoicesLoaded] = useState(false);
 
   // ─── House rules state ───
   const [houseRulesText, setHouseRulesText] = useState("");
@@ -162,6 +165,12 @@ export default function BuildingDetail() {
   useEffect(() => {
     if (activeTab === "Requests" && !requestsLoaded && !requestsLoading) {
       loadBuildingRequests();
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (activeTab === "Invoices" && !invoicesLoaded && !invoicesLoading) {
+      loadBuildingInvoices();
     }
   }, [activeTab]);
 
@@ -299,6 +308,22 @@ export default function BuildingDetail() {
       }
     } catch {
       // non-fatal
+    }
+  }
+
+  async function loadBuildingInvoices() {
+    if (!id) return;
+    setInvoicesLoading(true);
+    try {
+      const res = await fetch(`/api/invoices?buildingId=${id}&limit=200&view=summary`, { headers: authHeaders() });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error?.message || "Failed to load invoices");
+      setBuildingInvoices(json?.data || []);
+      setInvoicesLoaded(true);
+    } catch (e) {
+      setBuildingInvoices([]);
+    } finally {
+      setInvoicesLoading(false);
     }
   }
 
@@ -747,7 +772,7 @@ export default function BuildingDetail() {
 
           {/* Tabs Navigation */}
           {(() => {
-            const TAB_KEYS = ["Building information", "Units", "Tenants", "Assets", "Documents", "Policies", "Financials", "Requests", "Correspondence"];
+            const TAB_KEYS = ["Building information", "Units", "Tenants", "Assets", "Documents", "Policies", "Financials", "Invoices", "Requests", "Correspondence"];
             const TAB_I18N = {
               "Building information": t("manager:buildingsId.tabs.buildingInformation"),
               "Units":                t("manager:buildingsId.tabs.units"),
@@ -756,6 +781,7 @@ export default function BuildingDetail() {
               "Documents":            t("manager:buildingsId.tabs.documents"),
               "Policies":             t("manager:buildingsId.tabs.policies"),
               "Financials":           t("manager:buildingsId.tabs.financials"),
+              "Invoices":             "Invoices",
               "Requests":             t("manager:buildingsId.tabs.requests"),
               "Correspondence":       t("manager:buildingsId.tabs.correspondence"),
             };
@@ -1988,6 +2014,59 @@ export default function BuildingDetail() {
                             <td className="text-foreground-dim">
                               {r.createdAt ? new Date(r.createdAt).toLocaleDateString("de-CH") : "—"}
                             </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
+            </Panel>
+          )}
+
+          {/* Invoices tab */}
+          {activeTab === "Invoices" && (
+            <Panel title="Invoices">
+              {invoicesLoading ? (
+                <p className="text-sm text-muted py-4">Loading…</p>
+              ) : buildingInvoices.length === 0 ? (
+                <p className="text-sm text-muted italic py-4">No invoices attributed to this building yet.</p>
+              ) : (
+                <>
+                  {/* Mobile cards */}
+                  <div className="sm:hidden divide-y divide-slate-100">
+                    {buildingInvoices.map((inv) => (
+                      <div key={inv.id} className="py-3 flex flex-col gap-0.5 cursor-pointer hover:bg-surface-subtle" onClick={() => router.push(`/manager/finance/invoices/${inv.id}`)}>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-sm font-medium text-foreground">{inv.invoiceNumber || inv.description || inv.id.slice(0, 8)}</span>
+                          <span className="text-sm font-mono text-muted-dark">{inv.totalAmount != null ? `CHF ${(inv.totalAmount).toFixed(2)}` : "—"}</span>
+                        </div>
+                        <span className="text-xs text-muted">{inv.status} · {inv.direction}</span>
+                      </div>
+                    ))}
+                  </div>
+                  {/* Desktop table */}
+                  <div className="hidden sm:block overflow-x-auto">
+                    <table className="data-table w-full">
+                      <thead>
+                        <tr>
+                          <th>Number</th>
+                          <th>Description</th>
+                          <th>Direction</th>
+                          <th>Status</th>
+                          <th className="text-right">Total</th>
+                          <th>Date</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {buildingInvoices.map((inv) => (
+                          <tr key={inv.id} className="cursor-pointer hover:bg-surface-subtle" onClick={() => router.push(`/manager/finance/invoices/${inv.id}`)}>
+                            <td className="font-mono text-xs">{inv.invoiceNumber || inv.id.slice(0, 8)}</td>
+                            <td className="text-sm max-w-xs truncate">{inv.description || "—"}</td>
+                            <td><span className="text-xs text-muted">{inv.direction === "INCOMING" ? "↓ Incoming" : "↑ Outgoing"}</span></td>
+                            <td><span className="text-xs">{inv.status}</span></td>
+                            <td className="text-right font-mono text-sm">{inv.totalAmount != null ? `CHF ${(inv.totalAmount).toFixed(2)}` : "—"}</td>
+                            <td className="text-xs text-muted">{inv.createdAt ? new Date(inv.createdAt).toLocaleDateString("de-CH") : "—"}</td>
                           </tr>
                         ))}
                       </tbody>

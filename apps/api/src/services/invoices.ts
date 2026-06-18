@@ -571,17 +571,24 @@ export async function listInvoices(
     jobFilter.request = { ...jobFilter.request, unitId: filters.unitId };
   }
   if (Object.keys(jobFilter).length > 0) {
-    // Include invoices that match the job filter OR have no job (incoming invoices)
-    // When filtering by unitId, also include invoices linked via lease
     const orClauses: any[] = [{ job: jobFilter }];
     if (!filters?.contractorId) orClauses.push({ jobId: null });
     if (filters?.unitId) orClauses.push({ lease: { unitId: filters.unitId } });
+    // Also match invoices directly attributed to this building/unit
+    if (filters?.buildingId) orClauses.push({ buildingId: filters.buildingId });
+    if (filters?.unitId) orClauses.push({ unitId: filters.unitId });
     where.OR = orClauses;
   } else if (filters?.unitId) {
-    // unitId-only filter (no other job-based filters)
     where.OR = [
       { job: { request: { unitId: filters.unitId } } },
       { lease: { unitId: filters.unitId } },
+      { unitId: filters.unitId },
+    ];
+  } else if (filters?.buildingId) {
+    // buildingId-only — include direct attribution (no job filter needed separately)
+    where.OR = [
+      { job: { request: { unit: { buildingId: filters.buildingId } } } },
+      { buildingId: filters.buildingId },
     ];
   }
 
