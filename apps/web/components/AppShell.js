@@ -31,6 +31,7 @@ import ContractorSidebar from "./ContractorSidebar";
 import TenantSidebar from "./TenantSidebar";
 import BottomNav from "./mobile/BottomNav";
 import HubBar from "./HubBar";
+import ChatWidget from "./tenant/ChatWidget";
 import { createClient } from "../lib/supabase/client";
 import { setAuthToken } from "../lib/api";
 
@@ -250,6 +251,7 @@ export default function AppShell({ role: roleProp, children }) {
       {/* Mobile bottom navigation */}
       <BottomNav role={role} />
     </div>
+    {role === "TENANT" && <ChatWidget />}
     </>
   );
 }
