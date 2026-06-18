@@ -79,6 +79,7 @@
 | **ContractorBillingSchedule** | orgId, contractorId, status (BillingScheduleStatus), description, frequency (BillingFrequency), anchorDay, nextPeriodStart, lastGeneratedPeriod?, amountCents, vatRate, buildingId?, completedAt?, completionReason? | → Org, Contractor, Building?, Invoice[] |
 | **ConversationThread** | orgId, tenantId, channel (ConversationChannel, default IN_APP), createdAt, updatedAt; @@unique([tenantId, channel]), @@index([orgId]) | → Tenant, ConversationMessage[] |
 | **ConversationMessage** | threadId, role (ConversationRole), content (Text), intent (String?), createdAt; @@index([threadId, createdAt]) | → ConversationThread |
+| **WhatsAppOutbox** | orgId, toPhone (E.164), body (Text), status (OutboxStatus, default PENDING), retryCount (default 0), errorMessage?, createdAt, sentAt?; @@index([status, createdAt]) | — |
 
 ### Key Enums (64 total) <!-- 55 prior + ConversationChannel + ConversationRole + (existing 7 BillingScheduleStatus/IndexClauseType/RentAdjustmentType/RentAdjustmentStatus/ChargeReconciliationStatus/BillingFrequency counted separately) -->
 - `RequestStatus`: PENDING_REVIEW, AUTO_APPROVED, APPROVED, **RFP_PENDING**, ASSIGNED, IN_PROGRESS, COMPLETED, PENDING_OWNER_APPROVAL, **OWNER_REJECTED**
@@ -138,6 +139,7 @@
 - `BillingFrequency`: MONTHLY, QUARTERLY, SEMI_ANNUAL, ANNUAL
 - `ConversationChannel`: IN_APP, WHATSAPP, VOICE
 - `ConversationRole`: TENANT, ASSISTANT
+- `OutboxStatus`: PENDING, SENT, FAILED — used by `WhatsAppOutbox`
 
 ### ⚠️ Schema Gotchas (fields that DON'T exist where you'd expect)
 - **`Job` has NO `description`** — use `Request.description` via the relation

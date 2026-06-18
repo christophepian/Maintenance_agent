@@ -9097,6 +9097,38 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /webhooks/twilio/whatsapp:
+    post:
+      tags: [Webhooks]
+      summary: Twilio inbound WhatsApp webhook
+      description: >
+        Receives inbound WhatsApp messages from Twilio. Resolves tenant by phone number,
+        calls the conversation workflow (same as in-app chat), and enqueues the reply via
+        WhatsAppOutbox for async delivery. Auth via Twilio signature validation (skipped
+        in non-production). Always returns 200 with empty TwiML <Response/>.
+      operationId: twilioWhatsAppWebhook
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                From: { type: string, example: 'whatsapp:+41787208772' }
+                Body: { type: string }
+                AccountSid: { type: string }
+      responses:
+        '200':
+          description: Empty TwiML response (reply sent asynchronously via WhatsAppOutbox drain job)
+          content:
+            text/xml:
+              schema:
+                type: string
+                example: '<Response/>'
+        '403':
+          description: Invalid Twilio signature
+
   /tenant/conversation/history:
     get:
       tags: [TenantConversation]
