@@ -970,32 +970,33 @@ export default function OwnerReportingPage() {
             {(() => {
               const earliest = canvasData?.earliestDate;
               const now = new Date();
-              const RANGES = [
-                { key: "1W",  minDays: 7   },
-                { key: "1M",  minDays: 30  },
-                { key: "6M",  minDays: 180 },
-                { key: "1Y",  minDays: 365 },
-                { key: "2Y",  minDays: 730 },
-                { key: "5Y",  minDays: 1825},
-                { key: "10Y", minDays: 3650},
-              ];
               const daysSinceEarliest = earliest
                 ? Math.floor((now - new Date(earliest)) / 86400000)
                 : 0;
+              // 1W/1M need daily snapshots; 6M+ use monthly/quarterly/annual data always available
+              const RANGES = [
+                { key: "1W",  dailyOnly: true  },
+                { key: "1M",  dailyOnly: true  },
+                { key: "6M",  dailyOnly: false },
+                { key: "1Y",  dailyOnly: false },
+                { key: "2Y",  dailyOnly: false },
+                { key: "5Y",  dailyOnly: false },
+                { key: "10Y", dailyOnly: false },
+              ];
               return (
                 <div className="mb-5 flex items-center gap-1.5 flex-wrap">
-                  {RANGES.map(({ key, minDays }) => {
-                    const hasData = !earliest || daysSinceEarliest >= minDays * 0.2;
+                  {RANGES.map(({ key, dailyOnly }) => {
+                    const enabled = !dailyOnly || daysSinceEarliest >= (key === "1W" ? 7 : 30);
                     return (
                       <button
                         key={key}
-                        disabled={!hasData}
+                        disabled={!enabled}
                         onClick={() => setCanvasRange(key)}
                         className={cn(
                           "rounded-full px-3 py-1 text-sm font-semibold transition-colors",
                           canvasRange === key
                             ? "bg-slate-900 text-white"
-                            : hasData
+                            : enabled
                             ? "text-muted-text hover:bg-surface-hover"
                             : "text-foreground-dim cursor-not-allowed opacity-40",
                         )}
@@ -1008,26 +1009,18 @@ export default function OwnerReportingPage() {
               );
             })()}
 
-            {/* Chart card */}
-            <div className="rounded-2xl border border-surface-border bg-surface shadow-sm p-5">
-              <div className="mb-4">
-                <h2 className="text-base font-semibold text-foreground">
-                  {t("reporting.canvas.heading")}
-                </h2>
-                <p className="text-xs text-foreground-dim mt-0.5">
-                  {t("reporting.canvas.subheading", { range: canvasRange })}
-                </p>
-              </div>
-              {canvasLoading ? (
-                <div className="h-64 sm:h-80 animate-pulse rounded-xl bg-surface-hover" />
-              ) : (
-                <PortfolioCanvasChart
-                  points={canvasData?.points ?? []}
-                  range={canvasRange}
-t={t}
-                />
-              )}
-            </div>
+            {canvasLoading ? (
+              <>
+                <div className="h-64 animate-pulse rounded-2xl bg-surface-hover mb-4" />
+                <div className="h-64 animate-pulse rounded-2xl bg-surface-hover" />
+              </>
+            ) : (
+              <PortfolioCanvasChart
+                points={canvasData?.points ?? []}
+                range={canvasRange}
+                t={t}
+              />
+            )}
           </div>
         )}
 
