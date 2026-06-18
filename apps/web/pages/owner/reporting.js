@@ -173,7 +173,7 @@ function ExpandToggle({ expanded, total, onToggle, label }) {
 
 /* ─── Timeline header ────────────────────────────────────────── */
 
-function TimelineHeader({ year, month, mode, onSelect, onYearNav, onModeToggle, ytdActive, onYtdToggle }) {
+function TimelineHeader({ year, month, mode, onSelect, onYearNav, onModeToggle, ytdActive, onYtdToggle, topSlot, showDateControls = true }) {
   const { t } = useTranslation("owner");
   const { locale } = useRouter();
   const scrollRef = useRef(null);
@@ -196,7 +196,12 @@ function TimelineHeader({ year, month, mode, onSelect, onYearNav, onModeToggle, 
 
   return (
     <div className="sticky top-0 z-10 bg-surface border-b border-surface-border shadow-sm">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      {topSlot && (
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 border-b border-surface-divider">
+          {topSlot}
+        </div>
+      )}
+      {showDateControls && <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-3 py-3">
 
           {mode === "month" ? (
@@ -297,7 +302,7 @@ function TimelineHeader({ year, month, mode, onSelect, onYearNav, onModeToggle, 
                 })}
           </div>
         </div>
-      </div>
+      </div>}
     </div>
   );
 }
@@ -928,40 +933,29 @@ export default function OwnerReportingPage() {
 
   return (
     <AppShell role="OWNER">
-      {activeTab === 0 && (
-        <TimelineHeader
-          year={selYear}
-          month={selMonth}
-          mode={tlMode}
-          onSelect={(y, m) => { setSelYear(y); setSelMonth(m); setYtdMode(false); }}
-          onYearNav={(dir) => setSelYear((y) => y + dir)}
-          onModeToggle={() => setTlMode((m) => (m === "month" ? "year" : "month"))}
-          ytdActive={ytdMode}
-          onYtdToggle={() => setYtdMode((v) => !v)}
-        />
-      )}
-
-      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-
-        {/* ── TAB STRIP ────────────────────────────────────────── */}
-        <div className="mb-6">
+      <TimelineHeader
+        year={selYear}
+        month={selMonth}
+        mode={tlMode}
+        onSelect={(y, m) => { setSelYear(y); setSelMonth(m); setYtdMode(false); }}
+        onYearNav={(dir) => setSelYear((y) => y + dir)}
+        onModeToggle={() => setTlMode((m) => (m === "month" ? "year" : "month"))}
+        ytdActive={ytdMode}
+        onYtdToggle={() => setYtdMode((v) => !v)}
+        topSlot={
           <ScrollableTabs activeIndex={activeTab}>
-            <button
-              type="button"
-              onClick={() => setActiveTab(0)}
-              className={cn("tab-btn", activeTab === 0 && "tab-btn-active")}
-            >
+            <button type="button" onClick={() => setActiveTab(0)} className={cn("tab-btn", activeTab === 0 && "tab-btn-active")}>
               {t("reporting.canvas.tab.periodAnalysis")}
             </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab(1)}
-              className={cn("tab-btn", activeTab === 1 && "tab-btn-active")}
-            >
+            <button type="button" onClick={() => setActiveTab(1)} className={cn("tab-btn", activeTab === 1 && "tab-btn-active")}>
               {t("reporting.canvas.tab.performanceCanvas")}
             </button>
           </ScrollableTabs>
-        </div>
+        }
+        showDateControls={activeTab === 0}
+      />
+
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
 
         {/* ── PERFORMANCE CANVAS TAB ───────────────────────────── */}
         {activeTab === 1 && (
