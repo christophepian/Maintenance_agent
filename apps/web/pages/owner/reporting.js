@@ -928,16 +928,18 @@ export default function OwnerReportingPage() {
 
   return (
     <AppShell role="OWNER">
-      <TimelineHeader
-        year={selYear}
-        month={selMonth}
-        mode={tlMode}
-        onSelect={(y, m) => { setSelYear(y); setSelMonth(m); setYtdMode(false); }}
-        onYearNav={(dir) => setSelYear((y) => y + dir)}
-        onModeToggle={() => setTlMode((m) => (m === "month" ? "year" : "month"))}
-        ytdActive={ytdMode}
-        onYtdToggle={() => setYtdMode((v) => !v)}
-      />
+      {activeTab === 0 && (
+        <TimelineHeader
+          year={selYear}
+          month={selMonth}
+          mode={tlMode}
+          onSelect={(y, m) => { setSelYear(y); setSelMonth(m); setYtdMode(false); }}
+          onYearNav={(dir) => setSelYear((y) => y + dir)}
+          onModeToggle={() => setTlMode((m) => (m === "month" ? "year" : "month"))}
+          ytdActive={ytdMode}
+          onYtdToggle={() => setYtdMode((v) => !v)}
+        />
+      )}
 
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
 
