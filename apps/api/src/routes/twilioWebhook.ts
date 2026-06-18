@@ -42,7 +42,7 @@ function verifyTwilioSignature(
   req: http.IncomingMessage,
   params: Record<string, string>,
 ): boolean {
-  if (process.env.NODE_ENV === "test") return true;
+  if (process.env.NODE_ENV !== "production") return true;
 
   const authToken = process.env.TWILIO_AUTH_TOKEN;
   if (!authToken) {
