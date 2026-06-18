@@ -840,7 +840,49 @@ async function getDailyPoints(
   orgId: string,
   from: Date,
   to: Date,
+  ownerId?: string,
 ): Promise<TimeSeriesPoint[]> {
+  // Read whatever is already cached
+  const cached = await dailySnapshotRepo.findDailySnapshotsInRange(prisma, orgId, from, to);
+  const cachedDates = new Set(cached.map((r) => isoDate(r.date)));
+
+  // Compute and store any missing past days on-demand (excludes today — live data)
+  const now = new Date();
+  const todayStr = isoDate(new Date(now.getFullYear(), now.getMonth(), now.getDate()));
+  const cur = new Date(from);
+  const compute: Array<{ date: Date; str: string }> = [];
+  while (cur <= to) {
+    const str = isoDate(cur);
+    if (str < todayStr && !cachedDates.has(str)) {
+      compute.push({ date: new Date(cur), str });
+    }
+    cur.setDate(cur.getDate() + 1);
+  }
+
+  for (const { date, str } of compute) {
+    try {
+      const summary = await getPortfolioSummary(orgId, { from: str, to: str }, ownerId);
+      const noi     = summary.totalNetOperatingIncomeCents;
+      const earned  = summary.totalEarnedIncomeCents;
+      const expenses = summary.totalExpensesCents;
+      await dailySnapshotRepo.upsertPortfolioDailySnapshot(prisma, orgId, date, {
+        noiCents:          noi,
+        earnedIncomeCents: earned,
+        expensesCents:     expenses,
+        collectionRate:    summary.avgCollectionRate,
+        noiMarginPct:      safePct(noi, earned),
+        opexRatioPct:      safePct(expenses, earned),
+        occupancyRate:     summary.totalUnits > 0
+          ? Math.round((summary.totalActiveUnits / summary.totalUnits) * 10000) / 10000
+          : null,
+        activeUnitsCount: summary.totalActiveUnits,
+      });
+    } catch {
+      // skip days where computation fails
+    }
+  }
+
+  // Re-read after fill
   const rows = await dailySnapshotRepo.findDailySnapshotsInRange(prisma, orgId, from, to);
   return rows.map((r) => ({
     periodStart:       isoDate(r.date),
@@ -867,10 +909,10 @@ export async function getPortfolioTimeSeries(
 
   if (range === "1W") {
     const from = new Date(today); from.setDate(today.getDate() - 6);
-    points = await getDailyPoints(orgId, from, today);
+    points = await getDailyPoints(orgId, from, today, ownerId);
   } else if (range === "1M") {
     const from = new Date(today); from.setDate(today.getDate() - 29);
-    points = await getDailyPoints(orgId, from, today);
+    points = await getDailyPoints(orgId, from, today, ownerId);
   } else if (range === "6M") {
     const from = new Date(today); from.setMonth(today.getMonth() - 5); from.setDate(1);
     points = await getPortfolioMonthlyPoints(
