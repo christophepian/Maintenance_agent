@@ -1396,7 +1396,7 @@ export async function getUnitFinancialSummaries(
   const activeLeases = await prisma.lease.findMany({
     where: {
       unitId: { in: unitIds },
-      status: { in: ["ACTIVE", "PENDING"] },
+      status: { in: ["ACTIVE", "SIGNED"] },
       startDate: { lte: to },
       OR: [{ endDate: null }, { endDate: { gte: from } }],
     },
@@ -1505,25 +1505,33 @@ export async function getBuildingPeriodReport(
     overdue61plusCents: o3, totalOverdueCents: o1 + o2 + o3,
   };
 
+  // Pre-fetch unit number map for this building (avoids TS inference issues with nested select+where)
+  const buildingUnitRows = await prisma.unit.findMany({
+    where: { buildingId, orgId },
+    select: { id: true, unitNumber: true },
+  });
+  const unitNumMap: Record<string, string> = {};
+  for (const u of buildingUnitRows) unitNumMap[u.id] = u.unitNumber;
+
   // Move-ins: leases starting in period for this building
   const moveInLeases = await prisma.lease.findMany({
     where: {
-      unit: { buildingId, orgId },
+      unitId: { in: buildingUnitRows.map((u) => u.id) },
       startDate: { gte: new Date(from + "T00:00:00Z"), lte: new Date(to + "T23:59:59Z") },
-      status: { in: ["ACTIVE", "PENDING", "ENDED"] },
+      status: { in: ["ACTIVE", "SIGNED", "TERMINATED", "CANCELLED"] },
       isTemplate: false,
     },
-    select: { id: true, unitId: true, tenantName: true, startDate: true, unit: { select: { unitNumber: true } } },
+    select: { id: true, unitId: true, tenantName: true, startDate: true },
     take: 50,
   });
   const moveOuts_ = await prisma.lease.findMany({
     where: {
-      unit: { buildingId, orgId },
+      unitId: { in: buildingUnitRows.map((u) => u.id) },
       endDate: { gte: new Date(from + "T00:00:00Z"), lte: new Date(to + "T23:59:59Z") },
-      status: "ENDED",
+      status: { in: ["TERMINATED", "CANCELLED"] },
       isTemplate: false,
     },
-    select: { id: true, unitId: true, tenantName: true, endDate: true, unit: { select: { unitNumber: true } } },
+    select: { id: true, unitId: true, tenantName: true, endDate: true },
     take: 50,
   });
 
@@ -1554,14 +1562,14 @@ export async function getBuildingPeriodReport(
     moveIns: moveInLeases.filter(l => l.unitId).map(l => ({
       id: l.id,
       unitId: l.unitId!,
-      unitNumber: l.unit?.unitNumber ?? "?",
+      unitNumber: unitNumMap[l.unitId ?? ""] ?? "?",
       tenantName: l.tenantName,
       startDate: l.startDate.toISOString().slice(0, 10),
     })),
     moveOuts: moveOuts_.filter(l => l.unitId && l.endDate).map(l => ({
       id: l.id,
       unitId: l.unitId!,
-      unitNumber: l.unit?.unitNumber ?? "?",
+      unitNumber: unitNumMap[l.unitId ?? ""] ?? "?",
       tenantName: l.tenantName,
       endDate: l.endDate!.toISOString().slice(0, 10),
     })),
