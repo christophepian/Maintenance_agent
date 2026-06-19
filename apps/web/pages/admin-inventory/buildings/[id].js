@@ -271,7 +271,7 @@ function BuildingPeriodAnalysis({ buildingId }) {
       {!loading && bf && (
         <>
           {/* ── Hero ── */}
-          <div className="mb-0">
+          <div>
             <header className={cn("border border-surface-border bg-gradient-to-br p-6 shadow-sm", heroGradient, kpiOpen ? "rounded-t-3xl" : "rounded-3xl")}>
               <div className="inline-flex items-center rounded-full border border-black/10 bg-white/30 px-3 py-1 text-xs font-medium text-foreground/70 mb-3">
                 {periodLabel} · Monthly report
