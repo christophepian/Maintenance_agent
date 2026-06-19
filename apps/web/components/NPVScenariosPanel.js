@@ -182,8 +182,11 @@ function SliderRow({ label, value, min, max, step, onChange, format, tooltip }) 
 
 // ─── Main component ───────────────────────────────────────────
 
-export default function NPVScenariosPanel({ buildingId }) {
+// mode="interactive": building endpoint, sliders visible (default, used on Planning tab)
+// mode="plan":        plan endpoint via fetchUrl, sliders hidden, manual recalculate button
+export default function NPVScenariosPanel({ buildingId, fetchUrl, mode = "interactive" }) {
   const { t } = useTranslation("manager");
+  const isPlanMode = mode === "plan";
 
   const [discountRatePct, setDiscountRatePct] = useState(4);
   const [incomeGrowthRatePct, setIncomeGrowthRatePct] = useState(2);
@@ -196,20 +199,24 @@ export default function NPVScenariosPanel({ buildingId }) {
   const [error, setError] = useState("");
 
   const fetchScenarios = useCallback(async (id, discount, growth, horizon, deferYrs, propertyValue) => {
-    if (!id) return;
+    if (!id && !fetchUrl) return;
     setLoading(true);
     setError("");
     try {
-      const qs = new URLSearchParams({
-        discountRatePct: String(discount),
-        incomeGrowthRatePct: String(growth),
-        horizonYears: String(horizon),
-        deferYears: String(deferYrs),
-        ...(propertyValue > 0 ? { propertyValueChf: String(propertyValue) } : {}),
-      }).toString();
-      const res = await fetch(`/api/buildings/${id}/npv-scenarios?${qs}`, {
-        headers: authHeaders(),
-      });
+      let url;
+      if (isPlanMode && fetchUrl) {
+        url = fetchUrl;
+      } else {
+        const qs = new URLSearchParams({
+          discountRatePct: String(discount),
+          incomeGrowthRatePct: String(growth),
+          horizonYears: String(horizon),
+          deferYears: String(deferYrs),
+          ...(propertyValue > 0 ? { propertyValueChf: String(propertyValue) } : {}),
+        }).toString();
+        url = `/api/buildings/${id}/npv-scenarios?${qs}`;
+      }
+      const res = await fetch(url, { headers: authHeaders() });
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error?.message || "Failed to load NPV scenarios");
       setData(json.data);
@@ -218,16 +225,21 @@ export default function NPVScenariosPanel({ buildingId }) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isPlanMode, fetchUrl]);
 
-  // Re-fetch whenever building or any control changes
+  // Re-fetch whenever building or any control changes (interactive mode)
+  // In plan mode, only auto-fetch once on mount; manual recalculate thereafter
   useEffect(() => {
-    if (buildingId) {
+    if (isPlanMode && fetchUrl) {
+      setData(null);
+      fetchScenarios(null, discountRatePct, incomeGrowthRatePct, horizonYears, deferYears, 0);
+    } else if (!isPlanMode && buildingId) {
       setData(null);
       const parsed = Number(propertyValueChf);
       fetchScenarios(buildingId, discountRatePct, incomeGrowthRatePct, horizonYears, deferYears, isFinite(parsed) ? parsed : 0);
     }
-  }, [buildingId, discountRatePct, incomeGrowthRatePct, horizonYears, deferYears, propertyValueChf, fetchScenarios]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [buildingId, fetchUrl, ...(!isPlanMode ? [discountRatePct, incomeGrowthRatePct, horizonYears, deferYears, propertyValueChf] : [])]);
 
   // ── Derived values ────────────────────────────────────────────
 
@@ -318,8 +330,22 @@ export default function NPVScenariosPanel({ buildingId }) {
       <div className="space-y-4">
         {subtitle && <p className="text-xs text-muted">{subtitle}</p>}
 
-        {/* Controls */}
-        <div className="space-y-2 p-3 bg-surface-subtle rounded-md border border-surface-border">
+        {/* Plan mode: recalculate button (assumptions live in Assumptions panel above) */}
+        {isPlanMode && (
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => fetchScenarios(null, discountRatePct, incomeGrowthRatePct, horizonYears, deferYears, 0)}
+              disabled={loading}
+              className="text-xs font-medium text-blue-600 hover:underline disabled:opacity-50"
+            >
+              {loading ? "Computing…" : "↻ Recalculate"}
+            </button>
+            <span className="text-xs text-foreground-dim">Assumptions are set in the panel above.</span>
+          </div>
+        )}
+
+        {/* Controls (interactive mode only) */}
+        {!isPlanMode && <div className="space-y-2 p-3 bg-surface-subtle rounded-md border border-surface-border">
           <SliderRow
             label={t("manager:npvScenarios.controls.discountRate")}
             value={discountRatePct}
@@ -402,7 +428,7 @@ export default function NPVScenariosPanel({ buildingId }) {
               />
             </div>
           </div>
-        </div>
+        </div>}
 
         {/* Error */}
         {error && <div className="notice notice-err">{error}</div>}
@@ -421,8 +447,8 @@ export default function NPVScenariosPanel({ buildingId }) {
         {/* Loading */}
         {loading && <p className="loading-text">{t("manager:npvScenarios.text.loading")}</p>}
 
-        {/* Empty — no building selected */}
-        {!buildingId && !loading && (
+        {/* Empty — no building selected (interactive mode only) */}
+        {!isPlanMode && !buildingId && !loading && (
           <p className="text-sm text-foreground-dim">{t("manager:npvScenarios.text.selectBuilding")}</p>
         )}
 

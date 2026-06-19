@@ -47,7 +47,7 @@ interface StrategyContext {
   rationale?: string;
 }
 
-function computeRecommendation(
+export function computeRecommendation(
   archetype: string | null | undefined,
   dims: Record<string, number> | null,
   fciCurrentPct: number,

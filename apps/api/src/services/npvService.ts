@@ -468,3 +468,77 @@ export async function computeNPVScenarios(
     totalReplacementValueChf,
   };
 }
+
+/**
+ * Portfolio variant: aggregate NPV across multiple buildings.
+ * For a single building, delegates directly to computeNPVScenarios.
+ * For multiple buildings, sums DCF flows (linearity of NPV) across buildings.
+ */
+export async function computeNPVScenariosForBuildings(
+  prisma: PrismaClient,
+  orgId: string,
+  buildingIds: string[],
+  options: NPVOptions = {},
+): Promise<NPVScenariosResult> {
+  if (buildingIds.length === 0) {
+    throw Object.assign(new Error("At least one buildingId is required"), { statusCode: 400 });
+  }
+
+  // Single building — direct delegation, no aggregation needed
+  if (buildingIds.length === 1) {
+    return computeNPVScenarios(prisma, orgId, buildingIds[0], options);
+  }
+
+  // Portfolio: run per-building, then aggregate
+  const results = await Promise.all(
+    buildingIds.map((id) => computeNPVScenarios(prisma, orgId, id, options)),
+  );
+
+  function sumScenario(key: "invest" | "defer" | "neglect"): NPVScenarioResult {
+    const base = results[0].scenarios[key];
+    const aggregated: NPVYearlyFlow[] = base.yearlyFlows.map((flow, i) => {
+      const pvChf = results.reduce((s, r) => s + (r.scenarios[key].yearlyFlows[i]?.pvChf ?? 0), 0);
+      const netCashFlowChf = results.reduce((s, r) => s + (r.scenarios[key].yearlyFlows[i]?.netCashFlowChf ?? 0), 0);
+      const projectedNoiChf = results.reduce((s, r) => s + (r.scenarios[key].yearlyFlows[i]?.projectedNoiChf ?? 0), 0);
+      const capexChf = results.reduce((s, r) => s + (r.scenarios[key].yearlyFlows[i]?.capexChf ?? 0), 0);
+      const taxShieldChf = results.reduce((s, r) => s + (r.scenarios[key].yearlyFlows[i]?.taxShieldChf ?? 0), 0);
+      const cumulativePvChf = results.reduce((s, r) => s + (r.scenarios[key].yearlyFlows[i]?.cumulativePvChf ?? 0), 0);
+      return { ...flow, pvChf, netCashFlowChf, projectedNoiChf, capexChf, taxShieldChf, cumulativePvChf };
+    });
+    return {
+      npvChf:           results.reduce((s, r) => s + r.scenarios[key].npvChf, 0),
+      totalCapexChf:    results.reduce((s, r) => s + r.scenarios[key].totalCapexChf, 0),
+      totalTaxShieldChf: results.reduce((s, r) => s + r.scenarios[key].totalTaxShieldChf, 0),
+      totalNoiChf:      results.reduce((s, r) => s + r.scenarios[key].totalNoiChf, 0),
+      terminalValuePvChf: results.reduce((s, r) => s + r.scenarios[key].terminalValuePvChf, 0),
+      yearlyFlows: aggregated,
+    };
+  }
+
+  const first = results[0];
+  return {
+    buildingId:   "",
+    buildingName: `Portfolio (${results.length} buildings)`,
+    discountRatePct:         first.discountRatePct,
+    incomeGrowthRatePct:     first.incomeGrowthRatePct,
+    horizonYears:            first.horizonYears,
+    deferYears:              first.deferYears,
+    baseAnnualNoiChf:        results.reduce((s, r) => s + r.baseAnnualNoiChf, 0),
+    noIncomeData:            results.every((r) => r.noIncomeData),
+    fromYear:                first.fromYear,
+    toYear:                  first.toYear,
+    scenarios: {
+      invest:  sumScenario("invest"),
+      defer:   sumScenario("defer"),
+      neglect: sumScenario("neglect"),
+    },
+    terminalValueModeled:    results.some((r) => r.terminalValueModeled),
+    propertyValueChf:        results.reduce((s, r) => s + (r.propertyValueChf ?? 0), 0) || undefined,
+    neglectNoiErosionRatePct: first.neglectNoiErosionRatePct,
+    ownerMarginalTaxRatePct: first.ownerMarginalTaxRatePct,
+    ownerTaxRateIsDefault:   results.some((r) => r.ownerTaxRateIsDefault),
+    fciCurrentPct:  results.reduce((s, r) => s + r.fciCurrentPct, 0) / results.length,
+    fciNeglectHorizonPct: results.reduce((s, r) => s + r.fciNeglectHorizonPct, 0) / results.length,
+    totalReplacementValueChf: results.reduce((s, r) => s + r.totalReplacementValueChf, 0),
+  };
+}

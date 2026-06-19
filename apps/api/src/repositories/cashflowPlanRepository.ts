@@ -72,6 +72,10 @@ export async function createCashflowPlan(
     incomeGrowthRatePct?: number;
     openingBalanceCents?: bigint | null;
     horizonMonths?: number;
+    discountRatePct?: number;
+    capRatePct?: number;
+    deferYears?: number;
+    propertyValueChf?: number | null;
   },
 ) {
   return prisma.cashflowPlan.create({
@@ -82,6 +86,10 @@ export async function createCashflowPlan(
       incomeGrowthRatePct: data.incomeGrowthRatePct ?? 0,
       openingBalanceCents: data.openingBalanceCents ?? null,
       horizonMonths: data.horizonMonths ?? 60,
+      ...(data.discountRatePct  != null ? { discountRatePct:  data.discountRatePct  } : {}),
+      ...(data.capRatePct       != null ? { capRatePct:       data.capRatePct       } : {}),
+      ...(data.deferYears       != null ? { deferYears:       data.deferYears       } : {}),
+      ...(data.propertyValueChf !== undefined ? { propertyValueChf: data.propertyValueChf } : {}),
     },
     include: CASHFLOW_PLAN_INCLUDE,
   });
@@ -97,6 +105,12 @@ export async function updateCashflowPlan(
     openingBalanceCents?: bigint | null;
     status?: CashflowPlanStatus;
     lastComputedAt?: Date | null;
+    discountRatePct?: number;
+    capRatePct?: number;
+    deferYears?: number;
+    propertyValueChf?: number | null;
+    lastVerdictScenario?: string | null;
+    lastVerdictAt?: Date | null;
   },
 ) {
   const existing = await prisma.cashflowPlan.findFirst({ where: { id, orgId } });

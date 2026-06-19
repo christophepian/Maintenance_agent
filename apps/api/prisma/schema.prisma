@@ -2016,6 +2016,12 @@ model CashflowPlan {
   openingBalanceCents BigInt?            /// Optional starting cash balance; if null, show net flows only
   horizonMonths       Int                @default(60) /// Forward projection window in months
   lastComputedAt      DateTime?          /// Stamped on GET; stale if underlying forecast changed since
+  discountRatePct     Float              @default(4)    /// DCF discount rate for NPV computation
+  capRatePct          Float              @default(5)    /// Terminal value cap rate
+  deferYears          Int                @default(3)    /// Defer scenario: push near-term capex by N years
+  propertyValueChf    Float?                            /// Optional market value for terminal value modelling
+  lastVerdictScenario String?                           /// Cached NPV result: "invest" | "defer" | "neglect"
+  lastVerdictAt       DateTime?                         /// When the verdict was last computed
   createdAt           DateTime           @default(now())
   updatedAt           DateTime           @updatedAt
 

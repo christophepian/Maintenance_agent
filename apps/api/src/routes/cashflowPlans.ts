@@ -8,11 +8,12 @@
  *   GET    /cashflow-plans                          — list
  *   POST   /cashflow-plans                          — create
  *   GET    /cashflow-plans/:id                      — fetch + recompute cashflow
- *   PUT    /cashflow-plans/:id                      — update name / income growth / opening balance
+ *   PUT    /cashflow-plans/:id                      — update name / income growth / opening balance / NPV assumptions
  *   POST   /cashflow-plans/:id/overrides            — add timing override
  *   DELETE /cashflow-plans/:id/overrides/:oid       — remove timing override
  *   POST   /cashflow-plans/:id/submit               — DRAFT → SUBMITTED
  *   POST   /cashflow-plans/:id/approve              — SUBMITTED → APPROVED
+ *   GET    /cashflow-plans/:id/npv-scenarios        — compute Invest/Defer/Neglect from plan assumptions
  *   GET    /cashflow-plans/:id/rfp-candidates                               — list RFP candidates (APPROVED only)
  *   POST   /cashflow-plans/:id/rfp-candidates/:groupKey/create-rfp          — create RFP from a candidate group
  */
@@ -44,6 +45,8 @@ import {
 } from "../services/cashflowPlanningService";
 import { computeStrategyOverlay } from "../services/strategyAlignmentService";
 import { getBuildingProfileByBuildingId } from "../repositories/strategyProfileRepository";
+import { computeNPVScenariosForBuildings } from "../services/npvService";
+import { computeRecommendation } from "./forecasting";
 import {
   findRfpByCashflowGroup,
   createRfpWithInvites,
@@ -91,6 +94,10 @@ export function registerCashflowPlanRoutes(router: Router) {
           openingBalanceCents:
             data.openingBalanceCents != null ? BigInt(data.openingBalanceCents) : null,
           horizonMonths: data.horizonMonths,
+          discountRatePct: data.discountRatePct,
+          capRatePct: data.capRatePct,
+          deferYears: data.deferYears,
+          propertyValueChf: data.propertyValueChf,
         },
       );
       sendJson(res, 201, { data: serializePlan(plan) });
@@ -175,6 +182,10 @@ export function registerCashflowPlanRoutes(router: Router) {
           incomeGrowthRatePct: data.incomeGrowthRatePct,
           openingBalanceCents:
             data.openingBalanceCents != null ? BigInt(data.openingBalanceCents) : undefined,
+          discountRatePct: data.discountRatePct,
+          capRatePct: data.capRatePct,
+          deferYears: data.deferYears,
+          propertyValueChf: data.propertyValueChf,
         },
       );
       sendJson(res, 200, { data: serializePlan(plan) });
@@ -275,6 +286,87 @@ export function registerCashflowPlanRoutes(router: Router) {
         sendError(res, 400, "INVALID_TRANSITION", e.message);
       } else {
         sendError(res, 500, "DB_ERROR", "Failed to approve cashflow plan", String(e));
+      }
+    }
+  }));
+
+  // ── GET /cashflow-plans/:id/npv-scenarios ────────────────────
+  router.get("/cashflow-plans/:id/npv-scenarios", withAuthRequired(async ({ req, res, orgId, prisma, params }) => {
+    if (!maybeRequireManager(req, res)) return;
+    try {
+      const plan = await findCashflowPlanById(prisma, params.id, orgId);
+      if (!plan) {
+        sendError(res, 404, "NOT_FOUND", "CashflowPlan not found");
+        return;
+      }
+
+      // Resolve building scope: single building or all active org buildings
+      let buildingIds: string[];
+      if (plan.buildingId) {
+        buildingIds = [plan.buildingId];
+      } else {
+        const buildings = await prisma.building.findMany({
+          where: { orgId, isActive: true },
+          select: { id: true },
+        });
+        buildingIds = buildings.map((b) => b.id);
+        if (buildingIds.length === 0) {
+          sendError(res, 400, "NO_BUILDINGS", "No active buildings found for this organisation");
+          return;
+        }
+      }
+
+      const result = await computeNPVScenariosForBuildings(prisma, orgId, buildingIds, {
+        discountRatePct:     plan.discountRatePct,
+        incomeGrowthRatePct: plan.incomeGrowthRatePct,
+        horizonYears:        Math.ceil(plan.horizonMonths / 12),
+        deferYears:          plan.deferYears,
+        propertyValueChf:    plan.propertyValueChf ?? undefined,
+      });
+
+      // Strategy context — only for single-building plans
+      let strategyContext: { hasProfile: boolean; archetype?: string; recommendedScenario?: string; rationale?: string } = { hasProfile: false };
+      if (plan.buildingId) {
+        const profile = await getBuildingProfileByBuildingId(prisma, plan.buildingId, orgId);
+        if (profile) {
+          let dims: Record<string, number> | null = null;
+          try { dims = JSON.parse(profile.effectiveDimensionsJson) as Record<string, number>; } catch { /* proceed without dims */ }
+          const { scenario, rationale } = computeRecommendation(
+            profile.primaryArchetype,
+            dims,
+            result.fciCurrentPct,
+            result.scenarios,
+            result.deferYears,
+          );
+          strategyContext = {
+            hasProfile: true,
+            archetype: profile.primaryArchetype ?? undefined,
+            recommendedScenario: scenario,
+            rationale,
+          };
+        }
+      }
+
+      // Cache verdict on the plan (best-effort, non-blocking)
+      const bestScenario = strategyContext.hasProfile
+        ? (strategyContext.recommendedScenario ?? null)
+        : (() => {
+            const { invest, defer, neglect } = result.scenarios;
+            if (invest.npvChf >= defer.npvChf && invest.npvChf >= neglect.npvChf) return "invest";
+            if (defer.npvChf >= invest.npvChf && defer.npvChf >= neglect.npvChf) return "defer";
+            return "neglect";
+          })();
+      updateCashflowPlan(prisma, plan.id, orgId, {
+        lastVerdictScenario: bestScenario,
+        lastVerdictAt: new Date(),
+      }).catch(() => {/* best-effort */});
+
+      sendJson(res, 200, { data: { ...result, strategyContext } });
+    } catch (e: any) {
+      if (e.statusCode === 404) {
+        sendError(res, 404, "NOT_FOUND", String(e.message));
+      } else {
+        sendError(res, 500, "COMPUTATION_ERROR", "Failed to compute NPV scenarios", String(e));
       }
     }
   }));

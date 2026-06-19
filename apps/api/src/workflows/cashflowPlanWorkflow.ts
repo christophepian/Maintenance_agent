@@ -32,6 +32,10 @@ export interface CreatePlanInput {
   incomeGrowthRatePct?: number;
   openingBalanceCents?: bigint | null;
   horizonMonths?: number;
+  discountRatePct?: number;
+  capRatePct?: number;
+  deferYears?: number;
+  propertyValueChf?: number | null;
 }
 
 export interface UpdatePlanInput {
@@ -39,6 +43,10 @@ export interface UpdatePlanInput {
   name?: string;
   incomeGrowthRatePct?: number;
   openingBalanceCents?: bigint | null;
+  discountRatePct?: number;
+  capRatePct?: number;
+  deferYears?: number;
+  propertyValueChf?: number | null;
 }
 
 export interface AddOverrideInput {
@@ -72,6 +80,10 @@ export async function createPlanWorkflow(
     incomeGrowthRatePct: input.incomeGrowthRatePct,
     openingBalanceCents: input.openingBalanceCents,
     horizonMonths: input.horizonMonths,
+    discountRatePct: input.discountRatePct,
+    capRatePct: input.capRatePct,
+    deferYears: input.deferYears,
+    propertyValueChf: input.propertyValueChf,
   });
 
   emit<"CASHFLOW_PLAN_CREATED">({
