@@ -337,88 +337,62 @@ export default function BuildingFinancialsView({ buildingId, variant = "page" })
 
           {/* ═══ Expenses tab ═══ */}
           {activeTab === "expenses" && (
-            <>
-              <Section title={t("buildingFinancials.section.expensesByCategory")}>
-                <Panel bodyClassName="p-0">
-                  {d.expensesByCategory.length === 0 ? (
-                    <div className="empty-state">
-                      <p className="empty-state-text">{t("buildingFinancials.expenses.noExpenses")}</p>
-                    </div>
-                  ) : (
-                    <table className="inline-table">
-                      <thead>
-                        <tr>
-                          <th>{t("buildingFinancials.col.category")}</th>
-                          <th className="text-right">{t("buildingFinancials.col.amount")}</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {d.expensesByCategory.map((row) => (
-                          <tr key={row.category}>
-                            <td className="cell-bold">{t(`buildingFinancials.category.${row.category}`, { defaultValue: row.category })}</td>
-                            <td className="text-right font-mono">{formatChfCents(row.totalCents)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                      <tfoot>
-                        <tr className="border-t-2 border-muted-ring font-semibold">
-                          <td>{t("buildingFinancials.col.total")}</td>
-                          <td className="text-right font-mono">{formatChfCents(d.expensesTotalCents)}</td>
-                        </tr>
-                      </tfoot>
-                    </table>
-                  )}
-                </Panel>
-              </Section>
+            <Section title={t("buildingFinancials.section.expensesByCategory")}>
+              <Panel>
+                {d.expensesByCategory.length === 0 ? (
+                  <p className="text-sm text-muted italic py-2">{t("buildingFinancials.expenses.noExpenses")}</p>
+                ) : (
+                  <div className="space-y-0">
+                    {d.expensesByCategory.map((row) => (
+                      <StatRow
+                        key={row.category}
+                        label={t(`buildingFinancials.category.${row.category}`, { defaultValue: row.category })}
+                        value={formatChfCents(row.totalCents)}
+                      />
+                    ))}
 
-              {d.expensesByAccount && d.expensesByAccount.length > 0 && (
-                <Section title={t("buildingFinancials.section.expensesByAccount")}>
-                  <Panel bodyClassName="p-0">
-                    <table className="inline-table">
-                      <thead>
-                        <tr>
-                          <th>{t("buildingFinancials.col.code")}</th>
-                          <th>{t("buildingFinancials.col.account")}</th>
-                          <th className="text-right">{t("buildingFinancials.col.amount")}</th>
-                        </tr>
-                      </thead>
-                      <tbody>
+                    {d.expensesByAccount && d.expensesByAccount.length > 0 && (
+                      <>
+                        <div className="mt-3 mb-1 pt-3 border-t border-surface-border">
+                          <span className="text-xs font-medium text-muted uppercase tracking-wide">{t("buildingFinancials.section.expensesByAccount")}</span>
+                        </div>
                         {d.expensesByAccount.map((row) => (
-                          <tr key={row.accountId}>
-                            <td className="font-mono text-xs text-muted">{row.accountCode || "—"}</td>
-                            <td className="cell-bold">{row.accountName}</td>
-                            <td className="text-right font-mono">{formatChfCents(row.totalCents)}</td>
-                          </tr>
+                          <StatRow
+                            key={row.accountId}
+                            label={row.accountName}
+                            sub={row.accountCode || undefined}
+                            value={formatChfCents(row.totalCents)}
+                          />
                         ))}
-                      </tbody>
-                    </table>
-                  </Panel>
-                </Section>
-              )}
+                      </>
+                    )}
 
-              {d.topContractorsBySpend.length > 0 && (
-                <Section title={t("buildingFinancials.section.expensesByContractor")}>
-                  <Panel bodyClassName="p-0">
-                    <table className="inline-table">
-                      <thead>
-                        <tr>
-                          <th>{t("buildingFinancials.col.contractor")}</th>
-                          <th className="text-right">{t("buildingFinancials.col.total")}</th>
-                        </tr>
-                      </thead>
-                      <tbody>
+                    {d.topContractorsBySpend.length > 0 && (
+                      <>
+                        <div className="mt-3 mb-1 pt-3 border-t border-surface-border">
+                          <span className="text-xs font-medium text-muted uppercase tracking-wide">{t("buildingFinancials.section.expensesByContractor")}</span>
+                        </div>
                         {d.topContractorsBySpend.map((row) => (
-                          <tr key={row.contractorId}>
-                            <td className="cell-bold">{row.contractorName}</td>
-                            <td className="text-right font-mono">{formatChfCents(row.totalCents)}</td>
-                          </tr>
+                          <StatRow
+                            key={row.contractorId}
+                            label={row.contractorName}
+                            value={formatChfCents(row.totalCents)}
+                          />
                         ))}
-                      </tbody>
-                    </table>
-                  </Panel>
-                </Section>
-              )}
-            </>
+                      </>
+                    )}
+
+                    <div className="mt-3 pt-3 border-t-2 border-muted-ring">
+                      <StatRow
+                        label={t("buildingFinancials.col.total")}
+                        value={formatChfCents(d.expensesTotalCents)}
+                        accent="red"
+                      />
+                    </div>
+                  </div>
+                )}
+              </Panel>
+            </Section>
           )}
 
           {/* ═══ Receivables & Payables tab ═══ */}
