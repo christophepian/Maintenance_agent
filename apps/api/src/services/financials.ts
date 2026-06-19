@@ -1286,3 +1286,147 @@ export async function computeAndStoreDailyBuildingSnapshot(
     return false;
   }
 }
+
+// ==========================================
+// Per-unit financial summaries (Building Reporting tab)
+// ==========================================
+
+export interface UnitFinancialSummaryDTO {
+  unitId:               string;
+  unitNumber:           string;
+  floor:                string | null;
+  tenantName:           string | null;
+  projectedIncomeCents: number;
+  earnedIncomeCents:    number;
+  expensesCents:        number;
+  netIncomeCents:       number;
+  collectionRate:       number;
+  occupancyRate:        number; // 0 or 1 per unit (vacant / occupied)
+}
+
+export async function getUnitFinancialSummaries(
+  orgId: string,
+  buildingId: string,
+  fromStr: string,
+  toStr: string,
+): Promise<UnitFinancialSummaryDTO[]> {
+  const from = new Date(fromStr + "T00:00:00.000Z");
+  const to   = new Date(toStr   + "T23:59:59.999Z");
+
+  // Fetch all active units for the building
+  const units = await prisma.unit.findMany({
+    where: { orgId, buildingId, isActive: true },
+    orderBy: [{ unitNumber: "asc" }],
+    select: { id: true, unitNumber: true, floor: true },
+  });
+
+  if (units.length === 0) return [];
+
+  const unitIds = units.map((u) => u.id);
+
+  // Projected income: OUTGOING invoices issued (not DRAFT) with billing period in range
+  const projectedRows = await prisma.invoice.groupBy({
+    by: ["leaseId"],
+    where: {
+      orgId,
+      direction: "OUTGOING",
+      leaseId: { not: null },
+      billingPeriodStart: { gte: from, lte: to },
+      status: { not: "DRAFT" },
+      lease: { unitId: { in: unitIds } },
+    },
+    _sum: { totalAmount: true },
+  });
+  // Need unitId from leaseId — fetch lease→unit mapping
+  const leaseIds = projectedRows.map((r) => r.leaseId!).filter(Boolean);
+  const leaseUnitMap: Record<string, string> = {};
+  if (leaseIds.length > 0) {
+    const leases = await prisma.lease.findMany({
+      where: { id: { in: leaseIds } },
+      select: { id: true, unitId: true },
+    });
+    for (const l of leases) {
+      if (l.unitId) leaseUnitMap[l.id] = l.unitId;
+    }
+  }
+  const projectedByUnit: Record<string, number> = {};
+  for (const row of projectedRows) {
+    const uid = leaseUnitMap[row.leaseId!];
+    if (uid) projectedByUnit[uid] = (projectedByUnit[uid] ?? 0) + (row._sum.totalAmount ?? 0);
+  }
+
+  // Earned income: same but status = PAID
+  const earnedRows = await prisma.invoice.groupBy({
+    by: ["leaseId"],
+    where: {
+      orgId,
+      direction: "OUTGOING",
+      leaseId: { not: null },
+      billingPeriodStart: { gte: from, lte: to },
+      status: "PAID",
+      lease: { unitId: { in: unitIds } },
+    },
+    _sum: { totalAmount: true },
+  });
+  const earnedByUnit: Record<string, number> = {};
+  for (const row of earnedRows) {
+    const uid = leaseUnitMap[row.leaseId!];
+    if (uid) earnedByUnit[uid] = (earnedByUnit[uid] ?? 0) + (row._sum.totalAmount ?? 0);
+  }
+
+  // Expenses: ledger entries with unitId, INVOICE_ISSUED, debit
+  const expenseAgg = await prisma.ledgerEntry.groupBy({
+    by: ["unitId"],
+    where: {
+      orgId,
+      unitId: { in: unitIds },
+      sourceType: "INVOICE_ISSUED",
+      date: { gte: from, lte: to },
+      debitCents: { gt: 0 },
+      account: { accountType: "EXPENSE" },
+    },
+    _sum: { debitCents: true },
+  });
+  const expensesByUnit: Record<string, number> = {};
+  for (const row of expenseAgg) {
+    if (row.unitId) expensesByUnit[row.unitId] = row._sum.debitCents ?? 0;
+  }
+
+  // Active leases (for tenant name + occupancy)
+  const activeLeases = await prisma.lease.findMany({
+    where: {
+      unitId: { in: unitIds },
+      status: { in: ["ACTIVE", "PENDING"] },
+      startDate: { lte: to },
+      OR: [{ endDate: null }, { endDate: { gte: from } }],
+    },
+    select: {
+      unitId: true,
+      tenantName: true,
+    },
+    distinct: ["unitId"],
+  });
+  const leaseByUnit: Record<string, { tenantName: string | null }> = {};
+  for (const l of activeLeases) {
+    if (l.unitId) leaseByUnit[l.unitId] = { tenantName: l.tenantName };
+  }
+
+  return units.map((u) => {
+    const projected = projectedByUnit[u.id] ?? 0;
+    const earned    = earnedByUnit[u.id]    ?? 0;
+    const expenses  = expensesByUnit[u.id]  ?? 0;
+    const occupied  = !!leaseByUnit[u.id];
+    return {
+      unitId:               u.id,
+      unitNumber:           u.unitNumber,
+      floor:                u.floor,
+      tenantName:           leaseByUnit[u.id]?.tenantName ?? null,
+      projectedIncomeCents: projected,
+      earnedIncomeCents:    earned,
+      expensesCents:        expenses,
+      netIncomeCents:       earned - expenses,
+      collectionRate:       projected > 0 ? Math.min(1, earned / projected) : 0,
+      occupancyRate:        occupied ? 1 : 0,
+    };
+  });
+}

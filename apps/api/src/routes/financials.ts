@@ -10,6 +10,7 @@ import {
   getPortfolioMonthlyBreakdown,
   getPortfolioTimeSeries,
   getBuildingTimeSeries,
+  getUnitFinancialSummaries,
   setInvoiceExpenseCategory,
   listBuildingSnapshots,
   computeAnnualSnapshots,
@@ -298,6 +299,28 @@ export function registerFinancialRoutes(router: Router) {
         if (e instanceof NotFoundError) return sendError(res, 404, "NOT_FOUND", e.message);
         console.error("[GET /buildings/:id/timeseries]", e);
         sendError(res, 500, "INTERNAL_ERROR", "Failed to load building time series");
+      }
+    },
+  );
+
+  // ── GET /buildings/:id/unit-financials ─────────────────────
+  router.get(
+    "/buildings/:id/unit-financials",
+    async ({ req, res, params, query, orgId }) => {
+      if (!requireAuth(req, res)) return;
+      if (!requireOrgViewer(req, res)) return;
+
+      const from = first(query, "from");
+      const to   = first(query, "to");
+      if (!from || !to) return sendError(res, 400, "VALIDATION_ERROR", "from and to are required");
+
+      try {
+        const data = await getUnitFinancialSummaries(orgId, params.id, from, to);
+        sendJson(res, 200, { data });
+      } catch (e: any) {
+        if (e instanceof NotFoundError) return sendError(res, 404, "NOT_FOUND", e.message);
+        console.error("[GET /buildings/:id/unit-financials]", e);
+        sendError(res, 500, "INTERNAL_ERROR", "Failed to load unit financials");
       }
     },
   );

@@ -62,12 +62,244 @@ const RANGES = [
   { key: "10Y", dailyOnly: false },
 ];
 
+/* ── Building reporting helpers ─────────────────────────── */
+
+function brFmtChf(cents) {
+  if (!Number.isFinite(cents)) return "—";
+  const chf = cents / 100;
+  if (Math.abs(chf) >= 1000) return `CHF ${(chf / 1000).toFixed(1).replace(".", "'")}k`;
+  return `CHF ${chf.toFixed(0)}`;
+}
+function brFmtPct(rate) {
+  if (!Number.isFinite(rate)) return "—";
+  return `${Math.round(rate * 100)}%`;
+}
+
+function UnitRow({ unitNumber, floor, tenantName, earned, expenses, net, collectionRate, occupancyRate }) {
+  const netPositive = net >= 0;
+  const label = floor ? `Unit ${unitNumber} (fl. ${floor})` : `Unit ${unitNumber}`;
+  const sub   = tenantName || (occupancyRate === 1 ? "Occupied" : "Vacant");
+  return (
+    <div className="flex items-center justify-between rounded-2xl border border-surface-border bg-surface-subtle px-4 py-3">
+      <div className="mr-4 min-w-0">
+        <div className="text-sm font-medium text-foreground truncate">{label}</div>
+        <div className="text-xs text-foreground-dim truncate">{sub}</div>
+      </div>
+      <div className="flex items-center gap-4 shrink-0 text-right">
+        <div className="hidden sm:block">
+          <div className="text-xs text-foreground-dim">Income</div>
+          <div className="text-sm font-medium text-muted-dark">{brFmtChf(earned)}</div>
+        </div>
+        <div className="hidden sm:block">
+          <div className="text-xs text-foreground-dim">Expenses</div>
+          <div className="text-sm font-medium text-muted-dark">{brFmtChf(expenses)}</div>
+        </div>
+        <div>
+          <div className="text-xs text-foreground-dim">Net</div>
+          <div className={cn("text-sm font-semibold", netPositive ? "text-green-700" : "text-red-600")}>{brFmtChf(net)}</div>
+        </div>
+        <div className="hidden md:block">
+          <div className="text-xs text-foreground-dim">Collection</div>
+          <div className="text-sm text-muted-dark">{brFmtPct(collectionRate)}</div>
+        </div>
+        <div className="hidden lg:block">
+          <div className="text-xs text-foreground-dim">Occupancy</div>
+          <div className={cn("text-sm font-medium", occupancyRate < 1 ? "text-amber-600" : "text-muted-dark")}>{brFmtPct(occupancyRate)}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function BuildingPeriodAnalysis({ buildingId }) {
+  const now = new Date();
+  const [year, setYear]       = useState(now.getFullYear());
+  const [month, setMonth]     = useState(now.getMonth());
+  const [mode, setMode]       = useState("month"); // "month" | "year"
+  const [ytdActive, setYtd]   = useState(false);
+
+  const [bFinancials, setBFinancials]   = useState(null);
+  const [unitData, setUnitData]         = useState([]);
+  const [loading, setLoading]           = useState(false);
+  const [error, setError]               = useState("");
+
+  // Compute from/to from navigation state
+  const { from, to, periodLabel } = useMemo(() => {
+    if (ytdActive) {
+      const f = `${year}-01-01`;
+      const t = `${year}-12-31`;
+      return { from: f, to: t, periodLabel: `YTD ${year}` };
+    }
+    if (mode === "year") {
+      const f = `${year}-01-01`;
+      const t = `${year}-12-31`;
+      return { from: f, to: t, periodLabel: String(year) };
+    }
+    const lastDay = new Date(year, month + 1, 0).getDate();
+    const mm = String(month + 1).padStart(2, "0");
+    const f = `${year}-${mm}-01`;
+    const t = `${year}-${mm}-${String(lastDay).padStart(2, "0")}`;
+    const label = new Intl.DateTimeFormat("en", { month: "long", year: "numeric" }).format(new Date(year, month, 1));
+    return { from: f, to: t, periodLabel: label };
+  }, [year, month, mode, ytdActive]);
+
+  useEffect(() => {
+    if (!buildingId) return;
+    setLoading(true);
+    setError("");
+    const params = new URLSearchParams({ from, to, groupByAccount: "false" }).toString();
+    Promise.all([
+      fetch(`/api/buildings/${buildingId}/financial-summary?${params}`, { headers: authHeaders() }).then((r) => r.json()),
+      fetch(`/api/buildings/${buildingId}/unit-financials?from=${from}&to=${to}`, { headers: authHeaders() }).then((r) => r.json()),
+    ])
+      .then(([bf, uf]) => {
+        setBFinancials(bf?.data ?? null);
+        setUnitData(uf?.data ?? []);
+      })
+      .catch(() => setError("Failed to load"))
+      .finally(() => setLoading(false));
+  }, [buildingId, from, to]);
+
+  const monthsShort = useMemo(() =>
+    Array.from({ length: 12 }, (_, i) =>
+      new Intl.DateTimeFormat("en", { month: "short" }).format(new Date(2024, i, 1))
+    ), []);
+
+  const yearRange = useMemo(() => {
+    const start = Math.floor((year - 1) / 4) * 4 - 2;
+    return Array.from({ length: 9 }, (_, i) => start + i);
+  }, [year]);
+
+  const bf = bFinancials;
+
+  return (
+    <div className="space-y-5">
+      {/* Date nav — same visual pattern as portfolio reporting but inline (not sticky) */}
+      <div className="rounded-xl border border-surface-border bg-surface shadow-sm px-4 py-3 flex items-center gap-3 flex-wrap overflow-x-auto">
+        {mode === "month" ? (
+          <div className="flex items-center gap-1 shrink-0">
+            <button onClick={() => setYear((y) => y - 1)} className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-surface-hover text-muted transition-colors text-sm">‹</button>
+            <button onClick={() => setMode("year")} className="rounded-full px-3 py-1 text-sm font-semibold text-muted-dark hover:bg-surface-hover transition-colors tabular-nums">{year}</button>
+            <button onClick={() => setYear((y) => y + 1)} className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-surface-hover text-muted transition-colors text-sm">›</button>
+          </div>
+        ) : (
+          <button onClick={() => setMode("month")} className="shrink-0 rounded-full px-3 py-1 text-sm font-medium text-muted hover:bg-surface-hover transition-colors">← Months</button>
+        )}
+        <div className="w-px h-5 bg-surface-border shrink-0" />
+        <button
+          onClick={() => { setYtd((v) => !v); setMode("month"); }}
+          className={cn("shrink-0 rounded-full px-3 py-1 text-sm font-semibold transition-colors", ytdActive ? "bg-violet-600 text-white" : "text-muted-text hover:bg-surface-hover")}
+        >
+          Year
+        </button>
+        <div className="w-px h-5 bg-surface-border shrink-0" />
+        <div className="flex gap-1.5 overflow-x-auto scrollbar-none flex-1">
+          {mode === "month"
+            ? monthsShort.map((m, i) => {
+                const isSelected = i === month && !ytdActive;
+                const isFuture = new Date(year, i, 1) > now;
+                return (
+                  <button
+                    key={i}
+                    disabled={isFuture}
+                    onClick={() => { setMonth(i); setYtd(false); }}
+                    className={cn(
+                      "shrink-0 rounded-full px-3 py-1 text-sm font-medium transition-colors",
+                      isSelected ? "bg-slate-900 text-white" : isFuture ? "text-foreground-dim cursor-not-allowed" : "text-muted-text hover:bg-surface-hover",
+                    )}
+                  >{m}</button>
+                );
+              })
+            : yearRange.map((y) => {
+                const isSelected = y === year;
+                const isFuture = y > now.getFullYear();
+                return (
+                  <button
+                    key={y}
+                    disabled={isFuture}
+                    onClick={() => { setYear(y); setMode("month"); }}
+                    className={cn(
+                      "shrink-0 rounded-full px-4 py-1 text-sm font-medium tabular-nums transition-colors",
+                      isSelected ? "bg-slate-900 text-white" : isFuture ? "text-foreground-dim cursor-not-allowed" : "text-muted-text hover:bg-surface-hover",
+                    )}
+                  >{y}</button>
+                );
+              })}
+        </div>
+      </div>
+
+      {error && <p className="text-sm text-red-600">{error}</p>}
+      {loading && <p className="text-sm text-muted">Loading…</p>}
+
+      {!loading && bf && (
+        <>
+          {/* Hero KPI card */}
+          <div className="rounded-3xl border border-surface-border bg-surface p-5">
+            <p className="text-xs text-foreground-dim mb-3">{periodLabel}</p>
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+              <div>
+                <div className="text-xs text-foreground-dim">NOI</div>
+                <div className={cn("text-lg font-bold", bf.netOperatingIncomeCents >= 0 ? "text-green-700" : "text-red-600")}>{brFmtChf(bf.netOperatingIncomeCents)}</div>
+              </div>
+              <div>
+                <div className="text-xs text-foreground-dim">Income</div>
+                <div className="text-lg font-bold text-foreground">{brFmtChf(bf.earnedIncomeCents)}</div>
+              </div>
+              <div>
+                <div className="text-xs text-foreground-dim">Expenses</div>
+                <div className="text-lg font-bold text-foreground">{brFmtChf(bf.expensesTotalCents)}</div>
+              </div>
+              <div>
+                <div className="text-xs text-foreground-dim">Collection</div>
+                <div className={cn("text-lg font-bold", bf.collectionRate < 0.8 ? "text-red-600" : bf.collectionRate < 0.95 ? "text-amber-600" : "text-green-700")}>{brFmtPct(bf.collectionRate)}</div>
+              </div>
+              <div>
+                <div className="text-xs text-foreground-dim">Occupancy</div>
+                <div className={cn("text-lg font-bold", bf.activeUnitsCount / Math.max(bf.totalUnitsCount, 1) < 0.9 ? "text-amber-600" : "text-foreground")}>{bf.totalUnitsCount > 0 ? brFmtPct(bf.activeUnitsCount / bf.totalUnitsCount) : "—"}</div>
+              </div>
+            </div>
+          </div>
+
+          {/* By unit */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h2 className="text-base font-semibold text-foreground">By unit</h2>
+                <p className="text-xs text-foreground-dim mt-0.5">Net result per unit for {periodLabel}</p>
+              </div>
+            </div>
+            {unitData.length === 0 ? (
+              <p className="text-sm text-muted italic">No units found for this building.</p>
+            ) : (
+              <div className="space-y-2">
+                {unitData.map((u) => (
+                  <UnitRow
+                    key={u.unitId}
+                    unitNumber={u.unitNumber}
+                    floor={u.floor}
+                    tenantName={u.tenantName}
+                    earned={u.earnedIncomeCents}
+                    expenses={u.expensesCents}
+                    net={u.netIncomeCents}
+                    collectionRate={u.collectionRate}
+                    occupancyRate={u.occupancyRate}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 function BuildingReportingView({ buildingId }) {
-  const [reportingTab, setReportingTab] = useState(0); // 0=Period Analysis, 1=Performance Canvas
-  const [canvasRange, setCanvasRange] = useState("1Y");
-  const [tsData, setTsData] = useState(null);
-  const [tsLoading, setTsLoading] = useState(false);
-  const [tsError, setTsError] = useState("");
+  const [reportingTab, setReportingTab] = useState(0);
+  const [canvasRange, setCanvasRange]   = useState("1Y");
+  const [tsData, setTsData]             = useState(null);
+  const [tsLoading, setTsLoading]       = useState(false);
+  const [tsError, setTsError]           = useState("");
 
   useEffect(() => {
     if (reportingTab !== 1 || !buildingId) return;
@@ -98,9 +330,7 @@ function BuildingReportingView({ buildingId }) {
             onClick={() => setReportingTab(i)}
             className={cn(
               "rounded-lg px-4 py-1.5 text-sm font-medium transition-colors",
-              reportingTab === i
-                ? "bg-surface text-foreground shadow-sm"
-                : "text-muted hover:text-muted-dark",
+              reportingTab === i ? "bg-surface text-foreground shadow-sm" : "text-muted hover:text-muted-dark",
             )}
           >
             {label}
@@ -108,12 +338,8 @@ function BuildingReportingView({ buildingId }) {
         ))}
       </div>
 
-      {/* Period Analysis — reuse BuildingFinancialsView */}
-      {reportingTab === 0 && (
-        <BuildingFinancialsView buildingId={buildingId} variant="embedded" />
-      )}
+      {reportingTab === 0 && <BuildingPeriodAnalysis buildingId={buildingId} />}
 
-      {/* Performance Canvas */}
       {reportingTab === 1 && (
         <div className="space-y-3">
           <div className="flex flex-wrap gap-1.5">
@@ -127,15 +353,11 @@ function BuildingReportingView({ buildingId }) {
                   disabled={!enabled}
                   className={cn(
                     "px-3 py-1 rounded-full text-xs font-medium border transition",
-                    canvasRange === key
-                      ? "bg-blue-600 text-white border-blue-600"
-                      : enabled
-                      ? "bg-surface text-muted-dark border-surface-border hover:border-blue-400"
+                    canvasRange === key ? "bg-blue-600 text-white border-blue-600"
+                      : enabled ? "bg-surface text-muted-dark border-surface-border hover:border-blue-400"
                       : "bg-surface text-foreground-dim border-surface-border opacity-40 cursor-not-allowed",
                   )}
-                >
-                  {key}
-                </button>
+                >{key}</button>
               );
             })}
           </div>
