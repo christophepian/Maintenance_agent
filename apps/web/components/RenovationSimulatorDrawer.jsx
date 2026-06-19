@@ -317,6 +317,7 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId }
   // Cashflow plan state
   const [planAdding, setPlanAdding] = useState(false);
   const [planMsg,    setPlanMsg]    = useState("");
+  const [planId,     setPlanId]     = useState(null);
 
   const safeItems = Array.isArray(items) && items.length > 0 ? items : [];
 
@@ -474,7 +475,8 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId }
         });
       }));
 
-      setPlanMsg(`✓ Added to cashflow plan`);
+      setPlanId(planId);
+      setPlanMsg(`✓ Scheduled in cashflow plan`);
     } catch (e) {
       setPlanMsg(`Error: ${e.message}`);
     } finally {
@@ -731,6 +733,27 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId }
             </div>
           </div>
 
+          {/* Cashflow plan confirmation banner */}
+          {planMsg.startsWith("✓") && planId && (
+            <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 flex items-start gap-3">
+              <Check className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-green-800">Renovation scheduled in cashflow plan</p>
+                <p className="text-xs text-green-700 mt-0.5">
+                  These assets are now timed in your cashflow plan. The <strong>Invest</strong> scenario in the NPV panel below will reflect this capex automatically.
+                </p>
+                <a
+                  href={`/manager/cashflow/${planId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-xs font-semibold text-green-800 underline underline-offset-2 mt-1.5 hover:text-green-900"
+                >
+                  Open cashflow plan <ArrowRight className="h-3 w-3" />
+                </a>
+              </div>
+            </div>
+          )}
+
           {/* CTA */}
           <div className="flex flex-wrap items-center gap-3 pb-2">
             <button
@@ -751,21 +774,13 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId }
             {approveMsg && !approveMsg.startsWith("✓") && (
               <p className="text-xs text-red-600">{approveMsg}</p>
             )}
-            {approveMsg.startsWith("✓") && buildingId && (
+            {approveMsg.startsWith("✓") && buildingId && !planMsg.startsWith("✓") && (
               <button
                 onClick={handleAddToPlan}
-                disabled={planAdding || planMsg.startsWith("✓")}
-                className={cn(
-                  "flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors border",
-                  planMsg.startsWith("✓")
-                    ? "bg-green-100 text-green-700 border-green-200 cursor-default"
-                    : "bg-white text-slate-800 border-slate-300 hover:bg-slate-50 disabled:opacity-50"
-                )}
+                disabled={planAdding}
+                className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors border bg-white text-slate-800 border-slate-300 hover:bg-slate-50 disabled:opacity-50"
               >
-                {planMsg.startsWith("✓")
-                  ? <><Check className="h-4 w-4" />{planMsg}</>
-                  : <><ArrowRight className="h-4 w-4" />{planAdding ? "Adding…" : "Add to cashflow plan"}</>
-                }
+                <ArrowRight className="h-4 w-4" />{planAdding ? "Adding…" : "Add to cashflow plan"}
               </button>
             )}
             {planMsg && !planMsg.startsWith("✓") && (
