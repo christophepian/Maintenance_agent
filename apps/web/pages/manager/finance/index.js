@@ -14,12 +14,8 @@ import { authHeaders } from "../../../lib/api";
 import { InvoicesContent } from "./invoices";
 import ImportedStatementsPanel from "../../../components/ImportedStatementsPanel";
 import BillingEntityManager from "../../../components/BillingEntityManager";
-import { CapExSummaryBridge } from "../../../components/RenovationTaxPlanning";
 import CashflowPlansList from "../../../components/CashflowPlansList";
-import NOITrendPanel from "../../../components/NOITrendPanel";
-import CapexSchedulePanel from "../../../components/CapexSchedulePanel";
-import NPVScenariosPanel from "../../../components/NPVScenariosPanel";
-import RenovationSimulatorDrawer from "../../../components/RenovationSimulatorDrawer";
+import RenovationAccordion from "../../../components/RenovationAccordion";
 import { cn } from "../../../lib/utils";
 import { FilterToggle, FilterPanelBody, FilterSection, FilterSectionClear, DateField } from "../../../components/ui/FilterPanel";
 import ScrollableTabs from "../../../components/mobile/ScrollableTabs";
@@ -69,160 +65,6 @@ function HealthDot({ health }) {
   );
 }
 
-// ─── Renovation Opportunities Section ────────────────────────────────────────
-
-const REC_STYLE = {
-  REPLACE:          { badge: "bg-red-100 text-red-700",    label: "Replace" },
-  PLAN_REPLACEMENT: { badge: "bg-orange-100 text-orange-700", label: "Plan Replacement" },
-  MONITOR:          { badge: "bg-amber-100 text-amber-700", label: "Monitor" },
-  REPAIR:           { badge: "bg-green-100 text-green-700", label: "Repair" },
-};
-
-const COND_STYLE = {
-  GOOD:    "bg-green-100 text-green-700",
-  FAIR:    "bg-amber-100 text-amber-700",
-  POOR:    "bg-orange-100 text-orange-700",
-  DAMAGED: "bg-red-100 text-red-700",
-};
-
-function DepBar({ pct }) {
-  const capped = Math.min(100, pct ?? 0);
-  const color = capped >= 100 ? "bg-red-500" : capped >= 85 ? "bg-orange-400" : capped >= 65 ? "bg-amber-400" : "bg-green-400";
-  return (
-    <div className="flex items-center gap-1.5 min-w-0">
-      <div className="flex-1 h-1.5 rounded-full bg-surface-hover overflow-hidden min-w-[40px]">
-        <div className={cn("h-full rounded-full transition-all", color)} style={{ width: `${capped}%` }} />
-      </div>
-      <span className="text-xs tabular-nums text-foreground-dim w-7 text-right shrink-0">{pct ?? "—"}%</span>
-    </div>
-  );
-}
-
-function RenovationOpportunitiesSection({ buildingId }) {
-  const [items,       setItems]       = useState([]);
-  const [loading,     setLoading]     = useState(false);
-  const [err,         setErr]         = useState("");
-  const [selectedIds, setSelectedIds] = useState(new Set());
-  const [simItems,    setSimItems]    = useState(null); // null = closed
-
-  useEffect(() => {
-    setSelectedIds(new Set());
-    if (!buildingId) { setItems([]); return; }
-    setLoading(true); setErr("");
-    fetch(`/api/buildings/${buildingId}/renovation-opportunities`, { headers: authHeaders() })
-      .then((r) => r.json())
-      .then((d) => { if (d?.data) setItems(d.data); else throw new Error(d?.error?.message || "Failed"); })
-      .catch((e) => setErr(e.message))
-      .finally(() => setLoading(false));
-  }, [buildingId]);
-
-  const toggleSelect = useCallback((id) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
-  }, []);
-
-  const openSim = useCallback((bundle) => { setSimItems(bundle); }, []);
-  const closeSim = useCallback(() => { setSimItems(null); }, []);
-
-  const selectedCount = selectedIds.size;
-  const selectedBundle = items.filter((i) => selectedIds.has(i.assetId));
-
-  if (!buildingId) return (
-    <div className="rounded-2xl border border-surface-border bg-surface p-6 text-center">
-      <p className="text-sm text-foreground-dim">Select a building above to see renovation opportunities.</p>
-    </div>
-  );
-  if (loading) return <div className="rounded-2xl border border-surface-border bg-surface p-6 text-center text-sm text-foreground-dim">Analysing assets…</div>;
-  if (err)     return <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{err}</div>;
-  if (items.length === 0) return (
-    <div className="rounded-2xl border border-surface-border bg-surface p-6 text-center">
-      <p className="text-sm text-foreground-dim">No at-risk assets found for this building. All assets are in good repair.</p>
-    </div>
-  );
-
-  return (
-    <>
-      {/* Bulk action bar */}
-      {selectedCount > 0 && (
-        <div className="flex items-center justify-between gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5">
-          <p className="text-sm font-medium text-blue-900">{selectedCount} asset{selectedCount !== 1 ? "s" : ""} selected</p>
-          <button
-            onClick={() => openSim(selectedBundle)}
-            className="rounded-lg bg-slate-800 px-4 py-1.5 text-sm font-semibold text-white hover:bg-slate-700 transition-colors"
-          >
-            Simulate {selectedCount} asset{selectedCount !== 1 ? "s" : ""} →
-          </button>
-        </div>
-      )}
-
-      {/* Asset list */}
-      <div className="space-y-2">
-        {items.map((item) => {
-          const rec = REC_STYLE[item.recommendation] ?? REC_STYLE.REPAIR;
-          const condCls = item.lastConditionStatus ? COND_STYLE[item.lastConditionStatus] : null;
-          const isSelected = selectedIds.has(item.assetId);
-          return (
-            <div key={item.assetId}
-              className={cn(
-                "flex items-center gap-3 rounded-2xl border px-4 py-3 transition-colors",
-                isSelected ? "border-blue-400 bg-blue-50" : "border-surface-border bg-surface hover:bg-surface-subtle"
-              )}
-            >
-              {/* Checkbox */}
-              <input
-                type="checkbox"
-                checked={isSelected}
-                onChange={() => toggleSelect(item.assetId)}
-                className="h-4 w-4 shrink-0 rounded border-surface-border accent-slate-800 cursor-pointer"
-                onClick={(e) => e.stopPropagation()}
-              />
-              {/* Name + unit */}
-              <div className="flex-1 min-w-[120px]">
-                <p className="text-sm font-medium text-foreground truncate">{item.assetName}</p>
-                <p className="text-xs text-foreground-dim">{item.topic} · Unit {item.unitNumber}</p>
-              </div>
-              {/* Depreciation bar */}
-              <div className="w-24 shrink-0">
-                <DepBar pct={item.depreciationPct} />
-              </div>
-              {/* Badges */}
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <span className={cn("rounded-full px-2.5 py-0.5 text-xs font-semibold", rec.badge)}>{rec.label}</span>
-                {condCls && (
-                  <span className={cn("rounded-full px-2.5 py-0.5 text-xs font-semibold", condCls)}>
-                    {item.lastConditionStatus.charAt(0) + item.lastConditionStatus.slice(1).toLowerCase()}
-                  </span>
-                )}
-              </div>
-              {/* Rent */}
-              {item.currentLease && (
-                <div className="text-right shrink-0 hidden sm:block">
-                  <p className="text-xs font-medium text-foreground">CHF {item.currentLease.netRentChf}/mo</p>
-                  <p className="text-xs text-foreground-dim truncate max-w-[90px]">{item.currentLease.tenantName}</p>
-                </div>
-              )}
-              {/* Single simulate */}
-              <button
-                onClick={() => openSim([item])}
-                className="shrink-0 rounded-lg border border-surface-border px-2.5 py-1 text-xs font-medium text-foreground-dim hover:bg-surface-hover hover:text-foreground transition-colors"
-              >
-                Simulate →
-              </button>
-            </div>
-          );
-        })}
-      </div>
-
-      {simItems && (
-        <RenovationSimulatorDrawer items={simItems} onClose={closeSim} buildingId={buildingId} />
-      )}
-    </>
-  );
-}
-
 // ─── Tab definitions ─────────────────────────────────────────────────────────
 
 const FINANCE_TABS = [
@@ -246,7 +88,8 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
     router.push({ pathname: router.pathname, query: { ...router.query, tab: key } }, undefined, { shallow: true });
   }, [router]);
 
-  const [planningBuildingId, setPlanningBuildingId] = useState("");
+  const [planningBuildingIds, setPlanningBuildingIds] = useState([]);
+  const [allBuildings, setAllBuildings] = useState([]);
   const [range, setRange] = useState(defaultRange);
   const [portfolio, setPortfolio] = useState(null);
   const [portfolioLoading, setPortfolioLoading] = useState(true);
@@ -271,6 +114,20 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
   }, [range]);
 
   useEffect(() => { fetchPortfolio(); }, [fetchPortfolio]);
+
+  // Fetch building list once for the Planning tab building selector
+  useEffect(() => {
+    fetch("/api/buildings", { headers: authHeaders() })
+      .then((r) => r.json())
+      .then((d) => {
+        if (d?.data) {
+          const list = d.data.map((b) => ({ id: b.id, name: b.name }));
+          setAllBuildings(list);
+          if (list.length === 1) setPlanningBuildingIds([list[0].id]);
+        }
+      })
+      .catch(() => {/* non-critical */});
+  }, []);
 
   const { sortField: bSortField, sortDir: bSortDir, handleSort: handleBuildingSort } = useLocalSort("name", "asc");
   const sortedBuildings = useMemo(() => {
@@ -515,24 +372,60 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
 
           {/* ── Planning ── */}
           {activeTabKey === "planning" && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <NOITrendPanel onBuildingChange={setPlanningBuildingId} />
-                <CapexSchedulePanel buildingId={planningBuildingId} />
+            <div className="space-y-6">
+
+              {/* Building selector */}
+              <div className="flex items-center gap-3">
+                <label className="text-sm font-medium text-foreground shrink-0">Buildings</label>
+                <select
+                  multiple
+                  size={Math.min(allBuildings.length, 4)}
+                  value={planningBuildingIds}
+                  onChange={(e) => {
+                    const selected = Array.from(e.target.selectedOptions).map((o) => o.value);
+                    setPlanningBuildingIds(selected);
+                  }}
+                  className="border border-surface-border rounded-lg px-3 py-1.5 text-sm bg-surface text-foreground min-w-[200px] focus:outline-none focus:ring-1 focus:ring-slate-400"
+                >
+                  {allBuildings.map((b) => (
+                    <option key={b.id} value={b.id}>{b.name}</option>
+                  ))}
+                </select>
+                {allBuildings.length > 1 && (
+                  <button
+                    onClick={() => setPlanningBuildingIds(allBuildings.map((b) => b.id))}
+                    className="text-xs text-blue-600 hover:underline"
+                  >
+                    Select all
+                  </button>
+                )}
               </div>
-              <NPVScenariosPanel buildingId={planningBuildingId} />
-              <CapExSummaryBridge />
-              <CashflowPlansList />
-              {/* ── Renovation Simulator ── */}
+
+              {/* Renovation Opportunities */}
               <div>
                 <div className="mb-3">
                   <h3 className="text-sm font-semibold text-foreground">Renovation Opportunities</h3>
                   <p className="text-xs text-foreground-dim mt-0.5">
-                    Assets at risk of end-of-life or flagged in condition reports. Click any row to run an NPV simulation.
+                    Assets at risk of end-of-life or flagged in condition reports, sorted by urgency.
+                    Simulate any asset or bundle to compute NPV, then plan the work directly into a cashflow plan.
                   </p>
                 </div>
-                <RenovationOpportunitiesSection buildingId={planningBuildingId} />
+                <RenovationAccordion
+                  buildings={allBuildings.filter((b) => planningBuildingIds.includes(b.id))}
+                />
               </div>
+
+              {/* Plans */}
+              <div>
+                <div className="mb-3">
+                  <h3 className="text-sm font-semibold text-foreground">Plans</h3>
+                  <p className="text-xs text-foreground-dim mt-0.5">
+                    Open a plan to review its NPV verdict and assumptions, or to generate RFPs.
+                  </p>
+                </div>
+                <CashflowPlansList />
+              </div>
+
             </div>
           )}
 

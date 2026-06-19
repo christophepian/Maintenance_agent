@@ -291,9 +291,19 @@ const CashflowPlansList = forwardRef(function CashflowPlansList({ ownerMode = fa
       sortable: true,
       defaultVisible: true,
       render: (p) => (
-        <Badge variant={planVariant(p.status)}>
-          {p.status}
-        </Badge>
+        <div className="flex items-center gap-1.5">
+          <Badge variant={planVariant(p.status)}>{p.status}</Badge>
+          {p.lastVerdictScenario && (
+            <span className={cn(
+              "rounded-full px-2 py-0.5 text-xs font-semibold",
+              p.lastVerdictScenario === "invest"  && "bg-green-100 text-green-700",
+              p.lastVerdictScenario === "defer"   && "bg-amber-100 text-amber-700",
+              p.lastVerdictScenario === "neglect" && "bg-slate-100 text-slate-600",
+            )}>
+              {p.lastVerdictScenario.charAt(0).toUpperCase() + p.lastVerdictScenario.slice(1)}
+            </span>
+          )}
+        </div>
       ),
     },
     {
@@ -440,7 +450,19 @@ const CashflowPlansList = forwardRef(function CashflowPlansList({ ownerMode = fa
                 <div className="table-card">
                   <div className="flex items-start justify-between gap-2">
                     <span className="font-medium text-foreground text-sm">{p.name}</span>
-                    <Badge variant={planVariant(p.status)}>{p.status}</Badge>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {p.lastVerdictScenario && (
+                        <span className={cn(
+                          "rounded-full px-2 py-0.5 text-xs font-semibold",
+                          p.lastVerdictScenario === "invest"  && "bg-green-100 text-green-700",
+                          p.lastVerdictScenario === "defer"   && "bg-amber-100 text-amber-700",
+                          p.lastVerdictScenario === "neglect" && "bg-slate-100 text-slate-600",
+                        )}>
+                          {p.lastVerdictScenario.charAt(0).toUpperCase() + p.lastVerdictScenario.slice(1)}
+                        </span>
+                      )}
+                      <Badge variant={planVariant(p.status)}>{p.status}</Badge>
+                    </div>
                   </div>
                   <p className="text-xs text-muted mt-1">
                     {p.buildingId ? (buildingMap[p.buildingId] || t("cashflowPlan.building")) : t("cashflowPlan.portfolio")}

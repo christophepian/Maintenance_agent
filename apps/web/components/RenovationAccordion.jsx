@@ -1,0 +1,330 @@
+/**
+ * RenovationAccordion
+ *
+ * Accordion view of renovation opportunities across one or more buildings.
+ * Hierarchy: Building → Unit → Asset
+ *
+ * Each asset row shows: depreciation bar, recommendation badge, condition badge,
+ * estimated due year, and a "Simulate →" button.
+ * Checkboxes propagate up (asset → unit → building).
+ * Bulk "Simulate N →" CTA appears when any assets are selected.
+ *
+ * Replaces the flat RenovationOpportunitiesSection + CapexSchedulePanel combination.
+ * The CapEx timeline is implicit: assets are sorted by remainingLifeMonths asc.
+ */
+
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { ChevronRight, ChevronDown } from "lucide-react";
+import { cn } from "../lib/utils";
+import { authHeaders } from "../lib/api";
+import RenovationSimulatorDrawer from "./RenovationSimulatorDrawer";
+
+// ─── Style maps ───────────────────────────────────────────────────────────────
+
+const REC_STYLE = {
+  REPLACE:          { badge: "bg-red-100 text-red-700",       label: "Replace" },
+  PLAN_REPLACEMENT: { badge: "bg-orange-100 text-orange-700", label: "Plan" },
+  MONITOR:          { badge: "bg-amber-100 text-amber-700",   label: "Monitor" },
+  REPAIR:           { badge: "bg-green-100 text-green-700",   label: "Repair" },
+};
+
+const COND_STYLE = {
+  GOOD:    "bg-green-100 text-green-700",
+  FAIR:    "bg-amber-100 text-amber-700",
+  POOR:    "bg-orange-100 text-orange-700",
+  DAMAGED: "bg-red-100 text-red-700",
+};
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+function DepBar({ pct }) {
+  const capped = Math.min(100, pct ?? 0);
+  const color = capped >= 100 ? "bg-red-500" : capped >= 85 ? "bg-orange-400" : capped >= 65 ? "bg-amber-400" : "bg-green-400";
+  return (
+    <div className="flex items-center gap-1.5 min-w-0">
+      <div className="flex-1 h-1.5 rounded-full bg-surface-hover overflow-hidden min-w-[40px]">
+        <div className={cn("h-full rounded-full transition-all", color)} style={{ width: `${capped}%` }} />
+      </div>
+      <span className="text-xs tabular-nums text-foreground-dim shrink-0">{Math.round(capped)}%</span>
+    </div>
+  );
+}
+
+function dueYear(item) {
+  if (item.remainingLifeMonths == null) return null;
+  return new Date().getFullYear() + Math.ceil(item.remainingLifeMonths / 12);
+}
+
+// ─── Asset row ────────────────────────────────────────────────────────────────
+
+function AssetRow({ item, checked, onToggle, onSimulate }) {
+  const rec  = REC_STYLE[item.recommendation] ?? REC_STYLE.REPAIR;
+  const cond = item.lastConditionStatus ? COND_STYLE[item.lastConditionStatus] : null;
+  const due  = dueYear(item);
+
+  return (
+    <div className={cn(
+      "flex items-center gap-3 px-4 py-2.5 border-b border-surface-divider last:border-0 transition-colors",
+      checked ? "bg-blue-50" : "hover:bg-surface-subtle/60",
+    )}>
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={onToggle}
+        className="h-3.5 w-3.5 shrink-0 rounded border-surface-border accent-slate-800 cursor-pointer"
+        onClick={(e) => e.stopPropagation()}
+      />
+      {/* Name + topic */}
+      <div className="flex-1 min-w-0">
+        <p className="text-xs font-medium text-foreground truncate">{item.assetName}</p>
+        <p className="text-xs text-foreground-dim">{item.topic}</p>
+      </div>
+      {/* Depreciation */}
+      <div className="w-20 shrink-0 hidden sm:block">
+        <DepBar pct={item.depreciationPct} />
+      </div>
+      {/* Badges */}
+      <div className="flex items-center gap-1 shrink-0">
+        <span className={cn("rounded-full px-2 py-0.5 text-xs font-semibold", rec.badge)}>{rec.label}</span>
+        {cond && (
+          <span className={cn("rounded-full px-2 py-0.5 text-xs font-semibold hidden sm:inline", cond)}>
+            {item.lastConditionStatus.charAt(0) + item.lastConditionStatus.slice(1).toLowerCase()}
+          </span>
+        )}
+      </div>
+      {/* Due year */}
+      {due && (
+        <span className="text-xs tabular-nums text-foreground-dim shrink-0 hidden md:block">{due}</span>
+      )}
+      {/* Simulate */}
+      <button
+        onClick={(e) => { e.stopPropagation(); onSimulate([item]); }}
+        className="shrink-0 rounded-lg border border-surface-border px-2 py-0.5 text-xs font-medium text-foreground-dim hover:bg-surface-hover hover:text-foreground transition-colors"
+      >
+        Simulate →
+      </button>
+    </div>
+  );
+}
+
+// ─── Unit row ─────────────────────────────────────────────────────────────────
+
+function UnitRow({ unitNumber, items, selectedIds, onToggleAsset, onSimulate, buildingId }) {
+  const [open, setOpen] = useState(false);
+  const unitSelected = items.filter((i) => selectedIds.has(i.assetId));
+  const allChecked   = items.length > 0 && unitSelected.length === items.length;
+  const someChecked  = unitSelected.length > 0 && !allChecked;
+
+  function toggleUnit(e) {
+    e.stopPropagation();
+    items.forEach((i) => onToggleAsset(i.assetId, !allChecked));
+  }
+
+  // Sort assets by remainingLifeMonths asc (soonest replacement first)
+  const sorted = [...items].sort((a, b) => (a.remainingLifeMonths ?? 9999) - (b.remainingLifeMonths ?? 9999));
+
+  return (
+    <div className="border-b border-surface-divider last:border-0">
+      <div
+        className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-surface-subtle/40 transition-colors"
+        onClick={() => setOpen((v) => !v)}
+      >
+        <input
+          type="checkbox"
+          checked={allChecked}
+          ref={(el) => { if (el) el.indeterminate = someChecked; }}
+          onChange={toggleUnit}
+          onClick={(e) => e.stopPropagation()}
+          className="h-3.5 w-3.5 shrink-0 rounded border-surface-border accent-slate-800 cursor-pointer"
+        />
+        {open ? <ChevronDown className="h-3.5 w-3.5 text-foreground-dim shrink-0" /> : <ChevronRight className="h-3.5 w-3.5 text-foreground-dim shrink-0" />}
+        <span className="text-xs font-medium text-foreground">Unit {unitNumber}</span>
+        <span className="text-xs text-foreground-dim">{items.length} asset{items.length !== 1 ? "s" : ""}</span>
+        {unitSelected.length > 0 && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onSimulate(unitSelected); }}
+            className="ml-auto text-xs font-medium text-slate-600 hover:text-slate-900 transition-colors"
+          >
+            Simulate {unitSelected.length} →
+          </button>
+        )}
+      </div>
+      {open && (
+        <div className="ml-6">
+          {sorted.map((item) => (
+            <AssetRow
+              key={item.assetId}
+              item={item}
+              checked={selectedIds.has(item.assetId)}
+              onToggle={() => onToggleAsset(item.assetId, !selectedIds.has(item.assetId))}
+              onSimulate={onSimulate}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Building section ─────────────────────────────────────────────────────────
+
+function BuildingSection({ buildingId, buildingName, selectedIds, onToggleAsset, onSimulate, autoExpand }) {
+  const [open,    setOpen]    = useState(autoExpand);
+  const [items,   setItems]   = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [err,     setErr]     = useState("");
+
+  useEffect(() => {
+    setLoading(true); setErr("");
+    fetch(`/api/buildings/${buildingId}/renovation-opportunities`, { headers: authHeaders() })
+      .then((r) => r.json())
+      .then((d) => { if (d?.data) setItems(d.data); else throw new Error(d?.error?.message || "Failed"); })
+      .catch((e) => setErr(e.message))
+      .finally(() => setLoading(false));
+  }, [buildingId]);
+
+  // Group items by unit
+  const byUnit = useMemo(() => {
+    const map = new Map();
+    for (const item of items) {
+      if (!map.has(item.unitId)) map.set(item.unitId, { unitNumber: item.unitNumber, items: [] });
+      map.get(item.unitId).items.push(item);
+    }
+    return [...map.entries()].sort((a, b) => a[1].unitNumber.localeCompare(b[1].unitNumber));
+  }, [items]);
+
+  const allAssetIds    = items.map((i) => i.assetId);
+  const selectedInBldg = allAssetIds.filter((id) => selectedIds.has(id));
+  const allChecked     = allAssetIds.length > 0 && selectedInBldg.length === allAssetIds.length;
+  const someChecked    = selectedInBldg.length > 0 && !allChecked;
+
+  function toggleBuilding(e) {
+    e.stopPropagation();
+    allAssetIds.forEach((id) => onToggleAsset(id, !allChecked));
+  }
+
+  // Summary stats for collapsed header
+  const totalAtRiskChf = items.reduce((s, i) => s + (i.estimatedReplacementCostChf ?? 0), 0);
+  const nextDue = items.reduce((min, i) => {
+    const y = dueYear(i);
+    return (y != null && y < min) ? y : min;
+  }, 9999);
+
+  return (
+    <div className="rounded-2xl border border-surface-border bg-surface overflow-hidden">
+      {/* Building header */}
+      <div
+        className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-surface-subtle transition-colors"
+        onClick={() => setOpen((v) => !v)}
+      >
+        <input
+          type="checkbox"
+          checked={allChecked}
+          ref={(el) => { if (el) el.indeterminate = someChecked; }}
+          onChange={toggleBuilding}
+          onClick={(e) => e.stopPropagation()}
+          className="h-4 w-4 shrink-0 rounded border-surface-border accent-slate-800 cursor-pointer"
+        />
+        {open ? <ChevronDown className="h-4 w-4 text-foreground-dim shrink-0" /> : <ChevronRight className="h-4 w-4 text-foreground-dim shrink-0" />}
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-foreground">{buildingName}</p>
+          <p className="text-xs text-foreground-dim">
+            {loading ? "Loading…" : err ? "Error" : `${items.length} at-risk asset${items.length !== 1 ? "s" : ""}${nextDue < 9999 ? ` · next due ${nextDue}` : ""}`}
+          </p>
+        </div>
+        {totalAtRiskChf > 0 && (
+          <span className="text-xs font-semibold tabular-nums text-amber-700 shrink-0">
+            CHF {Math.round(totalAtRiskChf).toLocaleString("de-CH")}
+          </span>
+        )}
+        {selectedInBldg.length > 0 && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onSimulate(items.filter((i) => selectedIds.has(i.assetId))); }}
+            className="text-xs font-semibold bg-slate-800 text-white rounded-lg px-3 py-1 hover:bg-slate-700 transition-colors shrink-0"
+          >
+            Simulate {selectedInBldg.length} →
+          </button>
+        )}
+      </div>
+
+      {/* Expanded: unit rows */}
+      {open && !loading && !err && (
+        <div className="border-t border-surface-divider">
+          {byUnit.length === 0 ? (
+            <p className="px-4 py-3 text-xs text-foreground-dim">No at-risk assets for this building.</p>
+          ) : byUnit.map(([unitId, { unitNumber, items: unitItems }]) => (
+            <UnitRow
+              key={unitId}
+              unitNumber={unitNumber}
+              items={unitItems}
+              selectedIds={selectedIds}
+              onToggleAsset={onToggleAsset}
+              onSimulate={onSimulate}
+              buildingId={buildingId}
+            />
+          ))}
+        </div>
+      )}
+      {open && err && (
+        <p className="px-4 py-3 text-xs text-red-600 border-t border-surface-divider">{err}</p>
+      )}
+    </div>
+  );
+}
+
+// ─── Main export ──────────────────────────────────────────────────────────────
+
+export default function RenovationAccordion({ buildings }) {
+  // buildings: [{ id, name }]
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [simItems,    setSimItems]    = useState(null);
+
+  const onToggleAsset = useCallback((assetId, checked) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      checked ? next.add(assetId) : next.delete(assetId);
+      return next;
+    });
+  }, []);
+
+  const onSimulate = useCallback((items) => { setSimItems(items); }, []);
+
+  if (!buildings || buildings.length === 0) {
+    return (
+      <div className="rounded-2xl border border-surface-border bg-surface p-6 text-center">
+        <p className="text-sm text-foreground-dim">Select one or more buildings above to see renovation opportunities.</p>
+      </div>
+    );
+  }
+
+  // Find which building a simulated item belongs to (for buildingId prop)
+  const simBuildingId = simItems?.length > 0
+    ? buildings.find((b) => b.id === simItems[0]?.buildingId)?.id ?? buildings[0]?.id
+    : null;
+
+  return (
+    <>
+      <div className="space-y-3">
+        {buildings.map((b, i) => (
+          <BuildingSection
+            key={b.id}
+            buildingId={b.id}
+            buildingName={b.name}
+            selectedIds={selectedIds}
+            onToggleAsset={onToggleAsset}
+            onSimulate={onSimulate}
+            autoExpand={buildings.length === 1 || i === 0}
+          />
+        ))}
+      </div>
+
+      {simItems && (
+        <RenovationSimulatorDrawer
+          items={simItems}
+          onClose={() => setSimItems(null)}
+          buildingId={simBuildingId}
+        />
+      )}
+    </>
+  );
+}
