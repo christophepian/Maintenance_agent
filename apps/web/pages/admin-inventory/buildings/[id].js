@@ -62,14 +62,15 @@ const RANGES = [
   { key: "10Y", dailyOnly: false },
 ];
 
-function BuildingReportingView({ buildingId, buildingName }) {
+function BuildingReportingView({ buildingId }) {
+  const [reportingTab, setReportingTab] = useState(0); // 0=Period Analysis, 1=Performance Canvas
   const [canvasRange, setCanvasRange] = useState("1Y");
   const [tsData, setTsData] = useState(null);
   const [tsLoading, setTsLoading] = useState(false);
   const [tsError, setTsError] = useState("");
 
   useEffect(() => {
-    if (!buildingId) return;
+    if (reportingTab !== 1 || !buildingId) return;
     setTsLoading(true);
     setTsError("");
     fetch(`/api/buildings/${buildingId}/timeseries?range=${canvasRange}`, { headers: authHeaders() })
@@ -80,7 +81,7 @@ function BuildingReportingView({ buildingId, buildingName }) {
       })
       .catch(() => setTsError("Failed to load"))
       .finally(() => setTsLoading(false));
-  }, [buildingId, canvasRange]);
+  }, [buildingId, canvasRange, reportingTab]);
 
   const earliestDate = tsData?.earliestDate ? new Date(tsData.earliestDate) : null;
   const daysSinceEarliest = earliestDate
@@ -89,39 +90,61 @@ function BuildingReportingView({ buildingId, buildingName }) {
 
   return (
     <div className="space-y-4">
-      {buildingName && (
-        <p className="text-sm text-muted-text">{buildingName} · time-series performance</p>
-      )}
-
-      {/* Range picker */}
-      <div className="flex flex-wrap gap-1.5">
-        {RANGES.map(({ key, dailyOnly }) => {
-          const minDays = key === "1W" ? 7 : 30;
-          const enabled = !dailyOnly || daysSinceEarliest >= minDays;
-          return (
-            <button
-              key={key}
-              onClick={() => enabled && setCanvasRange(key)}
-              disabled={!enabled}
-              className={cn(
-                "px-3 py-1 rounded-full text-xs font-medium border transition",
-                canvasRange === key
-                  ? "bg-blue-600 text-white border-blue-600"
-                  : enabled
-                  ? "bg-surface text-muted-dark border-surface-border hover:border-blue-400"
-                  : "bg-surface text-foreground-dim border-surface-border opacity-40 cursor-not-allowed",
-              )}
-            >
-              {key}
-            </button>
-          );
-        })}
+      {/* Sub-tab strip */}
+      <div className="inline-flex rounded-lg border border-surface-border bg-surface-hover p-0.5 gap-0.5">
+        {["Period Analysis", "Performance Canvas"].map((label, i) => (
+          <button
+            key={label}
+            onClick={() => setReportingTab(i)}
+            className={cn(
+              "rounded-lg px-4 py-1.5 text-sm font-medium transition-colors",
+              reportingTab === i
+                ? "bg-surface text-foreground shadow-sm"
+                : "text-muted hover:text-muted-dark",
+            )}
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
-      {tsError && <p className="text-sm text-red-600">{tsError}</p>}
-      {tsLoading && <p className="text-sm text-muted">Loading…</p>}
-      {!tsLoading && !tsError && (
-        <PortfolioCanvasChart points={tsData?.points ?? []} range={canvasRange} />
+      {/* Period Analysis — reuse BuildingFinancialsView */}
+      {reportingTab === 0 && (
+        <BuildingFinancialsView buildingId={buildingId} variant="embedded" />
+      )}
+
+      {/* Performance Canvas */}
+      {reportingTab === 1 && (
+        <div className="space-y-3">
+          <div className="flex flex-wrap gap-1.5">
+            {RANGES.map(({ key, dailyOnly }) => {
+              const minDays = key === "1W" ? 7 : 30;
+              const enabled = !dailyOnly || daysSinceEarliest >= minDays;
+              return (
+                <button
+                  key={key}
+                  onClick={() => enabled && setCanvasRange(key)}
+                  disabled={!enabled}
+                  className={cn(
+                    "px-3 py-1 rounded-full text-xs font-medium border transition",
+                    canvasRange === key
+                      ? "bg-blue-600 text-white border-blue-600"
+                      : enabled
+                      ? "bg-surface text-muted-dark border-surface-border hover:border-blue-400"
+                      : "bg-surface text-foreground-dim border-surface-border opacity-40 cursor-not-allowed",
+                  )}
+                >
+                  {key}
+                </button>
+              );
+            })}
+          </div>
+          {tsError && <p className="text-sm text-red-600">{tsError}</p>}
+          {tsLoading && <p className="text-sm text-muted">Loading…</p>}
+          {!tsLoading && !tsError && (
+            <PortfolioCanvasChart points={tsData?.points ?? []} range={canvasRange} />
+          )}
+        </div>
       )}
     </div>
   );
@@ -2112,7 +2135,7 @@ export default function BuildingDetail() {
 
           {/* Reporting tab */}
           {activeTab === "Reporting" && id && (
-            <BuildingReportingView buildingId={id} buildingName={building?.name} />
+            <BuildingReportingView buildingId={id} />
           )}
 
           {/* Correspondence tab — read-only view of letters sent to this building's tenants */}
