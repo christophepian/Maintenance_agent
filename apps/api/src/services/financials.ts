@@ -478,34 +478,38 @@ export async function getPortfolioSummary(
 ): Promise<PortfolioSummaryDTO> {
   const buildings = await inventoryRepo.listBuildings(prisma, orgId, undefined, ownerId);
 
+  const buildingResults = await Promise.allSettled(
+    buildings.map((building) =>
+      getBuildingFinancials(orgId, building.id, { from: params.from, to: params.to }),
+    ),
+  );
+
   const summaries: BuildingSummaryDTO[] = [];
-  for (const building of buildings) {
-    try {
-      const dto = await getBuildingFinancials(orgId, building.id, {
-        from: params.from,
-        to: params.to,
-      });
-      summaries.push({
-        buildingId: dto.buildingId,
-        buildingName: dto.buildingName,
-        health: deriveHealth(dto.netIncomeCents, dto.collectionRate),
-        earnedIncomeCents: dto.earnedIncomeCents,
-        projectedIncomeCents: dto.projectedIncomeCents,
-        expensesTotalCents: dto.expensesTotalCents,
-        operatingTotalCents: dto.operatingTotalCents,
-        capexTotalCents: dto.capexTotalCents,
-        netIncomeCents: dto.netIncomeCents,
-        netOperatingIncomeCents: dto.netOperatingIncomeCents,
-        collectionRate: dto.collectionRate,
-        maintenanceRatio: dto.maintenanceRatio,
-        activeUnitsCount: dto.activeUnitsCount,
-        totalUnitsCount: dto.totalUnitsCount,
-        receivablesCents: dto.receivablesCents,
-        payablesCents: dto.payablesCents,
-      });
-    } catch (e) {
-      console.warn(`[portfolio-summary] Skipping building ${building.id}: ${e}`);
+  for (let i = 0; i < buildings.length; i++) {
+    const result = buildingResults[i];
+    if (result.status === "rejected") {
+      console.warn(`[portfolio-summary] Skipping building ${buildings[i].id}: ${result.reason}`);
+      continue;
     }
+    const dto = result.value;
+    summaries.push({
+      buildingId: dto.buildingId,
+      buildingName: dto.buildingName,
+      health: deriveHealth(dto.netIncomeCents, dto.collectionRate),
+      earnedIncomeCents: dto.earnedIncomeCents,
+      projectedIncomeCents: dto.projectedIncomeCents,
+      expensesTotalCents: dto.expensesTotalCents,
+      operatingTotalCents: dto.operatingTotalCents,
+      capexTotalCents: dto.capexTotalCents,
+      netIncomeCents: dto.netIncomeCents,
+      netOperatingIncomeCents: dto.netOperatingIncomeCents,
+      collectionRate: dto.collectionRate,
+      maintenanceRatio: dto.maintenanceRatio,
+      activeUnitsCount: dto.activeUnitsCount,
+      totalUnitsCount: dto.totalUnitsCount,
+      receivablesCents: dto.receivablesCents,
+      payablesCents: dto.payablesCents,
+    });
   }
 
   const arrears = await financialsRepo.getArrearsAging(prisma, orgId);
@@ -762,27 +766,29 @@ async function getPortfolioMonthlyPoints(
   toMonth: number,
   ownerId?: string,
 ): Promise<TimeSeriesPoint[]> {
-  const points: TimeSeriesPoint[] = [];
+  const now = new Date();
+  const periods: { from: string; to: string; label: string }[] = [];
+
   let y = fromYear;
   let m = fromMonth;
-  const now = new Date();
-
   while (y < toYear || (y === toYear && m <= toMonth)) {
     if (new Date(y, m - 1, 1) > now) break;
-    const from   = `${y}-${String(m).padStart(2, "0")}-01`;
+    const from    = `${y}-${String(m).padStart(2, "0")}-01`;
     const lastDay = new Date(y, m, 0).getDate();
-    const to     = `${y}-${String(m).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
-    const label  = `${monthLabel(y, m)} ${toYear - fromYear >= 1 ? y : ""}`.trim();
-    try {
-      const summary = await getPortfolioSummary(orgId, { from, to }, ownerId);
-      points.push(summaryToPoint(summary, from, to, label));
-    } catch {
-      // skip months with no data
-    }
+    const to      = `${y}-${String(m).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+    const label   = `${monthLabel(y, m)} ${toYear - fromYear >= 1 ? y : ""}`.trim();
+    periods.push({ from, to, label });
     m++;
     if (m > 12) { m = 1; y++; }
   }
-  return points;
+
+  const results = await Promise.allSettled(
+    periods.map(({ from, to }) => getPortfolioSummary(orgId, { from, to }, ownerId)),
+  );
+
+  return results
+    .map((r, i) => r.status === "fulfilled" ? summaryToPoint(r.value, periods[i].from, periods[i].to, periods[i].label) : null)
+    .filter((p): p is TimeSeriesPoint => p !== null);
 }
 
 async function getPortfolioQuarterlyPoints(
@@ -791,26 +797,28 @@ async function getPortfolioQuarterlyPoints(
   toYear: number,
   ownerId?: string,
 ): Promise<TimeSeriesPoint[]> {
-  const points: TimeSeriesPoint[] = [];
   const now = new Date();
+  const periods: { from: string; to: string; label: string }[] = [];
 
   for (let y = fromYear; y <= toYear; y++) {
     for (let q = 1; q <= 4; q++) {
-      const qStart = (q - 1) * 3 + 1;
-      const qEnd   = q * 3;
-      const from   = `${y}-${String(qStart).padStart(2, "0")}-01`;
+      const qStart  = (q - 1) * 3 + 1;
+      const qEnd    = q * 3;
+      const from    = `${y}-${String(qStart).padStart(2, "0")}-01`;
       const lastDay = new Date(y, qEnd, 0).getDate();
-      const to     = `${y}-${String(qEnd).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+      const to      = `${y}-${String(qEnd).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
       if (new Date(y, qStart - 1, 1) > now) break;
-      try {
-        const summary = await getPortfolioSummary(orgId, { from, to }, ownerId);
-        points.push(summaryToPoint(summary, from, to, `Q${q} ${y}`));
-      } catch {
-        // skip quarters with no data
-      }
+      periods.push({ from, to, label: `Q${q} ${y}` });
     }
   }
-  return points;
+
+  const results = await Promise.allSettled(
+    periods.map(({ from, to }) => getPortfolioSummary(orgId, { from, to }, ownerId)),
+  );
+
+  return results
+    .map((r, i) => r.status === "fulfilled" ? summaryToPoint(r.value, periods[i].from, periods[i].to, periods[i].label) : null)
+    .filter((p): p is TimeSeriesPoint => p !== null);
 }
 
 async function getPortfolioAnnualPoints(
@@ -819,21 +827,23 @@ async function getPortfolioAnnualPoints(
   toYear: number,
   ownerId?: string,
 ): Promise<TimeSeriesPoint[]> {
-  const points: TimeSeriesPoint[] = [];
   const now = new Date();
+  const periods: { from: string; to: string; label: string }[] = [];
 
   for (let y = fromYear; y <= toYear; y++) {
     if (y > now.getFullYear()) break;
     const from = `${y}-01-01`;
     const to   = y < now.getFullYear() ? `${y}-12-31` : isoDate(now);
-    try {
-      const summary = await getPortfolioSummary(orgId, { from, to }, ownerId);
-      points.push(summaryToPoint(summary, from, to, String(y)));
-    } catch {
-      // skip years with no data
-    }
+    periods.push({ from, to, label: String(y) });
   }
-  return points;
+
+  const results = await Promise.allSettled(
+    periods.map(({ from, to }) => getPortfolioSummary(orgId, { from, to }, ownerId)),
+  );
+
+  return results
+    .map((r, i) => r.status === "fulfilled" ? summaryToPoint(r.value, periods[i].from, periods[i].to, periods[i].label) : null)
+    .filter((p): p is TimeSeriesPoint => p !== null);
 }
 
 async function getDailyPoints(

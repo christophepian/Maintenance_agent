@@ -30,6 +30,15 @@ import {
   markLetterRead,
   createLetterResponse,
 } from "../services/correspondenceService";
+import {
+  findLettersByOrg,
+  findLetterDetail,
+  findLetterByIdAndOrg,
+  findFirstRecipientWithBuilding,
+  findTenantInbox,
+  findTenantLetterRead,
+  findSentLettersForTenants,
+} from "../repositories/correspondenceRepository";
 
 const VALID_TEMPLATE_TYPES = Object.values(LetterTemplateType);
 
@@ -39,13 +48,7 @@ export function registerCorrespondenceRoutes(router: Router) {
   router.get("/correspondence", async ({ req, res, orgId, prisma }) => {
     if (!maybeRequireManager(req, res)) return;
     try {
-      const letters = await prisma.letter.findMany({
-        where: { orgId },
-        include: {
-          _count: { select: { recipients: true, responses: true } },
-        },
-        orderBy: { createdAt: "desc" },
-      });
+      const letters = await findLettersByOrg(prisma, orgId);
       sendJson(res, 200, {
         data: letters.map((l) => ({
           id: l.id,
@@ -92,18 +95,7 @@ export function registerCorrespondenceRoutes(router: Router) {
   router.get("/correspondence/:id", async ({ req, res, orgId, prisma, params }) => {
     if (!maybeRequireManager(req, res)) return;
     try {
-      const letter = await prisma.letter.findFirst({
-        where: { id: params.id, orgId },
-        include: {
-          recipients: {
-            include: { tenant: { select: { id: true, name: true, email: true, phone: true } } },
-          },
-          responses: {
-            include: { tenant: { select: { id: true, name: true } } },
-            orderBy: { createdAt: "asc" },
-          },
-        },
-      });
+      const letter = await findLetterDetail(prisma, params.id, orgId);
       if (!letter) return sendError(res, 404, "NOT_FOUND", "Letter not found");
       sendJson(res, 200, { data: letter });
     } catch (e) {
@@ -115,7 +107,7 @@ export function registerCorrespondenceRoutes(router: Router) {
   router.patch("/correspondence/:id", async ({ req, res, orgId, prisma, params }) => {
     if (!maybeRequireManager(req, res)) return;
     try {
-      const letter = await prisma.letter.findFirst({ where: { id: params.id, orgId } });
+      const letter = await findLetterByIdAndOrg(prisma, params.id, orgId);
       if (!letter) return sendError(res, 404, "NOT_FOUND", "Letter not found");
       if (letter.status !== LetterStatus.DRAFT) {
         return sendError(res, 409, "CONFLICT", "Only draft letters can be edited");
@@ -140,7 +132,7 @@ export function registerCorrespondenceRoutes(router: Router) {
   router.delete("/correspondence/:id", async ({ req, res, orgId, prisma, params }) => {
     if (!maybeRequireManager(req, res)) return;
     try {
-      const letter = await prisma.letter.findFirst({ where: { id: params.id, orgId } });
+      const letter = await findLetterByIdAndOrg(prisma, params.id, orgId);
       if (!letter) return sendError(res, 404, "NOT_FOUND", "Letter not found");
       if (letter.status !== LetterStatus.DRAFT) {
         return sendError(res, 409, "CONFLICT", "Only draft letters can be deleted");
@@ -156,7 +148,7 @@ export function registerCorrespondenceRoutes(router: Router) {
   router.post("/correspondence/:id/ai-draft", async ({ req, res, orgId, prisma, params }) => {
     if (!maybeRequireManager(req, res)) return;
     try {
-      const letter = await prisma.letter.findFirst({ where: { id: params.id, orgId } });
+      const letter = await findLetterByIdAndOrg(prisma, params.id, orgId);
       if (!letter) return sendError(res, 404, "NOT_FOUND", "Letter not found");
 
       const body = await readJson(req).catch(() => ({})) as any;
@@ -164,19 +156,7 @@ export function registerCorrespondenceRoutes(router: Router) {
       // Pull building name from first recipient's building if available, else from body
       let buildingName = body.buildingName as string | undefined;
       if (!buildingName) {
-        const firstRecipient = await prisma.letterRecipient.findFirst({
-          where: { letterId: params.id },
-          include: {
-            tenant: {
-              include: {
-                occupancies: {
-                  include: { unit: { include: { building: { select: { name: true } } } } },
-                  take: 1,
-                },
-              },
-            },
-          },
-        });
+        const firstRecipient = await findFirstRecipientWithBuilding(prisma, params.id);
         buildingName = firstRecipient?.tenant?.occupancies?.[0]?.unit?.building?.name;
       }
 
@@ -204,7 +184,7 @@ export function registerCorrespondenceRoutes(router: Router) {
   router.post("/correspondence/:id/send", async ({ req, res, orgId, prisma, params }) => {
     if (!maybeRequireManager(req, res)) return;
     try {
-      const letter = await prisma.letter.findFirst({ where: { id: params.id, orgId } });
+      const letter = await findLetterByIdAndOrg(prisma, params.id, orgId);
       if (!letter) return sendError(res, 404, "NOT_FOUND", "Letter not found");
       if (!letter.subject.trim() || !letter.body.trim()) {
         return sendError(res, 400, "VALIDATION_ERROR", "Subject and body are required before sending");
@@ -238,11 +218,7 @@ export function registerCorrespondenceRoutes(router: Router) {
     const tenantId = requireTenantSession(req, res);
     if (!tenantId) return;
     try {
-      const recipients = await prisma.letterRecipient.findMany({
-        where: { tenantId, letter: { orgId, status: LetterStatus.SENT } },
-        include: { letter: { select: { id: true, subject: true, sentAt: true, templateType: true } } },
-        orderBy: { letter: { sentAt: "desc" } },
-      });
+      const recipients = await findTenantInbox(prisma, tenantId, orgId);
       sendJson(res, 200, {
         data: recipients.map((r) => ({
           letterId: r.letterId,
@@ -263,19 +239,7 @@ export function registerCorrespondenceRoutes(router: Router) {
     const tenantId = requireTenantSession(req, res);
     if (!tenantId) return;
     try {
-      const recipient = await prisma.letterRecipient.findUnique({
-        where: { letterId_tenantId: { letterId: params.id, tenantId } },
-        include: {
-          letter: {
-            include: {
-              responses: {
-                where: { tenantId },
-                orderBy: { createdAt: "asc" },
-              },
-            },
-          },
-        },
-      });
+      const recipient = await findTenantLetterRead(prisma, params.id, tenantId);
       if (!recipient || recipient.letter.orgId !== orgId) {
         return sendError(res, 404, "NOT_FOUND", "Letter not found");
       }
@@ -347,15 +311,7 @@ export function registerCorrespondenceRoutes(router: Router) {
       });
       const tenantIds = [...new Set(occupancies.map((o) => o.tenantId))];
 
-      const letters = await prisma.letter.findMany({
-        where: {
-          orgId,
-          status: LetterStatus.SENT,
-          recipients: { some: { tenantId: { in: tenantIds } } },
-        },
-        include: { _count: { select: { recipients: true } } },
-        orderBy: { sentAt: "desc" },
-      });
+      const letters = await findSentLettersForTenants(prisma, orgId, tenantIds, buildingId);
 
       sendJson(res, 200, {
         data: letters.map((l) => ({

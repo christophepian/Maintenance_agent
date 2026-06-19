@@ -41,6 +41,17 @@ export async function findLeaseRaw(
   return prisma.lease.findUnique({ where: { id } });
 }
 
+export async function findActiveLeaseWithUnit(
+  prisma: PrismaClient,
+  id: string,
+  orgId: string,
+) {
+  return prisma.lease.findFirst({
+    where: { id, orgId, status: "ACTIVE" },
+    include: { unit: { select: { id: true, unitNumber: true } } },
+  });
+}
+
 /** List leases for an org with optional filters. */
 export async function listLeases(
   prisma: PrismaClient,

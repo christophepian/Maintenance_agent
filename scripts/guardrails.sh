@@ -159,6 +159,7 @@ FUI9_WHITELIST="
   chart-of-accounts.js  -- Account-tree tables are structural sub-panels, not hub tables
   BuildingFinancialsView.jsx  -- Component: financial sub-tables inside building detail context
   BillingEntityManager.js     -- Component: billing entity sub-tables, used inside detail context
+  tenants/[id].js       -- Contracts / Invoices sub-tables in tenant detail panel (same pattern as leases/[id].js)
 "
 
 FUI9_HITS=""

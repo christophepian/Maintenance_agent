@@ -13,7 +13,7 @@ import { triageIssue } from "../services/triage";
 import { TenantSessionSchema } from "../validation/tenantSession";
 import { TriageSchema } from "../validation/triage";
 import { LoginSchema, RegisterSchema } from "../validation/auth";
-import { LEASE_FULL_INCLUDE } from "../repositories/leaseRepository";
+import { LEASE_FULL_INCLUDE, findActiveLeaseWithUnit } from "../repositories/leaseRepository";
 import { findUserProfile, findUserForCredentialCheck, updateUserProfile } from "../repositories/userRepository";
 import {
   findTenantRequests,
@@ -134,10 +134,7 @@ export function registerAuthRoutes(router: Router) {
     if (!tenantId) return;
     try {
       // Verify the lease belongs to this tenant and is ACTIVE
-      const lease = await prisma.lease.findFirst({
-        where: { id: params.id, orgId, status: "ACTIVE" },
-        include: { unit: { select: { id: true, unitNumber: true } } },
-      });
+      const lease = await findActiveLeaseWithUnit(prisma, params.id, orgId);
       if (!lease) return sendError(res, 404, "NOT_FOUND", "Active lease not found");
 
       // Verify the tenant occupies the unit

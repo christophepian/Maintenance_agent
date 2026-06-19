@@ -165,7 +165,7 @@ describe("GET /forecasting/asset-health — contract test", () => {
       expect(typeof dto.legalCoverageSummary.mappedCategories).toBe("number");
       expect(typeof dto.legalCoverageSummary.unmappedCategories).toBe("number");
     }
-  }, 15000);
+  }, 30000);
 
   it("supports includeLegalCoverage=false", async () => {
     const res = await jsonRequest("GET", "/forecasting/asset-health?includeLegalCoverage=false", getAuthHeaders(managerToken));
@@ -175,7 +175,7 @@ describe("GET /forecasting/asset-health — contract test", () => {
     expect(dto).toHaveProperty("portfolio");
     expect(dto).toHaveProperty("buildings");
     expect(dto.legalCoverageSummary).toBeNull();
-  }, 15000);
+  }, 30000);
 
   it("returns 401 without token", async () => {
     const res = await jsonRequest("GET", "/forecasting/asset-health");

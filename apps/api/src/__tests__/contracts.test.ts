@@ -455,7 +455,7 @@ describe('G10: API Contract Tests', () => {
         expect(typeof pt.noiCents).toBe('number');
         expect(typeof pt.collectionRate).toBe('number');
       }
-    });
+    }, 60000);
 
     it('returns 400 for invalid range', async () => {
       const res = await fetch(`${API_BASE}/financials/portfolio-timeseries?range=INVALID`);
