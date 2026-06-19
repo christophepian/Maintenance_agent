@@ -1276,7 +1276,7 @@ export default function OwnerReportingPage() {
                     net={b.netIncomeCents}
                     collectionRate={b.collectionRate}
                     occupancy={b.totalUnitsCount > 0 ? b.activeUnitsCount / b.totalUnitsCount : null}
-                    href={`/admin-inventory/buildings/${b.buildingId}?from=/owner/properties&role=owner`}
+                    href={`/admin-inventory/buildings/${b.buildingId}?from=/owner/reporting&tab=Reporting`}
                   />
                 ))}
               </div>

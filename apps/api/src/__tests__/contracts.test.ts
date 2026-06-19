@@ -463,6 +463,35 @@ describe('G10: API Contract Tests', () => {
     });
   });
 
+  describe('GET /buildings/:id/timeseries', () => {
+    it('returns BuildingTimeSeriesDTO with points array and range', async () => {
+      const buildings = await fetchJson('/buildings?limit=1');
+      if (!buildings.data?.length) return;
+      const buildingId = buildings.data[0].id;
+      const body = await fetchJson(`/buildings/${buildingId}/timeseries?range=1Y`);
+      expect(body).toHaveProperty('data');
+      const dto = body.data;
+      expectKeys(dto, ['buildingId', 'range', 'points'], 'BuildingTimeSeriesDTO');
+      expect(dto.range).toBe('1Y');
+      expect(Array.isArray(dto.points)).toBe(true);
+      if (dto.points.length > 0) {
+        const pt = dto.points[0];
+        expectKeys(pt, [
+          'periodStart', 'periodEnd', 'label',
+          'noiCents', 'earnedIncomeCents', 'expensesCents', 'collectionRate',
+        ], 'TimeSeriesPoint');
+      }
+    });
+
+    it('returns 400 for invalid range', async () => {
+      const buildings = await fetchJson('/buildings?limit=1');
+      if (!buildings.data?.length) return;
+      const buildingId = buildings.data[0].id;
+      const res = await fetch(`${API_BASE}/buildings/${buildingId}/timeseries?range=INVALID`);
+      expect(res.status).toBe(400);
+    });
+  });
+
   // ── RFPs ──
   describe('GET /rfps?limit=1', () => {
     it('returns envelope with data array and total', async () => {

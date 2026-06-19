@@ -55,7 +55,7 @@ import { processSchedulingEscalations } from "./workflows/schedulingWorkflow";
 import { flushPendingEmails } from "./services/emailTransport";
 import { drainOutbox as drainWhatsAppOutbox } from "./services/whatsAppService";
 import { processRecurringBilling } from "./services/recurringBillingService";
-import { computeAndStoreDailyPortfolioSnapshot } from "./services/financials";
+import { computeAndStoreDailyPortfolioSnapshot, computeAndStoreDailyBuildingSnapshot } from "./services/financials";
 import { processOverdueInvoices } from "./services/overdueInvoiceService";
 import { flushLegalVariableIngestion } from "./services/legalVariableIngestion";
 
@@ -548,6 +548,20 @@ async function runBackgroundJobsInner() {
     }
   } catch (e) {
     console.error("[BG-JOBS] Daily portfolio snapshot error:", e);
+  }
+
+  try {
+    const buildings = await prisma.building.findMany({ select: { id: true, orgId: true } });
+    let buildingDailyComputed = 0;
+    for (const b of buildings) {
+      const stored = await computeAndStoreDailyBuildingSnapshot(b.orgId, b.id);
+      if (stored) buildingDailyComputed++;
+    }
+    if (buildingDailyComputed > 0) {
+      console.log(`[BG-JOBS] Stored daily building snapshots for ${buildingDailyComputed} building(s)`);
+    }
+  } catch (e) {
+    console.error("[BG-JOBS] Daily building snapshot error:", e);
   }
 
   try {

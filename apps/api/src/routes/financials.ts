@@ -9,6 +9,7 @@ import {
   getPortfolioSummary,
   getPortfolioMonthlyBreakdown,
   getPortfolioTimeSeries,
+  getBuildingTimeSeries,
   setInvoiceExpenseCategory,
   listBuildingSnapshots,
   computeAnnualSnapshots,
@@ -272,6 +273,31 @@ export function registerFinancialRoutes(router: Router) {
       } catch (e: any) {
         console.error("[GET /financials/portfolio-timeseries]", e);
         sendError(res, 500, "INTERNAL_ERROR", "Failed to load portfolio time series");
+      }
+    },
+  );
+
+  // ── GET /buildings/:id/timeseries ──────────────────────────
+  router.get(
+    "/buildings/:id/timeseries",
+    async ({ req, res, params, query, orgId }) => {
+      if (!requireAuth(req, res)) return;
+      if (!requireOrgViewer(req, res)) return;
+
+      const VALID_RANGES = ["1W", "1M", "6M", "1Y", "2Y", "5Y", "10Y"] as const;
+      const rangeRaw = first(query, "range") ?? "1Y";
+      if (!VALID_RANGES.includes(rangeRaw as TimeSeriesRange)) {
+        return sendError(res, 400, "VALIDATION_ERROR", `range must be one of: ${VALID_RANGES.join(", ")}`);
+      }
+      const range = rangeRaw as TimeSeriesRange;
+
+      try {
+        const data = await getBuildingTimeSeries(orgId, params.id, range);
+        sendJson(res, 200, { data });
+      } catch (e: any) {
+        if (e instanceof NotFoundError) return sendError(res, 404, "NOT_FOUND", e.message);
+        console.error("[GET /buildings/:id/timeseries]", e);
+        sendError(res, 500, "INTERNAL_ERROR", "Failed to load building time series");
       }
     },
   );

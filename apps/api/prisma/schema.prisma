@@ -159,6 +159,7 @@ model Org {
   rentEstimationConfigs RentEstimationConfig[]
   financialSnapshots        BuildingFinancialSnapshot[]
   portfolioDailySnapshots   PortfolioDailySnapshot[]
+  buildingDailySnapshots    BuildingDailySnapshot[]
   requests              Request[]
   // Legal engine relations
   legalEvaluationLogs   LegalEvaluationLog[]
@@ -400,7 +401,8 @@ model Building {
   strategyProfile    BuildingStrategyProfile?
   importedStatements ImportedStatement[]
   assets             Asset[]
-  attributedInvoices Invoice[]             @relation("InvoiceBuildingAttribution")
+  attributedInvoices     Invoice[]             @relation("InvoiceBuildingAttribution")
+  dailySnapshots         BuildingDailySnapshot[]
 
   @@index([orgId])
   @@index([managerId])
@@ -2795,6 +2797,31 @@ model WhatsAppOutbox {
 
 // ── Portfolio Daily Snapshot ─────────────────────────────────
 // Pre-computed daily portfolio rollup for short-range (1W / 1M)
+// Per-building daily snapshot for building-level time-series reporting.
+// Written once per day by the hourly background job.
+
+model BuildingDailySnapshot {
+  id                String   @id @default(cuid())
+  orgId             String
+  buildingId        String
+  date              DateTime @db.Date
+  noiCents          Int
+  earnedIncomeCents Int
+  expensesCents     Int
+  collectionRate    Float
+  noiMarginPct      Float?
+  opexRatioPct      Float?
+  occupancyRate     Float?
+  activeUnitsCount  Int
+  computedAt        DateTime @default(now())
+
+  org      Org      @relation(fields: [orgId], references: [id])
+  building Building @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, buildingId, date])
+  @@index([orgId, buildingId, date])
+}
+
 // time-series charts in owner reporting. Written once per day by
 // the hourly background job (skipped if today's row already exists).
 

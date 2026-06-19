@@ -1,5 +1,7 @@
 import { useRouter } from "next/router";
 import { useEffect, useState, useCallback, useMemo } from "react";
+import dynamic from "next/dynamic";
+const PortfolioCanvasChart = dynamic(() => import("../../../components/PortfolioCanvasChart"), { ssr: false });
 
 function CorrespondenceTab({ buildingId }) {
   const [letters, setLetters] = useState([]);
@@ -50,6 +52,81 @@ import { ARCHETYPE_LABELS, ARCHETYPE_EXPLANATION_COPY } from "../../../lib/arche
 import KpiInlineGrid from "../../../components/ui/KpiInlineGrid";
 import { withServerTranslations } from "../../../lib/i18n";
 import { useTranslation } from "next-i18next";
+const RANGES = [
+  { key: "1W",  dailyOnly: true  },
+  { key: "1M",  dailyOnly: true  },
+  { key: "6M",  dailyOnly: false },
+  { key: "1Y",  dailyOnly: false },
+  { key: "2Y",  dailyOnly: false },
+  { key: "5Y",  dailyOnly: false },
+  { key: "10Y", dailyOnly: false },
+];
+
+function BuildingReportingView({ buildingId, buildingName }) {
+  const [canvasRange, setCanvasRange] = useState("1Y");
+  const [tsData, setTsData] = useState(null);
+  const [tsLoading, setTsLoading] = useState(false);
+  const [tsError, setTsError] = useState("");
+
+  useEffect(() => {
+    if (!buildingId) return;
+    setTsLoading(true);
+    setTsError("");
+    fetch(`/api/buildings/${buildingId}/timeseries?range=${canvasRange}`, { headers: authHeaders() })
+      .then((r) => r.json())
+      .then((d) => {
+        if (d?.data) setTsData(d.data);
+        else setTsError(d?.error?.message || "Failed to load");
+      })
+      .catch(() => setTsError("Failed to load"))
+      .finally(() => setTsLoading(false));
+  }, [buildingId, canvasRange]);
+
+  const earliestDate = tsData?.earliestDate ? new Date(tsData.earliestDate) : null;
+  const daysSinceEarliest = earliestDate
+    ? Math.floor((Date.now() - earliestDate.getTime()) / 86400000)
+    : 0;
+
+  return (
+    <div className="space-y-4">
+      {buildingName && (
+        <p className="text-sm text-muted-text">{buildingName} · time-series performance</p>
+      )}
+
+      {/* Range picker */}
+      <div className="flex flex-wrap gap-1.5">
+        {RANGES.map(({ key, dailyOnly }) => {
+          const minDays = key === "1W" ? 7 : 30;
+          const enabled = !dailyOnly || daysSinceEarliest >= minDays;
+          return (
+            <button
+              key={key}
+              onClick={() => enabled && setCanvasRange(key)}
+              disabled={!enabled}
+              className={cn(
+                "px-3 py-1 rounded-full text-xs font-medium border transition",
+                canvasRange === key
+                  ? "bg-blue-600 text-white border-blue-600"
+                  : enabled
+                  ? "bg-surface text-muted-dark border-surface-border hover:border-blue-400"
+                  : "bg-surface text-foreground-dim border-surface-border opacity-40 cursor-not-allowed",
+              )}
+            >
+              {key}
+            </button>
+          );
+        })}
+      </div>
+
+      {tsError && <p className="text-sm text-red-600">{tsError}</p>}
+      {tsLoading && <p className="text-sm text-muted">Loading…</p>}
+      {!tsLoading && !tsError && (
+        <PortfolioCanvasChart points={tsData?.points ?? []} range={canvasRange} />
+      )}
+    </div>
+  );
+}
+
 function displayDate(iso) {
   if (!iso) return "—";
   const d = new Date(iso);
@@ -65,7 +142,11 @@ export default function BuildingDetail() {
   const { id, from, role } = router.query;
   const isOwner = role === "owner";
   const backHref = from || (isOwner ? "/owner/properties" : "/manager/inventory?tab=buildings");
-  const [activeTab, setActiveTab] = useState("Building information");
+  const VALID_TABS = ["Building information", "Units", "Tenants", "Assets", "Documents", "Policies", "Financials", "Reporting", "Requests", "Correspondence"];
+  const initialTab = typeof router.query.tab === "string" && VALID_TABS.includes(router.query.tab)
+    ? router.query.tab
+    : "Building information";
+  const [activeTab, setActiveTab] = useState(initialTab);
 
   // ui object removed — all styles now use Tailwind className
 
@@ -772,7 +853,7 @@ export default function BuildingDetail() {
 
           {/* Tabs Navigation */}
           {(() => {
-            const TAB_KEYS = ["Building information", "Units", "Tenants", "Assets", "Documents", "Policies", "Financials", "Requests", "Correspondence"];
+            const TAB_KEYS = ["Building information", "Units", "Tenants", "Assets", "Documents", "Policies", "Financials", "Reporting", "Requests", "Correspondence"];
             const TAB_I18N = {
               "Building information": t("manager:buildingsId.tabs.buildingInformation"),
               "Units":                t("manager:buildingsId.tabs.units"),
@@ -781,6 +862,7 @@ export default function BuildingDetail() {
               "Documents":            t("manager:buildingsId.tabs.documents"),
               "Policies":             t("manager:buildingsId.tabs.policies"),
               "Financials":           t("manager:buildingsId.tabs.financials"),
+              "Reporting":            "Reporting",
               "Requests":             t("manager:buildingsId.tabs.requests"),
               "Correspondence":       t("manager:buildingsId.tabs.correspondence"),
             };
@@ -2026,6 +2108,11 @@ export default function BuildingDetail() {
           {/* Financials tab */}
           {activeTab === "Financials" && id && (
             <BuildingFinancialsView buildingId={id} variant="embedded" />
+          )}
+
+          {/* Reporting tab */}
+          {activeTab === "Reporting" && id && (
+            <BuildingReportingView buildingId={id} buildingName={building?.name} />
           )}
 
           {/* Correspondence tab — read-only view of letters sent to this building's tenants */}

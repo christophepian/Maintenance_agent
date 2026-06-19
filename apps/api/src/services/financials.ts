@@ -1013,3 +1013,276 @@ export class ValidationError extends Error {
 export class ConflictError extends Error {
   constructor(message: string) { super(message); this.name = "ConflictError"; }
 }
+
+// ==========================================
+// Building-level time-series (Reporting tab)
+// ==========================================
+
+import * as buildingDailyRepo from "../repositories/buildingDailySnapshotRepository";
+
+export interface BuildingTimeSeriesDTO {
+  buildingId:    string;
+  range:         TimeSeriesRange;
+  points:        TimeSeriesPoint[];
+  earliestDate:  string | null;
+}
+
+function buildingSummaryToPoint(
+  dto: BuildingFinancialsDTO,
+  periodStart: string,
+  periodEnd: string,
+  label: string,
+): TimeSeriesPoint {
+  const noi      = dto.netOperatingIncomeCents;
+  const earned   = dto.earnedIncomeCents;
+  const expenses = dto.expensesTotalCents;
+  return {
+    periodStart,
+    periodEnd,
+    label,
+    noiCents:          noi,
+    earnedIncomeCents: earned,
+    expensesCents:     expenses,
+    collectionRate:    dto.collectionRate,
+    noiMarginPct:      safePct(noi, earned),
+    opexRatioPct:      safePct(expenses, earned),
+    occupancyRate:
+      dto.totalUnitsCount > 0
+        ? Math.round((dto.activeUnitsCount / dto.totalUnitsCount) * 10000) / 10000
+        : null,
+  };
+}
+
+async function getBuildingMonthlyPoints(
+  orgId: string,
+  buildingId: string,
+  fromYear: number,
+  fromMonth: number,
+  toYear: number,
+  toMonth: number,
+): Promise<TimeSeriesPoint[]> {
+  const points: TimeSeriesPoint[] = [];
+  let y = fromYear;
+  let m = fromMonth;
+  const now = new Date();
+
+  while (y < toYear || (y === toYear && m <= toMonth)) {
+    if (new Date(y, m - 1, 1) > now) break;
+    const from    = `${y}-${String(m).padStart(2, "0")}-01`;
+    const lastDay = new Date(y, m, 0).getDate();
+    const to      = `${y}-${String(m).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+    const label   = `${monthLabel(y, m)} ${toYear - fromYear >= 1 ? y : ""}`.trim();
+    try {
+      const dto = await getBuildingFinancials(orgId, buildingId, { from, to });
+      points.push(buildingSummaryToPoint(dto, from, to, label));
+    } catch {
+      // skip months with no data
+    }
+    m++;
+    if (m > 12) { m = 1; y++; }
+  }
+  return points;
+}
+
+async function getBuildingQuarterlyPoints(
+  orgId: string,
+  buildingId: string,
+  fromYear: number,
+  toYear: number,
+): Promise<TimeSeriesPoint[]> {
+  const points: TimeSeriesPoint[] = [];
+  const now = new Date();
+
+  for (let y = fromYear; y <= toYear; y++) {
+    for (let q = 1; q <= 4; q++) {
+      const qStart  = (q - 1) * 3 + 1;
+      const qEnd    = q * 3;
+      const from    = `${y}-${String(qStart).padStart(2, "0")}-01`;
+      const lastDay = new Date(y, qEnd, 0).getDate();
+      const to      = `${y}-${String(qEnd).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+      if (new Date(y, qStart - 1, 1) > now) break;
+      try {
+        const dto = await getBuildingFinancials(orgId, buildingId, { from, to });
+        points.push(buildingSummaryToPoint(dto, from, to, `Q${q} ${y}`));
+      } catch {
+        // skip quarters with no data
+      }
+    }
+  }
+  return points;
+}
+
+async function getBuildingAnnualPoints(
+  orgId: string,
+  buildingId: string,
+  fromYear: number,
+  toYear: number,
+): Promise<TimeSeriesPoint[]> {
+  const points: TimeSeriesPoint[] = [];
+  const now = new Date();
+
+  for (let y = fromYear; y <= toYear; y++) {
+    if (y > now.getFullYear()) break;
+    const from = `${y}-01-01`;
+    const to   = y < now.getFullYear() ? `${y}-12-31` : isoDate(now);
+    try {
+      const dto = await getBuildingFinancials(orgId, buildingId, { from, to });
+      points.push(buildingSummaryToPoint(dto, from, to, String(y)));
+    } catch {
+      // skip years with no data
+    }
+  }
+  return points;
+}
+
+async function getBuildingDailyPoints(
+  orgId: string,
+  buildingId: string,
+  from: Date,
+  to: Date,
+): Promise<TimeSeriesPoint[]> {
+  const cached     = await buildingDailyRepo.findBuildingDailySnapshotsInRange(prisma, orgId, buildingId, from, to);
+  const cachedDates = new Set(cached.map((r) => isoDate(r.date)));
+
+  const now      = new Date();
+  const todayStr = isoDate(new Date(now.getFullYear(), now.getMonth(), now.getDate()));
+  const cur      = new Date(from);
+  const compute: Array<{ date: Date; str: string }> = [];
+
+  while (cur <= to) {
+    const str = isoDate(cur);
+    if (str < todayStr && !cachedDates.has(str)) {
+      compute.push({ date: new Date(cur), str });
+    }
+    cur.setDate(cur.getDate() + 1);
+  }
+
+  for (const { date, str } of compute) {
+    try {
+      const dto      = await getBuildingFinancials(orgId, buildingId, { from: str, to: str });
+      const noi      = dto.netOperatingIncomeCents;
+      const earned   = dto.earnedIncomeCents;
+      const expenses = dto.expensesTotalCents;
+      await buildingDailyRepo.upsertBuildingDailySnapshot(prisma, orgId, buildingId, date, {
+        noiCents:          noi,
+        earnedIncomeCents: earned,
+        expensesCents:     expenses,
+        collectionRate:    dto.collectionRate,
+        noiMarginPct:      safePct(noi, earned),
+        opexRatioPct:      safePct(expenses, earned),
+        occupancyRate:
+          dto.totalUnitsCount > 0
+            ? Math.round((dto.activeUnitsCount / dto.totalUnitsCount) * 10000) / 10000
+            : null,
+        activeUnitsCount: dto.activeUnitsCount,
+      });
+    } catch {
+      // skip days where computation fails
+    }
+  }
+
+  const rows = await buildingDailyRepo.findBuildingDailySnapshotsInRange(prisma, orgId, buildingId, from, to);
+  return rows.map((r) => ({
+    periodStart:       isoDate(r.date),
+    periodEnd:         isoDate(r.date),
+    label:             new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(r.date),
+    noiCents:          r.noiCents,
+    earnedIncomeCents: r.earnedIncomeCents,
+    expensesCents:     r.expensesCents,
+    collectionRate:    r.collectionRate,
+    noiMarginPct:      r.noiMarginPct,
+    opexRatioPct:      r.opexRatioPct,
+    occupancyRate:     r.occupancyRate,
+  }));
+}
+
+export async function getBuildingTimeSeries(
+  orgId: string,
+  buildingId: string,
+  range: TimeSeriesRange,
+): Promise<BuildingTimeSeriesDTO> {
+  const now   = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  let points: TimeSeriesPoint[] = [];
+
+  if (range === "1W") {
+    const from = new Date(today); from.setDate(today.getDate() - 6);
+    points = await getBuildingDailyPoints(orgId, buildingId, from, today);
+  } else if (range === "1M") {
+    const from = new Date(today); from.setDate(today.getDate() - 29);
+    points = await getBuildingDailyPoints(orgId, buildingId, from, today);
+  } else if (range === "6M") {
+    const from = new Date(today); from.setMonth(today.getMonth() - 5); from.setDate(1);
+    points = await getBuildingMonthlyPoints(
+      orgId, buildingId,
+      from.getFullYear(), from.getMonth() + 1,
+      now.getFullYear(), now.getMonth() + 1,
+    );
+  } else if (range === "1Y") {
+    const from = new Date(today); from.setFullYear(today.getFullYear() - 1); from.setDate(1);
+    points = await getBuildingMonthlyPoints(
+      orgId, buildingId,
+      from.getFullYear(), from.getMonth() + 1,
+      now.getFullYear(), now.getMonth() + 1,
+    );
+  } else if (range === "2Y") {
+    const from = new Date(today); from.setFullYear(today.getFullYear() - 2); from.setDate(1);
+    points = await getBuildingMonthlyPoints(
+      orgId, buildingId,
+      from.getFullYear(), from.getMonth() + 1,
+      now.getFullYear(), now.getMonth() + 1,
+    );
+  } else if (range === "5Y") {
+    points = await getBuildingQuarterlyPoints(orgId, buildingId, now.getFullYear() - 4, now.getFullYear());
+  } else {
+    points = await getBuildingAnnualPoints(orgId, buildingId, now.getFullYear() - 9, now.getFullYear());
+  }
+
+  const earliest = await buildingDailyRepo.findEarliestBuildingDailySnapshot(prisma, orgId, buildingId);
+
+  return {
+    buildingId,
+    range,
+    points,
+    earliestDate: earliest ? isoDate(earliest) : (points[0]?.periodStart ?? null),
+  };
+}
+
+export async function computeAndStoreDailyBuildingSnapshot(
+  orgId: string,
+  buildingId: string,
+): Promise<boolean> {
+  const now       = new Date();
+  const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+  const from      = isoDate(yesterday);
+
+  // Check if already done
+  const existing = await prisma.buildingDailySnapshot.findUnique({
+    where: { orgId_buildingId_date: { orgId, buildingId, date: yesterday } },
+    select: { id: true },
+  });
+  if (existing) return false;
+
+  try {
+    const dto      = await getBuildingFinancials(orgId, buildingId, { from, to: from });
+    const noi      = dto.netOperatingIncomeCents;
+    const earned   = dto.earnedIncomeCents;
+    const expenses = dto.expensesTotalCents;
+    await buildingDailyRepo.upsertBuildingDailySnapshot(prisma, orgId, buildingId, yesterday, {
+      noiCents:          noi,
+      earnedIncomeCents: earned,
+      expensesCents:     expenses,
+      collectionRate:    dto.collectionRate,
+      noiMarginPct:      safePct(noi, earned),
+      opexRatioPct:      safePct(expenses, earned),
+      occupancyRate:
+        dto.totalUnitsCount > 0
+          ? Math.round((dto.activeUnitsCount / dto.totalUnitsCount) * 10000) / 10000
+          : null,
+      activeUnitsCount: dto.activeUnitsCount,
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
