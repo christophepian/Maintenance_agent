@@ -1430,3 +1430,141 @@ export async function getUnitFinancialSummaries(
     };
   });
 }
+
+// ==========================================
+// Building period report (for building Reporting tab)
+// ==========================================
+
+export interface BuildingMonthlyBreakdownDTO {
+  month: number;
+  earnedIncomeCents: number;
+  expensesTotalCents: number;
+  noiCents: number;
+  collectionRate: number;
+}
+
+export interface BuildingPeriodReportDTO {
+  financials:  BuildingFinancialsDTO;
+  prevFinancials: BuildingFinancialsDTO | null;
+  arrears:     import("../repositories/financialsRepository").ArrearsAgingDTO;
+  moveIns:     Array<{ id: string; unitId: string; unitNumber: string; tenantName: string; startDate: string }>;
+  moveOuts:    Array<{ id: string; unitId: string; unitNumber: string; tenantName: string; endDate: string }>;
+  monthlyData: BuildingMonthlyBreakdownDTO[] | null;
+}
+
+export async function getBuildingPeriodReport(
+  orgId: string,
+  buildingId: string,
+  from: string,
+  to: string,
+  includeMonthly: boolean,
+): Promise<BuildingPeriodReportDTO> {
+  const building = await inventoryRepo.findBuildingByIdAndOrg(prisma, buildingId, orgId);
+  if (!building) throw new NotFoundError(`Building ${buildingId} not found`);
+
+  // Current period financials
+  const financials = await getBuildingFinancials(orgId, buildingId, { from, to });
+
+  // Prev period: same duration, immediately before
+  const fromDate = new Date(from + "T00:00:00Z");
+  const toDate   = new Date(to   + "T00:00:00Z");
+  const duration = toDate.getTime() - fromDate.getTime();
+  const prevToDate   = new Date(fromDate.getTime() - 1);
+  const prevFromDate = new Date(prevToDate.getTime() - duration);
+  const prevFrom = prevFromDate.toISOString().slice(0, 10);
+  const prevTo   = prevToDate.toISOString().slice(0, 10);
+  let prevFinancials: BuildingFinancialsDTO | null = null;
+  try {
+    prevFinancials = await getBuildingFinancials(orgId, buildingId, { from: prevFrom, to: prevTo });
+  } catch { /* prev period may have no data */ }
+
+  // Arrears — scoped to this building's units
+  const unitIds = await inventoryRepo.findActiveUnitIdsByBuilding(prisma, orgId, buildingId);
+  const rawInvoices = await prisma.invoice.findMany({
+    where: {
+      orgId,
+      direction: "OUTGOING",
+      status: "ISSUED",
+      lease: { unitId: { in: unitIds } },
+    },
+    select: { totalAmount: true, dueDate: true },
+  });
+  const today = new Date();
+  let currentCents = 0, o1 = 0, o2 = 0, o3 = 0;
+  for (const inv of rawInvoices) {
+    const amt = inv.totalAmount ?? 0;
+    if (!inv.dueDate) { currentCents += amt; continue; }
+    const days = Math.floor((today.getTime() - inv.dueDate.getTime()) / 86400000);
+    if (days <= 0) currentCents += amt;
+    else if (days <= 30) o1 += amt;
+    else if (days <= 60) o2 += amt;
+    else o3 += amt;
+  }
+  const arrears = {
+    currentCents, overdue1to30Cents: o1, overdue31to60Cents: o2,
+    overdue61plusCents: o3, totalOverdueCents: o1 + o2 + o3,
+  };
+
+  // Move-ins: leases starting in period for this building
+  const moveInLeases = await prisma.lease.findMany({
+    where: {
+      unit: { buildingId, orgId },
+      startDate: { gte: new Date(from + "T00:00:00Z"), lte: new Date(to + "T23:59:59Z") },
+      status: { in: ["ACTIVE", "PENDING", "ENDED"] },
+      isTemplate: false,
+    },
+    select: { id: true, unitId: true, tenantName: true, startDate: true, unit: { select: { unitNumber: true } } },
+    take: 50,
+  });
+  const moveOuts_ = await prisma.lease.findMany({
+    where: {
+      unit: { buildingId, orgId },
+      endDate: { gte: new Date(from + "T00:00:00Z"), lte: new Date(to + "T23:59:59Z") },
+      status: "ENDED",
+      isTemplate: false,
+    },
+    select: { id: true, unitId: true, tenantName: true, endDate: true, unit: { select: { unitNumber: true } } },
+    take: 50,
+  });
+
+  // Monthly breakdown (for YTD trendline)
+  let monthlyData: BuildingMonthlyBreakdownDTO[] | null = null;
+  if (includeMonthly) {
+    const year = fromDate.getUTCFullYear();
+    const now2 = new Date();
+    const lastMonth = year < now2.getFullYear() ? 12 : now2.getMonth() + 1;
+    monthlyData = [];
+    for (let m = 1; m <= lastMonth; m++) {
+      const mf = `${year}-${String(m).padStart(2, "0")}-01`;
+      const lastDay = new Date(year, m, 0).getDate();
+      const mt = `${year}-${String(m).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+      try {
+        const s = await getBuildingFinancials(orgId, buildingId, { from: mf, to: mt });
+        monthlyData.push({ month: m, earnedIncomeCents: s.earnedIncomeCents, expensesTotalCents: s.expensesTotalCents, noiCents: s.netOperatingIncomeCents, collectionRate: s.collectionRate });
+      } catch {
+        monthlyData.push({ month: m, earnedIncomeCents: 0, expensesTotalCents: 0, noiCents: 0, collectionRate: 0 });
+      }
+    }
+  }
+
+  return {
+    financials,
+    prevFinancials,
+    arrears,
+    moveIns: moveInLeases.filter(l => l.unitId).map(l => ({
+      id: l.id,
+      unitId: l.unitId!,
+      unitNumber: l.unit?.unitNumber ?? "?",
+      tenantName: l.tenantName,
+      startDate: l.startDate.toISOString().slice(0, 10),
+    })),
+    moveOuts: moveOuts_.filter(l => l.unitId && l.endDate).map(l => ({
+      id: l.id,
+      unitId: l.unitId!,
+      unitNumber: l.unit?.unitNumber ?? "?",
+      tenantName: l.tenantName,
+      endDate: l.endDate!.toISOString().slice(0, 10),
+    })),
+    monthlyData,
+  };
+}

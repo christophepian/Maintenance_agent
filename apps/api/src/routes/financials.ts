@@ -11,6 +11,7 @@ import {
   getPortfolioTimeSeries,
   getBuildingTimeSeries,
   getUnitFinancialSummaries,
+  getBuildingPeriodReport,
   setInvoiceExpenseCategory,
   listBuildingSnapshots,
   computeAnnualSnapshots,
@@ -299,6 +300,29 @@ export function registerFinancialRoutes(router: Router) {
         if (e instanceof NotFoundError) return sendError(res, 404, "NOT_FOUND", e.message);
         console.error("[GET /buildings/:id/timeseries]", e);
         sendError(res, 500, "INTERNAL_ERROR", "Failed to load building time series");
+      }
+    },
+  );
+
+  // ── GET /buildings/:id/period-report ───────────────────────
+  router.get(
+    "/buildings/:id/period-report",
+    async ({ req, res, params, query, orgId }) => {
+      if (!requireAuth(req, res)) return;
+      if (!requireOrgViewer(req, res)) return;
+
+      const from = first(query, "from");
+      const to   = first(query, "to");
+      const includeMonthly = first(query, "includeMonthly") === "true";
+      if (!from || !to) return sendError(res, 400, "VALIDATION_ERROR", "from and to are required");
+
+      try {
+        const data = await getBuildingPeriodReport(orgId, params.id, from, to, includeMonthly);
+        sendJson(res, 200, { data });
+      } catch (e: any) {
+        if (e instanceof NotFoundError) return sendError(res, 404, "NOT_FOUND", e.message);
+        console.error("[GET /buildings/:id/period-report]", e);
+        sendError(res, 500, "INTERNAL_ERROR", "Failed to load building period report");
       }
     },
   );

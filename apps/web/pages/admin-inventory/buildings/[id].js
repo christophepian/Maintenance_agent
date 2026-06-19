@@ -1,6 +1,17 @@
 import { useRouter } from "next/router";
 import { useEffect, useState, useCallback, useMemo } from "react";
 import dynamic from "next/dynamic";
+import { ChevronDown, ChevronUp } from "lucide-react";
+import {
+  MONTH_HERO_GRADIENTS,
+  fmtChf as rFmtChf,
+  fmtPct as rFmtPct,
+  KpiTable,
+  DriverItem,
+  WatchItem,
+  MonthlyTrendChart,
+  OccupancyRow,
+} from "../../../components/reporting/ReportingShared";
 const PortfolioCanvasChart = dynamic(() => import("../../../components/PortfolioCanvasChart"), { ssr: false });
 
 function CorrespondenceTab({ buildingId }) {
@@ -64,16 +75,7 @@ const RANGES = [
 
 /* ── Building reporting helpers ─────────────────────────── */
 
-function brFmtChf(cents) {
-  if (!Number.isFinite(cents)) return "—";
-  const chf = cents / 100;
-  if (Math.abs(chf) >= 1000) return `CHF ${(chf / 1000).toFixed(1).replace(".", "'")}k`;
-  return `CHF ${chf.toFixed(0)}`;
-}
-function brFmtPct(rate) {
-  if (!Number.isFinite(rate)) return "—";
-  return `${Math.round(rate * 100)}%`;
-}
+const PREVIEW_UNITS = 5;
 
 function UnitRow({ unitNumber, floor, tenantName, earned, expenses, net, collectionRate, occupancyRate }) {
   const netPositive = net >= 0;
@@ -88,94 +90,155 @@ function UnitRow({ unitNumber, floor, tenantName, earned, expenses, net, collect
       <div className="flex items-center gap-4 shrink-0 text-right">
         <div className="hidden sm:block">
           <div className="text-xs text-foreground-dim">Income</div>
-          <div className="text-sm font-medium text-muted-dark">{brFmtChf(earned)}</div>
+          <div className="text-sm font-medium text-muted-dark">{rFmtChf(earned)}</div>
         </div>
         <div className="hidden sm:block">
           <div className="text-xs text-foreground-dim">Expenses</div>
-          <div className="text-sm font-medium text-muted-dark">{brFmtChf(expenses)}</div>
+          <div className="text-sm font-medium text-muted-dark">{rFmtChf(expenses)}</div>
         </div>
         <div>
           <div className="text-xs text-foreground-dim">Net</div>
-          <div className={cn("text-sm font-semibold", netPositive ? "text-green-700" : "text-red-600")}>{brFmtChf(net)}</div>
+          <div className={cn("text-sm font-semibold", netPositive ? "text-green-700" : "text-red-600")}>{rFmtChf(net)}</div>
         </div>
         <div className="hidden md:block">
           <div className="text-xs text-foreground-dim">Collection</div>
-          <div className="text-sm text-muted-dark">{brFmtPct(collectionRate)}</div>
+          <div className="text-sm text-muted-dark">{rFmtPct(collectionRate)}</div>
         </div>
         <div className="hidden lg:block">
           <div className="text-xs text-foreground-dim">Occupancy</div>
-          <div className={cn("text-sm font-medium", occupancyRate < 1 ? "text-amber-600" : "text-muted-dark")}>{brFmtPct(occupancyRate)}</div>
+          <div className={cn("text-sm font-medium", occupancyRate < 1 ? "text-amber-600" : "text-muted-dark")}>{rFmtPct(occupancyRate)}</div>
         </div>
       </div>
     </div>
   );
 }
 
+function buildingDelta(curr, prev) {
+  if (!Number.isFinite(curr) || !Number.isFinite(prev) || curr === prev) return null;
+  const diff = curr - prev;
+  const tone = diff > 0 ? "text-green-600" : "text-red-500";
+  return { tone };
+}
+
+function buildingHeadline(bf, prevBf) {
+  if (!bf) return "Loading…";
+  const noi = bf.netOperatingIncomeCents;
+  const coll = bf.collectionRate;
+  const occ  = bf.totalUnitsCount > 0 ? bf.activeUnitsCount / bf.totalUnitsCount : 0;
+  if (noi > 0 && coll >= 0.95 && occ >= 0.9) return "Strong performance this period";
+  if (noi > 0 && coll >= 0.8)  return "Solid results, some room to improve";
+  if (coll < 0.6)               return "Collection needs immediate attention";
+  if (noi <= 0 && bf.earnedIncomeCents > 0) return "Expenses outpaced income this period";
+  if (bf.earnedIncomeCents === 0) return "No income recorded for this period";
+  return "Period closed";
+}
+
+function buildBuildingDrivers(bf, prevBf) {
+  const drivers = [];
+  if (!bf) return drivers;
+  const noi = bf.netOperatingIncomeCents;
+  if (prevBf) {
+    const netDiff = bf.earnedIncomeCents - prevBf.earnedIncomeCents;
+    if (netDiff > 0) drivers.push({ title: "Income increased vs previous period", body: `Collected rent rose by ${rFmtChf(netDiff)} compared to the prior period.`, impact: `+${rFmtChf(netDiff)}` });
+    else if (netDiff < 0) drivers.push({ title: "Income declined vs previous period", body: `Collected rent fell by ${rFmtChf(Math.abs(netDiff))} compared to the prior period.`, impact: `-${rFmtChf(Math.abs(netDiff))}` });
+    const expDiff = bf.expensesTotalCents - prevBf.expensesTotalCents;
+    if (expDiff > 0) drivers.push({ title: "Operating costs increased", body: `Expenses were ${rFmtChf(expDiff)} higher than the previous period.`, impact: `-${rFmtChf(expDiff)}` });
+    else if (expDiff < 0) drivers.push({ title: "Operating costs came down", body: `Expenses were ${rFmtChf(Math.abs(expDiff))} lower than the previous period.`, impact: `+${rFmtChf(Math.abs(expDiff))}` });
+  }
+  if (bf.expensesTotalCents > 0 && drivers.length < 3) {
+    drivers.push({ title: "Maintenance & operating spend", body: `Total expenses of ${rFmtChf(bf.expensesTotalCents)} recorded for the period.`, impact: rFmtChf(bf.expensesTotalCents) });
+  }
+  if (!drivers.length) drivers.push({ title: "No significant movements", body: "Income and expenses were stable with no material changes this period.", impact: "" });
+  return drivers;
+}
+
+function buildBuildingWatchItems(bf, arrears, unitData, moveIns, moveOuts) {
+  const items = [];
+  if (!bf) return items;
+  if (arrears?.overdue61plusCents > 0) items.push({ text: `${rFmtChf(arrears.overdue61plusCents)} overdue 61+ days — urgent tenant follow-up needed.`, severity: "red", action: { label: "View invoices", href: "/manager/finance/invoices" } });
+  if (arrears?.overdue31to60Cents > 0) items.push({ text: `${rFmtChf(arrears.overdue31to60Cents)} overdue 31–60 days — send payment reminders.`, severity: "amber" });
+  if (bf.collectionRate < 0.8 && bf.projectedIncomeCents > 0) items.push({ text: `Collection rate at ${rFmtPct(bf.collectionRate)} — below the 80% threshold. Review unpaid rent invoices.`, severity: "amber", action: { label: "View invoices", href: "/manager/finance/invoices" } });
+  const vacantUnits = (unitData ?? []).filter((u) => u.occupancyRate === 0);
+  if (vacantUnits.length > 0) items.push({ text: `${vacantUnits.length} unit${vacantUnits.length > 1 ? "s" : ""} vacant (${vacantUnits.map((u) => `Unit ${u.unitNumber}`).join(", ")}).`, severity: "amber" });
+  if (moveOuts?.length > 0) items.push({ text: `${moveOuts.length} tenant${moveOuts.length > 1 ? "s" : ""} moved out this period — re-letting in progress.`, severity: "violet" });
+  if (!items.length) items.push({ text: "No flags to report — building is performing within normal parameters.", severity: "violet" });
+  return items;
+}
+
 function BuildingPeriodAnalysis({ buildingId }) {
   const now = new Date();
-  const [year, setYear]       = useState(now.getFullYear());
-  const [month, setMonth]     = useState(now.getMonth());
-  const [mode, setMode]       = useState("month"); // "month" | "year"
-  const [ytdActive, setYtd]   = useState(false);
+  const [year, setYear]   = useState(now.getFullYear());
+  const [month, setMonth] = useState(now.getMonth());
+  const [mode, setMode]   = useState("month");
+  const [ytdActive, setYtd] = useState(false);
+  const [kpiOpen, setKpiOpen] = useState(false);
+  const [unitsExpanded, setUnitsExpanded] = useState(false);
+  const [insExpanded, setInsExpanded]     = useState(false);
+  const [outsExpanded, setOutsExpanded]   = useState(false);
+  const [report, setReport]   = useState(null);
+  const [unitData, setUnitData] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError]     = useState("");
 
-  const [bFinancials, setBFinancials]   = useState(null);
-  const [unitData, setUnitData]         = useState([]);
-  const [loading, setLoading]           = useState(false);
-  const [error, setError]               = useState("");
-
-  // Compute from/to from navigation state
-  const { from, to, periodLabel } = useMemo(() => {
-    if (ytdActive) {
-      const f = `${year}-01-01`;
-      const t = `${year}-12-31`;
-      return { from: f, to: t, periodLabel: `YTD ${year}` };
-    }
-    if (mode === "year") {
-      const f = `${year}-01-01`;
-      const t = `${year}-12-31`;
-      return { from: f, to: t, periodLabel: String(year) };
+  const { from, to, periodLabel, isYtd } = useMemo(() => {
+    const ytd = ytdActive || mode === "year";
+    if (ytd) {
+      return { from: `${year}-01-01`, to: `${year}-12-31`, periodLabel: ytdActive ? `YTD ${year}` : String(year), isYtd: ytdActive };
     }
     const lastDay = new Date(year, month + 1, 0).getDate();
     const mm = String(month + 1).padStart(2, "0");
-    const f = `${year}-${mm}-01`;
-    const t = `${year}-${mm}-${String(lastDay).padStart(2, "0")}`;
     const label = new Intl.DateTimeFormat("en", { month: "long", year: "numeric" }).format(new Date(year, month, 1));
-    return { from: f, to: t, periodLabel: label };
+    return { from: `${year}-${mm}-01`, to: `${year}-${mm}-${String(lastDay).padStart(2, "0")}`, periodLabel: label, isYtd: false };
   }, [year, month, mode, ytdActive]);
 
   useEffect(() => {
     if (!buildingId) return;
     setLoading(true);
     setError("");
-    const params = new URLSearchParams({ from, to, groupByAccount: "false" }).toString();
+    const q = new URLSearchParams({ from, to, includeMonthly: String(isYtd) }).toString();
     Promise.all([
-      fetch(`/api/buildings/${buildingId}/financial-summary?${params}`, { headers: authHeaders() }).then((r) => r.json()),
+      fetch(`/api/buildings/${buildingId}/period-report?${q}`, { headers: authHeaders() }).then((r) => r.json()),
       fetch(`/api/buildings/${buildingId}/unit-financials?from=${from}&to=${to}`, { headers: authHeaders() }).then((r) => r.json()),
     ])
-      .then(([bf, uf]) => {
-        setBFinancials(bf?.data ?? null);
-        setUnitData(uf?.data ?? []);
-      })
+      .then(([rpt, uf]) => { setReport(rpt?.data ?? null); setUnitData(uf?.data ?? []); })
       .catch(() => setError("Failed to load"))
       .finally(() => setLoading(false));
-  }, [buildingId, from, to]);
+  }, [buildingId, from, to, isYtd]);
 
-  const monthsShort = useMemo(() =>
-    Array.from({ length: 12 }, (_, i) =>
-      new Intl.DateTimeFormat("en", { month: "short" }).format(new Date(2024, i, 1))
-    ), []);
-
+  const monthsShort = useMemo(() => Array.from({ length: 12 }, (_, i) =>
+    new Intl.DateTimeFormat("en", { month: "short" }).format(new Date(2024, i, 1))), []);
   const yearRange = useMemo(() => {
     const start = Math.floor((year - 1) / 4) * 4 - 2;
     return Array.from({ length: 9 }, (_, i) => start + i);
   }, [year]);
 
-  const bf = bFinancials;
+  const bf   = report?.financials ?? null;
+  const prev = report?.prevFinancials ?? null;
+  const arrears   = report?.arrears ?? null;
+  const moveIns   = report?.moveIns  ?? [];
+  const moveOuts  = report?.moveOuts ?? [];
+  const monthly   = report?.monthlyData ?? null;
+
+  const noi      = bf?.netOperatingIncomeCents ?? 0;
+  const earned   = bf?.earnedIncomeCents       ?? 0;
+  const expenses = bf?.expensesTotalCents       ?? 0;
+  const coll     = bf?.collectionRate           ?? 0;
+  const occ      = bf && bf.totalUnitsCount > 0 ? bf.activeUnitsCount / bf.totalUnitsCount : null;
+  const noiMargin = earned > 0 ? noi / earned : null;
+  const opexRatio = earned > 0 ? expenses / earned : null;
+
+  const headline  = buildingHeadline(bf, prev);
+  const drivers   = buildBuildingDrivers(bf, prev);
+  const watchItems = buildBuildingWatchItems(bf, arrears, unitData, moveIns, moveOuts);
+
+  const heroGradient = ytdActive ? "from-violet-50 via-sky-50 to-green-50" : MONTH_HERO_GRADIENTS[month] ?? MONTH_HERO_GRADIENTS[0];
+
+  const visibleUnits = unitsExpanded ? unitData : unitData.slice(0, PREVIEW_UNITS);
 
   return (
-    <div className="space-y-5">
-      {/* Date nav — same visual pattern as portfolio reporting but inline (not sticky) */}
-      <div className="rounded-xl border border-surface-border bg-surface shadow-sm px-4 py-3 flex items-center gap-3 flex-wrap overflow-x-auto">
+    <div className="space-y-6">
+      {/* ── Date nav ── */}
+      <div className="rounded-xl border border-surface-border bg-surface shadow-sm px-4 py-3 flex items-center gap-3 overflow-x-auto">
         {mode === "month" ? (
           <div className="flex items-center gap-1 shrink-0">
             <button onClick={() => setYear((y) => y - 1)} className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-surface-hover text-muted transition-colors text-sm">‹</button>
@@ -186,108 +249,200 @@ function BuildingPeriodAnalysis({ buildingId }) {
           <button onClick={() => setMode("month")} className="shrink-0 rounded-full px-3 py-1 text-sm font-medium text-muted hover:bg-surface-hover transition-colors">← Months</button>
         )}
         <div className="w-px h-5 bg-surface-border shrink-0" />
-        <button
-          onClick={() => { setYtd((v) => !v); setMode("month"); }}
-          className={cn("shrink-0 rounded-full px-3 py-1 text-sm font-semibold transition-colors", ytdActive ? "bg-violet-600 text-white" : "text-muted-text hover:bg-surface-hover")}
-        >
-          Year
-        </button>
+        <button onClick={() => { setYtd((v) => !v); setMode("month"); }} className={cn("shrink-0 rounded-full px-3 py-1 text-sm font-semibold transition-colors", ytdActive ? "bg-violet-600 text-white" : "text-muted-text hover:bg-surface-hover")}>Year</button>
         <div className="w-px h-5 bg-surface-border shrink-0" />
         <div className="flex gap-1.5 overflow-x-auto scrollbar-none flex-1">
           {mode === "month"
             ? monthsShort.map((m, i) => {
-                const isSelected = i === month && !ytdActive;
-                const isFuture = new Date(year, i, 1) > now;
-                return (
-                  <button
-                    key={i}
-                    disabled={isFuture}
-                    onClick={() => { setMonth(i); setYtd(false); }}
-                    className={cn(
-                      "shrink-0 rounded-full px-3 py-1 text-sm font-medium transition-colors",
-                      isSelected ? "bg-slate-900 text-white" : isFuture ? "text-foreground-dim cursor-not-allowed" : "text-muted-text hover:bg-surface-hover",
-                    )}
-                  >{m}</button>
-                );
+                const sel = i === month && !ytdActive;
+                const fut = new Date(year, i, 1) > now;
+                return <button key={i} disabled={fut} onClick={() => { setMonth(i); setYtd(false); }} className={cn("shrink-0 rounded-full px-3 py-1 text-sm font-medium transition-colors", sel ? "bg-slate-900 text-white" : fut ? "text-foreground-dim cursor-not-allowed" : "text-muted-text hover:bg-surface-hover")}>{m}</button>;
               })
             : yearRange.map((y) => {
-                const isSelected = y === year;
-                const isFuture = y > now.getFullYear();
-                return (
-                  <button
-                    key={y}
-                    disabled={isFuture}
-                    onClick={() => { setYear(y); setMode("month"); }}
-                    className={cn(
-                      "shrink-0 rounded-full px-4 py-1 text-sm font-medium tabular-nums transition-colors",
-                      isSelected ? "bg-slate-900 text-white" : isFuture ? "text-foreground-dim cursor-not-allowed" : "text-muted-text hover:bg-surface-hover",
-                    )}
-                  >{y}</button>
-                );
+                const sel = y === year, fut = y > now.getFullYear();
+                return <button key={y} disabled={fut} onClick={() => { setYear(y); setMode("month"); }} className={cn("shrink-0 rounded-full px-4 py-1 text-sm font-medium tabular-nums transition-colors", sel ? "bg-slate-900 text-white" : fut ? "text-foreground-dim cursor-not-allowed" : "text-muted-text hover:bg-surface-hover")}>{y}</button>;
               })}
         </div>
       </div>
 
       {error && <p className="text-sm text-red-600">{error}</p>}
-      {loading && <p className="text-sm text-muted">Loading…</p>}
+      {loading && <div className="space-y-3">{[1,2,3].map((i) => <div key={i} className="h-24 rounded-3xl animate-pulse bg-surface-hover" />)}</div>}
 
       {!loading && bf && (
         <>
-          {/* Hero KPI card */}
-          <div className="rounded-3xl border border-surface-border bg-surface p-5">
-            <p className="text-xs text-foreground-dim mb-3">{periodLabel}</p>
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
-              <div>
-                <div className="text-xs text-foreground-dim">NOI</div>
-                <div className={cn("text-lg font-bold", bf.netOperatingIncomeCents >= 0 ? "text-green-700" : "text-red-600")}>{brFmtChf(bf.netOperatingIncomeCents)}</div>
+          {/* ── Hero ── */}
+          <div className="mb-0">
+            <header className={cn("border border-surface-border bg-gradient-to-br p-6 shadow-sm", heroGradient, kpiOpen ? "rounded-t-3xl" : "rounded-3xl")}>
+              <div className="inline-flex items-center rounded-full border border-black/10 bg-white/30 px-3 py-1 text-xs font-medium text-foreground/70 mb-3">
+                {periodLabel} · Monthly report
               </div>
-              <div>
-                <div className="text-xs text-foreground-dim">Income</div>
-                <div className="text-lg font-bold text-foreground">{brFmtChf(bf.earnedIncomeCents)}</div>
+              <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground">{headline}</h1>
+              <p className="mt-2 text-sm leading-6 text-muted-text max-w-2xl">
+                {earned > 0 ? <>Rent collected: <span className="font-semibold text-foreground">{rFmtChf(earned)}</span>. </> : ""}
+                {expenses > 0 ? <>Operating costs: <span className="font-semibold text-foreground">{rFmtChf(expenses)}</span>. </> : ""}
+                {bf.totalUnitsCount > 0 ? <>{bf.activeUnitsCount} of {bf.totalUnitsCount} units leased.</> : ""}
+              </p>
+              <button onClick={() => setKpiOpen((v) => !v)} className="mt-4 flex items-center gap-1.5 text-sm font-medium text-foreground/60 hover:text-foreground transition-colors">
+                {kpiOpen ? <><ChevronUp className="w-4 h-4" /> Hide details</> : <><ChevronDown className="w-4 h-4" /> View details</>}
+              </button>
+            </header>
+            {kpiOpen && (
+              <KpiTable
+                attached
+                isLoading={false}
+                left={[
+                  { label: "Net Operating Income", value: rFmtChf(noi),   delta: prev ? buildingDelta(noi, prev.netOperatingIncomeCents) : null },
+                  { label: "Rent Collected",       value: rFmtChf(earned), delta: prev ? buildingDelta(earned, prev.earnedIncomeCents) : null },
+                  { label: "Total Expenses",        value: rFmtChf(expenses), delta: prev ? buildingDelta(-expenses, -prev.expensesTotalCents) : null },
+                  { label: "Collection Rate",       value: rFmtPct(coll),  delta: prev ? buildingDelta(coll, prev.collectionRate) : null },
+                ]}
+                right={[
+                  { label: "NOI Margin",   value: noiMargin  !== null ? rFmtPct(noiMargin)  : "—", delta: null },
+                  { label: "OpEx Ratio",   value: opexRatio  !== null ? rFmtPct(opexRatio)  : "—", delta: null },
+                  { label: "Occupancy",    value: occ        !== null ? rFmtPct(occ)        : "—", delta: null },
+                  { label: "Receivables",  value: bf.receivablesCents > 0 ? rFmtChf(bf.receivablesCents) : "—", delta: null },
+                ]}
+              />
+            )}
+          </div>
+
+          {/* ── Monthly NOI trendline (YTD only) ── */}
+          {isYtd && monthly && monthly.length > 0 && (
+            <div className="rounded-3xl border border-surface-border bg-surface p-5">
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <h2 className="text-base font-semibold text-foreground">Monthly NOI</h2>
+                  <p className="text-xs text-foreground-dim mt-0.5">Net operating income per month · {year}</p>
+                </div>
+                <div className="text-right">
+                  <div className="text-xs text-foreground-dim">Best month</div>
+                  <div className="text-sm font-semibold text-green-700">
+                    {rFmtChf([...monthly].sort((a, b) => b.noiCents - a.noiCents)[0]?.noiCents ?? 0)}
+                  </div>
+                </div>
               </div>
-              <div>
-                <div className="text-xs text-foreground-dim">Expenses</div>
-                <div className="text-lg font-bold text-foreground">{brFmtChf(bf.expensesTotalCents)}</div>
+              <MonthlyTrendChart data={monthly} />
+            </div>
+          )}
+
+          {/* ── Receivables alert ── */}
+          {bf.receivablesCents > 0 && (
+            <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4">
+              <span className="mt-0.5 text-amber-500 text-lg shrink-0">⚠</span>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-amber-800 mb-0.5">{rFmtChf(bf.receivablesCents)} in uncollected rent</p>
+                <p className="text-xs text-amber-700">Mark invoices as paid once payment is received.</p>
               </div>
-              <div>
-                <div className="text-xs text-foreground-dim">Collection</div>
-                <div className={cn("text-lg font-bold", bf.collectionRate < 0.8 ? "text-red-600" : bf.collectionRate < 0.95 ? "text-amber-600" : "text-green-700")}>{brFmtPct(bf.collectionRate)}</div>
+              <a href="/manager/finance/invoices" className="shrink-0 rounded-lg bg-amber-600 hover:bg-amber-700 px-3 py-1.5 text-xs font-semibold text-white transition-colors no-underline">View invoices</a>
+            </div>
+          )}
+
+          {/* ── Arrears aging ── */}
+          {arrears && (arrears.totalOverdueCents > 0 || arrears.currentCents > 0) && (
+            <div className="rounded-2xl border border-surface-border bg-surface p-5">
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <h2 className="text-base font-semibold text-foreground">Rent arrears aging</h2>
+                  <p className="text-xs text-foreground-dim mt-0.5">Unpaid rent invoices by days overdue</p>
+                </div>
+                {arrears.totalOverdueCents > 0 && (
+                  <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700">{rFmtChf(arrears.totalOverdueCents)} overdue</span>
+                )}
               </div>
-              <div>
-                <div className="text-xs text-foreground-dim">Occupancy</div>
-                <div className={cn("text-lg font-bold", bf.activeUnitsCount / Math.max(bf.totalUnitsCount, 1) < 0.9 ? "text-amber-600" : "text-foreground")}>{bf.totalUnitsCount > 0 ? brFmtPct(bf.activeUnitsCount / bf.totalUnitsCount) : "—"}</div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {[
+                  { label: "Current",    cents: arrears.currentCents,        color: "text-green-700",  bg: "bg-green-50 border-green-200" },
+                  { label: "1–30 days",  cents: arrears.overdue1to30Cents,   color: "text-amber-700",  bg: "bg-amber-50 border-amber-200" },
+                  { label: "31–60 days", cents: arrears.overdue31to60Cents,  color: "text-orange-700", bg: "bg-orange-50 border-orange-200" },
+                  { label: "61+ days",   cents: arrears.overdue61plusCents,  color: "text-red-700",    bg: "bg-red-50 border-red-200" },
+                ].map(({ label, cents, color, bg }) => (
+                  <div key={label} className={cn("rounded-xl border p-4", cents > 0 ? bg : "border-surface-border bg-surface-subtle")}>
+                    <div className="text-xs text-foreground-dim">{label}</div>
+                    <div className={cn("mt-2 text-lg font-semibold", cents > 0 ? color : "text-foreground-dim")}>{cents > 0 ? rFmtChf(cents) : "—"}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ── What drove it / What to watch ── */}
+          <div className="rounded-3xl border border-surface-border bg-surface overflow-hidden">
+            <div className="grid lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-surface-border">
+              <div className="flex flex-col">
+                <div className="px-7 py-4 bg-green-50 border-b border-green-100">
+                  <div className="flex items-center gap-2.5 mb-0.5">
+                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-100 text-xs font-bold text-green-700">↑</div>
+                    <h2 className="text-sm font-semibold text-green-900">What drove performance</h2>
+                  </div>
+                  <p className="text-xs text-green-700/70 ml-[34px]">The main forces behind this period's numbers</p>
+                </div>
+                <div className="px-7 py-5 flex-1">
+                  {drivers.map((d, i) => <DriverItem key={i} number={i + 1} title={d.title} body={d.body} impact={d.impact} />)}
+                </div>
+              </div>
+              <div className="flex flex-col">
+                <div className="px-7 py-4 bg-amber-50 border-b border-amber-100">
+                  <div className="flex items-center gap-2.5 mb-0.5">
+                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-amber-100 text-xs font-bold text-amber-700">!</div>
+                    <h2 className="text-sm font-semibold text-amber-900">What to watch</h2>
+                  </div>
+                  <p className="text-xs text-amber-700/70 ml-[34px]">Flags and action items for this building</p>
+                </div>
+                <div className="px-7 py-5 flex-1">
+                  {watchItems.length > 0
+                    ? watchItems.map((item, i) => <WatchItem key={i} number={i + 1} text={item.text} severity={item.severity} action={item.action} />)
+                    : <div className="flex items-start gap-4 pt-2"><div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-700">✓</div><p className="text-sm text-muted-text leading-relaxed self-center">No flags — building is performing well.</p></div>}
+                </div>
               </div>
             </div>
           </div>
 
-          {/* By unit */}
-          <div>
-            <div className="flex items-center justify-between mb-3">
+          {/* ── By unit ── */}
+          <div className="rounded-3xl border border-surface-border bg-surface p-5">
+            <div className="flex items-center justify-between mb-4">
               <div>
                 <h2 className="text-base font-semibold text-foreground">By unit</h2>
                 <p className="text-xs text-foreground-dim mt-0.5">Net result per unit for {periodLabel}</p>
               </div>
+              {unitData.length > PREVIEW_UNITS && (
+                <button onClick={() => setUnitsExpanded((v) => !v)} className="text-xs font-medium text-muted-dark hover:text-foreground transition-colors">
+                  {unitsExpanded ? "Collapse ↑" : `Show all ${unitData.length} ↓`}
+                </button>
+              )}
             </div>
-            {unitData.length === 0 ? (
-              <p className="text-sm text-muted italic">No units found for this building.</p>
-            ) : (
-              <div className="space-y-2">
-                {unitData.map((u) => (
-                  <UnitRow
-                    key={u.unitId}
-                    unitNumber={u.unitNumber}
-                    floor={u.floor}
-                    tenantName={u.tenantName}
-                    earned={u.earnedIncomeCents}
-                    expenses={u.expensesCents}
-                    net={u.netIncomeCents}
-                    collectionRate={u.collectionRate}
-                    occupancyRate={u.occupancyRate}
-                  />
-                ))}
-              </div>
-            )}
+            {unitData.length === 0
+              ? <p className="text-sm text-muted italic">No units found.</p>
+              : <div className="space-y-2">{visibleUnits.map((u) => <UnitRow key={u.unitId} unitNumber={u.unitNumber} floor={u.floor} tenantName={u.tenantName} earned={u.earnedIncomeCents} expenses={u.expensesCents} net={u.netIncomeCents} collectionRate={u.collectionRate} occupancyRate={u.occupancyRate} />)}</div>}
           </div>
+
+          {/* ── Occupancy movements ── */}
+          {(moveIns.length > 0 || moveOuts.length > 0) && (
+            <div className="rounded-3xl border border-surface-border bg-surface p-5">
+              <h2 className="text-base font-semibold text-foreground mb-4">Tenant movements</h2>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-green-100 text-xs font-semibold text-green-700">↓</span>
+                    <span className="text-sm font-semibold text-foreground">Move-ins <span className="ml-1 text-foreground-dim font-normal">({moveIns.length})</span></span>
+                  </div>
+                  {moveIns.length === 0
+                    ? <p className="text-sm text-foreground-dim">No move-ins this period</p>
+                    : (insExpanded ? moveIns : moveIns.slice(0, 3)).map((l) => <OccupancyRow key={l.id} type="in" tenantName={l.tenantName} unitLabel={l.unitNumber} date={l.startDate} />)}
+                  {moveIns.length > 3 && <button onClick={() => setInsExpanded((v) => !v)} className="mt-2 text-xs font-medium text-muted-dark hover:text-foreground">{insExpanded ? "Show less" : `+ ${moveIns.length - 3} more`}</button>}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-surface-hover text-xs font-semibold text-muted">↑</span>
+                    <span className="text-sm font-semibold text-foreground">Move-outs <span className="ml-1 text-foreground-dim font-normal">({moveOuts.length})</span></span>
+                  </div>
+                  {moveOuts.length === 0
+                    ? <p className="text-sm text-foreground-dim">No move-outs this period</p>
+                    : (outsExpanded ? moveOuts : moveOuts.slice(0, 3)).map((l) => <OccupancyRow key={l.id} type="out" tenantName={l.tenantName} unitLabel={l.unitNumber} date={l.endDate} />)}
+                  {moveOuts.length > 3 && <button onClick={() => setOutsExpanded((v) => !v)} className="mt-2 text-xs font-medium text-muted-dark hover:text-foreground">{outsExpanded ? "Show less" : `+ ${moveOuts.length - 3} more`}</button>}
+                </div>
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>
