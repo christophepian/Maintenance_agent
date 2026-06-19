@@ -310,11 +310,7 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId }
   // Per-asset cost overrides (assetId → CHF)
   const [costOverrides, setCostOverrides] = useState({});
 
-  // Approve state
-  const [approving,  setApproving]  = useState(false);
-  const [approveMsg, setApproveMsg] = useState("");
-
-  // Cashflow plan state
+  // Plan state
   const [planAdding, setPlanAdding] = useState(false);
   const [planMsg,    setPlanMsg]    = useState("");
   const [planId,     setPlanId]     = useState(null);
@@ -394,43 +390,12 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId }
     return `${when} yields the best return — ${fmtChf(delta)} more than doing nothing. The investment ${be}.`;
   }, [bestKey, delta, bestBreakeven, minLeaseRemaining]);
 
-  // Approve all assets
-  const handleApprove = useCallback(async () => {
-    if (assetRows.length === 0) return;
-    setApproving(true); setApproveMsg("");
-    try {
-      const type = action === "replace" ? "REPLACEMENT" : "REPAIR";
-      const date = (() => {
-        const d = new Date();
-        if (timing !== "now" && minLeaseRemaining != null) d.setMonth(d.getMonth() + minLeaseRemaining);
-        return d.toISOString();
-      })();
-      await Promise.all(assetRows.map((row) =>
-        fetch(`/api/assets/${row.assetId}/interventions`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", ...authHeaders() },
-          body: JSON.stringify({
-            type,
-            interventionDate: date,
-            costChf: row.costChf,
-            notes: `Simulation: ${type.toLowerCase()} ${timing === "now" ? "immediately" : "at turnover"}. NPV scenario: ${fmtChf(bestNpv)}.`,
-          }),
-        })
-      ));
-      setApproveMsg(`✓ ${assetRows.length} intervention${assetRows.length > 1 ? "s" : ""} recorded`);
-    } catch (e) {
-      setApproveMsg(`Error: ${e.message}`);
-    } finally {
-      setApproving(false);
-    }
-  }, [assetRows, action, timing, minLeaseRemaining, bestNpv]);
-
-  // Add assets to an existing (or new) DRAFT cashflow plan for the building.
+  // Schedule assets in an existing (or new) DRAFT cashflow plan for the building.
   const handleAddToPlan = useCallback(async () => {
     if (!buildingId || assetRows.length === 0) return;
     setPlanAdding(true); setPlanMsg("");
     try {
-      // Determine the planned intervention year (mirrors handleApprove date logic)
+      // Determine the planned intervention year
       const d = new Date();
       if (timing !== "now" && minLeaseRemaining != null) d.setMonth(d.getMonth() + minLeaseRemaining);
       const overriddenYear = d.getFullYear();
@@ -756,31 +721,14 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId }
 
           {/* CTA */}
           <div className="flex flex-wrap items-center gap-3 pb-2">
-            <button
-              onClick={handleApprove}
-              disabled={approving || approveMsg.startsWith("✓")}
-              className={cn(
-                "flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors",
-                approveMsg.startsWith("✓")
-                  ? "bg-green-100 text-green-700 border border-green-200 cursor-default"
-                  : "bg-slate-800 text-white hover:bg-slate-700 disabled:opacity-50"
-              )}
-            >
-              {approveMsg.startsWith("✓")
-                ? <><Check className="h-4 w-4" />{approveMsg}</>
-                : <><ArrowRight className="h-4 w-4" />{approving ? "Recording…" : `Plan this work (${assetRows.length} asset${assetRows.length !== 1 ? "s" : ""})`}</>
-              }
-            </button>
-            {approveMsg && !approveMsg.startsWith("✓") && (
-              <p className="text-xs text-red-600">{approveMsg}</p>
-            )}
-            {approveMsg.startsWith("✓") && buildingId && !planMsg.startsWith("✓") && (
+            {!planMsg.startsWith("✓") && (
               <button
                 onClick={handleAddToPlan}
                 disabled={planAdding}
-                className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors border bg-white text-slate-800 border-slate-300 hover:bg-slate-50 disabled:opacity-50"
+                className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors bg-slate-800 text-white hover:bg-slate-700 disabled:opacity-50"
               >
-                <ArrowRight className="h-4 w-4" />{planAdding ? "Adding…" : "Add to cashflow plan"}
+                <ArrowRight className="h-4 w-4" />
+                {planAdding ? "Scheduling…" : `Plan this work (${assetRows.length} asset${assetRows.length !== 1 ? "s" : ""})`}
               </button>
             )}
             {planMsg && !planMsg.startsWith("✓") && (
