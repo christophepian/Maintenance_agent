@@ -217,7 +217,7 @@ function RenovationOpportunitiesSection({ buildingId }) {
       </div>
 
       {simItems && (
-        <RenovationSimulatorDrawer items={simItems} onClose={closeSim} />
+        <RenovationSimulatorDrawer items={simItems} onClose={closeSim} buildingId={buildingId} />
       )}
     </>
   );

@@ -294,7 +294,7 @@ function NumInput({ label, value, onChange, suffix, min, step }) {
 
 // ── Main component ─────────────────────────────────────────────────────────────
 
-export default function RenovationSimulatorDrawer({ items, onClose }) {
+export default function RenovationSimulatorDrawer({ items, onClose, buildingId }) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
 
@@ -313,6 +313,10 @@ export default function RenovationSimulatorDrawer({ items, onClose }) {
   // Approve state
   const [approving,  setApproving]  = useState(false);
   const [approveMsg, setApproveMsg] = useState("");
+
+  // Cashflow plan state
+  const [planAdding, setPlanAdding] = useState(false);
+  const [planMsg,    setPlanMsg]    = useState("");
 
   const safeItems = Array.isArray(items) && items.length > 0 ? items : [];
 
@@ -419,6 +423,64 @@ export default function RenovationSimulatorDrawer({ items, onClose }) {
       setApproving(false);
     }
   }, [assetRows, action, timing, minLeaseRemaining, bestNpv]);
+
+  // Add assets to an existing (or new) DRAFT cashflow plan for the building.
+  const handleAddToPlan = useCallback(async () => {
+    if (!buildingId || assetRows.length === 0) return;
+    setPlanAdding(true); setPlanMsg("");
+    try {
+      // Determine the planned intervention year (mirrors handleApprove date logic)
+      const d = new Date();
+      if (timing !== "now" && minLeaseRemaining != null) d.setMonth(d.getMonth() + minLeaseRemaining);
+      const overriddenYear = d.getFullYear();
+
+      // Fetch existing plans for this building
+      const plansRes = await fetch(`/api/cashflow-plans?buildingId=${buildingId}`, {
+        headers: authHeaders(),
+      });
+      const plansData = await plansRes.json();
+      const plans = plansData?.data ?? [];
+
+      // Use the first DRAFT plan, or create a new one
+      let planId = plans.find((p) => p.status === "DRAFT")?.id ?? null;
+      if (!planId) {
+        const createRes = await fetch("/api/cashflow-plans", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...authHeaders() },
+          body: JSON.stringify({
+            name: `Renovation ${overriddenYear}`,
+            buildingId,
+            horizonMonths: 60,
+          }),
+        });
+        const createData = await createRes.json();
+        if (!createRes.ok || !createData?.data?.id) {
+          throw new Error(createData?.error?.message ?? "Failed to create cashflow plan");
+        }
+        planId = createData.data.id;
+      }
+
+      // Add an override for each asset: shift its projected replacement to the planned year
+      const currentYear = new Date().getFullYear();
+      await Promise.all(assetRows.map((row) => {
+        const remainingYears = row.remainingLifeMonths != null
+          ? Math.ceil(row.remainingLifeMonths / 12)
+          : 0;
+        const originalYear = Math.max(currentYear, currentYear + remainingYears);
+        return fetch(`/api/cashflow-plans/${planId}/overrides`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...authHeaders() },
+          body: JSON.stringify({ assetId: row.assetId, originalYear, overriddenYear }),
+        });
+      }));
+
+      setPlanMsg(`✓ Added to cashflow plan`);
+    } catch (e) {
+      setPlanMsg(`Error: ${e.message}`);
+    } finally {
+      setPlanAdding(false);
+    }
+  }, [buildingId, assetRows, timing, minLeaseRemaining]);
 
   const title = safeItems.length === 1
     ? safeItems[0].assetName
@@ -688,6 +750,26 @@ export default function RenovationSimulatorDrawer({ items, onClose }) {
             </button>
             {approveMsg && !approveMsg.startsWith("✓") && (
               <p className="text-xs text-red-600">{approveMsg}</p>
+            )}
+            {approveMsg.startsWith("✓") && buildingId && (
+              <button
+                onClick={handleAddToPlan}
+                disabled={planAdding || planMsg.startsWith("✓")}
+                className={cn(
+                  "flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors border",
+                  planMsg.startsWith("✓")
+                    ? "bg-green-100 text-green-700 border-green-200 cursor-default"
+                    : "bg-white text-slate-800 border-slate-300 hover:bg-slate-50 disabled:opacity-50"
+                )}
+              >
+                {planMsg.startsWith("✓")
+                  ? <><Check className="h-4 w-4" />{planMsg}</>
+                  : <><ArrowRight className="h-4 w-4" />{planAdding ? "Adding…" : "Add to cashflow plan"}</>
+                }
+              </button>
+            )}
+            {planMsg && !planMsg.startsWith("✓") && (
+              <p className="text-xs text-red-600">{planMsg}</p>
             )}
             <button onClick={onClose} className="text-sm text-foreground-dim hover:text-foreground transition-colors">
               Back to planning
