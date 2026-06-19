@@ -99,12 +99,14 @@ function DepBar({ pct }) {
 }
 
 function RenovationOpportunitiesSection({ buildingId }) {
-  const [items, setItems]     = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [err, setErr]         = useState("");
-  const [active, setActive]   = useState(null);
+  const [items,       setItems]       = useState([]);
+  const [loading,     setLoading]     = useState(false);
+  const [err,         setErr]         = useState("");
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [simItems,    setSimItems]    = useState(null); // null = closed
 
   useEffect(() => {
+    setSelectedIds(new Set());
     if (!buildingId) { setItems([]); return; }
     setLoading(true); setErr("");
     fetch(`/api/buildings/${buildingId}/renovation-opportunities`, { headers: authHeaders() })
@@ -114,14 +116,27 @@ function RenovationOpportunitiesSection({ buildingId }) {
       .finally(() => setLoading(false));
   }, [buildingId]);
 
+  const toggleSelect = useCallback((id) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }, []);
+
+  const openSim = useCallback((bundle) => { setSimItems(bundle); }, []);
+  const closeSim = useCallback(() => { setSimItems(null); }, []);
+
+  const selectedCount = selectedIds.size;
+  const selectedBundle = items.filter((i) => selectedIds.has(i.assetId));
+
   if (!buildingId) return (
     <div className="rounded-2xl border border-surface-border bg-surface p-6 text-center">
       <p className="text-sm text-foreground-dim">Select a building above to see renovation opportunities.</p>
     </div>
   );
-
   if (loading) return <div className="rounded-2xl border border-surface-border bg-surface p-6 text-center text-sm text-foreground-dim">Analysing assets…</div>;
-  if (err) return <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{err}</div>;
+  if (err)     return <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{err}</div>;
   if (items.length === 0) return (
     <div className="rounded-2xl border border-surface-border bg-surface p-6 text-center">
       <p className="text-sm text-foreground-dim">No at-risk assets found for this building. All assets are in good repair.</p>
@@ -130,22 +145,47 @@ function RenovationOpportunitiesSection({ buildingId }) {
 
   return (
     <>
+      {/* Bulk action bar */}
+      {selectedCount > 0 && (
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5">
+          <p className="text-sm font-medium text-blue-900">{selectedCount} asset{selectedCount !== 1 ? "s" : ""} selected</p>
+          <button
+            onClick={() => openSim(selectedBundle)}
+            className="rounded-lg bg-slate-800 px-4 py-1.5 text-sm font-semibold text-white hover:bg-slate-700 transition-colors"
+          >
+            Simulate {selectedCount} asset{selectedCount !== 1 ? "s" : ""} →
+          </button>
+        </div>
+      )}
+
+      {/* Asset list */}
       <div className="space-y-2">
         {items.map((item) => {
           const rec = REC_STYLE[item.recommendation] ?? REC_STYLE.REPAIR;
           const condCls = item.lastConditionStatus ? COND_STYLE[item.lastConditionStatus] : null;
+          const isSelected = selectedIds.has(item.assetId);
           return (
             <div key={item.assetId}
-              className="flex flex-wrap items-center gap-3 rounded-2xl border border-surface-border bg-surface px-4 py-3 hover:bg-surface-subtle transition-colors cursor-pointer"
-              onClick={() => setActive(item)}
+              className={cn(
+                "flex items-center gap-3 rounded-2xl border px-4 py-3 transition-colors",
+                isSelected ? "border-blue-400 bg-blue-50" : "border-surface-border bg-surface hover:bg-surface-subtle"
+              )}
             >
+              {/* Checkbox */}
+              <input
+                type="checkbox"
+                checked={isSelected}
+                onChange={() => toggleSelect(item.assetId)}
+                className="h-4 w-4 shrink-0 rounded border-surface-border accent-slate-800 cursor-pointer"
+                onClick={(e) => e.stopPropagation()}
+              />
               {/* Name + unit */}
-              <div className="flex-1 min-w-[140px]">
+              <div className="flex-1 min-w-[120px]">
                 <p className="text-sm font-medium text-foreground truncate">{item.assetName}</p>
                 <p className="text-xs text-foreground-dim">{item.topic} · Unit {item.unitNumber}</p>
               </div>
               {/* Depreciation bar */}
-              <div className="w-28 shrink-0">
+              <div className="w-24 shrink-0">
                 <DepBar pct={item.depreciationPct} />
               </div>
               {/* Badges */}
@@ -157,20 +197,28 @@ function RenovationOpportunitiesSection({ buildingId }) {
                   </span>
                 )}
               </div>
-              {/* Tenant / rent */}
+              {/* Rent */}
               {item.currentLease && (
-                <div className="text-right shrink-0">
+                <div className="text-right shrink-0 hidden sm:block">
                   <p className="text-xs font-medium text-foreground">CHF {item.currentLease.netRentChf}/mo</p>
-                  <p className="text-xs text-foreground-dim truncate max-w-[100px]">{item.currentLease.tenantName}</p>
+                  <p className="text-xs text-foreground-dim truncate max-w-[90px]">{item.currentLease.tenantName}</p>
                 </div>
               )}
-              {/* Simulate arrow */}
-              <span className="text-xs text-blue-600 font-medium shrink-0">Simulate →</span>
+              {/* Single simulate */}
+              <button
+                onClick={() => openSim([item])}
+                className="shrink-0 rounded-lg border border-surface-border px-2.5 py-1 text-xs font-medium text-foreground-dim hover:bg-surface-hover hover:text-foreground transition-colors"
+              >
+                Simulate →
+              </button>
             </div>
           );
         })}
       </div>
-      {active && <RenovationSimulatorDrawer item={active} onClose={() => setActive(null)} />}
+
+      {simItems && (
+        <RenovationSimulatorDrawer items={simItems} onClose={closeSim} />
+      )}
     </>
   );
 }
