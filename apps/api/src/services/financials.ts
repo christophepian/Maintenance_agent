@@ -1576,3 +1576,202 @@ export async function getBuildingPeriodReport(
     monthlyData,
   };
 }
+
+// ==========================================
+// Unit period report (for unit Reporting tab)
+// ==========================================
+
+export interface UnitPeriodFinancials {
+  projectedIncomeCents: number;
+  earnedIncomeCents:    number;
+  expensesCents:        number;
+  netIncomeCents:       number;
+  collectionRate:       number;
+}
+
+export interface UnitPeriodReportDTO {
+  unitId:     string;
+  unitNumber: string;
+  from:       string;
+  to:         string;
+  current:    UnitPeriodFinancials;
+  prev:       UnitPeriodFinancials | null;
+  currentLease: {
+    id:               string;
+    tenantName:       string;
+    netRentChf:       number;
+    startDate:        string;
+    endDate:          string | null;
+    remainingMonths:  number | null;
+    status:           string;
+  } | null;
+  arrearsCents: number;
+  monthlyData: Array<{
+    month:              number;
+    earnedIncomeCents:  number;
+    expensesCents:      number;
+    noiCents:           number;
+  }> | null;
+  assetConditionSummary: {
+    total:   number;
+    good:    number;
+    fair:    number;
+    poor:    number;
+    damaged: number;
+  } | null;
+}
+
+export async function getUnitPeriodReport(
+  orgId:          string,
+  unitId:         string,
+  fromStr:        string,
+  toStr:          string,
+  includeMonthly: boolean,
+): Promise<UnitPeriodReportDTO> {
+  const unit = await prisma.unit.findFirst({
+    where: { id: unitId, orgId },
+    select: { id: true, unitNumber: true },
+  });
+  if (!unit) throw new NotFoundError(`Unit ${unitId} not found`);
+
+  // Pre-fetch all lease IDs for this unit (avoids relation-filter TS inference issues)
+  const unitLeases = await prisma.lease.findMany({
+    where: { unitId, orgId, isTemplate: false },
+    select: { id: true },
+  });
+  const leaseIdList = unitLeases.map((l) => l.id);
+
+  async function computeFinancials(f: Date, t: Date): Promise<UnitPeriodFinancials> {
+    const [projAgg, earnedAgg, expAgg] = await Promise.all([
+      prisma.invoice.aggregate({
+        where: {
+          orgId,
+          leaseId: { in: leaseIdList },
+          direction: "OUTGOING",
+          status: { not: "DRAFT" },
+          billingPeriodStart: { gte: f, lte: t },
+        },
+        _sum: { totalAmount: true },
+      }),
+      prisma.invoice.aggregate({
+        where: {
+          orgId,
+          leaseId: { in: leaseIdList },
+          direction: "OUTGOING",
+          status: "PAID",
+          billingPeriodStart: { gte: f, lte: t },
+        },
+        _sum: { totalAmount: true },
+      }),
+      prisma.ledgerEntry.aggregate({
+        where: {
+          orgId,
+          unitId,
+          sourceType: "INVOICE_ISSUED",
+          date: { gte: f, lte: t },
+          debitCents: { gt: 0 },
+          account: { accountType: "EXPENSE" },
+        },
+        _sum: { debitCents: true },
+      }),
+    ]);
+    const projected = projAgg._sum.totalAmount ?? 0;
+    const earned    = earnedAgg._sum.totalAmount ?? 0;
+    const expenses  = expAgg._sum.debitCents ?? 0;
+    return {
+      projectedIncomeCents: projected,
+      earnedIncomeCents:    earned,
+      expensesCents:        expenses,
+      netIncomeCents:       earned - expenses,
+      collectionRate:       projected > 0 ? Math.min(1, earned / projected) : 0,
+    };
+  }
+
+  const from = new Date(fromStr + "T00:00:00.000Z");
+  const to   = new Date(toStr   + "T23:59:59.999Z");
+  const current = await computeFinancials(from, to);
+
+  // Prev period: same duration, immediately before
+  const duration  = to.getTime() - from.getTime();
+  const prevTo    = new Date(from.getTime() - 1);
+  const prevFrom  = new Date(prevTo.getTime() - duration);
+  let prev: UnitPeriodFinancials | null = null;
+  try { prev = await computeFinancials(prevFrom, prevTo); } catch { /* no prev data */ }
+
+  // Current active lease
+  const today = new Date();
+  const activeLease = await prisma.lease.findFirst({
+    where: { unitId, orgId, status: { in: ["ACTIVE", "SIGNED"] }, isTemplate: false },
+    orderBy: { startDate: "desc" },
+    select: { id: true, tenantName: true, netRentChf: true, startDate: true, endDate: true, status: true },
+  });
+  const currentLease = activeLease ? {
+    id:              activeLease.id,
+    tenantName:      activeLease.tenantName,
+    netRentChf:      activeLease.netRentChf,
+    startDate:       activeLease.startDate.toISOString().slice(0, 10),
+    endDate:         activeLease.endDate?.toISOString().slice(0, 10) ?? null,
+    remainingMonths: activeLease.endDate
+      ? Math.max(0, Math.round((activeLease.endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24 * 30.44)))
+      : null,
+    status:          activeLease.status,
+  } : null;
+
+  // Arrears: outstanding OUTGOING invoices for this unit
+  const arrearsAgg = await prisma.invoice.aggregate({
+    where: { orgId, leaseId: { in: leaseIdList }, direction: "OUTGOING", status: "ISSUED" },
+    _sum: { totalAmount: true },
+  });
+  const arrearsCents = arrearsAgg._sum.totalAmount ?? 0;
+
+  // Monthly data (YTD)
+  let monthlyData: UnitPeriodReportDTO["monthlyData"] = null;
+  if (includeMonthly) {
+    const year = from.getUTCFullYear();
+    const now2 = new Date();
+    const lastMonth = year < now2.getFullYear() ? 12 : now2.getMonth() + 1;
+    monthlyData = [];
+    for (let m = 1; m <= lastMonth; m++) {
+      const mf = new Date(`${year}-${String(m).padStart(2, "0")}-01T00:00:00.000Z`);
+      const lastDay = new Date(year, m, 0).getDate();
+      const mt = new Date(`${year}-${String(m).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}T23:59:59.999Z`);
+      try {
+        const md = await computeFinancials(mf, mt);
+        monthlyData.push({ month: m, earnedIncomeCents: md.earnedIncomeCents, expensesCents: md.expensesCents, noiCents: md.netIncomeCents });
+      } catch {
+        monthlyData.push({ month: m, earnedIncomeCents: 0, expensesCents: 0, noiCents: 0 });
+      }
+    }
+  }
+
+  // Latest condition report summary
+  let assetConditionSummary: UnitPeriodReportDTO["assetConditionSummary"] = null;
+  const latestReport = await prisma.unitConditionReport.findFirst({
+    where: { unitId, orgId, status: { in: ["SUBMITTED", "APPROVED"] } },
+    orderBy: { submittedAt: "desc" },
+    select: { items: { select: { condition: true } } },
+  });
+  if (latestReport) {
+    let good = 0, fair = 0, poor = 0, damaged = 0;
+    for (const item of latestReport.items) {
+      if (item.condition === "GOOD") good++;
+      else if (item.condition === "FAIR") fair++;
+      else if (item.condition === "POOR") poor++;
+      else if (item.condition === "DAMAGED") damaged++;
+    }
+    assetConditionSummary = { total: latestReport.items.length, good, fair, poor, damaged };
+  }
+
+  return {
+    unitId: unit.id,
+    unitNumber: unit.unitNumber,
+    from: fromStr,
+    to: toStr,
+    current,
+    prev,
+    currentLease,
+    arrearsCents,
+    monthlyData,
+    assetConditionSummary,
+  };
+}

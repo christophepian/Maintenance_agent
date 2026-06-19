@@ -1,5 +1,5 @@
 import { useRouter } from "next/router";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import Link from "next/link";
 import AppShell from "../../../components/AppShell";
 import PageShell from "../../../components/layout/PageShell";
@@ -20,6 +20,198 @@ import SortableHeader from "../../../components/SortableHeader";
 import { useLocalSort, clientSort } from "../../../lib/tableUtils";
 import { withServerTranslations } from "../../../lib/i18n";
 import { useTranslation } from "next-i18next";
+import { ChevronDown, ChevronUp } from "lucide-react";
+import {
+  MONTH_HERO_GRADIENTS, fmtChf, fmtPct,
+  TrendArrow, KpiRow, KpiTable, MonthlyTrendChart,
+} from "../../../components/reporting/ReportingShared";
+
+// ── Unit Period Analysis component ─────────────────────────────────────────
+
+const MONTHS_SHORT = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+function delta(curr, prev, invert = false) {
+  if (prev == null || prev === 0) return null;
+  const pct = (curr - prev) / Math.abs(prev);
+  const up = invert ? pct < 0 : pct > 0;
+  return { pct, tone: up ? "text-green-600" : "text-red-500" };
+}
+
+function UnitPeriodAnalysis({ unitId }) {
+  const now = new Date();
+  const [year, setYear]   = useState(now.getFullYear());
+  const [ytd,  setYtd]    = useState(true);
+  const [month, setMonth] = useState(now.getMonth() + 1);
+  const [kpiOpen, setKpiOpen] = useState(false);
+  const [report, setReport]   = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [err, setErr]         = useState("");
+
+  const heroGradient = MONTH_HERO_GRADIENTS[(month - 1) % 12];
+
+  const { from, to } = useMemo(() => {
+    if (ytd) {
+      return { from: `${year}-01-01`, to: `${year}-12-31` };
+    }
+    const last = new Date(year, month, 0).getDate();
+    return { from: `${year}-${String(month).padStart(2,"0")}-01`, to: `${year}-${String(month).padStart(2,"0")}-${String(last).padStart(2,"0")}` };
+  }, [year, ytd, month]);
+
+  const load = useCallback(async () => {
+    if (!unitId) return;
+    setLoading(true); setErr("");
+    try {
+      const qs = new URLSearchParams({ from, to, includeMonthly: ytd ? "true" : "false" });
+      const res = await fetch(`/api/units/${unitId}/period-report?${qs}`, { headers: authHeaders() });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error?.message || "Failed");
+      setReport(json.data);
+    } catch (e) { setErr(e.message); }
+    finally { setLoading(false); }
+  }, [unitId, from, to, ytd]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const c = report?.current;
+  const p = report?.prev;
+  const cl = report?.currentLease;
+  const cond = report?.assetConditionSummary;
+
+  const headline = useMemo(() => {
+    if (!c) return "";
+    if (c.netIncomeCents > 0 && c.collectionRate >= 0.95) return "Strong unit performance";
+    if (c.collectionRate < 0.8) return "Collection rate needs attention";
+    if (c.netIncomeCents < 0) return "Unit running at a loss";
+    return "Unit performing within range";
+  }, [c]);
+
+  const periodBadge = ytd ? `YTD ${year}` : `${MONTHS_SHORT[month-1]} ${year}`;
+
+  return (
+    <div className="space-y-6">
+      {/* Date nav */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-1">
+          <button onClick={() => setYear(y => y - 1)} className="rounded border border-surface-border px-2 py-1 text-xs hover:bg-surface-hover">‹</button>
+          <span className="px-2 text-sm font-medium tabular-nums">{year}</span>
+          <button onClick={() => setYear(y => y + 1)} disabled={year >= now.getFullYear()} className="rounded border border-surface-border px-2 py-1 text-xs hover:bg-surface-hover disabled:opacity-40">›</button>
+        </div>
+        <button
+          onClick={() => setYtd(v => !v)}
+          className={cn("rounded-full border px-3 py-1 text-xs font-medium transition-colors", ytd ? "bg-brand border-brand text-white" : "border-surface-border text-foreground-dim hover:bg-surface-hover")}
+        >YTD</button>
+        {!ytd && (
+          <div className="flex gap-1 flex-wrap">
+            {MONTHS_SHORT.map((m, i) => (
+              <button key={m} onClick={() => setMonth(i+1)}
+                className={cn("rounded border px-2 py-0.5 text-xs transition-colors", month === i+1 ? "bg-brand border-brand text-white" : "border-surface-border text-foreground-dim hover:bg-surface-hover")}>
+                {m}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {err && <p className="text-sm text-red-600">{err}</p>}
+
+      {/* Hero */}
+      <div>
+        <header
+          className={cn("border border-surface-border bg-gradient-to-br p-6 shadow-sm", heroGradient, kpiOpen ? "rounded-t-3xl" : "rounded-3xl")}
+        >
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap mb-3">
+                <span className="rounded-full border border-white/60 bg-white/40 px-3 py-1 text-xs font-medium text-foreground backdrop-blur-sm">{periodBadge}</span>
+                {cl && <span className="text-xs text-foreground-dim">{cl.tenantName} · CHF {cl.netRentChf}/mo</span>}
+              </div>
+              <h3 className="text-xl font-bold text-foreground tracking-tight">{loading ? "—" : headline}</h3>
+              {c && !loading && (
+                <p className="mt-1 text-sm text-foreground-dim">
+                  NOI {fmtChf(c.netIncomeCents)} · Collection {fmtPct(c.collectionRate)}
+                  {cl?.endDate && <span> · Lease ends {cl.endDate}{cl.remainingMonths != null ? ` (${cl.remainingMonths} mo)` : ""}</span>}
+                </p>
+              )}
+            </div>
+            <div className="flex flex-col items-end gap-2">
+              <div className="text-right">
+                <p className={cn("text-3xl font-bold tabular-nums", loading ? "opacity-30" : "", c?.netIncomeCents >= 0 ? "text-foreground" : "text-red-600")}>
+                  {loading ? "—" : fmtChf(c?.netIncomeCents ?? 0)}
+                </p>
+                <p className="text-xs text-foreground-dim mt-0.5">Net operating income</p>
+              </div>
+              <button onClick={() => setKpiOpen(v => !v)} className="flex items-center gap-1 text-xs text-foreground-dim hover:text-foreground transition-colors">
+                {kpiOpen ? <><ChevronUp className="h-3 w-3"/>Hide KPIs</> : <><ChevronDown className="h-3 w-3"/>Show KPIs</>}
+              </button>
+            </div>
+          </div>
+        </header>
+        {kpiOpen && (
+          <KpiTable
+            attached
+            isLoading={loading}
+            left={[
+              { label: "Earned income",    value: fmtChf(c?.earnedIncomeCents ?? 0),    delta: delta(c?.earnedIncomeCents, p?.earnedIncomeCents) },
+              { label: "Projected income", value: fmtChf(c?.projectedIncomeCents ?? 0), delta: null },
+              { label: "Expenses",         value: fmtChf(c?.expensesCents ?? 0),         delta: delta(c?.expensesCents, p?.expensesCents, true) },
+              { label: "Net income",       value: fmtChf(c?.netIncomeCents ?? 0),        delta: delta(c?.netIncomeCents, p?.netIncomeCents) },
+            ]}
+            right={[
+              { label: "Collection rate",  value: fmtPct(c?.collectionRate ?? 0),        delta: delta(c?.collectionRate, p?.collectionRate) },
+              { label: "Monthly rent",     value: cl ? `CHF ${cl.netRentChf}` : "—",     delta: null },
+              { label: "Lease remaining",  value: cl?.remainingMonths != null ? `${cl.remainingMonths} mo` : cl ? "Open-ended" : "Vacant", delta: null },
+              { label: "Arrears",          value: fmtChf(report?.arrearsCents ?? 0),     delta: null },
+            ]}
+          />
+        )}
+      </div>
+
+      {/* Monthly NOI trendline (YTD only) */}
+      {ytd && report?.monthlyData?.length > 0 && (
+        <div className="rounded-2xl border border-surface-border bg-surface p-4 shadow-sm">
+          <p className="text-xs font-medium text-foreground-dim uppercase tracking-wide mb-3">Monthly NOI {year}</p>
+          <MonthlyTrendChart data={report.monthlyData} />
+        </div>
+      )}
+
+      {/* Arrears alert */}
+      {(report?.arrearsCents ?? 0) > 0 && (
+        <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+          <span className="mt-0.5 text-amber-600 text-lg leading-none">⚠</span>
+          <div>
+            <p className="text-sm font-semibold text-amber-900">Outstanding receivables</p>
+            <p className="text-sm text-amber-800">{fmtChf(report.arrearsCents)} in unpaid invoices for this unit.</p>
+          </div>
+        </div>
+      )}
+
+      {/* Asset condition summary */}
+      {cond && cond.total > 0 && (
+        <div className="rounded-2xl border border-surface-border bg-surface p-5 shadow-sm">
+          <p className="text-xs font-medium text-foreground-dim uppercase tracking-wide mb-4">Asset condition (latest report)</p>
+          <div className="grid grid-cols-4 gap-3">
+            {[
+              { label: "Good",    count: cond.good,    bg: "bg-green-100",  text: "text-green-700" },
+              { label: "Fair",    count: cond.fair,    bg: "bg-amber-100",  text: "text-amber-700" },
+              { label: "Poor",    count: cond.poor,    bg: "bg-orange-100", text: "text-orange-700" },
+              { label: "Damaged", count: cond.damaged, bg: "bg-red-100",    text: "text-red-700" },
+            ].map(({ label, count, bg, text }) => (
+              <div key={label} className={cn("rounded-xl p-3 text-center", bg)}>
+                <p className={cn("text-2xl font-bold", text)}>{count}</p>
+                <p className={cn("text-xs font-medium mt-0.5", text)}>{label}</p>
+              </div>
+            ))}
+          </div>
+          {(cond.poor > 0 || cond.damaged > 0) && (
+            <p className="mt-3 text-xs text-orange-700">
+              {cond.poor + cond.damaged} asset{cond.poor + cond.damaged !== 1 ? "s" : ""} in poor/damaged condition — consider running a renovation simulation.
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 export default function UnitDetail() {
   const { t } = useTranslation("manager");
   const router = useRouter();
@@ -553,8 +745,8 @@ export default function UnitDetail() {
             </div>
           )}
 
-          <ScrollableTabs activeIndex={["Details", "Tenants", "Assets", "Rent Estimate", "Documents", "Financials", "Contracts", "Requests", "Condition Reports"].indexOf(activeTab)}>
-            {["Details", "Tenants", "Assets", "Rent Estimate", "Documents", "Financials", "Contracts", "Requests", "Condition Reports"].map((tab) => (
+          <ScrollableTabs activeIndex={["Details", "Tenants", "Assets", "Rent Estimate", "Documents", "Financials", "Contracts", "Requests", "Condition Reports", "Reporting"].indexOf(activeTab)}>
+            {["Details", "Tenants", "Assets", "Rent Estimate", "Documents", "Financials", "Contracts", "Requests", "Condition Reports", "Reporting"].map((tab) => (
               <button key={tab} type="button"
                 className={activeTab === tab ? "tab-btn-active" : "tab-btn"}
                 onClick={() => setActiveTab(tab)}>
@@ -1522,6 +1714,10 @@ export default function UnitDetail() {
                 })
               )}
             </div>
+          )}
+
+          {activeTab === "Reporting" && (
+            <UnitPeriodAnalysis unitId={id} />
           )}
 
       </PageContent>

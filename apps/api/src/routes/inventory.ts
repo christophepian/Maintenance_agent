@@ -22,7 +22,7 @@ import {
   deactivateAssetModel,
   addAssetModelName,
 } from "../services/inventory";
-import { getAssetInventoryForUnit, getAssetInventoryForBuilding, getRepairReplaceAnalysis } from "../services/assetInventory";
+import { getAssetInventoryForUnit, getAssetInventoryForBuilding, getRepairReplaceAnalysis, getBuildingRenovationOpportunities } from "../services/assetInventory";
 import { seedDefaultBuildingAssets, seedDefaultUnitAssets } from "../services/defaultAssets";
 import { assetRepo } from "../repositories";
 import { listUnitTenants, linkTenantToUnit, unlinkTenantFromUnit } from "../services/occupancies";
@@ -617,6 +617,18 @@ export function registerInventoryRoutes(router: Router) {
   });
 
   /* ── Asset Inventory ───────────────────────────────────────── */
+
+  /* ── Building Renovation Opportunities ─────────────────────── */
+
+  router.get("/buildings/:id/renovation-opportunities", withAuthRequired(async ({ res, orgId, params, prisma }) => {
+    try {
+      const items = await getBuildingRenovationOpportunities(prisma, orgId, params.id);
+      sendJson(res, 200, { data: items });
+    } catch (e: any) {
+      if (String(e?.message).includes("not found")) return sendError(res, 404, "NOT_FOUND", String(e.message));
+      sendError(res, 500, "DB_ERROR", "Failed to fetch renovation opportunities", String(e));
+    }
+  }));
 
   /* ── Repair vs Replace Analysis ────────────────────────────── */
 

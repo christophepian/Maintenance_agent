@@ -385,6 +385,18 @@ export interface RepairReplaceItem {
   warrantyOffsetMonths: number;
   recommendation: RepairReplaceRecommendation;
   recommendationReason: string;
+  lastConditionStatus: "GOOD" | "FAIR" | "POOR" | "DAMAGED" | null;
+  currentLease: {
+    tenantName:      string;
+    netRentChf:      number;
+    endDate:         string | null;
+    remainingMonths: number | null;
+  } | null;
+}
+
+export interface RenovationOpportunity extends RepairReplaceItem {
+  unitId:     string;
+  unitNumber: string;
 }
 
 /** Default assumed warranty period for a brand-new replacement (months) */
@@ -412,6 +424,35 @@ export async function getRepairReplaceAnalysis(
   canton?: string | null,
 ): Promise<RepairReplaceItem[]> {
   const assets = await getAssetInventoryForUnit(prisma, orgId, unitId, canton);
+
+  // Pre-fetch: active lease for this unit (shared across all assets)
+  const today = new Date();
+  const activeLease = await prisma.lease.findFirst({
+    where: { unitId, orgId, status: { in: ["ACTIVE", "SIGNED"] }, isTemplate: false },
+    orderBy: { startDate: "desc" },
+    select: { tenantName: true, netRentChf: true, endDate: true },
+  });
+  const currentLease = activeLease ? {
+    tenantName:      activeLease.tenantName,
+    netRentChf:      activeLease.netRentChf,
+    endDate:         activeLease.endDate?.toISOString().slice(0, 10) ?? null,
+    remainingMonths: activeLease.endDate
+      ? Math.max(0, Math.round((activeLease.endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24 * 30.44)))
+      : null,
+  } : null;
+
+  // Pre-fetch: latest condition report items for this unit (assetId → condition)
+  const latestReport = await prisma.unitConditionReport.findFirst({
+    where: { unitId, orgId, status: { in: ["SUBMITTED", "APPROVED"] } },
+    orderBy: { submittedAt: "desc" },
+    select: { items: { where: { assetId: { not: null } }, select: { assetId: true, condition: true } } },
+  });
+  const conditionMap = new Map<string, "GOOD" | "FAIR" | "POOR" | "DAMAGED">();
+  if (latestReport) {
+    for (const item of latestReport.items) {
+      if (item.assetId) conditionMap.set(item.assetId, item.condition as "GOOD" | "FAIR" | "POOR" | "DAMAGED");
+    }
+  }
 
   const results: RepairReplaceItem[] = [];
 
@@ -525,10 +566,53 @@ export async function getRepairReplaceAnalysis(
       warrantyOffsetMonths: DEFAULT_WARRANTY_MONTHS,
       recommendation,
       recommendationReason,
+      lastConditionStatus: conditionMap.get(asset.id) ?? null,
+      currentLease,
     });
   }
 
   return results;
+}
+
+/**
+ * Portfolio-level renovation opportunities: all at-risk assets across a building's units.
+ * Includes assets where recommendation !== REPAIR or last condition is POOR/DAMAGED.
+ */
+export async function getBuildingRenovationOpportunities(
+  prisma: PrismaClient,
+  orgId: string,
+  buildingId: string,
+): Promise<RenovationOpportunity[]> {
+  const building = await prisma.building.findFirst({
+    where: { id: buildingId, orgId },
+    select: { canton: true },
+  });
+  if (!building) throw new Error(`Building ${buildingId} not found`);
+
+  const units = await prisma.unit.findMany({
+    where: { buildingId, orgId, isActive: true },
+    select: { id: true, unitNumber: true },
+    orderBy: { unitNumber: "asc" },
+  });
+
+  const opportunities: RenovationOpportunity[] = [];
+  for (const unit of units) {
+    try {
+      const items = await getRepairReplaceAnalysis(prisma, orgId, unit.id, building.canton);
+      for (const item of items) {
+        if (item.recommendation !== "REPAIR" || item.lastConditionStatus === "POOR" || item.lastConditionStatus === "DAMAGED") {
+          opportunities.push({ ...item, unitId: unit.id, unitNumber: unit.unitNumber });
+        }
+      }
+    } catch { /* skip units where analysis fails */ }
+  }
+
+  const order: Record<string, number> = { REPLACE: 0, PLAN_REPLACEMENT: 1, MONITOR: 2, REPAIR: 3 };
+  opportunities.sort((a, b) => {
+    const diff = (order[a.recommendation] ?? 3) - (order[b.recommendation] ?? 3);
+    return diff !== 0 ? diff : (b.depreciationPct ?? 0) - (a.depreciationPct ?? 0);
+  });
+  return opportunities;
 }
 
 /**

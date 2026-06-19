@@ -19,6 +19,7 @@ import CashflowPlansList from "../../../components/CashflowPlansList";
 import NOITrendPanel from "../../../components/NOITrendPanel";
 import CapexSchedulePanel from "../../../components/CapexSchedulePanel";
 import NPVScenariosPanel from "../../../components/NPVScenariosPanel";
+import RenovationSimulatorDrawer from "../../../components/RenovationSimulatorDrawer";
 import { cn } from "../../../lib/utils";
 import { FilterToggle, FilterPanelBody, FilterSection, FilterSectionClear, DateField } from "../../../components/ui/FilterPanel";
 import ScrollableTabs from "../../../components/mobile/ScrollableTabs";
@@ -65,6 +66,112 @@ function HealthDot({ health }) {
       title={health}
       className={cn("inline-block w-2.5 h-2.5 rounded-full shrink-0", HEALTH_DOT_CLASS[health] || "bg-slate-400")}
     />
+  );
+}
+
+// ─── Renovation Opportunities Section ────────────────────────────────────────
+
+const REC_STYLE = {
+  REPLACE:          { badge: "bg-red-100 text-red-700",    label: "Replace" },
+  PLAN_REPLACEMENT: { badge: "bg-orange-100 text-orange-700", label: "Plan Replacement" },
+  MONITOR:          { badge: "bg-amber-100 text-amber-700", label: "Monitor" },
+  REPAIR:           { badge: "bg-green-100 text-green-700", label: "Repair" },
+};
+
+const COND_STYLE = {
+  GOOD:    "bg-green-100 text-green-700",
+  FAIR:    "bg-amber-100 text-amber-700",
+  POOR:    "bg-orange-100 text-orange-700",
+  DAMAGED: "bg-red-100 text-red-700",
+};
+
+function DepBar({ pct }) {
+  const capped = Math.min(100, pct ?? 0);
+  const color = capped >= 100 ? "bg-red-500" : capped >= 85 ? "bg-orange-400" : capped >= 65 ? "bg-amber-400" : "bg-green-400";
+  return (
+    <div className="flex items-center gap-1.5 min-w-0">
+      <div className="flex-1 h-1.5 rounded-full bg-surface-hover overflow-hidden min-w-[40px]">
+        <div className={cn("h-full rounded-full transition-all", color)} style={{ width: `${capped}%` }} />
+      </div>
+      <span className="text-xs tabular-nums text-foreground-dim w-7 text-right shrink-0">{pct ?? "—"}%</span>
+    </div>
+  );
+}
+
+function RenovationOpportunitiesSection({ buildingId }) {
+  const [items, setItems]     = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [err, setErr]         = useState("");
+  const [active, setActive]   = useState(null);
+
+  useEffect(() => {
+    if (!buildingId) { setItems([]); return; }
+    setLoading(true); setErr("");
+    fetch(`/api/buildings/${buildingId}/renovation-opportunities`, { headers: authHeaders() })
+      .then((r) => r.json())
+      .then((d) => { if (d?.data) setItems(d.data); else throw new Error(d?.error?.message || "Failed"); })
+      .catch((e) => setErr(e.message))
+      .finally(() => setLoading(false));
+  }, [buildingId]);
+
+  if (!buildingId) return (
+    <div className="rounded-2xl border border-surface-border bg-surface p-6 text-center">
+      <p className="text-sm text-foreground-dim">Select a building above to see renovation opportunities.</p>
+    </div>
+  );
+
+  if (loading) return <div className="rounded-2xl border border-surface-border bg-surface p-6 text-center text-sm text-foreground-dim">Analysing assets…</div>;
+  if (err) return <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{err}</div>;
+  if (items.length === 0) return (
+    <div className="rounded-2xl border border-surface-border bg-surface p-6 text-center">
+      <p className="text-sm text-foreground-dim">No at-risk assets found for this building. All assets are in good repair.</p>
+    </div>
+  );
+
+  return (
+    <>
+      <div className="space-y-2">
+        {items.map((item) => {
+          const rec = REC_STYLE[item.recommendation] ?? REC_STYLE.REPAIR;
+          const condCls = item.lastConditionStatus ? COND_STYLE[item.lastConditionStatus] : null;
+          return (
+            <div key={item.assetId}
+              className="flex flex-wrap items-center gap-3 rounded-2xl border border-surface-border bg-surface px-4 py-3 hover:bg-surface-subtle transition-colors cursor-pointer"
+              onClick={() => setActive(item)}
+            >
+              {/* Name + unit */}
+              <div className="flex-1 min-w-[140px]">
+                <p className="text-sm font-medium text-foreground truncate">{item.assetName}</p>
+                <p className="text-xs text-foreground-dim">{item.topic} · Unit {item.unitNumber}</p>
+              </div>
+              {/* Depreciation bar */}
+              <div className="w-28 shrink-0">
+                <DepBar pct={item.depreciationPct} />
+              </div>
+              {/* Badges */}
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className={cn("rounded-full px-2.5 py-0.5 text-xs font-semibold", rec.badge)}>{rec.label}</span>
+                {condCls && (
+                  <span className={cn("rounded-full px-2.5 py-0.5 text-xs font-semibold", condCls)}>
+                    {item.lastConditionStatus.charAt(0) + item.lastConditionStatus.slice(1).toLowerCase()}
+                  </span>
+                )}
+              </div>
+              {/* Tenant / rent */}
+              {item.currentLease && (
+                <div className="text-right shrink-0">
+                  <p className="text-xs font-medium text-foreground">CHF {item.currentLease.netRentChf}/mo</p>
+                  <p className="text-xs text-foreground-dim truncate max-w-[100px]">{item.currentLease.tenantName}</p>
+                </div>
+              )}
+              {/* Simulate arrow */}
+              <span className="text-xs text-blue-600 font-medium shrink-0">Simulate →</span>
+            </div>
+          );
+        })}
+      </div>
+      {active && <RenovationSimulatorDrawer item={active} onClose={() => setActive(null)} />}
+    </>
   );
 }
 
@@ -368,6 +475,16 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
               <NPVScenariosPanel buildingId={planningBuildingId} />
               <CapExSummaryBridge />
               <CashflowPlansList />
+              {/* ── Renovation Simulator ── */}
+              <div>
+                <div className="mb-3">
+                  <h3 className="text-sm font-semibold text-foreground">Renovation Opportunities</h3>
+                  <p className="text-xs text-foreground-dim mt-0.5">
+                    Assets at risk of end-of-life or flagged in condition reports. Click any row to run an NPV simulation.
+                  </p>
+                </div>
+                <RenovationOpportunitiesSection buildingId={planningBuildingId} />
+              </div>
             </div>
           )}
 
