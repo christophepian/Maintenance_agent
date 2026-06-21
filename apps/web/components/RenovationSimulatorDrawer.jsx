@@ -18,6 +18,17 @@ import { createPortal } from "react-dom";
 import { X, Check, ArrowRight } from "lucide-react";
 import { cn } from "../lib/utils";
 import { authHeaders } from "../lib/api";
+import Tooltip from "./Tooltip";
+
+// Plain-language glosses for the jargon controls (novice hand-holding)
+const HINTS = {
+  oblf: "How much of the renovation cost Swiss law (OBLF Art. 14) lets you add to the rent — typically 50–70%.",
+  discount: "Your yearly hurdle rate: future money is worth less today, so we shrink it by this % per year.",
+  capRate: "Used to estimate resale value from rent: a lower cap rate implies a more valuable building.",
+  vacancy: "Months the unit sits empty during the works (no rent collected).",
+  doNothingRisk: "Expected yearly cost of NOT renovating: likely breakdowns plus rent-reduction risk if the unit degrades.",
+  rentUplift: "Extra monthly rent you can charge after the renovation, under OBLF Art. 14.",
+};
 
 // ── Failure-rate model ────────────────────────────────────────────────────────
 // Base annual probability that the asset will need a repair if left as-is.
@@ -301,10 +312,13 @@ function RailToggle({ label, options, value, onChange, vertical }) {
 }
 
 // Labelled number field laid out as a justified row (label left, input right).
-function RailNum({ label, value, onChange, suffix, min, step }) {
+function RailNum({ label, value, onChange, suffix, min, step, hint }) {
   return (
     <div className="flex items-center justify-between gap-2">
-      <span className="text-xs text-foreground-dim">{label}</span>
+      <span className="text-xs text-foreground-dim flex items-center gap-0.5">
+        {label}
+        {hint && <Tooltip content={hint} />}
+      </span>
       <div className="flex items-center gap-1 shrink-0">
         <input
           type="number" min={min ?? 0} step={step ?? 1} value={value}
@@ -318,11 +332,14 @@ function RailNum({ label, value, onChange, suffix, min, step }) {
 }
 
 // Read-only computed metric chip for the results summary strip.
-function SummaryStat({ label, value, tone }) {
+function SummaryStat({ label, value, tone, hint }) {
   const toneClass = tone === "green" ? "text-green-700" : tone === "red" ? "text-red-600" : "text-foreground";
   return (
     <div className="flex flex-col gap-0.5">
-      <span className="text-[10px] font-medium text-foreground-dim uppercase tracking-wide">{label}</span>
+      <span className="text-[10px] font-medium text-foreground-dim uppercase tracking-wide flex items-center gap-0.5">
+        {label}
+        {hint && <Tooltip content={hint} />}
+      </span>
       <span className={cn("text-sm font-semibold tabular-nums", toneClass)}>{value}</span>
     </div>
   );
@@ -546,10 +563,10 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId }
           <div className="border-t border-surface-divider" />
 
           <RailSection title="Assumptions">
-            <RailNum label="OBLF passthrough" value={passthroughPct} onChange={setPassthrough} suffix="%" min={10} step={5} />
-            <RailNum label="Discount rate"    value={discountRate}   onChange={setDiscount}    suffix="%" min={1}  step={0.5} />
-            <RailNum label="Cap rate"         value={capRate}        onChange={setCapRate}     suffix="%" min={2}  step={0.5} />
-            <RailNum label="Vacancy"          value={vacancyMonths}  onChange={setVacancy}     suffix="mo" min={0} step={1} />
+            <RailNum label="OBLF passthrough" value={passthroughPct} onChange={setPassthrough} suffix="%" min={10} step={5} hint={HINTS.oblf} />
+            <RailNum label="Discount rate"    value={discountRate}   onChange={setDiscount}    suffix="%" min={1}  step={0.5} hint={HINTS.discount} />
+            <RailNum label="Cap rate"         value={capRate}        onChange={setCapRate}     suffix="%" min={2}  step={0.5} hint={HINTS.capRate} />
+            <RailNum label="Vacancy"          value={vacancyMonths}  onChange={setVacancy}     suffix="mo" min={0} step={1} hint={HINTS.vacancy} />
           </RailSection>
 
           <div className="border-t border-surface-divider" />
@@ -576,8 +593,8 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId }
           {/* Computed summary strip */}
           <div className="grid grid-cols-3 gap-3 rounded-xl border border-surface-border bg-surface px-4 py-3 shadow-sm">
             <SummaryStat label="Total investment" value={fmtChf(totalCostChf)} />
-            <SummaryStat label="Rent uplift" value={`+CHF ${totalMonthlyUplift.toFixed(0)}/mo`} tone="green" />
-            <SummaryStat label="Do Nothing risk" value={`${fmtChf(monthlyDoNothingDeduct * 12)}/yr`} tone="red" />
+            <SummaryStat label="Rent uplift" value={`+CHF ${totalMonthlyUplift.toFixed(0)}/mo`} tone="green" hint={HINTS.rentUplift} />
+            <SummaryStat label="Do Nothing risk" value={`${fmtChf(monthlyDoNothingDeduct * 12)}/yr`} tone="red" hint={HINTS.doNothingRisk} />
           </div>
 
           {/* Chart */}
