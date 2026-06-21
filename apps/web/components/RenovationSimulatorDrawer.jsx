@@ -145,7 +145,7 @@ function fmtMo(m) {
 
 // ── Chart component ───────────────────────────────────────────────────────────
 
-function NpvChart({ nowYearly, turYearly, notYearly, timing }) {
+function NpvChart({ nowYearly, turYearly, notYearly }) {
   const canvasRef = useRef(null);
   const chartRef  = useRef(null);
 
@@ -157,33 +157,29 @@ function NpvChart({ nowYearly, turYearly, notYearly, timing }) {
       if (chartRef.current) { chartRef.current.destroy(); chartRef.current = null; }
 
       const datasets = [];
-      if (timing !== "turnover") {
-        datasets.push({
-          label: "Act Now",
-          data: nowYearly.map((d) => d.value),
-          borderColor: "#1e293b",
-          backgroundColor: "rgba(30,41,59,0.06)",
-          borderWidth: 2.5,
-          tension: 0.3,
-          fill: false,
-          pointRadius: 3,
-          pointHoverRadius: 5,
-        });
-      }
-      if (timing !== "now") {
-        datasets.push({
-          label: "At Turnover",
-          data: turYearly.map((d) => d.value),
-          borderColor: "#d97706",
-          backgroundColor: "rgba(217,119,6,0.06)",
-          borderWidth: 2,
-          borderDash: [6, 3],
-          tension: 0.3,
-          fill: false,
-          pointRadius: 3,
-          pointHoverRadius: 5,
-        });
-      }
+      datasets.push({
+        label: "Act Now",
+        data: nowYearly.map((d) => d.value),
+        borderColor: "#1e293b",
+        backgroundColor: "rgba(30,41,59,0.06)",
+        borderWidth: 2.5,
+        tension: 0.3,
+        fill: false,
+        pointRadius: 3,
+        pointHoverRadius: 5,
+      });
+      datasets.push({
+        label: "At Turnover",
+        data: turYearly.map((d) => d.value),
+        borderColor: "#d97706",
+        backgroundColor: "rgba(217,119,6,0.06)",
+        borderWidth: 2,
+        borderDash: [6, 3],
+        tension: 0.3,
+        fill: false,
+        pointRadius: 3,
+        pointHoverRadius: 5,
+      });
       datasets.push({
         label: "Do Nothing",
         data: notYearly.map((d) => d.value),
@@ -222,22 +218,33 @@ function NpvChart({ nowYearly, turYearly, notYearly, timing }) {
       alive = false;
       if (chartRef.current) { chartRef.current.destroy(); chartRef.current = null; }
     };
-  }, [nowYearly, turYearly, notYearly, timing]);
+  }, [nowYearly, turYearly, notYearly]);
 
   return <canvas ref={canvasRef} />;
 }
 
 // ── Scenario card ─────────────────────────────────────────────────────────────
 
-function ScenarioCard({ label, hint, npv, summary, isBest, breakeven }) {
+function ScenarioCard({ label, hint, npv, summary, isBest, breakeven, selectable, selected, onSelect }) {
+  const Comp = selectable ? "button" : "div";
   return (
-    <div className={cn(
-      "relative rounded-xl p-4 space-y-2",
-      isBest ? "border-2 border-slate-800 shadow-sm bg-surface" : "border border-surface-border bg-surface",
-    )}>
+    <Comp
+      type={selectable ? "button" : undefined}
+      onClick={selectable ? onSelect : undefined}
+      className={cn(
+        "relative w-full text-left rounded-xl p-4 space-y-2 transition-colors",
+        selected ? "border-2 border-slate-800 shadow-sm bg-surface" : "border border-surface-border bg-surface",
+        selectable && !selected && "hover:border-slate-400 cursor-pointer",
+      )}
+    >
       {isBest && (
         <span className="absolute -top-2.5 left-3 rounded-full bg-slate-800 px-2 py-0.5 text-[10px] font-bold text-white uppercase tracking-wide">
           Best NPV
+        </span>
+      )}
+      {selected && (
+        <span className="absolute -top-2.5 right-3 inline-flex items-center gap-1 rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold text-white uppercase tracking-wide">
+          <Check className="h-3 w-3" /> To plan
         </span>
       )}
       <div>
@@ -253,7 +260,7 @@ function ScenarioCard({ label, hint, npv, summary, isBest, breakeven }) {
       {summary && (
         <p className="text-xs border-t border-surface-divider pt-2 leading-relaxed text-muted-text">{summary}</p>
       )}
-    </div>
+    </Comp>
   );
 }
 
@@ -329,7 +336,6 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId }
 
   // ── Controls ────────────────────────────────────────────────────────────────
   const [action,        setAction]        = useState("replace");
-  const [timing,        setTiming]        = useState("both");
   const [horizon,       setHorizon]       = useState(10);
   const [passthroughPct, setPassthrough]  = useState(50);
   const [discountRate,  setDiscount]      = useState(5);
@@ -338,6 +344,10 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId }
 
   // Per-asset cost overrides (assetId → CHF)
   const [costOverrides, setCostOverrides] = useState({});
+
+  // Which scenario "Plan this work" will schedule ("now" | "turnover").
+  // null → follow the recommended (best) path automatically.
+  const [planPath, setPlanPath] = useState(null);
 
   // Plan state
   const [planAdding, setPlanAdding] = useState(false);
@@ -396,18 +406,23 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId }
     capRatePct:               capRate,
   }), [totalCostChf, totalMonthlyUplift, unitRents, monthlyDoNothingDeduct, discountRate, horizon, vacancyMonths, minLeaseRemaining, capRate]);
 
-  // Best scenario
+  // Best scenario — compared across all three, always
   const { npvNow, npvTur, npvNot } = result;
   const bestKey = (() => {
-    if (timing === "now")      return npvNow > npvNot ? "now"      : "nothing";
-    if (timing === "turnover") return npvTur > npvNot ? "turnover" : "nothing";
     const best = Math.max(npvNow, npvTur);
-    if (best <= npvNot)        return "nothing";
-    return npvNow >= npvTur    ? "now" : "turnover";
+    if (best <= npvNot) return "nothing";
+    return npvNow >= npvTur ? "now" : "turnover";
   })();
   const bestNpv  = bestKey === "now" ? npvNow : bestKey === "turnover" ? npvTur : npvNot;
   const delta    = bestNpv - npvNot;
   const bestBreakeven = bestKey === "now" ? result.breakevenNow : bestKey === "turnover" ? result.breakevenTur : null;
+
+  // The actionable scenario "Plan this work" will schedule. Defaults to the
+  // recommended path; if recommendation is "do nothing", fall back to the
+  // higher-NPV action so a path is always selectable.
+  const recommendedPath = bestKey === "nothing" ? (npvNow >= npvTur ? "now" : "turnover") : bestKey;
+  const selectedPath = planPath ?? recommendedPath;
+  const selectedLabel = selectedPath === "now" ? "Act Now" : "At Turnover";
 
   // Recommendation text
   const verdict = useMemo(() => {
@@ -426,7 +441,7 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId }
     try {
       // Determine the planned intervention year
       const d = new Date();
-      if (timing !== "now" && minLeaseRemaining != null) d.setMonth(d.getMonth() + minLeaseRemaining);
+      if (selectedPath !== "now" && minLeaseRemaining != null) d.setMonth(d.getMonth() + minLeaseRemaining);
       const overriddenYear = d.getFullYear();
 
       // Fetch existing plans for this building
@@ -476,7 +491,7 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId }
     } finally {
       setPlanAdding(false);
     }
-  }, [buildingId, assetRows, timing, minLeaseRemaining]);
+  }, [buildingId, assetRows, selectedPath, minLeaseRemaining]);
 
   const title = safeItems.length === 1
     ? safeItems[0].assetName
@@ -510,14 +525,6 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId }
             <RailToggle label="Action"
               options={[["replace", "Replace"], ["repair", "Repair"]]}
               value={action} onChange={(v) => { setAction(v); setCostOverrides({}); }}
-            />
-            <RailToggle label="Timing" vertical
-              options={[
-                ["now",      "Act Now"],
-                ["turnover", minLeaseRemaining != null ? `At Turnover (~${fmtMo(minLeaseRemaining)})` : "At Turnover"],
-                ["both",     "Compare Both"],
-              ]}
-              value={timing} onChange={setTiming}
             />
             <RailToggle label="Horizon"
               options={[["5", "5 yr"], ["10", "10 yr"], ["15", "15 yr"]]}
@@ -572,18 +579,17 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId }
                 nowYearly={result.nowYearly}
                 turYearly={result.turYearly}
                 notYearly={result.notYearly}
-                timing={timing}
               />
             </div>
             {/* Breakeven annotations */}
             <div className="mt-3 flex flex-wrap gap-4 text-xs text-foreground-dim">
-              {timing !== "turnover" && result.breakevenNow != null && (
+              {result.breakevenNow != null && (
                 <span>
                   <span className="inline-block h-0.5 w-3 rounded bg-slate-700 align-middle mr-1.5" />
                   Act Now breaks even at <strong className="text-foreground">{fmtMo(result.breakevenNow)}</strong>
                 </span>
               )}
-              {timing !== "now" && result.breakevenTur != null && (
+              {result.breakevenTur != null && (
                 <span>
                   <span className="inline-block h-0.5 w-3 rounded bg-amber-500 align-middle mr-1.5" />
                   At Turnover breaks even at <strong className="text-foreground">{fmtMo(result.breakevenTur)}</strong>
@@ -597,48 +603,56 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId }
             </div>
           </div>
 
-          {/* Scenario cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {(timing === "now" || timing === "both") && (
+          {/* Scenario cards — all three compared; pick the one to schedule */}
+          <div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <ScenarioCard
                 label="Act Now"
                 hint="Renovate immediately"
                 npv={npvNow}
                 isBest={bestKey === "now"}
                 breakeven={result.breakevenNow}
+                selectable
+                selected={selectedPath === "now"}
+                onSelect={() => setPlanPath("now")}
                 summary={
                   npvNow > npvNot
                     ? `${fmtChf(npvNow - npvNot)} better than doing nothing.`
                     : "Does not outperform doing nothing in this horizon."
                 }
               />
-            )}
-            {(timing === "turnover" || timing === "both") && (
               <ScenarioCard
                 label="At Turnover"
                 hint={minLeaseRemaining != null ? `In ~${fmtMo(minLeaseRemaining)}` : "When current lease ends"}
                 npv={npvTur}
                 isBest={bestKey === "turnover"}
                 breakeven={result.breakevenTur}
+                selectable
+                selected={selectedPath === "turnover"}
+                onSelect={() => setPlanPath("turnover")}
                 summary={
                   npvTur > npvNot
                     ? `Avoids disrupting current tenant. ${fmtChf(npvTur - npvNot)} better than doing nothing.`
                     : "Does not outperform doing nothing in this horizon."
                 }
               />
-            )}
-            <ScenarioCard
-              label="Do Nothing"
-              hint="Maintain as-is, risk-adjusted"
-              npv={npvNot}
-              isBest={bestKey === "nothing"}
-              breakeven={null}
-              summary={
-                delta > 0
-                  ? `${fmtChf(delta)} less than the best renovation scenario.${monthlyDoNothingDeduct > 0 ? ` Includes ${fmtChf(monthlyDoNothingDeduct * 12)}/yr expected failure + tenant risk.` : ""}`
-                  : "Returns best in this horizon — revisit if repair costs rise."
-              }
-            />
+              <ScenarioCard
+                label="Do Nothing"
+                hint="Maintain as-is, risk-adjusted"
+                npv={npvNot}
+                isBest={bestKey === "nothing"}
+                breakeven={null}
+                summary={
+                  delta > 0
+                    ? `${fmtChf(delta)} less than the best renovation scenario.${monthlyDoNothingDeduct > 0 ? ` Includes ${fmtChf(monthlyDoNothingDeduct * 12)}/yr expected failure + tenant risk.` : ""}`
+                    : "Returns best in this horizon — revisit if repair costs rise."
+                }
+              />
+            </div>
+            <p className="text-xs text-foreground-dim mt-2">
+              Tap <strong className="text-foreground">Act Now</strong> or <strong className="text-foreground">At Turnover</strong> to choose which one “Plan this work” schedules.
+              {planPath != null && planPath !== recommendedPath && " (overrides the recommendation)"}
+            </p>
           </div>
 
           {/* Recommendation strip */}
@@ -764,7 +778,7 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId }
                 className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors bg-slate-800 text-white hover:bg-slate-700 disabled:opacity-50"
               >
                 <ArrowRight className="h-4 w-4" />
-                {planAdding ? "Scheduling…" : `Plan this work (${assetRows.length} asset${assetRows.length !== 1 ? "s" : ""})`}
+                {planAdding ? "Scheduling…" : `Plan this work — ${selectedLabel} (${assetRows.length} asset${assetRows.length !== 1 ? "s" : ""})`}
               </button>
             )}
             {planMsg && !planMsg.startsWith("✓") && (
