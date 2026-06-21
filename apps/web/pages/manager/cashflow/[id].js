@@ -17,6 +17,7 @@ import { cn } from "../../../lib/utils";
 import { withServerTranslations } from "../../../lib/i18n";
 import { useTranslation } from "next-i18next";
 import NPVScenariosPanel from "../../../components/NPVScenariosPanel";
+import FinancingPanel from "../../../components/FinancingPanel";
 
 // ─── Strategy alignment helpers ──────────────────────────────────────────────
 
@@ -1047,6 +1048,8 @@ export default function CashflowPlanDetailPage() {
   const [error, setError] = useState("");
   const [actionError, setActionError] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
+  // Bumped after financing edits to remount the NPV panel and recompute levered metrics
+  const [npvRefreshKey, setNpvRefreshKey] = useState(0);
 
   const loadPlan = useCallback(async () => {
     if (!id) return;
@@ -1260,11 +1263,17 @@ export default function CashflowPlanDetailPage() {
             />
           </Panel>
 
+          {/* Financing & Valuation — building plans only (drives levered NPV) */}
+          {plan.buildingId && (
+            <FinancingPanel buildingId={plan.buildingId} onChanged={() => setNpvRefreshKey((k) => k + 1)} />
+          )}
+
           {/* NPV Assumptions */}
           <AssumptionsPanel plan={plan} isDraft={isDraft} onUpdated={loadPlan} />
 
           {/* NPV Verdict */}
           <NPVScenariosPanel
+            key={npvRefreshKey}
             fetchUrl={`/api/cashflow-plans/${plan.id}/npv-scenarios`}
             mode="plan"
           />

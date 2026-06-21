@@ -973,6 +973,21 @@
     "strategy": {
       "noProfileHint": "Définissez un profil stratégique pour obtenir une recommandation personnalisée pour ce bâtiment.",
       "noProfileLink": "Définir le profil"
+    },
+    "debt": {
+      "title": "Levier et rendement des fonds propres",
+      "ltv": "LTV",
+      "wacc": "WACC",
+      "costOfDebt": "Coût de la dette",
+      "equity": "Fonds propres actuels",
+      "totalDebt": "Dette totale",
+      "equityIrr": "TRI fonds propres",
+      "equityNpv": "VAN fonds propres",
+      "minDscr": "DSCR min",
+      "dscr": "DSCR",
+      "noData": "Ajoutez une valeur de marché et une ou plusieurs hypothèques dans Financement pour voir le rendement avec levier.",
+      "unlevered": "Sans levier",
+      "levered": "Avec levier (fonds propres)"
     }
   },
   "noiTrend": {
@@ -2847,5 +2862,36 @@
     "deltaCount": "{{count}} élément(s) présente(nt) une dégradation par rapport à l'état des lieux d'entrée.",
     "noDelta": "Aucune dégradation détectée par rapport à l'état des lieux d'entrée.",
     "missingPhotoWarning": "Photo requise — cet élément est dégradé mais n'a pas de photo."
+  },
+  "financing": {
+    "title": "Financement et valorisation",
+    "subtitle": "La valeur de marché et la dette déterminent le LTV, le DSCR, le WACC et le rendement des fonds propres.",
+    "marketValue": "Valeur de marché",
+    "marketValueHint": "Expertise / estimation actuelle",
+    "noValue": "Aucune valeur de marché définie",
+    "edit": "Modifier",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "saving": "Enregistrement…",
+    "delete": "Supprimer",
+    "mortgages": "Hypothèques",
+    "addMortgage": "Ajouter une hypothèque",
+    "noMortgages": "Aucune hypothèque enregistrée.",
+    "lender": "Prêteur",
+    "lenderPlaceholder": "ex. Banque Cantonale",
+    "balance": "Solde restant dû",
+    "originalPrincipal": "Montant initial",
+    "rate": "Taux d’intérêt",
+    "amortization": "Amortissement",
+    "annualAmortization": "Amortissement annuel",
+    "maturity": "Échéance",
+    "fixedUntil": "Taux fixe jusqu’au",
+    "ltv": "LTV",
+    "confirmDelete": "Supprimer cette hypothèque ?",
+    "amortizationType": {
+      "INTEREST_ONLY": "Intérêts seuls",
+      "LINEAR": "Linéaire",
+      "ANNUITY": "Annuité"
+    }
   }
 }

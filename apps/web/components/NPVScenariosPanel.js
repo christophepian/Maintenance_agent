@@ -64,6 +64,17 @@ function CumulativeBars({ flows, highlighted }) {
   );
 }
 
+// ─── Debt stat (leverage strip) ───────────────────────────────
+
+function DebtStat({ label, value }) {
+  return (
+    <span className="flex items-center gap-1">
+      <span className="text-foreground-dim">{label}</span>
+      <span className="font-mono font-semibold text-foreground tabular-nums">{value}</span>
+    </span>
+  );
+}
+
 // ─── Single scenario card ─────────────────────────────────────
 
 function ScenarioCard({ label, hint, data, t, isHighlighted, isRecommended, summary, identicalNotice }) {
@@ -130,6 +141,32 @@ function ScenarioCard({ label, hint, data, t, isHighlighted, isRecommended, summ
           <p className="font-mono font-medium text-emerald-600">
             +{formatChf(totalTaxShieldChf)}
           </p>
+        </div>
+      )}
+
+      {/* Levered (FCFE) metrics — shown when debt/value configured */}
+      {data.levered && (data.levered.equityNpvChf != null || data.levered.minDscr != null) && (
+        <div className="grid grid-cols-2 gap-1 text-xs border-t border-surface-divider pt-1.5">
+          {data.levered.equityNpvChf != null && (
+            <div>
+              <span className="text-foreground-dim">{t("manager:npvScenarios.debt.equityNpv")}</span>
+              <p className="font-mono font-medium">{formatChf(data.levered.equityNpvChf)}</p>
+            </div>
+          )}
+          {data.levered.equityIrrPct != null && (
+            <div>
+              <span className="text-foreground-dim">{t("manager:npvScenarios.debt.equityIrr")}</span>
+              <p className="font-mono font-medium tabular-nums">{data.levered.equityIrrPct}%</p>
+            </div>
+          )}
+          {data.levered.minDscr != null && (
+            <div>
+              <span className="text-foreground-dim">{t("manager:npvScenarios.debt.minDscr")}</span>
+              <p className={cn("font-mono font-medium tabular-nums", data.levered.minDscr < 1.2 ? "text-red-600" : "text-foreground")}>
+                {data.levered.minDscr.toFixed(2)}×
+              </p>
+            </div>
+          )}
         </div>
       )}
 
@@ -485,6 +522,18 @@ export default function NPVScenariosPanel({ buildingId, fetchUrl, mode = "intera
                 ? t("manager:npvScenarios.text.taxShieldDefaultNote", { rate: data.ownerMarginalTaxRatePct })
                 : t("manager:npvScenarios.text.taxShieldNote", { rate: data.ownerMarginalTaxRatePct })}
             </span>
+          </div>
+        )}
+
+        {/* Leverage strip — building-level debt summary */}
+        {!loading && data?.debt && (
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 rounded-md border border-surface-border bg-surface-subtle px-3 py-2 text-xs">
+            <span className="text-muted font-medium shrink-0">{t("manager:npvScenarios.debt.title")}</span>
+            <DebtStat label={t("manager:npvScenarios.debt.totalDebt")} value={formatChf(data.debt.totalDebtChf)} />
+            {data.debt.ltvPct != null && <DebtStat label={t("manager:npvScenarios.debt.ltv")} value={`${data.debt.ltvPct}%`} />}
+            {data.debt.weightedCostOfDebtPct != null && <DebtStat label={t("manager:npvScenarios.debt.costOfDebt")} value={`${data.debt.weightedCostOfDebtPct}%`} />}
+            {data.debt.waccPct != null && <DebtStat label={t("manager:npvScenarios.debt.wacc")} value={`${data.debt.waccPct}%`} />}
+            {data.debt.currentEquityChf != null && <DebtStat label={t("manager:npvScenarios.debt.equity")} value={formatChf(data.debt.currentEquityChf)} />}
           </div>
         )}
 

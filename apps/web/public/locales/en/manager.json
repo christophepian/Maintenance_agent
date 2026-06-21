@@ -973,6 +973,21 @@
     "strategy": {
       "noProfileHint": "Set a strategy profile to get a personalised recommendation for this building.",
       "noProfileLink": "Set profile"
+    },
+    "debt": {
+      "title": "Leverage & equity returns",
+      "ltv": "LTV",
+      "wacc": "WACC",
+      "costOfDebt": "Cost of debt",
+      "equity": "Current equity",
+      "totalDebt": "Total debt",
+      "equityIrr": "Equity IRR",
+      "equityNpv": "Equity NPV",
+      "minDscr": "Min DSCR",
+      "dscr": "DSCR",
+      "noData": "Add a market value and mortgage(s) under Financing to see leveraged returns.",
+      "unlevered": "Unlevered",
+      "levered": "Levered (equity)"
     }
   },
   "noiTrend": {
@@ -2848,5 +2863,36 @@
     "deltaCount": "{{count}} item(s) show degradation compared to the move-in report.",
     "noDelta": "No degradation detected compared to the move-in report.",
     "missingPhotoWarning": "Photo required — this item is degraded but has no photo."
+  },
+  "financing": {
+    "title": "Financing & Valuation",
+    "subtitle": "Market value and debt drive LTV, DSCR, WACC and the leveraged (equity) return.",
+    "marketValue": "Market value",
+    "marketValueHint": "Current appraisal / estimated value",
+    "noValue": "No market value set",
+    "edit": "Edit",
+    "save": "Save",
+    "cancel": "Cancel",
+    "saving": "Saving…",
+    "delete": "Delete",
+    "mortgages": "Mortgages",
+    "addMortgage": "Add mortgage",
+    "noMortgages": "No mortgages recorded.",
+    "lender": "Lender",
+    "lenderPlaceholder": "e.g. Cantonal Bank",
+    "balance": "Outstanding balance",
+    "originalPrincipal": "Original amount",
+    "rate": "Interest rate",
+    "amortization": "Amortization",
+    "annualAmortization": "Annual amortization",
+    "maturity": "Maturity",
+    "fixedUntil": "Fixed until",
+    "ltv": "LTV",
+    "confirmDelete": "Delete this mortgage?",
+    "amortizationType": {
+      "INTEREST_ONLY": "Interest only",
+      "LINEAR": "Linear",
+      "ANNUITY": "Annuity"
+    }
   }
 }
