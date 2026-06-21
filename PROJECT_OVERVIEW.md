@@ -149,6 +149,16 @@ Every repository exports a canonical include constant. DTO mappers use `Prisma.X
 
 `contracts.test.ts` guards DTO shape for key endpoints. Update it in the same PR as any DTO change.
 
+### G19: Mirrored Docs — Pitchdeck Copies Must Stay In Sync
+
+The pitchdeck exists in **two locations that must be byte-identical**:
+- `docs/pitchdeck.html` (root) — and `pitchdeck.css`
+- `apps/web/public/docs/pitchdeck.html` (the copy actually **served** at `/docs/pitchdeck.html`)
+
+**Always edit both copies in the same commit.** Never "sync" them by blindly copying one over the other without checking which is newer — their git histories differ (`git log -- <path>` per copy).
+
+The pre-commit hook (`scripts/guardrails.sh` G19) **blocks any commit where the two copies diverge**. Root cause it prevents: on 2026-06-18 a commit re-synced them from the *stale root copy*, silently reverting ~2,100 lines of committed content (correct pricing, parking lot, bios) inside an unrelated feature commit — the work was pushed, then clobbered. (Note: the other shared `docs/` HTML files — wiki, index, blueprint, etc. — are **not** currently mirror-enforced and have known drift; G19 is scoped to the pitchdeck only.)
+
 ### Auth Invariants (F1)
 
 Production server refuses to boot if:

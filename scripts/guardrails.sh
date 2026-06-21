@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Guardrail Enforcement Script
-# Runs locally (pre-commit) and in CI. Checks G8, F-UI4, F-UI4a, G9, G3.
+# Runs locally (pre-commit) and in CI. Checks G8, F-UI4, F-UI4a, G9, G3,
+# F-UI9, G18, G16, G17, G19.
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 set -euo pipefail
 
@@ -285,6 +286,39 @@ else
   else
     pass "G17: No obvious hardcoded labels detected"
   fi
+fi
+
+# ─── G19: Pitchdeck doc copies must stay byte-identical ──────────────────
+# The pitchdeck lives in two locations that MUST mirror each other:
+#   docs/pitchdeck.html (root)  and  apps/web/public/docs/pitchdeck.html (served).
+# On 2026-06-18 a commit "re-synced" them from the STALE root copy, silently
+# reverting the committed Jun 16-17 content rework (correct pricing, parking
+# lot, bios — ~2,100 lines) inside an unrelated feature commit. This guard
+# blocks any commit where the two copies diverge, so a stale-source overwrite
+# can never ship unnoticed. Always edit BOTH copies in the same commit.
+echo ""
+echo "━━━ G19: Checking pitchdeck doc copies are in sync ━━━"
+
+G19_VIOL=""
+for rel in pitchdeck.html pitchdeck.css; do
+  a="$ROOT/docs/$rel"
+  b="$ROOT/apps/web/public/docs/$rel"
+  if [ -f "$a" ] && [ -f "$b" ]; then
+    if ! cmp -s "$a" "$b"; then
+      G19_VIOL="${G19_VIOL}\n    $rel — docs/ and apps/web/public/docs/ differ"
+    fi
+  elif [ -f "$a" ] || [ -f "$b" ]; then
+    G19_VIOL="${G19_VIOL}\n    $rel — present in only one of docs/ or apps/web/public/docs/"
+  fi
+done
+
+if [ -n "$G19_VIOL" ]; then
+  fail "G19 VIOLATION: pitchdeck copies are out of sync — update BOTH in the same commit:"
+  echo -e "$G19_VIOL"
+  echo "    Fix: copy the INTENDED-newer file over the other, then re-stage both."
+  echo "    (2026-06-18 incident: a stale-source re-sync silently reverted committed content.)"
+else
+  pass "G19: pitchdeck doc copies are identical"
 fi
 
 # ─── Summary ─────────────────────────────────────────────────────────────
