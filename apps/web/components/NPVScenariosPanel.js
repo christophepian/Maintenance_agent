@@ -34,6 +34,20 @@ function fciColor(pct) {
   return "text-red-700";
 }
 
+// Traffic-light colour for loan-to-value: lower is safer.
+function ltvColor(pct) {
+  if (pct < 60) return "text-emerald-700";
+  if (pct <= 80) return "text-amber-600";
+  return "text-red-700";
+}
+
+// Traffic-light colour for DSCR: ≥1.5 comfortable, 1.2–1.5 ok, below tight.
+function dscrColor(d) {
+  if (d >= 1.5) return "text-emerald-700";
+  if (d >= 1.2) return "text-amber-600";
+  return "text-red-600";
+}
+
 // ─── Mini cumulative-PV sparkbar ──────────────────────────────
 
 function CumulativeBars({ flows, highlighted }) {
@@ -66,11 +80,14 @@ function CumulativeBars({ flows, highlighted }) {
 
 // ─── Debt stat (leverage strip) ───────────────────────────────
 
-function DebtStat({ label, value }) {
+function DebtStat({ label, value, tooltip, valueClass }) {
   return (
     <span className="flex items-center gap-1">
-      <span className="text-foreground-dim">{label}</span>
-      <span className="font-mono font-semibold text-foreground tabular-nums">{value}</span>
+      <span className="text-foreground-dim flex items-center gap-0.5">
+        {label}
+        {tooltip && <Tooltip content={tooltip} />}
+      </span>
+      <span className={cn("font-mono font-semibold tabular-nums", valueClass || "text-foreground")}>{value}</span>
     </span>
   );
 }
@@ -149,20 +166,29 @@ function ScenarioCard({ label, hint, data, t, isHighlighted, isRecommended, summ
         <div className="grid grid-cols-2 gap-1 text-xs border-t border-surface-divider pt-1.5">
           {data.levered.equityNpvChf != null && (
             <div>
-              <span className="text-foreground-dim">{t("manager:npvScenarios.debt.equityNpv")}</span>
+              <span className="text-foreground-dim flex items-center gap-0.5">
+                {t("manager:npvScenarios.debt.equityNpv")}
+                <Tooltip content={t("manager:npvScenarios.tooltip.equityNpv")} />
+              </span>
               <p className="font-mono font-medium">{formatChf(data.levered.equityNpvChf)}</p>
             </div>
           )}
           {data.levered.equityIrrPct != null && (
             <div>
-              <span className="text-foreground-dim">{t("manager:npvScenarios.debt.equityIrr")}</span>
+              <span className="text-foreground-dim flex items-center gap-0.5">
+                {t("manager:npvScenarios.debt.equityIrr")}
+                <Tooltip content={t("manager:npvScenarios.tooltip.equityIrr")} />
+              </span>
               <p className="font-mono font-medium tabular-nums">{data.levered.equityIrrPct}%</p>
             </div>
           )}
           {data.levered.minDscr != null && (
             <div>
-              <span className="text-foreground-dim">{t("manager:npvScenarios.debt.minDscr")}</span>
-              <p className={cn("font-mono font-medium tabular-nums", data.levered.minDscr < 1.2 ? "text-red-600" : "text-foreground")}>
+              <span className="text-foreground-dim flex items-center gap-0.5">
+                {t("manager:npvScenarios.debt.minDscr")}
+                <Tooltip content={t("manager:npvScenarios.tooltip.dscr")} />
+              </span>
+              <p className={cn("font-mono font-medium tabular-nums", dscrColor(data.levered.minDscr))}>
                 {data.levered.minDscr.toFixed(2)}×
               </p>
             </div>
@@ -362,6 +388,33 @@ export default function NPVScenariosPanel({ buildingId, fetchUrl, mode = "intera
   // Highlighted = strategy recommendation when profile exists, best NPV otherwise
   const highlightedScenario = strategyContext?.hasProfile ? recommendedScenario : bestScenarioKey;
 
+  // ── Plain-language verdict (novice hand-holding) ──────────────
+  const plainVerdict = (() => {
+    if (!data) return "";
+    if (bestScenarioKey === "invest") {
+      return t("manager:npvScenarios.plain.verdictInvest", { delta: formatChf(Math.abs(bestVsNeglectDelta)) });
+    }
+    if (bestScenarioKey === "defer") {
+      const vsInvest = data.scenarios.defer.npvChf - data.scenarios.invest.npvChf;
+      return t("manager:npvScenarios.plain.verdictDefer", { years: data.deferYears, delta: formatChf(Math.abs(vsInvest)) });
+    }
+    return t("manager:npvScenarios.plain.verdictNeglect");
+  })();
+
+  const bestLevered = bestScenario?.levered ?? null;
+  const coverageLine = (() => {
+    if (!data?.debt) return null;
+    if (data.debt.totalDebtChf <= 0) return t("manager:npvScenarios.plain.noDebt");
+    const dscr = bestLevered?.minDscr;
+    if (dscr == null) return null;
+    const key = dscr >= 1.5 ? "coverageComfortable" : dscr >= 1.2 ? "coverageOk" : "coverageTight";
+    let line = t(`manager:npvScenarios.plain.${key}`, { dscr: dscr.toFixed(2) });
+    if (bestLevered?.equityIrrPct != null) {
+      line += " " + t("manager:npvScenarios.plain.returnNote", { irr: bestLevered.equityIrrPct });
+    }
+    return line;
+  })();
+
   return (
     <Panel title={t("manager:npvScenarios.title.npvScenarios")}>
       <div className="space-y-4">
@@ -529,17 +582,26 @@ export default function NPVScenariosPanel({ buildingId, fetchUrl, mode = "intera
         {!loading && data?.debt && (
           <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 rounded-md border border-surface-border bg-surface-subtle px-3 py-2 text-xs">
             <span className="text-muted font-medium shrink-0">{t("manager:npvScenarios.debt.title")}</span>
-            <DebtStat label={t("manager:npvScenarios.debt.totalDebt")} value={formatChf(data.debt.totalDebtChf)} />
-            {data.debt.ltvPct != null && <DebtStat label={t("manager:npvScenarios.debt.ltv")} value={`${data.debt.ltvPct}%`} />}
-            {data.debt.weightedCostOfDebtPct != null && <DebtStat label={t("manager:npvScenarios.debt.costOfDebt")} value={`${data.debt.weightedCostOfDebtPct}%`} />}
-            {data.debt.waccPct != null && <DebtStat label={t("manager:npvScenarios.debt.wacc")} value={`${data.debt.waccPct}%`} />}
-            {data.debt.currentEquityChf != null && <DebtStat label={t("manager:npvScenarios.debt.equity")} value={formatChf(data.debt.currentEquityChf)} />}
+            <DebtStat label={t("manager:npvScenarios.debt.totalDebt")} value={formatChf(data.debt.totalDebtChf)} tooltip={t("manager:npvScenarios.tooltip.totalDebt")} />
+            {data.debt.ltvPct != null && <DebtStat label={t("manager:npvScenarios.debt.ltv")} value={`${data.debt.ltvPct}%`} tooltip={t("manager:npvScenarios.tooltip.ltv")} valueClass={ltvColor(data.debt.ltvPct)} />}
+            {data.debt.weightedCostOfDebtPct != null && <DebtStat label={t("manager:npvScenarios.debt.costOfDebt")} value={`${data.debt.weightedCostOfDebtPct}%`} tooltip={t("manager:npvScenarios.tooltip.costOfDebt")} />}
+            {data.debt.waccPct != null && <DebtStat label={t("manager:npvScenarios.debt.wacc")} value={`${data.debt.waccPct}%`} tooltip={t("manager:npvScenarios.tooltip.wacc")} />}
+            {data.debt.currentEquityChf != null && <DebtStat label={t("manager:npvScenarios.debt.equity")} value={formatChf(data.debt.currentEquityChf)} tooltip={t("manager:npvScenarios.tooltip.equity")} />}
           </div>
         )}
 
         {/* Scenario cards */}
         {!loading && data && (
           <>
+            {/* Plain-language verdict — what this means & what to do */}
+            <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2.5">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 mb-1">
+                {t("manager:npvScenarios.plain.whatThisMeans")}
+              </p>
+              <p className="text-sm text-foreground leading-relaxed">{plainVerdict}</p>
+              {coverageLine && <p className="text-xs text-muted-text mt-1 leading-relaxed">{coverageLine}</p>}
+            </div>
+
             {/* Delta callout with breakdown */}
             {bestVsNeglectDelta !== 0 && bestScenarioKey !== "neglect" && (
               <div className={cn(

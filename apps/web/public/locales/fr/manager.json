@@ -942,7 +942,15 @@
       "fci": "Indice d'état des installations = coût de l'entretien différé ÷ valeur totale de remplacement. Repères BOMA : <5% excellent, 5–10% bon, 10–30% passable, >30% critique.",
       "discountRate": "Coût annualisé du capital (coût d'opportunité). Référence immobilière privée suisse : 3–5%. Des taux plus élevés pénalisent davantage les flux futurs.",
       "incomeGrowth": "Taux de croissance annuel prévu des revenus locatifs. Moyenne suisse résidentielle long terme : 1–2%.",
-      "deferWindow": "Nombre d'années de report des investissements proches dans le scénario Reporter. Les actifs dus au-delà de cette fenêtre restent planifiés."
+      "deferWindow": "Nombre d'années de report des investissements proches dans le scénario Reporter. Les actifs dus au-delà de cette fenêtre restent planifiés.",
+      "equityNpv": "Valeur créée en argent d’aujourd’hui après remboursement de l’hypothèque. Positif = le plan crée de la richesse.",
+      "equityIrr": "Le rendement annuel en % sur les fonds que vous investissez réellement, en tenant compte du prêt.",
+      "dscr": "Loyers vs mensualités. 1,2× = les loyers couvrent 1,2 fois les mensualités — au-dessus de ~1,2× c’est sain.",
+      "ltv": "Part de la valeur de l’immeuble financée par la dette. Plus bas = plus sûr ; les banques plafonnent souvent vers 80%.",
+      "wacc": "Votre coût moyen du capital (fonds propres + dette) — le seuil qu’un plan doit dépasser.",
+      "costOfDebt": "Le taux d’intérêt moyen de vos hypothèques.",
+      "equity": "Vos fonds propres dans l’immeuble : valeur de marché moins dette.",
+      "totalDebt": "Solde hypothécaire total restant dû."
     },
     "notice": {
       "identicalScenarios": "Aucune dépense ne tombe dans les {{years}} premières années du calendrier — Investir et Reporter sont équivalents selon les hypothèses actuelles. Essayez une fenêtre de report plus courte."
@@ -988,6 +996,25 @@
       "noData": "Ajoutez une valeur de marché et une ou plusieurs hypothèques dans Financement pour voir le rendement avec levier.",
       "unlevered": "Sans levier",
       "levered": "Avec levier (fonds propres)"
+    },
+    "plain": {
+      "whatThisMeans": "Ce que cela signifie",
+      "verdictInvest": "Meilleure option : rénover maintenant — cela ajoute environ {{delta}} en valeur d’aujourd’hui par rapport à ne rien faire.",
+      "verdictDefer": "Meilleure option : attendre environ {{years}} ans — reporter vaut à peu près {{delta}} de plus qu’agir maintenant.",
+      "verdictNeglect": "Meilleure option pour l’instant : s’abstenir — dépenser sur cette période ne serait pas rentable.",
+      "coverageComfortable": "L’immeuble couvre confortablement ses mensualités ({{dscr}}× loyers/dette, au-dessus du seuil de confort de 1,2×).",
+      "coverageOk": "L’immeuble couvre ses mensualités ({{dscr}}× loyers/dette).",
+      "coverageTight": "Attention à la couverture — {{dscr}}× loyers/dette, en dessous du seuil de confort de 1,2×.",
+      "noDebt": "Aucune hypothèque enregistrée : vue « tout en fonds propres ».",
+      "returnNote": "Rendement d’environ {{irr}}% par an sur les fonds propres investis."
+    },
+    "health": {
+      "comfortable": "confortable",
+      "ok": "correct",
+      "tight": "juste",
+      "conservative": "prudent",
+      "moderate": "modéré",
+      "high": "élevé"
     }
   },
   "noiTrend": {

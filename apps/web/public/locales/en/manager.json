@@ -942,7 +942,15 @@
       "fci": "Facility Condition Index = deferred maintenance cost ÷ total replacement value. BOMA benchmarks: <5% excellent, 5–10% good, 10–30% fair, >30% critical.",
       "discountRate": "Annualised cost of capital (opportunity cost). Swiss private real estate benchmark: 3–5%. Higher rates penalise distant cash flows more.",
       "incomeGrowth": "Expected annual rental income growth rate. Swiss residential long-run average: 1–2%. Inflation + market tightness drive this.",
-      "deferWindow": "Number of years by which near-term capex is postponed in the Defer scenario. Assets due beyond this window are still executed on schedule."
+      "deferWindow": "Number of years by which near-term capex is postponed in the Defer scenario. Assets due beyond this window are still executed on schedule.",
+      "equityNpv": "Value created in today’s money after paying the mortgage. Positive = the plan adds wealth.",
+      "equityIrr": "The yearly % return on the cash you actually put in, accounting for the loan.",
+      "dscr": "Rent vs loan payments. 1.2× means rent covers payments 1.2 times — above ~1.2× is healthy.",
+      "ltv": "Share of the building’s value funded by debt. Lower = safer; banks often cap around 80%.",
+      "wacc": "Your blended cost of money across equity and debt — the hurdle a plan must beat.",
+      "costOfDebt": "The average interest rate across your mortgages.",
+      "equity": "Your own money in the building: market value minus debt.",
+      "totalDebt": "Total outstanding mortgage balance."
     },
     "notice": {
       "identicalScenarios": "No capex falls in the first {{years}} years of this building's schedule — Invest and Defer are equivalent under current assumptions. Try a shorter defer window to see a difference."
@@ -988,6 +996,25 @@
       "noData": "Add a market value and mortgage(s) under Financing to see leveraged returns.",
       "unlevered": "Unlevered",
       "levered": "Levered (equity)"
+    },
+    "plain": {
+      "whatThisMeans": "What this means",
+      "verdictInvest": "Best move: renovate now — it adds about {{delta}} in today’s money versus doing nothing.",
+      "verdictDefer": "Best move: wait about {{years}} years — deferring is worth roughly {{delta}} more than acting now.",
+      "verdictNeglect": "Best move right now: hold off — spending on this over this period wouldn’t pay for itself.",
+      "coverageComfortable": "The building comfortably covers its loan payments ({{dscr}}× rent-to-debt, above the 1.2× comfort line).",
+      "coverageOk": "The building covers its loan payments ({{dscr}}× rent-to-debt).",
+      "coverageTight": "Watch the loan coverage — {{dscr}}× rent-to-debt is below the 1.2× comfort line.",
+      "noDebt": "No mortgage on file, so this is an all-cash view.",
+      "returnNote": "Your money back at about {{irr}}% per year on the cash invested."
+    },
+    "health": {
+      "comfortable": "comfortable",
+      "ok": "ok",
+      "tight": "tight",
+      "conservative": "conservative",
+      "moderate": "moderate",
+      "high": "high"
     }
   },
   "noiTrend": {
