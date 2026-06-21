@@ -178,6 +178,8 @@ model Org {
   captureSessions       CaptureSession[]
   // Cashflow Planning
   cashflowPlans         CashflowPlan[]
+  // Mortgages / Debt
+  mortgages             Mortgage[]
   // Recurring Billing
   billingSchedules      RecurringBillingSchedule[]
   // Charge Reconciliation
@@ -380,6 +382,10 @@ model Building {
   canton          String?
   cantonDerivedAt DateTime?
 
+  // Valuation — enables LTV, WACC equity weight, terminal equity value
+  marketValueChf  Float?     /// Current market / appraisal value of the building, CHF
+  marketValueAt   DateTime?  /// Effective date of the market value estimate
+
   // House rules
   houseRulesText  String?
 
@@ -401,6 +407,7 @@ model Building {
   strategyProfile    BuildingStrategyProfile?
   importedStatements ImportedStatement[]
   assets             Asset[]
+  mortgages          Mortgage[]
   attributedInvoices     Invoice[]             @relation("InvoiceBuildingAttribution")
   dailySnapshots         BuildingDailySnapshot[]
 
@@ -2047,6 +2054,40 @@ model CashflowOverride {
 
   @@index([planId])
   @@index([assetId])
+}
+
+// ==========================================
+// Mortgage / Debt — enables FCFE levered NPV, DSCR, LTV, WACC
+// ==========================================
+
+enum AmortizationType {
+  INTEREST_ONLY /// No principal repayment (typical Swiss 1st rank)
+  LINEAR        /// Fixed principal repaid per year
+  ANNUITY       /// Constant total payment; principal share grows over time
+}
+
+model Mortgage {
+  id                    String           @id @default(uuid())
+  orgId                 String
+  buildingId            String
+  lenderName            String?
+  originalPrincipalChf  Float            /// Loan amount at origination
+  currentBalanceChf     Float            /// Outstanding principal today
+  interestRatePct       Float            /// Nominal annual interest rate, %
+  amortizationType      AmortizationType @default(ANNUITY)
+  /// LINEAR: principal repaid per year. ANNUITY: derived from term if null. INTEREST_ONLY: ignored.
+  annualAmortizationChf Float?
+  startDate             DateTime?
+  fixedUntil            DateTime?        /// End of the fixed-rate period (refinancing exposure)
+  maturityDate          DateTime?        /// Final repayment date (annuity term anchor)
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+
+  org      Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  building Building @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+
+  @@index([orgId])
+  @@index([buildingId])
 }
 
 // ==========================================
