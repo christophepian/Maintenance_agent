@@ -257,17 +257,34 @@ function ScenarioCard({ label, hint, npv, summary, isBest, breakeven }) {
   );
 }
 
-// ── Controls: compact toggle button ──────────────────────────────────────────
+// ── Inputs rail: helpers ──────────────────────────────────────────────────────
 
-function ToggleGroup({ label, options, value, onChange }) {
+// Small uppercase section heading inside the inputs rail.
+function RailSection({ title, children }) {
   return (
-    <div className="flex items-center gap-2 flex-wrap">
-      <span className="text-xs font-medium text-foreground-dim shrink-0">{label}</span>
-      <div className="flex rounded-lg border border-surface-border overflow-hidden">
+    <div className="space-y-3">
+      <p className="text-[10px] font-semibold text-foreground-dim uppercase tracking-wide">{title}</p>
+      {children}
+    </div>
+  );
+}
+
+// Segmented toggle. Horizontal for short option sets, vertical for long labels.
+function RailToggle({ label, options, value, onChange, vertical }) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="text-xs font-medium text-foreground-dim">{label}</span>
+      <div className={cn(
+        "flex rounded-lg border border-surface-border overflow-hidden",
+        vertical ? "flex-col divide-y divide-surface-border" : "divide-x divide-surface-border",
+      )}>
         {options.map(([k, l]) => (
           <button key={k} onClick={() => onChange(k)}
-            className={cn("px-3 py-1.5 text-xs font-medium transition-colors whitespace-nowrap",
-              value === k ? "bg-slate-800 text-white" : "bg-surface text-foreground-dim hover:bg-surface-hover")}>
+            className={cn(
+              "px-2 py-1.5 text-xs font-medium transition-colors",
+              vertical ? "text-left" : "flex-1 text-center whitespace-nowrap",
+              value === k ? "bg-slate-800 text-white" : "bg-surface text-foreground-dim hover:bg-surface-hover",
+            )}>
             {l}
           </button>
         ))}
@@ -276,18 +293,30 @@ function ToggleGroup({ label, options, value, onChange }) {
   );
 }
 
-function NumInput({ label, value, onChange, suffix, min, step }) {
+// Labelled number field laid out as a justified row (label left, input right).
+function RailNum({ label, value, onChange, suffix, min, step }) {
   return (
-    <div className="flex items-center gap-1.5">
-      <span className="text-xs text-foreground-dim shrink-0">{label}</span>
-      <div className="flex items-center gap-0.5">
+    <div className="flex items-center justify-between gap-2">
+      <span className="text-xs text-foreground-dim">{label}</span>
+      <div className="flex items-center gap-1 shrink-0">
         <input
           type="number" min={min ?? 0} step={step ?? 1} value={value}
           onChange={(e) => onChange(Number(e.target.value))}
-          className="w-14 rounded border border-surface-border px-1.5 py-1 text-xs tabular-nums text-center focus:border-blue-400 focus:outline-none"
+          className="w-20 rounded border border-surface-border px-2 py-1 text-xs tabular-nums text-right focus:border-blue-400 focus:outline-none"
         />
-        {suffix && <span className="text-xs text-foreground-dim">{suffix}</span>}
+        {suffix && <span className="text-xs text-foreground-dim w-7 text-left">{suffix}</span>}
       </div>
+    </div>
+  );
+}
+
+// Read-only computed metric chip for the results summary strip.
+function SummaryStat({ label, value, tone }) {
+  const toneClass = tone === "green" ? "text-green-700" : tone === "red" ? "text-red-600" : "text-foreground";
+  return (
+    <div className="flex flex-col gap-0.5">
+      <span className="text-[10px] font-medium text-foreground-dim uppercase tracking-wide">{label}</span>
+      <span className={cn("text-sm font-semibold tabular-nums", toneClass)}>{value}</span>
     </div>
   );
 }
@@ -458,68 +487,80 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId }
   return createPortal(
     <div className="fixed inset-0 z-50 flex flex-col bg-surface" style={{ isolation: "isolate" }}>
 
-      {/* ── Sticky header + controls ── */}
-      <div className="shrink-0 border-b border-surface-border bg-surface-subtle">
-
-        {/* Title row */}
-        <div className="flex items-center justify-between gap-4 px-5 py-3">
-          <div className="min-w-0">
-            <h2 className="text-sm font-semibold text-foreground truncate">{title}</h2>
-            <p className="text-xs text-foreground-dim">
-              {safeItems.map((i) => `Unit ${i.unitNumber}`).filter((v, i, a) => a.indexOf(v) === i).join(" · ")}
-            </p>
-          </div>
-          <button onClick={onClose} className="rounded-lg p-1.5 text-foreground-dim hover:bg-surface-hover transition-colors shrink-0">
-            <X className="h-4 w-4" />
-          </button>
+      {/* ── Sticky title bar ── */}
+      <div className="shrink-0 flex items-center justify-between gap-4 px-5 py-3 border-b border-surface-border bg-surface-subtle">
+        <div className="min-w-0">
+          <h2 className="text-sm font-semibold text-foreground truncate">{title}</h2>
+          <p className="text-xs text-foreground-dim">
+            {safeItems.map((i) => `Unit ${i.unitNumber}`).filter((v, i, a) => a.indexOf(v) === i).join(" · ")}
+          </p>
         </div>
-
-        {/* Controls row 1: scenario toggles */}
-        <div className="flex flex-wrap gap-x-5 gap-y-2 px-5 pb-3">
-          <ToggleGroup label="Action"
-            options={[["replace", "Replace"], ["repair", "Repair"]]}
-            value={action} onChange={(v) => { setAction(v); setCostOverrides({}); }}
-          />
-          <ToggleGroup label="Timing"
-            options={[
-              ["now",      "Act Now"],
-              ["turnover", minLeaseRemaining != null ? `At Turnover (~${fmtMo(minLeaseRemaining)})` : "At Turnover"],
-              ["both",     "Compare Both"],
-            ]}
-            value={timing} onChange={setTiming}
-          />
-          <ToggleGroup label="Horizon"
-            options={[["5", "5 yr"], ["10", "10 yr"], ["15", "15 yr"]]}
-            value={String(horizon)} onChange={(v) => setHorizon(Number(v))}
-          />
-        </div>
-
-        {/* Controls row 2: key metrics + overrideable params */}
-        <div className="flex flex-wrap gap-x-5 gap-y-2 px-5 pb-3 border-t border-surface-divider pt-2.5">
-          {/* Auto-computed (read-only) */}
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs text-foreground-dim">Total investment</span>
-            <span className="text-xs font-semibold text-foreground tabular-nums">{fmtChf(totalCostChf)}</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs text-foreground-dim">Rent uplift</span>
-            <span className="text-xs font-semibold text-green-700 tabular-nums">+CHF {totalMonthlyUplift.toFixed(0)}/mo</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs text-foreground-dim">Do Nothing risk</span>
-            <span className="text-xs font-semibold text-red-600 tabular-nums">{fmtChf(monthlyDoNothingDeduct * 12)}/yr</span>
-          </div>
-          {/* Overrideable */}
-          <NumInput label="OBLF %" value={passthroughPct} onChange={setPassthrough} suffix="%" min={10} step={5} />
-          <NumInput label="Discount" value={discountRate} onChange={setDiscount} suffix="%" min={1} step={0.5} />
-          <NumInput label="Cap rate" value={capRate} onChange={setCapRate} suffix="%" min={2} step={0.5} />
-          <NumInput label="Vacancy" value={vacancyMonths} onChange={setVacancy} suffix=" mo" min={0} step={1} />
-        </div>
+        <button onClick={onClose} className="rounded-lg p-1.5 text-foreground-dim hover:bg-surface-hover transition-colors shrink-0">
+          <X className="h-4 w-4" />
+        </button>
       </div>
 
-      {/* ── Scrollable body ── */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-5xl px-5 py-6 space-y-6">
+      {/* ── Two-column workspace: inputs rail | results ── */}
+      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+
+        {/* ── Inputs rail ── */}
+        <aside className="w-full lg:w-80 shrink-0 overflow-y-auto border-b lg:border-b-0 lg:border-r border-surface-border bg-surface-subtle px-5 py-5 space-y-6">
+
+          <RailSection title="Scenario">
+            <RailToggle label="Action"
+              options={[["replace", "Replace"], ["repair", "Repair"]]}
+              value={action} onChange={(v) => { setAction(v); setCostOverrides({}); }}
+            />
+            <RailToggle label="Timing" vertical
+              options={[
+                ["now",      "Act Now"],
+                ["turnover", minLeaseRemaining != null ? `At Turnover (~${fmtMo(minLeaseRemaining)})` : "At Turnover"],
+                ["both",     "Compare Both"],
+              ]}
+              value={timing} onChange={setTiming}
+            />
+            <RailToggle label="Horizon"
+              options={[["5", "5 yr"], ["10", "10 yr"], ["15", "15 yr"]]}
+              value={String(horizon)} onChange={(v) => setHorizon(Number(v))}
+            />
+          </RailSection>
+
+          <div className="border-t border-surface-divider" />
+
+          <RailSection title="Assumptions">
+            <RailNum label="OBLF passthrough" value={passthroughPct} onChange={setPassthrough} suffix="%" min={10} step={5} />
+            <RailNum label="Discount rate"    value={discountRate}   onChange={setDiscount}    suffix="%" min={1}  step={0.5} />
+            <RailNum label="Cap rate"         value={capRate}        onChange={setCapRate}     suffix="%" min={2}  step={0.5} />
+            <RailNum label="Vacancy"          value={vacancyMonths}  onChange={setVacancy}     suffix="mo" min={0} step={1} />
+          </RailSection>
+
+          <div className="border-t border-surface-divider" />
+
+          <RailSection title={`Asset cost${assetRows.length !== 1 ? "s" : ""} (CHF)`}>
+            {assetRows.map((row) => (
+              <div key={row.assetId} className="flex items-center justify-between gap-2">
+                <span className="text-xs text-foreground truncate" title={row.assetName}>{row.assetName}</span>
+                <input
+                  type="number" min={0} step={100}
+                  value={costOverrides[row.assetId] ?? row.costChf}
+                  onChange={(e) => setCostOverrides((prev) => ({ ...prev, [row.assetId]: Number(e.target.value) }))}
+                  className="w-24 shrink-0 rounded border border-surface-border px-2 py-1 text-xs tabular-nums text-right focus:border-blue-400 focus:outline-none"
+                />
+              </div>
+            ))}
+          </RailSection>
+        </aside>
+
+        {/* ── Results column ── */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="mx-auto max-w-4xl px-5 py-6 space-y-6">
+
+          {/* Computed summary strip */}
+          <div className="grid grid-cols-3 gap-3 rounded-xl border border-surface-border bg-surface px-4 py-3 shadow-sm">
+            <SummaryStat label="Total investment" value={fmtChf(totalCostChf)} />
+            <SummaryStat label="Rent uplift" value={`+CHF ${totalMonthlyUplift.toFixed(0)}/mo`} tone="green" />
+            <SummaryStat label="Do Nothing risk" value={`${fmtChf(monthlyDoNothingDeduct * 12)}/yr`} tone="red" />
+          </div>
 
           {/* Chart */}
           <div className="rounded-2xl border border-surface-border bg-surface p-5 shadow-sm">
@@ -644,13 +685,8 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId }
                         {row.unitNumber}
                         {row.depreciationPct != null && <span className="block">{row.depreciationPct}% depr.</span>}
                       </td>
-                      <td className="px-4 py-2.5 text-right">
-                        <input
-                          type="number" min={0} step={100}
-                          value={costOverrides[row.assetId] ?? row.costChf}
-                          onChange={(e) => setCostOverrides((prev) => ({ ...prev, [row.assetId]: Number(e.target.value) }))}
-                          className="w-24 rounded border border-surface-border px-2 py-1 text-xs tabular-nums text-right focus:border-blue-400 focus:outline-none"
-                        />
+                      <td className="px-4 py-2.5 text-right text-xs tabular-nums text-foreground font-medium">
+                        {fmtChf(row.costChf)}
                       </td>
                       <td className="px-4 py-2.5 text-right text-xs text-green-700 tabular-nums font-medium">
                         +CHF {row.monthlyUpl.toFixed(0)}/mo
@@ -739,6 +775,7 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId }
             </button>
           </div>
 
+          </div>
         </div>
       </div>
     </div>,
