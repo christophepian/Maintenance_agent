@@ -54,6 +54,9 @@ export interface AddOverrideInput {
   assetId: string;
   originalYear: number;
   overriddenYear: number;
+  costChf?: number | null;
+  rentUpliftChfPerMonth?: number | null;
+  riskAvoidedChfPerYear?: number | null;
 }
 
 export interface RemoveOverrideInput {
@@ -148,6 +151,9 @@ export async function addOverrideWorkflow(
     assetId: input.assetId,
     originalYear: input.originalYear,
     overriddenYear: input.overriddenYear,
+    costChf: input.costChf,
+    rentUpliftChfPerMonth: input.rentUpliftChfPerMonth,
+    riskAvoidedChfPerYear: input.riskAvoidedChfPerYear,
   });
   if (!override) {
     throw Object.assign(new Error("CashflowPlan not found"), { code: "NOT_FOUND" });

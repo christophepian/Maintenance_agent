@@ -129,7 +129,14 @@ export async function addCashflowOverride(
   prisma: PrismaClient,
   planId: string,
   orgId: string,
-  data: { assetId: string; originalYear: number; overriddenYear: number },
+  data: {
+    assetId: string;
+    originalYear: number;
+    overriddenYear: number;
+    costChf?: number | null;
+    rentUpliftChfPerMonth?: number | null;
+    riskAvoidedChfPerYear?: number | null;
+  },
 ) {
   const plan = await prisma.cashflowPlan.findFirst({ where: { id: planId, orgId } });
   if (!plan) return null;
@@ -140,6 +147,9 @@ export async function addCashflowOverride(
       assetId: data.assetId,
       originalYear: data.originalYear,
       overriddenYear: data.overriddenYear,
+      costChf: data.costChf ?? null,
+      rentUpliftChfPerMonth: data.rentUpliftChfPerMonth ?? null,
+      riskAvoidedChfPerYear: data.riskAvoidedChfPerYear ?? null,
     },
   });
 

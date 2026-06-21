@@ -163,6 +163,24 @@ export interface NPVOptions {
   propertyValueChf?: number;
   /** Annual NOI erosion rate for the Neglect scenario, % — default 1 */
   neglectNoiErosionRatePct?: number;
+  /**
+   * Planned renovations (from a plan's overrides). When present, the scenarios
+   * become renovation-aware so the plan NPV agrees with the simulator:
+   *  - Invest:  capex at capexYear; rent uplift credited after the work completes
+   *  - Defer:   capex + uplift pushed by deferYears; risk borne in the interim
+   *  - Neglect: no capex/uplift; the avoided risk is borne every year
+   */
+  renovations?: RenovationInput[];
+}
+
+/** A planned renovation carried from the simulator via a CashflowOverride. */
+export interface RenovationInput {
+  assetId: string;
+  /** Year the work is scheduled (the override's overriddenYear) */
+  capexYear: number;
+  costChf: number;
+  rentUpliftChfPerMonth: number;
+  riskAvoidedChfPerYear: number;
 }
 
 // ─── Helpers ───────────────────────────────────────────────────
@@ -197,6 +215,11 @@ function buildScenario(
      * Not passed for Neglect (no consented work = no deduction).
      */
     taxShieldByYear?: Map<number, number>;
+    /**
+     * Per-year NOI adjustment from planned renovations: positive = rent uplift
+     * once the work completes, negative = avoided risk borne while un-renovated.
+     */
+    noiAdjustmentByYear?: Map<number, number>;
   },
 ): NPVScenarioResult {
   const flows: NPVYearlyFlow[] = [];
@@ -214,7 +237,8 @@ function buildScenario(
       ? Math.pow(1 - opts.noiErosionRatePct / 100, erosionYears)
       : 1;
     const projectedNoiChf = Math.round(
-      baseAnnualNoiChf * growthFactor(incomeGrowthRatePct, yearsAhead) * erosionFactor,
+      baseAnnualNoiChf * growthFactor(incomeGrowthRatePct, yearsAhead) * erosionFactor
+      + (opts?.noiAdjustmentByYear?.get(year) ?? 0),
     );
 
     const capexChf = capexByYear.get(year) ?? 0;
@@ -315,6 +339,43 @@ function computeLeveredMetrics(
   }
 
   return { equityNpvChf, equityIrrPct, minDscr, avgDscr, dscrByYear };
+}
+
+/**
+ * Per-scenario annual NOI adjustments from planned renovations (pure).
+ *  - Uplift (OBLF rent increase) is credited once the work completes.
+ *  - The avoided risk (failure + CO 259d) is borne for every year the asset is
+ *    still un-renovated.
+ * Invest renovates at capexYear; Defer pushes near-term work by deferYears;
+ * Neglect never renovates. This is what makes the plan NPV agree with the
+ * simulator's "Act Now / At Turnover / Do Nothing".
+ */
+export function computeRenovationNoiAdjustments(
+  renovations: RenovationInput[],
+  fromYear: number,
+  toYear: number,
+  deferYears: number,
+): {
+  investNoiAdj: Map<number, number>;
+  deferNoiAdj: Map<number, number>;
+  neglectNoiAdj: Map<number, number>;
+} {
+  const investNoiAdj = new Map<number, number>();
+  const deferNoiAdj = new Map<number, number>();
+  const neglectNoiAdj = new Map<number, number>();
+  const addAdj = (m: Map<number, number>, y: number, v: number) => m.set(y, (m.get(y) ?? 0) + v);
+  for (const r of renovations) {
+    const upliftAnnual = Math.round(r.rentUpliftChfPerMonth * 12);
+    const riskAnnual = Math.round(r.riskAvoidedChfPerYear);
+    const investYear = r.capexYear;
+    const deferYear = investYear < fromYear + deferYears ? investYear + deferYears : investYear;
+    for (let y = fromYear; y <= toYear; y++) {
+      addAdj(investNoiAdj, y, y > investYear ? upliftAnnual : -riskAnnual);
+      addAdj(deferNoiAdj, y, y > deferYear ? upliftAnnual : -riskAnnual);
+      addAdj(neglectNoiAdj, y, -riskAnnual);
+    }
+  }
+  return { investNoiAdj, deferNoiAdj, neglectNoiAdj };
 }
 
 // ─── Main function ─────────────────────────────────────────────
@@ -486,6 +547,35 @@ export async function computeNPVScenarios(
     });
   }
 
+  // ── 4b. Apply planned renovations ──────────────────────────────
+  // Override each renovated asset's capex year + cost with the simulator's
+  // planned values, and append any renovation whose asset fell outside the
+  // depreciation horizon so its capex + uplift still count.
+  const renoByAsset = new Map<string, RenovationInput>();
+  for (const r of options.renovations ?? []) renoByAsset.set(r.assetId, r);
+  if (renoByAsset.size > 0) {
+    const present = new Set(allItems.map((i) => i.assetId));
+    for (const item of allItems) {
+      const r = renoByAsset.get(item.assetId);
+      if (r) {
+        item.estimatedReplacementYear = r.capexYear;
+        item.estimatedCostChf = r.costChf;
+      }
+    }
+    for (const r of renoByAsset.values()) {
+      if (!present.has(r.assetId)) {
+        allItems.push({
+          assetId: r.assetId,
+          assetName: r.assetId,
+          topic: "",
+          estimatedReplacementYear: r.capexYear,
+          estimatedCostChf: r.costChf,
+          deductiblePct: 0,
+        });
+      }
+    }
+  }
+
   // ── 5. Build capex and tax-shield maps per scenario ───────────
 
   // INVEST: bucket items by their scheduled year, capped to toYear
@@ -539,12 +629,18 @@ export async function computeNPVScenarios(
     ? Math.round((capexBacklog / totalReplacementValueChf) * 1000) / 10
     : 0;
 
+  // ── 6b. Renovation NOI adjustments per scenario ─────────────────
+  const { investNoiAdj, deferNoiAdj, neglectNoiAdj } = computeRenovationNoiAdjustments(
+    [...renoByAsset.values()], fromYear, toYear, deferYears,
+  );
+
   // ── 7. Compute each scenario ───────────────────────────────────
   const invest = buildScenario(
     fromYear, toYear, baseAnnualNoiChf, incomeGrowthRatePct, discountRatePct, investCapex,
     {
       terminalValueChf: terminalValueModeled ? propertyValueChf : undefined,
       taxShieldByYear: investTaxShield,
+      noiAdjustmentByYear: investNoiAdj,
     },
   );
   const defer = buildScenario(
@@ -552,6 +648,7 @@ export async function computeNPVScenarios(
     {
       terminalValueChf: terminalValueModeled ? propertyValueChf : undefined,
       taxShieldByYear: deferTaxShield,
+      noiAdjustmentByYear: deferNoiAdj,
     },
   );
   const neglect = buildScenario(
@@ -562,6 +659,7 @@ export async function computeNPVScenarios(
       terminalValueChf: terminalValueModeled
         ? Math.max(0, propertyValueChf! - capexBacklog)
         : undefined,
+      noiAdjustmentByYear: neglectNoiAdj,
       // No taxShieldByYear: Neglect performs no consented work
     },
   );

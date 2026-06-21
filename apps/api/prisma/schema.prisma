@@ -2047,6 +2047,12 @@ model CashflowOverride {
   assetId        String
   originalYear   Int      /// The raw depreciation-schedule year (baseline)
   overriddenYear Int      /// The year the user has shifted the replacement to
+  // Renovation economics (set by the simulator's "Plan this work") — make the
+  // plan NPV consistent with the simulator: Invest credits the rent uplift,
+  // Neglect bears the avoided risk. Null for manual year-shifts.
+  costChf               Float? /// Renovation cost the simulator used
+  rentUpliftChfPerMonth Float? /// OBLF rent uplift captured after the work completes
+  riskAvoidedChfPerYear Float? /// Expected failure + CO 259d risk avoided by renovating
   createdAt      DateTime @default(now())
 
   plan  CashflowPlan @relation(fields: [planId], references: [id], onDelete: Cascade)

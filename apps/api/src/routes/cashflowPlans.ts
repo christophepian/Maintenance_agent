@@ -316,12 +316,28 @@ export function registerCashflowPlanRoutes(router: Router) {
         }
       }
 
+      // Renovation economics from the plan's overrides — make the NPV verdict
+      // consistent with the simulator. Only for single-building plans (a building
+      // plan's overrides all belong to that building; avoids cross-building mixups).
+      const renovations = plan.buildingId
+        ? (plan.overrides ?? [])
+            .filter((o) => o.rentUpliftChfPerMonth != null || o.costChf != null)
+            .map((o) => ({
+              assetId: o.assetId,
+              capexYear: o.overriddenYear,
+              costChf: o.costChf ?? 0,
+              rentUpliftChfPerMonth: o.rentUpliftChfPerMonth ?? 0,
+              riskAvoidedChfPerYear: o.riskAvoidedChfPerYear ?? 0,
+            }))
+        : [];
+
       const result = await computeNPVScenariosForBuildings(prisma, orgId, buildingIds, {
         discountRatePct:     plan.discountRatePct,
         incomeGrowthRatePct: plan.incomeGrowthRatePct,
         horizonYears:        Math.ceil(plan.horizonMonths / 12),
         deferYears:          plan.deferYears,
         propertyValueChf:    plan.propertyValueChf ?? undefined,
+        renovations,
       });
 
       // Strategy context — only for single-building plans

@@ -25,6 +25,10 @@ export const AddOverrideSchema = z.object({
   assetId: z.string().min(1, "assetId is required"),
   originalYear: z.number().int().min(2000).max(2100),
   overriddenYear: z.number().int().min(2000).max(2100),
+  // Renovation economics from the simulator (optional — absent for manual shifts)
+  costChf: z.number().min(0).optional().nullable(),
+  rentUpliftChfPerMonth: z.number().min(0).optional().nullable(),
+  riskAvoidedChfPerYear: z.number().min(0).optional().nullable(),
 });
 
 export type CreateCashflowPlanInput = z.infer<typeof CreateCashflowPlanSchema>;

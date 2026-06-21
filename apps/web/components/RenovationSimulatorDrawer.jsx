@@ -461,6 +461,9 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId }
             name: `Renovation ${overriddenYear}`,
             buildingId,
             horizonMonths: 60,
+            // Align the plan's NPV assumptions with the simulator so the two agree
+            discountRatePct: discountRate,
+            capRatePct: capRate,
           }),
         });
         const createData = await createRes.json();
@@ -480,7 +483,15 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId }
         return fetch(`/api/cashflow-plans/${planId}/overrides`, {
           method: "POST",
           headers: { "Content-Type": "application/json", ...authHeaders() },
-          body: JSON.stringify({ assetId: row.assetId, originalYear, overriddenYear }),
+          body: JSON.stringify({
+            assetId: row.assetId,
+            originalYear,
+            overriddenYear,
+            // Renovation economics so the plan NPV credits the same upside/risk
+            costChf: Math.round(row.costChf),
+            rentUpliftChfPerMonth: Math.round(row.monthlyUpl),
+            riskAvoidedChfPerYear: Math.round(row.totalRisk),
+          }),
         });
       }));
 
