@@ -174,6 +174,70 @@ export default function ManagerExpensesPage() {
   const activeCount = [categoryFilter, buildingId, expenseTypeId, accountId].filter(Boolean).length;
   const [filterOpen, setFilterOpen] = useState(false);
 
+  // Hoisted above the early `loading` return so the hook runs on every render
+  // (React Hooks must be called unconditionally — rules-of-hooks).
+  const columns = useMemo(() => [
+    {
+      id: "invoiceNumber",
+      label: "Invoice #",
+      sortable: true,
+      alwaysVisible: true,
+      render: (inv) => inv.invoiceNumber || inv.id.slice(0, 8),
+    },
+    {
+      id: "category",
+      label: "Category",
+      sortable: true,
+      defaultVisible: true,
+      render: (inv) => <CategoryBadge category={inv.expenseCategory} />,
+    },
+    {
+      id: "description",
+      label: "Description",
+      defaultVisible: true,
+      render: (inv) => inv.description || "—",
+    },
+    {
+      id: "amount",
+      label: "Amount (CHF)",
+      sortable: true,
+      defaultVisible: true,
+      className: "text-right",
+      render: (inv) => <span className="tabular-nums cell-bold">{formatChf(inv.totalAmount)}</span>,
+    },
+    {
+      id: "date",
+      label: "Date",
+      sortable: true,
+      defaultVisible: true,
+      render: (inv) => formatDate(inv.createdAt),
+    },
+    {
+      id: "actions",
+      label: "Actions",
+      alwaysVisible: true,
+      render: (inv) => {
+        const isJobLinked = inv.jobId && inv.expenseCategory === "MAINTENANCE";
+        return isJobLinked ? (
+          <span className="text-xs text-foreground-dim">Auto (job-linked)</span>
+        ) : (
+          <select
+            value={inv.expenseCategory || ""}
+            onChange={(e) => setExpenseCategory(inv.id, e.target.value)}
+            disabled={actionLoading === inv.id}
+            className="edit-input cursor-pointer"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <option value="">Set category…</option>
+            {EXPENSE_CATEGORIES.map((cat) => (
+              <option key={cat} value={cat}>{cat}</option>
+            ))}
+          </select>
+        );
+      },
+    },
+  ], [setExpenseCategory, actionLoading]);
+
   return (
     <AppShell role="MANAGER">
       <PageShell>
@@ -236,67 +300,7 @@ export default function ManagerExpensesPage() {
             <>
             <ConfigurableTable
                 tableId="manager-expenses"
-                columns={useMemo(() => [
-                  {
-                    id: "invoiceNumber",
-                    label: "Invoice #",
-                    sortable: true,
-                    alwaysVisible: true,
-                    render: (inv) => inv.invoiceNumber || inv.id.slice(0, 8),
-                  },
-                  {
-                    id: "category",
-                    label: "Category",
-                    sortable: true,
-                    defaultVisible: true,
-                    render: (inv) => <CategoryBadge category={inv.expenseCategory} />,
-                  },
-                  {
-                    id: "description",
-                    label: "Description",
-                    defaultVisible: true,
-                    render: (inv) => inv.description || "—",
-                  },
-                  {
-                    id: "amount",
-                    label: "Amount (CHF)",
-                    sortable: true,
-                    defaultVisible: true,
-                    className: "text-right",
-                    render: (inv) => <span className="tabular-nums cell-bold">{formatChf(inv.totalAmount)}</span>,
-                  },
-                  {
-                    id: "date",
-                    label: "Date",
-                    sortable: true,
-                    defaultVisible: true,
-                    render: (inv) => formatDate(inv.createdAt),
-                  },
-                  {
-                    id: "actions",
-                    label: "Actions",
-                    alwaysVisible: true,
-                    render: (inv) => {
-                      const isJobLinked = inv.jobId && inv.expenseCategory === "MAINTENANCE";
-                      return isJobLinked ? (
-                        <span className="text-xs text-foreground-dim">Auto (job-linked)</span>
-                      ) : (
-                        <select
-                          value={inv.expenseCategory || ""}
-                          onChange={(e) => setExpenseCategory(inv.id, e.target.value)}
-                          disabled={actionLoading === inv.id}
-                          className="edit-input cursor-pointer"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <option value="">Set category…</option>
-                          {EXPENSE_CATEGORIES.map((cat) => (
-                            <option key={cat} value={cat}>{cat}</option>
-                          ))}
-                        </select>
-                      );
-                    },
-                  },
-                ], [setExpenseCategory, actionLoading])}
+                columns={columns}
                 data={invoices}
                 rowKey={(inv) => inv.id}
                 sortField={sortField}

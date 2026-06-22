@@ -1,5 +1,25 @@
 # Contributing to Maintenance Agent
 
+## Linting & formatting (report-only)
+
+ESLint + Prettier were added 2026-06-22 in **report-only mode** — they surface
+issues but do **not** block commits or CI yet.
+
+```bash
+npm run lint            # ESLint across apps/api + apps/web (warnings, not gates)
+npm run lint:fix        # auto-fix what ESLint can
+npm run format          # Prettier --write across the repo
+npm run format:check    # Prettier --check (no writes)
+npm run quality:report  # digest: lint/tsc/any/console/TODO counts vs baseline
+```
+
+Quality-debt rules (`no-explicit-any`, `no-console`, `react-hooks/exhaustive-deps`,
+a11y) are `warn`; only genuine-bug rules (`rules-of-hooks`, `no-debugger`, `no-var`)
+are `error`. Config lives in `eslint.config.mjs`. The committed baseline is
+`docs/quality-baseline.json` — the **weekly-code-quality** routine diffs against it
+and alerts on regression. Don't bump the baseline to silence an alert; lower it when
+you burn down debt. Promote a `warn` rule to `error` once its count hits zero.
+
 ## Testing
 
 ### Pre-commit checks

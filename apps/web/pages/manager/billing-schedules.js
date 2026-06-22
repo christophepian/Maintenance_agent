@@ -92,7 +92,7 @@ export default function BillingSchedulesPage() {
 
   useEffect(() => { fetchSchedules(); }, [fetchSchedules]);
 
-  async function handleAction(scheduleId, action) {
+  const handleAction = useCallback(async (scheduleId, action) => {
     setActionLoading(scheduleId);
     try {
       const res = await fetch(`/api/billing-schedules/${scheduleId}/${action}`, {
@@ -109,7 +109,86 @@ export default function BillingSchedulesPage() {
     } finally {
       setActionLoading(null);
     }
-  }
+  }, [fetchSchedules]);
+
+  // Hoisted above the early `loading` return so the hook runs on every render
+  // (React Hooks must be called unconditionally — rules-of-hooks).
+  const columns = useMemo(() => [
+    {
+      id: "tenant",
+      label: "Tenant",
+      sortable: true,
+      alwaysVisible: true,
+      render: (s) => s.lease ? (
+        <Link href={`/manager/leases/${s.leaseId}`} className="cell-link" onClick={(e) => e.stopPropagation()}>
+          {s.lease.tenantName || "—"}
+        </Link>
+      ) : "—",
+    },
+    {
+      id: "status",
+      label: "Status",
+      sortable: true,
+      defaultVisible: true,
+      render: (s) => <Badge variant={billingScheduleVariant(s.status)}>{s.status}</Badge>,
+    },
+    {
+      id: "baseRent",
+      label: "Base Rent",
+      sortable: true,
+      defaultVisible: true,
+      render: (s) => <span className="tabular-nums">{formatChfCents(s.baseRentCents)}</span>,
+    },
+    {
+      id: "charges",
+      label: "Charges",
+      defaultVisible: true,
+      render: (s) => <span className="tabular-nums">{formatChfCents(s.totalChargesCents)}</span>,
+    },
+    {
+      id: "total",
+      label: "Total",
+      sortable: true,
+      defaultVisible: true,
+      render: (s) => <span className="tabular-nums cell-bold">{formatChfCents(s.baseRentCents + s.totalChargesCents)}</span>,
+    },
+    {
+      id: "nextPeriod",
+      label: "Next Period",
+      sortable: true,
+      defaultVisible: true,
+      render: (s) => s.nextPeriodStart ? formatDate(s.nextPeriodStart) : "—",
+    },
+    {
+      id: "anchorDay",
+      label: "Anchor Day",
+      sortable: true,
+      defaultVisible: true,
+      render: (s) => s.anchorDay,
+    },
+    {
+      id: "actions",
+      label: "Actions",
+      alwaysVisible: true,
+      render: (s) => (
+        <>
+          {s.status === "ACTIVE" && (
+            <Button variant="warning" size="sm" onClick={(e) => { e.stopPropagation(); handleAction(s.id, "pause"); }} disabled={actionLoading === s.id}>
+              {actionLoading === s.id ? "…" : "Pause"}
+            </Button>
+          )}
+          {s.status === "PAUSED" && (
+            <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleAction(s.id, "resume"); }} disabled={actionLoading === s.id}>
+              {actionLoading === s.id ? "…" : "Resume"}
+            </Button>
+          )}
+          {s.status === "COMPLETED" && (
+            <span className="text-xs text-foreground-dim">{s.completionReason || "—"}</span>
+          )}
+        </>
+      ),
+    },
+  ], [handleAction, actionLoading]);
 
   return (
     <AppShell role="MANAGER">
@@ -171,82 +250,7 @@ export default function BillingSchedulesPage() {
                   </>
                 }
                 tableId="manager-billing-schedules"
-                columns={useMemo(() => [
-                  {
-                    id: "tenant",
-                    label: "Tenant",
-                    sortable: true,
-                    alwaysVisible: true,
-                    render: (s) => s.lease ? (
-                      <Link href={`/manager/leases/${s.leaseId}`} className="cell-link" onClick={(e) => e.stopPropagation()}>
-                        {s.lease.tenantName || "—"}
-                      </Link>
-                    ) : "—",
-                  },
-                  {
-                    id: "status",
-                    label: "Status",
-                    sortable: true,
-                    defaultVisible: true,
-                    render: (s) => <Badge variant={billingScheduleVariant(s.status)}>{s.status}</Badge>,
-                  },
-                  {
-                    id: "baseRent",
-                    label: "Base Rent",
-                    sortable: true,
-                    defaultVisible: true,
-                    render: (s) => <span className="tabular-nums">{formatChfCents(s.baseRentCents)}</span>,
-                  },
-                  {
-                    id: "charges",
-                    label: "Charges",
-                    defaultVisible: true,
-                    render: (s) => <span className="tabular-nums">{formatChfCents(s.totalChargesCents)}</span>,
-                  },
-                  {
-                    id: "total",
-                    label: "Total",
-                    sortable: true,
-                    defaultVisible: true,
-                    render: (s) => <span className="tabular-nums cell-bold">{formatChfCents(s.baseRentCents + s.totalChargesCents)}</span>,
-                  },
-                  {
-                    id: "nextPeriod",
-                    label: "Next Period",
-                    sortable: true,
-                    defaultVisible: true,
-                    render: (s) => s.nextPeriodStart ? formatDate(s.nextPeriodStart) : "—",
-                  },
-                  {
-                    id: "anchorDay",
-                    label: "Anchor Day",
-                    sortable: true,
-                    defaultVisible: true,
-                    render: (s) => s.anchorDay,
-                  },
-                  {
-                    id: "actions",
-                    label: "Actions",
-                    alwaysVisible: true,
-                    render: (s) => (
-                      <>
-                        {s.status === "ACTIVE" && (
-                          <Button variant="warning" size="sm" onClick={(e) => { e.stopPropagation(); handleAction(s.id, "pause"); }} disabled={actionLoading === s.id}>
-                            {actionLoading === s.id ? "…" : "Pause"}
-                          </Button>
-                        )}
-                        {s.status === "PAUSED" && (
-                          <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleAction(s.id, "resume"); }} disabled={actionLoading === s.id}>
-                            {actionLoading === s.id ? "…" : "Resume"}
-                          </Button>
-                        )}
-                        {s.status === "COMPLETED" && (
-                          <span className="text-xs text-foreground-dim">{s.completionReason || "—"}</span>
-                        )}
-                      </>
-                    ),
-                  },
-                ], [handleAction, actionLoading])}
+                columns={columns}
                 data={sortedSchedules}
                 rowKey={(s) => s.id}
                 sortField={sortField}

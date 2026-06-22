@@ -1,0 +1,12 @@
+node_modules
+dist
+.next
+coverage
+_archive
+backups
+website
+apps/web/public
+apps/api/prisma/migrations
+package-lock.json
+ROADMAP.json
+*.min.js

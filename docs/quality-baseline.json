@@ -1,0 +1,20 @@
+{
+  "_comment": "Code-quality baseline. The weekly code-quality routine diffs `npm run quality:report` against these numbers and alerts on regression. Lower is better for every field. Update deliberately (with the commit that burns down debt) — never bump silently to make an alert go away. Established 2026-06-22.",
+  "established": "2026-06-22",
+  "metrics": {
+    "eslint_err": 0,
+    "eslint_warn": 2362,
+    "tsc": 0,
+    "any": 685,
+    "console": 489,
+    "todo": 4,
+    "suppress": 35,
+    "bigfiles": 14
+  },
+  "notes": {
+    "eslint_err": "Now 0 (the 2 rules-of-hooks bugs in billing-schedules.js + finance/expenses.js were fixed 2026-06-22). Keep it at 0 — rules-of-hooks is the one error-level React rule.",
+    "any": "Backend `any` usages. tsconfig has noImplicitAny:false, so these compile. Burn down in legal/rental services first.",
+    "console": "Raw console.* in backend production code. Replace with a structured logger abstraction.",
+    "bigfiles": "Backend files > 800 LOC. Largest: localOcrScanner (2192), azureScanner (1944), financials (1810)."
+  }
+}
