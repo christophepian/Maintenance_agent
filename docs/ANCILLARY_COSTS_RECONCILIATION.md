@@ -1,7 +1,19 @@
 # Ancillary Costs (Nebenkosten / Charges) — Billing & Reconciliation
 
 Scope document for extending the charge-reconciliation feature to a legally complete
-Swiss ancillary-cost model. Status: **scoping + Phase 1 in progress.**
+Swiss ancillary-cost model. Status: **all four phases delivered (backend) 2026-06-22.**
+
+| Phase | Commit | Delivered |
+|---|---|---|
+| P1 | 3ece7f9 | Taxonomy (`AncillaryCostCategory`) + billable gate |
+| P2 | 5d6eda8 | Cost pool (`BillingPeriod`/`CostEntry`) + distribution-key apportionment + admin fee |
+| P3a | c3636cf | Dedicated credit notes for refunds |
+| P3b | 639cab1 | Apportionment auto-fill into reconciliation + `calculateFlatRate()` |
+| P4 | f8f4a9e | Inspection-rights workflow (`StatementDocRequest`, 30-day window, supporting docs) |
+
+Backend + API + tests only. **Frontend UI not yet built** (cost-pool entry, apportionment
+preview, credit-note view, inspection requests). Deferred: consumption metering,
+INCOMING-invoice→CostEntry auto-fill, credit-note PDF rendering.
 
 ## Background
 
