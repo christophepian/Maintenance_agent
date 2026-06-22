@@ -16,6 +16,7 @@ Swiss property management platform. Monorepo: Node.js + TypeScript backend (raw 
 | "Which file do I change?" | [ARCHITECTURE_LOW_CONTEXT_GUIDE.md](apps/api/src/ARCHITECTURE_LOW_CONTEXT_GUIDE.md) | File-level lookup for 16 common change types |
 | Schema / model change | [SCHEMA_REFERENCE.md](SCHEMA_REFERENCE.md) | Full models table, enums, migration path |
 | Testing / dev workflow | [CONTRIBUTING.md](CONTRIBUTING.md) | Port registry, test helpers, contract test pattern |
+| Linting / code quality | [CONTRIBUTING.md](CONTRIBUTING.md) §Linting | ESLint + Prettier (report-only), `npm run quality:report`, `docs/quality-baseline.json`, weekly watchdog routine |
 | Audit / open issues | [docs/AUDIT.md](docs/AUDIT.md) | 94 findings, 91 resolved, 3 remaining |
 | Full current-state reference | [PROJECT_STATE.md](PROJECT_STATE.md) | Guardrail details, backlog, state integrity |
 | Epic history / past work | [EPIC_HISTORY.md](EPIC_HISTORY.md) | Completed slice narratives |
