@@ -822,7 +822,7 @@ export function InvoicesContent() {
       defaultVisible: true,
       render: (inv) =>
         inv.buildingName || inv.unitNumber
-          ? <span>{inv.buildingName || "\u2014"}{inv.unitNumber ? <span className="text-foreground-dim"> \u00b7 {inv.unitNumber}</span> : null}</span>
+          ? <span>{inv.buildingName || "\u2014"}{inv.unitNumber ? <span className="text-foreground-dim"> · {inv.unitNumber}</span> : null}</span>
           : "\u2014",
     },
     {
@@ -859,7 +859,7 @@ export function InvoicesContent() {
         const isRecurring = !!(inv.billingScheduleId || inv.contractorBillingScheduleId);
         return isRecurring
           ? <span className="inline-flex items-center rounded-full bg-indigo-50 text-indigo-700 px-2 py-0.5 text-xs font-semibold">{t("manager:financeInvoices.text.recurring")}</span>
-          : <span className="text-foreground-dim text-xs">\u2014</span>;
+          : <span className="text-foreground-dim text-xs">—</span>;
       },
     },
     {
@@ -872,7 +872,7 @@ export function InvoicesContent() {
           ? <span className="text-xs text-muted-text">{inv.expenseCategory.charAt(0) + inv.expenseCategory.slice(1).toLowerCase()}</span>
           : inv.description
             ? <span className="text-xs text-muted-text block max-w-[220px] truncate" title={inv.description}>{inv.description}</span>
-            : <span className="text-foreground-dim text-xs">\u2014</span>,
+            : <span className="text-foreground-dim text-xs">—</span>,
     },
     {
       id: "actions",

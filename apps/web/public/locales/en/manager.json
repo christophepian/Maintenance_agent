@@ -1083,7 +1083,7 @@
     "col": {
       "status": "Status",
       "invoice": "Invoice #",
-      "buildingu00b7Unit": "Building \\u00b7 Unit",
+      "buildingu00b7Unit": "Building · Unit",
       "amount": "Amount",
       "date": "Date",
       "recurring": "Recurring",

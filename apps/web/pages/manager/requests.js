@@ -49,7 +49,7 @@ const TAB_ALIASES = { overview: "all", pending_review: "pending", active: "in_pr
 // ---------------------------------------------------------------------------
 
 function formatDate(iso) {
-  if (!iso) return "\u2014";
+  if (!iso) return "—";
   const d = new Date(iso);
   if (isNaN(d.getTime())) return iso;
   const dd = String(d.getDate()).padStart(2, "0");
@@ -59,10 +59,10 @@ function formatDate(iso) {
 }
 
 function formatCurrency(chf) {
-  if (typeof chf !== "number") return "\u2014";
+  if (typeof chf !== "number") return "—";
   const str = chf.toFixed(0);
-  const formatted = str.replace(/\B(?=(\d{3})+(?!\d))/g, "\u2019");
-  return `CHF\u00A0${formatted}`;
+  const formatted = str.replace(/\B(?=(\d{3})+(?!\d))/g, "’");
+  return `CHF ${formatted}`;
 }
 
 function nextApproverLabel(status) {
@@ -72,7 +72,7 @@ function nextApproverLabel(status) {
     case "RFP_PENDING":            return "Manager (RFP)";
     case "APPROVED":
     case "ASSIGNED":               return "Contractor";
-    default:                       return "\u2014";
+    default:                       return "—";
   }
 }
 
@@ -103,7 +103,7 @@ function ActionDropdown({ actions, loading }) {
         disabled={loading}
         className="whitespace-nowrap rounded-lg border border-surface-border bg-surface px-3 py-1.5 text-xs font-semibold text-muted-dark hover:bg-surface-subtle transition disabled:opacity-50"
       >
-        {loading ? "\u2026" : "Actions \u25be"}
+        {loading ? "…" : "Actions ▾"}
       </button>
       {open && (
         <div className="absolute right-0 z-20 mt-1 w-48 origin-top-right rounded-lg border border-surface-border bg-surface shadow-lg">
@@ -137,7 +137,7 @@ function buildRequestColumns({ t, router, actionLoading, approveRequest, rejectR
       className: "w-16",
       render: (r) => (
         <span className="font-mono text-muted">
-          {r.requestNumber ? `#${r.requestNumber}` : "\u2014"}
+          {r.requestNumber ? `#${r.requestNumber}` : "—"}
         </span>
       ),
     },
@@ -180,9 +180,9 @@ function buildRequestColumns({ t, router, actionLoading, approveRequest, rejectR
         <span className="text-muted-dark">
           {r.buildingId ? (
             <Link href={`/admin-inventory/buildings/${r.buildingId}?from=/manager/requests`} className="cell-link" onClick={(e) => e.stopPropagation()}>
-              {r.buildingName || "\u2014"}
+              {r.buildingName || "—"}
             </Link>
-          ) : (r.buildingName || "\u2014")}
+          ) : (r.buildingName || "—")}
           {r.unitNumber ? (
             r.unitId ? (
               <span className="text-foreground-dim"> / <Link href={`/admin-inventory/units/${r.unitId}`} className="cell-link" onClick={(e) => e.stopPropagation()}>{r.unitNumber}</Link></span>
@@ -200,7 +200,7 @@ function buildRequestColumns({ t, router, actionLoading, approveRequest, rejectR
       defaultVisible: true,
       render: (r) => (
         <span className="inline-block rounded-full bg-surface-hover px-2 py-0.5 text-xs font-medium text-muted-text">
-          {r.category || "\u2014"}
+          {r.category || "—"}
         </span>
       ),
     },
@@ -210,7 +210,7 @@ function buildRequestColumns({ t, router, actionLoading, approveRequest, rejectR
       defaultVisible: true,
       className: "max-w-[260px]",
       render: (r) => (
-        <span className="block truncate text-muted-text">{r.description || "\u2014"}</span>
+        <span className="block truncate text-muted-text">{r.description || "—"}</span>
       ),
     },
     {
@@ -224,11 +224,11 @@ function buildRequestColumns({ t, router, actionLoading, approveRequest, rejectR
           <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold", r.urgency === "EMERGENCY"
               ? "bg-red-100 text-red-700 border border-red-200"
               : "bg-orange-100 text-orange-700 border border-orange-200")}>
-            <span className="text-xs">{r.urgency === "EMERGENCY" ? "\u{1F6A8}" : "\u26A0"}</span>
+            <span className="text-xs">{r.urgency === "EMERGENCY" ? "\u{1F6A8}" : "⚠"}</span>
             {r.urgency === "EMERGENCY" ? "Emergency" : "High"}
           </span>
         ) : (
-          <span className="text-foreground-dim">\u2014</span>
+          <span className="text-foreground-dim">—</span>
         )
       ),
     },
@@ -239,7 +239,7 @@ function buildRequestColumns({ t, router, actionLoading, approveRequest, rejectR
       defaultVisible: false,
       render: (r) => (
         <span className="text-muted-text text-xs">
-          {r.assignedContractorName || <span className="text-foreground-dim">\u2014</span>}
+          {r.assignedContractorName || <span className="text-foreground-dim">—</span>}
         </span>
       ),
     },
@@ -283,7 +283,7 @@ function buildRequestColumns({ t, router, actionLoading, approveRequest, rejectR
       defaultVisible: false,
       render: (r) => (
         <span className="text-xs text-muted">
-          {r.approvalSource ? r.approvalSource.replace("_", " ").toLowerCase().replace(/\b\w/g, c => c.toUpperCase()) : <span className="text-foreground-dim">\u2014</span>}
+          {r.approvalSource ? r.approvalSource.replace("_", " ").toLowerCase().replace(/\b\w/g, c => c.toUpperCase()) : <span className="text-foreground-dim">—</span>}
         </span>
       ),
     },
@@ -382,7 +382,7 @@ function StatusBadge({ request }) {
 }
 
 // ---------------------------------------------------------------------------
-// Obligation explanation \u2014 plain language for managers
+// Obligation explanation — plain language for managers
 // ---------------------------------------------------------------------------
 
 const OBLIGATION_META = {
@@ -393,18 +393,18 @@ const OBLIGATION_META = {
   },
   DISCRETIONARY: {
     cls: "bg-amber-50 text-amber-700 border-amber-200",
-    heading: "Repair is at the landlord\u2019s discretion",
-    description: "This isn\u2019t strictly required by law, but is common practice. Consider the tenant relationship and cost.",
+    heading: "Repair is at the landlord’s discretion",
+    description: "This isn’t strictly required by law, but is common practice. Consider the tenant relationship and cost.",
   },
   NOT_OBLIGATED: {
     cls: "bg-red-50 text-red-700 border-red-200",
     heading: "Landlord is not obligated",
-    description: "Based on Swiss law and the asset\u2019s condition, this repair falls on the tenant. You may still choose to cover it.",
+    description: "Based on Swiss law and the asset’s condition, this repair falls on the tenant. You may still choose to cover it.",
   },
   UNKNOWN: {
     cls: "bg-surface-hover text-muted-dark border-surface-border",
     heading: "Needs your judgement",
-    description: "The legal engine couldn\u2019t determine obligation automatically. Review the details below and decide.",
+    description: "The legal engine couldn’t determine obligation automatically. Review the details below and decide.",
   },
 };
 
@@ -474,7 +474,7 @@ function getNextStep(r, legalDecision) {
     case 'RFP_PENDING':
       if (obl === 'OBLIGATED') {
         return {
-          label: 'Legally required \u2014 RFP open',
+          label: 'Legally required — RFP open',
           description: 'Swiss law requires this repair. An RFP has been created automatically.',
           variant: 'info',
         };
@@ -488,14 +488,14 @@ function getNextStep(r, legalDecision) {
     case 'PENDING_OWNER_APPROVAL':
       if (obl === 'OBLIGATED') {
         return {
-          label: 'Legal obligation \u2014 owner review',
+          label: 'Legal obligation — owner review',
           description: 'Swiss law requires this repair. The owner should approve to proceed.',
           variant: 'warn',
         };
       }
       return {
         label: 'Awaiting owner approval',
-        description: 'The selected quote exceeds the building\u2019s auto-approval threshold. The owner must approve before work can begin.',
+        description: 'The selected quote exceeds the building’s auto-approval threshold. The owner must approve before work can begin.',
         variant: 'warn',
       };
 
@@ -517,7 +517,7 @@ function getNextStep(r, legalDecision) {
       }
       if (jobStatus === 'COMPLETED' || jobStatus === 'INVOICED') {
         return {
-          label: 'Work complete \u2014 invoice pending',
+          label: 'Work complete — invoice pending',
           description: 'The contractor has marked the job done. Awaiting invoice review.',
           variant: 'success',
         };
@@ -611,7 +611,7 @@ function LegalRecommendationPanel({ decision, loading: isLoading, error: loadErr
   if (loadError) {
     return (
       <div className="border-t border-red-100 bg-red-50 px-6 py-3">
-        <p className="text-sm text-red-600">{"\u26A0"} Could not load recommendation: {loadError}</p>
+        <p className="text-sm text-red-600">{"⚠"} Could not load recommendation: {loadError}</p>
       </div>
     );
   }
@@ -774,16 +774,16 @@ function LegalRecommendationPanel({ decision, loading: isLoading, error: loadErr
         const contextActions = decision.recommendedActions.map((action) => {
           // Mark actions as completed if the request has already progressed past them
           if (action === 'CREATE_RFP' && isPastReview) {
-            return { label: '\u2713 RFP created', done: true };
+            return { label: '✓ RFP created', done: true };
           }
           if (action === 'NOTIFY_MANAGER' && isPastReview) {
-            return { label: '\u2713 Manager notified', done: true };
+            return { label: '✓ Manager notified', done: true };
           }
           if (action === 'ROUTE_TO_OWNER' && requestStatus === 'PENDING_OWNER_APPROVAL') {
-            return { label: '\u2713 Routed to owner \u2014 awaiting decision', done: false };
+            return { label: '✓ Routed to owner — awaiting decision', done: false };
           }
           if (action === 'ROUTE_TO_OWNER' && isPastOwnerApproval) {
-            return { label: '\u2713 Owner decision received', done: true };
+            return { label: '✓ Owner decision received', done: true };
           }
           // Default: show the raw action as a pending recommendation
           return { label: action.replace(/_/g, ' '), done: false };
@@ -876,7 +876,7 @@ function RepairReplacePanel({ state, requestCategory }) {
   if (state.error) {
     return (
       <div className="border-t border-red-100 bg-red-50 px-6 py-3">
-        <p className="text-sm text-red-600">\u26A0 Could not load repair/replace analysis: {state.error}</p>
+        <p className="text-sm text-red-600">⚠ Could not load repair/replace analysis: {state.error}</p>
       </div>
     );
   }
@@ -934,8 +934,8 @@ function RepairReplacePanel({ state, requestCategory }) {
                     )}
                   </div>
                   <p className="text-xs text-muted mt-0.5">
-                    {item.topic || "\u2014"}
-                    {ageYears && lifeYears ? ` \u00B7 ${ageYears} yr of ${lifeYears}-yr life` : ""}
+                    {item.topic || "—"}
+                    {ageYears && lifeYears ? ` · ${ageYears} yr of ${lifeYears}-yr life` : ""}
                   </p>
                 </div>
                 <span className={cn("shrink-0 inline-block rounded-full border px-2.5 py-0.5 text-xs font-semibold", style.badge)}>
@@ -982,7 +982,7 @@ function RepairReplacePanel({ state, requestCategory }) {
       </div>
 
       <p className="mt-2 text-xs text-foreground-dim">
-        Ratio = cumulative repair cost \u00F7 replacement est. Hover a card for the recommendation reason.
+        Ratio = cumulative repair cost ÷ replacement est. Hover a card for the recommendation reason.
       </p>
     </div>
   );

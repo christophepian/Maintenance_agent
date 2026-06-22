@@ -47,14 +47,14 @@ function buildBuildingColumns(t) {
     label: t("manager:inventory.col.address"),
     sortable: true,
     defaultVisible: true,
-    render: (b) => <span className="text-muted-text">{b.address || "\u2014"}</span>,
+    render: (b) => <span className="text-muted-text">{b.address || "—"}</span>,
   },
   {
     id: "canton",
     label: t("manager:inventory.col.canton"),
     sortable: true,
     defaultVisible: true,
-    render: (b) => <span className="text-muted-text">{b.canton || "\u2014"}</span>,
+    render: (b) => <span className="text-muted-text">{b.canton || "—"}</span>,
   },
   {
     id: "id",
@@ -67,7 +67,7 @@ function buildBuildingColumns(t) {
     label: t("manager:inventory.col.units"),
     sortable: true,
     defaultVisible: false,
-    render: (b) => <span className="text-muted-text">{b._count?.units ?? b.unitCount ?? "\u2014"}</span>,
+    render: (b) => <span className="text-muted-text">{b._count?.units ?? b.unitCount ?? "—"}</span>,
   },
   {
     id: "health",
@@ -75,7 +75,7 @@ function buildBuildingColumns(t) {
     defaultVisible: true,
     render: (b) => {
       const h = b._financial?.health;
-      if (!h) return <span className="text-foreground-dim">\u2014</span>;
+      if (!h) return <span className="text-foreground-dim">—</span>;
       const dot = { green: "bg-green-500 ring-green-200", amber: "bg-amber-500 ring-amber-200", red: "bg-red-500 ring-red-200" }[h] ?? "bg-slate-400 ring-slate-200";
       return (
         <span className={cn("inline-block h-2.5 w-2.5 rounded-full ring-2", dot)}>
@@ -90,7 +90,7 @@ function buildBuildingColumns(t) {
     defaultVisible: true,
     render: (b) => {
       const n = b._financial?.netIncomeCents;
-      if (n == null) return <span className="text-foreground-dim">\u2014</span>;
+      if (n == null) return <span className="text-foreground-dim">—</span>;
       return <span className={cn("text-sm font-medium tabular-nums", n >= 0 ? "text-green-700" : "text-red-600")}>{formatChfCents(n)}</span>;
     },
   },
@@ -100,7 +100,7 @@ function buildBuildingColumns(t) {
     defaultVisible: true,
     render: (b) => {
       const r = b._financial?.collectionRate;
-      if (r == null) return <span className="text-foreground-dim">\u2014</span>;
+      if (r == null) return <span className="text-foreground-dim">—</span>;
       return <span className={cn("text-sm tabular-nums", r >= 0.95 ? "text-green-700" : r >= 0.8 ? "text-amber-700" : "text-red-600")}>{formatPercent(r)}</span>;
     },
   },
@@ -121,14 +121,14 @@ function buildAssetModelColumns(t) {
     label: t("manager:inventory.col.category"),
     sortable: true,
     defaultVisible: true,
-    render: (m) => <span className="text-muted-text">{m.category || "\u2014"}</span>,
+    render: (m) => <span className="text-muted-text">{m.category || "—"}</span>,
   },
   {
     id: "manufacturer",
     label: t("manager:inventory.col.manufacturer"),
     sortable: true,
     defaultVisible: true,
-    render: (m) => <span className="text-muted-text">{m.manufacturer || "\u2014"}</span>,
+    render: (m) => <span className="text-muted-text">{m.manufacturer || "—"}</span>,
   },
   {
     id: "scope",
@@ -141,13 +141,13 @@ function buildAssetModelColumns(t) {
     id: "usefulLifeMonths",
     label: t("manager:inventory.col.usefulLife"),
     defaultVisible: false,
-    render: (m) => <span className="text-muted-text">{m.usefulLifeMonths ? `${Math.round(m.usefulLifeMonths / 12)}y` : "\u2014"}</span>,
+    render: (m) => <span className="text-muted-text">{m.usefulLifeMonths ? `${Math.round(m.usefulLifeMonths / 12)}y` : "—"}</span>,
   },
   {
     id: "replacementCostChf",
     label: t("manager:inventory.col.replaceCost"),
     defaultVisible: false,
-    render: (m) => <span className="text-muted-text">{typeof m.replacementCostChf === "number" ? `CHF ${m.replacementCostChf.toLocaleString()}` : "\u2014"}</span>,
+    render: (m) => <span className="text-muted-text">{typeof m.replacementCostChf === "number" ? `CHF ${m.replacementCostChf.toLocaleString()}` : "—"}</span>,
   },
 ];
 }

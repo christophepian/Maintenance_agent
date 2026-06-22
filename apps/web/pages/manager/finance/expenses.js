@@ -255,7 +255,7 @@ export default function ManagerExpensesPage() {
                     id: "description",
                     label: "Description",
                     defaultVisible: true,
-                    render: (inv) => inv.description || "\u2014",
+                    render: (inv) => inv.description || "—",
                   },
                   {
                     id: "amount",
@@ -288,7 +288,7 @@ export default function ManagerExpensesPage() {
                           className="edit-input cursor-pointer"
                           onClick={(e) => e.stopPropagation()}
                         >
-                          <option value="">Set category\u2026</option>
+                          <option value="">Set category…</option>
                           {EXPENSE_CATEGORIES.map((cat) => (
                             <option key={cat} value={cat}>{cat}</option>
                           ))}
