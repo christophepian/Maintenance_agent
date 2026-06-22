@@ -363,16 +363,25 @@ function KpiTable({ left, right, isLoading, attached = false }) {
   );
 }
 
-function DriverItem({ number, title, body, impact }) {
+// `positive` (optional boolean): true → helped (green ↑), false → hurt (red ↓),
+// omitted → informational (neutral numbered circle).
+function DriverItem({ number, title, body, impact, positive }) {
+  const hasDir = typeof positive === "boolean";
+  const circleCls = !hasDir
+    ? "bg-surface-hover text-muted"
+    : positive ? "bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-400" : "bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-400";
+  const impactCls = !hasDir
+    ? "text-foreground-dim"
+    : positive ? "text-green-700 dark:text-green-400" : "text-red-600 dark:text-red-400";
   return (
     <div className="flex gap-4 py-4 border-b border-surface-divider last:border-0 last:pb-0 first:pt-0">
-      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-green-100 text-sm font-semibold text-green-700">
-        {number}
+      <div className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold", circleCls)}>
+        {hasDir ? (positive ? "↑" : "↓") : number}
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-4">
           <span className="text-sm font-semibold text-foreground leading-snug">{title}</span>
-          {impact && <span className="shrink-0 text-xs text-foreground-dim whitespace-nowrap">{impact}</span>}
+          {impact && <span className={cn("shrink-0 text-xs whitespace-nowrap", impactCls)}>{impact}</span>}
         </div>
         <p className="mt-1.5 text-sm text-muted-text leading-relaxed">{body}</p>
       </div>
@@ -535,6 +544,7 @@ function buildDrivers(curr, prev, t) {
         title: t(`reporting.driver.${key}.title`),
         body:  t(`reporting.driver.${key}.body`, { amount: fmtChf(Math.abs(netDiff)) }),
         impact: t(`reporting.driver.${key}.impact`, { amount: fmtChf(Math.abs(netDiff)) }),
+        positive: netDiff >= 0,
       });
     }
 
@@ -543,12 +553,14 @@ function buildDrivers(curr, prev, t) {
         title: t("reporting.driver.costsIncreased.title"),
         body:  t("reporting.driver.costsIncreased.body", { amount: fmtChf(expDiff) }),
         impact: t("reporting.driver.costsIncreased.impact", { amount: fmtChf(expDiff) }),
+        positive: false,
       });
     } else if (expDiff < 0) {
       drivers.push({
         title: t("reporting.driver.costsCameDown.title"),
         body:  t("reporting.driver.costsCameDown.body", { amount: fmtChf(Math.abs(expDiff)) }),
         impact: t("reporting.driver.costsCameDown.impact", { amount: fmtChf(Math.abs(expDiff)) }),
+        positive: true,
       });
     }
   }
@@ -1174,13 +1186,13 @@ export default function OwnerReportingPage() {
 
               {/* Left — What drove it */}
               <div className="flex flex-col">
-                <div className="px-7 py-4 bg-green-50 dark:bg-green-950/20 border-b border-green-100 dark:border-green-900">
+                <div className="px-7 py-4 bg-surface-subtle border-b border-surface-border">
                   <div className="flex items-center gap-2.5 mb-0.5">
-                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-100 dark:bg-green-900 text-xs font-bold text-green-700 dark:text-green-400">↑</div>
-                    <h2 className="text-sm font-semibold text-green-900 dark:text-green-200">{t("reporting.heading.whatDrovePerformance")}</h2>
+                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-surface-hover text-xs font-bold text-muted">⇅</div>
+                    <h2 className="text-sm font-semibold text-foreground">{t("reporting.heading.whatDrovePerformance")}</h2>
                   </div>
-                  <p className="text-xs text-green-700/70 dark:text-green-400/70 ml-[34px]">{ytdMode ? t("reporting.text.theMainForcesBehindThisYearsNumbers") : t("reporting.text.theMainForcesBehindThisMonthsNumbers")}</p>
-                  {isFullYear && <p className="text-xs text-green-600/60 dark:text-green-500/50 ml-[34px] mt-0.5">{t("reporting.text.fullYearComparison", { year: selYear, prevYear: selYear - 1 })}</p>}
+                  <p className="text-xs text-foreground-dim ml-[34px]">{ytdMode ? t("reporting.text.theMainForcesBehindThisYearsNumbers") : t("reporting.text.theMainForcesBehindThisMonthsNumbers")}</p>
+                  {isFullYear && <p className="text-xs text-foreground-dim/70 ml-[34px] mt-0.5">{t("reporting.text.fullYearComparison", { year: selYear, prevYear: selYear - 1 })}</p>}
                 </div>
                 <div className="px-7 py-5 flex-1">
                   {loading ? (
@@ -1190,7 +1202,7 @@ export default function OwnerReportingPage() {
                   ) : (
                     <div>
                       {drivers.map((d, i) => (
-                        <DriverItem key={i} number={i + 1} title={d.title} body={d.body} impact={d.impact} />
+                        <DriverItem key={i} number={i + 1} title={d.title} body={d.body} impact={d.impact} positive={d.positive} />
                       ))}
                     </div>
                   )}

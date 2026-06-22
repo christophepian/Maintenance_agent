@@ -139,11 +139,11 @@ function buildBuildingDrivers(bf, prevBf) {
   const noi = bf.netOperatingIncomeCents;
   if (prevBf) {
     const netDiff = bf.earnedIncomeCents - prevBf.earnedIncomeCents;
-    if (netDiff > 0) drivers.push({ title: "Income increased vs previous period", body: `Collected rent rose by ${rFmtChf(netDiff)} compared to the prior period.`, impact: `+${rFmtChf(netDiff)}` });
-    else if (netDiff < 0) drivers.push({ title: "Income declined vs previous period", body: `Collected rent fell by ${rFmtChf(Math.abs(netDiff))} compared to the prior period.`, impact: `-${rFmtChf(Math.abs(netDiff))}` });
+    if (netDiff > 0) drivers.push({ title: "Income increased vs previous period", body: `Collected rent rose by ${rFmtChf(netDiff)} compared to the prior period.`, impact: `+${rFmtChf(netDiff)}`, positive: true });
+    else if (netDiff < 0) drivers.push({ title: "Income declined vs previous period", body: `Collected rent fell by ${rFmtChf(Math.abs(netDiff))} compared to the prior period.`, impact: `-${rFmtChf(Math.abs(netDiff))}`, positive: false });
     const expDiff = bf.expensesTotalCents - prevBf.expensesTotalCents;
-    if (expDiff > 0) drivers.push({ title: "Operating costs increased", body: `Expenses were ${rFmtChf(expDiff)} higher than the previous period.`, impact: `-${rFmtChf(expDiff)}` });
-    else if (expDiff < 0) drivers.push({ title: "Operating costs came down", body: `Expenses were ${rFmtChf(Math.abs(expDiff))} lower than the previous period.`, impact: `+${rFmtChf(Math.abs(expDiff))}` });
+    if (expDiff > 0) drivers.push({ title: "Operating costs increased", body: `Expenses were ${rFmtChf(expDiff)} higher than the previous period.`, impact: `-${rFmtChf(expDiff)}`, positive: false });
+    else if (expDiff < 0) drivers.push({ title: "Operating costs came down", body: `Expenses were ${rFmtChf(Math.abs(expDiff))} lower than the previous period.`, impact: `+${rFmtChf(Math.abs(expDiff))}`, positive: true });
   }
   if (bf.expensesTotalCents > 0 && drivers.length < 3) {
     drivers.push({ title: "Maintenance & operating spend", body: `Total expenses of ${rFmtChf(bf.expensesTotalCents)} recorded for the period.`, impact: rFmtChf(bf.expensesTotalCents) });
@@ -369,15 +369,15 @@ function BuildingPeriodAnalysis({ buildingId }) {
           <div className="rounded-3xl border border-surface-border bg-surface overflow-hidden">
             <div className="grid lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-surface-border">
               <div className="flex flex-col">
-                <div className="px-7 py-4 bg-green-50 border-b border-green-100">
+                <div className="px-7 py-4 bg-surface-subtle border-b border-surface-border">
                   <div className="flex items-center gap-2.5 mb-0.5">
-                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-100 text-xs font-bold text-green-700">↑</div>
-                    <h2 className="text-sm font-semibold text-green-900">What drove performance</h2>
+                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-surface-hover text-xs font-bold text-muted">⇅</div>
+                    <h2 className="text-sm font-semibold text-foreground">What drove performance</h2>
                   </div>
-                  <p className="text-xs text-green-700/70 ml-[34px]">The main forces behind this period's numbers</p>
+                  <p className="text-xs text-foreground-dim ml-[34px]">The main forces behind this period's numbers — green helped, red weighed on results</p>
                 </div>
                 <div className="px-7 py-5 flex-1">
-                  {drivers.map((d, i) => <DriverItem key={i} number={i + 1} title={d.title} body={d.body} impact={d.impact} />)}
+                  {drivers.map((d, i) => <DriverItem key={i} number={i + 1} title={d.title} body={d.body} impact={d.impact} positive={d.positive} />)}
                 </div>
               </div>
               <div className="flex flex-col">

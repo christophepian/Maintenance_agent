@@ -78,16 +78,26 @@ export function KpiTable({ left, right, isLoading, attached = false }) {
   );
 }
 
-export function DriverItem({ number, title, body, impact }) {
+// `positive` (optional boolean) marks whether the driver helped (true → green ↑)
+// or hurt (false → red ↓) performance. When omitted the driver is informational
+// and renders a neutral numbered circle.
+export function DriverItem({ number, title, body, impact, positive }) {
+  const hasDir = typeof positive === "boolean";
+  const circleCls = !hasDir
+    ? "bg-surface-hover text-muted"
+    : positive ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700";
+  const impactCls = !hasDir
+    ? "text-foreground-dim"
+    : positive ? "text-green-700" : "text-red-600";
   return (
     <div className="flex gap-4 py-4 border-b border-surface-divider last:border-0 last:pb-0 first:pt-0">
-      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-green-100 text-sm font-semibold text-green-700">
-        {number}
+      <div className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold", circleCls)}>
+        {hasDir ? (positive ? "↑" : "↓") : number}
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-4">
           <span className="text-sm font-semibold text-foreground leading-snug">{title}</span>
-          {impact && <span className="shrink-0 text-xs text-foreground-dim whitespace-nowrap">{impact}</span>}
+          {impact && <span className={cn("shrink-0 text-xs whitespace-nowrap", impactCls)}>{impact}</span>}
         </div>
         <p className="mt-1.5 text-sm text-muted-text leading-relaxed">{body}</p>
       </div>
