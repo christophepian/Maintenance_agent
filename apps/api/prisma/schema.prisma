@@ -186,6 +186,7 @@ model Org {
   chargeReconciliations      ChargeReconciliation[]
   // Ancillary cost taxonomy (Nebenkosten categories)
   ancillaryCostCategories    AncillaryCostCategory[]
+  billingPeriods             BillingPeriod[]
   // Rent Adjustments
   rentAdjustments            RentAdjustment[]
   // Contractor Billing
@@ -412,6 +413,7 @@ model Building {
   mortgages                  Mortgage[]
   attributedInvoices         Invoice[]                   @relation("InvoiceBuildingAttribution")
   dailySnapshots             BuildingDailySnapshot[]
+  billingPeriods             BillingPeriod[]
 
   @@index([orgId])
   @@index([managerId])
@@ -719,6 +721,7 @@ model Invoice {
   expenseCategory             ExpenseCategory?
   lineItems                   InvoiceLineItem[]
   chargeReconciliation        ChargeReconciliation? /// Back-reference if this invoice is a charge settlement
+  costEntries                 CostEntry[]                @relation("CostEntrySource")
 
   @@unique([orgId, invoiceNumber])
   @@index([orgId])
@@ -736,17 +739,22 @@ model Invoice {
 }
 
 model InvoiceLineItem {
-  id          String   @id @default(uuid())
+  id          String                 @id @default(uuid())
   invoiceId   String
   description String
-  quantity    Float    @default(1.0)
+  quantity    Float                  @default(1.0)
   unitPrice   Int
-  vatRate     Float    @default(7.7)
+  vatRate     Float                  @default(7.7)
   lineTotal   Int
-  createdAt   DateTime @default(now())
-  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  // Canonical ancillary-cost category (stamped on recurring rent lines) so
+  // advances-paid can be summed per category without description matching.
+  categoryId  String?
+  createdAt   DateTime               @default(now())
+  invoice     Invoice                @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  category    AncillaryCostCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
   @@index([invoiceId])
+  @@index([categoryId])
 }
 
 model ApprovalRule {
@@ -1167,6 +1175,11 @@ model Lease {
   chargesTotalChf     Int?
   rentTotalChf        Int?
 
+  // Distribution-key inputs for ancillary-cost apportionment (clés de répartition).
+  // SURFACE_AREA uses Unit.livingAreaSqm; these cover OCCUPANT_COUNT and FIXED_SHARE.
+  occupantCount      Int?
+  fixedSharePermille Int? /// PPE/contract fixed share in ‰ (0–1000)
+
   chargesSettlementDate String?
 
   paymentDueDayOfMonth Int?
@@ -1310,9 +1323,54 @@ model AncillaryCostCategory {
   expenseType       ExpenseType?       @relation(fields: [expenseTypeId], references: [id], onDelete: SetNull)
   account           Account?           @relation(fields: [accountId], references: [id], onDelete: SetNull)
   leaseExpenseItems LeaseExpenseItem[]
+  costEntries       CostEntry[]
+  invoiceLineItems  InvoiceLineItem[]
 
   @@unique([orgId, code])
   @@index([orgId])
+}
+
+// ─── Building cost pool (Phase 2) ───────────────────────────────
+// A billing period collects the actual incurred ancillary costs for a building,
+// which are then apportioned across leases via distribution keys at reconciliation.
+// See docs/ANCILLARY_COSTS_RECONCILIATION.md.
+model BillingPeriod {
+  id                   String   @id @default(uuid())
+  orgId                String
+  buildingId           String
+  startDate            DateTime
+  endDate              DateTime
+  status               String   @default("OPEN") /// OPEN | CLOSED
+  adminFeeRatePermille Int      @default(0) /// ≤30 (3%) enforced in code
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  org         Org         @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  building    Building    @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  costEntries CostEntry[]
+
+  @@unique([buildingId, startDate, endDate])
+  @@index([orgId])
+  @@index([buildingId])
+}
+
+/// One actual incurred cost booked to a category within a billing period.
+/// Only BILLABLE categories may be apportioned to tenants (enforced in service).
+model CostEntry {
+  id              String   @id @default(uuid())
+  billingPeriodId String
+  categoryId      String
+  amountCents     Int
+  sourceInvoiceId String? /// INCOMING utility bill, for the tenant's inspection right
+  note            String?
+  createdAt       DateTime @default(now())
+
+  billingPeriod BillingPeriod         @relation(fields: [billingPeriodId], references: [id], onDelete: Cascade)
+  category      AncillaryCostCategory @relation(fields: [categoryId], references: [id])
+  sourceInvoice Invoice?              @relation("CostEntrySource", fields: [sourceInvoiceId], references: [id], onDelete: SetNull)
+
+  @@index([billingPeriodId])
+  @@index([categoryId])
 }
 
 // ==========================================

@@ -201,6 +201,7 @@ export async function generateInvoiceForPeriod(
     unitPrice: number;
     vatRate: number;
     lineTotal: number;
+    categoryId?: string | null;
   }> = [];
 
   // Base rent line
@@ -228,6 +229,7 @@ export async function generateInvoiceForPeriod(
       unitPrice: itemCents,
       vatRate: 0,
       lineTotal: itemCents,
+      categoryId: (item as any).categoryId ?? null,
     });
   }
 
@@ -299,6 +301,7 @@ export async function generateInvoiceForPeriod(
           unitPrice: li.unitPrice,
           vatRate: li.vatRate,
           lineTotal: li.lineTotal,
+          ...(li.categoryId ? { categoryId: li.categoryId } : {}),
         })),
       },
     },

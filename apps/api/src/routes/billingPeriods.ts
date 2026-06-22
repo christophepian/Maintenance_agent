@@ -1,0 +1,143 @@
+/**
+ * billingPeriods routes
+ *
+ * Building-level ancillary cost pool (Phase 2): a billing period collects actual
+ * incurred costs (CostEntry) which are apportioned to leases via distribution keys.
+ *
+ * Endpoints:
+ *   GET    /billing-periods                          — list (?buildingId=)
+ *   GET    /billing-periods/:id                      — single with cost entries
+ *   POST   /billing-periods                          — create
+ *   PUT    /billing-periods/:id                      — update status / admin fee
+ *   POST   /billing-periods/:id/cost-entries         — add a cost entry
+ *   DELETE /billing-periods/:id/cost-entries/:eid    — remove a cost entry
+ *   GET    /billing-periods/:id/apportionment/:lid   — preview apportioned shares for a lease
+ */
+
+import { Router } from "../http/router";
+import { sendError, sendJson } from "../http/json";
+import { first } from "../http/query";
+import { maybeRequireManager, requireRole } from "../authz";
+import { withAuthRequired } from "../http/routeProtection";
+import { readJson } from "../http/body";
+import * as service from "../services/ancillaryReconciliationService";
+import {
+  CreateBillingPeriodSchema,
+  UpdateBillingPeriodSchema,
+  CreateCostEntrySchema,
+} from "../validation/billingPeriods";
+
+function badRequest(res: any, parsed: any) {
+  return sendError(res, 400, "VALIDATION_ERROR", parsed.error.issues.map((i: any) => i.message).join("; "));
+}
+
+export function registerBillingPeriodRoutes(router: Router) {
+  router.get(
+    "/billing-periods",
+    withAuthRequired(async ({ req, res, orgId, query }) => {
+      if (!maybeRequireManager(req, res)) return;
+      try {
+        const buildingId = first(query, "buildingId") || undefined;
+        sendJson(res, 200, { data: await service.listPeriods(orgId, buildingId) });
+      } catch (err: any) {
+        console.error("[billing-periods] list error:", err);
+        sendError(res, 500, "INTERNAL_ERROR", err.message);
+      }
+    }),
+  );
+
+  router.get(
+    "/billing-periods/:id",
+    withAuthRequired(async ({ req, res, orgId, params }) => {
+      if (!maybeRequireManager(req, res)) return;
+      try {
+        const dto = await service.getPeriod(orgId, params.id);
+        if (!dto) return sendError(res, 404, "NOT_FOUND", "Billing period not found");
+        sendJson(res, 200, { data: dto });
+      } catch (err: any) {
+        console.error("[billing-periods] get error:", err);
+        sendError(res, 500, "INTERNAL_ERROR", err.message);
+      }
+    }),
+  );
+
+  router.post(
+    "/billing-periods",
+    withAuthRequired(async ({ req, res, orgId }) => {
+      if (!requireRole(req, res, "MANAGER")) return;
+      try {
+        const parsed = CreateBillingPeriodSchema.safeParse(await readJson(req));
+        if (!parsed.success) return badRequest(res, parsed);
+        sendJson(res, 201, { data: await service.createPeriod(orgId, parsed.data) });
+      } catch (err: any) {
+        if (err?.code === "P2002") return sendError(res, 409, "CONFLICT", "A billing period with these dates already exists for this building");
+        if (/not found|Invalid period|adminFee/.test(err?.message)) return sendError(res, 400, "BAD_REQUEST", err.message);
+        console.error("[billing-periods] create error:", err);
+        sendError(res, 500, "INTERNAL_ERROR", err.message);
+      }
+    }),
+  );
+
+  router.put(
+    "/billing-periods/:id",
+    withAuthRequired(async ({ req, res, orgId, params }) => {
+      if (!requireRole(req, res, "MANAGER")) return;
+      try {
+        const parsed = UpdateBillingPeriodSchema.safeParse(await readJson(req));
+        if (!parsed.success) return badRequest(res, parsed);
+        sendJson(res, 200, { data: await service.updatePeriod(orgId, params.id, parsed.data) });
+      } catch (err: any) {
+        if (err?.message === "Billing period not found") return sendError(res, 404, "NOT_FOUND", err.message);
+        if (/status must|adminFee/.test(err?.message)) return sendError(res, 400, "BAD_REQUEST", err.message);
+        console.error("[billing-periods] update error:", err);
+        sendError(res, 500, "INTERNAL_ERROR", err.message);
+      }
+    }),
+  );
+
+  router.post(
+    "/billing-periods/:id/cost-entries",
+    withAuthRequired(async ({ req, res, orgId, params }) => {
+      if (!requireRole(req, res, "MANAGER")) return;
+      try {
+        const parsed = CreateCostEntrySchema.safeParse(await readJson(req));
+        if (!parsed.success) return badRequest(res, parsed);
+        sendJson(res, 201, { data: await service.addCostEntry(orgId, params.id, parsed.data) });
+      } catch (err: any) {
+        if (/not found/.test(err?.message)) return sendError(res, 404, "NOT_FOUND", err.message);
+        if (/CLOSED/.test(err?.message)) return sendError(res, 409, "CONFLICT", err.message);
+        console.error("[billing-periods] add cost entry error:", err);
+        sendError(res, 500, "INTERNAL_ERROR", err.message);
+      }
+    }),
+  );
+
+  router.delete(
+    "/billing-periods/:id/cost-entries/:eid",
+    withAuthRequired(async ({ req, res, orgId, params }) => {
+      if (!requireRole(req, res, "MANAGER")) return;
+      try {
+        sendJson(res, 200, { data: await service.removeCostEntry(orgId, params.id, params.eid) });
+      } catch (err: any) {
+        if (/not found/.test(err?.message)) return sendError(res, 404, "NOT_FOUND", err.message);
+        if (/CLOSED/.test(err?.message)) return sendError(res, 409, "CONFLICT", err.message);
+        console.error("[billing-periods] remove cost entry error:", err);
+        sendError(res, 500, "INTERNAL_ERROR", err.message);
+      }
+    }),
+  );
+
+  router.get(
+    "/billing-periods/:id/apportionment/:lid",
+    withAuthRequired(async ({ req, res, orgId, params }) => {
+      if (!maybeRequireManager(req, res)) return;
+      try {
+        sendJson(res, 200, { data: await service.apportionForLease(orgId, params.id, params.lid) });
+      } catch (err: any) {
+        if (/not found|not an active participant/.test(err?.message)) return sendError(res, 404, "NOT_FOUND", err.message);
+        console.error("[billing-periods] apportionment error:", err);
+        sendError(res, 500, "INTERNAL_ERROR", err.message);
+      }
+    }),
+  );
+}

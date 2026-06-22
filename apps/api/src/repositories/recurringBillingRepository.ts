@@ -35,6 +35,7 @@ export const BILLING_SCHEDULE_INCLUDE = {
           mode: true,
           expenseTypeId: true,
           accountId: true,
+          categoryId: true,
         },
       },
     },
