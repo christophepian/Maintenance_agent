@@ -1,5 +1,6 @@
 import { LeaseStatus, Prisma, RequestStatus, JobStatus, InvoiceStatus } from '@prisma/client';
 import prisma from './prismaClient';
+import { getCategoryForOrg } from './ancillaryCostCategoryService';
 import { CreateLeasePayload, UpdateLeasePayload } from '../validation/leases';
 import { normalizePhoneToE164 } from '../utils/phoneNormalization';
 import * as leaseRepo from '../repositories/leaseRepository';
@@ -142,6 +143,7 @@ export interface LeaseExpenseItemDTO {
   mode: string;
   expenseTypeId?: string;
   accountId?: string;
+  categoryId?: string;
   expenseType?: { id: string; name: string; code?: string };
   account?: { id: string; name: string; code?: string };
   isActive: boolean;
@@ -1344,6 +1346,7 @@ export interface CreateExpenseItemInput {
   mode?: 'ACOMPTE' | 'FORFAIT';
   expenseTypeId?: string;
   accountId?: string;
+  categoryId?: string;
 }
 
 export interface UpdateExpenseItemInput {
@@ -1352,7 +1355,21 @@ export interface UpdateExpenseItemInput {
   mode?: 'ACOMPTE' | 'FORFAIT';
   expenseTypeId?: string | null;
   accountId?: string | null;
+  categoryId?: string | null;
   isActive?: boolean;
+}
+
+/**
+ * Resolve a category for a lease expense item and enforce the legal billable gate:
+ * a NON_BILLABLE landlord cost (mortgage, insurance, tax, major repairs, building
+ * management) can never be charged to a tenant. See docs/ANCILLARY_COSTS_RECONCILIATION.md.
+ */
+async function assertBillableCategory(orgId: string, categoryId: string): Promise<void> {
+  const category = await getCategoryForOrg(orgId, categoryId);
+  if (!category) throw new Error(`Category not found or wrong org: ${categoryId}`);
+  if (category.billability === 'NON_BILLABLE') {
+    throw new Error(`Category "${category.name}" is non-billable and cannot be charged to a tenant`);
+  }
 }
 
 const EXPENSE_ITEM_INCLUDE = {
@@ -1377,6 +1394,7 @@ export async function createLeaseExpenseItem(
     const acc = await leaseRepo.findAccount(prisma, input.accountId);
     if (!acc || acc.orgId !== orgId) throw new Error(`Account not found or wrong org: ${input.accountId}`);
   }
+  if (input.categoryId) await assertBillableCategory(orgId, input.categoryId);
 
   const item = await leaseRepo.createLeaseExpenseItemRecord(prisma, {
     lease: { connect: { id: leaseId } },
@@ -1385,6 +1403,7 @@ export async function createLeaseExpenseItem(
     mode: input.mode || 'ACOMPTE',
     ...(input.expenseTypeId ? { expenseType: { connect: { id: input.expenseTypeId } } } : {}),
     ...(input.accountId ? { account: { connect: { id: input.accountId } } } : {}),
+    ...(input.categoryId ? { category: { connect: { id: input.categoryId } } } : {}),
   });
 
   return mapExpenseItemToDTO(item);
@@ -1426,6 +1445,13 @@ export async function updateLeaseExpenseItem(
     data.account = { connect: { id: input.accountId } };
   }
 
+  if (input.categoryId === null) {
+    data.category = { disconnect: true };
+  } else if (input.categoryId) {
+    await assertBillableCategory(orgId, input.categoryId);
+    data.category = { connect: { id: input.categoryId } };
+  }
+
   const item = await leaseRepo.updateLeaseExpenseItemRecord(prisma, itemId, data);
 
   return mapExpenseItemToDTO(item);
@@ -1456,6 +1482,7 @@ function mapExpenseItemToDTO(item: any): LeaseExpenseItemDTO {
     mode: item.mode,
     expenseTypeId: item.expenseTypeId || undefined,
     accountId: item.accountId || undefined,
+    categoryId: item.categoryId || undefined,
     expenseType: item.expenseType ? {
       id: item.expenseType.id,
       name: item.expenseType.name,

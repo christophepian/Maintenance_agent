@@ -34,6 +34,14 @@ export async function ensureDefaultOrgConfig(prisma: PrismaClient): Promise<void
   if (!config) {
     await createOrgConfigRecord(prisma, { orgId, autoApproveLimit: 200, autoLegalRouting: false });
   }
+
+  // Seed the default Nebenkosten taxonomy (idempotent; safe on every boot).
+  try {
+    const { seedDefaultCategories } = await import("./ancillaryCostCategoryService");
+    await seedDefaultCategories(orgId);
+  } catch (e) {
+    console.error("[orgConfig] Failed to seed ancillary cost categories:", e);
+  }
 }
 
 export async function getOrgConfig(
