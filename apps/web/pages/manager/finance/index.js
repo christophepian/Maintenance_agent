@@ -71,6 +71,7 @@ const FINANCE_TABS = [
   { key: "overview" },
   { key: "invoices" },
   { key: "imports" },
+  { key: "cost-pool" },
   { key: "billing-entities" },
   { key: "accounting" },
   { key: "planning" },
@@ -347,6 +348,16 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
 
           {/* ── Imports ── */}
           {activeTabKey === "imports" && <ImportedStatementsPanel />}
+
+          {/* ── Cost pool (Nebenkosten / ancillary cost reconciliation) ── */}
+          {activeTabKey === "cost-pool" && (
+            <Panel title={t("costPool.title.costPool")}>
+              <p className="text-sm text-muted-text mb-4">{t("manager:financeIndex.costPool.blurb")}</p>
+              <Link href="/manager/finance/billing-periods" className="inline-flex items-center rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:opacity-90">
+                {t("manager:financeIndex.costPool.open")} →
+              </Link>
+            </Panel>
+          )}
 
           {/* ── Billing Entities ── */}
           {activeTabKey === "billing-entities" && <BillingEntityManager />}

@@ -1,4 +1,24 @@
 {
+  "costPool": {
+    "title": { "costPool": "Cost Pool", "summary": "Summary", "costEntries": "Cost Entries" },
+    "field": { "building": "Building", "startDate": "Start date", "endDate": "End date", "adminFeePct": "Admin fee (%)", "status": "Status" },
+    "col": { "totalCosts": "Total costs", "billable": "Billable", "category": "Category", "amount": "Amount", "note": "Note", "actions": "Actions" },
+    "action": { "newPeriod": "New period", "create": "Create", "cancel": "Cancel", "close": "Close period", "reopen": "Reopen", "delete": "Delete", "addCostEntry": "Add cost entry" },
+    "status": { "open": "Open", "closed": "Closed" },
+    "text": {
+      "loading": "Loading…",
+      "saving": "Saving…",
+      "notFound": "Billing period not found.",
+      "noPeriods": "No billing periods yet for this building.",
+      "noCostEntries": "No cost entries yet.",
+      "selectCategory": "Select a category…",
+      "nonBillable": "non-billable",
+      "failedLoadBuildings": "Failed to load buildings.",
+      "adminFeeHint": "Capped at 3%. Applied to recoverable costs in the décompte.",
+      "billableOfTotal": "{{billable}} billable of {{total}} total",
+      "selectBuilding": "Select a building"
+    }
+  },
   "sandbox": {
     "banner": {
       "title": "Sandbox — no data yet?",
@@ -874,7 +894,12 @@
       "accounting": "Accounting",
       "planning": "Planning",
       "setup": "Setup",
-      "imports": "Imports"
+      "imports": "Imports",
+      "cost-pool": "Cost Pool"
+    },
+    "costPool": {
+      "blurb": "Record actual building costs per period and apportion them to tenants by distribution key (surface, units, occupants). Feeds the charge reconciliation.",
+      "open": "Open Cost Pool"
     }
   },
   "capexSchedule": {

@@ -1,4 +1,24 @@
 {
+  "costPool": {
+    "title": { "costPool": "Pool de charges", "summary": "Résumé", "costEntries": "Postes de coûts" },
+    "field": { "building": "Immeuble", "startDate": "Date de début", "endDate": "Date de fin", "adminFeePct": "Frais administratifs (%)", "status": "Statut" },
+    "col": { "totalCosts": "Coûts totaux", "billable": "Refacturable", "category": "Catégorie", "amount": "Montant", "note": "Note", "actions": "Actions" },
+    "action": { "newPeriod": "Nouvelle période", "create": "Créer", "cancel": "Annuler", "close": "Clôturer", "reopen": "Rouvrir", "delete": "Supprimer", "addCostEntry": "Ajouter un poste" },
+    "status": { "open": "Ouverte", "closed": "Clôturée" },
+    "text": {
+      "loading": "Chargement…",
+      "saving": "Enregistrement…",
+      "notFound": "Période de décompte introuvable.",
+      "noPeriods": "Aucune période pour cet immeuble.",
+      "noCostEntries": "Aucun poste de coût.",
+      "selectCategory": "Choisir une catégorie…",
+      "nonBillable": "non refacturable",
+      "failedLoadBuildings": "Échec du chargement des immeubles.",
+      "adminFeeHint": "Plafonné à 3%. Appliqué aux coûts refacturables du décompte.",
+      "billableOfTotal": "{{billable}} refacturable sur {{total}} au total",
+      "selectBuilding": "Choisir un immeuble"
+    }
+  },
   "sandbox": {
     "banner": {
       "title": "Sandbox — pas encore de données ?",
@@ -874,7 +894,12 @@
       "accounting": "Comptabilité",
       "planning": "Planification",
       "setup": "Configuration",
-      "imports": "Importations"
+      "imports": "Importations",
+      "cost-pool": "Pool de charges"
+    },
+    "costPool": {
+      "blurb": "Enregistrez les coûts réels de l'immeuble par période et répartissez-les entre les locataires selon la clé de répartition (surface, lots, occupants). Alimente le décompte de charges.",
+      "open": "Ouvrir le pool de charges"
     }
   },
   "capexSchedule": {
