@@ -188,6 +188,7 @@ model Org {
   ancillaryCostCategories    AncillaryCostCategory[]
   billingPeriods             BillingPeriod[]
   creditNotes                CreditNote[]
+  statementDocRequests       StatementDocRequest[]
   // Rent Adjustments
   rentAdjustments            RentAdjustment[]
   // Contractor Billing
@@ -2407,6 +2408,11 @@ model ChargeReconciliation {
   settlementCreditNoteId String?   @unique /// FK to the generated credit note (refund to tenant)
   settledAt              DateTime?
 
+  // Inspection right (P4): tenant may request supporting documents within ~30
+  // days of the statement being issued (at settle time).
+  issuedAt           DateTime?
+  inspectionDeadline DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -2417,10 +2423,29 @@ model ChargeReconciliation {
   settlementInvoice    Invoice?                   @relation(fields: [settlementInvoiceId], references: [id], onDelete: SetNull)
   settlementCreditNote CreditNote?                @relation("ReconCreditNote", fields: [settlementCreditNoteId], references: [id], onDelete: SetNull)
   lineItems            ChargeReconciliationLine[]
+  docRequests          StatementDocRequest[]
 
   @@unique([leaseId, fiscalYear])
   @@index([orgId])
   @@index([status])
+}
+
+/// A tenant's request to inspect the supporting documents behind a charge
+/// statement (factures, relevés, clés de répartition). Inspection-rights workflow.
+model StatementDocRequest {
+  id               String    @id @default(uuid())
+  orgId            String
+  reconciliationId String
+  status           String    @default("OPEN") /// OPEN | FULFILLED
+  note             String?
+  requestedAt      DateTime  @default(now())
+  fulfilledAt      DateTime?
+
+  org            Org                  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  reconciliation ChargeReconciliation @relation(fields: [reconciliationId], references: [id], onDelete: Cascade)
+
+  @@index([orgId])
+  @@index([reconciliationId])
 }
 
 /// Per-expense-item reconciliation line within a ChargeReconciliation.

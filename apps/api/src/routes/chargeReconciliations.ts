@@ -22,6 +22,7 @@ import { withAuthRequired } from "../http/routeProtection";
 import { readJson } from "../http/body";
 import * as reconRepo from "../repositories/chargeReconciliationRepository";
 import * as reconService from "../services/chargeReconciliationService";
+import * as docRequestService from "../services/statementDocRequestService";
 
 // ─── DTO ──────────────────────────────────────────────────────
 
@@ -49,6 +50,8 @@ export interface ChargeReconciliationDTO {
   settlementInvoiceId: string | null;
   settlementCreditNoteId: string | null;
   settledAt: string | null;
+  issuedAt: string | null;
+  inspectionDeadline: string | null;
   createdAt: string;
   updatedAt: string;
   lineItems: ChargeReconciliationLineDTO[];
@@ -86,6 +89,8 @@ function toDTO(r: any): ChargeReconciliationDTO {
     settlementInvoiceId: r.settlementInvoiceId,
     settlementCreditNoteId: r.settlementCreditNoteId ?? null,
     settledAt: r.settledAt ? r.settledAt.toISOString() : null,
+    issuedAt: r.issuedAt ? r.issuedAt.toISOString() : null,
+    inspectionDeadline: r.inspectionDeadline ? r.inspectionDeadline.toISOString() : null,
     createdAt: r.createdAt.toISOString(),
     updatedAt: r.updatedAt.toISOString(),
     lineItems: (r.lineItems || []).map((l: any) => ({
@@ -356,6 +361,66 @@ export function registerChargeReconciliationRoutes(router: Router) {
         sendJson(res, 200, { success: true });
       } catch (err: any) {
         console.error("[charge-reconciliations] delete error:", err);
+        sendError(res, 500, "INTERNAL_ERROR", err.message);
+      }
+    }),
+  );
+
+  // ── Inspection rights (Phase 4) ─────────────────────────────
+  // GET supporting documents (factures / relevés behind the statement)
+  router.get(
+    "/charge-reconciliations/:id/supporting-documents",
+    withAuthRequired(async ({ req, res, orgId, params }) => {
+      if (!maybeRequireManager(req, res)) return;
+      try {
+        sendJson(res, 200, { data: await docRequestService.getSupportingDocuments(orgId, params.id) });
+      } catch (err: any) {
+        if (/not found/.test(err.message)) return sendError(res, 404, "NOT_FOUND", err.message);
+        console.error("[charge-reconciliations] supporting-docs error:", err);
+        sendError(res, 500, "INTERNAL_ERROR", err.message);
+      }
+    }),
+  );
+
+  // GET / POST document-inspection requests
+  router.get(
+    "/charge-reconciliations/:id/doc-requests",
+    withAuthRequired(async ({ req, res, orgId, params }) => {
+      if (!maybeRequireManager(req, res)) return;
+      try {
+        sendJson(res, 200, { data: await docRequestService.listDocRequests(orgId, params.id) });
+      } catch (err: any) {
+        console.error("[charge-reconciliations] list doc-requests error:", err);
+        sendError(res, 500, "INTERNAL_ERROR", err.message);
+      }
+    }),
+  );
+
+  router.post(
+    "/charge-reconciliations/:id/doc-requests",
+    withAuthRequired(async ({ req, res, orgId, params }) => {
+      if (!maybeRequireManager(req, res)) return;
+      try {
+        const body = await readJson(req).catch(() => ({}));
+        sendJson(res, 201, { data: await docRequestService.createDocRequest(orgId, params.id, body?.note) });
+      } catch (err: any) {
+        if (/not found/.test(err.message)) return sendError(res, 404, "NOT_FOUND", err.message);
+        if (/not yet issued|window has closed/.test(err.message)) return sendError(res, 409, "INVALID_STATE", err.message);
+        console.error("[charge-reconciliations] create doc-request error:", err);
+        sendError(res, 500, "INTERNAL_ERROR", err.message);
+      }
+    }),
+  );
+
+  router.post(
+    "/charge-reconciliations/:id/doc-requests/:rid/fulfill",
+    withAuthRequired(async ({ req, res, orgId, params }) => {
+      if (!requireRole(req, res, "MANAGER")) return;
+      try {
+        sendJson(res, 200, { data: await docRequestService.fulfillDocRequest(orgId, params.rid) });
+      } catch (err: any) {
+        if (/not found/.test(err.message)) return sendError(res, 404, "NOT_FOUND", err.message);
+        console.error("[charge-reconciliations] fulfill doc-request error:", err);
         sendError(res, 500, "INTERNAL_ERROR", err.message);
       }
     }),

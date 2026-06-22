@@ -11,6 +11,7 @@ import { PrismaClient } from "@prisma/client";
 import { createCreditNote } from "../services/creditNoteService";
 import { settleReconciliation } from "../services/chargeReconciliationService";
 import { createLease } from "../services/leases";
+import { createDocRequest, listDocRequests, fulfillDocRequest } from "../services/statementDocRequestService";
 
 const prisma = new PrismaClient();
 
@@ -89,5 +90,32 @@ describe("Credit Notes (Phase 3a)", () => {
     const cn = await prisma.creditNote.findUnique({ where: { id: settled.settlementCreditNoteId! } });
     expect(cn!.amountCents).toBe(20000); // abs(balance)
     expect(cn!.status).toBe("ISSUED");
+  });
+
+  it("opens a 30-day inspection window and runs the doc-request workflow (P4)", async () => {
+    const recon = await prisma.chargeReconciliation.create({
+      data: {
+        orgId, leaseId, fiscalYear: 2028, status: "FINALIZED",
+        totalAcomptePaidCents: 100000, totalActualCostsCents: 80000, balanceCents: -20000,
+        lineItems: { create: [{ description: "Heating", chargeMode: "ACOMPTE", acomptePaidCents: 100000, actualCostCents: 80000, balanceCents: -20000 }] },
+      },
+    });
+    const settled = await settleReconciliation(prisma, recon.id, orgId);
+    expect(settled.issuedAt).toBeTruthy();
+    expect(settled.inspectionDeadline).toBeTruthy();
+
+    const dr = await createDocRequest(orgId, recon.id, "Please send the supporting invoices");
+    expect(dr.status).toBe("OPEN");
+    expect((await listDocRequests(orgId, recon.id))).toHaveLength(1);
+
+    const done = await fulfillDocRequest(orgId, dr.id);
+    expect(done.status).toBe("FULFILLED");
+  });
+
+  it("rejects a doc request before the statement is issued", async () => {
+    const draft = await prisma.chargeReconciliation.create({
+      data: { orgId, leaseId, fiscalYear: 2029, status: "DRAFT", balanceCents: 0 },
+    });
+    await expect(createDocRequest(orgId, draft.id)).rejects.toThrow(/not yet issued/i);
   });
 });

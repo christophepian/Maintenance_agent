@@ -235,12 +235,15 @@ export async function settleReconciliation(
   id: string,
   settlementInvoiceId: string,
 ) {
+  const now = new Date();
   return prisma.chargeReconciliation.update({
     where: { id },
     data: {
       status: "SETTLED",
       settlementInvoiceId,
-      settledAt: new Date(),
+      settledAt: now,
+      issuedAt: now,
+      inspectionDeadline: addDays(now, 30),
     },
     include: RECONCILIATION_INCLUDE,
   });
@@ -252,15 +255,24 @@ export async function settleReconciliationCreditNote(
   id: string,
   settlementCreditNoteId: string,
 ) {
+  const now = new Date();
   return prisma.chargeReconciliation.update({
     where: { id },
     data: {
       status: "SETTLED",
       settlementCreditNoteId,
-      settledAt: new Date(),
+      settledAt: now,
+      issuedAt: now,
+      inspectionDeadline: addDays(now, 30),
     },
     include: RECONCILIATION_INCLUDE,
   });
+}
+
+function addDays(d: Date, days: number): Date {
+  const out = new Date(d);
+  out.setDate(out.getDate() + days);
+  return out;
 }
 
 /**
