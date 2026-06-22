@@ -870,7 +870,9 @@ export function InvoicesContent() {
       render: (inv) =>
         inv.expenseCategory
           ? <span className="text-xs text-muted-text">{inv.expenseCategory.charAt(0) + inv.expenseCategory.slice(1).toLowerCase()}</span>
-          : <span className="text-foreground-dim text-xs">\u2014</span>,
+          : inv.description
+            ? <span className="text-xs text-muted-text block max-w-[220px] truncate" title={inv.description}>{inv.description}</span>
+            : <span className="text-foreground-dim text-xs">\u2014</span>,
     },
     {
       id: "actions",

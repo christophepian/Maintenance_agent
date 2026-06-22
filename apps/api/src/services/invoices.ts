@@ -988,7 +988,12 @@ function mapInvoiceToDTO(invoice: InvoiceWithFullInclude): InvoiceDTO {
 
   function mapInvoiceToSummaryDTO(invoice: InvoiceWithSummaryInclude): InvoiceSummaryDTO {
     const totalAmount = invoice.totalAmount ?? 0;
-    const unit = (invoice as any).job?.request?.unit;
+    // Resolve unit/building across all linkage paths: maintenance (job → request),
+    // rent (lease → unit), and direct attribution (attributedUnit/attributedBuilding).
+    const unit = (invoice as any).job?.request?.unit
+      || (invoice as any).lease?.unit
+      || (invoice as any).attributedUnit;
+    const buildingName = unit?.building?.name || (invoice as any).attributedBuilding?.name || undefined;
     return {
       id: invoice.id,
       orgId: invoice.orgId,
@@ -1006,7 +1011,7 @@ function mapInvoiceToDTO(invoice: InvoiceWithFullInclude): InvoiceDTO {
       issuerName: (invoice as any).issuer?.name || undefined,
       recipientName: invoice.recipientName || undefined,
       unitNumber: unit?.unitNumber || undefined,
-      buildingName: unit?.building?.name || undefined,
+      buildingName,
       // INV-HUB ingestion fields
       direction: (invoice as any).direction ?? 'OUTGOING',
       sourceChannel: (invoice as any).sourceChannel ?? 'MANUAL',

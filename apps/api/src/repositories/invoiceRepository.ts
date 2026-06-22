@@ -44,6 +44,20 @@ export const INVOICE_SUMMARY_INCLUDE = {
       },
     },
   },
+  // Rent invoices carry the unit/building via the lease; ingested/manual invoices
+  // may be directly attributed. Include all paths so the Building/Unit column
+  // resolves regardless of how the invoice is linked.
+  lease: {
+    select: {
+      unit: {
+        select: { unitNumber: true, building: { select: { name: true } } },
+      },
+    },
+  },
+  attributedUnit: {
+    select: { unitNumber: true, building: { select: { name: true } } },
+  },
+  attributedBuilding: { select: { name: true } },
 } as const;
 
 // ─── Query Functions ───────────────────────────────────────────
