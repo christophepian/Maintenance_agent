@@ -149,15 +149,17 @@ Every repository exports a canonical include constant. DTO mappers use `Prisma.X
 
 `contracts.test.ts` guards DTO shape for key endpoints. Update it in the same PR as any DTO change.
 
-### G19: Mirrored Docs — Pitchdeck Copies Must Stay In Sync
+### G19: Mirrored Docs — `docs/` and `apps/web/public/docs/` Must Stay In Sync
 
-The pitchdeck exists in **two locations that must be byte-identical**:
-- `docs/pitchdeck.html` (root) — and `pitchdeck.css`
-- `apps/web/public/docs/pitchdeck.html` (the copy actually **served** at `/docs/pitchdeck.html`)
+Every doc page exists in **two locations that must be byte-identical**:
+- `docs/<file>` (root) — the working source
+- `apps/web/public/docs/<file>` — the copy actually **served** at `/docs/<file>`
+
+This covers all files present in **both** directories (currently: `pitchdeck.html`, `pitchdeck.css`, `wiki.html`, `index.html`, `blueprint.html`, `design-system.html`, `product-overview.html`, `roadmap.html`, `roadmap-recs.json`). Root-only dev docs (`AUDIT.md`, `*.sql`, etc.) are ignored.
 
 **Always edit both copies in the same commit.** Never "sync" them by blindly copying one over the other without checking which is newer — their git histories differ (`git log -- <path>` per copy).
 
-The pre-commit hook (`scripts/guardrails.sh` G19) **blocks any commit where the two copies diverge**. Root cause it prevents: on 2026-06-18 a commit re-synced them from the *stale root copy*, silently reverting ~2,100 lines of committed content (correct pricing, parking lot, bios) inside an unrelated feature commit — the work was pushed, then clobbered. (Note: the other shared `docs/` HTML files — wiki, index, blueprint, etc. — are **not** currently mirror-enforced and have known drift; G19 is scoped to the pitchdeck only.)
+The pre-commit hook (`scripts/guardrails.sh` G19) **auto-discovers the shared set and blocks any commit where a copy diverges** (also catches a newly-added shared doc that lands in only one dir). Root cause it prevents: on 2026-06-18 a commit re-synced the pitchdeck from the *stale root copy*, silently reverting ~2,100 lines of committed content (correct pricing, parking lot, bios) inside an unrelated feature commit — the work was pushed, then clobbered. All 9 shared docs were reconciled to their authoritative (newest-content) side on 2026-06-22.
 
 ### Auth Invariants (F1)
 

@@ -405,11 +405,10 @@
   .footer-left { font-size: 13px; color: var(--text-muted); }
 </style>
 <style>body{padding-top:36px}nav{top:36px!important}</style>
-
 </head>
 <body>
 <style>#hub-bar{position:fixed;top:0;left:0;right:0;z-index:9000;height:36px;background:#0f172a;display:flex;align-items:center;padding:0 20px;font-family:'Inter',-apple-system,sans-serif;font-size:12px;font-weight:500;border-bottom:1px solid rgba(255,255,255,.08)}#hub-bar a{color:rgba(255,255,255,.5);text-decoration:none;padding:0 8px;height:36px;display:flex;align-items:center;transition:color .12s}#hub-bar a:hover,#hub-bar a.hub-active{color:#fff}#hub-bar .hub-brand{color:rgba(255,255,255,.9)!important;font-weight:700;padding-right:14px;margin-right:6px;border-right:1px solid rgba(255,255,255,.15)}#hub-bar .hub-open{margin-left:auto;background:#4f46e5;color:#fff!important;padding:0 12px;height:24px;border-radius:4px;font-size:11px;font-weight:600}#hub-bar .hub-open:hover{background:#4338ca!important}</style>
-<div id="hub-bar"><a href="index.html" class="hub-brand">MA Docs</a><a href="wiki.html">Wiki</a><a href="blueprint.html">Blueprint</a><a href="product-overview.html">Product</a><a href="roadmap.html">Roadmap</a><a href="design-system.html">Design</a><a href="pitchdeck.html">Pitch</a><a href="/website/index.html" target="_blank">Website</a><a href="/website/invest.html" target="_blank">Invest</a><a href="https://maintenance-agent-api-git-main-christophepians-projects.vercel.app/login" target="_blank" class="hub-open">Open App →</a></div>
+<div id="hub-bar"><a href="index.html" class="hub-brand">MA Docs</a><a href="wiki.html">Wiki</a><a href="blueprint.html">Blueprint</a><a href="product-overview.html">Product</a><a href="roadmap.html">Roadmap</a><a href="design-system.html">Design</a><a href="https://maintenance-agent-59fv2xwsq-christophepians-projects.vercel.app" target="_blank" class="hub-open">Open App →</a></div>
 <script>(function(){var c=window.location.pathname.split('/').pop()||'index.html';document.querySelectorAll('#hub-bar a[href]').forEach(function(a){if(a.getAttribute('href')===c)a.classList.add('hub-active');});})()</script>
 
 <!-- NAV -->
@@ -451,23 +450,23 @@
         <div class="hero-stat-label">User roles</div>
       </div>
       <div class="hero-stat">
-        <div class="hero-stat-num">68</div>
+        <div class="hero-stat-num">83</div>
         <div class="hero-stat-label">DB models</div>
       </div>
       <div class="hero-stat">
-        <div class="hero-stat-num">291</div>
-        <div class="hero-stat-label">API operations</div>
+        <div class="hero-stat-num">251</div>
+        <div class="hero-stat-label">API routes</div>
       </div>
       <div class="hero-stat">
-        <div class="hero-stat-num">288</div>
+        <div class="hero-stat-num">381</div>
         <div class="hero-stat-label">Frontend pages</div>
       </div>
       <div class="hero-stat">
-        <div class="hero-stat-num">67</div>
+        <div class="hero-stat-num">74</div>
         <div class="hero-stat-label">Test suites</div>
       </div>
       <div class="hero-stat">
-        <div class="hero-stat-num">84</div>
+        <div class="hero-stat-num">109</div>
         <div class="hero-stat-label">DB migrations</div>
       </div>
     </div>
@@ -699,14 +698,27 @@
 
         <div class="feature-card">
           <span class="feature-card-icon">🧠</span>
-          <div class="feature-card-title">Strategy &amp; Cashflow Engine</div>
+          <div class="feature-card-title">Strategy, Cashflow &amp; NPV</div>
           <ul class="feature-list">
             <li>5 building archetypes (stability, growth…)</li>
             <li>6 financial scoring dimensions</li>
-            <li>Decision scoring with ranked options</li>
             <li>Cashflow plan with strategy overlay</li>
-            <li>Forecasting with scenario comparison</li>
-            <li>56 passing unit tests</li>
+            <li>Invest / Defer / Neglect NPV scenarios</li>
+            <li>Full-screen renovation NPV simulator</li>
+            <li>Planning tab: accordion + plans list</li>
+          </ul>
+        </div>
+
+        <div class="feature-card">
+          <span class="feature-card-icon">📈</span>
+          <div class="feature-card-title">Owner Reporting</div>
+          <ul class="feature-list">
+            <li>Portfolio &amp; building time-series charts</li>
+            <li>YoY / YTD monthly NOI trendline</li>
+            <li>Dynamic appraisal (cap rate / NOI)</li>
+            <li>Actionable watch-items feed</li>
+            <li>Per-building financials + occupancy</li>
+            <li>Balance sheet import (PDF statements)</li>
           </ul>
         </div>
 
@@ -714,11 +726,11 @@
           <span class="feature-card-icon">📱</span>
           <div class="feature-card-title">Tenant Portal</div>
           <ul class="feature-list">
-            <li>Maintenance request submission</li>
+            <li>AI chat for maintenance intake</li>
             <li>Invoice view with QR payment slip</li>
             <li>Lease and contract access</li>
-            <li>Asset list for their unit</li>
-            <li>Listing browse &amp; application wizard</li>
+            <li>Move-out condition report (état des lieux)</li>
+            <li>Received formal letters &amp; replies</li>
             <li>Mobile responsive (dual-render)</li>
           </ul>
         </div>
@@ -727,12 +739,37 @@
           <span class="feature-card-icon">👁️</span>
           <div class="feature-card-title">Owner Portal</div>
           <ul class="feature-list">
-            <li>Portfolio overview (buildings &amp; units)</li>
+            <li>Portfolio reporting dashboard</li>
             <li>Pending approvals with full context</li>
             <li>Invoice review</li>
-            <li>Vacancy tracking</li>
+            <li>Formal letters sent to tenants</li>
             <li>Financial overview per building</li>
             <li>Role-isolated routing</li>
+          </ul>
+        </div>
+
+        <div class="feature-card">
+          <span class="feature-card-icon">✉️</span>
+          <div class="feature-card-title">Correspondence &amp; Complaints</div>
+          <ul class="feature-list">
+            <li>Formal letter drafting (6 templates)</li>
+            <li>AI-assisted letter generation (Claude)</li>
+            <li>Send to tenants with email notification</li>
+            <li>Tenant inbox + reply thread</li>
+            <li>Complaint type + warning letter generator</li>
+            <li>Resolution workflow for complaints</li>
+          </ul>
+        </div>
+
+        <div class="feature-card">
+          <span class="feature-card-icon">🔍</span>
+          <div class="feature-card-title">PDF Ingestion &amp; Manager Statements</div>
+          <ul class="feature-list">
+            <li>PDF upload → Azure OCR + Claude extraction</li>
+            <li>Auto-classified invoices + balance sheets</li>
+            <li>Manager review gate before posting</li>
+            <li>Feeds directly into owner reporting</li>
+            <li>Re-extract on OCR failure</li>
           </ul>
         </div>
 
@@ -871,15 +908,15 @@
         <li><strong>Routes</strong> — thin HTTP handlers. Parse input, call one workflow, return response. No business logic.</li>
         <li><strong>Workflows</strong> — orchestration. Delegate to services, emit domain events, own status transitions. 28 workflow modules.</li>
         <li><strong>Services</strong> — domain logic. No raw Prisma calls. All side effects go through repositories.</li>
-        <li><strong>Repositories</strong> — canonical Prisma access only. Each exports a typed include constant (e.g. <code class="inline">JOB_INCLUDE</code>). 27 repository modules.</li>
+        <li><strong>Repositories</strong> — canonical Prisma access only. Each exports a typed include constant (e.g. <code class="inline">JOB_INCLUDE</code>). 46 repository modules.</li>
         <li><strong>transitions.ts</strong> — all 8 status transition maps live here. Nowhere else.</li>
       </ul>
 
       <h3>Frontend proxy layer</h3>
-      <p>The Next.js app never calls the backend directly from the browser. Every API call goes through a proxy route in <code class="inline">apps/web/pages/api/</code> which forwards to the backend via the shared <code class="inline">proxyToBackend()</code> helper. 197 proxy routes, all conforming. This pattern keeps auth headers server-side and makes the frontend URL surface independent of the backend URL structure.</p>
+      <p>The Next.js app never calls the backend directly from the browser. Every API call goes through a proxy route in <code class="inline">apps/web/pages/api/</code> which forwards to the backend via the shared <code class="inline">proxyToBackend()</code> helper. 235 proxy routes, all conforming. This pattern keeps auth headers server-side and makes the frontend URL surface independent of the backend URL structure.</p>
 
       <h3>Why this architecture?</h3>
-      <p>The backend uses a raw <code class="inline">http.createServer()</code> rather than Express or Fastify. This was a deliberate early decision: no framework dependency, full control over binary forwarding (PDFs, QR-bill PNGs), and a clean separation between the HTTP layer and the workflow layer. The tradeoff is a bespoke routing and middleware stack — acceptable at the current scale (~225 URL paths), but worth re-evaluating before the team grows significantly. The explicit re-evaluation trigger is documented in the backlog.</p>
+      <p>The backend uses a raw <code class="inline">http.createServer()</code> rather than Express or Fastify. This was a deliberate early decision: no framework dependency, full control over binary forwarding (PDFs, QR-bill PNGs), and a clean separation between the HTTP layer and the workflow layer. The tradeoff is a bespoke routing and middleware stack — acceptable at the current scale (~251 URL paths), but worth re-evaluating before the team grows significantly. The explicit re-evaluation trigger is documented in the backlog.</p>
       <p>The Next.js frontend proxies every API call through its own <code class="inline">pages/api/</code> routes rather than calling the backend directly from the browser. This keeps auth tokens server-side, decouples the frontend URL structure from the backend, and makes it straightforward to add per-route logic (rate limiting, caching) later without changing the frontend components.</p>
 
       <h3>Domain event bus</h3>
@@ -920,13 +957,13 @@
         <tbody>
           <tr><td>Backend runtime</td><td>Node.js + TypeScript</td><td>Raw <code>http.createServer</code>, no framework</td></tr>
           <tr><td>Frontend</td><td>Next.js 14, Pages Router</td><td>SSR + CSR, <code>pages/</code> directory</td></tr>
-          <tr><td>ORM</td><td>Prisma</td><td>68 models, 84 migrations, shadow DB verified</td></tr>
+          <tr><td>ORM</td><td>Prisma</td><td>83 models, 109 migrations, shadow DB verified</td></tr>
           <tr><td>Database</td><td>PostgreSQL 16</td><td>Docker volume <code>maint_agent_pgdata</code></td></tr>
           <tr><td>Styling</td><td>Tailwind CSS v4.1</td><td><code>@theme {}</code> tokens + CVA + <code>@apply</code> in globals.css</td></tr>
           <tr><td>Component variants</td><td>CVA (class-variance-authority)</td><td>Button, Badge, Card, DataTable, etc.</td></tr>
           <tr><td>Class merging</td><td><code>cn()</code> = twMerge + clsx</td><td>Mandatory for all dynamic className</td></tr>
           <tr><td>Validation</td><td>Zod</td><td>All route input schemas</td></tr>
-          <tr><td>Testing</td><td>Jest + ts-jest</td><td>65 suites, serial (<code>maxWorkers: 1</code>)</td></tr>
+          <tr><td>Testing</td><td>Jest + ts-jest</td><td>74 suites, serial (<code>maxWorkers: 1</code>)</td></tr>
           <tr><td>OCR</td><td>Azure Document Intelligence</td><td><code>prebuilt-layout</code> model, Tesseract fallback</td></tr>
           <tr><td>E-signing</td><td>SignatureRequest / Skribble</td><td>Model wired; API integration in P0</td></tr>
           <tr><td>Email</td><td>EmailOutbox model + SMTP/SendGrid</td><td>Dev sink built; prod transport in P0</td></tr>
@@ -947,28 +984,28 @@
       <div class="code-block"><pre>
 Maintenance_Agent/
 ├── <span class="path">apps/api/</span>
-│   ├── prisma/              <span class="comment"># schema.prisma + 84 migrations/</span>
+│   ├── prisma/              <span class="comment"># schema.prisma + 109 migrations/</span>
 │   └── src/
 │       ├── server.ts        <span class="comment"># Entry point (port 3001)</span>
 │       ├── routes/          <span class="comment"># 28 route modules — thin HTTP handlers</span>
-│       ├── workflows/       <span class="comment"># 28 orchestration modules + transitions.ts</span>
+│       ├── workflows/       <span class="comment"># 32 orchestration modules + transitions.ts</span>
 │       ├── services/        <span class="comment"># Domain logic (legalService, strategyService…)</span>
-│       ├── repositories/    <span class="comment"># 27 Prisma repos with canonical includes</span>
+│       ├── repositories/    <span class="comment"># 46 Prisma repos with canonical includes</span>
 │       ├── events/          <span class="comment"># Domain event bus</span>
 │       ├── governance/      <span class="comment"># Org scope resolvers + assertOrgScope</span>
 │       ├── validation/      <span class="comment"># Zod schemas</span>
 │       ├── authz.ts         <span class="comment"># Auth helpers (requireAuth, requireRole…)</span>
 │       ├── http/            <span class="comment"># Body/JSON/query/errors/router helpers</span>
-│       ├── __tests__/       <span class="comment"># 65 test suites</span>
+│       ├── __tests__/       <span class="comment"># 74 test suites</span>
 │       └── ARCHITECTURE_LOW_CONTEXT_GUIDE.md
 │
 ├── <span class="path">apps/web/</span>
-│   ├── pages/               <span class="comment"># 288 pages: 88 UI + 200 API proxies</span>
-│   │   ├── manager/         <span class="comment"># 42 UI pages (hub, list, detail patterns)</span>
-│   │   ├── owner/           <span class="comment"># 8 UI pages</span>
-│   │   ├── tenant/          <span class="comment"># 8 UI pages</span>
-│   │   ├── contractor/      <span class="comment"># 6 UI pages</span>
-│   │   └── api/             <span class="comment"># 200 proxy routes (all use proxyToBackend())</span>
+│   ├── pages/               <span class="comment"># 381 pages: 146 UI + 235 API proxies</span>
+│   │   ├── manager/         <span class="comment"># ~60 UI pages (hub, list, detail patterns)</span>
+│   │   ├── owner/           <span class="comment"># ~15 UI pages</span>
+│   │   ├── tenant/          <span class="comment"># ~12 UI pages</span>
+│   │   ├── contractor/      <span class="comment"># ~8 UI pages</span>
+│   │   └── api/             <span class="comment"># 235 proxy routes (all use proxyToBackend())</span>
 │   ├── components/
 │   │   ├── AppShell.js      <span class="comment"># Sidebar + main, role-aware</span>
 │   │   ├── ui/              <span class="comment"># CVA components (Button, Badge, Modal…)</span>
@@ -1194,7 +1231,7 @@ AppShell [role="MANAGER"|"OWNER"|"CONTRACTOR"|"TENANT"]
         </div>
         <div class="guardrail">
           <div class="guardrail-title">5. All Jest tests pass</div>
-          <div class="guardrail-desc">All 65 suites against <code class="guardrail-code">maint_agent_test</code>.</div>
+          <div class="guardrail-desc">All 74 suites against <code class="guardrail-code">maint_agent_test</code>.</div>
         </div>
         <div class="guardrail">
           <div class="guardrail-title">6. Backend smoke test</div>
@@ -1697,15 +1734,105 @@ node -e "const jwt=require('jsonwebtoken'); \
           <div class="tl-date">Apr 30</div>
           <div class="tl-body">
             <div class="tl-title">Deployment readiness — audit, schema drift fix, Supabase staging live</div>
-            <div class="tl-desc">Uncompromising audit produced 11 findings (C/H/M/F/L) — all resolved. Discovered+fixed schema drift (AUTO_APPROVED enum value removed in code without migration; 16 legacy rows broke <code class="inline">GET /requests</code>). Migration <code class="inline">20260430120000_remove_auto_approved_request_status</code> backfills then drops. Migration plan Phase 1 begun: T-01 (audit + Node 20 pin via <code class="inline">.nvmrc</code> + <code class="inline">engines.node</code>), T-03 (unauthenticated <code class="inline">GET /health</code> with DB latency probe), T-04 (hard shutdown timeout for Render SIGKILL safety, prod-readiness checklist), T-05 (Supabase project provisioned, all 84 migrations deployed, <code class="inline">/health</code> returns 200 against staging at 89ms RTT). 67 suites · 1004 tests · 0 TS errors.</div>
+            <div class="tl-desc">Uncompromising audit produced 11 findings (C/H/M/F/L) — all resolved. Discovered+fixed schema drift (AUTO_APPROVED enum value removed in code without migration; 16 legacy rows broke <code class="inline">GET /requests</code>). Supabase project provisioned, all 84 migrations deployed, <code class="inline">/health</code> returns 200 against staging at 89ms RTT. 67 suites · 1004 tests · 0 TS errors.</div>
             <div class="tl-tags"><span class="tl-tag tl-tag-infra">Infra</span><span class="tl-tag tl-tag-backend">Backend</span><span class="tl-tag tl-tag-security">Security</span></div>
+          </div>
+        </div>
+
+        <div class="tl-row feature">
+          <div class="tl-date">May 4–5</div>
+          <div class="tl-body">
+            <div class="tl-title">Tenant AI chat + agentic asset matching + EN/FR i18n</div>
+            <div class="tl-desc">Claude-powered tenant chatbot: phone login → conversation → <code class="inline">reportIssue</code> tool creates request. AI-powered <code class="inline">resolveAssetWithAI()</code> replaces keyword scorer. Full bilingual EN/FR i18n via <code class="inline">next-i18next</code> — 5 namespaces, all strings extracted. Critical fix: <code class="inline">.vercelignore</code> blanket <code class="inline">*.json</code> rule was silently blocking all locale files from Vercel builds.</div>
+            <div class="tl-tags"><span class="tl-tag tl-tag-backend">Backend</span><span class="tl-tag tl-tag-frontend">Frontend</span></div>
+          </div>
+        </div>
+
+        <div class="tl-row milestone">
+          <div class="tl-date">May 6</div>
+          <div class="tl-body">
+            <div class="tl-title">Full project audit + ARCH-1 service-layer Prisma decoupling</div>
+            <div class="tl-desc">Audit + remediation: <code class="inline">jose@6</code> ESM incompatibility fixed (downgraded to v5), Supabase JWT pre-resolve bug fixed, test DB migrations deployed. ARCH-1 epic: all 5 slices complete — ~80 direct <code class="inline">prisma.*</code> calls eliminated from service layer across 11 files. No service file may call Prisma directly. 67 suites · 1009 tests · 0 TS errors.</div>
+            <div class="tl-tags"><span class="tl-tag tl-tag-backend">Backend</span><span class="tl-tag tl-tag-infra">Infra</span></div>
+          </div>
+        </div>
+
+        <div class="tl-row feature">
+          <div class="tl-date">May 12–20</div>
+          <div class="tl-body">
+            <div class="tl-title">QR invoice capture fixes + Supabase key migration + manager assignment + balance sheet</div>
+            <div class="tl-desc">6 QR capture bugs fixed (missing POST proxy, LAN-IP QR URL, phone routes behind auth wall, PDF iframe auth). Supabase migrated from HS256→ES256 JWTs + new publishable/secret key format. Manager ↔ building assignment enforced (manager sees only assigned buildings). Balance sheet redesign: <code class="inline">BALANCE_SHEET_IMPORT</code> / <code class="inline">INCOME_STATEMENT_IMPORT</code> source types, manager + owner finance tabs.</div>
+            <div class="tl-tags"><span class="tl-tag tl-tag-backend">Backend</span><span class="tl-tag tl-tag-frontend">Frontend</span><span class="tl-tag tl-tag-infra">Infra</span></div>
+          </div>
+        </div>
+
+        <div class="tl-row milestone">
+          <div class="tl-date">May 22</div>
+          <div class="tl-body">
+            <div class="tl-title">Financial Planning Phase 1 — Historical NOI aggregation</div>
+            <div class="tl-desc"><code class="inline">computeAnnualSnapshots()</code> upserts <code class="inline">BuildingFinancialSnapshot</code> rows per fiscal year. <code class="inline">NOITrendPanel</code> with CSS bar chart on finance/planning tab. 2 new endpoints, 7 integration tests. 69 suites · 1034 tests · 0 TS errors. EN/FR i18n complete.</div>
+            <div class="tl-tags"><span class="tl-tag tl-tag-backend">Backend</span><span class="tl-tag tl-tag-finance">Finance</span><span class="tl-tag tl-tag-frontend">Frontend</span></div>
+          </div>
+        </div>
+
+        <div class="tl-row milestone">
+          <div class="tl-date">May 30</div>
+          <div class="tl-body">
+            <div class="tl-title">Dark mode, notification preferences, triage agent, design tokens, code-quality sweep</div>
+            <div class="tl-desc">Dark mode: 37 semantic tokens, <code class="inline">html.dark</code> CSS override (invest.html palette), <code class="inline">useTheme</code> hook + <code class="inline">AppearanceTab</code> wired into all 4 persona settings. 3,683 hardcoded Tailwind color classes migrated via <code class="inline">migrate-tokens.js</code>. <code class="inline">NotificationPreference</code> model with opt-out per event group. Post-<code class="inline">REQUEST_CREATED</code> triage agent scores contractors + computes budget range. Session-6 quality sweep: 7 findings resolved (G9 violations, service <code class="inline">any</code> types, HTTP tests for 3 workflow routes). 72 suites · 1068 tests · 0 TS errors.</div>
+            <div class="tl-tags"><span class="tl-tag tl-tag-frontend">Frontend</span><span class="tl-tag tl-tag-backend">Backend</span></div>
+          </div>
+        </div>
+
+        <div class="tl-row feature">
+          <div class="tl-date">May 31</div>
+          <div class="tl-body">
+            <div class="tl-title">Legal sources canton mapping + request type classification (COMPLAINT / ADMINISTRATIVE)</div>
+            <div class="tl-desc">Per-building Documents tab lists canton-scoped legal sources (FEDERAL + canton). Tenant chatbot enriched with applicable legal docs, SNB/CPI values, and house rules. Three-type <code class="inline">RequestType</code> enum — AI classifies at intake. MAINTENANCE-only guards on asset-link and triage. Complaint detail view: Warning Letter Generator (Claude Haiku) + Resolution panel. <code class="inline">PATCH /requests/:id/resolution</code>. EN + FR locale keys.</div>
+            <div class="tl-tags"><span class="tl-tag tl-tag-backend">Backend</span><span class="tl-tag tl-tag-legal">Legal</span><span class="tl-tag tl-tag-frontend">Frontend</span></div>
+          </div>
+        </div>
+
+        <div class="tl-row milestone">
+          <div class="tl-date">Jun 2–3</div>
+          <div class="tl-body">
+            <div class="tl-title">Security hardening (OWASP audit) + sandbox environment</div>
+            <div class="tl-desc">Full 25-category OWASP audit — no critical findings. Shipped: HTTP security headers, rate limiting on public endpoints, CORS hardening, path traversal guard (<code class="inline">_safePath()</code>), prompt injection hardening. Sandbox environment: isolated Vercel+Render+Supabase stack, seed route, contractorId demo grant, sandbox branding, pgbouncer fix.</div>
+            <div class="tl-tags"><span class="tl-tag tl-tag-security">Security</span><span class="tl-tag tl-tag-infra">Infra</span></div>
+          </div>
+        </div>
+
+        <div class="tl-row milestone">
+          <div class="tl-date">Jun 4</div>
+          <div class="tl-body">
+            <div class="tl-title">Correspondence (manager→tenant letters) + Condition Reports (état des lieux)</div>
+            <div class="tl-desc">Full letter system: 6 template types, AI draft generation (Claude Sonnet), send to recipients with email notification, tenant inbox + reply thread, owner read-only view. Condition reports: MOVE_IN/MOVE_OUT inspection workflow, tenant-initiated departure flow, delta comparison between move-in and move-out, asset enrichment. Both features are bilingual FR/EN.</div>
+            <div class="tl-tags"><span class="tl-tag tl-tag-backend">Backend</span><span class="tl-tag tl-tag-frontend">Frontend</span></div>
+          </div>
+        </div>
+
+        <div class="tl-row milestone">
+          <div class="tl-date">Jun 17</div>
+          <div class="tl-body">
+            <div class="tl-title">Owner Reporting — Portfolio Dashboard</div>
+            <div class="tl-desc">Dynamic portfolio appraisal (cap rate, NOI), YoY/YTD monthly NOI trendline, actionable watch-items feed (lease expiry, vacancy, maintenance backlog), all-buildings breakdown with occupancy. Portfolio time-series across 7 ranges (1W–10Y). Building and unit period reports. Full EN/FR i18n.</div>
+            <div class="tl-tags"><span class="tl-tag tl-tag-backend">Backend</span><span class="tl-tag tl-tag-finance">Finance</span><span class="tl-tag tl-tag-frontend">Frontend</span></div>
+          </div>
+        </div>
+
+        <div class="tl-row milestone">
+          <div class="tl-date">Jun 19</div>
+          <div class="tl-body">
+            <div class="tl-title">Renovation Simulator + Planning tab rearchitecture</div>
+            <div class="tl-desc">Full-screen NPV simulator (Invest/Defer/Neglect) with per-asset rent-uplift inputs and DCF model. Planning tab redesigned: building selector → <code class="inline">RenovationAccordion</code> (building→unit→asset hierarchy, urgency-sorted) → "Plan this work" creates cashflow plan with overrides → Plans list with cached verdict badges. NPV Assumptions + Verdict panels on plan detail page. CashflowPlan schema extended (discountRatePct, capRatePct, deferYears, propertyValueChf, lastVerdictScenario). 83 models · 109 migrations · 74 suites · 1085 tests · 0 TS errors.</div>
+            <div class="tl-tags"><span class="tl-tag tl-tag-backend">Backend</span><span class="tl-tag tl-tag-finance">Finance</span><span class="tl-tag tl-tag-frontend">Frontend</span></div>
           </div>
         </div>
 
       </div>
 
       <div class="callout callout-tip" style="margin-top:24px;">
-        <strong>Platform maturity at a glance:</strong> ~13 weeks from initial commit to a fully responsive, security-hardened, law-aware platform with 68 models, 291 API operations, 288 pages, 1004 tests, and a live Supabase staging environment ready for Render + Vercel deploy.
+        <strong>Platform maturity at a glance:</strong> ~20 weeks from initial commit to a fully responsive, security-hardened, bilingual, AI-assisted platform with 83 models, 251 API routes, 381 pages, 1085 tests, live sandbox + staging environments, and a complete Swiss property management stack across 4 personas.
       </div>
     </section>
 
@@ -1913,7 +2040,7 @@ node -e "const jwt=require('jsonwebtoken'); \
       <ul class="prose">
         <li><strong>Pre-existing test interaction failures (TC-11)</strong> — ~10 legacy test suites use local <code class="inline">startServer</code> copies instead of canonical <code class="inline">testHelpers.ts</code>. They pass individually but can fail in full serial mode. All new tests (since March 2026) use shared helpers.</li>
         <li><strong>ASSET_TYPE_COLORS in depreciation page</strong> — uses hardcoded Tailwind color strings, bypassing the token system. Migrate when depreciation page is next touched.</li>
-        <li><strong>Custom HTTP stack</strong> — the raw <code class="inline">http.createServer</code> backend is appropriate at current scale (~225 URL paths). Evaluate migrating to Express/Fastify before the team grows or route count exceeds ~200.</li>
+        <li><strong>Custom HTTP stack</strong> — the raw <code class="inline">http.createServer</code> backend is appropriate at current scale (~251 URL paths). Evaluate migrating to Express/Fastify before the team grows or route count exceeds ~200.</li>
         <li><strong>Dev auth token expiry</strong> — three dev tokens expire 2027-03-15. See the Dev Setup section for regeneration command.</li>
       </ul>
     </section>
