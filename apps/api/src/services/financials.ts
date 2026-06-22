@@ -57,6 +57,10 @@ export interface BuildingFinancialsDTO {
   maintenanceRatio: number;
   costPerUnitCents: number;
   collectionRate: number;
+  // Raw inputs to collectionRate (paid ÷ invoiced by billing period) — exposed so
+  // the portfolio rate can be a true weighted aggregate across buildings.
+  invoicedForPeriodCents: number;
+  paidForPeriodCents: number;
 
   // Breakdowns
   activeUnitsCount: number;
@@ -210,7 +214,15 @@ export async function getBuildingFinancials(
         inventoryRepo.countTotalUnitsByBuilding(prisma, orgId, buildingId),
         inventoryRepo.countLeasedUnitsByBuilding(prisma, orgId, buildingId, from, to),
       ]);
-      const cachedCollectionRate = Math.min(1, safeDivide(cached.earnedIncomeCents, cached.projectedIncomeCents));
+      const [cachedInvoicedForPeriodCents, cachedPaidForPeriodCents] = await Promise.all([
+        financialsRepo.aggregateInvoicedRentForPeriod(prisma, orgId, buildingId, from, to),
+        financialsRepo.aggregatePaidRentForPeriod(prisma, orgId, buildingId, from, to),
+      ]);
+      // Mirror the fresh-path formula so cached periods agree: paid ÷ invoiced by
+      // billing period, falling back to earned ÷ projected when nothing was invoiced.
+      const cachedCollectionRate = Math.min(1, cachedInvoicedForPeriodCents > 0
+        ? safeDivide(cachedPaidForPeriodCents, cachedInvoicedForPeriodCents)
+        : safeDivide(cached.earnedIncomeCents, cached.projectedIncomeCents));
       return {
         buildingId,
         buildingName: building.name,
@@ -231,6 +243,8 @@ export async function getBuildingFinancials(
         maintenanceRatio: 0,
         costPerUnitCents: 0,
         collectionRate: cachedCollectionRate,
+        invoicedForPeriodCents: cachedInvoicedForPeriodCents,
+        paidForPeriodCents: cachedPaidForPeriodCents,
         activeUnitsCount: cachedActiveUnits,
         totalUnitsCount: cachedTotalUnits,
         expensesByCategory: [],
@@ -404,6 +418,8 @@ export async function getBuildingFinancials(
     maintenanceRatio: Math.round(maintenanceRatio * 10000) / 10000,
     costPerUnitCents,
     collectionRate: Math.round(collectionRate * 10000) / 10000,
+    invoicedForPeriodCents,
+    paidForPeriodCents,
     activeUnitsCount,
     totalUnitsCount,
     expensesByCategory,
@@ -428,6 +444,8 @@ export interface BuildingSummaryDTO {
   netIncomeCents: number;
   netOperatingIncomeCents: number;
   collectionRate: number;
+  invoicedForPeriodCents: number;
+  paidForPeriodCents: number;
   maintenanceRatio: number;
   activeUnitsCount: number;
   totalUnitsCount: number;
@@ -504,6 +522,8 @@ export async function getPortfolioSummary(
       netIncomeCents: dto.netIncomeCents,
       netOperatingIncomeCents: dto.netOperatingIncomeCents,
       collectionRate: dto.collectionRate,
+      invoicedForPeriodCents: dto.invoicedForPeriodCents,
+      paidForPeriodCents: dto.paidForPeriodCents,
       maintenanceRatio: dto.maintenanceRatio,
       activeUnitsCount: dto.activeUnitsCount,
       totalUnitsCount: dto.totalUnitsCount,
@@ -524,12 +544,15 @@ export async function getPortfolioSummary(
   const totalActive = summaries.reduce((s, b) => s + b.activeUnitsCount, 0);
   const totalAllUnits = summaries.reduce((s, b) => s + b.totalUnitsCount, 0);
   const active = summaries.filter((b) => b.earnedIncomeCents > 0 || b.expensesTotalCents > 0);
-  // Weighted collection rate: total earned / total projected avoids one building's
-  // rate dominating the average when portfolio sizes differ.
-  const totalEarnedActive    = active.reduce((s, b) => s + b.earnedIncomeCents, 0);
-  const totalProjectedActive = active.reduce((s, b) => s + b.projectedIncomeCents, 0);
-  const avgCollection = Math.min(1, totalProjectedActive > 0
-    ? safeDivide(totalEarnedActive, totalProjectedActive)
+  // Weighted collection rate: total PAID / total INVOICED across buildings, by
+  // billing period — the same invoice-based definition used by the per-building,
+  // building-report and unit-report surfaces, so every page agrees. (Previously
+  // this used earned/projected, which could exceed 100% — masked by the cap — and
+  // disagreed with the inventory page's paid/invoiced rate.)
+  const totalInvoicedActive = active.reduce((s, b) => s + b.invoicedForPeriodCents, 0);
+  const totalPaidActive     = active.reduce((s, b) => s + b.paidForPeriodCents, 0);
+  const avgCollection = Math.min(1, totalInvoicedActive > 0
+    ? safeDivide(totalPaidActive, totalInvoicedActive)
     : (active.length > 0 ? active.reduce((s, b) => s + b.collectionRate, 0) / active.length : 0));
   const avgMaintenance = active.length > 0
     ? active.reduce((s, b) => s + b.maintenanceRatio, 0) / active.length : 0;
