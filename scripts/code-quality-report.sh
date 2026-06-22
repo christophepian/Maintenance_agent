@@ -32,6 +32,14 @@ CONSOLE_COUNT=$(grep -rEn 'console\.(log|error|warn|info|debug)' "$API_SRC" --in
 TODO_COUNT=$(grep -rEn 'TODO|FIXME|HACK|XXX' "$API_SRC" "$WEB_SRC/pages" "$WEB_SRC/components" 2>/dev/null | grep -vc '\.test\.' | tail -1)
 SUPPRESS_COUNT=$(grep -rEn '@ts-ignore|@ts-nocheck|eslint-disable' "$API_SRC" "$WEB_SRC/pages" "$WEB_SRC/components" "$WEB_SRC/lib" 2>/dev/null | grep -vc '\.test\.' | tail -1)
 BIG_FILES=$(find "$API_SRC" -name '*.ts' ! -name '*.test.ts' -exec wc -l {} + 2>/dev/null | awk '$1>800{c++} END{print c+0}')
+
+# ── TypeScript errors ──
+# The Prisma client (node_modules/.prisma/client) is gitignored, so a fresh
+# clone has none — tsc would then report hundreds of phantom "no exported
+# member" errors for any schema type. Generate it first so the tsc count
+# reflects real type errors, not a stale/missing client. (CI does the same via
+# its "G7: Prisma generate" step.)
+( cd apps/api && npx prisma generate ) >/dev/null 2>&1 || true
 TSC_ERRORS=$(npx tsc --noEmit --project apps/api/tsconfig.json 2>&1 | grep -c 'error TS')
 
 cat <<EOF
