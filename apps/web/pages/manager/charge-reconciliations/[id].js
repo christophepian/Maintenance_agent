@@ -107,6 +107,66 @@ export default function ChargeReconciliationDetailPage() {
     }).catch(e => alert(e.message));
   };
 
+  // ── F2: cost-pool auto-fill + inspection rights ──
+  const [periods, setPeriods] = useState([]);
+  const [selPeriod, setSelPeriod] = useState("");
+  const [supportingDocs, setSupportingDocs] = useState([]);
+  const [docRequests, setDocRequests] = useState([]);
+
+  useEffect(() => {
+    if (recon?.status !== "DRAFT") return;
+    fetch("/api/billing-periods", { headers: authHeaders() })
+      .then((r) => r.json())
+      .then((j) => setPeriods(j.data || []))
+      .catch(() => {});
+  }, [recon?.status]);
+
+  useEffect(() => {
+    if (!id || recon?.status !== "SETTLED") return;
+    Promise.all([
+      fetch(`/api/charge-reconciliations/${id}/supporting-documents`, { headers: authHeaders() }).then((r) => r.json()).catch(() => ({ data: [] })),
+      fetch(`/api/charge-reconciliations/${id}/doc-requests`, { headers: authHeaders() }).then((r) => r.json()).catch(() => ({ data: [] })),
+    ]).then(([s, d]) => { setSupportingDocs(s.data || []); setDocRequests(d.data || []); });
+  }, [id, recon?.status]);
+
+  const handleAutofill = () => {
+    if (!selPeriod) return;
+    runAction("autofill", async () => {
+      const res = await fetch(`/api/charge-reconciliations/${id}/autofill`, {
+        method: "POST",
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ billingPeriodId: selPeriod }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error?.message || "Failed to auto-fill");
+      setRecon(json);
+      const initEdits = {};
+      for (const line of json.lineItems || []) initEdits[line.id] = String(line.actualCostCents / 100);
+      setEditValues(initEdits);
+    }).catch((e) => alert(e.message));
+  };
+
+  const refreshDocRequests = async () => {
+    const d = await fetch(`/api/charge-reconciliations/${id}/doc-requests`, { headers: authHeaders() }).then((r) => r.json()).catch(() => ({ data: [] }));
+    setDocRequests(d.data || []);
+  };
+  const createDocReq = () => {
+    runAction("docreq", async () => {
+      const res = await fetch(`/api/charge-reconciliations/${id}/doc-requests`, { method: "POST", headers: { ...authHeaders(), "Content-Type": "application/json" }, body: "{}" });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error?.message || "Failed");
+      await refreshDocRequests();
+    }).catch((e) => alert(e.message));
+  };
+  const fulfillDocReq = (rid) => {
+    runAction("fulfill-" + rid, async () => {
+      const res = await fetch(`/api/charge-reconciliations/${id}/doc-requests/${rid}/fulfill`, { method: "POST", headers: { ...authHeaders(), "Content-Type": "application/json" }, body: "{}" });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error?.message || "Failed");
+      await refreshDocRequests();
+    }).catch((e) => alert(e.message));
+  };
+
   const isDraft = recon?.status === "DRAFT";
   const isFinalized = recon?.status === "FINALIZED";
   const isSettled = recon?.status === "SETTLED";
@@ -152,11 +212,34 @@ export default function ChargeReconciliationDetailPage() {
               <DetailItem label={t("manager:charge_ReconciliationsId.prop.totalAcomptePaid")}>{formatChfCents(recon.totalAcomptePaidCents)}</DetailItem>
               <DetailItem label={t("manager:charge_ReconciliationsId.prop.totalActualCosts")}>{formatChfCents(recon.totalActualCostsCents)}</DetailItem>
               <DetailItem label={t("manager:charge_ReconciliationsId.prop.difference")}>{recon.balanceCents > 0 ? "+" : ""}{formatChfCents(recon.balanceCents)}</DetailItem>
+              {recon.adminFeeCents > 0 && (
+                <DetailItem label={t("costPool.field.adminFee")}>{formatChfCents(recon.adminFeeCents)}</DetailItem>
+              )}
             </DetailGrid>
           </Panel>
 
           {/* Line Items */}
-          <Panel title={t("manager:chargeReconciliationsId.title.expenseLines")} className="mt-6">
+          <Panel
+            title={t("manager:chargeReconciliationsId.title.expenseLines")}
+            className="mt-6"
+            actions={isDraft && periods.length > 0 ? (
+              <div className="flex items-center gap-2">
+                <select
+                  className="border border-surface-border rounded-lg px-2 py-1 text-xs bg-surface max-w-[220px]"
+                  value={selPeriod}
+                  onChange={(e) => setSelPeriod(e.target.value)}
+                >
+                  <option value="">{t("costPool.text.selectPeriod")}</option>
+                  {periods.map((p) => (
+                    <option key={p.id} value={p.id}>{p.buildingName} · {p.startDate?.slice(0, 10)}–{p.endDate?.slice(0, 10)}</option>
+                  ))}
+                </select>
+                <Button variant="secondary" size="xs" onClick={handleAutofill} disabled={!selPeriod || actionLoading === "autofill"}>
+                  {actionLoading === "autofill" ? "…" : t("costPool.action.autofill")}
+                </Button>
+              </div>
+            ) : null}
+          >
             {/* Mobile cards */}
             <div className="sm:hidden divide-y divide-slate-100">
               {sortedLineItems.map((line) => (
@@ -292,6 +375,70 @@ export default function ChargeReconciliationDetailPage() {
                   <span>{recon.settlementInvoice.description}</span>
                 </div>
               </div>
+            </Panel>
+          )}
+
+          {/* Refund credit note */}
+          {isSettled && recon.settlementCreditNoteId && (
+            <Panel title={t("costPool.title.creditNote")} className="mt-6">
+              <p className="text-sm text-green-700">{t("costPool.text.refundIssued")}</p>
+            </Panel>
+          )}
+
+          {/* Inspection rights */}
+          {isSettled && (
+            <Panel title={t("costPool.title.inspection")} className="mt-6">
+              {recon.inspectionDeadline && (
+                <p className="text-sm text-muted-text mb-4">{t("costPool.text.inspectionUntil", { date: recon.inspectionDeadline.slice(0, 10) })}</p>
+              )}
+
+              <h3 className="text-sm font-semibold text-foreground mb-2">{t("costPool.title.supportingDocs")}</h3>
+              {supportingDocs.length === 0 ? (
+                <p className="text-xs text-muted-text italic mb-4">{t("costPool.text.noSupportingDocs")}</p>
+              ) : (
+                <div className="overflow-x-auto mb-4">
+                  <table className="data-table w-full">
+                    <thead>
+                      <tr>
+                        <th>{t("costPool.col.category")}</th>
+                        <th className="text-right">{t("costPool.col.amount")}</th>
+                        <th>{t("costPool.col.sourceInvoice")}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {supportingDocs.map((d, i) => (
+                        <tr key={i} className="border-t border-surface-divider">
+                          <td>{d.categoryName}</td>
+                          <td className="text-right tabular-nums">{formatChfCents(d.amountCents)}</td>
+                          <td className="text-xs text-muted-text">{d.sourceInvoiceId ? d.sourceInvoiceId.slice(0, 8) : "—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-semibold text-foreground">{t("costPool.title.docRequests")}</h3>
+                <Button variant="secondary" size="xs" onClick={createDocReq} disabled={!!actionLoading}>{t("costPool.action.logDocRequest")}</Button>
+              </div>
+              {docRequests.length === 0 ? (
+                <p className="text-xs text-muted-text italic">{t("costPool.text.noDocRequests")}</p>
+              ) : (
+                <ul className="space-y-1.5">
+                  {docRequests.map((r) => (
+                    <li key={r.id} className="flex items-center justify-between gap-3 text-sm">
+                      <span className="min-w-0 truncate">{r.requestedAt?.slice(0, 10)}{r.note ? ` — ${r.note}` : ""}</span>
+                      <span className="flex items-center gap-2 shrink-0">
+                        <Badge variant={r.status === "FULFILLED" ? "success" : "warning"} size="sm">{r.status}</Badge>
+                        {r.status === "OPEN" && (
+                          <Button variant="primary" size="xs" onClick={() => fulfillDocReq(r.id)} disabled={!!actionLoading}>{t("costPool.action.fulfill")}</Button>
+                        )}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </Panel>
           )}
 
