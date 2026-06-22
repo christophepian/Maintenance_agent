@@ -252,6 +252,57 @@ export async function removeCostEntry(orgId: string, billingPeriodId: string, en
   return (await getPeriod(orgId, billingPeriodId))!;
 }
 
+// ─── Flat-rate (forfait) calculation ───────────────────────────
+export interface FlatRateResult {
+  categoryId: string;
+  distributionKey: DistributionKey;
+  basisYears: number; // number of prior CLOSED periods used
+  avgAnnualBuildingCents: number;
+  factor: number | null;
+  monthlyFlatRateCents: number | null;
+  requiresManual: boolean;
+}
+
+/**
+ * Suggested FLAT_RATE (forfait) monthly amount for a lease+category, per Swiss
+ * practice: the average actual building cost of the preceding (up to 3) CLOSED
+ * periods, apportioned to this lease, divided by 12. Inert (basisYears 0) until
+ * cost-pool history exists. No reconciliation is produced for flat-rate charges.
+ */
+export async function calculateFlatRate(
+  orgId: string,
+  leaseId: string,
+  categoryId: string,
+): Promise<FlatRateResult> {
+  const category = await prisma.ancillaryCostCategory.findFirst({ where: { id: categoryId, orgId } });
+  if (!category) throw new Error("Category not found");
+  const lease = await prisma.lease.findFirst({ where: { id: leaseId, orgId }, select: { unit: { select: { buildingId: true } } } });
+  if (!lease?.unit?.buildingId) throw new Error("Lease or building not found");
+  const buildingId = lease.unit.buildingId;
+
+  const periods = await repo.findClosedBillingPeriodsForBuilding(prisma, orgId, buildingId, 3);
+  const annualTotals = periods.map((p) =>
+    p.costEntries.filter((e) => e.categoryId === categoryId).reduce((s, e) => s + e.amountCents, 0),
+  );
+  const basisYears = annualTotals.length;
+  const avgAnnualBuildingCents = basisYears > 0 ? Math.round(annualTotals.reduce((s, v) => s + v, 0) / basisYears) : 0;
+
+  const participants = await repo.findBuildingLeaseParticipants(prisma, orgId, buildingId);
+  const me = participants.find((p) => p.leaseId === leaseId);
+  const factor = me ? distributionFactor(me, category.defaultKey, participants) : null;
+  const monthlyFlatRateCents = factor == null ? null : Math.round((avgAnnualBuildingCents * factor) / 12);
+
+  return {
+    categoryId,
+    distributionKey: category.defaultKey,
+    basisYears,
+    avgAnnualBuildingCents,
+    factor,
+    monthlyFlatRateCents,
+    requiresManual: factor == null,
+  };
+}
+
 function assertAdminFeeCap(permille?: number): void {
   if (permille != null && (permille < 0 || permille > ADMIN_FEE_CAP_PERMILLE)) {
     throw new Error(`adminFeeRatePermille must be between 0 and ${ADMIN_FEE_CAP_PERMILLE} (3%)`);

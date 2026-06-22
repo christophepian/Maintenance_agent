@@ -114,6 +114,7 @@ export async function createReconciliation(
       description: string;
       chargeMode: "ACOMPTE" | "FORFAIT";
       acomptePaidCents: number;
+      categoryId?: string | null;
     }>;
   },
 ) {
@@ -133,9 +134,24 @@ export async function createReconciliation(
           description: li.description,
           chargeMode: li.chargeMode,
           acomptePaidCents: li.acomptePaidCents,
+          categoryId: li.categoryId ?? null,
         })),
       },
     },
+    include: RECONCILIATION_INCLUDE,
+  });
+}
+
+/** Link a reconciliation to a building cost pool period + set the admin fee. */
+export async function linkBillingPeriod(
+  prisma: PrismaClient,
+  id: string,
+  billingPeriodId: string,
+  adminFeeCents: number,
+) {
+  return prisma.chargeReconciliation.update({
+    where: { id },
+    data: { billingPeriodId, adminFeeCents },
     include: RECONCILIATION_INCLUDE,
   });
 }
@@ -196,13 +212,16 @@ export async function finalizeReconciliation(
     }
   }
 
+  // The admin fee is a billable cost added on top of the apportioned actuals.
+  const totalActualWithFee = totalActual + recon.adminFeeCents;
+
   return prisma.chargeReconciliation.update({
     where: { id },
     data: {
       status: "FINALIZED",
       totalAcomptePaidCents: totalAcompte,
-      totalActualCostsCents: totalActual,
-      balanceCents: totalActual - totalAcompte,
+      totalActualCostsCents: totalActualWithFee,
+      balanceCents: totalActualWithFee - totalAcompte,
     },
     include: RECONCILIATION_INCLUDE,
   });

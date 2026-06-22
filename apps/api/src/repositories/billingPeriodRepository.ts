@@ -130,3 +130,18 @@ export async function findBuildingLeaseParticipants(
 }
 
 export type LeaseParticipant = Awaited<ReturnType<typeof findBuildingLeaseParticipants>>[number];
+
+/** Most recent CLOSED billing periods for a building (for flat-rate 3-yr averaging). */
+export async function findClosedBillingPeriodsForBuilding(
+  prisma: PrismaClient,
+  orgId: string,
+  buildingId: string,
+  limit = 3,
+) {
+  return prisma.billingPeriod.findMany({
+    where: { orgId, buildingId, status: "CLOSED" },
+    include: { costEntries: { select: { categoryId: true, amountCents: true } } },
+    orderBy: { endDate: "desc" },
+    take: limit,
+  });
+}

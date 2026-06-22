@@ -32,6 +32,7 @@ export interface ChargeReconciliationLineDTO {
   acomptePaidCents: number;
   actualCostCents: number;
   balanceCents: number;
+  categoryId: string | null;
 }
 
 export interface ChargeReconciliationDTO {
@@ -42,8 +43,11 @@ export interface ChargeReconciliationDTO {
   status: string;
   totalAcomptePaidCents: number;
   totalActualCostsCents: number;
+  adminFeeCents: number;
   balanceCents: number;
+  billingPeriodId: string | null;
   settlementInvoiceId: string | null;
+  settlementCreditNoteId: string | null;
   settledAt: string | null;
   createdAt: string;
   updatedAt: string;
@@ -76,8 +80,11 @@ function toDTO(r: any): ChargeReconciliationDTO {
     status: r.status,
     totalAcomptePaidCents: r.totalAcomptePaidCents,
     totalActualCostsCents: r.totalActualCostsCents,
+    adminFeeCents: r.adminFeeCents ?? 0,
     balanceCents: r.balanceCents,
+    billingPeriodId: r.billingPeriodId ?? null,
     settlementInvoiceId: r.settlementInvoiceId,
+    settlementCreditNoteId: r.settlementCreditNoteId ?? null,
     settledAt: r.settledAt ? r.settledAt.toISOString() : null,
     createdAt: r.createdAt.toISOString(),
     updatedAt: r.updatedAt.toISOString(),
@@ -88,6 +95,7 @@ function toDTO(r: any): ChargeReconciliationDTO {
       acomptePaidCents: l.acomptePaidCents,
       actualCostCents: l.actualCostCents,
       balanceCents: l.balanceCents,
+      categoryId: l.categoryId ?? null,
     })),
     lease: r.lease
       ? {
@@ -225,6 +233,27 @@ export function registerChargeReconciliationRoutes(router: Router) {
         if (err.message.includes("Cannot edit")) {
           return sendError(res, 409, "INVALID_STATE", err.message);
         }
+        sendError(res, 500, "INTERNAL_ERROR", err.message);
+      }
+    }),
+  );
+
+  // ── POST /charge-reconciliations/:id/autofill ───────────────
+  // Auto-fill actual costs from a building cost pool period (Phase 3b).
+  router.post(
+    "/charge-reconciliations/:id/autofill",
+    withAuthRequired(async ({ req, res, orgId, prisma, params }) => {
+      if (!requireRole(req, res, "MANAGER")) return;
+      try {
+        const body = await readJson(req);
+        const billingPeriodId = body?.billingPeriodId;
+        if (!billingPeriodId) return sendError(res, 400, "VALIDATION_ERROR", "billingPeriodId is required");
+        const result = await reconService.autoFillActualCostsFromPeriod(prisma, params.id, billingPeriodId, orgId);
+        sendJson(res, 200, toDTO(result));
+      } catch (err: any) {
+        if (/not found|not an active participant/.test(err.message)) return sendError(res, 404, "NOT_FOUND", err.message);
+        if (/must be DRAFT/.test(err.message)) return sendError(res, 409, "INVALID_STATE", err.message);
+        console.error("[charge-reconciliations] autofill error:", err);
         sendError(res, 500, "INTERNAL_ERROR", err.message);
       }
     }),

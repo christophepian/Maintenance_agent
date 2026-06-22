@@ -14,7 +14,10 @@ import {
   createPeriod,
   addCostEntry,
   apportionForLease,
+  updatePeriod,
+  calculateFlatRate,
 } from "../services/ancillaryReconciliationService";
+import { autoFillActualCostsFromPeriod } from "../services/chargeReconciliationService";
 
 const prisma = new PrismaClient();
 
@@ -77,6 +80,8 @@ describe("apportionForLease (Phase 2)", () => {
   });
 
   afterAll(async () => {
+    await prisma.chargeReconciliationLine.deleteMany({ where: { reconciliation: { orgId } } }).catch(() => {});
+    await prisma.chargeReconciliation.deleteMany({ where: { orgId } }).catch(() => {});
     await prisma.costEntry.deleteMany({ where: { billingPeriod: { orgId } } }).catch(() => {});
     await prisma.billingPeriod.deleteMany({ where: { orgId } }).catch(() => {});
     await prisma.lease.deleteMany({ where: { orgId } }).catch(() => {});
@@ -106,5 +111,46 @@ describe("apportionForLease (Phase 2)", () => {
     // admin fee 30‰ of 90000 = 2700 (within 3% cap)
     expect(result.adminFeeCents).toBe(2700);
     expect(result.totalActualCostsCents).toBe(92700);
+  });
+
+  it("auto-fills a reconciliation's actual costs from the cost pool by category", async () => {
+    const periodId = (global as any).__periodId as string;
+    const cats = await listCategories(orgId);
+    const elec = cats.find((c) => c.code === "COMMON_ELECTRICITY")!;
+    const lift = cats.find((c) => c.code === "ELEVATOR")!;
+
+    // Lease A (unit area 82 of 217) — reconciliation with category-tagged ACOMPTE lines
+    const recon = await prisma.chargeReconciliation.create({
+      data: {
+        orgId, leaseId: leaseAId, fiscalYear: 2027, status: "DRAFT",
+        lineItems: {
+          create: [
+            { description: "Électricité", chargeMode: "ACOMPTE", acomptePaidCents: 30000, categoryId: elec.id },
+            { description: "Ascenseur", chargeMode: "ACOMPTE", acomptePaidCents: 20000, categoryId: lift.id },
+          ],
+        },
+      },
+    });
+
+    const updated = await autoFillActualCostsFromPeriod(prisma, recon.id, periodId, orgId);
+    const elecLine = updated.lineItems.find((l: any) => l.categoryId === elec.id)!;
+    const liftLine = updated.lineItems.find((l: any) => l.categoryId === lift.id)!;
+
+    expect(elecLine.actualCostCents).toBe(60000); // surface share 60/100 of 100000
+    expect(liftLine.actualCostCents).toBe(30000); // half of 60000
+    expect(updated.adminFeeCents).toBeGreaterThan(0);
+    expect(updated.billingPeriodId).toBe(periodId);
+  });
+
+  it("calculateFlatRate averages prior CLOSED periods", async () => {
+    const periodId = (global as any).__periodId as string;
+    await updatePeriod(orgId, periodId, { status: "CLOSED" });
+    const cats = await listCategories(orgId);
+    const elec = cats.find((c) => c.code === "COMMON_ELECTRICITY")!;
+
+    const fr = await calculateFlatRate(orgId, leaseAId, elec.id);
+    expect(fr.basisYears).toBe(1);
+    expect(fr.avgAnnualBuildingCents).toBe(100000);
+    expect(fr.monthlyFlatRateCents).toBe(Math.round((100000 * (60 / 100)) / 12)); // 5000
   });
 });

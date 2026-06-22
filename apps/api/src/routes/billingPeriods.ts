@@ -127,6 +127,24 @@ export function registerBillingPeriodRoutes(router: Router) {
     }),
   );
 
+  // ── GET /flat-rate?leaseId=&categoryId= — suggested forfait (3-yr avg) ──
+  router.get(
+    "/flat-rate",
+    withAuthRequired(async ({ req, res, orgId, query }) => {
+      if (!maybeRequireManager(req, res)) return;
+      try {
+        const leaseId = first(query, "leaseId");
+        const categoryId = first(query, "categoryId");
+        if (!leaseId || !categoryId) return sendError(res, 400, "VALIDATION_ERROR", "leaseId and categoryId are required");
+        sendJson(res, 200, { data: await service.calculateFlatRate(orgId, leaseId, categoryId) });
+      } catch (err: any) {
+        if (/not found/.test(err?.message)) return sendError(res, 404, "NOT_FOUND", err.message);
+        console.error("[flat-rate] error:", err);
+        sendError(res, 500, "INTERNAL_ERROR", err.message);
+      }
+    }),
+  );
+
   router.get(
     "/billing-periods/:id/apportionment/:lid",
     withAuthRequired(async ({ req, res, orgId, params }) => {

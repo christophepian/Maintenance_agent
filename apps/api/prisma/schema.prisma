@@ -1323,12 +1323,13 @@ model AncillaryCostCategory {
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
 
-  org               Org                @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  expenseType       ExpenseType?       @relation(fields: [expenseTypeId], references: [id], onDelete: SetNull)
-  account           Account?           @relation(fields: [accountId], references: [id], onDelete: SetNull)
-  leaseExpenseItems LeaseExpenseItem[]
-  costEntries       CostEntry[]
-  invoiceLineItems  InvoiceLineItem[]
+  org                 Org                        @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  expenseType         ExpenseType?               @relation(fields: [expenseTypeId], references: [id], onDelete: SetNull)
+  account             Account?                   @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  leaseExpenseItems   LeaseExpenseItem[]
+  costEntries         CostEntry[]
+  invoiceLineItems    InvoiceLineItem[]
+  reconciliationLines ChargeReconciliationLine[]
 
   @@unique([orgId, code])
   @@index([orgId])
@@ -1349,9 +1350,10 @@ model BillingPeriod {
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 
-  org         Org         @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  building    Building    @relation(fields: [buildingId], references: [id], onDelete: Cascade)
-  costEntries CostEntry[]
+  org             Org                    @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  building        Building               @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  costEntries     CostEntry[]
+  reconciliations ChargeReconciliation[]
 
   @@unique([buildingId, startDate, endDate])
   @@index([orgId])
@@ -2393,8 +2395,12 @@ model ChargeReconciliation {
 
   // Summary amounts (cents)
   totalAcomptePaidCents Int @default(0) /// Sum of ACOMPTE charges invoiced to tenant
-  totalActualCostsCents Int @default(0) /// Sum of actual costs entered by manager
+  totalActualCostsCents Int @default(0) /// Sum of actual costs (incl. admin fee)
+  adminFeeCents         Int @default(0) /// Décompte admin fee (≤3% of recoverable actuals)
   balanceCents          Int @default(0) /// actual − acompte (positive = tenant owes more)
+
+  // Optional link to the building cost pool the actual costs were apportioned from
+  billingPeriodId String?
 
   // Settlement
   settlementInvoiceId    String?   @unique /// FK to the generated debit invoice (tenant owes)
@@ -2407,6 +2413,7 @@ model ChargeReconciliation {
   // Relations
   org                  Org                        @relation(fields: [orgId], references: [id], onDelete: Cascade)
   lease                Lease                      @relation(fields: [leaseId], references: [id], onDelete: Cascade)
+  billingPeriod        BillingPeriod?             @relation(fields: [billingPeriodId], references: [id], onDelete: SetNull)
   settlementInvoice    Invoice?                   @relation(fields: [settlementInvoiceId], references: [id], onDelete: SetNull)
   settlementCreditNote CreditNote?                @relation("ReconCreditNote", fields: [settlementCreditNoteId], references: [id], onDelete: SetNull)
   lineItems            ChargeReconciliationLine[]
@@ -2423,14 +2430,17 @@ model ChargeReconciliationLine {
   description      String /// Expense item label (e.g. "Heating", "Water")
   chargeMode       ChargeMode /// ACOMPTE or FORFAIT — only ACOMPTE lines are reconciled
   acomptePaidCents Int        @default(0) /// What the tenant paid as advance for this category
-  actualCostCents  Int        @default(0) /// Actual cost entered by manager
+  actualCostCents  Int        @default(0) /// Actual cost (apportioned from the cost pool or entered manually)
   balanceCents     Int        @default(0) /// actual − acompte
+  categoryId       String? /// Canonical category — links the line to the cost pool for auto-fill
 
   createdAt DateTime @default(now())
 
-  reconciliation ChargeReconciliation @relation(fields: [reconciliationId], references: [id], onDelete: Cascade)
+  reconciliation ChargeReconciliation   @relation(fields: [reconciliationId], references: [id], onDelete: Cascade)
+  category       AncillaryCostCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
   @@index([reconciliationId])
+  @@index([categoryId])
 }
 
 /// Credit note (note de crédit / avoir) — a refund document issued to a tenant,
