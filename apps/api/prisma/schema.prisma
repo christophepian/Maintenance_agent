@@ -187,6 +187,7 @@ model Org {
   // Ancillary cost taxonomy (Nebenkosten categories)
   ancillaryCostCategories    AncillaryCostCategory[]
   billingPeriods             BillingPeriod[]
+  creditNotes                CreditNote[]
   // Rent Adjustments
   rentAdjustments            RentAdjustment[]
   // Contractor Billing
@@ -621,27 +622,29 @@ model Job {
 }
 
 model BillingEntity {
-  id                  String            @id @default(uuid())
-  orgId               String
-  type                BillingEntityType
-  name                String
-  addressLine1        String
-  addressLine2        String?
-  postalCode          String
-  city                String
-  country             String            @default("CH")
-  iban                String
-  vatNumber           String?
-  defaultVatRate      Float             @default(7.7)
-  nextInvoiceSequence Int               @default(1)
-  createdAt           DateTime          @default(now())
-  updatedAt           DateTime          @updatedAt
-  contractorId        String?           @unique
-  userId              String?           @unique
-  contractor          Contractor?       @relation(fields: [contractorId], references: [id])
-  user                User?             @relation(fields: [userId], references: [id])
-  org                 Org               @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  invoices            Invoice[]
+  id                     String            @id @default(uuid())
+  orgId                  String
+  type                   BillingEntityType
+  name                   String
+  addressLine1           String
+  addressLine2           String?
+  postalCode             String
+  city                   String
+  country                String            @default("CH")
+  iban                   String
+  vatNumber              String?
+  defaultVatRate         Float             @default(7.7)
+  nextInvoiceSequence    Int               @default(1)
+  nextCreditNoteSequence Int               @default(1)
+  createdAt              DateTime          @default(now())
+  updatedAt              DateTime          @updatedAt
+  contractorId           String?           @unique
+  userId                 String?           @unique
+  contractor             Contractor?       @relation(fields: [contractorId], references: [id])
+  user                   User?             @relation(fields: [userId], references: [id])
+  org                    Org               @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  invoices               Invoice[]
+  creditNotes            CreditNote[]
 
   @@index([orgId])
 }
@@ -1240,6 +1243,7 @@ model Lease {
   expenseItems          LeaseExpenseItem[]
   billingSchedule       RecurringBillingSchedule?
   chargeReconciliations ChargeReconciliation[]
+  creditNotes           CreditNote[]
   rentAdjustments       RentAdjustment[]
   conditionReports      UnitConditionReport[]
 
@@ -2393,17 +2397,19 @@ model ChargeReconciliation {
   balanceCents          Int @default(0) /// actual − acompte (positive = tenant owes more)
 
   // Settlement
-  settlementInvoiceId String?   @unique /// FK to the generated credit/debit invoice
-  settledAt           DateTime?
+  settlementInvoiceId    String?   @unique /// FK to the generated debit invoice (tenant owes)
+  settlementCreditNoteId String?   @unique /// FK to the generated credit note (refund to tenant)
+  settledAt              DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Relations
-  org               Org                        @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  lease             Lease                      @relation(fields: [leaseId], references: [id], onDelete: Cascade)
-  settlementInvoice Invoice?                   @relation(fields: [settlementInvoiceId], references: [id], onDelete: SetNull)
-  lineItems         ChargeReconciliationLine[]
+  org                  Org                        @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  lease                Lease                      @relation(fields: [leaseId], references: [id], onDelete: Cascade)
+  settlementInvoice    Invoice?                   @relation(fields: [settlementInvoiceId], references: [id], onDelete: SetNull)
+  settlementCreditNote CreditNote?                @relation("ReconCreditNote", fields: [settlementCreditNoteId], references: [id], onDelete: SetNull)
+  lineItems            ChargeReconciliationLine[]
 
   @@unique([leaseId, fiscalYear])
   @@index([orgId])
@@ -2425,6 +2431,52 @@ model ChargeReconciliationLine {
   reconciliation ChargeReconciliation @relation(fields: [reconciliationId], references: [id], onDelete: Cascade)
 
   @@index([reconciliationId])
+}
+
+/// Credit note (note de crédit / avoir) — a refund document issued to a tenant,
+/// e.g. when a charge reconciliation shows the tenant overpaid. Distinct legal
+/// document with its own numbering sequence. See docs/ANCILLARY_COSTS_RECONCILIATION.md.
+model CreditNote {
+  id                    String    @id @default(uuid())
+  orgId                 String
+  creditNoteNumber      String? /// e.g. CN-2026-001 (assigned on issue)
+  leaseId               String?
+  issuerBillingEntityId String?
+  recipientName         String?
+  recipientAddressLine1 String?
+  recipientPostalCode   String?
+  recipientCity         String?
+  recipientCountry      String    @default("CH")
+  amountCents           Int /// positive magnitude of the credit
+  currency              String    @default("CHF")
+  status                String    @default("ISSUED") /// DRAFT | ISSUED
+  issueDate             DateTime?
+  description           String?
+  lockedAt              DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  org            Org                   @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  lease          Lease?                @relation(fields: [leaseId], references: [id], onDelete: SetNull)
+  issuer         BillingEntity?        @relation(fields: [issuerBillingEntityId], references: [id], onDelete: SetNull)
+  reconciliation ChargeReconciliation? @relation("ReconCreditNote")
+  lineItems      CreditNoteLine[]
+
+  @@unique([orgId, creditNoteNumber])
+  @@index([orgId])
+  @@index([leaseId])
+}
+
+model CreditNoteLine {
+  id           String   @id @default(uuid())
+  creditNoteId String
+  description  String
+  amountCents  Int
+  createdAt    DateTime @default(now())
+
+  creditNote CreditNote @relation(fields: [creditNoteId], references: [id], onDelete: Cascade)
+
+  @@index([creditNoteId])
 }
 
 // ==========================================

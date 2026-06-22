@@ -227,6 +227,23 @@ export async function settleReconciliation(
   });
 }
 
+/** Settle a reconciliation via a credit note (refund path). */
+export async function settleReconciliationCreditNote(
+  prisma: PrismaClient,
+  id: string,
+  settlementCreditNoteId: string,
+) {
+  return prisma.chargeReconciliation.update({
+    where: { id },
+    data: {
+      status: "SETTLED",
+      settlementCreditNoteId,
+      settledAt: new Date(),
+    },
+    include: RECONCILIATION_INCLUDE,
+  });
+}
+
 /**
  * Delete a DRAFT reconciliation and its line items.
  */

@@ -19,6 +19,7 @@ import { PrismaClient } from "@prisma/client";
 import * as reconRepo from "../repositories/chargeReconciliationRepository";
 import { issueInvoiceWorkflow } from "../workflows/issueInvoiceWorkflow";
 import type { WorkflowContext } from "../workflows/context";
+import { createCreditNote } from "./creditNoteService";
 
 // ─── Create Reconciliation ─────────────────────────────────────
 
@@ -244,6 +245,7 @@ export async function settleReconciliation(
 
   // Resolve issuer billing entity
   let issuerBillingEntityId: string | undefined;
+  // (resolution below is shared by both the debit-invoice and refund-credit-note paths)
   if (lease.unitId) {
     const unit = await prisma.unit.findUnique({
       where: { id: lease.unitId },
@@ -266,6 +268,20 @@ export async function settleReconciliation(
       select: { id: true },
     });
     issuerBillingEntityId = orgBillingEntity?.id;
+  }
+
+  // ── Refund path: tenant overpaid → issue a dedicated credit note (avoir) ──
+  if (!isDebit) {
+    const creditNote = await createCreditNote({
+      orgId,
+      leaseId: lease.id,
+      issuerBillingEntityId: issuerBillingEntityId ?? null,
+      recipientName: lease.tenantName,
+      amountCents: absBalance,
+      description,
+      lineItems: invoiceLineItems.map((li) => ({ description: li.description, amountCents: li.lineTotal })),
+    });
+    return reconRepo.settleReconciliationCreditNote(prisma, reconciliationId, creditNote.id);
   }
 
   // Due date = 30 days from now
