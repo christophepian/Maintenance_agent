@@ -572,10 +572,16 @@ export async function listInvoices(
   }
   if (Object.keys(jobFilter).length > 0) {
     const orClauses: any[] = [{ job: jobFilter }];
-    if (!filters?.contractorId) orClauses.push({ jobId: null });
+    // Match invoices directly attributed to this building/unit, or to a lease on
+    // the unit. NOTE: do NOT add a bare `{ jobId: null }` clause here — it would
+    // match every job-less invoice in the org (all rent + all ingested bills),
+    // bypassing the unit/building filter entirely. Job-less invoices that truly
+    // belong to this unit/building are caught by the attribution clauses below.
     if (filters?.unitId) orClauses.push({ lease: { unitId: filters.unitId } });
-    // Also match invoices directly attributed to this building/unit
     if (filters?.buildingId) orClauses.push({ buildingId: filters.buildingId });
+    // Rent invoices are lease-linked; traverse lease → unit → building so a
+    // building view includes rent for all its units.
+    if (filters?.buildingId) orClauses.push({ lease: { unit: { buildingId: filters.buildingId } } });
     if (filters?.unitId) orClauses.push({ unitId: filters.unitId });
     where.OR = orClauses;
   } else if (filters?.unitId) {
