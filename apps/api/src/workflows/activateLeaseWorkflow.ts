@@ -54,7 +54,11 @@ export async function activateLeaseWorkflow(
   const dto = mapLeaseToDTO(updated);
 
   // ── 4. Emit event ──────────────────────────────────────────
-  emit({
+  // Awaited (unlike most emits) because the recurring-billing handler creates
+  // the RecurringBillingSchedule + first rent invoice synchronously here, and
+  // callers (e.g. the mark-signed route) run autoActivateLeaseInvoices right
+  // after — which must see the generated invoice to avoid a duplicate first-rent.
+  await emit({
     type: "LEASE_STATUS_CHANGED",
     orgId,
     actorUserId: ctx.actorUserId,
