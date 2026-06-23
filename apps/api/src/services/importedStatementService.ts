@@ -29,6 +29,7 @@ import type { ExtractedAccountBalance, ExtractedInvoiceLine, ScanResult } from "
 import { scanDocument } from "./documentScan";
 import { storage } from "../storage/attachments";
 import { getAnthropicClient } from "./aiClient";
+import { writeAuditLog } from "./auditLog";
 import { createInvoice } from "./invoices";
 import { postJournalEntries } from "./ledgerService";
 import * as accountRepo from "../repositories/accountRepository";
@@ -936,6 +937,20 @@ export async function approveStatement(
     include: {
       building: { select: { name: true } },
       accountBalances: { include: { account: { select: { name: true, code: true } } } },
+    },
+  });
+
+  await writeAuditLog(prisma, {
+    action: "STATEMENT_APPROVED",
+    orgId,
+    actorUserId: approvedBy,
+    entityType: "ImportedStatement",
+    entityId: statementId,
+    metadata: {
+      buildingId: statement.buildingId,
+      sectionType: statement.sectionType,
+      fiscalYear: statement.fiscalYear,
+      referenceOnly,
     },
   });
 

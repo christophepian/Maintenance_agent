@@ -3137,3 +3137,22 @@ model PortfolioDailySnapshot {
   @@unique([orgId, date])
   @@index([orgId, date])
 }
+
+/// Append-only audit trail for auth-sensitive and data-mutating actions
+/// (DSG/GDPR pre-GA requirement). Standalone (no FK relations) so entries
+/// survive deletion of their subjects; write via services/auditLog.ts.
+model AuditLog {
+  id          String   @id @default(uuid())
+  orgId       String?
+  actorUserId String?
+  action      String
+  entityType  String?
+  entityId    String?
+  ip          String?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  @@index([orgId, createdAt])
+  @@index([action, createdAt])
+  @@index([entityType, entityId])
+}

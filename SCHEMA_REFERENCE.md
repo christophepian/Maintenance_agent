@@ -5,11 +5,11 @@
 
 ## Database Schema (Prisma)
 
-**Status: ACTIVE AND IN USE — 121 migrations** (shadow DB replay verified clean 2026-03-30)
+**Status: ACTIVE AND IN USE — 122 migrations** (shadow DB replay verified clean 2026-03-30)
 
 **Last verified:** 2026-06-23
 
-### Models (91 total)
+### Models (92 total)
 
 | Model | Key Fields | Relations |
 |-------|-----------|-----------|
