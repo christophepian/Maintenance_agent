@@ -5,6 +5,35 @@
 
 ---
 
+## Session 2026-06-23 — Ancillary Costs v3 + Reporting recognition & i18n
+
+### Commits (pushed to origin/main)
+`a4f5b0a` v3 remediation · `9a3d274` classification feedback + dark mode · `833e5a7` building hero dark-aware · `a4190c4` arrears/receivables tokens · `bce2727` charges in building reporting + period boundary · `8097627` ledger attribution backfill · `fef4dfb`→`5a374ca` recognition-basis prototype → unbilled-rent watch item · `7eb5d51` building report i18n + KPI relabel · `615420d` owner+unit i18n · `25003dd` income field rename
+
+### Ancillary Costs v3 remediation (WS1–WS5)
+Corrected the Nebenkosten model: an incoming invoice is classified once at the review gate by **nature**.
+
+| WS | Delivered |
+|---|---|
+| WS1 | `Invoice.costNature` (CHARGE\|DIRECT) + `ancillaryCategoryId` FK (migration `20260623020000`). Empty-string FK save bug fixed (coerce `""→null` in service + zod preprocess). Invoice page nature-first classifier (charge→category+building, unit hidden; direct→building+unit). |
+| WS2 | `bridgeChargeInvoiceToCostPool()` runs on approval for CHARGE invoices — auto-resolves/creates an OPEN calendar-year period, idempotent on `sourceInvoiceId`. |
+| WS3 | `getBuildingFinancials` exposes `recoverableAncillaryCents` (folded into expenses, de-duped vs ledger by source invoice); `getUnitFinancialSummaries`/`getUnitPeriodReport` apportion each unit's charge share. |
+| WS4 | CONSUMPTION→SURFACE_AREA ventilation fallback when no meters; `getBuildingDistribution` lazily seeds a row per billable category. |
+| WS5 | Unit page charges panel auto-selects the latest period (passive); settle stays explicit. |
+
+Also fixed: **period-boundary lookup** (`findBillingPeriodOverlappingWindow` — a Jan1–Dec31 period was missed by a YTD report ending end-of-day Dec 31), and **ledger attribution backfill** (attributing/classifying an invoice *after* it was posted left `ledgerEntry.unitId` null → per-unit reporting read zero; `updateInvoice` now backfills posted legs by `sourceId`). Tests: `ancillaryV3Remediation.test.ts`.
+
+### Reporting recognition & income-field rename
+Diagnosed the "0% collection rate next to CHF 4.2k collected" report as **arrears timing, not a bug** — the rate is billing-period-scoped (this period's bills paid) while the cash figure is payment-dated (usually last month's rent). Relabeled the KPI pair "Rent Collected → **Cash received**", "Collection Rate → **On-time collection**" (no math change). Dropped an abstract accrued/billed/collected prototype panel in favour of an actionable **unbilled-rent watch item** in "What to watch".
+
+End-to-end field rename for clarity (the old names were backwards): `earnedIncomeCents → collectedIncomeCents` (cash), `projectedIncomeCents → accruedIncomeCents` (accrual-recognized rent from lease terms), plus `total*` aggregates — across DTOs, services, repos, openapi, tests, frontend, **and the 3 snapshot DB columns** (`BuildingFinancialSnapshot`, `BuildingDailySnapshot`, `PortfolioDailySnapshot`) via migration `20260623030000` (column renames, data preserved).
+
+### Dark-mode + i18n
+- Dark-mode contrast fixes: invoice-classifier selected card → brand tokens; building/unit hero gradients gained the `dark:from-brand-light …` override; arrears-aging buckets, receivables alert and asset-condition ramp → severity tokens.
+- Building, owner and unit **reporting fully i18n'd** (EN + Swiss-French) — `buildingsId.reporting.*`, `unitsId.reporting.*`, owner relabels — with `{{interpolation}}`/plurals, locale-aware month/date formatting, and shared `OccupancyRow` via the `common` namespace.
+
+---
+
 ## Session 2026-05-30 — Dark mode implementation
 
 ### Commits: `5d40fd2` · `c09ab15` (pushed to origin/main)

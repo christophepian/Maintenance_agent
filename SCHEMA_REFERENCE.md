@@ -5,11 +5,11 @@
 
 ## Database Schema (Prisma)
 
-**Status: ACTIVE AND IN USE — 106 migrations** (shadow DB replay verified clean 2026-03-30)
+**Status: ACTIVE AND IN USE — 120 migrations** (shadow DB replay verified clean 2026-03-30)
 
-**Last verified:** 2026-05-04
+**Last verified:** 2026-06-23
 
-### Models (70 total)
+### Models (91 total)
 
 | Model | Key Fields | Relations |
 |-------|-----------|-----------|
@@ -31,7 +31,7 @@
 | **RequestEvent** | requestId, type (RequestEventType), contractorId (required), message | → Request, Contractor |
 | **Event** | orgId, type, actorUserId?, requestId?, payload (JSON) | (standalone) |
 | **Job** | orgId, requestId (unique), **contractorId** (required), status, actualCost, startedAt?, completedAt? | → Request, Contractor, Invoices |
-| **Invoice** | orgId, **jobId** (required), leaseId?, issuer fields, recipient fields, amounts in cents, status, lineItems, **expenseTypeId?**, **accountId?**, direction (InvoiceDirection), sourceChannel (InvoiceSourceChannel), ingestionStatus (IngestionStatus)?, ocrConfidence?, rawOcrText?, sourceFileUrl?, **contractorId?**, **contractorBillingScheduleId?** | → Job, Lease, BillingEntity, InvoiceLineItems, ExpenseType?, Account?, Contractor?, ContractorBillingSchedule? |
+| **Invoice** | orgId, **jobId** (required), leaseId?, issuer fields, recipient fields, amounts in cents, status, lineItems, **expenseTypeId?**, **accountId?**, direction (InvoiceDirection), sourceChannel (InvoiceSourceChannel), ingestionStatus (IngestionStatus)?, ocrConfidence?, rawOcrText?, sourceFileUrl?, **contractorId?**, **contractorBillingScheduleId?**, buildingId?, unitId?, **costNature? (CostNature)**, **ancillaryCategoryId?** | → Job, Lease, BillingEntity, InvoiceLineItems, ExpenseType?, Account?, Contractor?, ContractorBillingSchedule?, AncillaryCostCategory? |
 | **InvoiceLineItem** | invoiceId, description, quantity, unitPrice (cents), vatRate, lineTotal | → Invoice |
 | **BillingEntity** | orgId, type, contractorId?, name, address, iban, vatNumber | → Org, Contractor |
 | **ApprovalRule** | orgId, buildingId?, name, priority, conditions (JSON), action, isActive | → Org, Building |
@@ -44,7 +44,7 @@
 | **RentalApplicationUnit** | applicationId, unitId, status (RentalApplicationUnitStatus), evaluationJson, scoreTotal, confidenceScore, disqualified, disqualifiedReasons (Json?), rank, managerScoreDelta, managerOverrideJson, managerOverrideReason | → RentalApplication, Unit |
 | **RentalOwnerSelection** | unitId, status (RentalOwnerSelectionStatus), primaryApplicationUnitId, backup1ApplicationUnitId?, backup2ApplicationUnitId?, deadlineAt, decidedAt? | → Unit, RentalApplicationUnits |
 | **EmailOutbox** | orgId, template (EmailTemplate), toEmail, subject, bodyText, status (EmailOutboxStatus), metaJson? | → Org |
-| **BuildingFinancialSnapshot** | orgId, buildingId, periodStart, periodEnd, earnedIncomeCents, projectedIncomeCents, expensesTotalCents, maintenanceTotalCents, capexTotalCents, operatingTotalCents, netIncomeCents, netOperatingIncomeCents, activeUnitsCount, computedAt | → Org, Building |
+| **BuildingFinancialSnapshot** | orgId, buildingId, periodStart, periodEnd, **collectedIncomeCents** (cash; was earnedIncomeCents), **accruedIncomeCents** (accrual; was projectedIncomeCents), expensesTotalCents, maintenanceTotalCents, capexTotalCents, operatingTotalCents, netIncomeCents, netOperatingIncomeCents, activeUnitsCount, computedAt | → Org, Building |
 | **RentEstimationConfig** | orgId, canton?, baseRentPerSqmChfMonthly, locationCoefs (prime/standard/periphery), ageCoefs (new/mid/old/veryOld), energyCoefJson (Json), chargesBase (optimistic/pessimistic), heatingChargeAdjJson (Json), serviceChargeAdj (elevator/concierge), chargesMinClamp, chargesMaxClamp | → Org |
 | **LegalSource** | name, jurisdiction, **scope** (LegalSourceScope, default FEDERAL), url?, updateFrequency?, fetcherType?, parserType?, status (LegalSourceStatus), lastCheckedAt?, lastSuccessAt?, lastError? | → LegalVariableVersions, DepreciationStandards |
 | **LegalVariable** | key (unique per jurisdiction+canton), jurisdiction, canton?, unit?, description? | → LegalVariableVersions |
@@ -81,7 +81,9 @@
 | **ConversationMessage** | threadId, role (ConversationRole), content (Text), intent (String?), createdAt; @@index([threadId, createdAt]) | → ConversationThread |
 | **WhatsAppOutbox** | orgId, toPhone (E.164), body (Text), status (OutboxStatus, default PENDING), retryCount (default 0), errorMessage?, createdAt, sentAt?; @@index([status, createdAt]) | — |
 
-### Key Enums (64 total) <!-- 55 prior + ConversationChannel + ConversationRole + (existing 7 BillingScheduleStatus/IndexClauseType/RentAdjustmentType/RentAdjustmentStatus/ChargeReconciliationStatus/BillingFrequency counted separately) -->
+### Key Enums (78 total)
+- `CostNature`: CHARGE, DIRECT — set once at the invoice review gate. CHARGE = recoverable Nebenkosten → building cost pool, ventilated to units; DIRECT = repair/maintenance/capex/insurance/tax → ledger/billing flow. See `docs/ANCILLARY_COSTS_V3_REMEDIATION.md`.
+- `CostBillability`: BILLABLE, NON_BILLABLE · `DistributionKey`: SURFACE_AREA, UNIT_COUNT, CONSUMPTION, OCCUPANT_COUNT, FIXED_SHARE (ancillary-cost taxonomy)
 - `RequestStatus`: PENDING_REVIEW, AUTO_APPROVED, APPROVED, **RFP_PENDING**, ASSIGNED, IN_PROGRESS, COMPLETED, PENDING_OWNER_APPROVAL, **OWNER_REJECTED**
 - `ApprovalSource`: SYSTEM_AUTO, OWNER_APPROVED, OWNER_REJECTED, LEGAL_OBLIGATION
 - `PayingParty`: LANDLORD, TENANT
@@ -142,6 +144,7 @@
 - `OutboxStatus`: PENDING, SENT, FAILED — used by `WhatsAppOutbox`
 
 ### ⚠️ Schema Gotchas (fields that DON'T exist where you'd expect)
+- **Income fields renamed 2026-06-23** — `earnedIncomeCents → collectedIncomeCents` (cash received, ledger `INVOICE_PAID`) and `projectedIncomeCents → accruedIncomeCents` (accrual-recognized rent from lease terms). Old names were backwards. Applies to `BuildingFinancialSnapshot`, `BuildingDailySnapshot`, `PortfolioDailySnapshot` columns and all reporting DTOs (migration `20260623030000`).
 - **`Job` has NO `description`** — use `Request.description` via the relation
 - **`Appliance` has NO `category`** — category lives on `AssetModel`, accessed via `appliance.assetModel.category`
 - **`Job.contractorId` is REQUIRED** — every Job must reference an active Contractor
