@@ -1,11 +1,59 @@
 {
   "costPool": {
-    "title": { "costPool": "Cost Pool", "summary": "Summary", "costEntries": "Cost Entries", "creditNote": "Credit Note", "inspection": "Inspection Rights", "supportingDocs": "Supporting Documents", "docRequests": "Document Requests", "fromInvoice": "Qualify from an incoming invoice", "manualEntry": "Manual entry", "distribution": "Distribution (répartition)" },
-    "field": { "building": "Building", "startDate": "Start date", "endDate": "End date", "adminFeePct": "Admin fee (%)", "status": "Status", "adminFee": "Admin fee" },
-    "col": { "totalCosts": "Total costs", "billable": "Billable", "category": "Category", "amount": "Amount", "note": "Note", "actions": "Actions", "sourceInvoice": "Source invoice", "method": "Method" },
-    "distKey": { "SURFACE_AREA": "By surface area", "UNIT_COUNT": "Equal per unit", "OCCUPANT_COUNT": "By occupants", "FIXED_SHARE": "Fixed share (‰)", "CONSUMPTION": "By consumption" },
-    "action": { "newPeriod": "New period", "create": "Create", "cancel": "Cancel", "close": "Close period", "reopen": "Reopen", "delete": "Delete", "addCostEntry": "Add cost entry", "autofill": "Auto-fill from cost pool", "logDocRequest": "Log document request", "fulfill": "Mark fulfilled", "qualify": "Qualify" },
-    "status": { "open": "Open", "closed": "Closed" },
+    "title": {
+      "costPool": "Cost Pool",
+      "summary": "Summary",
+      "costEntries": "Cost Entries",
+      "creditNote": "Credit Note",
+      "inspection": "Inspection Rights",
+      "supportingDocs": "Supporting Documents",
+      "docRequests": "Document Requests",
+      "fromInvoice": "Qualify from an incoming invoice",
+      "manualEntry": "Manual entry",
+      "distribution": "Distribution (répartition)"
+    },
+    "field": {
+      "building": "Building",
+      "startDate": "Start date",
+      "endDate": "End date",
+      "adminFeePct": "Admin fee (%)",
+      "status": "Status",
+      "adminFee": "Admin fee"
+    },
+    "col": {
+      "totalCosts": "Total costs",
+      "billable": "Billable",
+      "category": "Category",
+      "amount": "Amount",
+      "note": "Note",
+      "actions": "Actions",
+      "sourceInvoice": "Source invoice",
+      "method": "Method"
+    },
+    "distKey": {
+      "SURFACE_AREA": "By surface area",
+      "UNIT_COUNT": "Equal per unit",
+      "OCCUPANT_COUNT": "By occupants",
+      "FIXED_SHARE": "Fixed share (‰)",
+      "CONSUMPTION": "By consumption"
+    },
+    "action": {
+      "newPeriod": "New period",
+      "create": "Create",
+      "cancel": "Cancel",
+      "close": "Close period",
+      "reopen": "Reopen",
+      "delete": "Delete",
+      "addCostEntry": "Add cost entry",
+      "autofill": "Auto-fill from cost pool",
+      "logDocRequest": "Log document request",
+      "fulfill": "Mark fulfilled",
+      "qualify": "Qualify"
+    },
+    "status": {
+      "open": "Open",
+      "closed": "Closed"
+    },
     "text": {
       "loading": "Loading…",
       "saving": "Saving…",
@@ -582,6 +630,121 @@
       "urgency": "Urgency",
       "contractor": "Contractor",
       "date": "Date"
+    },
+    "reporting": {
+      "months": "Months",
+      "year": "Year",
+      "monthlyReport": "Monthly report",
+      "rentCollected": "Rent collected:",
+      "operatingCosts": "Operating costs:",
+      "recoverableCharges": "Recoverable charges:",
+      "unitsLeased": "{{active}} of {{total}} units leased.",
+      "viewDetails": "View details",
+      "hideDetails": "Hide details",
+      "kpi": {
+        "noi": "Net Operating Income",
+        "cashReceived": "Cash received",
+        "totalExpenses": "Total Expenses",
+        "onTimeCollection": "On-time collection",
+        "noiMargin": "NOI Margin",
+        "opexRatio": "OpEx Ratio",
+        "occupancy": "Occupancy",
+        "receivables": "Receivables"
+      },
+      "monthlyNoiTitle": "Monthly NOI",
+      "monthlyNoiSub": "Net operating income per month · {{year}}",
+      "bestMonth": "Best month",
+      "uncollectedRent": "{{amount}} in uncollected rent",
+      "markPaidHint": "Mark invoices as paid once payment is received.",
+      "viewInvoices": "View invoices",
+      "arrearsTitle": "Rent arrears aging",
+      "arrearsSub": "Unpaid rent invoices by days overdue",
+      "overdueBadge": "{{amount}} overdue",
+      "arrears": {
+        "current": "Current",
+        "days1to30": "1–30 days",
+        "days31to60": "31–60 days",
+        "days61plus": "61+ days"
+      },
+      "whatDrove": "What drove performance",
+      "whatDroveSub": "The main forces behind this period's numbers — green helped, red weighed on results",
+      "whatToWatch": "What to watch",
+      "whatToWatchSub": "Flags and action items for this building",
+      "noFlags": "No flags — building is performing well.",
+      "byUnit": "By unit",
+      "byUnitSub": "Net result per unit for {{period}}",
+      "showAll": "Show all {{count}}",
+      "collapse": "Collapse",
+      "noUnits": "No units found.",
+      "income": "Income",
+      "expenses": "Expenses",
+      "charges": "Charges",
+      "net": "Net",
+      "collection": "Collection",
+      "occupancy": "Occupancy",
+      "occupied": "Occupied",
+      "vacant": "Vacant",
+      "unitLabel": "Unit {{number}}",
+      "unitLabelFloor": "Unit {{number}} (fl. {{floor}})",
+      "chargesTooltip": "Apportioned recoverable charges (Nebenkosten)",
+      "tenantMovements": "Tenant movements",
+      "moveIns": "Move-ins",
+      "moveOuts": "Move-outs",
+      "noMoveIns": "No move-ins this period",
+      "noMoveOuts": "No move-outs this period",
+      "showLess": "Show less",
+      "moreCount": "+ {{count}} more",
+      "headline": {
+        "loading": "Loading…",
+        "strong": "Strong performance this period",
+        "solid": "Solid results, some room to improve",
+        "collectionAttention": "Collection needs immediate attention",
+        "expensesOutpaced": "Expenses outpaced income this period",
+        "noIncome": "No income recorded for this period",
+        "closed": "Period closed"
+      },
+      "driver": {
+        "incomeUp": {
+          "title": "Income increased vs previous period",
+          "body": "Collected rent rose by {{amount}} compared to the prior period."
+        },
+        "incomeDown": {
+          "title": "Income declined vs previous period",
+          "body": "Collected rent fell by {{amount}} compared to the prior period."
+        },
+        "costsUp": {
+          "title": "Operating costs increased",
+          "body": "Expenses were {{amount}} higher than the previous period."
+        },
+        "costsDown": {
+          "title": "Operating costs came down",
+          "body": "Expenses were {{amount}} lower than the previous period."
+        },
+        "spend": {
+          "title": "Maintenance & operating spend",
+          "body": "Total expenses of {{amount}} recorded for the period."
+        },
+        "stable": {
+          "title": "No significant movements",
+          "body": "Income and expenses were stable with no material changes this period."
+        }
+      },
+      "watch": {
+        "overdue61": "{{amount}} overdue 61+ days — urgent tenant follow-up needed.",
+        "overdue31": "{{amount}} overdue 31–60 days — send payment reminders.",
+        "collectionRate": "Collection rate at {{rate}} — below the 80% threshold. Review unpaid rent invoices.",
+        "unbilled": "{{amount}} of expected rent looks uninvoiced this period — verify billing is complete.",
+        "vacant_one": "{{count}} unit vacant ({{units}}).",
+        "vacant_other": "{{count}} units vacant ({{units}}).",
+        "movedOut_one": "{{count}} tenant moved out this period — re-letting in progress.",
+        "movedOut_other": "{{count}} tenants moved out this period — re-letting in progress.",
+        "allClear": "No flags to report — building is performing within normal parameters."
+      },
+      "reviewBilling": "Review billing",
+      "failedToLoad": "Failed to load",
+      "loadingEllipsis": "Loading…",
+      "periodAnalysis": "Period Analysis",
+      "performanceCanvas": "Performance Canvas"
     }
   },
   "unitsId": {

@@ -1,11 +1,59 @@
 {
   "costPool": {
-    "title": { "costPool": "Pool de charges", "summary": "Résumé", "costEntries": "Postes de coûts", "creditNote": "Note de crédit", "inspection": "Droit de regard", "supportingDocs": "Pièces justificatives", "docRequests": "Demandes de pièces", "fromInvoice": "Qualifier depuis une facture entrante", "manualEntry": "Saisie manuelle", "distribution": "Répartition" },
-    "field": { "building": "Immeuble", "startDate": "Date de début", "endDate": "Date de fin", "adminFeePct": "Frais administratifs (%)", "status": "Statut", "adminFee": "Frais administratifs" },
-    "col": { "totalCosts": "Coûts totaux", "billable": "Refacturable", "category": "Catégorie", "amount": "Montant", "note": "Note", "actions": "Actions", "sourceInvoice": "Facture source", "method": "Méthode" },
-    "distKey": { "SURFACE_AREA": "Par surface", "UNIT_COUNT": "Égale par unité", "OCCUPANT_COUNT": "Par occupants", "FIXED_SHARE": "Quote-part fixe (‰)", "CONSUMPTION": "Par consommation" },
-    "action": { "newPeriod": "Nouvelle période", "create": "Créer", "cancel": "Annuler", "close": "Clôturer", "reopen": "Rouvrir", "delete": "Supprimer", "addCostEntry": "Ajouter un poste", "autofill": "Remplir depuis le pool", "logDocRequest": "Enregistrer une demande", "fulfill": "Marquer traitée", "qualify": "Qualifier" },
-    "status": { "open": "Ouverte", "closed": "Clôturée" },
+    "title": {
+      "costPool": "Pool de charges",
+      "summary": "Résumé",
+      "costEntries": "Postes de coûts",
+      "creditNote": "Note de crédit",
+      "inspection": "Droit de regard",
+      "supportingDocs": "Pièces justificatives",
+      "docRequests": "Demandes de pièces",
+      "fromInvoice": "Qualifier depuis une facture entrante",
+      "manualEntry": "Saisie manuelle",
+      "distribution": "Répartition"
+    },
+    "field": {
+      "building": "Immeuble",
+      "startDate": "Date de début",
+      "endDate": "Date de fin",
+      "adminFeePct": "Frais administratifs (%)",
+      "status": "Statut",
+      "adminFee": "Frais administratifs"
+    },
+    "col": {
+      "totalCosts": "Coûts totaux",
+      "billable": "Refacturable",
+      "category": "Catégorie",
+      "amount": "Montant",
+      "note": "Note",
+      "actions": "Actions",
+      "sourceInvoice": "Facture source",
+      "method": "Méthode"
+    },
+    "distKey": {
+      "SURFACE_AREA": "Par surface",
+      "UNIT_COUNT": "Égale par unité",
+      "OCCUPANT_COUNT": "Par occupants",
+      "FIXED_SHARE": "Quote-part fixe (‰)",
+      "CONSUMPTION": "Par consommation"
+    },
+    "action": {
+      "newPeriod": "Nouvelle période",
+      "create": "Créer",
+      "cancel": "Annuler",
+      "close": "Clôturer",
+      "reopen": "Rouvrir",
+      "delete": "Supprimer",
+      "addCostEntry": "Ajouter un poste",
+      "autofill": "Remplir depuis le pool",
+      "logDocRequest": "Enregistrer une demande",
+      "fulfill": "Marquer traitée",
+      "qualify": "Qualifier"
+    },
+    "status": {
+      "open": "Ouverte",
+      "closed": "Clôturée"
+    },
     "text": {
       "loading": "Chargement…",
       "saving": "Enregistrement…",
@@ -582,6 +630,121 @@
       "urgency": "Urgence",
       "contractor": "Prestataire",
       "date": "Date"
+    },
+    "reporting": {
+      "months": "Mois",
+      "year": "Année",
+      "monthlyReport": "Rapport mensuel",
+      "rentCollected": "Loyers encaissés :",
+      "operatingCosts": "Charges d'exploitation :",
+      "recoverableCharges": "Charges récupérables :",
+      "unitsLeased": "{{active}} sur {{total}} lots loués.",
+      "viewDetails": "Voir les détails",
+      "hideDetails": "Masquer les détails",
+      "kpi": {
+        "noi": "Résultat d'exploitation net",
+        "cashReceived": "Encaissements",
+        "totalExpenses": "Charges totales",
+        "onTimeCollection": "Recouvrement à échéance",
+        "noiMargin": "Marge d'exploitation",
+        "opexRatio": "Ratio de charges",
+        "occupancy": "Taux d'occupation",
+        "receivables": "Créances"
+      },
+      "monthlyNoiTitle": "Résultat d'exploitation mensuel",
+      "monthlyNoiSub": "Résultat d'exploitation net par mois · {{year}}",
+      "bestMonth": "Meilleur mois",
+      "uncollectedRent": "{{amount}} de loyers impayés",
+      "markPaidHint": "Marquez les factures comme payées dès réception du paiement.",
+      "viewInvoices": "Voir les factures",
+      "arrearsTitle": "Ancienneté des arriérés de loyer",
+      "arrearsSub": "Factures de loyer impayées par jours de retard",
+      "overdueBadge": "{{amount}} en retard",
+      "arrears": {
+        "current": "À jour",
+        "days1to30": "1–30 jours",
+        "days31to60": "31–60 jours",
+        "days61plus": "61+ jours"
+      },
+      "whatDrove": "Facteurs de performance",
+      "whatDroveSub": "Les principaux facteurs derrière les chiffres de la période — le vert a aidé, le rouge a pesé",
+      "whatToWatch": "Points de vigilance",
+      "whatToWatchSub": "Alertes et actions à mener pour cet immeuble",
+      "noFlags": "Aucune alerte — l'immeuble se porte bien.",
+      "byUnit": "Par lot",
+      "byUnitSub": "Résultat net par lot pour {{period}}",
+      "showAll": "Afficher tout ({{count}})",
+      "collapse": "Réduire",
+      "noUnits": "Aucun lot trouvé.",
+      "income": "Revenus",
+      "expenses": "Charges",
+      "charges": "Charges récup.",
+      "net": "Net",
+      "collection": "Recouvrement",
+      "occupancy": "Occupation",
+      "occupied": "Occupé",
+      "vacant": "Vacant",
+      "unitLabel": "Lot {{number}}",
+      "unitLabelFloor": "Lot {{number}} (ét. {{floor}})",
+      "chargesTooltip": "Quote-part des charges récupérables (Nebenkosten)",
+      "tenantMovements": "Mouvements de locataires",
+      "moveIns": "Entrées",
+      "moveOuts": "Départs",
+      "noMoveIns": "Aucune entrée cette période",
+      "noMoveOuts": "Aucun départ cette période",
+      "showLess": "Afficher moins",
+      "moreCount": "+ {{count}} de plus",
+      "headline": {
+        "loading": "Chargement…",
+        "strong": "Forte performance cette période",
+        "solid": "Bons résultats, encore perfectibles",
+        "collectionAttention": "Le recouvrement requiert une attention immédiate",
+        "expensesOutpaced": "Les charges ont dépassé les revenus cette période",
+        "noIncome": "Aucun revenu enregistré pour cette période",
+        "closed": "Période clôturée"
+      },
+      "driver": {
+        "incomeUp": {
+          "title": "Revenus en hausse vs période précédente",
+          "body": "Les loyers encaissés ont augmenté de {{amount}} par rapport à la période précédente."
+        },
+        "incomeDown": {
+          "title": "Revenus en baisse vs période précédente",
+          "body": "Les loyers encaissés ont diminué de {{amount}} par rapport à la période précédente."
+        },
+        "costsUp": {
+          "title": "Charges d'exploitation en hausse",
+          "body": "Les charges ont été supérieures de {{amount}} à la période précédente."
+        },
+        "costsDown": {
+          "title": "Charges d'exploitation en baisse",
+          "body": "Les charges ont été inférieures de {{amount}} à la période précédente."
+        },
+        "spend": {
+          "title": "Entretien et charges d'exploitation",
+          "body": "Charges totales de {{amount}} enregistrées pour la période."
+        },
+        "stable": {
+          "title": "Pas de mouvement significatif",
+          "body": "Revenus et charges stables, sans changement notable cette période."
+        }
+      },
+      "watch": {
+        "overdue61": "{{amount}} en retard de 61+ jours — relance urgente du locataire nécessaire.",
+        "overdue31": "{{amount}} en retard de 31–60 jours — envoyez des rappels de paiement.",
+        "collectionRate": "Taux de recouvrement à {{rate}} — sous le seuil de 80 %. Examinez les loyers impayés.",
+        "unbilled": "{{amount}} de loyers attendus semblent non facturés cette période — vérifiez que la facturation est complète.",
+        "vacant_one": "{{count}} lot vacant ({{units}}).",
+        "vacant_other": "{{count}} lots vacants ({{units}}).",
+        "movedOut_one": "{{count}} locataire parti cette période — relocation en cours.",
+        "movedOut_other": "{{count}} locataires partis cette période — relocation en cours.",
+        "allClear": "Aucune alerte à signaler — l'immeuble fonctionne normalement."
+      },
+      "reviewBilling": "Vérifier la facturation",
+      "failedToLoad": "Échec du chargement",
+      "loadingEllipsis": "Chargement…",
+      "periodAnalysis": "Analyse de période",
+      "performanceCanvas": "Canevas de performance"
     }
   },
   "unitsId": {

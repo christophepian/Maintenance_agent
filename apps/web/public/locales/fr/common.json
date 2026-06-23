@@ -323,5 +323,10 @@
     "resetFilters": "Réinitialiser les filtres",
     "noOptions": "Aucune option disponible"
   },
-  "loading": "Chargement…"
+  "loading": "Chargement…",
+  "reporting": {
+    "movingIn": "Entrée",
+    "movingOut": "Départ",
+    "unit": "Lot {{number}}"
+  }
 }

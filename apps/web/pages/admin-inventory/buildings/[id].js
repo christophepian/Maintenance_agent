@@ -78,9 +78,12 @@ const RANGES = [
 const PREVIEW_UNITS = 5;
 
 function UnitRow({ unitNumber, floor, tenantName, earned, expenses, charges, net, collectionRate, occupancyRate }) {
+  const { t } = useTranslation("manager");
   const netPositive = net >= 0;
-  const label = floor ? `Unit ${unitNumber} (fl. ${floor})` : `Unit ${unitNumber}`;
-  const sub   = tenantName || (occupancyRate === 1 ? "Occupied" : "Vacant");
+  const label = floor
+    ? t("buildingsId.reporting.unitLabelFloor", { number: unitNumber, floor })
+    : t("buildingsId.reporting.unitLabel", { number: unitNumber });
+  const sub   = tenantName || (occupancyRate === 1 ? t("buildingsId.reporting.occupied") : t("buildingsId.reporting.vacant"));
   return (
     <div className="flex items-center justify-between rounded-2xl border border-surface-border bg-surface-subtle px-4 py-3">
       <div className="mr-4 min-w-0">
@@ -89,29 +92,29 @@ function UnitRow({ unitNumber, floor, tenantName, earned, expenses, charges, net
       </div>
       <div className="flex items-center gap-4 shrink-0 text-right">
         <div className="hidden sm:block">
-          <div className="text-xs text-foreground-dim">Income</div>
+          <div className="text-xs text-foreground-dim">{t("buildingsId.reporting.income")}</div>
           <div className="text-sm font-medium text-muted-dark">{rFmtChf(earned)}</div>
         </div>
         <div className="hidden sm:block">
-          <div className="text-xs text-foreground-dim">Expenses</div>
+          <div className="text-xs text-foreground-dim">{t("buildingsId.reporting.expenses")}</div>
           <div className="text-sm font-medium text-muted-dark">{rFmtChf(expenses)}</div>
         </div>
         {charges > 0 && (
           <div className="hidden md:block">
-            <div className="text-xs text-foreground-dim">Charges</div>
-            <div className="text-sm font-medium text-muted-dark" title="Apportioned recoverable charges (Nebenkosten)">{rFmtChf(charges)}</div>
+            <div className="text-xs text-foreground-dim">{t("buildingsId.reporting.charges")}</div>
+            <div className="text-sm font-medium text-muted-dark" title={t("buildingsId.reporting.chargesTooltip")}>{rFmtChf(charges)}</div>
           </div>
         )}
         <div>
-          <div className="text-xs text-foreground-dim">Net</div>
+          <div className="text-xs text-foreground-dim">{t("buildingsId.reporting.net")}</div>
           <div className={cn("text-sm font-semibold", netPositive ? "text-success-text" : "text-destructive-text")}>{rFmtChf(net)}</div>
         </div>
         <div className="hidden md:block">
-          <div className="text-xs text-foreground-dim">Collection</div>
+          <div className="text-xs text-foreground-dim">{t("buildingsId.reporting.collection")}</div>
           <div className="text-sm text-muted-dark">{rFmtPct(collectionRate)}</div>
         </div>
         <div className="hidden lg:block">
-          <div className="text-xs text-foreground-dim">Occupancy</div>
+          <div className="text-xs text-foreground-dim">{t("buildingsId.reporting.occupancy")}</div>
           <div className={cn("text-sm font-medium", occupancyRate < 1 ? "text-amber-600" : "text-muted-dark")}>{rFmtPct(occupancyRate)}</div>
         </div>
       </div>
@@ -126,60 +129,62 @@ function buildingDelta(curr, prev) {
   return { tone };
 }
 
-function buildingHeadline(bf, prevBf) {
-  if (!bf) return "Loading…";
+function buildingHeadline(bf, t) {
+  if (!bf) return t("buildingsId.reporting.headline.loading");
   const noi = bf.netOperatingIncomeCents;
   const coll = bf.collectionRate;
   const occ  = bf.totalUnitsCount > 0 ? bf.activeUnitsCount / bf.totalUnitsCount : 0;
-  if (noi > 0 && coll >= 0.95 && occ >= 0.9) return "Strong performance this period";
-  if (noi > 0 && coll >= 0.8)  return "Solid results, some room to improve";
-  if (coll < 0.6)               return "Collection needs immediate attention";
-  if (noi <= 0 && bf.earnedIncomeCents > 0) return "Expenses outpaced income this period";
-  if (bf.earnedIncomeCents === 0) return "No income recorded for this period";
-  return "Period closed";
+  if (noi > 0 && coll >= 0.95 && occ >= 0.9) return t("buildingsId.reporting.headline.strong");
+  if (noi > 0 && coll >= 0.8)  return t("buildingsId.reporting.headline.solid");
+  if (coll < 0.6)               return t("buildingsId.reporting.headline.collectionAttention");
+  if (noi <= 0 && bf.earnedIncomeCents > 0) return t("buildingsId.reporting.headline.expensesOutpaced");
+  if (bf.earnedIncomeCents === 0) return t("buildingsId.reporting.headline.noIncome");
+  return t("buildingsId.reporting.headline.closed");
 }
 
-function buildBuildingDrivers(bf, prevBf) {
+function buildBuildingDrivers(bf, prevBf, t) {
   const drivers = [];
   if (!bf) return drivers;
-  const noi = bf.netOperatingIncomeCents;
   if (prevBf) {
     const netDiff = bf.earnedIncomeCents - prevBf.earnedIncomeCents;
-    if (netDiff > 0) drivers.push({ title: "Income increased vs previous period", body: `Collected rent rose by ${rFmtChf(netDiff)} compared to the prior period.`, impact: `+${rFmtChf(netDiff)}`, positive: true });
-    else if (netDiff < 0) drivers.push({ title: "Income declined vs previous period", body: `Collected rent fell by ${rFmtChf(Math.abs(netDiff))} compared to the prior period.`, impact: `-${rFmtChf(Math.abs(netDiff))}`, positive: false });
+    if (netDiff > 0) drivers.push({ title: t("buildingsId.reporting.driver.incomeUp.title"), body: t("buildingsId.reporting.driver.incomeUp.body", { amount: rFmtChf(netDiff) }), impact: `+${rFmtChf(netDiff)}`, positive: true });
+    else if (netDiff < 0) drivers.push({ title: t("buildingsId.reporting.driver.incomeDown.title"), body: t("buildingsId.reporting.driver.incomeDown.body", { amount: rFmtChf(Math.abs(netDiff)) }), impact: `-${rFmtChf(Math.abs(netDiff))}`, positive: false });
     const expDiff = bf.expensesTotalCents - prevBf.expensesTotalCents;
-    if (expDiff > 0) drivers.push({ title: "Operating costs increased", body: `Expenses were ${rFmtChf(expDiff)} higher than the previous period.`, impact: `-${rFmtChf(expDiff)}`, positive: false });
-    else if (expDiff < 0) drivers.push({ title: "Operating costs came down", body: `Expenses were ${rFmtChf(Math.abs(expDiff))} lower than the previous period.`, impact: `+${rFmtChf(Math.abs(expDiff))}`, positive: true });
+    if (expDiff > 0) drivers.push({ title: t("buildingsId.reporting.driver.costsUp.title"), body: t("buildingsId.reporting.driver.costsUp.body", { amount: rFmtChf(expDiff) }), impact: `-${rFmtChf(expDiff)}`, positive: false });
+    else if (expDiff < 0) drivers.push({ title: t("buildingsId.reporting.driver.costsDown.title"), body: t("buildingsId.reporting.driver.costsDown.body", { amount: rFmtChf(Math.abs(expDiff)) }), impact: `+${rFmtChf(Math.abs(expDiff))}`, positive: true });
   }
   if (bf.expensesTotalCents > 0 && drivers.length < 3) {
-    drivers.push({ title: "Maintenance & operating spend", body: `Total expenses of ${rFmtChf(bf.expensesTotalCents)} recorded for the period.`, impact: rFmtChf(bf.expensesTotalCents) });
+    drivers.push({ title: t("buildingsId.reporting.driver.spend.title"), body: t("buildingsId.reporting.driver.spend.body", { amount: rFmtChf(bf.expensesTotalCents) }), impact: rFmtChf(bf.expensesTotalCents) });
   }
-  if (!drivers.length) drivers.push({ title: "No significant movements", body: "Income and expenses were stable with no material changes this period.", impact: "" });
+  if (!drivers.length) drivers.push({ title: t("buildingsId.reporting.driver.stable.title"), body: t("buildingsId.reporting.driver.stable.body"), impact: "" });
   return drivers;
 }
 
-function buildBuildingWatchItems(bf, arrears, unitData, moveIns, moveOuts) {
+function buildBuildingWatchItems(bf, arrears, unitData, moveIns, moveOuts, t) {
   const items = [];
   if (!bf) return items;
-  if (arrears?.overdue61plusCents > 0) items.push({ text: `${rFmtChf(arrears.overdue61plusCents)} overdue 61+ days — urgent tenant follow-up needed.`, severity: "red", action: { label: "View invoices", href: "/manager/finance/invoices" } });
-  if (arrears?.overdue31to60Cents > 0) items.push({ text: `${rFmtChf(arrears.overdue31to60Cents)} overdue 31–60 days — send payment reminders.`, severity: "amber" });
-  if (bf.collectionRate < 0.8 && bf.projectedIncomeCents > 0) items.push({ text: `Collection rate at ${rFmtPct(bf.collectionRate)} — below the 80% threshold. Review unpaid rent invoices.`, severity: "amber", action: { label: "View invoices", href: "/manager/finance/invoices" } });
+  const viewInvoices = { label: t("buildingsId.reporting.viewInvoices"), href: "/manager/finance/invoices" };
+  if (arrears?.overdue61plusCents > 0) items.push({ text: t("buildingsId.reporting.watch.overdue61", { amount: rFmtChf(arrears.overdue61plusCents) }), severity: "red", action: viewInvoices });
+  if (arrears?.overdue31to60Cents > 0) items.push({ text: t("buildingsId.reporting.watch.overdue31", { amount: rFmtChf(arrears.overdue31to60Cents) }), severity: "amber" });
+  if (bf.collectionRate < 0.8 && bf.projectedIncomeCents > 0) items.push({ text: t("buildingsId.reporting.watch.collectionRate", { rate: rFmtPct(bf.collectionRate) }), severity: "amber", action: viewInvoices });
   // Unbilled rent = recognized (lease terms) − invoiced this period. Flag only a
   // material gap (>10% and >CHF 200) so proration noise doesn't trigger it. This
   // is the "earned but not yet invoiced" signal — distinct from arrears (invoiced
   // but unpaid), which the collection-rate item above covers.
   const unbilledCents = (bf.projectedIncomeCents ?? 0) - (bf.invoicedForPeriodCents ?? 0);
   if (bf.projectedIncomeCents > 0 && unbilledCents > Math.max(20000, bf.projectedIncomeCents * 0.1)) {
-    items.push({ text: `${rFmtChf(unbilledCents)} of expected rent looks uninvoiced this period — verify billing is complete.`, severity: "amber", action: { label: "Review billing", href: "/manager/finance/invoices" } });
+    items.push({ text: t("buildingsId.reporting.watch.unbilled", { amount: rFmtChf(unbilledCents) }), severity: "amber", action: { label: t("buildingsId.reporting.reviewBilling"), href: "/manager/finance/invoices" } });
   }
   const vacantUnits = (unitData ?? []).filter((u) => u.occupancyRate === 0);
-  if (vacantUnits.length > 0) items.push({ text: `${vacantUnits.length} unit${vacantUnits.length > 1 ? "s" : ""} vacant (${vacantUnits.map((u) => `Unit ${u.unitNumber}`).join(", ")}).`, severity: "amber" });
-  if (moveOuts?.length > 0) items.push({ text: `${moveOuts.length} tenant${moveOuts.length > 1 ? "s" : ""} moved out this period — re-letting in progress.`, severity: "violet" });
-  if (!items.length) items.push({ text: "No flags to report — building is performing within normal parameters.", severity: "violet" });
+  if (vacantUnits.length > 0) items.push({ text: t("buildingsId.reporting.watch.vacant", { count: vacantUnits.length, units: vacantUnits.map((u) => t("buildingsId.reporting.unitLabel", { number: u.unitNumber })).join(", ") }), severity: "amber" });
+  if (moveOuts?.length > 0) items.push({ text: t("buildingsId.reporting.watch.movedOut", { count: moveOuts.length }), severity: "violet" });
+  if (!items.length) items.push({ text: t("buildingsId.reporting.watch.allClear"), severity: "violet" });
   return items;
 }
 
 function BuildingPeriodAnalysis({ buildingId }) {
+  const { t, i18n } = useTranslation("manager");
+  const locale = i18n.language || "en";
   const now = new Date();
   const [year, setYear]   = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
@@ -201,9 +206,9 @@ function BuildingPeriodAnalysis({ buildingId }) {
     }
     const lastDay = new Date(year, month + 1, 0).getDate();
     const mm = String(month + 1).padStart(2, "0");
-    const label = new Intl.DateTimeFormat("en", { month: "long", year: "numeric" }).format(new Date(year, month, 1));
+    const label = new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(new Date(year, month, 1));
     return { from: `${year}-${mm}-01`, to: `${year}-${mm}-${String(lastDay).padStart(2, "0")}`, periodLabel: label, isYtd: false };
-  }, [year, month, mode, ytdActive]);
+  }, [year, month, mode, ytdActive, locale]);
 
   useEffect(() => {
     if (!buildingId) return;
@@ -215,12 +220,12 @@ function BuildingPeriodAnalysis({ buildingId }) {
       fetch(`/api/buildings/${buildingId}/unit-financials?from=${from}&to=${to}`, { headers: authHeaders() }).then((r) => r.json()),
     ])
       .then(([rpt, uf]) => { setReport(rpt?.data ?? null); setUnitData(uf?.data ?? []); })
-      .catch(() => setError("Failed to load"))
+      .catch(() => setError(t("buildingsId.reporting.failedToLoad")))
       .finally(() => setLoading(false));
-  }, [buildingId, from, to, isYtd]);
+  }, [buildingId, from, to, isYtd, t]);
 
   const monthsShort = useMemo(() => Array.from({ length: 12 }, (_, i) =>
-    new Intl.DateTimeFormat("en", { month: "short" }).format(new Date(2024, i, 1))), []);
+    new Intl.DateTimeFormat(locale, { month: "short" }).format(new Date(2024, i, 1))), [locale]);
   const yearRange = useMemo(() => {
     const start = Math.floor((year - 1) / 4) * 4 - 2;
     return Array.from({ length: 9 }, (_, i) => start + i);
@@ -241,9 +246,9 @@ function BuildingPeriodAnalysis({ buildingId }) {
   const noiMargin = earned > 0 ? noi / earned : null;
   const opexRatio = earned > 0 ? expenses / earned : null;
 
-  const headline  = buildingHeadline(bf, prev);
-  const drivers   = buildBuildingDrivers(bf, prev);
-  const watchItems = buildBuildingWatchItems(bf, arrears, unitData, moveIns, moveOuts);
+  const headline  = buildingHeadline(bf, t);
+  const drivers   = buildBuildingDrivers(bf, prev, t);
+  const watchItems = buildBuildingWatchItems(bf, arrears, unitData, moveIns, moveOuts, t);
 
   const heroGradient = ytdActive ? "from-violet-50 via-sky-50 to-green-50" : MONTH_HERO_GRADIENTS[month] ?? MONTH_HERO_GRADIENTS[0];
 
@@ -260,10 +265,10 @@ function BuildingPeriodAnalysis({ buildingId }) {
             <button onClick={() => setYear((y) => y + 1)} className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-surface-hover text-muted transition-colors text-sm">›</button>
           </div>
         ) : (
-          <button onClick={() => setMode("month")} className="shrink-0 rounded-full px-3 py-1 text-sm font-medium text-muted hover:bg-surface-hover transition-colors">← Months</button>
+          <button onClick={() => setMode("month")} className="shrink-0 rounded-full px-3 py-1 text-sm font-medium text-muted hover:bg-surface-hover transition-colors">← {t("buildingsId.reporting.months")}</button>
         )}
         <div className="w-px h-5 bg-surface-border shrink-0" />
-        <button onClick={() => { setYtd((v) => !v); setMode("month"); }} className={cn("shrink-0 rounded-full px-3 py-1 text-sm font-semibold transition-colors", ytdActive ? "bg-violet-600 text-white" : "text-muted-text hover:bg-surface-hover")}>Year</button>
+        <button onClick={() => { setYtd((v) => !v); setMode("month"); }} className={cn("shrink-0 rounded-full px-3 py-1 text-sm font-semibold transition-colors", ytdActive ? "bg-violet-600 text-white" : "text-muted-text hover:bg-surface-hover")}>{t("buildingsId.reporting.year")}</button>
         <div className="w-px h-5 bg-surface-border shrink-0" />
         <div className="flex gap-1.5 overflow-x-auto scrollbar-none flex-1">
           {mode === "month"
@@ -295,17 +300,17 @@ function BuildingPeriodAnalysis({ buildingId }) {
               kpiOpen ? "rounded-t-3xl" : "rounded-3xl",
             )}>
               <div className="inline-flex items-center rounded-full border border-black/20 dark:border-white/20 bg-black/5 dark:bg-white/10 px-3 py-1 text-xs font-medium text-foreground/70 mb-3">
-                {periodLabel} · Monthly report
+                {periodLabel} · {t("buildingsId.reporting.monthlyReport")}
               </div>
               <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground">{headline}</h1>
               <p className="mt-2 text-sm leading-6 text-muted-text max-w-2xl">
-                {earned > 0 ? <>Rent collected: <span className="font-semibold text-foreground">{rFmtChf(earned)}</span>. </> : ""}
-                {expenses > 0 ? <>Operating costs: <span className="font-semibold text-foreground">{rFmtChf(expenses)}</span>. </> : ""}
-                {bf.recoverableAncillaryCents > 0 ? <>Recoverable charges: <span className="font-semibold text-foreground">{rFmtChf(bf.recoverableAncillaryCents)}</span>. </> : ""}
-                {bf.totalUnitsCount > 0 ? <>{bf.activeUnitsCount} of {bf.totalUnitsCount} units leased.</> : ""}
+                {earned > 0 ? <>{t("buildingsId.reporting.rentCollected")} <span className="font-semibold text-foreground">{rFmtChf(earned)}</span>. </> : ""}
+                {expenses > 0 ? <>{t("buildingsId.reporting.operatingCosts")} <span className="font-semibold text-foreground">{rFmtChf(expenses)}</span>. </> : ""}
+                {bf.recoverableAncillaryCents > 0 ? <>{t("buildingsId.reporting.recoverableCharges")} <span className="font-semibold text-foreground">{rFmtChf(bf.recoverableAncillaryCents)}</span>. </> : ""}
+                {bf.totalUnitsCount > 0 ? <>{t("buildingsId.reporting.unitsLeased", { active: bf.activeUnitsCount, total: bf.totalUnitsCount })}</> : ""}
               </p>
               <button onClick={() => setKpiOpen((v) => !v)} className="mt-4 flex items-center gap-1.5 text-sm font-medium text-foreground/60 hover:text-foreground transition-colors">
-                {kpiOpen ? <><ChevronUp className="w-4 h-4" /> Hide details</> : <><ChevronDown className="w-4 h-4" /> View details</>}
+                {kpiOpen ? <><ChevronUp className="w-4 h-4" /> {t("buildingsId.reporting.hideDetails")}</> : <><ChevronDown className="w-4 h-4" /> {t("buildingsId.reporting.viewDetails")}</>}
               </button>
             </header>
             {kpiOpen && (
@@ -313,16 +318,16 @@ function BuildingPeriodAnalysis({ buildingId }) {
                 attached
                 isLoading={false}
                 left={[
-                  { label: "Net Operating Income", value: rFmtChf(noi),   delta: prev ? buildingDelta(noi, prev.netOperatingIncomeCents) : null },
-                  { label: "Rent Collected",       value: rFmtChf(earned), delta: prev ? buildingDelta(earned, prev.earnedIncomeCents) : null },
-                  { label: "Total Expenses",        value: rFmtChf(expenses), delta: prev ? buildingDelta(-expenses, -prev.expensesTotalCents) : null },
-                  { label: "Collection Rate",       value: rFmtPct(coll),  delta: prev ? buildingDelta(coll, prev.collectionRate) : null },
+                  { label: t("buildingsId.reporting.kpi.noi"),            value: rFmtChf(noi),   delta: prev ? buildingDelta(noi, prev.netOperatingIncomeCents) : null },
+                  { label: t("buildingsId.reporting.kpi.cashReceived"),   value: rFmtChf(earned), delta: prev ? buildingDelta(earned, prev.earnedIncomeCents) : null },
+                  { label: t("buildingsId.reporting.kpi.totalExpenses"),  value: rFmtChf(expenses), delta: prev ? buildingDelta(-expenses, -prev.expensesTotalCents) : null },
+                  { label: t("buildingsId.reporting.kpi.onTimeCollection"), value: rFmtPct(coll),  delta: prev ? buildingDelta(coll, prev.collectionRate) : null },
                 ]}
                 right={[
-                  { label: "NOI Margin",   value: noiMargin  !== null ? rFmtPct(noiMargin)  : "—", delta: null },
-                  { label: "OpEx Ratio",   value: opexRatio  !== null ? rFmtPct(opexRatio)  : "—", delta: null },
-                  { label: "Occupancy",    value: occ        !== null ? rFmtPct(occ)        : "—", delta: null },
-                  { label: "Receivables",  value: bf.receivablesCents > 0 ? rFmtChf(bf.receivablesCents) : "—", delta: null },
+                  { label: t("buildingsId.reporting.kpi.noiMargin"),   value: noiMargin  !== null ? rFmtPct(noiMargin)  : "—", delta: null },
+                  { label: t("buildingsId.reporting.kpi.opexRatio"),   value: opexRatio  !== null ? rFmtPct(opexRatio)  : "—", delta: null },
+                  { label: t("buildingsId.reporting.kpi.occupancy"),   value: occ        !== null ? rFmtPct(occ)        : "—", delta: null },
+                  { label: t("buildingsId.reporting.kpi.receivables"), value: bf.receivablesCents > 0 ? rFmtChf(bf.receivablesCents) : "—", delta: null },
                 ]}
               />
             )}
@@ -333,11 +338,11 @@ function BuildingPeriodAnalysis({ buildingId }) {
             <div className="rounded-3xl border border-surface-border bg-surface p-5">
               <div className="mb-4 flex items-center justify-between">
                 <div>
-                  <h2 className="text-base font-semibold text-foreground">Monthly NOI</h2>
-                  <p className="text-xs text-foreground-dim mt-0.5">Net operating income per month · {year}</p>
+                  <h2 className="text-base font-semibold text-foreground">{t("buildingsId.reporting.monthlyNoiTitle")}</h2>
+                  <p className="text-xs text-foreground-dim mt-0.5">{t("buildingsId.reporting.monthlyNoiSub", { year })}</p>
                 </div>
                 <div className="text-right">
-                  <div className="text-xs text-foreground-dim">Best month</div>
+                  <div className="text-xs text-foreground-dim">{t("buildingsId.reporting.bestMonth")}</div>
                   <div className="text-sm font-semibold text-green-700">
                     {rFmtChf([...monthly].sort((a, b) => b.noiCents - a.noiCents)[0]?.noiCents ?? 0)}
                   </div>
@@ -352,10 +357,10 @@ function BuildingPeriodAnalysis({ buildingId }) {
             <div className="flex items-start gap-3 rounded-2xl border border-warning-ring bg-warning-light px-5 py-4">
               <span className="mt-0.5 text-warning-text text-lg shrink-0">⚠</span>
               <div className="flex-1">
-                <p className="text-sm font-semibold text-warning-text mb-0.5">{rFmtChf(bf.receivablesCents)} in uncollected rent</p>
-                <p className="text-xs text-warning-text/80">Mark invoices as paid once payment is received.</p>
+                <p className="text-sm font-semibold text-warning-text mb-0.5">{t("buildingsId.reporting.uncollectedRent", { amount: rFmtChf(bf.receivablesCents) })}</p>
+                <p className="text-xs text-warning-text/80">{t("buildingsId.reporting.markPaidHint")}</p>
               </div>
-              <a href="/manager/finance/invoices" className="shrink-0 rounded-lg bg-warning hover:opacity-90 px-3 py-1.5 text-xs font-semibold text-white transition-opacity no-underline">View invoices</a>
+              <a href="/manager/finance/invoices" className="shrink-0 rounded-lg bg-warning hover:opacity-90 px-3 py-1.5 text-xs font-semibold text-white transition-opacity no-underline">{t("buildingsId.reporting.viewInvoices")}</a>
             </div>
           )}
 
@@ -364,19 +369,19 @@ function BuildingPeriodAnalysis({ buildingId }) {
             <div className="rounded-2xl border border-surface-border bg-surface p-5">
               <div className="mb-4 flex items-center justify-between">
                 <div>
-                  <h2 className="text-base font-semibold text-foreground">Rent arrears aging</h2>
-                  <p className="text-xs text-foreground-dim mt-0.5">Unpaid rent invoices by days overdue</p>
+                  <h2 className="text-base font-semibold text-foreground">{t("buildingsId.reporting.arrearsTitle")}</h2>
+                  <p className="text-xs text-foreground-dim mt-0.5">{t("buildingsId.reporting.arrearsSub")}</p>
                 </div>
                 {arrears.totalOverdueCents > 0 && (
-                  <span className="rounded-full bg-destructive-light px-3 py-1 text-xs font-semibold text-destructive-text">{rFmtChf(arrears.totalOverdueCents)} overdue</span>
+                  <span className="rounded-full bg-destructive-light px-3 py-1 text-xs font-semibold text-destructive-text">{t("buildingsId.reporting.overdueBadge", { amount: rFmtChf(arrears.totalOverdueCents) })}</span>
                 )}
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {[
-                  { label: "Current",    cents: arrears.currentCents,        color: "text-success-text",     bg: "bg-success-light border-success-ring" },
-                  { label: "1–30 days",  cents: arrears.overdue1to30Cents,   color: "text-warning-text",     bg: "bg-warning-light border-warning-ring" },
-                  { label: "31–60 days", cents: arrears.overdue31to60Cents,  color: "text-orange-text",      bg: "bg-orange-light border-orange-ring" },
-                  { label: "61+ days",   cents: arrears.overdue61plusCents,  color: "text-destructive-text", bg: "bg-destructive-light border-destructive-ring" },
+                  { label: t("buildingsId.reporting.arrears.current"),    cents: arrears.currentCents,        color: "text-success-text",     bg: "bg-success-light border-success-ring" },
+                  { label: t("buildingsId.reporting.arrears.days1to30"),  cents: arrears.overdue1to30Cents,   color: "text-warning-text",     bg: "bg-warning-light border-warning-ring" },
+                  { label: t("buildingsId.reporting.arrears.days31to60"), cents: arrears.overdue31to60Cents,  color: "text-orange-text",      bg: "bg-orange-light border-orange-ring" },
+                  { label: t("buildingsId.reporting.arrears.days61plus"), cents: arrears.overdue61plusCents,  color: "text-destructive-text", bg: "bg-destructive-light border-destructive-ring" },
                 ].map(({ label, cents, color, bg }) => (
                   <div key={label} className={cn("rounded-xl border p-4", cents > 0 ? bg : "border-surface-border bg-surface-subtle")}>
                     <div className="text-xs text-foreground-dim">{label}</div>
@@ -394,26 +399,26 @@ function BuildingPeriodAnalysis({ buildingId }) {
                 <div className="px-7 py-4 bg-surface-subtle border-b border-surface-border">
                   <div className="flex items-center gap-2.5 mb-0.5">
                     <div className="flex h-6 w-6 items-center justify-center rounded-full bg-surface-hover text-xs font-bold text-muted">⇅</div>
-                    <h2 className="text-sm font-semibold text-foreground">What drove performance</h2>
+                    <h2 className="text-sm font-semibold text-foreground">{t("buildingsId.reporting.whatDrove")}</h2>
                   </div>
-                  <p className="text-xs text-foreground-dim ml-[34px]">The main forces behind this period's numbers — green helped, red weighed on results</p>
+                  <p className="text-xs text-foreground-dim ml-[34px]">{t("buildingsId.reporting.whatDroveSub")}</p>
                 </div>
                 <div className="px-7 py-5 flex-1">
                   {drivers.map((d, i) => <DriverItem key={i} number={i + 1} title={d.title} body={d.body} impact={d.impact} positive={d.positive} />)}
                 </div>
               </div>
               <div className="flex flex-col">
-                <div className="px-7 py-4 bg-amber-50 border-b border-amber-100">
+                <div className="px-7 py-4 bg-warning-light border-b border-warning-ring">
                   <div className="flex items-center gap-2.5 mb-0.5">
-                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-amber-100 text-xs font-bold text-amber-700">!</div>
-                    <h2 className="text-sm font-semibold text-amber-900">What to watch</h2>
+                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-warning-light text-xs font-bold text-warning-text">!</div>
+                    <h2 className="text-sm font-semibold text-warning-text">{t("buildingsId.reporting.whatToWatch")}</h2>
                   </div>
-                  <p className="text-xs text-amber-700/70 ml-[34px]">Flags and action items for this building</p>
+                  <p className="text-xs text-warning-text/80 ml-[34px]">{t("buildingsId.reporting.whatToWatchSub")}</p>
                 </div>
                 <div className="px-7 py-5 flex-1">
                   {watchItems.length > 0
                     ? watchItems.map((item, i) => <WatchItem key={i} number={i + 1} text={item.text} severity={item.severity} action={item.action} />)
-                    : <div className="flex items-start gap-4 pt-2"><div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-700">✓</div><p className="text-sm text-muted-text leading-relaxed self-center">No flags — building is performing well.</p></div>}
+                    : <div className="flex items-start gap-4 pt-2"><div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-success-light text-success-text">✓</div><p className="text-sm text-muted-text leading-relaxed self-center">{t("buildingsId.reporting.noFlags")}</p></div>}
                 </div>
               </div>
             </div>
@@ -423,44 +428,44 @@ function BuildingPeriodAnalysis({ buildingId }) {
           <div className="rounded-3xl border border-surface-border bg-surface p-5">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h2 className="text-base font-semibold text-foreground">By unit</h2>
-                <p className="text-xs text-foreground-dim mt-0.5">Net result per unit for {periodLabel}</p>
+                <h2 className="text-base font-semibold text-foreground">{t("buildingsId.reporting.byUnit")}</h2>
+                <p className="text-xs text-foreground-dim mt-0.5">{t("buildingsId.reporting.byUnitSub", { period: periodLabel })}</p>
               </div>
               {unitData.length > PREVIEW_UNITS && (
                 <button onClick={() => setUnitsExpanded((v) => !v)} className="text-xs font-medium text-muted-dark hover:text-foreground transition-colors">
-                  {unitsExpanded ? "Collapse ↑" : `Show all ${unitData.length} ↓`}
+                  {unitsExpanded ? `${t("buildingsId.reporting.collapse")} ↑` : `${t("buildingsId.reporting.showAll", { count: unitData.length })} ↓`}
                 </button>
               )}
             </div>
             {unitData.length === 0
-              ? <p className="text-sm text-muted italic">No units found.</p>
+              ? <p className="text-sm text-muted italic">{t("buildingsId.reporting.noUnits")}</p>
               : <div className="space-y-2">{visibleUnits.map((u) => <UnitRow key={u.unitId} unitNumber={u.unitNumber} floor={u.floor} tenantName={u.tenantName} earned={u.earnedIncomeCents} expenses={u.expensesCents} charges={u.apportionedChargesCents} net={u.netIncomeCents} collectionRate={u.collectionRate} occupancyRate={u.occupancyRate} />)}</div>}
           </div>
 
           {/* ── Occupancy movements ── */}
           {(moveIns.length > 0 || moveOuts.length > 0) && (
             <div className="rounded-3xl border border-surface-border bg-surface p-5">
-              <h2 className="text-base font-semibold text-foreground mb-4">Tenant movements</h2>
+              <h2 className="text-base font-semibold text-foreground mb-4">{t("buildingsId.reporting.tenantMovements")}</h2>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-green-100 text-xs font-semibold text-green-700">↓</span>
-                    <span className="text-sm font-semibold text-foreground">Move-ins <span className="ml-1 text-foreground-dim font-normal">({moveIns.length})</span></span>
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-success-light text-xs font-semibold text-success-text">↓</span>
+                    <span className="text-sm font-semibold text-foreground">{t("buildingsId.reporting.moveIns")} <span className="ml-1 text-foreground-dim font-normal">({moveIns.length})</span></span>
                   </div>
                   {moveIns.length === 0
-                    ? <p className="text-sm text-foreground-dim">No move-ins this period</p>
+                    ? <p className="text-sm text-foreground-dim">{t("buildingsId.reporting.noMoveIns")}</p>
                     : (insExpanded ? moveIns : moveIns.slice(0, 3)).map((l) => <OccupancyRow key={l.id} type="in" tenantName={l.tenantName} unitLabel={l.unitNumber} date={l.startDate} />)}
-                  {moveIns.length > 3 && <button onClick={() => setInsExpanded((v) => !v)} className="mt-2 text-xs font-medium text-muted-dark hover:text-foreground">{insExpanded ? "Show less" : `+ ${moveIns.length - 3} more`}</button>}
+                  {moveIns.length > 3 && <button onClick={() => setInsExpanded((v) => !v)} className="mt-2 text-xs font-medium text-muted-dark hover:text-foreground">{insExpanded ? t("buildingsId.reporting.showLess") : t("buildingsId.reporting.moreCount", { count: moveIns.length - 3 })}</button>}
                 </div>
                 <div>
                   <div className="flex items-center gap-2 mb-2">
                     <span className="flex h-5 w-5 items-center justify-center rounded-full bg-surface-hover text-xs font-semibold text-muted">↑</span>
-                    <span className="text-sm font-semibold text-foreground">Move-outs <span className="ml-1 text-foreground-dim font-normal">({moveOuts.length})</span></span>
+                    <span className="text-sm font-semibold text-foreground">{t("buildingsId.reporting.moveOuts")} <span className="ml-1 text-foreground-dim font-normal">({moveOuts.length})</span></span>
                   </div>
                   {moveOuts.length === 0
-                    ? <p className="text-sm text-foreground-dim">No move-outs this period</p>
+                    ? <p className="text-sm text-foreground-dim">{t("buildingsId.reporting.noMoveOuts")}</p>
                     : (outsExpanded ? moveOuts : moveOuts.slice(0, 3)).map((l) => <OccupancyRow key={l.id} type="out" tenantName={l.tenantName} unitLabel={l.unitNumber} date={l.endDate} />)}
-                  {moveOuts.length > 3 && <button onClick={() => setOutsExpanded((v) => !v)} className="mt-2 text-xs font-medium text-muted-dark hover:text-foreground">{outsExpanded ? "Show less" : `+ ${moveOuts.length - 3} more`}</button>}
+                  {moveOuts.length > 3 && <button onClick={() => setOutsExpanded((v) => !v)} className="mt-2 text-xs font-medium text-muted-dark hover:text-foreground">{outsExpanded ? t("buildingsId.reporting.showLess") : t("buildingsId.reporting.moreCount", { count: moveOuts.length - 3 })}</button>}
                 </div>
               </div>
             </div>
@@ -472,6 +477,7 @@ function BuildingPeriodAnalysis({ buildingId }) {
 }
 
 function BuildingReportingView({ buildingId }) {
+  const { t } = useTranslation("manager");
   const [reportingTab, setReportingTab] = useState(0);
   const [canvasRange, setCanvasRange]   = useState("1Y");
   const [tsData, setTsData]             = useState(null);
@@ -486,11 +492,11 @@ function BuildingReportingView({ buildingId }) {
       .then((r) => r.json())
       .then((d) => {
         if (d?.data) setTsData(d.data);
-        else setTsError(d?.error?.message || "Failed to load");
+        else setTsError(d?.error?.message || t("buildingsId.reporting.failedToLoad"));
       })
-      .catch(() => setTsError("Failed to load"))
+      .catch(() => setTsError(t("buildingsId.reporting.failedToLoad")))
       .finally(() => setTsLoading(false));
-  }, [buildingId, canvasRange, reportingTab]);
+  }, [buildingId, canvasRange, reportingTab, t]);
 
   const earliestDate = tsData?.earliestDate ? new Date(tsData.earliestDate) : null;
   const daysSinceEarliest = earliestDate
@@ -501,7 +507,7 @@ function BuildingReportingView({ buildingId }) {
     <div className="space-y-4">
       {/* Sub-tab strip */}
       <div className="inline-flex rounded-lg border border-surface-border bg-surface-hover p-0.5 gap-0.5">
-        {["Period Analysis", "Performance Canvas"].map((label, i) => (
+        {[t("buildingsId.reporting.periodAnalysis"), t("buildingsId.reporting.performanceCanvas")].map((label, i) => (
           <button
             key={label}
             onClick={() => setReportingTab(i)}
@@ -538,8 +544,8 @@ function BuildingReportingView({ buildingId }) {
               );
             })}
           </div>
-          {tsError && <p className="text-sm text-red-600">{tsError}</p>}
-          {tsLoading && <p className="text-sm text-muted">Loading…</p>}
+          {tsError && <p className="text-sm text-destructive-text">{tsError}</p>}
+          {tsLoading && <p className="text-sm text-muted">{t("buildingsId.reporting.loadingEllipsis")}</p>}
           {!tsLoading && !tsError && (
             <PortfolioCanvasChart points={tsData?.points ?? []} range={canvasRange} />
           )}

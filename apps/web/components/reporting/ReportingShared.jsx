@@ -1,4 +1,5 @@
 import { cn } from "../../lib/utils";
+import { useTranslation } from "next-i18next";
 
 export const MONTH_HERO_GRADIENTS = [
   "from-slate-50  via-blue-50   to-cyan-50",
@@ -157,6 +158,7 @@ export function MonthlyTrendChart({ data }) {
 }
 
 export function OccupancyRow({ type, tenantName, unitLabel, date }) {
+  const { t, i18n } = useTranslation("common");
   const isMoveIn = type === "in";
   return (
     <div className="flex items-start gap-3 py-3 border-b border-surface-divider last:border-0">
@@ -170,10 +172,10 @@ export function OccupancyRow({ type, tenantName, unitLabel, date }) {
         <div className="flex items-baseline justify-between gap-2">
           <span className="text-sm font-medium text-foreground truncate">{tenantName}</span>
           <span className="shrink-0 text-xs text-foreground-dim">
-            {date ? new Date(date).toLocaleDateString("en", { day: "numeric", month: "short" }) : "—"}
+            {date ? new Date(date).toLocaleDateString(i18n.language || "en", { day: "numeric", month: "short" }) : "—"}
           </span>
         </div>
-        <div className="text-xs text-muted">{isMoveIn ? "Moving in" : "Moving out"} · Unit {unitLabel}</div>
+        <div className="text-xs text-muted">{isMoveIn ? t("reporting.movingIn") : t("reporting.movingOut")} · {t("reporting.unit", { number: unitLabel })}</div>
       </div>
     </div>
   );

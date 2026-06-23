@@ -323,5 +323,10 @@
     "resetFilters": "Reset filters",
     "noOptions": "No options available"
   },
-  "loading": "Loading…"
+  "loading": "Loading…",
+  "reporting": {
+    "movingIn": "Moving in",
+    "movingOut": "Moving out",
+    "unit": "Unit {{number}}"
+  }
 }
