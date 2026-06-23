@@ -202,6 +202,7 @@ export async function generateInvoiceForPeriod(
     vatRate: number;
     lineTotal: number;
     categoryId?: string | null;
+    isChargeAdvance?: boolean;
   }> = [];
 
   // Base rent line
@@ -217,19 +218,39 @@ export async function generateInvoiceForPeriod(
     lineTotal: baseRentCents,
   });
 
-  // Expense item lines (each LeaseExpenseItem → separate line)
-  for (const item of lease.expenseItems) {
-    const itemCents = Math.round(item.amountChf * 100 * fraction);
-    const modeLabel = item.mode === "ACOMPTE" ? "acompte" : "forfait";
+  // Charges: show net rent and charges as separate lines so the tenant sees
+  // gross = net rent + charges. If the lease itemises charges (LeaseExpenseItem),
+  // emit one line per item; otherwise emit a single "Charges (acompte)" line from
+  // the lease's defined charges total. All charge lines are tagged isChargeAdvance
+  // so advances can be summed for the reconciliation.
+  if (lease.expenseItems.length > 0) {
+    for (const item of lease.expenseItems) {
+      const itemCents = Math.round(item.amountChf * 100 * fraction);
+      const modeLabel = item.mode === "ACOMPTE" ? "acompte" : "forfait";
+      lineItems.push({
+        description: isProRata
+          ? `${item.description} (${modeLabel}, pro rata)`
+          : `${item.description} (${modeLabel})`,
+        quantity: 1,
+        unitPrice: itemCents,
+        vatRate: 0,
+        lineTotal: itemCents,
+        categoryId: (item as any).categoryId ?? null,
+        isChargeAdvance: item.mode === "ACOMPTE",
+      });
+    }
+  } else if (((lease as any).chargesTotalChf ?? 0) > 0) {
+    const chargesCents = Math.round((lease as any).chargesTotalChf * 100 * fraction);
+    const chargesMonth = periodStart.toLocaleString("fr-CH", { month: "long", year: "numeric" });
     lineItems.push({
       description: isProRata
-        ? `${item.description} (${modeLabel}, pro rata)`
-        : `${item.description} (${modeLabel})`,
+        ? `Charges (acompte, pro rata) — ${chargesMonth}`
+        : `Charges (acompte) — ${chargesMonth}`,
       quantity: 1,
-      unitPrice: itemCents,
+      unitPrice: chargesCents,
       vatRate: 0,
-      lineTotal: itemCents,
-      categoryId: (item as any).categoryId ?? null,
+      lineTotal: chargesCents,
+      isChargeAdvance: true,
     });
   }
 
@@ -302,6 +323,7 @@ export async function generateInvoiceForPeriod(
           vatRate: li.vatRate,
           lineTotal: li.lineTotal,
           ...(li.categoryId ? { categoryId: li.categoryId } : {}),
+          ...(li.isChargeAdvance ? { isChargeAdvance: true } : {}),
         })),
       },
     },

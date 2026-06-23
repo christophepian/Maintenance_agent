@@ -336,6 +336,34 @@ export async function setBuildingDistribution(
   return getBuildingDistribution(orgId, buildingId);
 }
 
+// ─── Charges advances paid (v2 C3) ─────────────────────────────
+/**
+ * Total charges advance a tenant paid over [from, to] — the sum of all
+ * isChargeAdvance line items on their issued OUTGOING (rent) invoices whose
+ * billing period falls in the window.
+ */
+export async function getChargesAdvancesPaidCents(
+  orgId: string,
+  leaseId: string,
+  from: Date,
+  to: Date,
+): Promise<number> {
+  const agg = await prisma.invoiceLineItem.aggregate({
+    where: {
+      isChargeAdvance: true,
+      invoice: {
+        orgId,
+        leaseId,
+        direction: "OUTGOING",
+        status: { not: "DRAFT" },
+        billingPeriodStart: { gte: from, lte: to },
+      },
+    },
+    _sum: { lineTotal: true },
+  });
+  return agg._sum.lineTotal ?? 0;
+}
+
 // ─── Flat-rate (forfait) calculation ───────────────────────────
 export interface FlatRateResult {
   categoryId: string;

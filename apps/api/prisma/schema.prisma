@@ -745,19 +745,22 @@ model Invoice {
 }
 
 model InvoiceLineItem {
-  id          String                 @id @default(uuid())
-  invoiceId   String
-  description String
-  quantity    Float                  @default(1.0)
-  unitPrice   Int
-  vatRate     Float                  @default(7.7)
-  lineTotal   Int
+  id              String                 @id @default(uuid())
+  invoiceId       String
+  description     String
+  quantity        Float                  @default(1.0)
+  unitPrice       Int
+  vatRate         Float                  @default(7.7)
+  lineTotal       Int
   // Canonical ancillary-cost category (stamped on recurring rent lines) so
   // advances-paid can be summed per category without description matching.
-  categoryId  String?
-  createdAt   DateTime               @default(now())
-  invoice     Invoice                @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-  category    AncillaryCostCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  categoryId      String?
+  // True for the charges (acompte) portion of a rent invoice — lets advances be
+  // summed over a period for the reconciliation (vs net rent).
+  isChargeAdvance Boolean                @default(false)
+  createdAt       DateTime               @default(now())
+  invoice         Invoice                @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  category        AncillaryCostCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
   @@index([invoiceId])
   @@index([categoryId])
