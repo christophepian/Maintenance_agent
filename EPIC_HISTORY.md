@@ -5,6 +5,37 @@
 
 ---
 
+## Session 2026-06-23 — Governance audit remediation (`docs/CRITICAL_AUDIT_2026-06-23.md`)
+
+### Commits (pushed to origin/main)
+`d248093` doc reconciliation · `f9523da` G20 service-Prisma ratchet · `1cb4dca` OpenAPI budget + G21 doc-freshness gate · `8bc7342` sandbox/SANDBOX_MODE hardening · `d6d65f4` commit NOT_INSPECTED migration (unbreak main) · `4c4bb7e` report-only CSP · `2439a11` strict quality gate + tsc fix · `44ab5d8` G23 styling ratchet · `c5309ff` frontend-inventory generator · `ee2d928` G22 route-Prisma ratchet · `750339a` service-Prisma burndown 28→24 · `67e584f` rate-limiter consolidation · `d374534` audit-logging foundation · `cc4b4bc` credit-notes OpenAPI graduation · `39a97c5` styling burndown 50→39
+
+### Documentation reconciliation
+Refreshed all derived counts to live values (92 models · 78 enums · 122 migrations · 52 repos · 37 route modules · 317 API ops) across PROJECT_OVERVIEW / PROJECT_STATE / SCHEMA_REFERENCE / copilot-instructions / ARCHITECTURE_LOW_CONTEXT_GUIDE; the `check-docs.js` consistency gate is green. Corrected the stale `Request` "no orgId" gotcha (it has a direct `orgId` since DT-114; `unitId` nullable). Re-scoped the overstated "no raw style tokens remain" claim to measured debt. Replaced the hand-maintained `FRONTEND_INVENTORY.md` with a generator (`npm run inventory`).
+
+### New guardrails (ratchets — block regression, baselines shrink on burndown)
+| Guardrail | Enforces |
+|---|---|
+| **G20** | No new `prisma.*` in `src/services/**` (baseline 24 files / 212 calls) |
+| **G22** | No new `prisma.*` in `src/routes/**` (baseline 5 files / 41 calls) |
+| **G23** | No new raw `slate-*`/`bg-white` (39) or inline `style={{}}` (44) in `apps/web` JSX |
+| **G21** | Doc freshness — `check-docs.js` wired into pre-commit + CI |
+| OpenAPI budget | `PUBLIC_UNSPECCED_BUDGET` (111) — no new public route bypasses `openapi.yaml` |
+| Quality gate | `code-quality-report.sh --strict` blocks regression vs `quality-baseline.json` in CI |
+
+### Burndown started
+Service-layer Prisma 28→24 files (tenantIdentity / requestEventService / defaultAssets / conditionReportService moved to repos). OpenAPI: `GET /credit-notes` (+`/:id`) graduated into the spec with `CreditNoteDTO` (budget 113→111). Styling: all `*-slate-400` indicators mapped to the `foreground-dim` token (raw 50→39).
+
+### Pre-GA security
+Sandbox routes no longer register unless `SANDBOX_MODE=true`; boot guard makes `SANDBOX_MODE=true` fatal off the `sandbox` branch. **Report-only CSP** added (`next.config.js`) to map origins before enforcing. Rate limiters consolidated into one shared, Redis-ready module (`http/rateLimiter.ts`). **Audit-logging foundation**: append-only `AuditLog` model + migration `20260623050000` + `writeAuditLog()` (fire-and-forget), wired into statement approval. Still deferred (infra): Redis backend, flipping CSP to enforcing.
+
+### Correctness fix
+`code-quality-report.sh --strict` surfaced a real `tsc` error — `CONDITION_ORDINAL` in `conditionReportService.ts` missing the `NOT_INSPECTED` enum key; fixed + committed the prior session's uncommitted `NOT_INSPECTED` schema change & migration (which would otherwise have failed CI on main).
+
+Full status table in `docs/CRITICAL_AUDIT_2026-06-23.md` context; remediation summary in PROJECT_STATE.md §Doc-governance reconciliation.
+
+---
+
 ## Session 2026-06-23 — Ancillary Costs v3 + Reporting recognition & i18n
 
 ### Commits (pushed to origin/main)

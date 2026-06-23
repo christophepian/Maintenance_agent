@@ -150,6 +150,17 @@ Every repository exports a canonical include constant. DTO mappers use `Prisma.X
 
 `contracts.test.ts` guards DTO shape for key endpoints. Update it in the same PR as any DTO change.
 
+### G20–G23: Architectural-smell ratchets (added 2026-06-23)
+
+Each is a **ratchet** in `scripts/guardrails.sh` (pre-commit + CI): a baseline that may only **shrink** — any increase fails the build, and you lower the baseline in the same commit that burns debt down.
+
+- **G20** — no new direct `prisma.*` in `apps/api/src/services/**` (baseline 24 files / 212 calls). New service code goes through repositories.
+- **G22** — no new direct `prisma.*` in `apps/api/src/routes/**` (baseline 5 files / 41 calls).
+- **G23** — no new raw `slate-*`/`bg-white` (baseline 39 lines) or inline `style={{}}` (baseline 44 lines) in `apps/web` JSX. Mark genuine exceptions with `/* no-token: <reason> */` (excluded from the count).
+- **G21** — documentation freshness: runs `scripts/check-docs.js` (count consistency across docs + link validity + "Do NOT" parity) on every commit and in CI.
+
+Also: the **OpenAPI budget** (`openApiSync.test.ts` `PUBLIC_UNSPECCED_BUDGET`, 111) blocks new public routes that bypass `openapi.yaml`, and the **quality gate** (`bash scripts/code-quality-report.sh --strict`, run in CI) blocks any regression vs `docs/quality-baseline.json`.
+
 ### G19: Mirrored Docs — `docs/` and `apps/web/public/docs/` Must Stay In Sync
 
 Every doc page exists in **two locations that must be byte-identical**:

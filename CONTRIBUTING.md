@@ -10,7 +10,8 @@ npm run lint            # ESLint across apps/api + apps/web (warnings, not gates
 npm run lint:fix        # auto-fix what ESLint can
 npm run format          # Prettier --write across the repo
 npm run format:check    # Prettier --check (no writes)
-npm run quality:report  # digest: lint/tsc/any/console/TODO counts vs baseline
+npm run quality:report  # digest: lint/tsc/any/console/TODO counts vs baseline (report-only, exit 0)
+npm run inventory       # regenerate docs/FRONTEND_INVENTORY.md from the filesystem
 ```
 
 Quality-debt rules (`no-explicit-any`, `no-console`, `react-hooks/exhaustive-deps`,
@@ -19,6 +20,10 @@ are `error`. Config lives in `eslint.config.mjs`. The committed baseline is
 `docs/quality-baseline.json` — the **weekly-code-quality** routine diffs against it
 and alerts on regression. Don't bump the baseline to silence an alert; lower it when
 you burn down debt. Promote a `warn` rule to `error` once its count hits zero.
+
+**No-regression gate (CI, added 2026-06-23).** `bash scripts/code-quality-report.sh --strict`
+(or `QUALITY_STRICT=1`) exits non-zero if any metric regresses above the baseline. CI runs
+it as a blocking step (the bare `quality:report` stays report-only for the weekly routine).
 
 ## Testing
 
@@ -179,6 +184,11 @@ name and the contract test fails, update the test — do not delete it.
 | G14 | Session-end: verify nothing valuable is left uncommitted |
 | G15 | Never `git stash drop` without inspection; prefer `stash branch` |
 | G18 | Never commit secrets — `.env*` files (except `.env.example`) and hardcoded key patterns are blocked by the pre-commit hook |
+| G19 | Mirrored docs (`docs/` ↔ `apps/web/public/docs/`) must stay byte-identical — edit both copies in one commit |
+| G20 | No new direct `prisma.*` in `src/services/**` — ratchet baseline 24 files / 212 calls (burndown lowers it) |
+| G21 | Docs freshness — runs `scripts/check-docs.js` (count consistency + links + "Do NOT" parity) on commit + CI |
+| G22 | No new direct `prisma.*` in `src/routes/**` — ratchet baseline 5 files / 41 calls |
+| G23 | No new raw `slate-*`/`bg-white` (39) or inline `style={{}}` (44) in `apps/web` JSX — mark exceptions `/* no-token */` |
 
 Full guardrail list: `PROJECT_OVERVIEW.md`
 File-routing map: `apps/api/src/ARCHITECTURE_LOW_CONTEXT_GUIDE.md`
