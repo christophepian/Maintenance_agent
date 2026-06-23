@@ -10,7 +10,7 @@ import Button from "../../../../components/ui/Button";
 import Badge from "../../../../components/ui/Badge";
 import { DetailGrid, DetailItem } from "../../../../components/ui/DetailGrid";
 import { authHeaders } from "../../../../lib/api";
-import { formatChfCents } from "../../../../lib/format";
+import { formatChfCents, formatChf } from "../../../../lib/format";
 import { cn } from "../../../../lib/utils";
 import { withServerTranslations } from "../../../../lib/i18n";
 import { useTranslation } from "next-i18next";
@@ -133,6 +133,9 @@ export default function BillingPeriodDetailPage() {
                             {e.billability === "NON_BILLABLE" && (
                               <span className="ml-2 text-xs text-muted-text">({t("costPool.text.nonBillable")})</span>
                             )}
+                            {e.sourceInvoiceId && (
+                              <span className="ml-2 text-xs text-muted-text">📎 {t("costPool.text.fromInvoice")}</span>
+                            )}
                           </td>
                           <td className="text-right tabular-nums">{formatChfCents(e.amountCents)}</td>
                           <td className="text-muted-text">{e.note || "—"}</td>
@@ -148,6 +151,14 @@ export default function BillingPeriodDetailPage() {
                 </div>
               )}
 
+              {isOpen && (
+                <QualifyFromInvoiceForm
+                  period={period}
+                  categories={categories}
+                  onAdded={(updated) => setPeriod(updated)}
+                  t={t}
+                />
+              )}
               {isOpen && (
                 <AddCostEntryForm
                   periodId={id}
@@ -194,6 +205,7 @@ function AddCostEntryForm({ periodId, categories, onAdded, t }) {
 
   return (
     <div className="mt-4 border-t border-surface-divider pt-4">
+      <p className="text-xs font-semibold text-muted-text mb-2">{t("costPool.title.manualEntry")}</p>
       {err && <p className="error-banner mb-2">{err}</p>}
       <div className="flex flex-wrap items-end gap-2">
         <div className="flex-1 min-w-[180px]">
@@ -215,6 +227,84 @@ function AddCostEntryForm({ periodId, categories, onAdded, t }) {
         </div>
         <Button variant="primary" size="sm" onClick={submit} disabled={saving || !categoryId || !amountChf}>
           {saving ? t("costPool.text.saving") : t("costPool.action.addCostEntry")}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// Qualify an incoming invoice as a building cost: pulls a real INCOMING invoice
+// into the cost pool (creates a CostEntry linked to it). The period defines the
+// building + dates, so building attribution is implicit.
+function QualifyFromInvoiceForm({ period, categories, onAdded, t }) {
+  const [invoices, setInvoices] = useState([]);
+  const [invoiceId, setInvoiceId] = useState("");
+  const [categoryId, setCategoryId] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState("");
+
+  useEffect(() => {
+    if (!period?.buildingId) return;
+    fetch(`/api/invoices?direction=INCOMING&buildingId=${period.buildingId}&view=summary`, { headers: authHeaders() })
+      .then((r) => r.json())
+      .then((j) => setInvoices(Array.isArray(j) ? j : j?.data || []))
+      .catch(() => {});
+  }, [period?.buildingId]);
+
+  const usedIds = new Set((period.costEntries || []).map((e) => e.sourceInvoiceId).filter(Boolean));
+  const available = invoices.filter((i) => !usedIds.has(i.id));
+  const selected = available.find((i) => i.id === invoiceId);
+
+  async function submit() {
+    if (!selected || !categoryId) return;
+    setSaving(true);
+    setErr("");
+    try {
+      const res = await fetch(`/api/billing-periods/${period.id}/cost-entries`, {
+        method: "POST",
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({
+          categoryId,
+          amountCents: Math.round((selected.totalAmount || 0) * 100),
+          sourceInvoiceId: selected.id,
+          note: selected.invoiceNumber || selected.description || null,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error?.message || "Failed");
+      onAdded(json.data);
+      setInvoiceId(""); setCategoryId("");
+    } catch (e) { setErr(e.message); } finally { setSaving(false); }
+  }
+
+  if (available.length === 0) return null;
+  return (
+    <div className="mt-4 border-t border-surface-divider pt-4">
+      <p className="text-xs font-semibold text-muted-text mb-2">{t("costPool.title.fromInvoice")}</p>
+      {err && <p className="error-banner mb-2">{err}</p>}
+      <div className="flex flex-wrap items-end gap-2">
+        <div className="flex-1 min-w-[240px]">
+          <label className="block text-xs font-medium text-muted-text mb-1">{t("costPool.col.sourceInvoice")}</label>
+          <select className="w-full border border-surface-border rounded-lg px-2 py-1.5 text-sm bg-surface" value={invoiceId} onChange={(e) => setInvoiceId(e.target.value)}>
+            <option value="">{t("costPool.text.selectInvoice")}</option>
+            {available.map((i) => (
+              <option key={i.id} value={i.id}>
+                {(i.invoiceNumber || i.id.slice(0, 8))} — {i.issuerName || i.recipientName || ""} — {formatChf(i.totalAmount)}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="flex-1 min-w-[180px]">
+          <label className="block text-xs font-medium text-muted-text mb-1">{t("costPool.col.category")}</label>
+          <select className="w-full border border-surface-border rounded-lg px-2 py-1.5 text-sm bg-surface" value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
+            <option value="">{t("costPool.text.selectCategory")}</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}{c.billability === "NON_BILLABLE" ? ` (${t("costPool.text.nonBillable")})` : ""}</option>
+            ))}
+          </select>
+        </div>
+        <Button variant="primary" size="sm" onClick={submit} disabled={saving || !invoiceId || !categoryId}>
+          {saving ? t("costPool.text.saving") : t("costPool.action.qualify")}
         </Button>
       </div>
     </div>

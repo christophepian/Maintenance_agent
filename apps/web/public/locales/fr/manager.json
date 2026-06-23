@@ -1,9 +1,9 @@
 {
   "costPool": {
-    "title": { "costPool": "Pool de charges", "summary": "Résumé", "costEntries": "Postes de coûts", "creditNote": "Note de crédit", "inspection": "Droit de regard", "supportingDocs": "Pièces justificatives", "docRequests": "Demandes de pièces" },
+    "title": { "costPool": "Pool de charges", "summary": "Résumé", "costEntries": "Postes de coûts", "creditNote": "Note de crédit", "inspection": "Droit de regard", "supportingDocs": "Pièces justificatives", "docRequests": "Demandes de pièces", "fromInvoice": "Qualifier depuis une facture entrante", "manualEntry": "Saisie manuelle" },
     "field": { "building": "Immeuble", "startDate": "Date de début", "endDate": "Date de fin", "adminFeePct": "Frais administratifs (%)", "status": "Statut", "adminFee": "Frais administratifs" },
     "col": { "totalCosts": "Coûts totaux", "billable": "Refacturable", "category": "Catégorie", "amount": "Montant", "note": "Note", "actions": "Actions", "sourceInvoice": "Facture source" },
-    "action": { "newPeriod": "Nouvelle période", "create": "Créer", "cancel": "Annuler", "close": "Clôturer", "reopen": "Rouvrir", "delete": "Supprimer", "addCostEntry": "Ajouter un poste", "autofill": "Remplir depuis le pool", "logDocRequest": "Enregistrer une demande", "fulfill": "Marquer traitée" },
+    "action": { "newPeriod": "Nouvelle période", "create": "Créer", "cancel": "Annuler", "close": "Clôturer", "reopen": "Rouvrir", "delete": "Supprimer", "addCostEntry": "Ajouter un poste", "autofill": "Remplir depuis le pool", "logDocRequest": "Enregistrer une demande", "fulfill": "Marquer traitée", "qualify": "Qualifier" },
     "status": { "open": "Ouverte", "closed": "Clôturée" },
     "text": {
       "loading": "Chargement…",
@@ -13,6 +13,8 @@
       "noCostEntries": "Aucun poste de coût.",
       "selectCategory": "Choisir une catégorie…",
       "selectPeriod": "Choisir une période…",
+      "selectInvoice": "Choisir une facture entrante…",
+      "fromInvoice": "depuis facture",
       "nonBillable": "non refacturable",
       "failedLoadBuildings": "Échec du chargement des immeubles.",
       "adminFeeHint": "Plafonné à 3%. Appliqué aux coûts refacturables du décompte.",
