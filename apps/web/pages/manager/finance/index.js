@@ -60,7 +60,7 @@ function HealthDot({ health }) {
   return (
     <span
       title={health}
-      className={cn("inline-block w-2.5 h-2.5 rounded-full shrink-0", HEALTH_DOT_CLASS[health] || "bg-slate-400")}
+      className={cn("inline-block w-2.5 h-2.5 rounded-full shrink-0", HEALTH_DOT_CLASS[health] || "bg-foreground-dim")}
     />
   );
 }

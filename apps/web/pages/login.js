@@ -546,7 +546,7 @@ export default function LoginPage() {
             {loading && <Spinner />}
             {loading ? t("login.sending") : t("login.sendSignInLink")}
           </button>
-          <p className="text-xs text-center text-slate-400 mt-4">
+          <p className="text-xs text-center text-foreground-dim mt-4">
             {t("login.oneClickHint")}
           </p>
         </form>

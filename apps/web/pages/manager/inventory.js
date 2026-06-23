@@ -76,7 +76,7 @@ function buildBuildingColumns(t) {
     render: (b) => {
       const h = b._financial?.health;
       if (!h) return <span className="text-foreground-dim">—</span>;
-      const dot = { green: "bg-green-500 ring-green-200", amber: "bg-amber-500 ring-amber-200", red: "bg-red-500 ring-red-200" }[h] ?? "bg-slate-400 ring-slate-200";
+      const dot = { green: "bg-green-500 ring-green-200", amber: "bg-amber-500 ring-amber-200", red: "bg-red-500 ring-red-200" }[h] ?? "bg-foreground-dim ring-slate-200";
       return (
         <span className={cn("inline-block h-2.5 w-2.5 rounded-full ring-2", dot)}>
           <span className="sr-only">{h}</span>
@@ -514,7 +514,7 @@ export default function ManagerInventoryPage() {
                 emptyState={<p className="text-sm text-muted">{t("manager:inventory.text.noBuildingsFound")}</p>}
                 mobileCard={(b) => {
                   const h = b._financial?.health;
-                  const dot = h ? ({ green: "bg-green-500 ring-green-200", amber: "bg-amber-500 ring-amber-200", red: "bg-red-500 ring-red-200" }[h] ?? "bg-slate-400 ring-slate-200") : null;
+                  const dot = h ? ({ green: "bg-green-500 ring-green-200", amber: "bg-amber-500 ring-amber-200", red: "bg-red-500 ring-red-200" }[h] ?? "bg-foreground-dim ring-slate-200") : null;
                   const n = b._financial?.netIncomeCents;
                   const r = b._financial?.collectionRate;
                   return (

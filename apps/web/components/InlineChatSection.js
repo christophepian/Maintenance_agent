@@ -34,9 +34,9 @@ function TypingIndicator() {
     <div className="flex justify-start">
       <div className="rounded-2xl rounded-bl-sm bg-surface-hover px-4 py-3">
         <div className="flex items-center gap-1">
-          <span className="h-1.5 w-1.5 rounded-full bg-slate-400 animate-bounce [animation-delay:-0.3s]" />
-          <span className="h-1.5 w-1.5 rounded-full bg-slate-400 animate-bounce [animation-delay:-0.15s]" />
-          <span className="h-1.5 w-1.5 rounded-full bg-slate-400 animate-bounce" />
+          <span className="h-1.5 w-1.5 rounded-full bg-foreground-dim animate-bounce [animation-delay:-0.3s]" />
+          <span className="h-1.5 w-1.5 rounded-full bg-foreground-dim animate-bounce [animation-delay:-0.15s]" />
+          <span className="h-1.5 w-1.5 rounded-full bg-foreground-dim animate-bounce" />
         </div>
       </div>
     </div>
