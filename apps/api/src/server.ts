@@ -367,9 +367,26 @@ const server = http.createServer(async (req: AuthedRequest, res) => {
     /* Parse URL + resolve org */
     const { path, query } = parseQuery(req.url);
 
-    /* T-03: Health endpoint — unauthenticated, used by Render/Vercel uptime probes.
-       Must be reachable without AUTH_SECRET, before org resolution, and never throw. */
+    /* T-03: Liveness probe — unauthenticated, used by Render's deploy health check.
+       LIVENESS ONLY: returns 200 as soon as the HTTP server is up, with NO external
+       dependency (no DB). Gating this on a DB round-trip made deploys time out when
+       the Supabase pgbouncer pool was slow/contended during the old↔new overlap.
+       Returns 503 only while shutting down so Render drains gracefully.
+       Readiness (incl. DB) lives at /readyz. */
     if ((path === "/health" || path === "/healthz") && req.method === "GET") {
+      sendJson(res, isShuttingDown ? 503 : 200, {
+        status: isShuttingDown ? "shutting_down" : "ok",
+        shuttingDown: isShuttingDown,
+        uptimeSeconds: Math.round(process.uptime()),
+        version: process.env.GIT_SHA || process.env.RENDER_GIT_COMMIT || "dev",
+        codeVersion: "2026-05-09-public-listings",
+      });
+      return;
+    }
+
+    /* Readiness probe — includes the DB check (was the old /health behaviour).
+       Use this for uptime/monitoring dashboards, not for the deploy health check. */
+    if (path === "/readyz" && req.method === "GET") {
       const startedAt = Date.now();
       let dbStatus: "connected" | "disconnected" = "disconnected";
       let dbLatencyMs: number | null = null;
@@ -381,15 +398,13 @@ const server = http.createServer(async (req: AuthedRequest, res) => {
       } catch {
         // fall through with disconnected
       }
-      const healthy = dbStatus === "connected" && !isShuttingDown;
-      sendJson(res, healthy ? 200 : 503, {
-        status: healthy ? "ok" : "degraded",
+      const ready = dbStatus === "connected" && !isShuttingDown;
+      sendJson(res, ready ? 200 : 503, {
+        status: ready ? "ready" : "degraded",
         db: dbStatus,
         dbLatencyMs,
         shuttingDown: isShuttingDown,
         uptimeSeconds: Math.round(process.uptime()),
-        version: process.env.GIT_SHA || process.env.RENDER_GIT_COMMIT || "dev",
-        codeVersion: "2026-05-09-public-listings",
         checkedInMs: Date.now() - startedAt,
       });
       return;
