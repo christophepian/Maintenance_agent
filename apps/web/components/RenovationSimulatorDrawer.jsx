@@ -18,6 +18,7 @@ import { createPortal } from "react-dom";
 import { X, Check, ArrowRight } from "lucide-react";
 import { cn } from "../lib/utils";
 import { authHeaders } from "../lib/api";
+import { useTheme } from "../hooks/useTheme";
 import Tooltip from "./Tooltip";
 
 // Plain-language glosses for the jargon controls (novice hand-holding)
@@ -156,9 +157,37 @@ function fmtMo(m) {
 
 // ── Chart component ───────────────────────────────────────────────────────────
 
+// Resolve the chart palette from the live CSS token layer so the canvas (which
+// cannot consume Tailwind classes) tracks the same light/dark tokens as the
+// rest of the app. `.dark` on <html> redefines these custom properties, so
+// reading them at draw time is the single source of truth for either theme.
+function readChartPalette() {
+  const root = typeof document !== "undefined" ? document.documentElement : null;
+  const isDark = !!root && root.classList.contains("dark");
+  const css = root ? getComputedStyle(root) : null;
+  const tok = (name, fallback) => {
+    const v = css?.getPropertyValue(name)?.trim();
+    return v || fallback;
+  };
+  return {
+    isDark,
+    // Series colours — kept distinct and high-contrast against the surface in
+    // both themes. "Act Now" is the hero line, so it tracks the foreground
+    // token (slate-900 / white); the dark slate-800 it used before was nearly
+    // invisible on the dark navy surface.
+    actNow:    isDark ? "#f1f5f9" : "#1e293b",
+    turnover:  tok("--color-warning-text", isDark ? "#fbbf24" : "#b45309"),
+    doNothing: isDark ? "#94a3b8" : "#94a3b8",
+    // Chrome — grid, axis ticks, legend text — all token-backed.
+    grid: tok("--color-surface-divider", "#f1f5f9"),
+    text: tok("--color-muted", "#64748b"),
+  };
+}
+
 function NpvChart({ nowYearly, turYearly, notYearly }) {
   const canvasRef = useRef(null);
   const chartRef  = useRef(null);
+  const { theme } = useTheme();
 
   useEffect(() => {
     let alive = true;
@@ -167,12 +196,14 @@ function NpvChart({ nowYearly, turYearly, notYearly }) {
       Chart.register(...registerables);
       if (chartRef.current) { chartRef.current.destroy(); chartRef.current = null; }
 
+      const c = readChartPalette();
+
       const datasets = [];
       datasets.push({
         label: "Act Now",
         data: nowYearly.map((d) => d.value),
-        borderColor: "#1e293b",
-        backgroundColor: "rgba(30,41,59,0.06)",
+        borderColor: c.actNow,
+        backgroundColor: "transparent",
         borderWidth: 2.5,
         tension: 0.3,
         fill: false,
@@ -182,8 +213,8 @@ function NpvChart({ nowYearly, turYearly, notYearly }) {
       datasets.push({
         label: "At Turnover",
         data: turYearly.map((d) => d.value),
-        borderColor: "#d97706",
-        backgroundColor: "rgba(217,119,6,0.06)",
+        borderColor: c.turnover,
+        backgroundColor: "transparent",
         borderWidth: 2,
         borderDash: [6, 3],
         tension: 0.3,
@@ -194,7 +225,7 @@ function NpvChart({ nowYearly, turYearly, notYearly }) {
       datasets.push({
         label: "Do Nothing",
         data: notYearly.map((d) => d.value),
-        borderColor: "#94a3b8",
+        borderColor: c.doNothing,
         backgroundColor: "transparent",
         borderWidth: 1.5,
         borderDash: [3, 3],
@@ -212,14 +243,15 @@ function NpvChart({ nowYearly, turYearly, notYearly }) {
           maintainAspectRatio: false,
           interaction: { mode: "index", intersect: false },
           plugins: {
-            legend: { position: "top", labels: { font: { size: 11 }, boxWidth: 16, padding: 12 } },
-            tooltip: { callbacks: { label: (c) => `${c.dataset.label}: ${fmtChf(c.parsed.y)}` } },
+            legend: { position: "top", labels: { color: c.text, font: { size: 11 }, boxWidth: 16, padding: 12 } },
+            tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${fmtChf(ctx.parsed.y)}` } },
           },
           scales: {
-            x: { grid: { color: "#f1f5f9" }, ticks: { font: { size: 10 } } },
+            x: { grid: { color: c.grid }, border: { color: c.grid }, ticks: { color: c.text, font: { size: 10 } } },
             y: {
-              grid: { color: "#f1f5f9" },
-              ticks: { font: { size: 10 }, callback: (v) => fmtChf(v) },
+              grid: { color: c.grid },
+              border: { color: c.grid },
+              ticks: { color: c.text, font: { size: 10 }, callback: (v) => fmtChf(v) },
             },
           },
         },
@@ -229,7 +261,7 @@ function NpvChart({ nowYearly, turYearly, notYearly }) {
       alive = false;
       if (chartRef.current) { chartRef.current.destroy(); chartRef.current = null; }
     };
-  }, [nowYearly, turYearly, notYearly]);
+  }, [nowYearly, turYearly, notYearly, theme]);
 
   return <canvas ref={canvasRef} />;
 }
@@ -613,13 +645,13 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId }
             <div className="mt-3 flex flex-wrap gap-4 text-xs text-foreground-dim">
               {result.breakevenNow != null && (
                 <span>
-                  <span className="inline-block h-0.5 w-3 rounded bg-slate-700 align-middle mr-1.5" />
+                  <span className="inline-block h-0.5 w-3 rounded bg-foreground align-middle mr-1.5" />
                   Act Now breaks even at <strong className="text-foreground">{fmtMo(result.breakevenNow)}</strong>
                 </span>
               )}
               {result.breakevenTur != null && (
                 <span>
-                  <span className="inline-block h-0.5 w-3 rounded bg-amber-500 align-middle mr-1.5" />
+                  <span className="inline-block h-0.5 w-3 rounded bg-warning-text align-middle mr-1.5" />
                   At Turnover breaks even at <strong className="text-foreground">{fmtMo(result.breakevenTur)}</strong>
                 </span>
               )}
