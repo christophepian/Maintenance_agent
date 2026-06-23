@@ -320,6 +320,55 @@ function BuildingPeriodAnalysis({ buildingId }) {
             )}
           </div>
 
+          {/* ── Recognition basis (accrued / billed / collected) ── */}
+          {(() => {
+            const rows = [
+              { key: "accrued",   label: "Accrued",   note: "recognized for the period", income: bf.projectedIncomeCents ?? 0,   expense: bf.expensesTotalCents ?? 0 },
+              { key: "billed",    label: "Billed",    note: "invoiced",                  income: bf.invoicedForPeriodCents ?? 0, expense: bf.billedExpenseCents ?? 0 },
+              { key: "collected", label: "Collected", note: "cash in / out",             income: bf.paidForPeriodCents ?? 0,     expense: bf.collectedExpenseCents ?? 0 },
+            ];
+            const anyValue = rows.some((r) => r.income !== 0 || r.expense !== 0);
+            if (!anyValue) return null;
+            return (
+              <div className="rounded-3xl border border-surface-border bg-surface p-5">
+                <div className="mb-1 flex items-center justify-between">
+                  <h2 className="text-base font-semibold text-foreground">Recognition basis</h2>
+                </div>
+                <p className="text-xs text-foreground-dim mb-4">
+                  The same period viewed three ways — what was <span className="font-medium text-muted-dark">accrued</span> (earned/incurred), what was <span className="font-medium text-muted-dark">billed</span> (invoiced), and what was <span className="font-medium text-muted-dark">collected</span> (cash). Gaps between rows reveal under/over-billing and arrears.
+                </p>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-xs text-foreground-dim border-b border-surface-border">
+                        <th className="text-left font-medium py-2">Basis</th>
+                        <th className="text-right font-medium py-2">Income</th>
+                        <th className="text-right font-medium py-2">Expenses</th>
+                        <th className="text-right font-medium py-2">Net</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rows.map((r) => {
+                        const net = r.income - r.expense;
+                        return (
+                          <tr key={r.key} className="border-b border-surface-divider last:border-0">
+                            <td className="py-2.5">
+                              <span className="font-medium text-foreground">{r.label}</span>
+                              <span className="ml-2 text-xs text-foreground-dim">{r.note}</span>
+                            </td>
+                            <td className="py-2.5 text-right tabular-nums text-muted-dark">{rFmtChf(r.income)}</td>
+                            <td className="py-2.5 text-right tabular-nums text-muted-dark">{rFmtChf(r.expense)}</td>
+                            <td className={cn("py-2.5 text-right tabular-nums font-semibold", net >= 0 ? "text-success-text" : "text-destructive-text")}>{rFmtChf(net)}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            );
+          })()}
+
           {/* ── Monthly NOI trendline (YTD only) ── */}
           {isYtd && monthly && monthly.length > 0 && (
             <div className="rounded-3xl border border-surface-border bg-surface p-5">

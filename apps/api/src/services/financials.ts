@@ -53,6 +53,15 @@ export interface BuildingFinancialsDTO {
    */
   recoverableAncillaryCents: number;
 
+  // ── Recognition basis (prototype) ────────────────────────────
+  // A clean accrued / billed / collected split so reporting distinguishes
+  // recognized vs invoiced vs cash, on one consistent basis (NOT tied to invoice
+  // workflow status). Income's three figures already exist as projectedIncome
+  // (accrued), invoicedForPeriod (billed) and paidForPeriod (collected); these
+  // add the two missing expense figures (accrued = expensesTotal).
+  billedExpenseCents: number;    // incoming costs invoiced (status ≠ DRAFT) by issue date
+  collectedExpenseCents: number; // incoming costs actually paid, by payment date
+
   // Income breakdown (projected, from lease terms)
   rentalIncomeCents: number;
   serviceChargeIncomeCents: number;
@@ -208,6 +217,10 @@ export async function getBuildingFinancials(
   if (from >= to)
     throw new ValidationError("'from' must be before 'to'.");
 
+  // 2a. Recognition-basis expense figures (billed / collected from incoming costs).
+  //     Cheap (two aggregates) and needed by both the cached and fresh returns.
+  const incomingCosts = await financialsRepo.aggregateIncomingCostsForBuilding(prisma, orgId, buildingId, from, to);
+
   // 2b. Check snapshot cache — bypass for any period that overlaps the current
   //     calendar month so live payments are always reflected without a force-refresh.
   const startOfCurrentMonth = new Date();
@@ -245,6 +258,8 @@ export async function getBuildingFinancials(
         netIncomeCents: cached.netIncomeCents,
         netOperatingIncomeCents: cached.netOperatingIncomeCents,
         recoverableAncillaryCents: 0, // already folded into cached expensesTotalCents
+        billedExpenseCents: incomingCosts.billedCents,
+        collectedExpenseCents: incomingCosts.collectedCents,
         rentalIncomeCents: 0,
         serviceChargeIncomeCents: 0,
         receivablesCents: 0,
@@ -444,6 +459,8 @@ export async function getBuildingFinancials(
     netIncomeCents,
     netOperatingIncomeCents,
     recoverableAncillaryCents,
+    billedExpenseCents: incomingCosts.billedCents,
+    collectedExpenseCents: incomingCosts.collectedCents,
     rentalIncomeCents: incomeBreakdown.rentalIncomeCents,
     serviceChargeIncomeCents: incomeBreakdown.serviceChargeIncomeCents,
     receivablesCents,
