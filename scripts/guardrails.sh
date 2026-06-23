@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Guardrail Enforcement Script
-# Runs locally (pre-commit) and in CI. Checks G8, F-UI4, F-UI4a, G9, G20, G3,
-# F-UI9, G18, G16, G17, G19, G21.
+# Runs locally (pre-commit) and in CI. Checks G8, F-UI4, F-UI4a, G9, G20, G22,
+# G3, F-UI9, G18, G16, G17, G19, G21.
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 set -euo pipefail
 
@@ -135,6 +135,30 @@ elif [ "$G20_CUR_FILES" -lt "$G20_BASELINE_FILES" ] || [ "$G20_CUR_LINES" -lt "$
   warn "G20: service Prisma debt decreased (files $G20_CUR_FILES≤$G20_BASELINE_FILES, calls $G20_CUR_LINES≤$G20_BASELINE_LINES) — lower the baselines in scripts/guardrails.sh to lock in the win."
 else
   pass "G20: no new direct Prisma access in services (baseline $G20_BASELINE_FILES files / $G20_BASELINE_LINES calls held)"
+fi
+
+# ─── G22: No NEW direct Prisma access in routes (layer-rule enforcement) ──
+# Architecture rule: routes are thin HTTP handlers — DB access goes through
+# workflows/services → repositories, never `prisma.*` directly (incl. the
+# router-injected `prisma` context param). ~41 calls across 5 files remain as
+# grandfathered debt (auth/cashflowPlans/conditionReports/correspondence/
+# sandbox). Same ratchet as G20: blocks any increase; lower the baselines as
+# routes are cleaned up. Goal: both → 0.
+echo ""
+echo "━━━ G22: Checking for new direct Prisma access in routes ━━━"
+G22_BASELINE_FILES=5
+G22_BASELINE_LINES=41
+G22_CUR_FILES=$(grep -rl 'prisma\.' "$ROOT/apps/api/src/routes" --include="*.ts" 2>/dev/null | wc -l | tr -d ' ')
+G22_CUR_LINES=$(grep -rho 'prisma\.' "$ROOT/apps/api/src/routes" --include="*.ts" 2>/dev/null | wc -l | tr -d ' ')
+if [ "$G22_CUR_FILES" -gt "$G22_BASELINE_FILES" ] || [ "$G22_CUR_LINES" -gt "$G22_BASELINE_LINES" ]; then
+  fail "G22: direct Prisma access in routes increased (files $G22_CUR_FILES vs baseline $G22_BASELINE_FILES, calls $G22_CUR_LINES vs baseline $G22_BASELINE_LINES)."
+  echo "    Routes must not call Prisma directly — move the query into a repository and reach it via a"
+  echo "    workflow/service. If you legitimately REMOVED calls, lower G22_BASELINE_FILES / G22_BASELINE_LINES"
+  echo "    in scripts/guardrails.sh to match."
+elif [ "$G22_CUR_FILES" -lt "$G22_BASELINE_FILES" ] || [ "$G22_CUR_LINES" -lt "$G22_BASELINE_LINES" ]; then
+  warn "G22: route Prisma debt decreased (files $G22_CUR_FILES≤$G22_BASELINE_FILES, calls $G22_CUR_LINES≤$G22_BASELINE_LINES) — lower the baselines in scripts/guardrails.sh to lock in the win."
+else
+  pass "G22: no new direct Prisma access in routes (baseline $G22_BASELINE_FILES files / $G22_BASELINE_LINES calls held)"
 fi
 
 # ─── G3 (light): Detect likely DTO/include mismatches ────────────────────
