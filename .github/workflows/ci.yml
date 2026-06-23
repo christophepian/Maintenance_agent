@@ -103,6 +103,13 @@ jobs:
         run: npx tsc --noEmit
         working-directory: apps/web
 
+      # ── G7-4c: Code-quality no-regression gate ──
+      # Fails the build if any metric (eslint_warn/any/console/tsc/suppress/...)
+      # regresses above docs/quality-baseline.json. Debt may only shrink; the
+      # baseline is lowered deliberately in the commit that burns it down.
+      - name: "G7: Code-quality regression gate (strict)"
+        run: bash scripts/code-quality-report.sh --strict
+
       # ── G7-5: Jest tests ──
       - name: "G7: Run Jest tests"
         run: npm test -- --ci --forceExit

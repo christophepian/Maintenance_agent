@@ -7,11 +7,18 @@
 # (`npm run quality:report`) or weekly by the code-quality routine, which
 # diffs the digest against the committed baseline and alerts on regression.
 #
-# Exit code is always 0 — this is a report, not a gate.
+# Exit code: 0 by default (report mode — used by the weekly alert routine).
+# With `--strict` (or QUALITY_STRICT=1) it becomes a GATE: exit 1 if any metric
+# regressed above docs/quality-baseline.json. CI runs it in strict mode so debt
+# can't grow silently; the weekly routine runs it report-only.
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
+
+STRICT=0
+[ "${QUALITY_STRICT:-0}" = "1" ] && STRICT=1
+for arg in "$@"; do [ "$arg" = "--strict" ] && STRICT=1; done
 
 API_SRC="apps/api/src"
 WEB_SRC="apps/web"
@@ -70,13 +77,20 @@ if [ -f "$BASELINE" ]; then
     const b=JSON.parse(fs.readFileSync(process.argv[1],"utf8")).metrics;
     const cur={eslint_err:+process.env.E,eslint_warn:+process.env.W,tsc:+process.env.T,any:+process.env.A,console:+process.env.C,todo:+process.env.D,suppress:+process.env.S,bigfiles:+process.env.B};
     const regressions=[];
-    for(const k of Object.keys(b)){ if(cur[k]>b[k]) regressions.push(`${k}: ${b[k]} -> ${cur[k]} (+${cur[k]-b[k]})`); }
+    for(const k of Object.keys(b)){ if(Number.isFinite(cur[k]) && cur[k]>b[k]) regressions.push(`${k}: ${b[k]} -> ${cur[k]} (+${cur[k]-b[k]})`); }
     if(regressions.length){
       console.log("\nQUALITY_ALERT REGRESSION DETECTED:");
       regressions.forEach(r=>console.log("  ⬆ "+r));
-      process.exit(0);
+      process.exit(2);
     } else {
       console.log("\nQUALITY_OK no regressions vs baseline ("+new Date().toISOString().slice(0,10)+")");
     }
-  ' "$BASELINE" 2>/dev/null || true
+  ' "$BASELINE"
+  RC=$?
+  if [ "$RC" -eq 2 ] && [ "$STRICT" -eq 1 ]; then
+    echo ""
+    echo "QUALITY GATE FAILED (strict mode): a metric regressed above docs/quality-baseline.json."
+    echo "Burn the debt back down, or update the baseline deliberately in the same commit."
+    exit 1
+  fi
 fi

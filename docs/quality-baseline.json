@@ -3,15 +3,16 @@
   "established": "2026-06-22",
   "metrics": {
     "eslint_err": 0,
-    "eslint_warn": 2380,
+    "eslint_warn": 2438,
     "tsc": 0,
-    "any": 695,
-    "console": 496,
+    "any": 730,
+    "console": 512,
     "todo": 4,
-    "suppress": 35,
+    "suppress": 36,
     "bigfiles": 14
   },
   "notes": {
+    "rebaselined_2026-06-23": "Re-baselined to main HEAD (post ancillary-v3 / levered-NPV / reporting-i18n epics). vs 2026-06-22: eslint_warn 2380->2438 (+58), any 695->730 (+35), console 496->512 (+16), suppress 35->36 (+1). All from feature code merged since the prior baseline. Accepted as the new floor, NOT silenced — burn-down notes below still stand. tsc was momentarily 1 (CONDITION_ORDINAL missing the NOT_INSPECTED enum key in conditionReportService.ts) and was FIXED in the same pass, held at 0. From this commit the strict gate (scripts/code-quality-report.sh --strict) runs in CI, so these numbers can only go down.",
     "rebaselined_2026-06-22": "Re-baselined to committed main HEAD 5d6eda8 (nebenkosten Phase 2). vs the initial 2026-06-22 baseline this added: any 685->695 (+10), console 489->496 (+7), eslint_warn 2362->2380 (+18), all from Phase 1+2 ancillary-cost code. Accepted as the new floor, NOT silenced — see the burn-down note on `any`/`console`.",
     "eslint_err": "Now 0 (the 2 rules-of-hooks bugs in billing-schedules.js + finance/expenses.js were fixed 2026-06-22). Keep it at 0 — rules-of-hooks is the one error-level React rule.",
     "tsc": "Report runs `prisma generate` before tsc (the generated client is gitignored); without it a fresh clone shows ~391 phantom 'no exported member' errors. Keep at 0.",

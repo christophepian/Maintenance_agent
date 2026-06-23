@@ -4,6 +4,7 @@ import * as repo from "../repositories/conditionReportRepository";
 // ── Condition ordering (lower = better) ───────────────────────────────────────
 
 const CONDITION_ORDINAL: Record<ItemCondition, number> = {
+  NOT_INSPECTED: -1,
   GOOD: 0,
   FAIR: 1,
   POOR: 2,
@@ -11,6 +12,9 @@ const CONDITION_ORDINAL: Record<ItemCondition, number> = {
 };
 
 export function isWorse(a: ItemCondition, b: ItemCondition): boolean {
+  // NOT_INSPECTED is the seeded default, not a quality grade — without a rating
+  // on both sides we can't claim deterioration, so never flag it as a delta.
+  if (a === "NOT_INSPECTED" || b === "NOT_INSPECTED") return false;
   return CONDITION_ORDINAL[a] > CONDITION_ORDINAL[b];
 }
 
