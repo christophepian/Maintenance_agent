@@ -1,298 +1,171 @@
 # Frontend Page Inventory
 
-Summary counts refreshed: 2026-06-23 · detailed per-page tables below are a 2026-05-04 snapshot (re-enumeration pending).
+> **Generated** 2026-06-23 by `scripts/gen-frontend-inventory.js` — do not hand-edit.
+> Re-run with `npm run inventory` after adding/removing pages.
 
 ---
 
-## Summary (counts as of 2026-06-23)
+## Summary
 
-| Persona | Page count |
-|---------|-----------|
-| manager | 53 |
+| Persona / area | UI pages |
+|---|---|
+| manager | 51 |
 | owner | 19 |
 | tenant | 11 |
+| (root) | 10 |
 | contractor | 9 |
-| root-level (login, index, set/reset-password, …) | 10 |
-| admin / admin-inventory | 3 |
-| other (sandbox, docs, etc.) | balance |
+| admin-inventory | 2 |
+| admin | 1 |
+| capture | 1 |
 
-**Totals:** 107 UI pages · 289 API proxy files (`apps/web/pages/api/`).
+**Totals:** 104 UI pages · 289 API proxy files (`apps/web/pages/api/`).
 
-> The per-persona archetype/empty-state/loading-state breakdown below was last fully audited 2026-05-04 (74 pages); treat it as historical until re-enumerated. Live totals are derived above.
+Empty-state / loading-state columns are heuristic (token/component grep), useful as a coverage signal, not a guarantee.
 
 ---
 
 ## Full Page List
 
-### Manager Pages (42)
+### manager (51)
 
-| Path | Type | Uses proxyToBackend | Has empty state | Last modified | Status |
-|------|------|--------------------|-----------------|----|--------|
-| /manager/index | UI — dashboard | N/A | yes | 2026-04-29 | active |
-| /manager/dashboard-v2 | UI — dashboard (prototype) | N/A | yes | 2026-04-29 | active |
-| /manager/requests | UI — list | N/A | yes | 2026-03-08 | active |
-| /manager/work-requests | UI — redirect | N/A | — | 2026-02-27 | active (→ /manager/requests) |
-| /manager/assets | UI — redirect | N/A | — | 2026-03-08 | active (→ /admin-inventory) |
-| /manager/properties | UI — redirect | N/A | — | 2026-03-08 | active (→ /admin-inventory) |
-| /manager/emails | UI — list | N/A | yes | 2026-03-04 | suspect (dev-only, not in prod nav) |
-| /manager/reports | UI — coming-soon | N/A | — | 2026-03-12 | active (coming-soon stub) |
-| /manager/inventory | UI — tabbed hub | N/A | yes | 2026-03-12 | active |
-| /manager/rfps | UI — list | N/A | yes | 2026-03-08 | active |
-| /manager/settings | UI — form | N/A | — | 2026-03-04 | active |
-| /manager/legal | UI — tabbed hub | N/A | yes | 2026-03-12 | active |
-| /manager/legal/depreciation | UI — list | N/A | yes | 2026-03-08 | active |
-| /manager/legal/evaluations | UI — list | N/A | yes | 2026-03-08 | active |
-| /manager/legal/mappings | UI — list | N/A | yes | 2026-03-06 | active |
-| /manager/legal/rules | UI — list | N/A | yes | 2026-03-08 | active |
-| /manager/finance/index | UI — tabbed hub | N/A | yes | 2026-03-12 | active |
-| /manager/finance/billing-entities | UI — list | N/A | yes (via component) | 2026-02-12 | active |
-| /manager/finance/charges | UI — list | N/A | yes | 2026-03-08 | active |
-| /manager/finance/expenses | UI — list | N/A | yes | 2026-03-08 | active |
-| /manager/finance/invoices | UI — list | N/A | yes | 2026-03-04 | active |
-| /manager/finance/ledger | UI — placeholder | N/A | — | 2026-02-08 | active (placeholder) |
-| /manager/finance/payments | UI — list | N/A | yes | 2026-03-08 | active |
-| /manager/leases/index | UI — list | N/A | yes | 2026-03-02 | active |
-| /manager/leases/[id] | UI — detail | N/A | yes | 2026-03-08 | active |
-| /manager/leases/templates | UI — list | N/A | yes | 2026-03-04 | active |
-| /manager/people/index | UI — tabbed hub | N/A | yes | 2026-03-12 | active |
-| /manager/people/tenants | UI — list | N/A | yes | 2026-03-09 | active |
-| /manager/people/tenants/[id] | UI — detail | N/A | yes | 2026-03-08 | active |
-| /manager/people/vendors | UI — list | N/A | yes | 2026-03-09 | active |
-| /manager/people/owners | UI — coming-soon | N/A | — | 2026-03-12 | active (coming-soon stub) |
-| /manager/people/vendors/[id] | UI — detail | N/A | yes | 2026-03-08 | active |
-| /manager/rental-applications/[applicationId] | UI — detail | N/A | yes | 2026-03-08 | active |
-| /manager/vacancies/index | UI — list | N/A | yes | 2026-03-04 | active |
-| /manager/vacancies/[unitId]/applications | UI — detail | N/A | yes | 2026-03-08 | active |
-| /manager/buildings/[id]/financials | UI — detail | N/A | yes | 2026-03-08 | active |
-| /manager/cashflow/index | UI — plan list | N/A | yes | 2026-04-01 | active |
-| /manager/cashflow/[id] | UI — plan detail + chart + overrides + RFP panel | N/A | yes | 2026-04-01 | active |
-| /manager/billing-schedules/index | UI — recurring billing schedule list | N/A | yes | 2026-04-03 | active |
-| /manager/billing-schedules/[id] | UI — billing schedule detail + lifecycle | N/A | yes | 2026-04-03 | active |
-| /manager/charge-reconciliations/index | UI — ACOMPTE reconciliation list | N/A | yes | 2026-04-03 | active |
-| /manager/charge-reconciliations/[id] | UI — reconciliation detail + lines | N/A | yes | 2026-04-03 | active |
-| /manager/rent-adjustments/index | UI — CPI/manual rent adjustment list | N/A | yes | 2026-04-03 | active |
-| /manager/rent-adjustments/[id] | UI — rent adjustment detail | N/A | yes | 2026-04-03 | active |
-| /manager/contractor-billing-schedules/index | UI — contractor recurring billing list + create | N/A | yes | 2026-04-03 | active |
-| /manager/contractor-billing-schedules/[id] | UI — contractor billing detail + lifecycle | N/A | yes | 2026-04-03 | active |
+| Route | Empty state | Loading state |
+|---|---|---|
+| /manager | — | yes |
+| /manager/assets | — | — |
+| /manager/billing-schedules | yes | yes |
+| /manager/buildings/[id]/financials | — | yes |
+| /manager/cashflow | — | — |
+| /manager/cashflow/[id] | yes | yes |
+| /manager/charge-reconciliations | yes | yes |
+| /manager/charge-reconciliations/[id] | — | yes |
+| /manager/condition-reports/[id] | — | yes |
+| /manager/contractor-billing-schedules | yes | yes |
+| /manager/contractor-billing-schedules/[id] | — | yes |
+| /manager/correspondence | yes | yes |
+| /manager/correspondence/[id] | — | yes |
+| /manager/correspondence/new | — | — |
+| /manager/dashboard-v2 | — | yes |
+| /manager/emails | yes | yes |
+| /manager/finance | yes | yes |
+| /manager/finance/billing-entities | — | — |
+| /manager/finance/billing-entities/[id] | yes | yes |
+| /manager/finance/billing-periods | yes | yes |
+| /manager/finance/billing-periods/[id] | yes | yes |
+| /manager/finance/charges | yes | yes |
+| /manager/finance/chart-of-accounts | yes | yes |
+| /manager/finance/expenses | — | yes |
+| /manager/finance/imports/[id] | — | yes |
+| /manager/finance/invoices | yes | yes |
+| /manager/finance/invoices/[id] | yes | yes |
+| /manager/finance/invoices/new | — | — |
+| /manager/finance/ledger | — | yes |
+| /manager/finance/payments | — | yes |
+| /manager/inventory | yes | yes |
+| /manager/leases | yes | yes |
+| /manager/leases/[id] | — | yes |
+| /manager/people | yes | yes |
+| /manager/people/owners/[id] | — | yes |
+| /manager/people/tenants | yes | yes |
+| /manager/people/tenants/[id] | — | yes |
+| /manager/people/vendors | yes | yes |
+| /manager/people/vendors/[id] | — | yes |
+| /manager/properties | — | — |
+| /manager/rent-adjustments | yes | yes |
+| /manager/rent-adjustments/[id] | — | yes |
+| /manager/rental-applications/[applicationId] | — | yes |
+| /manager/requests | yes | yes |
+| /manager/requests/[id] | yes | yes |
+| /manager/rfps | yes | yes |
+| /manager/rfps/[id] | yes | yes |
+| /manager/settings | yes | yes |
+| /manager/vacancies | yes | yes |
+| /manager/vacancies/[unitId]/applications | — | yes |
+| /manager/work-requests | — | — |
 
-### Contractor Pages (6)
+### owner (19)
 
-| Path | Type | Uses proxyToBackend | Has empty state | Last modified | Status |
-|------|------|--------------------|-----------------|----|--------|
-| /contractor/index | UI — dashboard | N/A | yes | 2026-03-04 | active |
-| /contractor/jobs | UI — list | N/A | yes | 2026-03-08 | active |
-| /contractor/jobs/[id] | UI — detail | N/A | yes | 2026-03-08 | active |
-| /contractor/invoices | UI — list | N/A | yes | 2026-03-08 | active |
-| /contractor/estimates | UI — placeholder | N/A | — | 2026-02-08 | active (coming soon) |
-| /contractor/status-updates | UI — redirect | N/A | — | 2026-03-08 | active (→ /contractor/jobs) |
+| Route | Empty state | Loading state |
+|---|---|---|
+| /owner | — | yes |
+| /owner/approvals | yes | yes |
+| /owner/billing-entities | — | — |
+| /owner/finance | yes | yes |
+| /owner/finance/invoices/[id] | yes | yes |
+| /owner/invoices | yes | yes |
+| /owner/jobs | yes | yes |
+| /owner/properties | yes | yes |
+| /owner/reporting | — | yes |
+| /owner/requests/[id] | yes | yes |
+| /owner/rfps | — | — |
+| /owner/rfps/[id] | yes | yes |
+| /owner/settings | yes | yes |
+| /owner/settings/strategy | — | yes |
+| /owner/strategy | — | — |
+| /owner/vacancies | — | — |
+| /owner/vacancies/[unitId]/candidates | — | yes |
+| /owner/vacancies/[unitId]/fill | — | yes |
+| /owner/work-requests | yes | yes |
 
-### Owner Pages (8)
+### tenant (11)
 
-| Path | Type | Uses proxyToBackend | Has empty state | Last modified | Status |
-|------|------|--------------------|-----------------|----|--------|
-| /owner/index | UI — dashboard | N/A | yes | 2026-04-29 | active |
-| /owner/approvals | UI — list | N/A | yes | 2026-03-04 | active |
-| /owner/invoices | UI — list | N/A | yes | 2026-03-08 | active |
-| /owner/jobs | UI — list | N/A | yes | 2026-03-02 | active |
-| /owner/billing-entities | UI — list | N/A | yes (via component) | 2026-02-12 | active |
-| /owner/vacancies | UI — list | N/A | yes | 2026-03-08 | active |
-| /owner/vacancies/[unitId]/candidates | UI — detail | N/A | yes | 2026-03-04 | active |
-| /owner/vacancies/[unitId]/fill | UI — wizard | N/A | yes | 2026-03-04 | active |
+| Route | Empty state | Loading state |
+|---|---|---|
+| /tenant/assets | — | — |
+| /tenant/condition-reports | yes | yes |
+| /tenant/condition-reports/[id] | — | yes |
+| /tenant/inbox | yes | yes |
+| /tenant/invoices/[id] | — | yes |
+| /tenant/leases/[id] | — | yes |
+| /tenant/letters | yes | yes |
+| /tenant/letters/[id] | — | yes |
+| /tenant/myhome | — | yes |
+| /tenant/requests | yes | yes |
+| /tenant/settings | — | — |
 
-### Tenant Pages (8)
+### (root) (10)
 
-| Path | Type | Uses proxyToBackend | Has empty state | Last modified | Status |
-|------|------|--------------------|-----------------|----|--------|
-| /tenant | UI — login | N/A | — | 2026-03-04 | active |
-| /tenant-form | UI — form | N/A | — | 2026-03-08 | active |
-| /tenant-chat | UI — chat | N/A | — | 2026-03-04 | active |
-| /tenant/inbox | UI — list | N/A | yes | 2026-03-08 | active |
-| /tenant/invoices | UI — list | N/A | yes | 2026-03-02 | active |
-| /tenant/leases/index | UI — list | N/A | yes | 2026-03-04 | active |
-| /tenant/leases/[id] | UI — detail | N/A | yes | 2026-03-04 | active |
-| /tenant/assets | UI — coming-soon | N/A | — | 2026-03-12 | active (coming-soon stub) |
+| Route | Empty state | Loading state |
+|---|---|---|
+| /apply | — | yes |
+| /index | — | — |
+| /listings | — | yes |
+| /login | — | yes |
+| /reset-password | — | yes |
+| /set-password | — | yes |
+| /tenant | — | — |
+| /tenant-chat | — | yes |
+| /tenant-dev-login | yes | yes |
+| /tenant-form | yes | yes |
 
-### Public / Shared Pages (8)
+### contractor (9)
 
-| Path | Type | Uses proxyToBackend | Has empty state | Last modified | Status |
-|------|------|--------------------|-----------------|----|--------|
-| /_app | framework | N/A | — | 2026-02-08 | active |
-| /index | hub | N/A | — | 2026-03-12 | active |
-| /login | UI — form | N/A | — | 2026-03-08 | active |
-| /apply | UI — wizard | N/A | yes | 2026-03-02 | active |
-| /listings | UI — list | N/A | yes | 2026-03-02 | active |
-| /admin-inventory | UI — list | N/A | yes | 2026-03-04 | active |
-| /admin-inventory/asset-models | UI — list | N/A | yes | 2026-03-04 | active |
-| /admin-inventory/buildings/index | UI — list | N/A | yes | 2026-03-08 | active |
-| /admin-inventory/buildings/[id] | UI — detail | N/A | yes | 2026-03-09 | active |
-| /admin-inventory/units/[id] | UI — detail | N/A | yes | 2026-03-07 | active |
+| Route | Empty state | Loading state |
+|---|---|---|
+| /contractor | — | yes |
+| /contractor/estimates | — | — |
+| /contractor/invoices | — | yes |
+| /contractor/jobs | yes | yes |
+| /contractor/jobs/[id] | — | yes |
+| /contractor/rfps | — | yes |
+| /contractor/rfps/[id] | — | yes |
+| /contractor/settings | — | — |
+| /contractor/status-updates | — | — |
 
----
+### admin-inventory (2)
 
-## Flagged Pages
+| Route | Empty state | Loading state |
+|---|---|---|
+| /admin-inventory/buildings/[id] | yes | yes |
+| /admin-inventory/units/[id] | yes | yes |
 
-### ⚠️ Suspect (Orphaned / Dev-only)
+### admin (1)
 
-| Page | Concern | Recommendation |
-|------|---------|----------------|
-| /manager/emails | Dev-only email outbox viewer — behind "Dev Tools" nav section, not visible in production | Guard with `DEV_IDENTITY_ENABLED` check or remove from production builds |
-| /manager/finance/ledger | Placeholder since 2026-02-08, no implementation | Implement or remove nav link |
-| /contractor/estimates | "Coming soon" stub since 2026-02-08 | Implement or hide from nav |
+| Route | Empty state | Loading state |
+|---|---|---|
+| /admin/users | yes | yes |
 
-### 🔁 Duplicates
+### capture (1)
 
-| Page A | Page B | Overlap | Recommendation |
-|--------|--------|---------|----------------|
-| /contractors (root) | /manager/people/vendors | ✅ **RESOLVED** — /contractors deleted, next.config.js redirect in place | — |
-| /manager/finance/billing-entities | /owner/billing-entities | Both wrap same `BillingEntityManager` component with different AppShell role | Acceptable — persona-specific wrapper |
-
-### 🔀 Redirect Pages (legacy aliases)
-
-| Source | Target | Notes |
-|--------|--------|-------|
-| /manager/assets | /admin-inventory | Legacy path |
-| /manager/properties | /admin-inventory | Legacy path |
-| /manager/operations/inventory | /admin-inventory | ✅ Moved to next.config.js redirect (page deleted) |
-| /manager/operations/contractors | /manager/people/vendors | ✅ Moved to next.config.js redirect (page deleted) |
-| /manager/operations/tenants | /manager/people/tenants | ✅ Moved to next.config.js redirect (page deleted) |
-| /manager/work-requests | /manager/requests | Preserved query params |
-| /contractor/status-updates | /contractor/jobs | Feature merged |
-
----
-
-## Proxy Standardization Audit
-
-### Infrastructure
-
-The shared proxy utility at `apps/web/lib/proxy.js` (`proxyToBackend`) handles all 5 checks:
-
-| Check | Status | How |
-|-------|--------|-----|
-| ① Uses proxyToBackend | ✅ baseline | — |
-| ② Forwards Authorization header | ✅ | Clones all request headers (strips host/connection) |
-| ③ Binary response handling | ✅ | Auto-detects `application/pdf` & `image/png`; also accepts `binary` option |
-| ④ Query param passthrough | ✅ | Splits URL at `?` and appends raw query string unchanged |
-| ⑤ Transparent error status codes | ✅ | `res.status(upstreamRes.status)` — all 4xx/5xx pass through |
-
-### Proxy Files Using `proxyToBackend` (127 of 127) — All Pass ✅
-
-All files using `proxyToBackend()` automatically pass all 5 checks. Patterns include:
-- **Simple passthrough** (~85 files): `proxyToBackend(req, res, "/path")`
-- **Dynamic ID routes** (~25 files): `proxyToBackend(req, res, "/path/" + req.query.id)`
-- **Catch-all routes** (5 files): Joins array segments from `[...id]`
-- **Binary-aware** (3 files): `proxyToBackend(req, res, path, { binary: true })`
-- **Custom headers** (4 files): Contractor routes inject `X-Dev-Role: CONTRACTOR`
-- **Multipart** (2 files): Uses `bodyParser: false` config + raw stream forwarding
-- **Transform proxy** (1 file): `requests/approve.js` — POST→PATCH with fixed body via `{ method: "PATCH" }` option
-- **Legacy compat** (1 file): `requests.js` — maps `text` → `description` in POST body before forwarding
-
-### ✅ Non-Conforming Proxy Files — All Resolved
-
-Migrated in frontend-debt-cleanup slice (2026-03-12):
-- `pages/api/requests.js` — was 97 lines → now 14 lines using `proxyToBackend`; preserves `text→description` compat
-- `pages/api/requests/approve.js` — was 58 lines → now 22 lines using `proxyToBackend` with `{ method: "PATCH" }`
-- `pages/api/work-requests.js` — was already conforming (6 lines, uses `proxyToBackend`)
-
-### Minor Observations
-
-- `pages/api/invoices.js` and `pages/api/invoices/index.js` both proxy to `/invoices` — Next.js resolves to the more specific one, but `invoices.js` is effectively dead code.
-
----
-
-## Page Archetypes
-
-| Archetype | Description | Example pages | Required elements |
-|-----------|-------------|---------------|-------------------|
-| **List page** | Fetches and displays a filterable collection | /manager/requests, /manager/leases/index, /manager/people/tenants, /contractor/jobs | Loading state, empty state, data table/cards, optional filters, optional action button |
-| **Detail page** | Shows a single entity with related data and actions | /manager/leases/[id], /contractor/jobs/[id], /manager/people/tenants/[id], /manager/people/vendors/[id] | Header with title, status badge, tabbed or sectioned content, action buttons, error/not-found state |
-| **Dashboard** | Summary metrics with quick-action links | /manager/index, /contractor/index, /owner/index | KPI stat cards, recent items list, quick-action buttons, collapsible sections |
-| **Wizard** | Multi-step form flow for complex creation | /apply (3-step rental), /owner/vacancies/[unitId]/fill | Step indicator, back/next navigation, per-step validation, progress persistence |
-| **Settings page** | CRUD for configuration values | /manager/settings | Form fields, save/cancel buttons, success/error feedback message |
-| **Hub page** | Navigation gateway to sub-pages | /manager/finance/index, /manager/people/index, /manager/legal | Card-grid or link-list to child routes, no data fetching |
-| **Redirect page** | Legacy URL alias → canonical path | /manager/work-requests, /manager/assets, /manager/properties | `router.replace()` on mount, preserves query params |
-| **Placeholder** | Stub for planned feature | /manager/reports, /manager/finance/ledger, /contractor/estimates, /tenant/assets | "Coming soon" or placeholder text, no data fetching |
-
-### Archetype Conformance
-
-#### List pages (expected: loading state + empty state + data rendering)
-
-| Page | Loading | Empty | Filters | Conforms |
-|------|---------|-------|---------|----------|
-| /manager/requests | ✅ | ✅ | ✅ status, search | ✅ |
-| /manager/leases/index | ✅ | ✅ | ❌ | ✅ |
-| /manager/leases/templates | ✅ | ✅ | ❌ | ✅ |
-| /manager/people/tenants | ✅ | ✅ | ✅ search | ✅ |
-| /manager/people/vendors | ✅ | ✅ | ✅ search | ✅ |
-| /manager/finance/charges | ✅ | ✅ | ✅ tabs | ✅ |
-| /manager/finance/expenses | ✅ | ✅ | ✅ category | ✅ |
-| /manager/finance/invoices | ✅ | ✅ | ✅ status | ✅ |
-| /manager/finance/payments | ✅ | ✅ | ✅ tabs | ✅ |
-| /manager/legal/rules | ✅ | ✅ | ❌ | ✅ |
-| /manager/legal/evaluations | ✅ | ✅ | ✅ obligation, category | ✅ |
-| /manager/legal/depreciation | ✅ | ✅ | ✅ search, type | ✅ |
-| /manager/legal/mappings | ✅ | ✅ | ❌ | ✅ |
-| /manager/rfps | ✅ | ✅ | ✅ status tabs | ✅ |
-| /manager/emails | ✅ | ✅ | ❌ | ✅ |
-| /manager/vacancies/index | ✅ | ✅ | ❌ | ✅ |
-| /contractor/jobs | ✅ | ✅ | ✅ status | ✅ |
-| /contractor/invoices | ✅ | ✅ | ✅ status | ✅ |
-| /owner/approvals | ✅ | ✅ | ❌ | ✅ |
-| /owner/invoices | ✅ | ✅ | ✅ status | ✅ |
-| /owner/jobs | ✅ | ✅ | ✅ status | ✅ |
-| /owner/vacancies | ✅ | ✅ | ❌ | ✅ |
-| /listings | ✅ | ✅ | ❌ | ✅ |
-
-**Result:** All list pages conform — every one has loading state + empty state.
-
-#### Detail pages (expected: header + sections + status + actions + not-found)
-
-| Page | Header | Sections | Status badge | Actions | Not-found | Conforms |
-|------|--------|----------|-------------|---------|-----------|----------|
-| /manager/leases/[id] | ✅ | ✅ tabs | ✅ | ✅ | ✅ | ✅ |
-| /manager/people/tenants/[id] | ✅ | ✅ tabs | ❌ | ✅ | ✅ | ⚠️ no status badge |
-| /manager/people/vendors/[id] | ✅ | ✅ tabs | ❌ | ✅ | ✅ | ⚠️ no status badge |
-| /contractor/jobs/[id] | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| /manager/rental-applications/[applicationId] | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| /admin-inventory/buildings/[id] | ✅ | ✅ tabs | ❌ | ✅ | ✅ | ⚠️ no status badge (entity has no status) |
-| /admin-inventory/units/[id] | ✅ | ✅ tabs | ✅ | ✅ | ✅ | ✅ |
-
-#### Dashboards (expected: KPIs + recent items + quick actions)
-
-| Page | KPI cards | Recent items | Quick actions | Conforms |
-|------|-----------|-------------|---------------|----------|
-| /manager/index | ✅ | ✅ | ✅ | ✅ |
-| /contractor/index | ✅ | ✅ | ✅ | ✅ |
-| /owner/index | ✅ | ✅ | ✅ | ✅ |
-
-#### Tabbed Hubs (expected: tab strip + inline data per tab + "Open full page →" link)
-
-Hub pages that render summary tables inline per tab instead of linking out to sub-pages.
-Pattern: `useState` for active tab, `useEffect` + `fetch` on mount, CSS component classes (`.tab-strip`, `.tab-btn`, `.tab-panel`, `.inline-table`, etc.) defined in `globals.css` `@layer components`, capped at ~20 rows with "View all →" overflow link.
-
-| Page | Tabs | All inline | Loading | Empty | Conforms |
-|------|------|-----------|---------|-------|----------|
-| /manager/requests | 4 (Overview, Active, Pending review, Completed) | ✅ | ✅ | ✅ | ✅ |
-| /manager/finance/index | 4 (Payments, Expenses, Charges, Invoices) | ✅ | ✅ | ✅ | ✅ |
-| /manager/leases/index | 4 (Active, Drafts, Templates, Archive) | ✅ | ✅ | ✅ | ✅ |
-| /manager/people/index | 3 (Tenants, Vendors, Owners) | ✅ (Owners = stub) | ✅ | ✅ | ✅ |
-| /manager/inventory | 4 (Buildings, Units, Assets, Depreciation) | ✅ | ✅ | ✅ | ✅ |
-| /manager/legal | 4 (Rules, Evaluations, Category mappings, Sources) | ✅ | ✅ | ✅ | ✅ |
-| /manager/settings | 4 (Organisation, Buildings, Notifications, Integrations) | ✅ (Notif/Integ = stubs) | ✅ | ✅ | ✅ |
-
----
-
-## Empty State Style Audit (Manager Pages)
-
-All manager list pages already implement empty states. Current styling approaches:
-
-| Pattern | Pages using it | Notes |
-|---------|---------------|-------|
-| CSS class `.empty-state` + `.empty-state-text` | All manager hub pages | Standard component class in globals.css |
-| Tailwind `className="text-sm text-slate-500"` | requests, rfps, emails | Lightweight inline text |
-| `Panel` wrapper + Tailwind text | depreciation, mappings | Wraps empty text in a Panel card |
-
-**Status:** All manager empty states standardized via `.empty-state` + `.empty-state-text` component classes (migrated from managerStyles.js, 2026-03-14).
-
----
-
-<!-- reviewed 2026-03-14 -->
+| Route | Empty state | Loading state |
+|---|---|---|
+| /capture/[token] | — | yes |

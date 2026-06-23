@@ -30,7 +30,8 @@
     "lint:report": "eslint . --format stylish || true",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "quality:report": "bash scripts/code-quality-report.sh"
+    "quality:report": "bash scripts/code-quality-report.sh",
+    "inventory": "node scripts/gen-frontend-inventory.js"
   },
   "dependencies": {
     "tailwindcss": "^4.1.18"
