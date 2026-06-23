@@ -1,21 +1,24 @@
 # Frontend Page Inventory
 
-Updated: 2026-05-04 (tenant conversation slice)
+Summary counts refreshed: 2026-06-23 · detailed per-page tables below are a 2026-05-04 snapshot (re-enumeration pending).
 
 ---
 
-## Summary
+## Summary (counts as of 2026-06-23)
 
-| Persona | Page count | API proxy count | Has empty state | Has loading state |
-|---------|-----------|-----------------|-----------------|-------------------|
-| manager | 42 | ~78 | Y | Y |
-| contractor | 6 | 4 | Y | Y |
-| tenant | 8 | ~14 | Y | Y |
-| owner | 8 | ~6 | Y | Y |
-| public | 2 | 2 | Y | Y |
-| shared/api | 8 | ~35 | — | — |
+| Persona | Page count |
+|---------|-----------|
+| manager | 53 |
+| owner | 19 |
+| tenant | 11 |
+| contractor | 9 |
+| root-level (login, index, set/reset-password, …) | 10 |
+| admin / admin-inventory | 3 |
+| other (sandbox, docs, etc.) | balance |
 
-**Totals:** 74 UI pages · 137 API proxy files
+**Totals:** 107 UI pages · 289 API proxy files (`apps/web/pages/api/`).
+
+> The per-persona archetype/empty-state/loading-state breakdown below was last fully audited 2026-05-04 (74 pages); treat it as historical until re-enumerated. Live totals are derived above.
 
 ---
 

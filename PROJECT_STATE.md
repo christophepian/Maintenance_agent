@@ -24,9 +24,15 @@ Safe to:
 
 ---
 
+🩺 **Doc-governance reconciliation (2026-06-23, per `docs/CRITICAL_AUDIT_2026-06-23.md`).** Refreshed derived counts to live values across PROJECT_OVERVIEW / PROJECT_STATE / SCHEMA_REFERENCE / copilot-instructions / ARCHITECTURE_LOW_CONTEXT_GUIDE (91 models · 78 enums · 120 migrations · 51 repos · 37 route modules · 317 API operations · 396 page files); `check-docs.js` count-consistency gate is green again. Corrected the stale `Request` "no orgId" gotcha (it has a direct `orgId` column since DT-114; `unitId` is now nullable). Re-scoped the styling claim from "no raw tokens remain" to a target with measured debt (~25 JSX files / ~67 raw `slate-*`/`bg-white` occurrences, ~29 files with inline `style={{}}`). Refreshed `docs/FRONTEND_INVENTORY.md` summary totals (107 UI pages · 289 proxies).
+> **Still open from the same audit (need a decision / scoped work, not yet actioned):**
+> - **Service-layer Prisma rule.** Docs state the service layer is "fully decoupled from Prisma," but ~219 direct `prisma.*` calls remain across ~28 service files (plus ~41 in 5 route files). The architecture rule "services never call Prisma" is therefore aspirational, not enforced. **Decision pending:** make it a hard guardrail (+ burndown) or formally soften it. No guardrail check for `services/**` Prisma access exists yet.
+> - **OpenAPI allowlist.** `KNOWN_UNSPECCED_ROUTES` ≈ 87 entries; no dev-only/public split and no regression budget.
+> - **Pre-GA security (deferred by design):** durable (Redis) rate limiting, CSP header, audit logging; `sandbox` still in the prod branch allowlist and sandbox routes registered in all envs.
+
 ✅ **Code-quality tooling — ESLint + Prettier (report-only) + weekly watchdog (2026-06-22).** First linter in the repo (quality previously rested on `tsc` + `scripts/guardrails.sh` only). ESLint 9 flat config (`eslint.config.mjs`) covers `apps/api` (TS) + `apps/web` (React); debt rules (`no-explicit-any`, `no-console`, `react-hooks/exhaustive-deps`, a11y) are `warn` and only genuine-bug rules (`rules-of-hooks`, `no-debugger`, `no-var`) are `error`, so it does **not** block commits/CI. New scripts: `lint` / `lint:fix` / `format` / `format:check` / `quality:report`. `scripts/code-quality-report.sh` emits a metric digest (runs `prisma generate` before `tsc`) and diffs against `docs/quality-baseline.json`, alerting on regression. Fixed the 2 `rules-of-hooks` bugs the config surfaced (`useMemo` called below an early return in `manager/billing-schedules.js` + `finance/expenses.js`). Baseline (main HEAD `5d6eda8`): eslint_err=0 · eslint_warn=2380 · tsc=0 · any=695 · console=496. A remote routine **weekly-code-quality** (`trig_01Uwzx…`, Mon 09:00 Zurich) runs the report and alerts on regression; validated end-to-end 2026-06-22. Commits `5d1da7a`, `805e630`. See [CONTRIBUTING.md](CONTRIBUTING.md) § Linting & formatting.
 
-✅ **Project stabilized, security-hardened, org-scoped, and UI-connected (2026-04-29).** 65 test suites · 980 tests, 0 TS errors. 91/94 audit findings resolved. Backend: ~73k LOC | Frontend: ~45k LOC | 291 API operations | 68 Prisma models | 78 enums | 120 migrations | 289 frontend pages | 28 workflows | 28 route modules. Strategy Engine & Capture Hardening epic complete. Responsive polish pass complete: dual-render pattern (F-UI9) applied to 18+ pages; `KpiInlineGrid` + `QuickLinksRail` components added; `Panel.jsx` header wrapping fixed; RFP deep-link navigation fixed. See [EPIC_HISTORY.md](EPIC_HISTORY.md) for full completion details.
+✅ **Project stabilized, security-hardened, org-scoped, and UI-connected (2026-04-29).** 65 test suites · 980 tests, 0 TS errors. 91/94 audit findings resolved. Backend: ~73k LOC | Frontend: ~45k LOC | 291 API operations | 91 Prisma models | 78 enums | 120 migrations | 289 frontend pages | 28 workflows | 28 route modules. Strategy Engine & Capture Hardening epic complete. Responsive polish pass complete: dual-render pattern (F-UI9) applied to 18+ pages; `KpiInlineGrid` + `QuickLinksRail` components added; `Panel.jsx` header wrapping fixed; RFP deep-link navigation fixed. See [EPIC_HISTORY.md](EPIC_HISTORY.md) for full completion details.
 
 ✅ **Tenant AI Chat + Agentic Asset Matching (2026-05-04).** ChatWidget fully wired end-to-end: tenant phone login → Claude conversation → `reportIssue` tool creates request with correct urgency. Three bugs fixed in session: (1) error display hidden on empty message list; (2) `urgency` field missing from Zod schema / repo / workflow — now flows from AI tool call through to DB; (3) asset auto-link was matching `SHOWER_CABIN_GLASS` via generic token "glass" for a window crack report. Replaced keyword scorer with AI-powered `resolveAssetWithAI()` (claude-3-5-haiku, ~$0.0005/call) — keyword fallback retained when AI unavailable or unit has ≤1 asset. New files: `services/aiClient.ts` (shared Anthropic client), `services/assetMatcher.ts` (asset resolution tool-use).
 
@@ -118,11 +124,11 @@ Remaining known limitation: OCR extracts amount and date reliably from phone pho
 | Migrations | 120 | prisma/migrations/ — derived |
 | Workflows | 32 | src/workflows/ — derived |
 | Repositories | 51 | src/repositories/ — derived (excl. index.ts) |
-| Route modules | 28 | src/routes/ — derived (excl. helpers.ts utility) |
+| Route modules | 37 | src/routes/ — derived (excl. helpers.ts utility) |
 | Backend LOC | ~91k | src/ (incl. tests) — derived |
 | Frontend LOC | ~64k | apps/web/ — derived |
-| Frontend pages | 381 | apps/web/pages/ — derived |
-| API operations | 291 | openapi.yaml operationId count — derived |
+| Frontend pages | 396 | apps/web/pages/ — derived (incl. api proxies) |
+| API operations | 317 | openapi.yaml operationId count — derived |
 | URL paths | 251 | openapi.yaml unique paths — derived |
 | Tests | 69 suites · 1085 tests | jest — derived |
 | Proxy conformance | 235 / 235 | apps/web/pages/api/ — derived |
