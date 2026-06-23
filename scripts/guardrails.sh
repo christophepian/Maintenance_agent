@@ -2,7 +2,7 @@
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Guardrail Enforcement Script
 # Runs locally (pre-commit) and in CI. Checks G8, F-UI4, F-UI4a, G9, G20, G3,
-# F-UI9, G18, G16, G17, G19.
+# F-UI9, G18, G16, G17, G19, G21.
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 set -euo pipefail
 
@@ -345,6 +345,26 @@ if [ -n "$G19_VIOL" ]; then
   echo "    (2026-06-18 incident: a stale-source re-sync silently reverted committed content.)"
 else
   pass "G19: all mirrored docs are identical"
+fi
+
+# ─── G21: Documentation freshness (counts consistent, links valid) ───────
+# Wires scripts/check-docs.js into the gate (was previously only run by hand via
+# `npm run blueprint`). Blocks if model/enum/migration counts disagree across
+# the canonical docs, a doc link is broken, or the "Do NOT" lists drift — the
+# exact staleness CRITICAL_AUDIT_2026-06-23 flagged. Fix: `npm run blueprint`
+# (auto-syncs PROJECT_STATE derived counts) then update the remaining docs.
+echo ""
+echo "━━━ G21: Checking documentation freshness (scripts/check-docs.js) ━━━"
+if [ -f "$ROOT/scripts/check-docs.js" ]; then
+  if node "$ROOT/scripts/check-docs.js" >/tmp/g21_check_docs.log 2>&1; then
+    pass "G21: docs consistent (counts + links + Do-NOT parity)"
+  else
+    fail "G21: documentation freshness check failed:"
+    grep -E '❌|inconsistent|broken|mismatch' /tmp/g21_check_docs.log | head -10 | while read -r line; do echo "    $line"; done
+    echo "    Run \`npm run blueprint\` then reconcile remaining docs; full output: node scripts/check-docs.js"
+  fi
+else
+  warn "G21: scripts/check-docs.js not found — skipping doc freshness check"
 fi
 
 # ─── Summary ─────────────────────────────────────────────────────────────

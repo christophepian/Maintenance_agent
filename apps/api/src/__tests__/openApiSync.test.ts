@@ -122,9 +122,27 @@ describe("OpenAPI spec ↔ Router sync", () => {
     expect(codeRoutes.size).toBeGreaterThan(50);
   });
 
-  // Routes registered in code but not yet documented in openapi.yaml.
-  // Track here so the sync test stays green while spec catches up.
-  const KNOWN_UNSPECCED_ROUTES = new Set<string>([
+  // ── Unspecced-route allowlist, split by intent (CRITICAL_AUDIT_2026-06-23) ──
+  //
+  // INTENTIONALLY_PRIVATE_ROUTES: dev/demo-only endpoints that must NEVER appear
+  // in the public OpenAPI spec. This set may grow (new dev tooling is fine).
+  //
+  // PUBLIC_UNSPECCED_ROUTES: public routes that SHOULD be in openapi.yaml but
+  // aren't yet. This is debt. A budget test below pins its size so it can only
+  // SHRINK — a new public route must be added to the spec, not parked here.
+  // To document a public route: add it to apps/api/openapi.yaml, delete it from
+  // this set, and lower PUBLIC_UNSPECCED_BUDGET to match.
+
+  const INTENTIONALLY_PRIVATE_ROUTES = new Set<string>([
+    // Dev-only impersonation endpoints — never exposed in the public spec
+    "GET /__dev/tenant-list",
+    "POST /__dev/tenant-login",
+    // Sandbox/demo provisioning — runtime-gated by SANDBOX_MODE, not public API
+    "POST /sandbox/setup",
+    "POST /sandbox/seed",
+  ]);
+
+  const PUBLIC_UNSPECCED_ROUTES = new Set<string>([
     // API-04: Strategy Engine routes (added 2026-04-16, spec pending)
     "POST /strategy/owner-profile",
     "GET /strategy/owner-profile/:ownerId",
@@ -151,9 +169,6 @@ describe("OpenAPI spec ↔ Router sync", () => {
     "GET /units/:id/unlinked-jobs",
     "PATCH /requests/:id/asset",
     "GET /strategy/owner-profile-current",
-    // DEV: Dev-only impersonation endpoints — never exposed in the public spec
-    "GET /__dev/tenant-list",
-    "POST /__dev/tenant-login",
     // API-09: Imported statements & owner people routes (added 2026-05, spec pending)
     "POST /imported-statements/upload",
     "GET /imported-statements/batch/:batchId",
@@ -182,7 +197,7 @@ describe("OpenAPI spec ↔ Router sync", () => {
     // API-10: NPV scenarios route (added 2026-05, spec pending)
     "GET /buildings/:id/npv-scenarios",
     // API-11: Routes added 2026-06 (correspondence, reporting timeseries, complaint patches,
-    //         renovation opportunities, sandbox, legal-sources, invoice swap — spec pending)
+    //         renovation opportunities, legal-sources, invoice swap — spec pending)
     "GET /correspondence/:id",
     "PATCH /correspondence/:id",
     "DELETE /correspondence/:id",
@@ -203,8 +218,6 @@ describe("OpenAPI spec ↔ Router sync", () => {
     "PATCH /requests/:id/resolution",
     "PATCH /requests/:id/type",
     "POST /requests/:id/warning-letter",
-    "POST /sandbox/setup",
-    "POST /sandbox/seed",
     // API-12: Base correspondence routes + tenant departure + NPV plan scenarios (added 2026-06, spec pending)
     "GET /correspondence",
     "POST /correspondence",
@@ -225,6 +238,49 @@ describe("OpenAPI spec ↔ Router sync", () => {
     "DELETE /tenant-portal/condition-reports/:id/items/:itemId/photos/:photoId",
     "GET /condition-report-photos/:photoId",
     "POST /tenant-portal/condition-reports/:id/submit",
+    // API-14: Ancillary costs / billing periods / charge reconciliation / credit
+    //         notes / mortgages + valuation (nebenkosten v3 + levered NPV epics,
+    //         added 2026-06, catalogued 2026-06-23 — these had silently fallen out
+    //         of sync; spec pending)
+    "GET /ancillary-cost-categories",
+    "POST /ancillary-cost-categories",
+    "PUT /ancillary-cost-categories/:id",
+    "POST /ancillary-cost-categories/seed",
+    "GET /billing-periods",
+    "POST /billing-periods",
+    "GET /billing-periods/:id",
+    "PUT /billing-periods/:id",
+    "POST /billing-periods/:id/cost-entries",
+    "DELETE /billing-periods/:id/cost-entries/:eid",
+    "POST /billing-periods/:id/qualify-invoice",
+    "GET /billing-periods/:id/apportionment/:lid",
+    "GET /charge-distribution",
+    "PUT /charge-distribution",
+    "GET /flat-rate",
+    "GET /unit-reconciliation",
+    "POST /unit-reconciliation/settle",
+    "GET /charge-reconciliations/:id/doc-requests",
+    "POST /charge-reconciliations/:id/doc-requests",
+    "POST /charge-reconciliations/:id/doc-requests/:rid/fulfill",
+    "GET /charge-reconciliations/:id/supporting-documents",
+    "POST /charge-reconciliations/:id/autofill",
+    "GET /credit-notes",
+    "GET /credit-notes/:id",
+    "GET /buildings/:id/mortgages",
+    "POST /buildings/:id/mortgages",
+    "PUT /mortgages/:id",
+    "DELETE /mortgages/:id",
+    "PUT /buildings/:id/valuation",
+  ]);
+
+  // Regression budget: the public-unspecced backlog may only shrink. Lower this
+  // each time a route graduates into openapi.yaml. (Audit 2026-06-23 baseline:
+  // 84 prior + 29 catalogued from the API-14 backfill = 113.)
+  const PUBLIC_UNSPECCED_BUDGET = 113;
+
+  const KNOWN_UNSPECCED_ROUTES = new Set<string>([
+    ...INTENTIONALLY_PRIVATE_ROUTES,
+    ...PUBLIC_UNSPECCED_ROUTES,
   ]);
 
   it("every code route has a spec entry", () => {
@@ -237,6 +293,21 @@ describe("OpenAPI spec ↔ Router sync", () => {
 
     expect(missing).toEqual([]);
     // If this fails, add the missing routes to apps/api/openapi.yaml
+  });
+
+  it("public-unspecced backlog does not grow beyond budget", () => {
+    // No net increase in public routes that bypass the spec. If this fails you
+    // added a public route to PUBLIC_UNSPECCED_ROUTES instead of openapi.yaml —
+    // document it in the spec, or (if it's genuinely dev/demo-only) move it to
+    // INTENTIONALLY_PRIVATE_ROUTES.
+    expect(PUBLIC_UNSPECCED_ROUTES.size).toBeLessThanOrEqual(PUBLIC_UNSPECCED_BUDGET);
+  });
+
+  it("private and public allowlists do not overlap", () => {
+    const overlap = [...INTENTIONALLY_PRIVATE_ROUTES].filter((r) =>
+      PUBLIC_UNSPECCED_ROUTES.has(r),
+    );
+    expect(overlap).toEqual([]);
   });
 
   it("every spec route has a code registration", () => {
