@@ -164,6 +164,14 @@ function buildBuildingWatchItems(bf, arrears, unitData, moveIns, moveOuts) {
   if (arrears?.overdue61plusCents > 0) items.push({ text: `${rFmtChf(arrears.overdue61plusCents)} overdue 61+ days — urgent tenant follow-up needed.`, severity: "red", action: { label: "View invoices", href: "/manager/finance/invoices" } });
   if (arrears?.overdue31to60Cents > 0) items.push({ text: `${rFmtChf(arrears.overdue31to60Cents)} overdue 31–60 days — send payment reminders.`, severity: "amber" });
   if (bf.collectionRate < 0.8 && bf.projectedIncomeCents > 0) items.push({ text: `Collection rate at ${rFmtPct(bf.collectionRate)} — below the 80% threshold. Review unpaid rent invoices.`, severity: "amber", action: { label: "View invoices", href: "/manager/finance/invoices" } });
+  // Unbilled rent = recognized (lease terms) − invoiced this period. Flag only a
+  // material gap (>10% and >CHF 200) so proration noise doesn't trigger it. This
+  // is the "earned but not yet invoiced" signal — distinct from arrears (invoiced
+  // but unpaid), which the collection-rate item above covers.
+  const unbilledCents = (bf.projectedIncomeCents ?? 0) - (bf.invoicedForPeriodCents ?? 0);
+  if (bf.projectedIncomeCents > 0 && unbilledCents > Math.max(20000, bf.projectedIncomeCents * 0.1)) {
+    items.push({ text: `${rFmtChf(unbilledCents)} of expected rent looks uninvoiced this period — verify billing is complete.`, severity: "amber", action: { label: "Review billing", href: "/manager/finance/invoices" } });
+  }
   const vacantUnits = (unitData ?? []).filter((u) => u.occupancyRate === 0);
   if (vacantUnits.length > 0) items.push({ text: `${vacantUnits.length} unit${vacantUnits.length > 1 ? "s" : ""} vacant (${vacantUnits.map((u) => `Unit ${u.unitNumber}`).join(", ")}).`, severity: "amber" });
   if (moveOuts?.length > 0) items.push({ text: `${moveOuts.length} tenant${moveOuts.length > 1 ? "s" : ""} moved out this period — re-letting in progress.`, severity: "violet" });
@@ -319,55 +327,6 @@ function BuildingPeriodAnalysis({ buildingId }) {
               />
             )}
           </div>
-
-          {/* ── Recognition basis (accrued / billed / collected) ── */}
-          {(() => {
-            const rows = [
-              { key: "accrued",   label: "Accrued",   note: "recognized for the period", income: bf.projectedIncomeCents ?? 0,   expense: bf.expensesTotalCents ?? 0 },
-              { key: "billed",    label: "Billed",    note: "invoiced",                  income: bf.invoicedForPeriodCents ?? 0, expense: bf.billedExpenseCents ?? 0 },
-              { key: "collected", label: "Collected", note: "cash in / out",             income: bf.paidForPeriodCents ?? 0,     expense: bf.collectedExpenseCents ?? 0 },
-            ];
-            const anyValue = rows.some((r) => r.income !== 0 || r.expense !== 0);
-            if (!anyValue) return null;
-            return (
-              <div className="rounded-3xl border border-surface-border bg-surface p-5">
-                <div className="mb-1 flex items-center justify-between">
-                  <h2 className="text-base font-semibold text-foreground">Recognition basis</h2>
-                </div>
-                <p className="text-xs text-foreground-dim mb-4">
-                  The same period viewed three ways — what was <span className="font-medium text-muted-dark">accrued</span> (earned/incurred), what was <span className="font-medium text-muted-dark">billed</span> (invoiced), and what was <span className="font-medium text-muted-dark">collected</span> (cash). Gaps between rows reveal under/over-billing and arrears.
-                </p>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="text-xs text-foreground-dim border-b border-surface-border">
-                        <th className="text-left font-medium py-2">Basis</th>
-                        <th className="text-right font-medium py-2">Income</th>
-                        <th className="text-right font-medium py-2">Expenses</th>
-                        <th className="text-right font-medium py-2">Net</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {rows.map((r) => {
-                        const net = r.income - r.expense;
-                        return (
-                          <tr key={r.key} className="border-b border-surface-divider last:border-0">
-                            <td className="py-2.5">
-                              <span className="font-medium text-foreground">{r.label}</span>
-                              <span className="ml-2 text-xs text-foreground-dim">{r.note}</span>
-                            </td>
-                            <td className="py-2.5 text-right tabular-nums text-muted-dark">{rFmtChf(r.income)}</td>
-                            <td className="py-2.5 text-right tabular-nums text-muted-dark">{rFmtChf(r.expense)}</td>
-                            <td className={cn("py-2.5 text-right tabular-nums font-semibold", net >= 0 ? "text-success-text" : "text-destructive-text")}>{rFmtChf(net)}</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            );
-          })()}
 
           {/* ── Monthly NOI trendline (YTD only) ── */}
           {isYtd && monthly && monthly.length > 0 && (

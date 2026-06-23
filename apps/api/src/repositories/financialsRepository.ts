@@ -155,38 +155,6 @@ export async function getArrearsAging(
   };
 }
 
-/**
- * Recognition-basis expense figures for a building, from INCOMING (cost) invoices.
- * - billed: invoiced (status ≠ DRAFT), by issue date in window.
- * - collected: actually paid, by payment date in window.
- * Mirrors the accrued figure (ledger INVOICE_ISSUED) used elsewhere; together they
- * give the accrued / billed / collected trio. Building scope covers both directly
- * attributed invoices and maintenance-job invoices.
- */
-export async function aggregateIncomingCostsForBuilding(
-  prisma: PrismaClient,
-  orgId: string,
-  buildingId: string,
-  from: Date,
-  to: Date,
-): Promise<{ billedCents: number; collectedCents: number }> {
-  const buildingScope = [
-    { buildingId },
-    { job: { request: { unit: { buildingId } } } },
-  ];
-  const [billed, collected] = await Promise.all([
-    prisma.invoice.aggregate({
-      where: { orgId, direction: "INCOMING", status: { not: "DRAFT" }, issueDate: { gte: from, lte: endOfDayUTC(to) }, OR: buildingScope },
-      _sum: { totalAmount: true },
-    }),
-    prisma.invoice.aggregate({
-      where: { orgId, direction: "INCOMING", status: "PAID", paidAt: { gte: from, lte: endOfDayUTC(to) }, OR: buildingScope },
-      _sum: { totalAmount: true },
-    }),
-  ]);
-  return { billedCents: billed._sum.totalAmount ?? 0, collectedCents: collected._sum.totalAmount ?? 0 };
-}
-
 /** Sum of rent payments received (bank debit on INVOICE_PAID) for a building in a period. */
 export async function aggregateLedgerIncome(
   prisma: PrismaClient,

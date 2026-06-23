@@ -151,9 +151,6 @@ describe("reporting surfaces ventilated charges (WS3)", () => {
     const bf = await getBuildingFinancials(orgId, buildingId, { from: "2027-01-01", to: "2027-12-31", forceRefresh: true });
     expect(bf.recoverableAncillaryCents).toBe(100000);
     expect(bf.expensesTotalCents).toBeGreaterThanOrEqual(100000);
-    // Recognition-basis figures are wired (accrued/billed/collected expense).
-    expect(typeof bf.billedExpenseCents).toBe("number");
-    expect(typeof bf.collectedExpenseCents).toBe("number");
 
     const units = await getUnitFinancialSummaries(orgId, buildingId, "2027-01-01", "2027-12-31");
     const unitA = units.find((u) => u.unitId === unitAId)!;
