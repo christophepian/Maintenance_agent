@@ -21,6 +21,7 @@ import {
   addCostEntry,
   getBuildingDistribution,
 } from "../services/ancillaryReconciliationService";
+import { getBuildingFinancials, getUnitFinancialSummaries } from "../services/financials";
 
 const prisma = new PrismaClient();
 
@@ -134,6 +135,25 @@ describe("CONSUMPTION → surface fallback (WS4)", () => {
     expect(line.distributionKey).toBe("SURFACE_AREA");
     expect(line.actualShareCents).toBe(60000); // 60/100 surface share
     expect(line.requiresManual).toBe(false);
+  });
+});
+
+describe("reporting surfaces ventilated charges (WS3)", () => {
+  it("building financials expose recoverableAncillaryCents; per-unit summaries apportion", async () => {
+    const cats = await listCategories(orgId);
+    const elec = cats.find((c) => c.code === "COMMON_ELECTRICITY")!; // SURFACE_AREA
+    // Window after the leases' 2026 start so they count as active participants.
+    const period = await createPeriod(orgId, { buildingId, startDate: "2027-01-01", endDate: "2027-12-31" });
+    await addCostEntry(orgId, period.id, { categoryId: elec.id, amountCents: 100000 });
+
+    const bf = await getBuildingFinancials(orgId, buildingId, { from: "2027-01-01", to: "2027-12-31", forceRefresh: true });
+    expect(bf.recoverableAncillaryCents).toBe(100000);
+    expect(bf.expensesTotalCents).toBeGreaterThanOrEqual(100000);
+
+    const units = await getUnitFinancialSummaries(orgId, buildingId, "2027-01-01", "2027-12-31");
+    const unitA = units.find((u) => u.unitId === unitAId)!;
+    expect(unitA.apportionedChargesCents).toBe(60000); // 60/100 surface share
+    expect(unitA.expensesCents).toBeGreaterThanOrEqual(60000);
   });
 });
 

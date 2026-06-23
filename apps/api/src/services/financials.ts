@@ -364,16 +364,20 @@ export async function getBuildingFinancials(
   const chargeEntries = await billingPeriodRepo.findChargeCostEntriesForBuildingWindow(
     prisma, orgId, buildingId, from, endOfDayUTC(to),
   );
-  let recoverableAncillaryCents = 0;
+  let recoverableAncillaryCents = 0;     // gross ventilated charges (for display)
+  let chargesAlreadyInLedgerCents = 0;   // portion double-represented as a ledger expense
   for (const e of chargeEntries) {
-    if (e.sourceInvoiceId && ledgerInvoiceIdSet.has(e.sourceInvoiceId)) continue; // already in ledger
     const d = e.sourceInvoice?.issueDate ?? e.sourceInvoice?.createdAt ?? null;
     if (d && (d < from || d > endOfDayUTC(to))) continue; // outside the window
     recoverableAncillaryCents += e.amountCents;
+    if (e.sourceInvoiceId && ledgerInvoiceIdSet.has(e.sourceInvoiceId)) {
+      chargesAlreadyInLedgerCents += e.amountCents;
+    }
   }
-  // Fold charges into the expense total (operating, never capex) before deriving
-  // KPIs and persisting the snapshot.
-  expensesTotalCents += recoverableAncillaryCents;
+  // Fold only the charges NOT already posted to the ledger into the expense total
+  // (operating, never capex) so nothing is double-counted; the gross figure stays
+  // exposed for display. Done before deriving KPIs and persisting the snapshot.
+  expensesTotalCents += recoverableAncillaryCents - chargesAlreadyInLedgerCents;
 
   // 10. Derived totals and KPIs
   const operatingTotalCents = expensesTotalCents - capexTotalCents;
@@ -1361,6 +1365,8 @@ export interface UnitFinancialSummaryDTO {
   projectedIncomeCents: number;
   earnedIncomeCents:    number;
   expensesCents:        number;
+  /** Apportioned recoverable-charge share from the cost pool, included in expensesCents. */
+  apportionedChargesCents: number;
   netIncomeCents:       number;
   collectionRate:       number;
   occupancyRate:        number; // 0 or 1 per unit (vacant / occupied)
@@ -1454,7 +1460,7 @@ export async function getUnitFinancialSummaries(
     if (row.unitId) expensesByUnit[row.unitId] = row._sum.debitCents ?? 0;
   }
 
-  // Active leases (for tenant name + occupancy)
+  // Active leases (for tenant name + occupancy + charge apportionment)
   const activeLeases = await prisma.lease.findMany({
     where: {
       unitId: { in: unitIds },
@@ -1463,20 +1469,41 @@ export async function getUnitFinancialSummaries(
       OR: [{ endDate: null }, { endDate: { gte: from } }],
     },
     select: {
+      id: true,
       unitId: true,
       tenantName: true,
     },
     distinct: ["unitId"],
   });
-  const leaseByUnit: Record<string, { tenantName: string | null }> = {};
+  const leaseByUnit: Record<string, { id: string; tenantName: string | null }> = {};
   for (const l of activeLeases) {
-    if (l.unitId) leaseByUnit[l.unitId] = { tenantName: l.tenantName };
+    if (l.unitId) leaseByUnit[l.unitId] = { id: l.id, tenantName: l.tenantName };
+  }
+
+  // Apportioned recoverable-charge share per unit (cost pool). Charges are
+  // building-level, so they never appear in the per-unit ledger above; without
+  // this the "By unit" view shows none of the ventilated Nebenkosten. We use the
+  // billing period overlapping the window (same basis as the unit page).
+  const apportionedByUnit: Record<string, number> = {};
+  const chargePeriod = await billingPeriodRepo.findBillingPeriodOverlappingWindow(prisma, orgId, buildingId, from, to);
+  if (chargePeriod) {
+    const { apportionForLease } = await import("./ancillaryReconciliationService");
+    await Promise.all(
+      Object.entries(leaseByUnit).map(async ([unitId, lease]) => {
+        try {
+          const a = await apportionForLease(orgId, chargePeriod.id, lease.id);
+          apportionedByUnit[unitId] = a.totalActualCostsCents;
+        } catch { /* no apportionable charges for this unit */ }
+      }),
+    );
   }
 
   return units.map((u) => {
     const projected = projectedByUnit[u.id] ?? 0;
     const earned    = earnedByUnit[u.id]    ?? 0;
-    const expenses  = expensesByUnit[u.id]  ?? 0;
+    const ledgerExp = expensesByUnit[u.id]  ?? 0;
+    const charges   = apportionedByUnit[u.id] ?? 0;
+    const expenses  = ledgerExp + charges; // charges fold into expenses, mirroring the building total
     const occupied  = !!leaseByUnit[u.id];
     return {
       unitId:               u.id,
@@ -1486,6 +1513,7 @@ export async function getUnitFinancialSummaries(
       projectedIncomeCents: projected,
       earnedIncomeCents:    earned,
       expensesCents:        expenses,
+      apportionedChargesCents: charges,
       netIncomeCents:       earned - expenses,
       collectionRate:       projected > 0 ? Math.min(1, earned / projected) : 0,
       occupancyRate:        occupied ? 1 : 0,
@@ -1800,7 +1828,7 @@ export async function getUnitPeriodReport(
     if (activeLease) {
       const unitRow = await prisma.unit.findFirst({ where: { id: unitId, orgId }, select: { buildingId: true } });
       if (unitRow?.buildingId) {
-        const period = await billingPeriodRepo.findBillingPeriodForDate(prisma, orgId, unitRow.buildingId, to);
+        const period = await billingPeriodRepo.findBillingPeriodOverlappingWindow(prisma, orgId, unitRow.buildingId, from, to);
         if (period) {
           const { apportionForLease } = await import("./ancillaryReconciliationService");
           const apportion = await apportionForLease(orgId, period.id, activeLease.id);

@@ -169,6 +169,26 @@ export async function findBillingPeriodForDate(
 }
 
 /**
+ * The most recent billing period for a building that overlaps the window
+ * [from, to] (startDate ≤ to AND endDate ≥ from). Overlap-based (not point-in-
+ * range) so a period ending at midnight on the window's last day still matches a
+ * report whose `to` is end-of-day. Used by per-unit reporting apportionment.
+ */
+export async function findBillingPeriodOverlappingWindow(
+  prisma: PrismaClient,
+  orgId: string,
+  buildingId: string,
+  from: Date,
+  to: Date,
+) {
+  return prisma.billingPeriod.findFirst({
+    where: { orgId, buildingId, startDate: { lte: to }, endDate: { gte: from } },
+    include: BILLING_PERIOD_INCLUDE,
+    orderBy: { startDate: "desc" },
+  });
+}
+
+/**
  * Billable cost-pool entries for a building whose billing period overlaps the
  * report window [from, to]. Carries the source invoice's date so reporting can
  * scope to the window precisely and de-dupe against ledger entries by invoice.

@@ -77,7 +77,7 @@ const RANGES = [
 
 const PREVIEW_UNITS = 5;
 
-function UnitRow({ unitNumber, floor, tenantName, earned, expenses, net, collectionRate, occupancyRate }) {
+function UnitRow({ unitNumber, floor, tenantName, earned, expenses, charges, net, collectionRate, occupancyRate }) {
   const netPositive = net >= 0;
   const label = floor ? `Unit ${unitNumber} (fl. ${floor})` : `Unit ${unitNumber}`;
   const sub   = tenantName || (occupancyRate === 1 ? "Occupied" : "Vacant");
@@ -96,9 +96,15 @@ function UnitRow({ unitNumber, floor, tenantName, earned, expenses, net, collect
           <div className="text-xs text-foreground-dim">Expenses</div>
           <div className="text-sm font-medium text-muted-dark">{rFmtChf(expenses)}</div>
         </div>
+        {charges > 0 && (
+          <div className="hidden md:block">
+            <div className="text-xs text-foreground-dim">Charges</div>
+            <div className="text-sm font-medium text-muted-dark" title="Apportioned recoverable charges (Nebenkosten)">{rFmtChf(charges)}</div>
+          </div>
+        )}
         <div>
           <div className="text-xs text-foreground-dim">Net</div>
-          <div className={cn("text-sm font-semibold", netPositive ? "text-green-700" : "text-red-600")}>{rFmtChf(net)}</div>
+          <div className={cn("text-sm font-semibold", netPositive ? "text-success-text" : "text-destructive-text")}>{rFmtChf(net)}</div>
         </div>
         <div className="hidden md:block">
           <div className="text-xs text-foreground-dim">Collection</div>
@@ -287,6 +293,7 @@ function BuildingPeriodAnalysis({ buildingId }) {
               <p className="mt-2 text-sm leading-6 text-muted-text max-w-2xl">
                 {earned > 0 ? <>Rent collected: <span className="font-semibold text-foreground">{rFmtChf(earned)}</span>. </> : ""}
                 {expenses > 0 ? <>Operating costs: <span className="font-semibold text-foreground">{rFmtChf(expenses)}</span>. </> : ""}
+                {bf.recoverableAncillaryCents > 0 ? <>Recoverable charges: <span className="font-semibold text-foreground">{rFmtChf(bf.recoverableAncillaryCents)}</span>. </> : ""}
                 {bf.totalUnitsCount > 0 ? <>{bf.activeUnitsCount} of {bf.totalUnitsCount} units leased.</> : ""}
               </p>
               <button onClick={() => setKpiOpen((v) => !v)} className="mt-4 flex items-center gap-1.5 text-sm font-medium text-foreground/60 hover:text-foreground transition-colors">
@@ -419,7 +426,7 @@ function BuildingPeriodAnalysis({ buildingId }) {
             </div>
             {unitData.length === 0
               ? <p className="text-sm text-muted italic">No units found.</p>
-              : <div className="space-y-2">{visibleUnits.map((u) => <UnitRow key={u.unitId} unitNumber={u.unitNumber} floor={u.floor} tenantName={u.tenantName} earned={u.earnedIncomeCents} expenses={u.expensesCents} net={u.netIncomeCents} collectionRate={u.collectionRate} occupancyRate={u.occupancyRate} />)}</div>}
+              : <div className="space-y-2">{visibleUnits.map((u) => <UnitRow key={u.unitId} unitNumber={u.unitNumber} floor={u.floor} tenantName={u.tenantName} earned={u.earnedIncomeCents} expenses={u.expensesCents} charges={u.apportionedChargesCents} net={u.netIncomeCents} collectionRate={u.collectionRate} occupancyRate={u.occupancyRate} />)}</div>}
           </div>
 
           {/* ── Occupancy movements ── */}
