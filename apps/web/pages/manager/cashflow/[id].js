@@ -113,22 +113,22 @@ function CashflowChart({ buckets, hasOpeningBalance }) {
         {/* Y-axis gridlines */}
         {[0.25, 0.5, 0.75, 1].map((frac) => (
           <g key={frac}>
-            <line x1={ML} y1={midY - (ch / 2 - 6) * frac} x2={W - MR} y2={midY - (ch / 2 - 6) * frac} stroke="rgb(241 245 249)" strokeWidth="1" />
-            <line x1={ML} y1={midY + (ch / 2 - 6) * frac} x2={W - MR} y2={midY + (ch / 2 - 6) * frac} stroke="rgb(241 245 249)" strokeWidth="1" />
+            <line x1={ML} y1={midY - (ch / 2 - 6) * frac} x2={W - MR} y2={midY - (ch / 2 - 6) * frac} className="stroke-surface-divider" strokeWidth="1" />
+            <line x1={ML} y1={midY + (ch / 2 - 6) * frac} x2={W - MR} y2={midY + (ch / 2 - 6) * frac} className="stroke-surface-divider" strokeWidth="1" />
           </g>
         ))}
-        <text x={ML - 4} y={MT + 12} textAnchor="end" fontSize="9" fill="rgb(148 163 184)">{formatChfCents(maxVal)}</text>
-        <text x={ML - 4} y={H - MB - 4} textAnchor="end" fontSize="9" fill="rgb(148 163 184)">{formatChfCents(-maxVal)}</text>
+        <text x={ML - 4} y={MT + 12} textAnchor="end" fontSize="9" className="fill-foreground-dim">{formatChfCents(maxVal)}</text>
+        <text x={ML - 4} y={H - MB - 4} textAnchor="end" fontSize="9" className="fill-foreground-dim">{formatChfCents(-maxVal)}</text>
 
         {/* Zero line */}
-        <line x1={ML} y1={midY} x2={W - MR} y2={midY} stroke="rgb(226 232 240)" strokeWidth="1" />
+        <line x1={ML} y1={midY} x2={W - MR} y2={midY} className="stroke-surface-border" strokeWidth="1" />
 
         {/* Historical / projected divider */}
         {lastActualIdx >= 0 && lastActualIdx < buckets.length - 1 && (
           <line
             x1={xSlot(lastActualIdx + 1)} y1={MT}
             x2={xSlot(lastActualIdx + 1)} y2={H - MB}
-            stroke="rgb(148 163 184)" strokeWidth="1" strokeDasharray="4,2"
+            className="stroke-muted" strokeWidth="1" strokeDasharray="4,2"
           />
         )}
 
@@ -140,25 +140,25 @@ function CashflowChart({ buckets, hasOpeningBalance }) {
           const cH = Math.max(0, toH(b.scheduledCapexCents));
           return (
             <g key={i} onMouseEnter={() => setHovered(i)} onMouseLeave={() => setHovered(null)}>
-              {hovered === i && <rect x={xSlot(i)} y={MT} width={slotW} height={ch} fill="rgb(248 250 252)" />}
-              {iH > 0 && <rect x={x} y={midY - iH} width={barW} height={iH} fill={b.isActual ? "rgb(22 163 74)" : "rgb(134 239 172)"} />}
-              {oH > 0 && <rect x={x} y={midY} width={barW} height={oH} fill={b.isActual ? "rgb(220 38 38)" : "rgb(252 165 165)"} />}
-              {cH > 0 && <rect x={x} y={midY + oH} width={barW} height={cH} fill="rgb(245 158 11)" />}
+              {hovered === i && <rect x={xSlot(i)} y={MT} width={slotW} height={ch} className="fill-surface-hover" />}
+              {iH > 0 && <rect x={x} y={midY - iH} width={barW} height={iH} className={b.isActual ? "fill-green-600" : "fill-green-400"} />}
+              {oH > 0 && <rect x={x} y={midY} width={barW} height={oH} className={b.isActual ? "fill-red-600" : "fill-red-400"} />}
+              {cH > 0 && <rect x={x} y={midY + oH} width={barW} height={cH} className="fill-amber-500" />}
             </g>
           );
         })}
 
         {/* Balance line */}
         {balancePoints && (
-          <polyline points={balancePoints} fill="none" stroke="rgb(59 130 246)" strokeWidth="1.5" strokeLinejoin="round" />
+          <polyline points={balancePoints} fill="none" className="stroke-blue-500" strokeWidth="1.5" strokeLinejoin="round" />
         )}
 
         {/* X-axis */}
-        <line x1={ML} y1={H - MB} x2={W - MR} y2={H - MB} stroke="rgb(226 232 240)" strokeWidth="1" />
+        <line x1={ML} y1={H - MB} x2={W - MR} y2={H - MB} className="stroke-surface-border" strokeWidth="1" />
         {buckets.map((b, i) => {
           if (i % labelEvery !== 0) return null;
           return (
-            <text key={i} x={xSlot(i) + slotW / 2} y={H - MB + 14} textAnchor="middle" fontSize="9" fill="rgb(148 163 184)">
+            <text key={i} x={xSlot(i) + slotW / 2} y={H - MB + 14} textAnchor="middle" fontSize="9" className="fill-foreground-dim">
               {MONTHS[b.month - 1]} {b.year}
             </text>
           );
@@ -172,28 +172,28 @@ function CashflowChart({ buckets, hasOpeningBalance }) {
             {fmtMonth(hovB.year, hovB.month)}
             <span className="ml-2 font-normal text-foreground-dim">{hovB.isActual ? "Actual" : "Projected"}</span>
           </div>
-          <div className="flex justify-between gap-4 text-green-700">
+          <div className="flex justify-between gap-4 text-success-text">
             <span>{t("manager:cashflowId.text.income")}</span><span className="font-mono">{formatChfCents(hovB.projectedIncomeCents)}</span>
           </div>
-          <div className="flex justify-between gap-4 text-red-600">
+          <div className="flex justify-between gap-4 text-destructive-text">
             <span>{t("manager:cashflowId.text.opEx")}</span><span className="font-mono">{formatChfCents(hovB.projectedOpexCents)}</span>
           </div>
           {hovB.scheduledCapexCents > 0 && (
-            <div className="flex justify-between gap-4 text-amber-600">
+            <div className="flex justify-between gap-4 text-warning-text">
               <span>{t("manager:cashflowId.text.capEx")}</span><span className="font-mono">{formatChfCents(hovB.scheduledCapexCents)}</span>
             </div>
           )}
           <div className="border-t border-surface-divider mt-1.5 pt-1.5 flex justify-between gap-4 font-semibold">
-            <span className={hovB.netCents >= 0 ? "text-green-700" : "text-red-600"}>{t("manager:cashflowId.text.net")}</span>
-            <span className={cn("font-mono", hovB.netCents >= 0 ? "text-green-700" : "text-red-600")}>
+            <span className={hovB.netCents >= 0 ? "text-success-text" : "text-destructive-text"}>{t("manager:cashflowId.text.net")}</span>
+            <span className={cn("font-mono", hovB.netCents >= 0 ? "text-success-text" : "text-destructive-text")}>
               {formatChfCents(hovB.netCents)}
             </span>
           </div>
           {hovB.capexItems?.length > 0 && (
             <div className="mt-1.5 pt-1.5 border-t border-surface-divider space-y-0.5">
               {hovB.capexItems.slice(0, 4).map((ci, j) => (
-                <div key={j} className="flex justify-between gap-4 text-amber-700">
-                  <span className="truncate" className="max-w-[96px]">{ci.assetName}</span>
+                <div key={j} className="flex justify-between gap-4 text-warning-text">
+                  <span className="truncate max-w-[96px]">{ci.assetName}</span>
                   <span className="font-mono">{formatChfCents(ci.costCents)}</span>
                 </div>
               ))}
@@ -206,12 +206,12 @@ function CashflowChart({ buckets, hasOpeningBalance }) {
       {/* Legend */}
       <div className="flex flex-wrap gap-4 mt-3 text-xs text-muted">
         <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-sm bg-green-600" />Income (actual)</span>
-        <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-sm bg-green-300" />Income (projected)</span>
-        <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-sm bg-red-500" />OpEx (actual)</span>
-        <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-sm bg-red-300" />OpEx (projected)</span>
-        <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-sm bg-amber-400" />{t("manager:cashflowId.text.capEx")}</span>
+        <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-sm bg-green-400" />Income (projected)</span>
+        <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-sm bg-red-600" />OpEx (actual)</span>
+        <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-sm bg-red-400" />OpEx (projected)</span>
+        <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-sm bg-amber-500" />{t("manager:cashflowId.text.capEx")}</span>
         {hasOpeningBalance && <span className="flex items-center gap-1.5"><span className="inline-block w-5 h-0.5 bg-blue-500" />{t("manager:cashflowId.text.cumulativeBalance")}</span>}
-        {lastActualIdx >= 0 && <span className="flex items-center gap-1.5"><span className="inline-block w-5 h-px border-t border-dashed border-slate-400" />{t("manager:cashflowId.text.historicalProjected")}</span>}
+        {lastActualIdx >= 0 && <span className="flex items-center gap-1.5"><span className="inline-block w-5 h-px border-t border-dashed border-muted" />{t("manager:cashflowId.text.historicalProjected")}</span>}
       </div>
     </div>
   );
