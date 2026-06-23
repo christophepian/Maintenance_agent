@@ -9,6 +9,7 @@ import Panel from "../../../../components/layout/Panel";
 import Badge from "../../../../components/ui/Badge";
 import { invoiceVariant, ingestionVariant } from "../../../../lib/statusVariants";
 import { authHeaders } from "../../../../lib/api";
+import { cn } from "../../../../lib/utils";
 import { withServerTranslations } from "../../../../lib/i18n";
 import { useTranslation } from "next-i18next";
 
@@ -735,6 +736,18 @@ export default function InvoiceDetailPage() {
                 {inv.status !== "PAID" && inv.direction === "INCOMING" && (
                   <Panel title="Cost classification">
                     <div className="space-y-4">
+                      {/* Persistent confirmation of what's recorded on the invoice */}
+                      {inv.costNature && (
+                        <div className="flex items-start gap-2 rounded-lg border border-success-ring bg-success-light px-3 py-2 text-xs text-success-text">
+                          <span aria-hidden>✓</span>
+                          <span>
+                            Saved as <strong>{inv.costNature === "CHARGE" ? "Recoverable charge" : "Direct cost"}</strong>
+                            {inv.costNature === "CHARGE" && inv.ancillaryCategory ? ` · ${inv.ancillaryCategory.name}` : ""}
+                            {inv.buildingId ? ` · ${buildings.find((b) => b.id === inv.buildingId)?.name || "building set"}` : ""}
+                            {inv.costNature === "DIRECT" && inv.unitId ? ` · unit ${units.find((u) => u.id === inv.unitId)?.unitNumber || "set"}` : ""}.
+                          </span>
+                        </div>
+                      )}
                       {/* Step 1 — nature gates everything below */}
                       <div>
                         <label className="block text-xs font-medium text-muted mb-1.5">What is this cost?</label>
@@ -747,14 +760,14 @@ export default function InvoiceDetailPage() {
                               key={opt.v}
                               type="button"
                               onClick={() => setCostNature(opt.v)}
-                              className={
-                                "text-left rounded-lg border px-3 py-2 transition " +
-                                (costNature === opt.v
-                                  ? "border-blue-500 bg-blue-50 ring-1 ring-blue-500"
-                                  : "border-surface-border bg-surface hover:bg-surface-subtle")
-                              }
+                              className={cn(
+                                "text-left rounded-lg border px-3 py-2 transition",
+                                costNature === opt.v
+                                  ? "border-brand bg-brand-light ring-1 ring-brand-ring"
+                                  : "border-surface-border bg-surface hover:bg-surface-subtle",
+                              )}
                             >
-                              <span className="block text-sm font-medium text-foreground">{opt.label}</span>
+                              <span className={cn("block text-sm font-medium", costNature === opt.v ? "text-brand-dark" : "text-foreground")}>{opt.label}</span>
                               <span className="block text-xs text-muted mt-0.5">{opt.hint}</span>
                             </button>
                           ))}
@@ -843,7 +856,7 @@ export default function InvoiceDetailPage() {
                           {attributionSaving ? "Saving…" : "Save classification"}
                         </button>
                         {attributionMsg && (
-                          <span className={attributionMsg.type === "ok" ? "text-sm text-green-600 font-medium" : "text-sm text-red-600 font-medium"}>
+                          <span className={attributionMsg.type === "ok" ? "text-sm text-success-text font-medium" : "text-sm text-destructive-text font-medium"}>
                             {attributionMsg.type === "ok" ? "✓ " : "✗ "}{attributionMsg.text}
                           </span>
                         )}
@@ -894,7 +907,7 @@ export default function InvoiceDetailPage() {
                           {attributionSaving ? "Saving…" : "Save attribution"}
                         </button>
                         {attributionMsg && (
-                          <span className={attributionMsg.type === "ok" ? "text-sm text-green-600 font-medium" : "text-sm text-red-600 font-medium"}>
+                          <span className={attributionMsg.type === "ok" ? "text-sm text-success-text font-medium" : "text-sm text-destructive-text font-medium"}>
                             {attributionMsg.type === "ok" ? "✓ " : "✗ "}{attributionMsg.text}
                           </span>
                         )}
