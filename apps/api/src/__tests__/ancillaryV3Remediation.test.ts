@@ -55,6 +55,8 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  await prisma.ledgerEntry.deleteMany({ where: { orgId } }).catch(() => {});
+  await prisma.account.deleteMany({ where: { orgId } }).catch(() => {});
   await prisma.costEntry.deleteMany({ where: { billingPeriod: { orgId } } }).catch(() => {});
   await prisma.billingPeriod.deleteMany({ where: { orgId } }).catch(() => {});
   await prisma.buildingChargeDistribution.deleteMany({ where: { orgId } }).catch(() => {});
@@ -154,6 +156,29 @@ describe("reporting surfaces ventilated charges (WS3)", () => {
     const unitA = units.find((u) => u.unitId === unitAId)!;
     expect(unitA.apportionedChargesCents).toBe(60000); // 60/100 surface share
     expect(unitA.expensesCents).toBeGreaterThanOrEqual(60000);
+  });
+});
+
+describe("ledger backfill on re-attribution (WS3 direct-cost gap)", () => {
+  it("backfills a posted ledger entry's unit/building when attribution is set after posting", async () => {
+    const account = await prisma.account.create({ data: { orgId, name: "V3 Test Expense", accountType: "EXPENSE" } });
+    const inv = await createInvoice({ orgId, amount: 300, vatRate: 0, direction: "INCOMING", description: "Repair posted then attributed", issueDate: new Date("2028-03-01T00:00:00.000Z") });
+    // Simulate the invoice having been posted (approved) with NO attribution yet.
+    await prisma.ledgerEntry.create({
+      data: { orgId, date: new Date("2028-03-01T00:00:00.000Z"), accountId: account.id, debitCents: 30000, creditCents: 0, description: "Repair expense", journalId: "v3-test-journal", sourceType: "INVOICE_ISSUED", sourceId: inv.id, unitId: null, buildingId: null },
+    });
+
+    // Classify as a DIRECT cost on unit A after the fact.
+    await updateInvoice(inv.id, { buildingId, unitId: unitAId, costNature: "DIRECT" });
+
+    const entry = await prisma.ledgerEntry.findFirst({ where: { sourceId: inv.id } });
+    expect(entry?.unitId).toBe(unitAId);
+    expect(entry?.buildingId).toBe(buildingId);
+
+    // It now shows as unit A's expense in the building's per-unit breakdown.
+    const units = await getUnitFinancialSummaries(orgId, buildingId, "2028-01-01", "2028-12-31");
+    const unitA = units.find((u) => u.unitId === unitAId)!;
+    expect(unitA.expensesCents).toBeGreaterThanOrEqual(30000);
   });
 });
 

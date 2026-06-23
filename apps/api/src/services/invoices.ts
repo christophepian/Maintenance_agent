@@ -816,6 +816,32 @@ export async function updateInvoice(
     return invoice;
   });
 
+  // Keep the ledger (and cost pool) in sync when attribution/classification changes
+  // on an already-posted invoice. Posting captured the building/unit at issue time;
+  // a later change must backfill those columns, or reporting scoped by unitId/
+  // buildingId reads zero for the newly-attributed unit. See ANCILLARY_COSTS_V3.
+  const attributionChanged = params.buildingId !== undefined || params.unitId !== undefined;
+  const natureChanged = params.costNature !== undefined || params.ancillaryCategoryId !== undefined;
+  if (attributionChanged || natureChanged) {
+    const isCharge = (updated as any).costNature === 'CHARGE';
+    await prisma.ledgerEntry.updateMany({
+      where: { orgId: existing.orgId, sourceId: invoiceId, sourceType: { in: ['INVOICE_ISSUED', 'INVOICE_PAID'] } },
+      data: {
+        ...(params.buildingId !== undefined && { buildingId: params.buildingId }),
+        // A recoverable charge is building-level — clear any unit on its ledger legs.
+        ...(isCharge ? { unitId: null } : params.unitId !== undefined ? { unitId: params.unitId } : {}),
+      },
+    });
+    // If an already-approved invoice is (re)classified as a charge, make sure its
+    // cost-pool entry exists (the approval-time bridge ran before classification).
+    if (isCharge && (updated as any).status === 'APPROVED') {
+      const { bridgeChargeInvoiceToCostPool } = await import('./ancillaryReconciliationService');
+      bridgeChargeInvoiceToCostPool(existing.orgId, invoiceId).catch((e) =>
+        console.error('[ANCILLARY] post-hoc charge bridge failed', e),
+      );
+    }
+  }
+
   return mapInvoiceToDTO(updated);
 }
 
