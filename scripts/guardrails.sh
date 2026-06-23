@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Guardrail Enforcement Script
-# Runs locally (pre-commit) and in CI. Checks G8, F-UI4, F-UI4a, G9, G3,
+# Runs locally (pre-commit) and in CI. Checks G8, F-UI4, F-UI4a, G9, G20, G3,
 # F-UI9, G18, G16, G17, G19.
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 set -euo pipefail
@@ -110,6 +110,31 @@ if [ -n "$G9_HITS" ]; then
   fi
 else
   pass "No ad-hoc include trees in routes"
+fi
+
+# ─── G20: No NEW direct Prisma access in services (ARCH-1 enforcement) ────
+# Architecture rule: services contain domain logic only; all DB access routes
+# through repositories. ~219 direct `prisma.*` calls across 28 service files
+# remain as grandfathered debt (the ARCH-1 epic was declared complete but
+# regressed — see CRITICAL_AUDIT_2026-06-23). This ratchet BLOCKS any increase:
+# no new prisma-using service file AND no new prisma.* call in an existing one.
+# Burndown: when you remove calls, LOWER the baselines below so the ratchet
+# tightens. Goal: both → 0, at which point flip this to a zero-tolerance check.
+echo ""
+echo "━━━ G20: Checking for new direct Prisma access in services ━━━"
+G20_BASELINE_FILES=28
+G20_BASELINE_LINES=219
+G20_CUR_FILES=$(grep -rl 'prisma\.' "$ROOT/apps/api/src/services" --include="*.ts" 2>/dev/null | wc -l | tr -d ' ')
+G20_CUR_LINES=$(grep -rho 'prisma\.' "$ROOT/apps/api/src/services" --include="*.ts" 2>/dev/null | wc -l | tr -d ' ')
+if [ "$G20_CUR_FILES" -gt "$G20_BASELINE_FILES" ] || [ "$G20_CUR_LINES" -gt "$G20_BASELINE_LINES" ]; then
+  fail "G20: direct Prisma access in services increased (files $G20_CUR_FILES vs baseline $G20_BASELINE_FILES, calls $G20_CUR_LINES vs baseline $G20_BASELINE_LINES)."
+  echo "    Services must not call Prisma directly — add the query to a repository (apps/api/src/repositories/)"
+  echo "    and call it from the service. If you legitimately REMOVED calls, lower G20_BASELINE_FILES /"
+  echo "    G20_BASELINE_LINES in scripts/guardrails.sh to match the new (lower) count."
+elif [ "$G20_CUR_FILES" -lt "$G20_BASELINE_FILES" ] || [ "$G20_CUR_LINES" -lt "$G20_BASELINE_LINES" ]; then
+  warn "G20: service Prisma debt decreased (files $G20_CUR_FILES≤$G20_BASELINE_FILES, calls $G20_CUR_LINES≤$G20_BASELINE_LINES) — lower the baselines in scripts/guardrails.sh to lock in the win."
+else
+  pass "G20: no new direct Prisma access in services (baseline $G20_BASELINE_FILES files / $G20_BASELINE_LINES calls held)"
 fi
 
 # ─── G3 (light): Detect likely DTO/include mismatches ────────────────────

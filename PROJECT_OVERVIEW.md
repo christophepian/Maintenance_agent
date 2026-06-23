@@ -37,7 +37,7 @@ routes → workflows → services → repositories → Prisma → PostgreSQL
 
 - **Routes** — thin HTTP handlers. Parse input, call workflow, return response. No business logic.
 - **Workflows** — orchestration. Delegate to services, emit domain events, own status transitions.
-- **Services** — domain logic. No raw Prisma calls.
+- **Services** — domain logic. No raw Prisma calls (enforced by guardrail **G20**: a ratchet blocks any increase in service-layer `prisma.*` usage above the grandfathered baseline; existing debt burns down over time).
 - **Repositories** — canonical Prisma access. Exported include constants only.
 - **transitions.ts** — all status transition rules. Nowhere else.
 
