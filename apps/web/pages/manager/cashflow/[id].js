@@ -30,8 +30,8 @@ const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov
 
 const STATUS_BADGE = {
   DRAFT: "bg-surface-hover text-muted-text",
-  SUBMITTED: "bg-blue-100 text-blue-700",
-  APPROVED: "bg-green-100 text-green-700",
+  SUBMITTED: "bg-info-light text-info-text",
+  APPROVED: "bg-success-light text-success-text",
 };
 
 const STALE_THRESHOLD_MS = 7 * 24 * 60 * 60 * 1000;
@@ -238,7 +238,7 @@ function StrategyOverlayPanel({ overlay }) {
         <div className="flex items-center gap-3">
           <button
             onClick={() => setExpanded(!expanded)}
-            className="text-xs text-indigo-600 hover:text-indigo-800 font-medium transition-colors"
+            className="text-xs text-brand-dark hover:opacity-80 font-medium transition-colors"
             aria-label={expanded ? "Collapse strategy details" : "Expand strategy details"}
           >
             {expanded ? "Hide details ▴" : "Show details ▾"}
@@ -250,7 +250,7 @@ function StrategyOverlayPanel({ overlay }) {
       </div>
 
       {overlay.deprioritizationNote && (
-        <p className="text-xs text-amber-600 m-0 mt-2 bg-amber-50 rounded px-2 py-1">
+        <p className="text-xs text-warning-text m-0 mt-2 bg-warning-light rounded px-2 py-1">
           💡 {overlay.deprioritizationNote}
         </p>
       )}
@@ -264,8 +264,8 @@ function StrategyOverlayPanel({ overlay }) {
                 key={item.assetId}
                 className={cn(
                   "rounded-lg border px-3 py-2.5",
-                  item.tag === "aligned" ? "border-emerald-200 bg-emerald-50/50" :
-                  item.tag === "review" ? "border-amber-200 bg-amber-50/50" :
+                  item.tag === "aligned" ? "border-success-ring bg-success-light" :
+                  item.tag === "review" ? "border-warning-ring bg-warning-light" :
                   "border-surface-border bg-surface-subtle/50"
                 )}
               >
@@ -292,9 +292,9 @@ function StrategyOverlayPanel({ overlay }) {
                         key={d.name}
                         className={cn(
                           "inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-full font-medium",
-                          d.itemScore >= 60 ? "bg-emerald-100 text-emerald-700" :
-                          d.itemScore >= 40 ? "bg-amber-100 text-amber-700" :
-                          "bg-red-100 text-red-700"
+                          d.itemScore >= 60 ? "bg-success-light text-success-text" :
+                          d.itemScore >= 40 ? "bg-warning-light text-warning-text" :
+                          "bg-destructive-light text-destructive-text"
                         )}
                         title={`${d.label}: item scores ${d.itemScore}/100 (weight: ${Math.round(d.weight * 100)}%)`}
                       >
@@ -478,7 +478,7 @@ function CapexMobileCard({ ev, ov, rec, planId, isDraft, onRefresh, alignmentMap
     <div className="py-3 flex flex-col gap-1">
       <div className="flex items-start justify-between gap-2">
         <span className={cn("text-sm font-medium text-foreground", isOverridden && "italic text-muted")}>
-          {isOverridden && <span className="mr-1 text-amber-500 text-xs">⟳</span>}
+          {isOverridden && <span className="mr-1 text-warning-text text-xs">⟳</span>}
           {ev.assetName}
         </span>
         <span className="text-sm font-mono text-muted-dark shrink-0">{formatChfCents(ev.costCents)}</span>
@@ -505,14 +505,14 @@ function CapexMobileCard({ ev, ov, rec, planId, isDraft, onRefresh, alignmentMap
             <button
               onClick={handleRemoveOverride}
               disabled={removing}
-              className="text-xs text-foreground-dim hover:text-red-500 disabled:opacity-50"
+              className="text-xs text-foreground-dim hover:text-destructive-text disabled:opacity-50"
             >
               {removing ? "…" : "Reset"}
             </button>
           )}
         </div>
       )}
-      {error && <span className="text-xs text-red-600">{error}</span>}
+      {error && <span className="text-xs text-destructive-text">{error}</span>}
     </div>
   );
 }
@@ -582,7 +582,7 @@ function CapexEventRow({ ev, ov, rec, planId, isDraft, onRefresh, alignmentMap }
     <tr className={rowClass}>
       <td className="cell-bold">
         {isOverridden && (
-          <span className="mr-1 text-amber-500 text-xs" title={t("manager:cashflowId.title.yearOverridden")}>⟳</span>
+          <span className="mr-1 text-warning-text text-xs" title={t("manager:cashflowId.title.yearOverridden")}>⟳</span>
         )}
         {ev.assetName}
         {alignmentMap?.[ev.assetId] && (
@@ -601,7 +601,7 @@ function CapexEventRow({ ev, ov, rec, planId, isDraft, onRefresh, alignmentMap }
       </td>
       <td className="text-right font-mono">{formatChfCents(ev.costCents)}</td>
       <td>{ev.tradeGroup || "—"}</td>
-      <td>{ev.bundleId ? <span className="status-pill bg-blue-50 text-blue-700">{t("manager:cashflowId.text.bundled")}</span> : <span className="text-foreground-dim text-xs">—</span>}</td>
+      <td>{ev.bundleId ? <span className="status-pill bg-info-light text-info-text">{t("manager:cashflowId.text.bundled")}</span> : <span className="text-foreground-dim text-xs">—</span>}</td>
       {isDraft && (
         <td>
           <div className="flex flex-col gap-1 min-w-48">
@@ -636,14 +636,14 @@ function CapexEventRow({ ev, ov, rec, planId, isDraft, onRefresh, alignmentMap }
                 <button
                   onClick={handleRemoveOverride}
                   disabled={removing}
-                  className="text-xs text-foreground-dim hover:text-red-500 disabled:opacity-50"
+                  className="text-xs text-foreground-dim hover:text-destructive-text disabled:opacity-50"
                   title={t("manager:cashflowId.title.resetToBaselineYear")}
                 >
                   {removing ? "…" : "Reset"}
                 </button>
               )}
             </div>
-            {error && <span className="text-xs text-red-600">{error}</span>}
+            {error && <span className="text-xs text-destructive-text">{error}</span>}
           </div>
         </td>
       )}
@@ -703,7 +703,7 @@ function IncomeGrowthRateEditor({ planId, currentRate, onUpdated }) {
     return (
       <button
         onClick={startEdit}
-        className="text-sm text-muted-text hover:text-blue-600 underline underline-offset-2 tabular-nums"
+        className="text-sm text-muted-text hover:text-brand-dark underline underline-offset-2 tabular-nums"
         title={t("manager:cashflowId.title.clickToEditIncomeGrowthRate")}
       >
         Income growth: <span className="font-semibold">{currentRate ?? 0}%</span> / year
@@ -724,12 +724,12 @@ function IncomeGrowthRateEditor({ planId, currentRate, onUpdated }) {
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={handleKeyDown}
         onBlur={save}
-        className="border border-blue-300 rounded px-2 py-0.5 text-sm w-20 tabular-nums"
+        className="border border-muted-ring rounded px-2 py-0.5 text-sm w-20 tabular-nums"
         autoFocus
       />
       <span className="text-sm text-muted">{t("manager:cashflowId.text.year")}</span>
       {saving && <span className="text-xs text-foreground-dim">{t("manager:cashflowId.text.saving")}</span>}
-      {error && <span className="text-xs text-red-600">{error}</span>}
+      {error && <span className="text-xs text-destructive-text">{error}</span>}
     </div>
   );
 }
@@ -811,7 +811,7 @@ function AssumptionsPanel({ plan, isDraft, onUpdated }) {
     <Panel
       title="NPV Assumptions"
       actions={isDraft && !editing && (
-        <button onClick={() => setEditing(true)} className="text-xs text-blue-600 hover:underline">
+        <button onClick={() => setEditing(true)} className="text-xs text-brand-dark hover:underline">
           Edit
         </button>
       )}
@@ -826,7 +826,7 @@ function AssumptionsPanel({ plan, isDraft, onUpdated }) {
         <div className="flex items-center gap-3 mt-4 pt-4 border-t border-surface-divider">
           <button
             onClick={save} disabled={saving}
-            className="bg-slate-800 text-white text-sm font-medium px-4 py-1.5 rounded hover:bg-slate-700 disabled:opacity-50"
+            className="bg-brand text-white text-sm font-medium px-4 py-1.5 rounded hover:opacity-90 disabled:opacity-50"
           >
             {saving ? "Saving…" : "Save assumptions"}
           </button>
@@ -836,7 +836,7 @@ function AssumptionsPanel({ plan, isDraft, onUpdated }) {
           >
             Cancel
           </button>
-          {error && <span className="text-xs text-red-600">{error}</span>}
+          {error && <span className="text-xs text-destructive-text">{error}</span>}
         </div>
       )}
       <p className="text-xs text-foreground-dim mt-3">
@@ -886,29 +886,29 @@ function OpeningBalanceBanner({ planId, onUpdated }) {
       {!editing ? (
         <button
           onClick={() => setEditing(true)}
-          className="text-sm font-medium text-amber-700 underline underline-offset-2 whitespace-nowrap"
+          className="text-sm font-medium text-warning-text underline underline-offset-2 whitespace-nowrap"
         >
           Add opening balance
         </button>
       ) : (
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-sm font-medium text-amber-700">CHF</span>
+          <span className="text-sm font-medium text-warning-text">CHF</span>
           <input
             type="number" min="0" step="100" placeholder={t("manager:cashflowId.placeholder.eG50000")}
             value={value} onChange={(e) => setValue(e.target.value)}
-            className="border border-amber-300 rounded px-2 py-1 text-sm w-32"
+            className="border border-warning-ring rounded px-2 py-1 text-sm w-32"
             autoFocus
           />
           <button
             onClick={handleSave} disabled={saving}
-            className="text-sm font-medium bg-amber-600 text-white px-3 py-1 rounded hover:bg-amber-700 disabled:opacity-50"
+            className="text-sm font-medium bg-warning text-white px-3 py-1 rounded hover:opacity-90 disabled:opacity-50"
           >
             {saving ? "Saving…" : "Save"}
           </button>
-          <button onClick={() => { setEditing(false); setError(""); }} className="text-sm text-amber-700 underline">
+          <button onClick={() => { setEditing(false); setError(""); }} className="text-sm text-warning-text underline">
             Cancel
           </button>
-          {error && <span className="text-xs text-red-600">{error}</span>}
+          {error && <span className="text-xs text-destructive-text">{error}</span>}
         </div>
       )}
     </div>
@@ -957,7 +957,7 @@ function RfpCandidateCard({ planId, candidate }) {
           <span className="font-semibold text-foreground text-sm">{candidate.tradeGroup}</span>
           <span className="text-xs text-foreground-dim ml-2">{candidate.scheduledYear}</span>
         </div>
-        <span className="text-sm font-semibold text-amber-700 tabular-nums shrink-0">
+        <span className="text-sm font-semibold text-warning-text tabular-nums shrink-0">
           CHF {totalChf.toLocaleString("de-CH")}
         </span>
       </div>
@@ -981,8 +981,8 @@ function RfpCandidateCard({ planId, candidate }) {
 
       {status === "done" || rfpId ? (
         <div className="flex items-center gap-2">
-          <span className="status-pill bg-green-100 text-green-700">{t("manager:cashflowId.text.rFPCreated")}</span>
-          <Link href={`/manager/rfps/${rfpId}`} className="text-xs text-blue-600 hover:underline">
+          <span className="status-pill bg-success-light text-success-text">{t("manager:cashflowId.text.rFPCreated")}</span>
+          <Link href={`/manager/rfps/${rfpId}`} className="text-xs text-brand-dark hover:underline">
             View RFP →
           </Link>
         </div>
@@ -990,7 +990,7 @@ function RfpCandidateCard({ planId, candidate }) {
         <button
           onClick={handleCreate}
           disabled={status === "creating"}
-          className="bg-blue-600 text-white text-xs font-medium px-3 py-1.5 rounded hover:bg-blue-700 disabled:opacity-50 self-start"
+          className="bg-brand text-white text-xs font-medium px-3 py-1.5 rounded hover:opacity-90 disabled:opacity-50 self-start"
         >
           {status === "creating" ? "Creating…" : "Create RFP"}
         </button>
@@ -1104,7 +1104,7 @@ export default function CashflowPlanDetailPage() {
         <PageShell>
           <PageContent>
             <div className="notice notice-err">{error || "Plan not found."}</div>
-            <Link href="/manager/cashflow" className="text-sm text-blue-600 hover:underline mt-2 inline-block">
+            <Link href="/manager/cashflow" className="text-sm text-brand-dark hover:underline mt-2 inline-block">
               ← Back to plans
             </Link>
           </PageContent>
@@ -1168,7 +1168,7 @@ export default function CashflowPlanDetailPage() {
               <button
                 onClick={loadPlan}
                 disabled={loading}
-                className="text-sm font-medium text-amber-700 underline underline-offset-2 whitespace-nowrap ml-4"
+                className="text-sm font-medium text-warning-text underline underline-offset-2 whitespace-nowrap ml-4"
               >
                 Reload
               </button>
@@ -1199,17 +1199,17 @@ export default function CashflowPlanDetailPage() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <div className="card p-4 flex flex-col gap-1">
                 <span className="text-xs font-medium text-muted uppercase tracking-wide">{t("manager:cashflowId.text.12moProjectedIncome")}</span>
-                <span className="text-xl font-bold text-green-700">{formatChfCents(stats.totalIncome)}</span>
+                <span className="text-xl font-bold text-success-text">{formatChfCents(stats.totalIncome)}</span>
                 <span className="text-xs text-foreground-dim">{t("manager:cashflowId.text.next12ProjectedMonths")}</span>
               </div>
               <div className="card p-4 flex flex-col gap-1">
                 <span className="text-xs font-medium text-muted uppercase tracking-wide">{t("manager:cashflowId.text.totalProjectedCapex")}</span>
-                <span className="text-xl font-bold text-amber-700">{formatChfCents(stats.totalCapex)}</span>
+                <span className="text-xl font-bold text-warning-text">{formatChfCents(stats.totalCapex)}</span>
                 <span className="text-xs text-foreground-dim">Over {plan.horizonMonths}-month horizon</span>
               </div>
               <div className="card p-4 flex flex-col gap-1">
                 <span className="text-xs font-medium text-muted uppercase tracking-wide">{t("manager:cashflowId.text.peakMonthlyCapex")}</span>
-                <span className="text-xl font-bold text-amber-700">{formatChfCents(stats.peakCapex?.v)}</span>
+                <span className="text-xl font-bold text-warning-text">{formatChfCents(stats.peakCapex?.v)}</span>
                 <span className="text-xs text-foreground-dim">
                   {stats.peakCapex?.b ? fmtMonth(stats.peakCapex.b.year, stats.peakCapex.b.month) : "—"}
                 </span>
@@ -1218,7 +1218,7 @@ export default function CashflowPlanDetailPage() {
                 <span className="text-xs font-medium text-muted uppercase tracking-wide">{t("manager:cashflowId.text.lowestCumulativeBalance")}</span>
                 {hasOpeningBalance ? (
                   <>
-                    <span className={cn("text-xl font-bold", (stats.lowestBal?.v ?? 0) < 0 ? "text-red-600" : "text-foreground")}>
+                    <span className={cn("text-xl font-bold", (stats.lowestBal?.v ?? 0) < 0 ? "text-destructive-text" : "text-foreground")}>
                       {formatChfCents(stats.lowestBal?.v)}
                     </span>
                     <span className="text-xs text-foreground-dim">
@@ -1287,7 +1287,7 @@ export default function CashflowPlanDetailPage() {
                   <button
                     onClick={() => handleAction("submit")}
                     disabled={actionLoading}
-                    className="bg-blue-600 text-white text-sm font-medium px-5 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
+                    className="bg-brand text-white text-sm font-medium px-5 py-2 rounded hover:opacity-90 disabled:opacity-50"
                   >
                     {actionLoading ? "Submitting…" : "Submit for approval"}
                   </button>
@@ -1296,7 +1296,7 @@ export default function CashflowPlanDetailPage() {
                   <button
                     onClick={() => handleAction("approve")}
                     disabled={actionLoading}
-                    className="bg-green-600 text-white text-sm font-medium px-5 py-2 rounded hover:bg-green-700 disabled:opacity-50"
+                    className="bg-success text-white text-sm font-medium px-5 py-2 rounded hover:opacity-90 disabled:opacity-50"
                   >
                     {actionLoading ? "Approving…" : "Approve plan"}
                   </button>

@@ -28,24 +28,24 @@ import Tooltip from "./Tooltip";
 // ─── FCI colour helper ─────────────────────────────────────────
 
 function fciColor(pct) {
-  if (pct < 5)  return "text-emerald-700";
-  if (pct < 10) return "text-amber-600";
+  if (pct < 5)  return "text-success-text";
+  if (pct < 10) return "text-warning-text";
   if (pct < 30) return "text-orange-600";
-  return "text-red-700";
+  return "text-destructive-text";
 }
 
 // Traffic-light colour for loan-to-value: lower is safer.
 function ltvColor(pct) {
-  if (pct < 60) return "text-emerald-700";
-  if (pct <= 80) return "text-amber-600";
-  return "text-red-700";
+  if (pct < 60) return "text-success-text";
+  if (pct <= 80) return "text-warning-text";
+  return "text-destructive-text";
 }
 
 // Traffic-light colour for DSCR: ≥1.5 comfortable, 1.2–1.5 ok, below tight.
 function dscrColor(d) {
-  if (d >= 1.5) return "text-emerald-700";
-  if (d >= 1.2) return "text-amber-600";
-  return "text-red-600";
+  if (d >= 1.5) return "text-success-text";
+  if (d >= 1.2) return "text-warning-text";
+  return "text-destructive-text";
 }
 
 // ─── Mini cumulative-PV sparkbar ──────────────────────────────
@@ -66,7 +66,7 @@ function CumulativeBars({ flows, highlighted }) {
               className={cn(
                 "rounded-sm",
                 positive
-                  ? (highlighted ? "bg-slate-700" : "bg-slate-400")
+                  ? (highlighted ? "bg-foreground" : "bg-muted")
                   : "bg-track",
               )}
               style={{ height: `${Math.max(pct, 4)}%` }}
@@ -103,19 +103,19 @@ function ScenarioCard({ label, hint, data, t, isHighlighted, isRecommended, summ
       className={cn(
         "rounded-lg p-4 space-y-2 relative bg-surface",
         isHighlighted
-          ? "border-2 border-slate-800 shadow-sm"
+          ? "border-2 border-brand shadow-sm ring-1 ring-brand-ring"
           : "border border-surface-border",
       )}
     >
       {/* Strategy recommendation badge */}
       {isRecommended && (
-        <span className="absolute -top-2.5 left-3 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-800 text-white">
+        <span className="absolute -top-2.5 left-3 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-brand text-white shadow-sm">
           {t("manager:npvScenarios.recommendation.badge")}
         </span>
       )}
       {/* Best-NPV chip (shown when highlighted by NPV alone, not strategy) */}
       {isHighlighted && !isRecommended && (
-        <span className="absolute -top-2.5 left-3 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-700 text-white">
+        <span className="absolute -top-2.5 left-3 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-brand text-white shadow-sm">
           {t("manager:npvScenarios.recommendation.bestNpv")}
         </span>
       )}
@@ -155,7 +155,7 @@ function ScenarioCard({ label, hint, data, t, isHighlighted, isRecommended, summ
             {t("manager:npvScenarios.text.taxShield")}
             <Tooltip content={t("manager:npvScenarios.tooltip.taxShield")} />
           </span>
-          <p className="font-mono font-medium text-emerald-600">
+          <p className="font-mono font-medium text-success-text">
             +{formatChf(totalTaxShieldChf)}
           </p>
         </div>
@@ -212,7 +212,7 @@ function ScenarioCard({ label, hint, data, t, isHighlighted, isRecommended, summ
 
       {/* Identical-scenario notice (Defer only) */}
       {identicalNotice && (
-        <div className="rounded border border-amber-300 bg-amber-50 px-2 py-1.5 text-xs text-amber-800">
+        <div className="rounded border border-warning-ring bg-warning-light px-2 py-1.5 text-xs text-warning-text">
           {identicalNotice}
         </div>
       )}
@@ -426,7 +426,7 @@ export default function NPVScenariosPanel({ buildingId, fetchUrl, mode = "intera
             <button
               onClick={() => fetchScenarios(null, discountRatePct, incomeGrowthRatePct, horizonYears, deferYears, 0)}
               disabled={loading}
-              className="text-xs font-medium text-blue-600 hover:underline disabled:opacity-50"
+              className="text-xs font-medium text-brand-dark hover:underline disabled:opacity-50"
             >
               {loading ? "Computing…" : "↻ Recalculate"}
             </button>
@@ -466,8 +466,8 @@ export default function NPVScenariosPanel({ buildingId, fetchUrl, mode = "intera
                   className={cn(
                     "px-2 py-0.5 rounded text-xs font-medium border",
                     horizonYears === y
-                      ? "bg-slate-700 text-white border-slate-700"
-                      : "bg-surface text-muted-text border-muted-ring hover:border-slate-500",
+                      ? "bg-brand text-white border-brand"
+                      : "bg-surface text-muted-text border-muted-ring hover:border-brand-ring",
                   )}
                 >
                   {y}yr
@@ -490,8 +490,8 @@ export default function NPVScenariosPanel({ buildingId, fetchUrl, mode = "intera
                   className={cn(
                     "px-2 py-0.5 rounded text-xs font-medium border",
                     deferYears === y
-                      ? "bg-amber-600 text-white border-amber-600"
-                      : "bg-surface text-muted-text border-muted-ring hover:border-slate-500",
+                      ? "bg-warning text-white border-warning"
+                      : "bg-surface text-muted-text border-muted-ring hover:border-brand-ring",
                   )}
                 >
                   {y}yr
@@ -514,7 +514,7 @@ export default function NPVScenariosPanel({ buildingId, fetchUrl, mode = "intera
                 value={propertyValueChf}
                 onChange={(e) => setPropertyValueChf(e.target.value)}
                 placeholder={t("manager:npvScenarios.controls.propertyValuePlaceholder")}
-                className="flex-1 text-xs border border-muted-ring rounded px-2 py-0.5 font-mono text-muted-dark focus:outline-none focus:border-slate-500"
+                className="flex-1 text-xs border border-muted-ring rounded px-2 py-0.5 font-mono text-muted-dark focus:outline-none focus:border-brand-ring"
               />
             </div>
           </div>
@@ -525,7 +525,7 @@ export default function NPVScenariosPanel({ buildingId, fetchUrl, mode = "intera
 
         {/* No income data warning */}
         {!loading && data?.noIncomeData && (
-          <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          <div className="flex items-start gap-2 rounded-md border border-warning-ring bg-warning-light px-3 py-2 text-xs text-warning-text">
             <span className="mt-0.5 shrink-0">⚠</span>
             <span>
               No income history found for this building — NOI is shown as CHF 0.
@@ -594,8 +594,8 @@ export default function NPVScenariosPanel({ buildingId, fetchUrl, mode = "intera
         {!loading && data && (
           <>
             {/* Plain-language verdict — what this means & what to do */}
-            <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2.5">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 mb-1">
+            <div className="rounded-md border border-surface-border bg-surface-subtle px-3 py-2.5">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted mb-1">
                 {t("manager:npvScenarios.plain.whatThisMeans")}
               </p>
               <p className="text-sm text-foreground leading-relaxed">{plainVerdict}</p>
@@ -607,8 +607,8 @@ export default function NPVScenariosPanel({ buildingId, fetchUrl, mode = "intera
               <div className={cn(
                 "rounded-md border px-3 py-2 space-y-1.5",
                 bestVsNeglectDelta > 0
-                  ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-                  : "border-red-200 bg-red-50 text-red-800",
+                  ? "border-success-ring bg-success-light text-success-text"
+                  : "border-destructive-ring bg-destructive-light text-destructive-text",
               )}>
                 <p className="text-xs font-semibold">
                   {t(`manager:npvScenarios.delta.${bestScenarioKey}Wins`, {
