@@ -27,6 +27,14 @@ function sandboxOnly(res: any): boolean {
 }
 
 export function registerSandboxRoutes(router: Router) {
+  // Defense in depth: don't even register sandbox handlers unless this instance
+  // is in sandbox mode. Off-sandbox the routes simply don't exist (404 at the
+  // router level) rather than relying solely on the per-handler 403 guard.
+  // (Audit CRITICAL_AUDIT_2026-06-23 — register sandbox routes only when enabled.)
+  if (!isSandbox) {
+    return;
+  }
+
   /* ── POST /sandbox/setup ─────────────────────────────────────────────────── */
   router.post("/sandbox/setup", async ({ req, res, prisma, orgId }) => {
     if (!sandboxOnly(res)) return;

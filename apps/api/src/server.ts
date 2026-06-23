@@ -134,13 +134,25 @@ if (isProdEnv) {
     );
     process.exit(1);
   }
-  // Guard against deploying from a branch other than main.
+  // Guard against deploying from an unexpected branch.
   // RENDER_GIT_BRANCH is injected automatically by Render at build time.
+  // 'sandbox' is intentional: the beta sandbox environment is a separate Render
+  // service that deploys from the `sandbox` branch with SANDBOX_MODE=true. The
+  // production (`main`) service must NEVER run in sandbox mode — see guard below.
   const deployedBranch = process.env.RENDER_GIT_BRANCH;
   const allowedBranches = ["main", "sandbox"];
   if (deployedBranch && !allowedBranches.includes(deployedBranch)) {
     console.error(
       `[FATAL] Production must deploy from 'main' or 'sandbox'. Currently on '${deployedBranch}'. Update the Render service branch setting.`,
+    );
+    process.exit(1);
+  }
+  // Defense in depth: sandbox demo provisioning/seeding must never activate on
+  // the production deployment. SANDBOX_MODE is only legitimate on the sandbox
+  // branch service. (Audit CRITICAL_AUDIT_2026-06-23 — sandbox/branch policy.)
+  if (process.env.SANDBOX_MODE === "true" && deployedBranch && deployedBranch !== "sandbox") {
+    console.error(
+      `[FATAL] SANDBOX_MODE=true is only permitted on the 'sandbox' branch deployment, not '${deployedBranch}'. Refusing to start.`,
     );
     process.exit(1);
   }
