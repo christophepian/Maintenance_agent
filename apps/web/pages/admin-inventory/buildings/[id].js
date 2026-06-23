@@ -272,8 +272,15 @@ function BuildingPeriodAnalysis({ buildingId }) {
         <>
           {/* ── Hero ── */}
           <div>
-            <header className={cn("border border-surface-border bg-gradient-to-br p-6 shadow-sm", heroGradient, kpiOpen ? "rounded-t-3xl" : "rounded-3xl")}>
-              <div className="inline-flex items-center rounded-full border border-black/10 bg-white/30 px-3 py-1 text-xs font-medium text-foreground/70 mb-3">
+            <header className={cn(
+              "border border-surface-border bg-gradient-to-br p-6 shadow-sm",
+              // Dark-aware override: the light month gradient is unreadable behind
+              // text-foreground (white) in dark mode — swap to brand/info tokens.
+              "dark:from-brand-light dark:via-info-light dark:to-transparent",
+              heroGradient,
+              kpiOpen ? "rounded-t-3xl" : "rounded-3xl",
+            )}>
+              <div className="inline-flex items-center rounded-full border border-black/20 dark:border-white/20 bg-black/5 dark:bg-white/10 px-3 py-1 text-xs font-medium text-foreground/70 mb-3">
                 {periodLabel} · Monthly report
               </div>
               <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground">{headline}</h1>
