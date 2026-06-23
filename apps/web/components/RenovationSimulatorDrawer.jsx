@@ -276,12 +276,16 @@ function ScenarioCard({ label, hint, npv, summary, isBest, breakeven, selectable
       onClick={selectable ? onSelect : undefined}
       className={cn(
         "relative w-full text-left rounded-xl p-4 space-y-2 transition-colors",
-        selected ? "border-2 border-slate-800 shadow-sm bg-surface" : "border border-surface-border bg-surface",
-        selectable && !selected && "hover:border-slate-400 cursor-pointer",
+        selected
+          ? "border-2 border-brand shadow-sm bg-surface ring-1 ring-brand-ring"
+          : isBest
+            ? "border border-brand-ring bg-surface"
+            : "border border-surface-border bg-surface",
+        selectable && !selected && "hover:border-brand-ring cursor-pointer",
       )}
     >
       {isBest && (
-        <span className="absolute -top-2.5 left-3 rounded-full bg-slate-800 px-2 py-0.5 text-[10px] font-bold text-white uppercase tracking-wide">
+        <span className="absolute -top-2.5 left-3 rounded-full bg-brand px-2 py-0.5 text-[10px] font-bold text-white uppercase tracking-wide shadow-sm">
           Best NPV
         </span>
       )}
@@ -294,7 +298,7 @@ function ScenarioCard({ label, hint, npv, summary, isBest, breakeven, selectable
         <p className="text-sm font-semibold text-foreground">{label}</p>
         <p className="text-xs text-foreground-dim">{hint}</p>
       </div>
-      <p className={cn("text-2xl font-bold font-mono tabular-nums", npv >= 0 ? "text-foreground" : "text-red-600")}>
+      <p className={cn("text-2xl font-bold font-mono tabular-nums", npv >= 0 ? "text-foreground" : "text-destructive-text")}>
         {fmtChf(npv)}
       </p>
       {breakeven != null && (

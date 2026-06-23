@@ -37,7 +37,13 @@ on the **unit page** → settle to a **credit note** (overpaid) or **extra invoi
 **Add:** invoice **qualification → CostEntry**; `BuildingChargeDistribution` config (+ UI); **unit-page** reconciliation view (paid | actual | delta → settle).
 **Wrong road (to rework):** manual-entry-first cost pool framing; reconciliation auto-fill living only on the manager page; the proposed lease-expense-item category picker (advances come from the rent charges line, not per-lease categorized items).
 
-**Build order (v2):** C1 invoice qualification → cost pool · C2 per-building per-category distribution config · C3 charges-advance billing (estimate + emit line + advances summation) · C4 unit-page reconciliation (paid/actual/delta/settle) + keep manager list. C2 and C3 precede C4.
+**Build order (v2) — ALL DELIVERED 2026-06-23:**
+- C1 invoice qualification → cost pool — `a210a21` / `6e25571` (qualify attributes building + creates CostEntry).
+- C2 per-building per-category distribution config — `6e25571` (`BuildingChargeDistribution`; apportionment uses it).
+- C3 charges-advance billing — `410e08e` (net rent + charges as two lines from `chargesTotalChf`, `InvoiceLineItem.isChargeAdvance`, `getChargesAdvancesPaidCents`).
+- C4 unit-page reconciliation — `0fbee57` (`/admin-inventory/units/[id]` Reconciliations tab: paid | actual | delta → settle to credit note / invoice; `getUnitReconciliationPreview` + `settleUnitReconciliation`).
+
+Still deferred: consumption metering (heating/water keys → "manual"); the 3-yr-average advance estimate (advance currently = lease's defined charges); credit-note PDF; tenant-portal self-service doc requests.
 
 ## Background
 
