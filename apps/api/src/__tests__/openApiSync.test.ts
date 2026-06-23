@@ -264,8 +264,7 @@ describe("OpenAPI spec ↔ Router sync", () => {
     "POST /charge-reconciliations/:id/doc-requests/:rid/fulfill",
     "GET /charge-reconciliations/:id/supporting-documents",
     "POST /charge-reconciliations/:id/autofill",
-    "GET /credit-notes",
-    "GET /credit-notes/:id",
+    // GET /credit-notes + GET /credit-notes/:id graduated into openapi.yaml 2026-06-23
     "GET /buildings/:id/mortgages",
     "POST /buildings/:id/mortgages",
     "PUT /mortgages/:id",
@@ -275,8 +274,9 @@ describe("OpenAPI spec ↔ Router sync", () => {
 
   // Regression budget: the public-unspecced backlog may only shrink. Lower this
   // each time a route graduates into openapi.yaml. (Audit 2026-06-23 baseline:
-  // 84 prior + 29 catalogued from the API-14 backfill = 113.)
-  const PUBLIC_UNSPECCED_BUDGET = 113;
+  // 84 prior + 29 catalogued from the API-14 backfill = 113; −2 credit-notes
+  // graduated into the spec = 111.)
+  const PUBLIC_UNSPECCED_BUDGET = 111;
 
   const KNOWN_UNSPECCED_ROUTES = new Set<string>([
     ...INTENTIONALLY_PRIVATE_ROUTES,

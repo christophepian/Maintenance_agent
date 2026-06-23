@@ -1755,11 +1755,80 @@ components:
         estimatedCostChf: { type: number }
         suggestedRfpSendDate: { type: string, format: date }
 
+    CreditNoteLineDTO:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        description: { type: string }
+        amountCents: { type: integer }
+
+    CreditNoteDTO:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        creditNoteNumber: { type: string, nullable: true }
+        leaseId: { type: string, format: uuid, nullable: true }
+        tenantName: { type: string, nullable: true }
+        amountCents: { type: integer }
+        currency: { type: string }
+        status: { type: string }
+        issueDate: { type: string, format: date-time, nullable: true }
+        description: { type: string, nullable: true }
+        lineItems:
+          type: array
+          items: { $ref: '#/components/schemas/CreditNoteLineDTO' }
+
 # ──────────────────────────────────────────────────────────────
 # Paths
 # ──────────────────────────────────────────────────────────────
 
 paths:
+  # ═══════════════════════════════════════════════════════════
+  # Credit Notes
+  # ═══════════════════════════════════════════════════════════
+  /credit-notes:
+    get:
+      tags: [Invoices]
+      summary: List credit notes
+      operationId: listCreditNotes
+      parameters:
+        - name: leaseId
+          in: query
+          required: false
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Credit note list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/CreditNoteDTO' }
+  /credit-notes/{id}:
+    get:
+      tags: [Invoices]
+      summary: Get a credit note by id
+      operationId: getCreditNote
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Credit note
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/CreditNoteDTO' }
+        '404':
+          description: Not found
+
   # ═══════════════════════════════════════════════════════════
   # Health (unauthenticated — uptime probes)
   # ═══════════════════════════════════════════════════════════
