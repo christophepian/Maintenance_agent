@@ -15,6 +15,30 @@ Backend + API + tests only. **Frontend UI not yet built** (cost-pool entry, appo
 preview, credit-note view, inspection requests). Deferred: consumption metering,
 INCOMING-invoice→CostEntry auto-fill, credit-note PDF rendering.
 
+## Corrected model (v2 — 2026-06-23)
+
+Owner feedback corrected the intended flow. The engine (apportionment, advances-vs-actual,
+credit-note/invoice settle) holds, but the **data flow and frontend** were wrong.
+
+**Correct flow:** Incoming invoice → **qualify** (assign building + category) → it becomes
+an actual building cost (cost pool) → **ventilate** to units by the building's per-category
+distribution config → compare each unit's apportioned share against the **charges advance**
+the tenant paid (single "charges (acompte)" line on rent) over the period → **delta** shown
+on the **unit page** → settle to a **credit note** (overpaid) or **extra invoice** (underpaid).
+
+**Decisions (owner, 2026-06-23):**
+- Cost source = **qualified incoming invoices** (+ manual fallback). `CostEntry.sourceInvoiceId` exists.
+- Delta shown/actioned on the **unit page** (`/admin-inventory/units/[id]` reconciliations sub-tab) **+** keep the manager list.
+- Advances = a **single "charges (acompte)" line** on rent; monthly amount **estimated from prior-year costs** (calculateFlatRate-style). Aggregate compare (total paid vs total actual).
+- Ventilation = **per-category method, set per building** (building × category → key).
+
+**Keep:** `AncillaryCostCategory` + billable gate; `BillingPeriod`/`CostEntry`; `distributionFactor`; `ChargeReconciliation` + credit notes + inspection rights; `calculateFlatRate`.
+**Change:** apportionment to read a **per-building per-category** distribution config (not `category.defaultKey`); reconciliation **advances** from the rent charges line (aggregate), not per-category description matching; recurring billing to **emit the charges (acompte) line**.
+**Add:** invoice **qualification → CostEntry**; `BuildingChargeDistribution` config (+ UI); **unit-page** reconciliation view (paid | actual | delta → settle).
+**Wrong road (to rework):** manual-entry-first cost pool framing; reconciliation auto-fill living only on the manager page; the proposed lease-expense-item category picker (advances come from the rent charges line, not per-lease categorized items).
+
+**Build order (v2):** C1 invoice qualification → cost pool · C2 per-building per-category distribution config · C3 charges-advance billing (estimate + emit line + advances summation) · C4 unit-page reconciliation (paid/actual/delta/settle) + keep manager list. C2 and C3 precede C4.
+
 ## Background
 
 The reconciliation feature already exists and works end-to-end (see
