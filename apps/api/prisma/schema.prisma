@@ -3002,6 +3002,7 @@ enum ItemCondition {
   FAIR
   POOR
   DAMAGED
+  NOT_INSPECTED /// seeded default for asset-baselined items; must be rated before submit
 }
 
 model UnitConditionReport {

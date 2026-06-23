@@ -24,7 +24,7 @@ Full-stack Swiss property management platform. Monorepo with Node.js + TypeScrip
 |-|-|
 | Backend | Raw `http.createServer()` — no Express/NestJS. Port 3001. |
 | Frontend | Next.js Pages Router. Port 3000. |
-| Database | PostgreSQL 16 via Docker. Prisma ORM. 91 models · 78 enums · 120 migrations. |
+| Database | PostgreSQL 16 via Docker. Prisma ORM. 91 models · 78 enums · 121 migrations. |
 | Auth | JWT-based. Role enum: MANAGER, CONTRACTOR, TENANT, OWNER. |
 | Personas | Manager · Contractor · Tenant · Owner |
 
@@ -131,7 +131,7 @@ Maintenance_Agent/
 │   └── governance/      # Org scoping + authz
 ├── apps/api/prisma/
 │   ├── schema.prisma    # 91 models · 78 enums
-│   └── migrations/      # 120 dirs — never edit past migrations
+│   └── migrations/      # 121 dirs — never edit past migrations
 ├── apps/web/pages/      # 332 pages (88 UI + 200 API proxies)
 ├── apps/web/components/ui/  # 10 CVA + 7 presentational components (Button, Badge, ResourceShell, DetailGrid, Modal, etc.)
 ├── apps/web/lib/
@@ -156,14 +156,14 @@ Maintenance_Agent/
 ## Known Open Issues (check `docs/AUDIT.md` for full list)
 
 - **94 findings total, 91 resolved, 3 remaining** (SI-2/3/4 schema doc drift, TC-11 partial)
-- **Multi-org** — `Request` has no `orgId`; `DEFAULT_ORG_ID` still in `authz.ts` fallback (dev only)
+- **Multi-org** — `Request` now has a direct `orgId`; `DEFAULT_ORG_ID` still in `authz.ts` fallback (dev only)
 - **Legal DSL** — `LegalVariable` values not wired into DSL condition evaluation
 
 ---
 
 ## Key Schema Gotchas
 
-- `Request` — no `orgId` (scoped via unit→building FK chain)
+- `Request` — has a direct `orgId` column (DT-114); scope via `requestOrgScopeWhere(orgId)`. `Request.unitId` is nullable (building-level COMPLAINT/ADMINISTRATIVE requests)
 - `Job` — no `description` (use `Request.description`)
 - `Appliance` — no `category` (lives on `AssetModel`)
 - `Job.contractorId` — required, not optional
