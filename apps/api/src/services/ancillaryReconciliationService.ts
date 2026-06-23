@@ -135,13 +135,18 @@ export async function apportionForLease(
   const me = participants.find((p) => p.leaseId === leaseId);
   if (!me) throw new Error("Lease is not an active participant on this building");
 
+  // Per-building per-category distribution overrides (fallback: category default).
+  const configRows = await repo.findBuildingDistribution(prisma, orgId, period.buildingId);
+  const keyByCategory = new Map(configRows.map((r) => [r.categoryId, r.key]));
+
   // Sum building actuals per BILLABLE category.
   const perCategory = new Map<string, { code: string; name: string; key: DistributionKey; cents: number }>();
   for (const e of period.costEntries) {
     if (e.category.billability !== "BILLABLE") continue;
+    const key = keyByCategory.get(e.categoryId) ?? e.category.defaultKey;
     const acc = perCategory.get(e.categoryId);
     if (acc) acc.cents += e.amountCents;
-    else perCategory.set(e.categoryId, { code: e.category.code, name: e.category.name, key: e.category.defaultKey, cents: e.amountCents });
+    else perCategory.set(e.categoryId, { code: e.category.code, name: e.category.name, key, cents: e.amountCents });
   }
 
   const lines: ApportionedLine[] = [];
@@ -242,6 +247,44 @@ export async function addCostEntry(
   return (await getPeriod(orgId, billingPeriodId))!;
 }
 
+/**
+ * Qualify an INCOMING invoice as a building cost: attribute it to the period's
+ * building (if not already) and create a CostEntry linked to it. Atomic-ish.
+ */
+export async function qualifyInvoiceAsCost(
+  orgId: string,
+  billingPeriodId: string,
+  input: { invoiceId: string; categoryId: string },
+): Promise<BillingPeriodDTO> {
+  const period = await repo.findBillingPeriodById(prisma, billingPeriodId, orgId);
+  if (!period) throw new Error("Billing period not found");
+  if (period.status === "CLOSED") throw new Error("Cannot add cost entries to a CLOSED period");
+
+  const invoice = await prisma.invoice.findFirst({ where: { id: input.invoiceId, orgId } });
+  if (!invoice) throw new Error("Invoice not found");
+  if ((invoice as any).direction !== "INCOMING") throw new Error("Only incoming invoices can be qualified as building costs");
+
+  const category = await prisma.ancillaryCostCategory.findFirst({ where: { id: input.categoryId, orgId } });
+  if (!category) throw new Error("Category not found or wrong org");
+
+  const already = await prisma.costEntry.findFirst({ where: { sourceInvoiceId: input.invoiceId, billingPeriod: { orgId } } });
+  if (already) throw new Error("This invoice has already been qualified");
+
+  // Attribute the invoice to the building if it isn't yet.
+  if (!invoice.buildingId) {
+    await prisma.invoice.update({ where: { id: invoice.id }, data: { buildingId: period.buildingId } });
+  }
+
+  await repo.createCostEntry(prisma, {
+    billingPeriodId,
+    categoryId: input.categoryId,
+    amountCents: invoice.totalAmount ?? 0,
+    sourceInvoiceId: invoice.id,
+    note: invoice.invoiceNumber || invoice.description || null,
+  });
+  return (await getPeriod(orgId, billingPeriodId))!;
+}
+
 export async function removeCostEntry(orgId: string, billingPeriodId: string, entryId: string): Promise<BillingPeriodDTO> {
   const period = await repo.findBillingPeriodById(prisma, billingPeriodId, orgId);
   if (!period) throw new Error("Billing period not found");
@@ -250,6 +293,47 @@ export async function removeCostEntry(orgId: string, billingPeriodId: string, en
   if (!entry || entry.billingPeriodId !== billingPeriodId) throw new Error("Cost entry not found");
   await repo.deleteCostEntry(prisma, entryId);
   return (await getPeriod(orgId, billingPeriodId))!;
+}
+
+// ─── Per-building distribution config (v2 C2) ──────────────────
+export interface DistributionConfigRowDTO {
+  categoryId: string;
+  categoryCode: string;
+  categoryName: string;
+  billability: string;
+  key: DistributionKey;
+  isDefault: boolean; // true = using the category default (no building override)
+}
+
+/** All billable categories for the org with this building's resolved distribution key. */
+export async function getBuildingDistribution(orgId: string, buildingId: string): Promise<DistributionConfigRowDTO[]> {
+  const [cats, rows] = await Promise.all([
+    prisma.ancillaryCostCategory.findMany({ where: { orgId, isActive: true, billability: "BILLABLE" }, orderBy: { name: "asc" } }),
+    repo.findBuildingDistribution(prisma, orgId, buildingId),
+  ]);
+  const byCat = new Map(rows.map((r) => [r.categoryId, r.key]));
+  return cats.map((c) => ({
+    categoryId: c.id,
+    categoryCode: c.code,
+    categoryName: c.name,
+    billability: c.billability,
+    key: byCat.get(c.id) ?? c.defaultKey,
+    isDefault: !byCat.has(c.id),
+  }));
+}
+
+export async function setBuildingDistribution(
+  orgId: string,
+  buildingId: string,
+  categoryId: string,
+  key: DistributionKey,
+): Promise<DistributionConfigRowDTO[]> {
+  const building = await prisma.building.findFirst({ where: { id: buildingId, orgId } });
+  if (!building) throw new Error("Building not found or wrong org");
+  const category = await prisma.ancillaryCostCategory.findFirst({ where: { id: categoryId, orgId } });
+  if (!category) throw new Error("Category not found or wrong org");
+  await repo.upsertBuildingDistribution(prisma, orgId, buildingId, categoryId, key);
+  return getBuildingDistribution(orgId, buildingId);
 }
 
 // ─── Flat-rate (forfait) calculation ───────────────────────────

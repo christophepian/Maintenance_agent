@@ -1,8 +1,9 @@
 {
   "costPool": {
-    "title": { "costPool": "Pool de charges", "summary": "Résumé", "costEntries": "Postes de coûts", "creditNote": "Note de crédit", "inspection": "Droit de regard", "supportingDocs": "Pièces justificatives", "docRequests": "Demandes de pièces", "fromInvoice": "Qualifier depuis une facture entrante", "manualEntry": "Saisie manuelle" },
+    "title": { "costPool": "Pool de charges", "summary": "Résumé", "costEntries": "Postes de coûts", "creditNote": "Note de crédit", "inspection": "Droit de regard", "supportingDocs": "Pièces justificatives", "docRequests": "Demandes de pièces", "fromInvoice": "Qualifier depuis une facture entrante", "manualEntry": "Saisie manuelle", "distribution": "Répartition" },
     "field": { "building": "Immeuble", "startDate": "Date de début", "endDate": "Date de fin", "adminFeePct": "Frais administratifs (%)", "status": "Statut", "adminFee": "Frais administratifs" },
-    "col": { "totalCosts": "Coûts totaux", "billable": "Refacturable", "category": "Catégorie", "amount": "Montant", "note": "Note", "actions": "Actions", "sourceInvoice": "Facture source" },
+    "col": { "totalCosts": "Coûts totaux", "billable": "Refacturable", "category": "Catégorie", "amount": "Montant", "note": "Note", "actions": "Actions", "sourceInvoice": "Facture source", "method": "Méthode" },
+    "distKey": { "SURFACE_AREA": "Par surface", "UNIT_COUNT": "Égale par unité", "OCCUPANT_COUNT": "Par occupants", "FIXED_SHARE": "Quote-part fixe (‰)", "CONSUMPTION": "Par consommation" },
     "action": { "newPeriod": "Nouvelle période", "create": "Créer", "cancel": "Annuler", "close": "Clôturer", "reopen": "Rouvrir", "delete": "Supprimer", "addCostEntry": "Ajouter un poste", "autofill": "Remplir depuis le pool", "logDocRequest": "Enregistrer une demande", "fulfill": "Marquer traitée", "qualify": "Qualifier" },
     "status": { "open": "Ouverte", "closed": "Clôturée" },
     "text": {
@@ -23,7 +24,9 @@
       "refundIssued": "Un remboursement a été émis au locataire sous forme de note de crédit.",
       "inspectionUntil": "Le locataire peut demander les pièces justificatives jusqu'au {{date}}.",
       "noSupportingDocs": "Aucune pièce justificative (liez les postes de coûts aux factures source pour les afficher).",
-      "noDocRequests": "Aucune demande de pièces."
+      "noDocRequests": "Aucune demande de pièces.",
+      "distributionHint": "Comment chaque catégorie est répartie entre les unités de cet immeuble (remplace la valeur par défaut).",
+      "default": "défaut"
     }
   },
   "sandbox": {

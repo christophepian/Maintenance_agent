@@ -1,8 +1,9 @@
 {
   "costPool": {
-    "title": { "costPool": "Cost Pool", "summary": "Summary", "costEntries": "Cost Entries", "creditNote": "Credit Note", "inspection": "Inspection Rights", "supportingDocs": "Supporting Documents", "docRequests": "Document Requests", "fromInvoice": "Qualify from an incoming invoice", "manualEntry": "Manual entry" },
+    "title": { "costPool": "Cost Pool", "summary": "Summary", "costEntries": "Cost Entries", "creditNote": "Credit Note", "inspection": "Inspection Rights", "supportingDocs": "Supporting Documents", "docRequests": "Document Requests", "fromInvoice": "Qualify from an incoming invoice", "manualEntry": "Manual entry", "distribution": "Distribution (répartition)" },
     "field": { "building": "Building", "startDate": "Start date", "endDate": "End date", "adminFeePct": "Admin fee (%)", "status": "Status", "adminFee": "Admin fee" },
-    "col": { "totalCosts": "Total costs", "billable": "Billable", "category": "Category", "amount": "Amount", "note": "Note", "actions": "Actions", "sourceInvoice": "Source invoice" },
+    "col": { "totalCosts": "Total costs", "billable": "Billable", "category": "Category", "amount": "Amount", "note": "Note", "actions": "Actions", "sourceInvoice": "Source invoice", "method": "Method" },
+    "distKey": { "SURFACE_AREA": "By surface area", "UNIT_COUNT": "Equal per unit", "OCCUPANT_COUNT": "By occupants", "FIXED_SHARE": "Fixed share (‰)", "CONSUMPTION": "By consumption" },
     "action": { "newPeriod": "New period", "create": "Create", "cancel": "Cancel", "close": "Close period", "reopen": "Reopen", "delete": "Delete", "addCostEntry": "Add cost entry", "autofill": "Auto-fill from cost pool", "logDocRequest": "Log document request", "fulfill": "Mark fulfilled", "qualify": "Qualify" },
     "status": { "open": "Open", "closed": "Closed" },
     "text": {
@@ -23,7 +24,9 @@
       "refundIssued": "A refund was issued to the tenant as a credit note.",
       "inspectionUntil": "The tenant may request supporting documents until {{date}}.",
       "noSupportingDocs": "No supporting documents (link cost entries to source invoices to populate this).",
-      "noDocRequests": "No document requests."
+      "noDocRequests": "No document requests.",
+      "distributionHint": "How each cost category is split across this building's units (overrides the category default).",
+      "default": "default"
     }
   },
   "sandbox": {

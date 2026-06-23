@@ -112,6 +112,23 @@ export function registerBillingPeriodRoutes(router: Router) {
     }),
   );
 
+  router.post(
+    "/billing-periods/:id/qualify-invoice",
+    withAuthRequired(async ({ req, res, orgId, params }) => {
+      if (!requireRole(req, res, "MANAGER")) return;
+      try {
+        const body = await readJson(req);
+        if (!body?.invoiceId || !body?.categoryId) return sendError(res, 400, "VALIDATION_ERROR", "invoiceId and categoryId are required");
+        sendJson(res, 201, { data: await service.qualifyInvoiceAsCost(orgId, params.id, { invoiceId: body.invoiceId, categoryId: body.categoryId }) });
+      } catch (err: any) {
+        if (/not found/.test(err?.message)) return sendError(res, 404, "NOT_FOUND", err.message);
+        if (/CLOSED|already|Only incoming/.test(err?.message)) return sendError(res, 409, "CONFLICT", err.message);
+        console.error("[billing-periods] qualify-invoice error:", err);
+        sendError(res, 500, "INTERNAL_ERROR", err.message);
+      }
+    }),
+  );
+
   router.delete(
     "/billing-periods/:id/cost-entries/:eid",
     withAuthRequired(async ({ req, res, orgId, params }) => {
@@ -140,6 +157,41 @@ export function registerBillingPeriodRoutes(router: Router) {
       } catch (err: any) {
         if (/not found/.test(err?.message)) return sendError(res, 404, "NOT_FOUND", err.message);
         console.error("[flat-rate] error:", err);
+        sendError(res, 500, "INTERNAL_ERROR", err.message);
+      }
+    }),
+  );
+
+  // ── Per-building per-category distribution config (v2 C2) ──
+  router.get(
+    "/charge-distribution",
+    withAuthRequired(async ({ req, res, orgId, query }) => {
+      if (!maybeRequireManager(req, res)) return;
+      try {
+        const buildingId = first(query, "buildingId");
+        if (!buildingId) return sendError(res, 400, "VALIDATION_ERROR", "buildingId is required");
+        sendJson(res, 200, { data: await service.getBuildingDistribution(orgId, buildingId) });
+      } catch (err: any) {
+        console.error("[charge-distribution] get error:", err);
+        sendError(res, 500, "INTERNAL_ERROR", err.message);
+      }
+    }),
+  );
+
+  router.put(
+    "/charge-distribution",
+    withAuthRequired(async ({ req, res, orgId }) => {
+      if (!requireRole(req, res, "MANAGER")) return;
+      try {
+        const body = await readJson(req);
+        const KEYS = ["SURFACE_AREA", "UNIT_COUNT", "CONSUMPTION", "OCCUPANT_COUNT", "FIXED_SHARE"];
+        if (!body?.buildingId || !body?.categoryId || !KEYS.includes(body?.key)) {
+          return sendError(res, 400, "VALIDATION_ERROR", "buildingId, categoryId and a valid key are required");
+        }
+        sendJson(res, 200, { data: await service.setBuildingDistribution(orgId, body.buildingId, body.categoryId, body.key) });
+      } catch (err: any) {
+        if (/not found/.test(err?.message)) return sendError(res, 404, "NOT_FOUND", err.message);
+        console.error("[charge-distribution] put error:", err);
         sendError(res, 500, "INTERNAL_ERROR", err.message);
       }
     }),

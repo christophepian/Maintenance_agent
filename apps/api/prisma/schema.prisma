@@ -134,73 +134,74 @@ model RequestEvent {
 }
 
 model Org {
-  id                         String                      @id @default(uuid())
-  name                       String
-  mode                       OrgMode                     @default(MANAGED)
-  approvalRules              ApprovalRule[]
-  assetModels                AssetModel[]
-  billingEntities            BillingEntity[]
-  buildings                  Building[]
-  buildingConfigs            BuildingConfig[]
-  contractors                Contractor[]
-  invoices                   Invoice[]
-  jobs                       Job[]
-  notifications              Notification[]
-  notificationPrefs          NotificationPreference[]
-  config                     OrgConfig?
-  tenants                    Tenant[]
-  units                      Unit[]
-  unitConfigs                UnitConfig[]
-  users                      User[]
-  leases                     Lease[]
-  signatureRequests          SignatureRequest[]
-  rentalApplications         RentalApplication[]
-  emailOutbox                EmailOutbox[]
-  rentEstimationConfigs      RentEstimationConfig[]
-  financialSnapshots         BuildingFinancialSnapshot[]
-  portfolioDailySnapshots    PortfolioDailySnapshot[]
-  buildingDailySnapshots     BuildingDailySnapshot[]
-  requests                   Request[]
+  id                          String                       @id @default(uuid())
+  name                        String
+  mode                        OrgMode                      @default(MANAGED)
+  approvalRules               ApprovalRule[]
+  assetModels                 AssetModel[]
+  billingEntities             BillingEntity[]
+  buildings                   Building[]
+  buildingConfigs             BuildingConfig[]
+  contractors                 Contractor[]
+  invoices                    Invoice[]
+  jobs                        Job[]
+  notifications               Notification[]
+  notificationPrefs           NotificationPreference[]
+  config                      OrgConfig?
+  tenants                     Tenant[]
+  units                       Unit[]
+  unitConfigs                 UnitConfig[]
+  users                       User[]
+  leases                      Lease[]
+  signatureRequests           SignatureRequest[]
+  rentalApplications          RentalApplication[]
+  emailOutbox                 EmailOutbox[]
+  rentEstimationConfigs       RentEstimationConfig[]
+  financialSnapshots          BuildingFinancialSnapshot[]
+  portfolioDailySnapshots     PortfolioDailySnapshot[]
+  buildingDailySnapshots      BuildingDailySnapshot[]
+  requests                    Request[]
   // Legal engine relations
-  legalEvaluationLogs        LegalEvaluationLog[]
-  legalCategoryMappings      LegalCategoryMapping[]
-  assets                     Asset[]
-  rfps                       Rfp[]
-  appointmentSlots           AppointmentSlot[]
-  jobRatings                 JobRating[]
+  legalEvaluationLogs         LegalEvaluationLog[]
+  legalCategoryMappings       LegalCategoryMapping[]
+  assets                      Asset[]
+  rfps                        Rfp[]
+  appointmentSlots            AppointmentSlot[]
+  jobRatings                  JobRating[]
   // Chart-of-Accounts (FIN-COA)
-  expenseTypes               ExpenseType[]
-  accounts                   Account[]
-  expenseMappings            ExpenseMapping[]
+  expenseTypes                ExpenseType[]
+  accounts                    Account[]
+  expenseMappings             ExpenseMapping[]
   // Ledger
-  ledgerEntries              LedgerEntry[]
+  ledgerEntries               LedgerEntry[]
   // Capture Sessions (INV-HUB)
-  captureSessions            CaptureSession[]
+  captureSessions             CaptureSession[]
   // Cashflow Planning
-  cashflowPlans              CashflowPlan[]
+  cashflowPlans               CashflowPlan[]
   // Mortgages / Debt
-  mortgages                  Mortgage[]
+  mortgages                   Mortgage[]
   // Recurring Billing
-  billingSchedules           RecurringBillingSchedule[]
+  billingSchedules            RecurringBillingSchedule[]
   // Charge Reconciliation
-  chargeReconciliations      ChargeReconciliation[]
+  chargeReconciliations       ChargeReconciliation[]
   // Ancillary cost taxonomy (Nebenkosten categories)
-  ancillaryCostCategories    AncillaryCostCategory[]
-  billingPeriods             BillingPeriod[]
-  creditNotes                CreditNote[]
-  statementDocRequests       StatementDocRequest[]
+  ancillaryCostCategories     AncillaryCostCategory[]
+  billingPeriods              BillingPeriod[]
+  creditNotes                 CreditNote[]
+  statementDocRequests        StatementDocRequest[]
+  buildingChargeDistributions BuildingChargeDistribution[]
   // Rent Adjustments
-  rentAdjustments            RentAdjustment[]
+  rentAdjustments             RentAdjustment[]
   // Contractor Billing
-  contractorBillingSchedules ContractorBillingSchedule[]
+  contractorBillingSchedules  ContractorBillingSchedule[]
   // Property Manager Statement Import
-  uploadBatches              UploadBatch[]
-  importedStatements         ImportedStatement[]
-  importedAccountBalances    ImportedAccountBalance[]
+  uploadBatches               UploadBatch[]
+  importedStatements          ImportedStatement[]
+  importedAccountBalances     ImportedAccountBalance[]
   // Correspondence
-  letters                    Letter[]
+  letters                     Letter[]
   // Condition reports
-  conditionReports           UnitConditionReport[]
+  conditionReports            UnitConditionReport[]
 }
 
 model OrgConfig {
@@ -394,11 +395,11 @@ model Building {
   // House rules
   houseRulesText String?
 
-  createdAt                  DateTime                    @default(now())
-  updatedAt                  DateTime                    @updatedAt
-  isActive                   Boolean                     @default(true)
+  createdAt                  DateTime                     @default(now())
+  updatedAt                  DateTime                     @updatedAt
+  isActive                   Boolean                      @default(true)
   approvalRules              ApprovalRule[]
-  org                        Org                         @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  org                        Org                          @relation(fields: [orgId], references: [id], onDelete: Cascade)
   config                     BuildingConfig?
   notifications              Notification[]
   units                      Unit[]
@@ -413,9 +414,10 @@ model Building {
   importedStatements         ImportedStatement[]
   assets                     Asset[]
   mortgages                  Mortgage[]
-  attributedInvoices         Invoice[]                   @relation("InvoiceBuildingAttribution")
+  attributedInvoices         Invoice[]                    @relation("InvoiceBuildingAttribution")
   dailySnapshots             BuildingDailySnapshot[]
   billingPeriods             BillingPeriod[]
+  chargeDistributions        BuildingChargeDistribution[]
 
   @@index([orgId])
   @@index([managerId])
@@ -1324,16 +1326,38 @@ model AncillaryCostCategory {
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
 
-  org                 Org                        @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  expenseType         ExpenseType?               @relation(fields: [expenseTypeId], references: [id], onDelete: SetNull)
-  account             Account?                   @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  org                 Org                          @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  expenseType         ExpenseType?                 @relation(fields: [expenseTypeId], references: [id], onDelete: SetNull)
+  account             Account?                     @relation(fields: [accountId], references: [id], onDelete: SetNull)
   leaseExpenseItems   LeaseExpenseItem[]
   costEntries         CostEntry[]
   invoiceLineItems    InvoiceLineItem[]
   reconciliationLines ChargeReconciliationLine[]
+  distributions       BuildingChargeDistribution[]
 
   @@unique([orgId, code])
   @@index([orgId])
+}
+
+// ─── Per-building per-category distribution config (v2 C2) ──────
+// How each ancillary cost category is ventilated to units in a given building
+// (overrides AncillaryCostCategory.defaultKey). See docs/ANCILLARY_COSTS_RECONCILIATION.md.
+model BuildingChargeDistribution {
+  id         String          @id @default(uuid())
+  orgId      String
+  buildingId String
+  categoryId String
+  key        DistributionKey
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+
+  org      Org                   @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  building Building              @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  category AncillaryCostCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([buildingId, categoryId])
+  @@index([orgId])
+  @@index([buildingId])
 }
 
 // ─── Building cost pool (Phase 2) ───────────────────────────────

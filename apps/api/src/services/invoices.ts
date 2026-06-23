@@ -194,6 +194,7 @@ export interface InvoiceDTO {
     recipientName?: string;
     unitNumber?: string;
     buildingName?: string;
+    buildingId?: string | null;
     // INV-HUB ingestion fields
     direction: InvoiceDirection;
     sourceChannel: InvoiceSourceChannel;
@@ -1012,6 +1013,7 @@ function mapInvoiceToDTO(invoice: InvoiceWithFullInclude): InvoiceDTO {
       recipientName: invoice.recipientName || undefined,
       unitNumber: unit?.unitNumber || undefined,
       buildingName,
+      buildingId: (invoice as any).buildingId ?? null,
       // INV-HUB ingestion fields
       direction: (invoice as any).direction ?? 'OUTGOING',
       sourceChannel: (invoice as any).sourceChannel ?? 'MANUAL',

@@ -131,6 +131,25 @@ export async function findBuildingLeaseParticipants(
 
 export type LeaseParticipant = Awaited<ReturnType<typeof findBuildingLeaseParticipants>>[number];
 
+// ─── Per-building per-category distribution config ─────────────
+export async function findBuildingDistribution(prisma: PrismaClient, orgId: string, buildingId: string) {
+  return prisma.buildingChargeDistribution.findMany({ where: { orgId, buildingId } });
+}
+
+export async function upsertBuildingDistribution(
+  prisma: PrismaClient,
+  orgId: string,
+  buildingId: string,
+  categoryId: string,
+  key: import("@prisma/client").DistributionKey,
+) {
+  return prisma.buildingChargeDistribution.upsert({
+    where: { buildingId_categoryId: { buildingId, categoryId } },
+    create: { orgId, buildingId, categoryId, key },
+    update: { key },
+  });
+}
+
 /** Most recent CLOSED billing periods for a building (for flat-rate 3-yr averaging). */
 export async function findClosedBillingPeriodsForBuilding(
   prisma: PrismaClient,

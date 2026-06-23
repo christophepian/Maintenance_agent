@@ -169,9 +169,79 @@ export default function BillingPeriodDetailPage() {
               )}
             </Panel>
           </div>
+
+          <DistributionConfigPanel buildingId={period.buildingId} t={t} />
         </PageContent>
       </PageShell>
     </AppShell>
+  );
+}
+
+const DIST_KEYS = ["SURFACE_AREA", "UNIT_COUNT", "OCCUPANT_COUNT", "FIXED_SHARE", "CONSUMPTION"];
+
+// Per-building per-category distribution config (v2 C2).
+function DistributionConfigPanel({ buildingId, t }) {
+  const [rows, setRows] = useState([]);
+  const [savingId, setSavingId] = useState("");
+
+  useEffect(() => {
+    if (!buildingId) return;
+    fetch(`/api/charge-distribution?buildingId=${buildingId}`, { headers: authHeaders() })
+      .then((r) => r.json())
+      .then((j) => setRows(j.data || []))
+      .catch(() => {});
+  }, [buildingId]);
+
+  async function setKey(categoryId, key) {
+    setSavingId(categoryId);
+    try {
+      const res = await fetch(`/api/charge-distribution`, {
+        method: "PUT",
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ buildingId, categoryId, key }),
+      });
+      const json = await res.json();
+      if (res.ok) setRows(json.data || []);
+    } finally { setSavingId(""); }
+  }
+
+  if (rows.length === 0) return null;
+  return (
+    <div className="mt-6">
+      <Panel title={t("costPool.title.distribution")}>
+        <p className="text-sm text-muted-text mb-3">{t("costPool.text.distributionHint")}</p>
+        <div className="overflow-x-auto">
+          <table className="data-table w-full">
+            <thead>
+              <tr>
+                <th>{t("costPool.col.category")}</th>
+                <th>{t("costPool.col.method")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr key={r.categoryId} className="border-t border-surface-divider">
+                  <td>{r.categoryName}</td>
+                  <td>
+                    <select
+                      className="border border-surface-border rounded-lg px-2 py-1 text-sm bg-surface"
+                      value={r.key}
+                      disabled={savingId === r.categoryId}
+                      onChange={(e) => setKey(r.categoryId, e.target.value)}
+                    >
+                      {DIST_KEYS.map((k) => (
+                        <option key={k} value={k}>{t(`costPool.distKey.${k}`)}</option>
+                      ))}
+                    </select>
+                    {r.isDefault && <span className="ml-2 text-xs text-muted-text">({t("costPool.text.default")})</span>}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Panel>
+    </div>
   );
 }
 
@@ -244,15 +314,18 @@ function QualifyFromInvoiceForm({ period, categories, onAdded, t }) {
   const [err, setErr] = useState("");
 
   useEffect(() => {
-    if (!period?.buildingId) return;
-    fetch(`/api/invoices?direction=INCOMING&buildingId=${period.buildingId}&view=summary`, { headers: authHeaders() })
+    // Incoming invoices for this building OR not yet attributed to any building
+    // (qualifying an unattributed invoice will assign it to this building).
+    fetch(`/api/invoices?direction=INCOMING&view=summary`, { headers: authHeaders() })
       .then((r) => r.json())
       .then((j) => setInvoices(Array.isArray(j) ? j : j?.data || []))
       .catch(() => {});
-  }, [period?.buildingId]);
+  }, []);
 
   const usedIds = new Set((period.costEntries || []).map((e) => e.sourceInvoiceId).filter(Boolean));
-  const available = invoices.filter((i) => !usedIds.has(i.id));
+  const available = invoices.filter(
+    (i) => !usedIds.has(i.id) && (i.buildingId === period.buildingId || !i.buildingId),
+  );
   const selected = available.find((i) => i.id === invoiceId);
 
   async function submit() {
@@ -260,15 +333,10 @@ function QualifyFromInvoiceForm({ period, categories, onAdded, t }) {
     setSaving(true);
     setErr("");
     try {
-      const res = await fetch(`/api/billing-periods/${period.id}/cost-entries`, {
+      const res = await fetch(`/api/billing-periods/${period.id}/qualify-invoice`, {
         method: "POST",
         headers: { ...authHeaders(), "Content-Type": "application/json" },
-        body: JSON.stringify({
-          categoryId,
-          amountCents: Math.round((selected.totalAmount || 0) * 100),
-          sourceInvoiceId: selected.id,
-          note: selected.invoiceNumber || selected.description || null,
-        }),
+        body: JSON.stringify({ invoiceId: selected.id, categoryId }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error?.message || "Failed");
