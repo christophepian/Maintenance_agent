@@ -865,9 +865,9 @@ export default function OwnerReportingPage() {
   const prevNoi     = prevData?.totalNetOperatingIncomeCents ?? 0;
   const expenses    = currData?.totalExpensesCents ?? 0;
   const prevExpenses = prevData?.totalExpensesCents ?? 0;
-  const earned      = currData?.totalEarnedIncomeCents ?? 0;
-  const prevEarned  = prevData?.totalEarnedIncomeCents ?? 0;
-  const projected   = currData?.totalProjectedIncomeCents ?? 0;
+  const earned      = currData?.totalCollectedIncomeCents ?? 0;
+  const prevEarned  = prevData?.totalCollectedIncomeCents ?? 0;
+  const projected   = currData?.totalAccruedIncomeCents ?? 0;
   const operating   = currData?.totalOperatingCents ?? 0;
   const collRate    = currData?.avgCollectionRate ?? 0;
   const prevCollRate = prevData?.avgCollectionRate ?? 0;
@@ -885,7 +885,7 @@ export default function OwnerReportingPage() {
   // Prev-period derived ratios (for row-2 KPI deltas)
   const prevAllUnits      = prevData?.totalUnits ?? 0;
   const prevActiveUnits   = prevData?.totalActiveUnits ?? 0;
-  const prevEarnedForRatio = prevData?.totalEarnedIncomeCents ?? 0;
+  const prevEarnedForRatio = prevData?.totalCollectedIncomeCents ?? 0;
   const prevOccupancyRate = prevAllUnits > 0 ? prevActiveUnits / prevAllUnits : null;
   const prevOpexRatio     = prevEarnedForRatio > 0 ? (prevData?.totalOperatingCents ?? 0) / prevEarnedForRatio : null;
   const prevNoiMargin     = prevEarnedForRatio > 0 ? (prevData?.totalNetOperatingIncomeCents ?? 0) / prevEarnedForRatio : null;
@@ -1283,7 +1283,7 @@ export default function OwnerReportingPage() {
                   <BuildingRow
                     key={b.buildingId}
                     name={b.buildingName}
-                    earned={b.earnedIncomeCents}
+                    earned={b.collectedIncomeCents}
                     expenses={b.expensesTotalCents}
                     net={b.netIncomeCents}
                     collectionRate={b.collectionRate}

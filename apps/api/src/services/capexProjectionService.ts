@@ -486,7 +486,7 @@ async function computeTimingRecommendations(
     const yearlyIncome = new Map<number, number>();
     for (const snap of snapshots) {
       const year = snap.periodStart.getFullYear();
-      yearlyIncome.set(year, (yearlyIncome.get(year) || 0) + snap.projectedIncomeCents);
+      yearlyIncome.set(year, (yearlyIncome.get(year) || 0) + snap.accruedIncomeCents);
     }
 
     // If no income data at all, use current leases as proxy

@@ -663,7 +663,7 @@
       "pctPanel": "Santé du portefeuille %",
       "metric": {
         "noiCents": "RNE",
-        "earnedIncomeCents": "Encaissements",
+        "collectedIncomeCents": "Encaissements",
         "expensesCents": "Charges totales",
         "collectionRate": "Recouvrement à échéance",
         "noiMarginPct": "Marge RNE",

@@ -1695,8 +1695,8 @@ model BuildingFinancialSnapshot {
   periodStart DateTime
   periodEnd   DateTime
 
-  earnedIncomeCents    Int
-  projectedIncomeCents Int
+  collectedIncomeCents Int
+  accruedIncomeCents   Int
 
   expensesTotalCents    Int
   maintenanceTotalCents Int
@@ -3098,7 +3098,7 @@ model BuildingDailySnapshot {
   buildingId        String
   date              DateTime @db.Date
   noiCents          Int
-  earnedIncomeCents Int
+  collectedIncomeCents Int
   expensesCents     Int
   collectionRate    Float
   noiMarginPct      Float?
@@ -3122,7 +3122,7 @@ model PortfolioDailySnapshot {
   orgId             String
   date              DateTime @db.Date
   noiCents          Int
-  earnedIncomeCents Int
+  collectedIncomeCents Int
   expensesCents     Int
   collectionRate    Float
   noiMarginPct      Float?

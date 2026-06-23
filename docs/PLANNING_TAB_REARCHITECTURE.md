@@ -1,7 +1,8 @@
 # Planning Tab Rearchitecture — Scoping Document
 
 **Date:** 2026-06-19  
-**Status:** Delivered — all 7 steps shipped 2026-06-19 (commits 590d241, fb41318)
+**Status:** Delivered — all 7 steps shipped 2026-06-19 (commits 590d241, fb41318).
+Follow-up 2026-06-23 (commit 615420d): strategy-context owner-portfolio fallback + owner-facing building-strategy editor — see §6B.
 
 ---
 
@@ -154,13 +155,49 @@ Auth: `maybeRequireManager`
    - buildingId null → all active buildings in org (portfolio plan)
 3. Call computeNpvScenarios() from npvService.ts with plan's saved assumptions
    (discountRatePct, incomeGrowthRatePct, horizonMonths/12, deferYears, propertyValueChf)
-4. For building-scoped plans: look up BuildingStrategyProfile → computeRecommendation()
+4. For building-scoped plans: resolveStrategyContext() (see below).
    For portfolio plans: no strategy profile (skip strategyContext)
 5. Stamp plan.lastVerdictScenario + plan.lastVerdictAt (best-effort update, don't block response)
 6. Return same shape as GET /buildings/:id/npv-scenarios
 ```
 
 Proxy: `apps/web/pages/api/cashflow-plans/[id]/npv-scenarios.js`
+
+#### Strategy context resolution (added 2026-06-23)
+
+`resolveStrategyContext()` in `routes/cashflowPlans.ts` resolves the recommendation
+with a precedence chain, and reports its origin via `strategyContext.source`:
+
+```
+1. Explicit BuildingStrategyProfile  → computeRecommendation()       source "building"
+2. else: building owners' OwnerStrategyProfiles                      source "owner-portfolio"
+   - per-owner computeRecommendation() computed independently
+   - unanimous → consensus scenario
+   - divergent → default to "defer" (cautious middle; not averaged, not primary-pick).
+     FCI ≥ 30 forces a unanimous "invest" inside computeRecommendation, so a
+     critically-degraded building is never under-called.
+3. else (no profiles at all)                                          source "none"
+```
+
+Rationale: most buildings never completed the wizard's step-6 building setup
+(which only *creates new* buildings), so a building created any other way had no
+`BuildingStrategyProfile` and showed the bare "set a profile" hint despite the
+owner having a portfolio profile. `BuildingOwner` has no ownership-share/primary
+field, so a multi-owner split can't be share-weighted — hence the cautious-defer
+rule (the error is asymmetric: over-spending against a capital-preserver is worse
+than deferring).
+
+UI: `NPVScenariosPanel.js` renders `source === "owner-portfolio"` as a distinct ⓘ
+strip (a default, not authoritative) vs the ★ strip for an explicit building profile.
+
+**Owner-facing building-strategy editor:** `admin-inventory/buildings/[id].js` —
+owners (`isOwner`) get a roleIntent **Set strategy / Edit** control that POSTs
+`/strategy/building-profile` with the existing `buildingId` + their `ownerProfileId`
+(backend already upserts on `buildingId`). Fills the gap that the wizard could only
+attach a profile at building-creation time. Manager Edit button stays gated `!isOwner`.
+
+> Not applied to the `forecasting.ts` interactive `GET /buildings/:id/npv-scenarios`
+> endpoint (currently an unused surface); mirror there if it is ever surfaced.
 
 ### 6C. Portfolio NPV aggregation
 

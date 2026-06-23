@@ -183,7 +183,7 @@ export default function BuildingFinancialsView({ buildingId, variant = "page" })
                 <div className="sm:hidden">
                   <KpiInlineGrid
                     items={[
-                      { label: t("buildingFinancials.kpi.earnedIncome"),  value: formatChfCents(d.earnedIncomeCents),        tone: "good" },
+                      { label: t("buildingFinancials.kpi.earnedIncome"),  value: formatChfCents(d.collectedIncomeCents),        tone: "good" },
                       { label: t("buildingFinancials.kpi.totalExpenses"), value: formatChfCents(d.expensesTotalCents) },
                       { label: t("buildingFinancials.kpi.noi"),            value: formatChfCents(d.netOperatingIncomeCents),  tone: d.netOperatingIncomeCents >= 0 ? "good" : "warn" },
                       { label: t("buildingFinancials.kpi.collection"),     value: formatPercent(d.collectionRate),             tone: d.collectionRate >= 0.8 ? "good" : "warn" },
@@ -199,7 +199,7 @@ export default function BuildingFinancialsView({ buildingId, variant = "page" })
 
                 {/* Desktop: original KpiCard grids */}
                 <div className="hidden sm:grid grid-cols-2 md:grid-cols-4 gap-3">
-                  <KpiCard label={t("buildingFinancials.kpi.earnedIncome")} value={formatChfCents(d.earnedIncomeCents)} accent="green" />
+                  <KpiCard label={t("buildingFinancials.kpi.earnedIncome")} value={formatChfCents(d.collectedIncomeCents)} accent="green" />
                   <KpiCard label={t("buildingFinancials.kpi.totalExpenses")} value={formatChfCents(d.expensesTotalCents)} />
                   <KpiCard
                     label={t("buildingFinancials.kpi.noiLong")}
@@ -213,7 +213,7 @@ export default function BuildingFinancialsView({ buildingId, variant = "page" })
                     value={formatPercent(d.collectionRate)}
                     accent={d.collectionRate >= 0.95 ? "green" : d.collectionRate >= 0.8 ? "amber" : "red"}
                     sub={t("buildingFinancials.kpi.collectionRateSub")}
-                    rag={d.projectedIncomeCents === 0 ? { dot: "🟡", label: t("buildingFinancials.rag.noProjection") } : d.collectionRate >= 0.95 ? { dot: "🟢", label: t("buildingFinancials.rag.onTrack") } : d.collectionRate >= 0.8 ? { dot: "🟡", label: t("buildingFinancials.rag.watch") } : { dot: "🔴", label: t("buildingFinancials.rag.overdue") }}
+                    rag={d.accruedIncomeCents === 0 ? { dot: "🟡", label: t("buildingFinancials.rag.noProjection") } : d.collectionRate >= 0.95 ? { dot: "🟢", label: t("buildingFinancials.rag.onTrack") } : d.collectionRate >= 0.8 ? { dot: "🟡", label: t("buildingFinancials.rag.watch") } : { dot: "🔴", label: t("buildingFinancials.rag.overdue") }}
                   />
                 </div>
                 <div className="hidden sm:grid grid-cols-2 md:grid-cols-4 gap-3 mt-3">
@@ -223,7 +223,7 @@ export default function BuildingFinancialsView({ buildingId, variant = "page" })
                     value={formatPercent(d.maintenanceRatio)}
                     accent={d.maintenanceRatio > 0.3 ? "red" : d.maintenanceRatio > 0.15 ? "amber" : "green"}
                     sub={t("buildingFinancials.kpi.maintRatioSub")}
-                    rag={d.earnedIncomeCents === 0 && d.maintenanceTotalCents === 0 ? { dot: "🟡", label: t("buildingFinancials.rag.noData") } : d.maintenanceRatio <= 0.15 ? { dot: "🟢", label: t("buildingFinancials.rag.healthy") } : d.maintenanceRatio <= 0.3 ? { dot: "🟡", label: t("buildingFinancials.rag.monitor") } : { dot: "🔴", label: t("buildingFinancials.rag.high") }}
+                    rag={d.collectedIncomeCents === 0 && d.maintenanceTotalCents === 0 ? { dot: "🟡", label: t("buildingFinancials.rag.noData") } : d.maintenanceRatio <= 0.15 ? { dot: "🟢", label: t("buildingFinancials.rag.healthy") } : d.maintenanceRatio <= 0.3 ? { dot: "🟡", label: t("buildingFinancials.rag.monitor") } : { dot: "🔴", label: t("buildingFinancials.rag.high") }}
                   />
                   <KpiCard label={t("buildingFinancials.kpi.capex")} value={formatChfCents(d.capexTotalCents)} sub={t("buildingFinancials.kpi.capexSub")} />
                   <KpiCard
@@ -287,13 +287,13 @@ export default function BuildingFinancialsView({ buildingId, variant = "page" })
                 <div className="space-y-0">
                   <StatRow
                     label={t("buildingFinancials.kpi.earnedIncome")}
-                    value={formatChfCents(d.earnedIncomeCents)}
+                    value={formatChfCents(d.collectedIncomeCents)}
                     sub={t("buildingFinancials.kpi.earnedIncomeSub")}
                     accent="green"
                   />
                   <StatRow
                     label={t("buildingFinancials.kpi.projectedIncome")}
-                    value={formatChfCents(d.projectedIncomeCents)}
+                    value={formatChfCents(d.accruedIncomeCents)}
                     sub={t("buildingFinancials.kpi.projectedIncomeSub")}
                   />
                   <div className="mt-3 mb-1 pt-3 border-t border-surface-border">

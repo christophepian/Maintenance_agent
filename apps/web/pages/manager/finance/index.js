@@ -138,7 +138,7 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
       if (f === "net") return b.netIncomeCents ?? 0;
       if (f === "collection") return b.collectionRate ?? 0;
       if (f === "receivables") return b.receivablesCents ?? 0;
-      if (f === "earned") return b.earnedIncomeCents ?? 0;
+      if (f === "earned") return b.collectedIncomeCents ?? 0;
       if (f === "expenses") return b.expensesTotalCents ?? 0;
       return "";
     });
@@ -212,7 +212,7 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
                     <div className="sm:hidden mb-3">
                       <KpiInlineGrid
                         items={[
-                          { label: "Earned Income",  value: formatChfCents(p.totalEarnedIncomeCents), tone: "good" },
+                          { label: "Earned Income",  value: formatChfCents(p.totalCollectedIncomeCents), tone: "good" },
                           { label: "Total Expenses", value: formatChfCents(p.totalExpensesCents) },
                           { label: "Net Result",     value: formatChfCents(p.totalNetIncomeCents), tone: p.totalNetIncomeCents >= 0 ? "good" : "warn" },
                           { label: "Receivables",    value: formatChfCents(p.totalReceivablesCents), tone: p.totalReceivablesCents > 0 ? "warn" : undefined },
@@ -222,7 +222,7 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
                     </div>
                     {/* Desktop: card grid */}
                     <div className="hidden sm:grid grid-cols-2 md:grid-cols-5 gap-3">
-                      <SummaryCard label={t("manager:financeIndex.prop.earnedIncome")}  value={formatChfCents(p.totalEarnedIncomeCents)} accent="green" />
+                      <SummaryCard label={t("manager:financeIndex.prop.earnedIncome")}  value={formatChfCents(p.totalCollectedIncomeCents)} accent="green" />
                       <SummaryCard label={t("manager:financeIndex.prop.totalExpenses")} value={formatChfCents(p.totalExpensesCents)} />
                       <SummaryCard label={t("manager:financeIndex.prop.netResult")}     value={formatChfCents(p.totalNetIncomeCents)} accent={netAccent} sub="Income − Expenses" />
                       <SummaryCard label={t("manager:financeIndex.prop.receivables")}    value={formatChfCents(p.totalReceivablesCents)} accent={p.totalReceivablesCents > 0 ? "amber" : ""} sub="Unpaid rent invoices" />
@@ -296,7 +296,7 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
                                         <span className="cell-bold">{b.buildingName}</span>
                                       </span>
                                     </td>
-                                    <td className="text-right font-mono">{formatChfCents(b.earnedIncomeCents)}</td>
+                                    <td className="text-right font-mono">{formatChfCents(b.collectedIncomeCents)}</td>
                                     <td className="text-right font-mono">{formatChfCents(b.expensesTotalCents)}</td>
                                     <td className={cn("text-right font-mono font-semibold", b.netIncomeCents >= 0 ? "text-success-text" : "text-destructive-text")}>
                                       {formatChfCents(b.netIncomeCents)}

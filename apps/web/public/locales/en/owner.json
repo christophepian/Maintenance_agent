@@ -663,7 +663,7 @@
       "pctPanel": "Portfolio Health %",
       "metric": {
         "noiCents": "NOI",
-        "earnedIncomeCents": "Cash received",
+        "collectedIncomeCents": "Cash received",
         "expensesCents": "Total Expenses",
         "collectionRate": "On-time collection",
         "noiMarginPct": "NOI Margin",

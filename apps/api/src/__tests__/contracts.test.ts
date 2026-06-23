@@ -366,8 +366,8 @@ describe('G10: API Contract Tests', () => {
         'buildingName',
         'from',
         'to',
-        'earnedIncomeCents',
-        'projectedIncomeCents',
+        'collectedIncomeCents',
+        'accruedIncomeCents',
         'expensesTotalCents',
         'maintenanceTotalCents',
         'capexTotalCents',
@@ -384,8 +384,8 @@ describe('G10: API Contract Tests', () => {
 
       // All numeric totals must be numbers (never undefined/null)
       for (const key of [
-        'earnedIncomeCents',
-        'projectedIncomeCents',
+        'collectedIncomeCents',
+        'accruedIncomeCents',
         'expensesTotalCents',
         'maintenanceTotalCents',
         'capexTotalCents',
@@ -450,7 +450,7 @@ describe('G10: API Contract Tests', () => {
         const pt = dto.points[0];
         expectKeys(pt, [
           'periodStart', 'periodEnd', 'label',
-          'noiCents', 'earnedIncomeCents', 'expensesCents', 'collectionRate',
+          'noiCents', 'collectedIncomeCents', 'expensesCents', 'collectionRate',
         ], 'TimeSeriesPoint');
         expect(typeof pt.noiCents).toBe('number');
         expect(typeof pt.collectionRate).toBe('number');
@@ -478,7 +478,7 @@ describe('G10: API Contract Tests', () => {
         const pt = dto.points[0];
         expectKeys(pt, [
           'periodStart', 'periodEnd', 'label',
-          'noiCents', 'earnedIncomeCents', 'expensesCents', 'collectionRate',
+          'noiCents', 'collectedIncomeCents', 'expensesCents', 'collectionRate',
         ], 'TimeSeriesPoint');
       }
     });
@@ -695,7 +695,7 @@ describe('G10: API Contract Tests', () => {
       expect(Array.isArray(cashflow.buckets)).toBe(true);
       if (cashflow.buckets.length > 0) {
         const bucket = cashflow.buckets[0];
-        expectKeys(bucket, ['year', 'month', 'isActual', 'projectedIncomeCents', 'projectedOpexCents', 'scheduledCapexCents', 'netCents', 'cumulativeBalanceCents'], 'MonthlyBucket');
+        expectKeys(bucket, ['year', 'month', 'isActual', 'accruedIncomeCents', 'projectedOpexCents', 'scheduledCapexCents', 'netCents', 'cumulativeBalanceCents'], 'MonthlyBucket');
       }
     });
   });

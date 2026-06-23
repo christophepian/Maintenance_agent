@@ -172,8 +172,8 @@ components:
         - buildingName
         - from
         - to
-        - earnedIncomeCents
-        - projectedIncomeCents
+        - collectedIncomeCents
+        - accruedIncomeCents
         - expensesTotalCents
         - maintenanceTotalCents
         - capexTotalCents
@@ -191,8 +191,8 @@ components:
         buildingName: { type: string }
         from: { type: string, format: date }
         to: { type: string, format: date }
-        earnedIncomeCents: { type: integer }
-        projectedIncomeCents: { type: integer }
+        collectedIncomeCents: { type: integer }
+        accruedIncomeCents: { type: integer }
         expensesTotalCents: { type: integer }
         maintenanceTotalCents: { type: integer }
         capexTotalCents: { type: integer }
@@ -238,13 +238,13 @@ components:
 
     TimeSeriesPoint:
       type: object
-      required: [periodStart, periodEnd, label, noiCents, earnedIncomeCents, expensesCents, collectionRate]
+      required: [periodStart, periodEnd, label, noiCents, collectedIncomeCents, expensesCents, collectionRate]
       properties:
         periodStart:       { type: string, format: date }
         periodEnd:         { type: string, format: date }
         label:             { type: string }
         noiCents:          { type: integer }
-        earnedIncomeCents: { type: integer }
+        collectedIncomeCents: { type: integer }
         expensesCents:     { type: integer }
         collectionRate:    { type: number }
         noiMarginPct:      { type: number, nullable: true }
@@ -264,8 +264,8 @@ components:
       required:
         - periodStart
         - periodEnd
-        - earnedIncomeCents
-        - projectedIncomeCents
+        - collectedIncomeCents
+        - accruedIncomeCents
         - expensesTotalCents
         - maintenanceTotalCents
         - capexTotalCents
@@ -277,8 +277,8 @@ components:
       properties:
         periodStart: { type: string, format: date }
         periodEnd: { type: string, format: date }
-        earnedIncomeCents: { type: integer }
-        projectedIncomeCents: { type: integer }
+        collectedIncomeCents: { type: integer }
+        accruedIncomeCents: { type: integer }
         expensesTotalCents: { type: integer }
         maintenanceTotalCents: { type: integer }
         capexTotalCents: { type: integer }
@@ -1697,7 +1697,7 @@ components:
         year: { type: integer }
         month: { type: integer }
         isActual: { type: boolean }
-        projectedIncomeCents: { type: integer }
+        accruedIncomeCents: { type: integer }
         projectedOpexCents: { type: integer }
         scheduledCapexCents: { type: integer }
         netCents: { type: integer }

@@ -159,8 +159,8 @@ function UnitPeriodAnalysis({ unitId }) {
             attached
             isLoading={loading}
             left={[
-              { label: t("unitsId.reporting.kpi.cashReceived"),  value: fmtChf(c?.earnedIncomeCents ?? 0),    delta: delta(c?.earnedIncomeCents, p?.earnedIncomeCents) },
-              { label: t("unitsId.reporting.kpi.accruedIncome"),  value: fmtChf(c?.projectedIncomeCents ?? 0), delta: null },
+              { label: t("unitsId.reporting.kpi.cashReceived"),  value: fmtChf(c?.collectedIncomeCents ?? 0),    delta: delta(c?.collectedIncomeCents, p?.collectedIncomeCents) },
+              { label: t("unitsId.reporting.kpi.accruedIncome"),  value: fmtChf(c?.accruedIncomeCents ?? 0), delta: null },
               { label: t("unitsId.reporting.kpi.expenses"),       value: fmtChf(c?.expensesCents ?? 0),         delta: delta(c?.expensesCents, p?.expensesCents, true) },
               { label: t("unitsId.reporting.kpi.netIncome"),      value: fmtChf(c?.netIncomeCents ?? 0),        delta: delta(c?.netIncomeCents, p?.netIncomeCents) },
             ]}

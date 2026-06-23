@@ -46,7 +46,7 @@ function statCards(buckets, hasOpeningBalance) {
   if (!buckets || buckets.length === 0) return {};
   const projected = buckets.filter((b) => !b.isActual);
   const next12 = projected.slice(0, 12);
-  const totalIncome = next12.reduce((s, b) => s + b.projectedIncomeCents, 0);
+  const totalIncome = next12.reduce((s, b) => s + b.accruedIncomeCents, 0);
   const totalCapex = projected.reduce((s, b) => s + b.scheduledCapexCents, 0);
   let peakCapex = { v: 0, b: null };
   let lowestBal = { v: Infinity, b: null };
@@ -80,7 +80,7 @@ function CashflowChart({ buckets, hasOpeningBalance }) {
   const maxVal = Math.max(
     1,
     ...buckets.map((b) =>
-      Math.max(b.projectedIncomeCents, b.projectedOpexCents + b.scheduledCapexCents)
+      Math.max(b.accruedIncomeCents, b.projectedOpexCents + b.scheduledCapexCents)
     )
   );
 
@@ -135,7 +135,7 @@ function CashflowChart({ buckets, hasOpeningBalance }) {
         {/* Bars */}
         {buckets.map((b, i) => {
           const x = xSlot(i) + barOff;
-          const iH = Math.max(0, toH(b.projectedIncomeCents));
+          const iH = Math.max(0, toH(b.accruedIncomeCents));
           const oH = Math.max(0, toH(b.projectedOpexCents));
           const cH = Math.max(0, toH(b.scheduledCapexCents));
           return (
@@ -173,7 +173,7 @@ function CashflowChart({ buckets, hasOpeningBalance }) {
             <span className="ml-2 font-normal text-foreground-dim">{hovB.isActual ? "Actual" : "Projected"}</span>
           </div>
           <div className="flex justify-between gap-4 text-success-text">
-            <span>{t("manager:cashflowId.text.income")}</span><span className="font-mono">{formatChfCents(hovB.projectedIncomeCents)}</span>
+            <span>{t("manager:cashflowId.text.income")}</span><span className="font-mono">{formatChfCents(hovB.accruedIncomeCents)}</span>
           </div>
           <div className="flex justify-between gap-4 text-destructive-text">
             <span>{t("manager:cashflowId.text.opEx")}</span><span className="font-mono">{formatChfCents(hovB.projectedOpexCents)}</span>

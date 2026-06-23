@@ -207,7 +207,7 @@ function OverviewTab() {
   const netAccent = p ? (p.totalNetIncomeCents > 0 ? "green" : p.totalNetIncomeCents < 0 ? "red" : "") : "";
   const sortedBuildings = useMemo(() => clientSort(p?.buildings ?? [], bSF, bSD, (b, f) => {
     if (f === "buildingName") return (b.buildingName || "").toLowerCase();
-    if (f === "earnedIncomeCents") return b.earnedIncomeCents ?? 0;
+    if (f === "collectedIncomeCents") return b.collectedIncomeCents ?? 0;
     if (f === "expensesTotalCents") return b.expensesTotalCents ?? 0;
     if (f === "netIncomeCents") return b.netIncomeCents ?? 0;
     if (f === "collectionRate") return b.collectionRate ?? 0;
@@ -246,7 +246,7 @@ function OverviewTab() {
             <div className="sm:hidden mb-3">
               <KpiInlineGrid
                 items={[
-                  { label: "Earned Income",  value: formatChfCents(p.totalEarnedIncomeCents), tone: "good" },
+                  { label: "Earned Income",  value: formatChfCents(p.totalCollectedIncomeCents), tone: "good" },
                   { label: "Total Expenses", value: formatChfCents(p.totalExpensesCents) },
                   { label: "Net Result",     value: formatChfCents(p.totalNetIncomeCents), tone: p.totalNetIncomeCents >= 0 ? "good" : "warn" },
                   { label: "Receivables",    value: formatChfCents(p.totalReceivablesCents), tone: p.totalReceivablesCents > 0 ? "warn" : undefined },
@@ -256,7 +256,7 @@ function OverviewTab() {
             </div>
             {/* Desktop KPI cards */}
             <div className="hidden sm:grid grid-cols-2 md:grid-cols-5 gap-3">
-              <SummaryCard label={t("owner:finance.prop.earnedIncome")}  value={formatChfCents(p.totalEarnedIncomeCents)} accent="green" />
+              <SummaryCard label={t("owner:finance.prop.earnedIncome")}  value={formatChfCents(p.totalCollectedIncomeCents)} accent="green" />
               <SummaryCard label={t("owner:finance.prop.totalExpenses")} value={formatChfCents(p.totalExpensesCents)} />
               <SummaryCard label={t("owner:finance.prop.netResult")}     value={formatChfCents(p.totalNetIncomeCents)} accent={netAccent} sub="Income − Expenses" />
               <SummaryCard label={t("owner:finance.prop.receivables")}    value={formatChfCents(p.totalReceivablesCents)} accent={p.totalReceivablesCents > 0 ? "amber" : ""} sub="Unpaid rent invoices" />
@@ -303,7 +303,7 @@ function OverviewTab() {
                       <thead>
                         <tr>
                           <SortableHeader label={t("owner:finance.prop.building")} field="buildingName" sortField={bSF} sortDir={bSD} onSort={handleBSort} />
-                          <SortableHeader label={t("owner:finance.prop.earnedIncome")} field="earnedIncomeCents" sortField={bSF} sortDir={bSD} onSort={handleBSort} className="text-right" />
+                          <SortableHeader label={t("owner:finance.prop.earnedIncome")} field="collectedIncomeCents" sortField={bSF} sortDir={bSD} onSort={handleBSort} className="text-right" />
                           <SortableHeader label={t("owner:finance.prop.expenses")} field="expensesTotalCents" sortField={bSF} sortDir={bSD} onSort={handleBSort} className="text-right" />
                           <SortableHeader label={t("owner:finance.prop.net")} field="netIncomeCents" sortField={bSF} sortDir={bSD} onSort={handleBSort} className="text-right" />
                           <SortableHeader label={t("owner:finance.prop.collection")} field="collectionRate" sortField={bSF} sortDir={bSD} onSort={handleBSort} className="text-right" />
@@ -319,7 +319,7 @@ function OverviewTab() {
                                 <span className="cell-bold">{b.buildingName}</span>
                               </span>
                             </td>
-                            <td className="text-right font-mono">{formatChfCents(b.earnedIncomeCents)}</td>
+                            <td className="text-right font-mono">{formatChfCents(b.collectedIncomeCents)}</td>
                             <td className="text-right font-mono">{formatChfCents(b.expensesTotalCents)}</td>
                             <td className={cn("text-right font-mono font-semibold", b.netIncomeCents >= 0 ? "text-success-text" : "text-destructive-text")}>
                               {formatChfCents(b.netIncomeCents)}

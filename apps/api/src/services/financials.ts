@@ -37,8 +37,8 @@ export interface BuildingFinancialsDTO {
   to: string; // ISO date
 
   // Core totals (all in cents)
-  earnedIncomeCents: number;
-  projectedIncomeCents: number;
+  collectedIncomeCents: number;
+  accruedIncomeCents: number;
   expensesTotalCents: number;
   maintenanceTotalCents: number;
   capexTotalCents: number;
@@ -133,9 +133,9 @@ async function getProjectedIncome(
   unitIds: string[],
   from: Date,
   to: Date,
-): Promise<{ projectedIncomeCents: number; rentalIncomeCents: number; serviceChargeIncomeCents: number }> {
+): Promise<{ accruedIncomeCents: number; rentalIncomeCents: number; serviceChargeIncomeCents: number }> {
   if (unitIds.length === 0) {
-    return { projectedIncomeCents: 0, rentalIncomeCents: 0, serviceChargeIncomeCents: 0 };
+    return { accruedIncomeCents: 0, rentalIncomeCents: 0, serviceChargeIncomeCents: 0 };
   }
 
   const activeLeases = await leaseRepo.findActiveLeasesForProjection(prisma, orgId, unitIds, from, to);
@@ -163,7 +163,7 @@ async function getProjectedIncome(
   }
 
   return {
-    projectedIncomeCents: rentalIncomeCents + serviceChargeIncomeCents,
+    accruedIncomeCents: rentalIncomeCents + serviceChargeIncomeCents,
     rentalIncomeCents,
     serviceChargeIncomeCents,
   };
@@ -230,14 +230,14 @@ export async function getBuildingFinancials(
       // billing period, falling back to earned ÷ projected when nothing was invoiced.
       const cachedCollectionRate = Math.min(1, cachedInvoicedForPeriodCents > 0
         ? safeDivide(cachedPaidForPeriodCents, cachedInvoicedForPeriodCents)
-        : safeDivide(cached.earnedIncomeCents, cached.projectedIncomeCents));
+        : safeDivide(cached.collectedIncomeCents, cached.accruedIncomeCents));
       return {
         buildingId,
         buildingName: building.name,
         from: params.from,
         to: params.to,
-        earnedIncomeCents: cached.earnedIncomeCents,
-        projectedIncomeCents: cached.projectedIncomeCents,
+        collectedIncomeCents: cached.collectedIncomeCents,
+        accruedIncomeCents: cached.accruedIncomeCents,
         expensesTotalCents: cached.expensesTotalCents,
         maintenanceTotalCents: cached.maintenanceTotalCents,
         capexTotalCents: cached.capexTotalCents,
@@ -337,7 +337,7 @@ export async function getBuildingFinancials(
   }
 
   // 7. Earned income from ledger (rent payments: bank debit on INVOICE_PAID)
-  const earnedIncomeCents = await getEarnedIncomeFromLedger(orgId, buildingId, from, to);
+  const collectedIncomeCents = await getEarnedIncomeFromLedger(orgId, buildingId, from, to);
 
   // 8. Projected income from active leases (prorated)
   const incomeBreakdown = await getProjectedIncome(orgId, unitIds, from, to);
@@ -381,15 +381,15 @@ export async function getBuildingFinancials(
 
   // 10. Derived totals and KPIs
   const operatingTotalCents = expensesTotalCents - capexTotalCents;
-  const netIncomeCents = earnedIncomeCents - expensesTotalCents;
-  const netOperatingIncomeCents = earnedIncomeCents - operatingTotalCents;
-  const maintenanceRatio = safeDivide(maintenanceTotalCents, earnedIncomeCents);
+  const netIncomeCents = collectedIncomeCents - expensesTotalCents;
+  const netOperatingIncomeCents = collectedIncomeCents - operatingTotalCents;
+  const maintenanceRatio = safeDivide(maintenanceTotalCents, collectedIncomeCents);
   const costPerUnitCents = Math.round(safeDivide(expensesTotalCents, activeUnitsCount));
   // Invoice-billing-period rate capped at 100% to prevent catch-up payments
   // inflating the rate above 1.0 when the fallback formula fires.
   const collectionRate = Math.min(1, invoicedForPeriodCents > 0
     ? safeDivide(paidForPeriodCents, invoicedForPeriodCents)
-    : safeDivide(earnedIncomeCents, incomeBreakdown.projectedIncomeCents));
+    : safeDivide(collectedIncomeCents, incomeBreakdown.accruedIncomeCents));
 
   // 11. Format breakdown arrays
   const expensesByCategory: ExpenseCategoryTotalDTO[] = Array.from(categoryTotals.entries())
@@ -418,8 +418,8 @@ export async function getBuildingFinancials(
 
   // 12. Persist snapshot (upsert keyed on org+building+period)
   await snapshotRepo.upsertBuildingFinancialSnapshot(prisma, orgId, buildingId, from, to, {
-    earnedIncomeCents,
-    projectedIncomeCents: incomeBreakdown.projectedIncomeCents,
+    collectedIncomeCents,
+    accruedIncomeCents: incomeBreakdown.accruedIncomeCents,
     expensesTotalCents,
     maintenanceTotalCents,
     capexTotalCents,
@@ -435,8 +435,8 @@ export async function getBuildingFinancials(
     buildingName: building.name,
     from: params.from,
     to: params.to,
-    earnedIncomeCents,
-    projectedIncomeCents: incomeBreakdown.projectedIncomeCents,
+    collectedIncomeCents,
+    accruedIncomeCents: incomeBreakdown.accruedIncomeCents,
     expensesTotalCents,
     maintenanceTotalCents,
     capexTotalCents,
@@ -469,8 +469,8 @@ export interface BuildingSummaryDTO {
   buildingId: string;
   buildingName: string;
   health: "green" | "amber" | "red";
-  earnedIncomeCents: number;
-  projectedIncomeCents: number;
+  collectedIncomeCents: number;
+  accruedIncomeCents: number;
   expensesTotalCents: number;
   operatingTotalCents: number;
   capexTotalCents: number;
@@ -488,7 +488,7 @@ export interface BuildingSummaryDTO {
 
 export interface MonthlyBreakdownDTO {
   month: number; // 1–12
-  earnedIncomeCents: number;
+  collectedIncomeCents: number;
   expensesTotalCents: number;
   noiCents: number;
   collectionRate: number;
@@ -497,8 +497,8 @@ export interface MonthlyBreakdownDTO {
 export interface PortfolioSummaryDTO {
   from: string;
   to: string;
-  totalEarnedIncomeCents: number;
-  totalProjectedIncomeCents: number;
+  totalCollectedIncomeCents: number;
+  totalAccruedIncomeCents: number;
   totalExpensesCents: number;
   totalOperatingCents: number;
   totalCapexCents: number;
@@ -547,8 +547,8 @@ export async function getPortfolioSummary(
       buildingId: dto.buildingId,
       buildingName: dto.buildingName,
       health: deriveHealth(dto.netIncomeCents, dto.collectionRate),
-      earnedIncomeCents: dto.earnedIncomeCents,
-      projectedIncomeCents: dto.projectedIncomeCents,
+      collectedIncomeCents: dto.collectedIncomeCents,
+      accruedIncomeCents: dto.accruedIncomeCents,
       expensesTotalCents: dto.expensesTotalCents,
       operatingTotalCents: dto.operatingTotalCents,
       capexTotalCents: dto.capexTotalCents,
@@ -567,8 +567,8 @@ export async function getPortfolioSummary(
 
   const arrears = await financialsRepo.getArrearsAging(prisma, orgId);
 
-  const totalEarned = summaries.reduce((s, b) => s + b.earnedIncomeCents, 0);
-  const totalProjected = summaries.reduce((s, b) => s + b.projectedIncomeCents, 0);
+  const totalEarned = summaries.reduce((s, b) => s + b.collectedIncomeCents, 0);
+  const totalProjected = summaries.reduce((s, b) => s + b.accruedIncomeCents, 0);
   const totalExpenses = summaries.reduce((s, b) => s + b.expensesTotalCents, 0);
   const totalOperating = summaries.reduce((s, b) => s + b.operatingTotalCents, 0);
   const totalCapex = summaries.reduce((s, b) => s + b.capexTotalCents, 0);
@@ -576,7 +576,7 @@ export async function getPortfolioSummary(
   const totalNOI = summaries.reduce((s, b) => s + b.netOperatingIncomeCents, 0);
   const totalActive = summaries.reduce((s, b) => s + b.activeUnitsCount, 0);
   const totalAllUnits = summaries.reduce((s, b) => s + b.totalUnitsCount, 0);
-  const active = summaries.filter((b) => b.earnedIncomeCents > 0 || b.expensesTotalCents > 0);
+  const active = summaries.filter((b) => b.collectedIncomeCents > 0 || b.expensesTotalCents > 0);
   // Weighted collection rate: total PAID / total INVOICED across buildings, by
   // billing period — the same invoice-based definition used by the per-building,
   // building-report and unit-report surfaces, so every page agrees. (Previously
@@ -593,8 +593,8 @@ export async function getPortfolioSummary(
   return {
     from: params.from,
     to: params.to,
-    totalEarnedIncomeCents: totalEarned,
-    totalProjectedIncomeCents: totalProjected,
+    totalCollectedIncomeCents: totalEarned,
+    totalAccruedIncomeCents: totalProjected,
     totalExpensesCents: totalExpenses,
     totalOperatingCents: totalOperating,
     totalCapexCents: totalCapex,
@@ -637,13 +637,13 @@ export async function getPortfolioMonthlyBreakdown(
       const summary = await getPortfolioSummary(orgId, { from, to }, ownerId);
       results.push({
         month: m,
-        earnedIncomeCents: summary.totalEarnedIncomeCents,
+        collectedIncomeCents: summary.totalCollectedIncomeCents,
         expensesTotalCents: summary.totalExpensesCents,
         noiCents: summary.totalNetOperatingIncomeCents,
         collectionRate: summary.avgCollectionRate,
       });
     } catch {
-      results.push({ month: m, earnedIncomeCents: 0, expensesTotalCents: 0, noiCents: 0, collectionRate: 0 });
+      results.push({ month: m, collectedIncomeCents: 0, expensesTotalCents: 0, noiCents: 0, collectionRate: 0 });
     }
   }
 
@@ -680,8 +680,8 @@ export async function setInvoiceExpenseCategory(
 export interface AnnualSnapshotDTO {
   periodStart: string; // YYYY-MM-DD
   periodEnd: string;   // YYYY-MM-DD
-  earnedIncomeCents: number;
-  projectedIncomeCents: number;
+  collectedIncomeCents: number;
+  accruedIncomeCents: number;
   expensesTotalCents: number;
   maintenanceTotalCents: number;
   capexTotalCents: number;
@@ -704,8 +704,8 @@ export async function listBuildingSnapshots(
   return rows.map((r) => ({
     periodStart: r.periodStart.toISOString().slice(0, 10),
     periodEnd: r.periodEnd.toISOString().slice(0, 10),
-    earnedIncomeCents: r.earnedIncomeCents,
-    projectedIncomeCents: r.projectedIncomeCents,
+    collectedIncomeCents: r.collectedIncomeCents,
+    accruedIncomeCents: r.accruedIncomeCents,
     expensesTotalCents: r.expensesTotalCents,
     maintenanceTotalCents: r.maintenanceTotalCents,
     capexTotalCents: r.capexTotalCents,
@@ -759,7 +759,7 @@ export interface TimeSeriesPoint {
   periodEnd:         string;
   label:             string;   // display label: "Jun", "Q2 2024", "2023", etc.
   noiCents:          number;
-  earnedIncomeCents: number;
+  collectedIncomeCents: number;
   expensesCents:     number;
   collectionRate:    number;
   noiMarginPct:      number | null;
@@ -795,14 +795,14 @@ function summaryToPoint(
   label: string,
 ): TimeSeriesPoint {
   const noi      = summary.totalNetOperatingIncomeCents;
-  const earned   = summary.totalEarnedIncomeCents;
+  const earned   = summary.totalCollectedIncomeCents;
   const expenses = summary.totalExpensesCents;
   return {
     periodStart,
     periodEnd,
     label,
     noiCents:          noi,
-    earnedIncomeCents: earned,
+    collectedIncomeCents: earned,
     expensesCents:     expenses,
     collectionRate:    summary.avgCollectionRate,
     noiMarginPct:      safePct(noi, earned),
@@ -929,11 +929,11 @@ async function getDailyPoints(
     try {
       const summary = await getPortfolioSummary(orgId, { from: str, to: str }, ownerId);
       const noi     = summary.totalNetOperatingIncomeCents;
-      const earned  = summary.totalEarnedIncomeCents;
+      const earned  = summary.totalCollectedIncomeCents;
       const expenses = summary.totalExpensesCents;
       await dailySnapshotRepo.upsertPortfolioDailySnapshot(prisma, orgId, date, {
         noiCents:          noi,
-        earnedIncomeCents: earned,
+        collectedIncomeCents: earned,
         expensesCents:     expenses,
         collectionRate:    summary.avgCollectionRate,
         noiMarginPct:      safePct(noi, earned),
@@ -955,7 +955,7 @@ async function getDailyPoints(
     periodEnd:         isoDate(r.date),
     label:             new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(r.date),
     noiCents:          r.noiCents,
-    earnedIncomeCents: r.earnedIncomeCents,
+    collectedIncomeCents: r.collectedIncomeCents,
     expensesCents:     r.expensesCents,
     collectionRate:    r.collectionRate,
     noiMarginPct:      r.noiMarginPct,
@@ -1045,12 +1045,12 @@ export async function computeAndStoreDailyPortfolioSnapshot(
 
   const summary = await getPortfolioSummary(orgId, { from, to }, ownerId);
   const noi     = summary.totalNetOperatingIncomeCents;
-  const earned  = summary.totalEarnedIncomeCents;
+  const earned  = summary.totalCollectedIncomeCents;
   const expenses = summary.totalExpensesCents;
 
   await dailySnapshotRepo.upsertPortfolioDailySnapshot(prisma, orgId, yesterday, {
     noiCents:          noi,
-    earnedIncomeCents: earned,
+    collectedIncomeCents: earned,
     expensesCents:     expenses,
     collectionRate:    summary.avgCollectionRate,
     noiMarginPct:      safePct(noi, earned),
@@ -1100,14 +1100,14 @@ function buildingSummaryToPoint(
   label: string,
 ): TimeSeriesPoint {
   const noi      = dto.netOperatingIncomeCents;
-  const earned   = dto.earnedIncomeCents;
+  const earned   = dto.collectedIncomeCents;
   const expenses = dto.expensesTotalCents;
   return {
     periodStart,
     periodEnd,
     label,
     noiCents:          noi,
-    earnedIncomeCents: earned,
+    collectedIncomeCents: earned,
     expensesCents:     expenses,
     collectionRate:    dto.collectionRate,
     noiMarginPct:      safePct(noi, earned),
@@ -1227,11 +1227,11 @@ async function getBuildingDailyPoints(
     try {
       const dto      = await getBuildingFinancials(orgId, buildingId, { from: str, to: str });
       const noi      = dto.netOperatingIncomeCents;
-      const earned   = dto.earnedIncomeCents;
+      const earned   = dto.collectedIncomeCents;
       const expenses = dto.expensesTotalCents;
       await buildingDailyRepo.upsertBuildingDailySnapshot(prisma, orgId, buildingId, date, {
         noiCents:          noi,
-        earnedIncomeCents: earned,
+        collectedIncomeCents: earned,
         expensesCents:     expenses,
         collectionRate:    dto.collectionRate,
         noiMarginPct:      safePct(noi, earned),
@@ -1253,7 +1253,7 @@ async function getBuildingDailyPoints(
     periodEnd:         isoDate(r.date),
     label:             new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(r.date),
     noiCents:          r.noiCents,
-    earnedIncomeCents: r.earnedIncomeCents,
+    collectedIncomeCents: r.collectedIncomeCents,
     expensesCents:     r.expensesCents,
     collectionRate:    r.collectionRate,
     noiMarginPct:      r.noiMarginPct,
@@ -1332,11 +1332,11 @@ export async function computeAndStoreDailyBuildingSnapshot(
   try {
     const dto      = await getBuildingFinancials(orgId, buildingId, { from, to: from });
     const noi      = dto.netOperatingIncomeCents;
-    const earned   = dto.earnedIncomeCents;
+    const earned   = dto.collectedIncomeCents;
     const expenses = dto.expensesTotalCents;
     await buildingDailyRepo.upsertBuildingDailySnapshot(prisma, orgId, buildingId, yesterday, {
       noiCents:          noi,
-      earnedIncomeCents: earned,
+      collectedIncomeCents: earned,
       expensesCents:     expenses,
       collectionRate:    dto.collectionRate,
       noiMarginPct:      safePct(noi, earned),
@@ -1362,8 +1362,8 @@ export interface UnitFinancialSummaryDTO {
   unitNumber:           string;
   floor:                string | null;
   tenantName:           string | null;
-  projectedIncomeCents: number;
-  earnedIncomeCents:    number;
+  accruedIncomeCents: number;
+  collectedIncomeCents:    number;
   expensesCents:        number;
   /** Apportioned recoverable-charge share from the cost pool, included in expensesCents. */
   apportionedChargesCents: number;
@@ -1510,8 +1510,8 @@ export async function getUnitFinancialSummaries(
       unitNumber:           u.unitNumber,
       floor:                u.floor,
       tenantName:           leaseByUnit[u.id]?.tenantName ?? null,
-      projectedIncomeCents: projected,
-      earnedIncomeCents:    earned,
+      accruedIncomeCents: projected,
+      collectedIncomeCents:    earned,
       expensesCents:        expenses,
       apportionedChargesCents: charges,
       netIncomeCents:       earned - expenses,
@@ -1527,7 +1527,7 @@ export async function getUnitFinancialSummaries(
 
 export interface BuildingMonthlyBreakdownDTO {
   month: number;
-  earnedIncomeCents: number;
+  collectedIncomeCents: number;
   expensesTotalCents: number;
   noiCents: number;
   collectionRate: number;
@@ -1638,9 +1638,9 @@ export async function getBuildingPeriodReport(
       const mt = `${year}-${String(m).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
       try {
         const s = await getBuildingFinancials(orgId, buildingId, { from: mf, to: mt });
-        monthlyData.push({ month: m, earnedIncomeCents: s.earnedIncomeCents, expensesTotalCents: s.expensesTotalCents, noiCents: s.netOperatingIncomeCents, collectionRate: s.collectionRate });
+        monthlyData.push({ month: m, collectedIncomeCents: s.collectedIncomeCents, expensesTotalCents: s.expensesTotalCents, noiCents: s.netOperatingIncomeCents, collectionRate: s.collectionRate });
       } catch {
-        monthlyData.push({ month: m, earnedIncomeCents: 0, expensesTotalCents: 0, noiCents: 0, collectionRate: 0 });
+        monthlyData.push({ month: m, collectedIncomeCents: 0, expensesTotalCents: 0, noiCents: 0, collectionRate: 0 });
       }
     }
   }
@@ -1672,8 +1672,8 @@ export async function getBuildingPeriodReport(
 // ==========================================
 
 export interface UnitPeriodFinancials {
-  projectedIncomeCents: number;
-  earnedIncomeCents:    number;
+  accruedIncomeCents: number;
+  collectedIncomeCents:    number;
   expensesCents:        number;
   netIncomeCents:       number;
   collectionRate:       number;
@@ -1704,7 +1704,7 @@ export interface UnitPeriodReportDTO {
   apportionedChargesCents: number | null;
   monthlyData: Array<{
     month:              number;
-    earnedIncomeCents:  number;
+    collectedIncomeCents:  number;
     expensesCents:      number;
     noiCents:           number;
   }> | null;
@@ -1775,8 +1775,8 @@ export async function getUnitPeriodReport(
     const earned    = earnedAgg._sum.totalAmount ?? 0;
     const expenses  = expAgg._sum.debitCents ?? 0;
     return {
-      projectedIncomeCents: projected,
-      earnedIncomeCents:    earned,
+      accruedIncomeCents: projected,
+      collectedIncomeCents:    earned,
       expensesCents:        expenses,
       netIncomeCents:       earned - expenses,
       collectionRate:       projected > 0 ? Math.min(1, earned / projected) : 0,
@@ -1851,9 +1851,9 @@ export async function getUnitPeriodReport(
       const mt = new Date(`${year}-${String(m).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}T23:59:59.999Z`);
       try {
         const md = await computeFinancials(mf, mt);
-        monthlyData.push({ month: m, earnedIncomeCents: md.earnedIncomeCents, expensesCents: md.expensesCents, noiCents: md.netIncomeCents });
+        monthlyData.push({ month: m, collectedIncomeCents: md.collectedIncomeCents, expensesCents: md.expensesCents, noiCents: md.netIncomeCents });
       } catch {
-        monthlyData.push({ month: m, earnedIncomeCents: 0, expensesCents: 0, noiCents: 0 });
+        monthlyData.push({ month: m, collectedIncomeCents: 0, expensesCents: 0, noiCents: 0 });
       }
     }
   }

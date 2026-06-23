@@ -179,7 +179,7 @@ describe("Financial Performance Engine", () => {
 
     // Result should contain our expense data
     expect(result.expensesTotalCents).toBe(53850);
-    expect(result.earnedIncomeCents).toBe(0); // lease invoices are separate from job invoices
+    expect(result.collectedIncomeCents).toBe(0); // lease invoices are separate from job invoices
   });
 
   // ── Second request uses cached snapshot ──
@@ -277,7 +277,7 @@ describe("Financial Performance Engine", () => {
     });
 
     // 2200 CHF × 1 month = 220000 cents
-    expect(fullMonth.projectedIncomeCents).toBe(220000);
+    expect(fullMonth.accruedIncomeCents).toBe(220000);
 
     // Now query half of January (15 days out of 31)
     const halfMonth = await getBuildingFinancials(orgId, buildingId, {
@@ -296,7 +296,7 @@ describe("Financial Performance Engine", () => {
     // So projected = 220000 × 1.0 = 220000 for this micro-bucket.
     // That's the correct proration: for this 15-day window, expected rent is full monthly rent
     // scaled by (overlapDays / periodDays).
-    expect(halfMonth.projectedIncomeCents).toBe(220000);
+    expect(halfMonth.accruedIncomeCents).toBe(220000);
 
     // Now query a period where lease only partially overlaps: Dec 15 2025 to Jan 15 2026
     // Lease ends Dec 31 2025. So overlap with Dec bucket = Dec 15-31 (16 days) out of 17 days (Dec 15-Jan 1)
@@ -312,8 +312,8 @@ describe("Financial Performance Engine", () => {
     // projected ≈ 220000 × 0.9412 ≈ 207059 (rounded)
     // Jan bucket: [Jan 1, Jan 15) = 14 days. Lease ended → 0.
     // Total projected should be ≈ 207059
-    expect(partialOverlap.projectedIncomeCents).toBeGreaterThan(0);
-    expect(partialOverlap.projectedIncomeCents).toBeLessThan(220000);
+    expect(partialOverlap.accruedIncomeCents).toBeGreaterThan(0);
+    expect(partialOverlap.accruedIncomeCents).toBeLessThan(220000);
   });
 
   // ── Category breakdown sums equal expensesTotal ──
@@ -371,9 +371,9 @@ describe("Financial Performance Engine", () => {
 
     expect(result.rentalIncomeCents).toBe(200000);
     expect(result.serviceChargeIncomeCents).toBe(20000);
-    // Together they match projectedIncomeCents
+    // Together they match accruedIncomeCents
     expect(result.rentalIncomeCents + result.serviceChargeIncomeCents).toBe(
-      result.projectedIncomeCents,
+      result.accruedIncomeCents,
     );
   });
 

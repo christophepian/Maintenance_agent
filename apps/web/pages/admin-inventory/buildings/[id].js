@@ -137,8 +137,8 @@ function buildingHeadline(bf, t) {
   if (noi > 0 && coll >= 0.95 && occ >= 0.9) return t("buildingsId.reporting.headline.strong");
   if (noi > 0 && coll >= 0.8)  return t("buildingsId.reporting.headline.solid");
   if (coll < 0.6)               return t("buildingsId.reporting.headline.collectionAttention");
-  if (noi <= 0 && bf.earnedIncomeCents > 0) return t("buildingsId.reporting.headline.expensesOutpaced");
-  if (bf.earnedIncomeCents === 0) return t("buildingsId.reporting.headline.noIncome");
+  if (noi <= 0 && bf.collectedIncomeCents > 0) return t("buildingsId.reporting.headline.expensesOutpaced");
+  if (bf.collectedIncomeCents === 0) return t("buildingsId.reporting.headline.noIncome");
   return t("buildingsId.reporting.headline.closed");
 }
 
@@ -146,7 +146,7 @@ function buildBuildingDrivers(bf, prevBf, t) {
   const drivers = [];
   if (!bf) return drivers;
   if (prevBf) {
-    const netDiff = bf.earnedIncomeCents - prevBf.earnedIncomeCents;
+    const netDiff = bf.collectedIncomeCents - prevBf.collectedIncomeCents;
     if (netDiff > 0) drivers.push({ title: t("buildingsId.reporting.driver.incomeUp.title"), body: t("buildingsId.reporting.driver.incomeUp.body", { amount: rFmtChf(netDiff) }), impact: `+${rFmtChf(netDiff)}`, positive: true });
     else if (netDiff < 0) drivers.push({ title: t("buildingsId.reporting.driver.incomeDown.title"), body: t("buildingsId.reporting.driver.incomeDown.body", { amount: rFmtChf(Math.abs(netDiff)) }), impact: `-${rFmtChf(Math.abs(netDiff))}`, positive: false });
     const expDiff = bf.expensesTotalCents - prevBf.expensesTotalCents;
@@ -166,13 +166,13 @@ function buildBuildingWatchItems(bf, arrears, unitData, moveIns, moveOuts, t) {
   const viewInvoices = { label: t("buildingsId.reporting.viewInvoices"), href: "/manager/finance/invoices" };
   if (arrears?.overdue61plusCents > 0) items.push({ text: t("buildingsId.reporting.watch.overdue61", { amount: rFmtChf(arrears.overdue61plusCents) }), severity: "red", action: viewInvoices });
   if (arrears?.overdue31to60Cents > 0) items.push({ text: t("buildingsId.reporting.watch.overdue31", { amount: rFmtChf(arrears.overdue31to60Cents) }), severity: "amber" });
-  if (bf.collectionRate < 0.8 && bf.projectedIncomeCents > 0) items.push({ text: t("buildingsId.reporting.watch.collectionRate", { rate: rFmtPct(bf.collectionRate) }), severity: "amber", action: viewInvoices });
+  if (bf.collectionRate < 0.8 && bf.accruedIncomeCents > 0) items.push({ text: t("buildingsId.reporting.watch.collectionRate", { rate: rFmtPct(bf.collectionRate) }), severity: "amber", action: viewInvoices });
   // Unbilled rent = recognized (lease terms) − invoiced this period. Flag only a
   // material gap (>10% and >CHF 200) so proration noise doesn't trigger it. This
   // is the "earned but not yet invoiced" signal — distinct from arrears (invoiced
   // but unpaid), which the collection-rate item above covers.
-  const unbilledCents = (bf.projectedIncomeCents ?? 0) - (bf.invoicedForPeriodCents ?? 0);
-  if (bf.projectedIncomeCents > 0 && unbilledCents > Math.max(20000, bf.projectedIncomeCents * 0.1)) {
+  const unbilledCents = (bf.accruedIncomeCents ?? 0) - (bf.invoicedForPeriodCents ?? 0);
+  if (bf.accruedIncomeCents > 0 && unbilledCents > Math.max(20000, bf.accruedIncomeCents * 0.1)) {
     items.push({ text: t("buildingsId.reporting.watch.unbilled", { amount: rFmtChf(unbilledCents) }), severity: "amber", action: { label: t("buildingsId.reporting.reviewBilling"), href: "/manager/finance/invoices" } });
   }
   const vacantUnits = (unitData ?? []).filter((u) => u.occupancyRate === 0);
@@ -239,7 +239,7 @@ function BuildingPeriodAnalysis({ buildingId }) {
   const monthly   = report?.monthlyData ?? null;
 
   const noi      = bf?.netOperatingIncomeCents ?? 0;
-  const earned   = bf?.earnedIncomeCents       ?? 0;
+  const earned   = bf?.collectedIncomeCents       ?? 0;
   const expenses = bf?.expensesTotalCents       ?? 0;
   const coll     = bf?.collectionRate           ?? 0;
   const occ      = bf && bf.totalUnitsCount > 0 ? bf.activeUnitsCount / bf.totalUnitsCount : null;
@@ -319,7 +319,7 @@ function BuildingPeriodAnalysis({ buildingId }) {
                 isLoading={false}
                 left={[
                   { label: t("buildingsId.reporting.kpi.noi"),            value: rFmtChf(noi),   delta: prev ? buildingDelta(noi, prev.netOperatingIncomeCents) : null },
-                  { label: t("buildingsId.reporting.kpi.cashReceived"),   value: rFmtChf(earned), delta: prev ? buildingDelta(earned, prev.earnedIncomeCents) : null },
+                  { label: t("buildingsId.reporting.kpi.cashReceived"),   value: rFmtChf(earned), delta: prev ? buildingDelta(earned, prev.collectedIncomeCents) : null },
                   { label: t("buildingsId.reporting.kpi.totalExpenses"),  value: rFmtChf(expenses), delta: prev ? buildingDelta(-expenses, -prev.expensesTotalCents) : null },
                   { label: t("buildingsId.reporting.kpi.onTimeCollection"), value: rFmtPct(coll),  delta: prev ? buildingDelta(coll, prev.collectionRate) : null },
                 ]}
@@ -439,7 +439,7 @@ function BuildingPeriodAnalysis({ buildingId }) {
             </div>
             {unitData.length === 0
               ? <p className="text-sm text-muted italic">{t("buildingsId.reporting.noUnits")}</p>
-              : <div className="space-y-2">{visibleUnits.map((u) => <UnitRow key={u.unitId} unitNumber={u.unitNumber} floor={u.floor} tenantName={u.tenantName} earned={u.earnedIncomeCents} expenses={u.expensesCents} charges={u.apportionedChargesCents} net={u.netIncomeCents} collectionRate={u.collectionRate} occupancyRate={u.occupancyRate} />)}</div>}
+              : <div className="space-y-2">{visibleUnits.map((u) => <UnitRow key={u.unitId} unitNumber={u.unitNumber} floor={u.floor} tenantName={u.tenantName} earned={u.collectedIncomeCents} expenses={u.expensesCents} charges={u.apportionedChargesCents} net={u.netIncomeCents} collectionRate={u.collectionRate} occupancyRate={u.occupancyRate} />)}</div>}
           </div>
 
           {/* ── Occupancy movements ── */}

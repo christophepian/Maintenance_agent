@@ -47,7 +47,7 @@ function ChartLegend({ items }) {
 
 const CHF_SERIES = [
   { key: "noiCents",          label: "NOI",            color: "rgba(59,130,246,0.85)"  },
-  { key: "earnedIncomeCents", label: "Rent Collected", color: "rgba(16,185,129,0.85)"  },
+  { key: "collectedIncomeCents", label: "Cash received", color: "rgba(16,185,129,0.85)"  },
   { key: "expensesCents",     label: "Expenses",       color: "rgba(239,68,68,0.75)"   },
 ];
 
@@ -128,7 +128,7 @@ function ChfPanel({ points, t }) {
 // ── Panel: % line chart ──────────────────────────────────────
 
 const PCT_SERIES = [
-  { key: "collectionRate", label: "Collection Rate", color: "rgba(168,85,247,1)"  },
+  { key: "collectionRate", label: "On-time collection", color: "rgba(168,85,247,1)"  },
   { key: "noiMarginPct",   label: "NOI Margin",      color: "rgba(20,184,166,1)"  },
   { key: "opexRatioPct",   label: "OpEx Ratio",      color: "rgba(249,115,22,1)"  },
   { key: "occupancyRate",  label: "Occupancy",        color: "rgba(99,102,241,1)"  },

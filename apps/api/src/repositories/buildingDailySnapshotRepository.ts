@@ -3,7 +3,7 @@ import { PrismaClient } from "@prisma/client";
 export interface BuildingDailySnapshotRow {
   date: Date;
   noiCents: number;
-  earnedIncomeCents: number;
+  collectedIncomeCents: number;
   expensesCents: number;
   collectionRate: number;
   noiMarginPct: number | null;
@@ -40,7 +40,7 @@ export async function findBuildingDailySnapshotsInRange(
   return rows.map((r) => ({
     date: r.date,
     noiCents: r.noiCents,
-    earnedIncomeCents: r.earnedIncomeCents,
+    collectedIncomeCents: r.collectedIncomeCents,
     expensesCents: r.expensesCents,
     collectionRate: r.collectionRate,
     noiMarginPct: r.noiMarginPct,
