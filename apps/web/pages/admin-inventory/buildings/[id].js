@@ -564,6 +564,9 @@ function displayDate(iso) {
   return `${dd}.${mm}.${d.getFullYear()}`;
 }
 
+// Role-intent choices an owner can assign to a building (excludes "unspecified").
+const ROLE_INTENT_OPTIONS = ["income", "long_term_quality", "stable_hold", "reposition", "sell"];
+
 export default function BuildingDetail() {
   const { t } = useTranslation("manager");
   const router = useRouter();
@@ -616,6 +619,12 @@ export default function BuildingDetail() {
   const [ownerLoading, setOwnerLoading] = useState(false);
   const [ownerStrategyProfiles, setOwnerStrategyProfiles] = useState({});
   const [buildingStrategyProfile, setBuildingStrategyProfile] = useState(null);
+  // ─── Owner-facing building-strategy editor (sets roleIntent on this building) ───
+  const [ownerProfile, setOwnerProfile] = useState(null); // current owner's portfolio profile
+  const [stratEditOpen, setStratEditOpen] = useState(false);
+  const [stratRoleIntent, setStratRoleIntent] = useState("");
+  const [stratSaving, setStratSaving] = useState(false);
+  const [stratError, setStratError] = useState("");
 
   // ─── Asset inventory state ───
   const [assetInventory, setAssetInventory] = useState([]);
@@ -733,6 +742,7 @@ export default function BuildingDetail() {
         loadOwnerStrategyProfiles(b.owners.map((o) => o.id));
       }
       loadBuildingStrategyProfile();
+      if (isOwner) loadOwnerProfileCurrent();
     } catch (e) {
       setErr(`Failed to load building: ${e.message}`);
     } finally {
@@ -817,6 +827,46 @@ export default function BuildingDetail() {
       }
     } catch {
       // non-fatal
+    }
+  }
+
+  // Current owner's portfolio strategy profile — anchors the building-strategy editor.
+  async function loadOwnerProfileCurrent() {
+    try {
+      const res = await fetch(`/api/strategy/owner-profile-current`, { headers: authHeaders() });
+      if (res.ok) {
+        const json = await res.json();
+        setOwnerProfile(json?.profile ?? null);
+      }
+    } catch {
+      // non-fatal
+    }
+  }
+
+  // Owner sets/edits this building's role intent → upserts the BuildingStrategyProfile,
+  // anchored to the editing owner's portfolio profile.
+  async function saveBuildingStrategy() {
+    if (!id || !ownerProfile?.id || !stratRoleIntent) return;
+    setStratSaving(true);
+    setStratError("");
+    try {
+      const res = await fetch(`/api/strategy/building-profile`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({
+          buildingId: id,
+          ownerProfileId: ownerProfile.id,
+          roleIntent: stratRoleIntent,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error?.message || json?.error || "Failed to save strategy");
+      setStratEditOpen(false);
+      await loadBuildingStrategyProfile();
+    } catch (e) {
+      setStratError(e.message);
+    } finally {
+      setStratSaving(false);
     }
   }
 
@@ -1681,12 +1731,13 @@ export default function BuildingDetail() {
                     )}
                   </div>
 
-              {/* Building Strategy Profile */}
-              {buildingStrategyProfile && (() => {
+              {/* Building Strategy Profile — read-only guidelines; owners can set/edit the role intent */}
+              {(buildingStrategyProfile || (isOwner && ownerProfile)) && (() => {
                 const bp = buildingStrategyProfile;
-                const archLabel = bp.primaryArchetype ? ARCHETYPE_LABELS[bp.primaryArchetype] : null;
-                const copy = bp.primaryArchetype ? ARCHETYPE_EXPLANATION_COPY[bp.primaryArchetype] : null;
-                const secLabel = bp.secondaryArchetype ? ARCHETYPE_LABELS[bp.secondaryArchetype] : null;
+                const archLabel = bp?.primaryArchetype ? ARCHETYPE_LABELS[bp.primaryArchetype] : null;
+                const copy = bp?.primaryArchetype ? ARCHETYPE_EXPLANATION_COPY[bp.primaryArchetype] : null;
+                const secLabel = bp?.secondaryArchetype ? ARCHETYPE_LABELS[bp.secondaryArchetype] : null;
+                const canEdit = isOwner && ownerProfile;
                 return (
                   <div className="mt-6 pt-4 border-t border-surface-border">
                     <div className="flex items-center justify-between mb-3">
@@ -1694,34 +1745,91 @@ export default function BuildingDetail() {
                       <div className="flex items-center gap-1.5">
                         {archLabel && <Badge variant="brand" size="sm">{archLabel}</Badge>}
                         {secLabel && <Badge variant="info" size="sm">{secLabel}</Badge>}
+                        {canEdit && !stratEditOpen && (
+                          <button
+                            type="button"
+                            className="text-xs font-medium text-indigo-600 hover:text-indigo-800 transition-colors ml-1"
+                            onClick={() => {
+                              setStratRoleIntent(bp?.roleIntent && bp.roleIntent !== "unspecified" ? bp.roleIntent : "");
+                              setStratError("");
+                              setStratEditOpen(true);
+                            }}
+                          >
+                            {bp ? t("manager:buildingsId.btn.edit") : t("manager:buildingsId.btn.setStrategy")}
+                          </button>
+                        )}
                       </div>
                     </div>
-                    <KpiInlineGrid
-                      items={[
-                        { label: t("manager:buildingsId.label.roleIntent"), value: bp.roleIntent ? bp.roleIntent.replace(/_/g, " ") : "—" },
-                        { label: t("manager:buildingsId.label.buildingType"), value: bp.buildingType ? bp.buildingType.replace(/_/g, " ") : "—" },
-                        { label: t("manager:buildingsId.label.condition"), value: bp.conditionRating != null ? `${bp.conditionRating}/10` : "—" },
-                        { label: t("manager:buildingsId.label.approxUnits"), value: bp.approxUnits != null ? String(bp.approxUnits) : "—" },
-                      ]}
-                    />
-                    {copy && (
-                      <div className="mt-3">
-                        <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim mb-1.5">{t("manager:buildingsId.label.guidelines")}</div>
-                        <ul className="space-y-1">
-                          {copy.bullets.map((b, i) => (
-                            <li key={i} className="text-xs text-muted-text flex gap-1.5">
-                              <span className="text-foreground-dim flex-shrink-0">·</span>
-                              <span>{b}</span>
-                            </li>
-                          ))}
-                          {copy.deprioritize && (
-                            <li className="text-xs text-foreground-dim flex gap-1.5 mt-1">
-                              <span className="flex-shrink-0">↓ {t("manager:buildingsId.label.guidelines")}:</span>
-                              <span>{copy.deprioritize}</span>
-                            </li>
-                          )}
-                        </ul>
+
+                    {canEdit && stratEditOpen ? (
+                      <div className="space-y-3">
+                        <p className="text-xs text-muted">{t("manager:buildingsId.strategyEditor.intro")}</p>
+                        <div>
+                          <label className="block text-xs font-medium uppercase tracking-wide text-foreground-dim mb-1">
+                            {t("manager:buildingsId.label.roleIntent")}
+                          </label>
+                          <select
+                            className="input text-sm w-full max-w-xs"
+                            value={stratRoleIntent}
+                            onChange={(e) => setStratRoleIntent(e.target.value)}
+                          >
+                            <option value="">{t("manager:buildingsId.select.roleIntent")}</option>
+                            {ROLE_INTENT_OPTIONS.map((v) => (
+                              <option key={v} value={v}>{v.replace(/_/g, " ")}</option>
+                            ))}
+                          </select>
+                        </div>
+                        {stratError && <p className="text-xs text-red-500">{stratError}</p>}
+                        <div className="flex items-center gap-3">
+                          <button
+                            type="button"
+                            className="button-primary text-sm"
+                            disabled={!stratRoleIntent || stratSaving}
+                            onClick={saveBuildingStrategy}
+                          >
+                            {stratSaving ? t("manager:buildingsId.btn.saving") : t("manager:buildingsId.btn.save")}
+                          </button>
+                          <button
+                            type="button"
+                            className="text-sm font-medium text-muted-dark hover:text-foreground transition-colors"
+                            onClick={() => setStratEditOpen(false)}
+                          >
+                            {t("manager:buildingsId.btn.cancel")}
+                          </button>
+                        </div>
                       </div>
+                    ) : bp ? (
+                      <>
+                        <KpiInlineGrid
+                          items={[
+                            { label: t("manager:buildingsId.label.roleIntent"), value: bp.roleIntent ? bp.roleIntent.replace(/_/g, " ") : "—" },
+                            { label: t("manager:buildingsId.label.buildingType"), value: bp.buildingType ? bp.buildingType.replace(/_/g, " ") : "—" },
+                            { label: t("manager:buildingsId.label.condition"), value: bp.conditionRating != null ? `${bp.conditionRating}/10` : "—" },
+                            { label: t("manager:buildingsId.label.approxUnits"), value: bp.approxUnits != null ? String(bp.approxUnits) : "—" },
+                          ]}
+                        />
+                        {copy && (
+                          <div className="mt-3">
+                            <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim mb-1.5">{t("manager:buildingsId.label.guidelines")}</div>
+                            <ul className="space-y-1">
+                              {copy.bullets.map((b, i) => (
+                                <li key={i} className="text-xs text-muted-text flex gap-1.5">
+                                  <span className="text-foreground-dim flex-shrink-0">·</span>
+                                  <span>{b}</span>
+                                </li>
+                              ))}
+                              {copy.deprioritize && (
+                                <li className="text-xs text-foreground-dim flex gap-1.5 mt-1">
+                                  <span className="flex-shrink-0">↓ {t("manager:buildingsId.label.guidelines")}:</span>
+                                  <span>{copy.deprioritize}</span>
+                                </li>
+                              )}
+                            </ul>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <p className="text-xs text-muted italic">{t("manager:buildingsId.strategyEditor.notSet")}</p>
                     )}
                   </div>
                 );

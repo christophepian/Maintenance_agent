@@ -498,9 +498,9 @@
     "prop": {
       "netIncome": "Revenu net",
       "netOperatingIncome": "Revenu opérationnel net",
-      "rentCollected": "Loyer encaissé",
+      "rentCollected": "Encaissements",
       "totalExpenses": "Total des dépenses",
-      "collectionRate": "Taux de recouvrement",
+      "collectionRate": "Recouvrement à échéance",
       "noiMargin": "Marge NOI",
       "opexRatio": "Ratio charges d'exploitation",
       "occupancy": "Taux d'occupation",
@@ -662,13 +662,13 @@
       "chfPanel": "Performance CHF",
       "pctPanel": "Santé du portefeuille %",
       "metric": {
-        "noiCents":          "RNE",
-        "earnedIncomeCents": "Loyers encaissés",
-        "expensesCents":     "Charges totales",
-        "collectionRate":    "Taux de recouvrement",
-        "noiMarginPct":      "Marge RNE",
-        "opexRatioPct":      "Ratio charges/loyers",
-        "occupancyRate":     "Taux d'occupation"
+        "noiCents": "RNE",
+        "earnedIncomeCents": "Encaissements",
+        "expensesCents": "Charges totales",
+        "collectionRate": "Recouvrement à échéance",
+        "noiMarginPct": "Marge RNE",
+        "opexRatioPct": "Ratio charges/loyers",
+        "occupancyRate": "Taux d'occupation"
       }
     },
     "highlight": {

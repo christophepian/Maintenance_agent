@@ -24,7 +24,7 @@ import { readJson } from "../http/body";
 import { first } from "../http/query";
 import { maybeRequireManager, requireRole, requireAnyRole, getAuthUser } from "../authz";
 import { withAuthRequired } from "../http/routeProtection";
-import { CashflowPlanStatus } from "@prisma/client";
+import { CashflowPlanStatus, PrismaClient } from "@prisma/client";
 import {
   listCashflowPlans,
   findCashflowPlanById,
@@ -58,6 +58,118 @@ import {
   UpdateCashflowPlanSchema,
   AddOverrideSchema,
 } from "../validation/cashflowPlans";
+
+type ScenarioKey = "invest" | "defer" | "neglect";
+
+interface NpvStrategyContext {
+  hasProfile: boolean;
+  /** Where the recommendation is derived from. "owner-portfolio" is a fallback default, not authoritative. */
+  source: "building" | "owner-portfolio" | "none";
+  archetype?: string;
+  roleIntent?: string;
+  recommendedScenario?: ScenarioKey;
+  rationale?: string;
+  /** owner-portfolio fallback: how many owner profiles were considered */
+  ownerProfileCount?: number;
+  /** owner-portfolio fallback: whether the owners' individual recommendations diverged */
+  divergent?: boolean;
+}
+
+/**
+ * Resolve the strategy context for a building-scoped NPV result.
+ *
+ * Precedence:
+ *  1. Explicit building strategy profile (authoritative) — source "building".
+ *  2. No building profile → fall back to the building owners' portfolio-level
+ *     strategy profiles. Each owner's recommendation is computed independently;
+ *     if they agree we surface the consensus, if they diverge we default to the
+ *     cautious "defer" middle ground. The FCI-critical override inside
+ *     computeRecommendation still forces a unanimous "invest" when condition is
+ *     critical, so a building that genuinely needs work is never under-called.
+ *     Source "owner-portfolio" — a default, flagged as such to the UI.
+ *  3. No profiles at all → source "none" (UI shows the set-a-profile hint).
+ */
+async function resolveStrategyContext(
+  prisma: PrismaClient,
+  orgId: string,
+  buildingId: string,
+  result: { fciCurrentPct: number; scenarios: { invest: any; defer: any; neglect: any }; deferYears: number },
+): Promise<NpvStrategyContext> {
+  // 1. Explicit building profile wins.
+  const buildingProfile = await getBuildingProfileByBuildingId(prisma, buildingId, orgId);
+  if (buildingProfile) {
+    let dims: Record<string, number> | null = null;
+    try { dims = JSON.parse(buildingProfile.effectiveDimensionsJson) as Record<string, number>; } catch { /* proceed without dims */ }
+    const { scenario, rationale } = computeRecommendation(
+      buildingProfile.primaryArchetype,
+      dims,
+      result.fciCurrentPct,
+      result.scenarios,
+      result.deferYears,
+    );
+    return {
+      hasProfile: true,
+      source: "building",
+      archetype: buildingProfile.primaryArchetype ?? undefined,
+      roleIntent: buildingProfile.roleIntent ?? undefined,
+      recommendedScenario: scenario,
+      rationale,
+    };
+  }
+
+  // 2. Fall back to the building owners' portfolio profiles.
+  const owners = await prisma.buildingOwner.findMany({
+    where: { buildingId },
+    include: { user: { include: { strategyProfile: true } } },
+  });
+  const ownerProfiles = owners
+    .map((o) => o.user?.strategyProfile)
+    .filter((p): p is NonNullable<typeof p> => !!p);
+
+  if (ownerProfiles.length === 0) {
+    return { hasProfile: false, source: "none" };
+  }
+
+  // Compute each owner's recommendation independently, then reconcile.
+  const perOwner = ownerProfiles.map((p) => {
+    let dims: Record<string, number> | null = null;
+    try { dims = JSON.parse(p.dimensionsJson) as Record<string, number>; } catch { /* proceed without dims */ }
+    const rec = computeRecommendation(
+      p.primaryArchetype,
+      dims,
+      result.fciCurrentPct,
+      result.scenarios,
+      result.deferYears,
+    );
+    return { archetype: p.primaryArchetype, goalLabel: p.userFacingGoalLabel, scenario: rec.scenario, rationale: rec.rationale };
+  });
+
+  const distinct = Array.from(new Set(perOwner.map((r) => r.scenario)));
+  const divergent = distinct.length > 1;
+
+  let recommendedScenario: ScenarioKey;
+  let rationale: string;
+  if (!divergent) {
+    recommendedScenario = perOwner[0].scenario;
+    rationale = perOwner.length === 1
+      ? `Based on the owner's portfolio strategy (no building-specific strategy set): ${perOwner[0].rationale}`
+      : `All owners' strategies agree (no building-specific strategy set): ${perOwner[0].rationale}`;
+  } else {
+    // Owners genuinely diverge → cautious middle ground rather than picking a winner.
+    recommendedScenario = "defer";
+    const labels = perOwner.map((r) => r.goalLabel || r.archetype).filter(Boolean);
+    rationale = `Owners follow differing strategies (${labels.join(" vs. ")}). Showing the cautious default — defer — until a building-specific strategy is set.`;
+  }
+
+  return {
+    hasProfile: true,
+    source: "owner-portfolio",
+    recommendedScenario,
+    rationale,
+    ownerProfileCount: ownerProfiles.length,
+    divergent,
+  };
+}
 
 export function registerCashflowPlanRoutes(router: Router) {
 
@@ -340,27 +452,12 @@ export function registerCashflowPlanRoutes(router: Router) {
         renovations,
       });
 
-      // Strategy context — only for single-building plans
-      let strategyContext: { hasProfile: boolean; archetype?: string; recommendedScenario?: string; rationale?: string } = { hasProfile: false };
+      // Strategy context — only for single-building plans. Prefers the explicit
+      // building strategy profile and falls back to the owners' portfolio
+      // profiles when none is set (see resolveStrategyContext).
+      let strategyContext: NpvStrategyContext = { hasProfile: false, source: "none" };
       if (plan.buildingId) {
-        const profile = await getBuildingProfileByBuildingId(prisma, plan.buildingId, orgId);
-        if (profile) {
-          let dims: Record<string, number> | null = null;
-          try { dims = JSON.parse(profile.effectiveDimensionsJson) as Record<string, number>; } catch { /* proceed without dims */ }
-          const { scenario, rationale } = computeRecommendation(
-            profile.primaryArchetype,
-            dims,
-            result.fciCurrentPct,
-            result.scenarios,
-            result.deferYears,
-          );
-          strategyContext = {
-            hasProfile: true,
-            archetype: profile.primaryArchetype ?? undefined,
-            recommendedScenario: scenario,
-            rationale,
-          };
-        }
+        strategyContext = await resolveStrategyContext(prisma, orgId, plan.buildingId, result);
       }
 
       // Cache verdict on the plan (best-effort, non-blocking)

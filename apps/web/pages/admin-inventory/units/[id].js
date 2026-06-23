@@ -29,8 +29,6 @@ import {
 
 // ── Unit Period Analysis component ─────────────────────────────────────────
 
-const MONTHS_SHORT = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-
 function delta(curr, prev, invert = false) {
   if (prev == null || prev === 0) return null;
   const pct = (curr - prev) / Math.abs(prev);
@@ -39,6 +37,10 @@ function delta(curr, prev, invert = false) {
 }
 
 function UnitPeriodAnalysis({ unitId }) {
+  const { t, i18n } = useTranslation("manager");
+  const locale = i18n.language || "en";
+  const monthsShort = useMemo(() => Array.from({ length: 12 }, (_, i) =>
+    new Intl.DateTimeFormat(locale, { month: "short" }).format(new Date(2024, i, 1))), [locale]);
   const now = new Date();
   const [year, setYear]   = useState(now.getFullYear());
   const [ytd,  setYtd]    = useState(true);
@@ -65,11 +67,11 @@ function UnitPeriodAnalysis({ unitId }) {
       const qs = new URLSearchParams({ from, to, includeMonthly: ytd ? "true" : "false" });
       const res = await fetch(`/api/units/${unitId}/period-report?${qs}`, { headers: authHeaders() });
       const json = await res.json();
-      if (!res.ok) throw new Error(json?.error?.message || "Failed");
+      if (!res.ok) throw new Error(json?.error?.message || t("unitsId.reporting.failed"));
       setReport(json.data);
     } catch (e) { setErr(e.message); }
     finally { setLoading(false); }
-  }, [unitId, from, to, ytd]);
+  }, [unitId, from, to, ytd, t]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -80,13 +82,13 @@ function UnitPeriodAnalysis({ unitId }) {
 
   const headline = useMemo(() => {
     if (!c) return "";
-    if (c.netIncomeCents > 0 && c.collectionRate >= 0.95) return "Strong unit performance";
-    if (c.collectionRate < 0.8) return "Collection rate needs attention";
-    if (c.netIncomeCents < 0) return "Unit running at a loss";
-    return "Unit performing within range";
-  }, [c]);
+    if (c.netIncomeCents > 0 && c.collectionRate >= 0.95) return t("unitsId.reporting.headline.strong");
+    if (c.collectionRate < 0.8) return t("unitsId.reporting.headline.collectionAttention");
+    if (c.netIncomeCents < 0) return t("unitsId.reporting.headline.loss");
+    return t("unitsId.reporting.headline.withinRange");
+  }, [c, t]);
 
-  const periodBadge = ytd ? `YTD ${year}` : `${MONTHS_SHORT[month-1]} ${year}`;
+  const periodBadge = ytd ? `YTD ${year}` : `${monthsShort[month-1]} ${year}`;
 
   return (
     <div className="space-y-6">
@@ -103,7 +105,7 @@ function UnitPeriodAnalysis({ unitId }) {
         >YTD</button>
         {!ytd && (
           <div className="flex gap-1 flex-wrap">
-            {MONTHS_SHORT.map((m, i) => (
+            {monthsShort.map((m, i) => (
               <button key={m} onClick={() => setMonth(i+1)}
                 className={cn("rounded border px-2 py-0.5 text-xs transition-colors", month === i+1 ? "bg-brand border-brand text-white" : "border-surface-border text-foreground-dim hover:bg-surface-hover")}>
                 {m}
@@ -113,24 +115,29 @@ function UnitPeriodAnalysis({ unitId }) {
         )}
       </div>
 
-      {err && <p className="text-sm text-red-600">{err}</p>}
+      {err && <p className="text-sm text-destructive-text">{err}</p>}
 
       {/* Hero */}
       <div>
         <header
-          className={cn("border border-surface-border bg-gradient-to-br p-6 shadow-sm", heroGradient, kpiOpen ? "rounded-t-3xl" : "rounded-3xl")}
+          className={cn(
+            "border border-surface-border bg-gradient-to-br p-6 shadow-sm",
+            "dark:from-brand-light dark:via-info-light dark:to-transparent",
+            heroGradient,
+            kpiOpen ? "rounded-t-3xl" : "rounded-3xl",
+          )}
         >
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap mb-3">
-                <span className="rounded-full border border-white/60 bg-white/40 px-3 py-1 text-xs font-medium text-foreground backdrop-blur-sm">{periodBadge}</span>
-                {cl && <span className="text-xs text-foreground-dim">{cl.tenantName} · CHF {cl.netRentChf}/mo</span>}
+                <span className="rounded-full border border-black/20 dark:border-white/20 bg-black/5 dark:bg-white/10 px-3 py-1 text-xs font-medium text-foreground/70 backdrop-blur-sm">{periodBadge}</span>
+                {cl && <span className="text-xs text-foreground-dim">{cl.tenantName} · {t("unitsId.reporting.perMonth", { amount: cl.netRentChf })}</span>}
               </div>
               <h3 className="text-xl font-bold text-foreground tracking-tight">{loading ? "—" : headline}</h3>
               {c && !loading && (
                 <p className="mt-1 text-sm text-foreground-dim">
-                  NOI {fmtChf(c.netIncomeCents)} · Collection {fmtPct(c.collectionRate)}
-                  {cl?.endDate && <span> · Lease ends {cl.endDate}{cl.remainingMonths != null ? ` (${cl.remainingMonths} mo)` : ""}</span>}
+                  {t("unitsId.reporting.noiCollection", { noi: fmtChf(c.netIncomeCents), rate: fmtPct(c.collectionRate) })}
+                  {cl?.endDate && <span> · {t("unitsId.reporting.leaseEnds", { date: cl.endDate })}{cl.remainingMonths != null ? ` (${t("unitsId.reporting.months", { count: cl.remainingMonths })})` : ""}</span>}
                 </p>
               )}
             </div>
@@ -139,10 +146,10 @@ function UnitPeriodAnalysis({ unitId }) {
                 <p className={cn("text-3xl font-bold tabular-nums", loading ? "opacity-30" : "", c?.netIncomeCents >= 0 ? "text-foreground" : "text-red-600")}>
                   {loading ? "—" : fmtChf(c?.netIncomeCents ?? 0)}
                 </p>
-                <p className="text-xs text-foreground-dim mt-0.5">Net operating income</p>
+                <p className="text-xs text-foreground-dim mt-0.5">{t("unitsId.reporting.netOperatingIncome")}</p>
               </div>
               <button onClick={() => setKpiOpen(v => !v)} className="flex items-center gap-1 text-xs text-foreground-dim hover:text-foreground transition-colors">
-                {kpiOpen ? <><ChevronUp className="h-3 w-3"/>Hide KPIs</> : <><ChevronDown className="h-3 w-3"/>Show KPIs</>}
+                {kpiOpen ? <><ChevronUp className="h-3 w-3"/>{t("unitsId.reporting.hideKpis")}</> : <><ChevronDown className="h-3 w-3"/>{t("unitsId.reporting.showKpis")}</>}
               </button>
             </div>
           </div>
@@ -152,16 +159,16 @@ function UnitPeriodAnalysis({ unitId }) {
             attached
             isLoading={loading}
             left={[
-              { label: "Earned income",    value: fmtChf(c?.earnedIncomeCents ?? 0),    delta: delta(c?.earnedIncomeCents, p?.earnedIncomeCents) },
-              { label: "Projected income", value: fmtChf(c?.projectedIncomeCents ?? 0), delta: null },
-              { label: "Expenses",         value: fmtChf(c?.expensesCents ?? 0),         delta: delta(c?.expensesCents, p?.expensesCents, true) },
-              { label: "Net income",       value: fmtChf(c?.netIncomeCents ?? 0),        delta: delta(c?.netIncomeCents, p?.netIncomeCents) },
+              { label: t("unitsId.reporting.kpi.cashReceived"),  value: fmtChf(c?.earnedIncomeCents ?? 0),    delta: delta(c?.earnedIncomeCents, p?.earnedIncomeCents) },
+              { label: t("unitsId.reporting.kpi.accruedIncome"),  value: fmtChf(c?.projectedIncomeCents ?? 0), delta: null },
+              { label: t("unitsId.reporting.kpi.expenses"),       value: fmtChf(c?.expensesCents ?? 0),         delta: delta(c?.expensesCents, p?.expensesCents, true) },
+              { label: t("unitsId.reporting.kpi.netIncome"),      value: fmtChf(c?.netIncomeCents ?? 0),        delta: delta(c?.netIncomeCents, p?.netIncomeCents) },
             ]}
             right={[
-              { label: "Collection rate",  value: fmtPct(c?.collectionRate ?? 0),        delta: delta(c?.collectionRate, p?.collectionRate) },
-              { label: "Monthly rent",     value: cl ? `CHF ${cl.netRentChf}` : "—",     delta: null },
-              { label: "Lease remaining",  value: cl?.remainingMonths != null ? `${cl.remainingMonths} mo` : cl ? "Open-ended" : "Vacant", delta: null },
-              { label: "Arrears",          value: fmtChf(report?.arrearsCents ?? 0),     delta: null },
+              { label: t("unitsId.reporting.kpi.onTimeCollection"), value: fmtPct(c?.collectionRate ?? 0),      delta: delta(c?.collectionRate, p?.collectionRate) },
+              { label: t("unitsId.reporting.kpi.monthlyRent"),     value: cl ? `CHF ${cl.netRentChf}` : "—",     delta: null },
+              { label: t("unitsId.reporting.kpi.leaseRemaining"),  value: cl?.remainingMonths != null ? t("unitsId.reporting.months", { count: cl.remainingMonths }) : cl ? t("unitsId.reporting.openEnded") : t("unitsId.reporting.vacant"), delta: null },
+              { label: t("unitsId.reporting.kpi.arrears"),         value: fmtChf(report?.arrearsCents ?? 0),     delta: null },
             ]}
           />
         )}
@@ -170,18 +177,18 @@ function UnitPeriodAnalysis({ unitId }) {
       {/* Monthly NOI trendline (YTD only) */}
       {ytd && report?.monthlyData?.length > 0 && (
         <div className="rounded-2xl border border-surface-border bg-surface p-4 shadow-sm">
-          <p className="text-xs font-medium text-foreground-dim uppercase tracking-wide mb-3">Monthly NOI {year}</p>
+          <p className="text-xs font-medium text-foreground-dim uppercase tracking-wide mb-3">{t("unitsId.reporting.monthlyNoi", { year })}</p>
           <MonthlyTrendChart data={report.monthlyData} />
         </div>
       )}
 
       {/* Arrears alert */}
       {(report?.arrearsCents ?? 0) > 0 && (
-        <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4">
-          <span className="mt-0.5 text-amber-600 text-lg leading-none">⚠</span>
+        <div className="flex items-start gap-3 rounded-2xl border border-warning-ring bg-warning-light p-4">
+          <span className="mt-0.5 text-warning-text text-lg leading-none">⚠</span>
           <div>
-            <p className="text-sm font-semibold text-amber-900">Outstanding receivables</p>
-            <p className="text-sm text-amber-800">{fmtChf(report.arrearsCents)} in unpaid invoices for this unit.</p>
+            <p className="text-sm font-semibold text-warning-text">{t("unitsId.reporting.outstandingReceivables")}</p>
+            <p className="text-sm text-warning-text/80">{t("unitsId.reporting.unpaidForUnit", { amount: fmtChf(report.arrearsCents) })}</p>
           </div>
         </div>
       )}
@@ -189,13 +196,13 @@ function UnitPeriodAnalysis({ unitId }) {
       {/* Asset condition summary */}
       {cond && cond.total > 0 && (
         <div className="rounded-2xl border border-surface-border bg-surface p-5 shadow-sm">
-          <p className="text-xs font-medium text-foreground-dim uppercase tracking-wide mb-4">Asset condition (latest report)</p>
+          <p className="text-xs font-medium text-foreground-dim uppercase tracking-wide mb-4">{t("unitsId.reporting.assetCondition")}</p>
           <div className="grid grid-cols-4 gap-3">
             {[
-              { label: "Good",    count: cond.good,    bg: "bg-green-100",  text: "text-green-700" },
-              { label: "Fair",    count: cond.fair,    bg: "bg-amber-100",  text: "text-amber-700" },
-              { label: "Poor",    count: cond.poor,    bg: "bg-orange-100", text: "text-orange-700" },
-              { label: "Damaged", count: cond.damaged, bg: "bg-red-100",    text: "text-red-700" },
+              { label: t("unitsId.reporting.condition.good"),    count: cond.good,    bg: "bg-success-light",     text: "text-success-text" },
+              { label: t("unitsId.reporting.condition.fair"),    count: cond.fair,    bg: "bg-warning-light",     text: "text-warning-text" },
+              { label: t("unitsId.reporting.condition.poor"),    count: cond.poor,    bg: "bg-orange-light",      text: "text-orange-text" },
+              { label: t("unitsId.reporting.condition.damaged"), count: cond.damaged, bg: "bg-destructive-light", text: "text-destructive-text" },
             ].map(({ label, count, bg, text }) => (
               <div key={label} className={cn("rounded-xl p-3 text-center", bg)}>
                 <p className={cn("text-2xl font-bold", text)}>{count}</p>
@@ -204,8 +211,8 @@ function UnitPeriodAnalysis({ unitId }) {
             ))}
           </div>
           {(cond.poor > 0 || cond.damaged > 0) && (
-            <p className="mt-3 text-xs text-orange-700">
-              {cond.poor + cond.damaged} asset{cond.poor + cond.damaged !== 1 ? "s" : ""} in poor/damaged condition — consider running a renovation simulation.
+            <p className="mt-3 text-xs text-orange-text">
+              {t("unitsId.reporting.poorDamaged", { count: cond.poor + cond.damaged })}
             </p>
           )}
         </div>

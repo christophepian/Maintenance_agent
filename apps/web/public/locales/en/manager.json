@@ -529,7 +529,8 @@
       "delete": "Delete",
       "editPolicies": "Edit policies",
       "cancelPolicies": "Cancel",
-      "addOverride": "+ Add override rule"
+      "addOverride": "+ Add override rule",
+      "setStrategy": "Set strategy"
     },
     "label": {
       "name": "Name",
@@ -582,7 +583,8 @@
       "endsWith": "Ends With",
       "autoApprove": "Auto-approve",
       "requireManagerReview": "Require manager review",
-      "requireOwnerApproval": "Require owner approval"
+      "requireOwnerApproval": "Require owner approval",
+      "roleIntent": "Select a role intent"
     },
     "text": {
       "loadingBuilding": "Loading building...",
@@ -745,6 +747,10 @@
       "loadingEllipsis": "Loading…",
       "periodAnalysis": "Period Analysis",
       "performanceCanvas": "Performance Canvas"
+    },
+    "strategyEditor": {
+      "intro": "Set how this building should be managed — the cashflow recommendation engine uses it to tailor advice for this property.",
+      "notSet": "No building-specific strategy is set. Set one to tailor cashflow recommendations to this building."
     }
   },
   "unitsId": {
@@ -781,6 +787,46 @@
       "invoices": "Invoices",
       "contracts": "Contracts",
       "openRequests": "Open Requests"
+    },
+    "reporting": {
+      "failed": "Failed to load",
+      "headline": {
+        "strong": "Strong unit performance",
+        "collectionAttention": "Collection rate needs attention",
+        "loss": "Unit running at a loss",
+        "withinRange": "Unit performing within range"
+      },
+      "perMonth": "CHF {{amount}}/mo",
+      "noiCollection": "NOI {{noi}} · Collection {{rate}}",
+      "leaseEnds": "Lease ends {{date}}",
+      "months": "{{count}} mo",
+      "netOperatingIncome": "Net operating income",
+      "hideKpis": "Hide KPIs",
+      "showKpis": "Show KPIs",
+      "kpi": {
+        "cashReceived": "Cash received",
+        "accruedIncome": "Accrued income",
+        "expenses": "Expenses",
+        "netIncome": "Net income",
+        "onTimeCollection": "On-time collection",
+        "monthlyRent": "Monthly rent",
+        "leaseRemaining": "Lease remaining",
+        "arrears": "Arrears"
+      },
+      "openEnded": "Open-ended",
+      "vacant": "Vacant",
+      "monthlyNoi": "Monthly NOI {{year}}",
+      "outstandingReceivables": "Outstanding receivables",
+      "unpaidForUnit": "{{amount}} in unpaid invoices for this unit.",
+      "assetCondition": "Asset condition (latest report)",
+      "condition": {
+        "good": "Good",
+        "fair": "Fair",
+        "poor": "Poor",
+        "damaged": "Damaged"
+      },
+      "poorDamaged_one": "{{count}} asset in poor/damaged condition — consider running a renovation simulation.",
+      "poorDamaged_other": "{{count}} assets in poor/damaged condition — consider running a renovation simulation."
     }
   },
   "billingSchedules": {
@@ -1178,7 +1224,8 @@
     },
     "strategy": {
       "noProfileHint": "Set a strategy profile to get a personalised recommendation for this building.",
-      "noProfileLink": "Set profile"
+      "noProfileLink": "Set profile",
+      "setBuildingLink": "Set a building strategy"
     },
     "debt": {
       "title": "Leverage & equity returns",

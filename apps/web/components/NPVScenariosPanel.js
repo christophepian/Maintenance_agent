@@ -650,8 +650,23 @@ export default function NPVScenariosPanel({ buildingId, fetchUrl, mode = "intera
               </div>
             )}
 
-            {/* Strategy recommendation strip */}
-            {strategyContext?.hasProfile && strategyContext.rationale && (
+            {/* Strategy recommendation strip — owner-portfolio fallback (a default, not building-specific) */}
+            {strategyContext?.hasProfile && strategyContext.source === "owner-portfolio" && strategyContext.rationale && (
+              <div className="rounded-md border border-surface-border bg-surface-subtle px-3 py-2 text-xs text-muted flex items-start justify-between gap-2">
+                <span className="flex items-start gap-2 min-w-0">
+                  <span className="shrink-0 mt-px text-foreground-dim">ⓘ</span>
+                  <span>{strategyContext.rationale}</span>
+                </span>
+                <a
+                  href="/owner/strategy"
+                  className="shrink-0 text-muted-dark font-medium underline hover:text-foreground"
+                >
+                  {t("manager:npvScenarios.strategy.setBuildingLink")}
+                </a>
+              </div>
+            )}
+            {/* Strategy recommendation strip — authoritative building profile */}
+            {strategyContext?.hasProfile && strategyContext.source !== "owner-portfolio" && strategyContext.rationale && (
               <div className="rounded-md border border-surface-border bg-surface-subtle px-3 py-2 text-xs text-muted-dark flex items-start gap-2">
                 <span className="shrink-0 mt-px text-foreground-dim">★</span>
                 <span>{strategyContext.rationale}</span>

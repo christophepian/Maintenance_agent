@@ -498,9 +498,9 @@
     "prop": {
       "netIncome": "Net Income",
       "netOperatingIncome": "Net Operating Income",
-      "rentCollected": "Rent Collected",
+      "rentCollected": "Cash received",
       "totalExpenses": "Total Expenses",
-      "collectionRate": "Collection Rate",
+      "collectionRate": "On-time collection",
       "noiMargin": "NOI Margin",
       "opexRatio": "OpEx Ratio",
       "occupancy": "Occupancy",
@@ -662,13 +662,13 @@
       "chfPanel": "CHF Performance",
       "pctPanel": "Portfolio Health %",
       "metric": {
-        "noiCents":          "NOI",
-        "earnedIncomeCents": "Rent Collected",
-        "expensesCents":     "Total Expenses",
-        "collectionRate":    "Collection Rate",
-        "noiMarginPct":      "NOI Margin",
-        "opexRatioPct":      "OpEx Ratio",
-        "occupancyRate":     "Occupancy"
+        "noiCents": "NOI",
+        "earnedIncomeCents": "Cash received",
+        "expensesCents": "Total Expenses",
+        "collectionRate": "On-time collection",
+        "noiMarginPct": "NOI Margin",
+        "opexRatioPct": "OpEx Ratio",
+        "occupancyRate": "Occupancy"
       }
     },
     "highlight": {

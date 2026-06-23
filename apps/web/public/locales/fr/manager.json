@@ -529,7 +529,8 @@
       "delete": "Supprimer",
       "editPolicies": "Modifier les politiques",
       "cancelPolicies": "Annuler",
-      "addOverride": "+ Ajouter règle d’exception"
+      "addOverride": "+ Ajouter règle d’exception",
+      "setStrategy": "Définir la stratégie"
     },
     "label": {
       "name": "Nom",
@@ -582,7 +583,8 @@
       "endsWith": "Se termine par",
       "autoApprove": "Approbation automatique",
       "requireManagerReview": "Révision gestionnaire requise",
-      "requireOwnerApproval": "Approbation propriétaire requise"
+      "requireOwnerApproval": "Approbation propriétaire requise",
+      "roleIntent": "Sélectionnez un rôle"
     },
     "text": {
       "loadingBuilding": "Chargement de l’immeuble…",
@@ -745,6 +747,10 @@
       "loadingEllipsis": "Chargement…",
       "periodAnalysis": "Analyse de période",
       "performanceCanvas": "Canevas de performance"
+    },
+    "strategyEditor": {
+      "intro": "Définissez la gestion de ce bâtiment — le moteur de recommandation de trésorerie l'utilise pour adapter ses conseils à ce bien.",
+      "notSet": "Aucune stratégie spécifique au bâtiment n'est définie. Définissez-en une pour adapter les recommandations de trésorerie à ce bâtiment."
     }
   },
   "unitsId": {
@@ -781,6 +787,46 @@
       "invoices": "Factures",
       "contracts": "Contrats",
       "openRequests": "Demandes ouvertes"
+    },
+    "reporting": {
+      "failed": "Échec du chargement",
+      "headline": {
+        "strong": "Forte performance du lot",
+        "collectionAttention": "Le recouvrement requiert une attention",
+        "loss": "Lot déficitaire",
+        "withinRange": "Lot dans la norme"
+      },
+      "perMonth": "CHF {{amount}}/mois",
+      "noiCollection": "Résultat {{noi}} · Recouvrement {{rate}}",
+      "leaseEnds": "Bail échéant le {{date}}",
+      "months": "{{count}} mois",
+      "netOperatingIncome": "Résultat d'exploitation net",
+      "hideKpis": "Masquer les indicateurs",
+      "showKpis": "Afficher les indicateurs",
+      "kpi": {
+        "cashReceived": "Encaissements",
+        "accruedIncome": "Revenus courus",
+        "expenses": "Charges",
+        "netIncome": "Résultat net",
+        "onTimeCollection": "Recouvrement à échéance",
+        "monthlyRent": "Loyer mensuel",
+        "leaseRemaining": "Durée restante du bail",
+        "arrears": "Arriérés"
+      },
+      "openEnded": "Indéterminée",
+      "vacant": "Vacant",
+      "monthlyNoi": "Résultat net mensuel {{year}}",
+      "outstandingReceivables": "Créances en souffrance",
+      "unpaidForUnit": "{{amount}} de factures impayées pour ce lot.",
+      "assetCondition": "État des actifs (dernier rapport)",
+      "condition": {
+        "good": "Bon",
+        "fair": "Correct",
+        "poor": "Mauvais",
+        "damaged": "Endommagé"
+      },
+      "poorDamaged_one": "{{count}} actif en mauvais état / endommagé — envisagez une simulation de rénovation.",
+      "poorDamaged_other": "{{count}} actifs en mauvais état / endommagés — envisagez une simulation de rénovation."
     }
   },
   "billingSchedules": {
@@ -1178,7 +1224,8 @@
     },
     "strategy": {
       "noProfileHint": "Définissez un profil stratégique pour obtenir une recommandation personnalisée pour ce bâtiment.",
-      "noProfileLink": "Définir le profil"
+      "noProfileLink": "Définir le profil",
+      "setBuildingLink": "Définir une stratégie de bâtiment"
     },
     "debt": {
       "title": "Levier et rendement des fonds propres",
