@@ -15,7 +15,7 @@
  */
 
 import { PrismaClient, AssetType } from "@prisma/client";
-import { upsertAsset } from "../repositories/assetRepository";
+import { upsertAsset, deleteAssetsWhere } from "../repositories/assetRepository";
 
 interface DefaultAsset {
   name: string;
@@ -123,7 +123,7 @@ async function deleteLegacyAssets(
     "buildingId" in scope
       ? { orgId, buildingId: scope.buildingId, topic: { in: legacyTopics } }
       : { orgId, unitId: scope.unitId, topic: { in: legacyTopics } };
-  await (prisma.asset as any).deleteMany({ where });
+  await deleteAssetsWhere(prisma, where);
 }
 
 // ─── Seed functions ────────────────────────────────────────────

@@ -7,7 +7,11 @@
  */
 
 import { PrismaClient, RequestEventType } from "@prisma/client";
-import { findRequestExistsById } from "../repositories/requestRepository";
+import {
+  findRequestExistsById,
+  listRequestEventsByRequestId,
+  createRequestEventRow,
+} from "../repositories/requestRepository";
 import { findContractorByIdRaw } from "../repositories/contractorRepository";
 
 // ─── DTOs ──────────────────────────────────────────────────────
@@ -27,10 +31,7 @@ export async function listRequestEvents(
   prisma: PrismaClient,
   requestId: string,
 ): Promise<RequestEventDTO[]> {
-  const events = await prisma.requestEvent.findMany({
-    where: { requestId },
-    orderBy: { timestamp: "asc" },
-  });
+  const events = await listRequestEventsByRequestId(prisma, requestId);
   return events;
 }
 
@@ -57,13 +58,11 @@ export async function createRequestEvent(
     throw Object.assign(new Error("Contractor not found"), { code: "NOT_FOUND" });
   }
 
-  const event = await prisma.requestEvent.create({
-    data: {
-      requestId: input.requestId,
-      contractorId: input.contractorId,
-      type: input.type,
-      message: input.message,
-    },
+  const event = await createRequestEventRow(prisma, {
+    requestId: input.requestId,
+    contractorId: input.contractorId,
+    type: input.type,
+    message: input.message,
   });
   return event;
 }

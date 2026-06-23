@@ -10,7 +10,7 @@
  * G9: canonical include constants live here.
  */
 
-import { PrismaClient, Prisma, RequestStatus, RequestUrgency, RequestType, ApprovalSource, PayingParty } from "@prisma/client";
+import { PrismaClient, Prisma, RequestStatus, RequestUrgency, RequestType, ApprovalSource, PayingParty, RequestEventType } from "@prisma/client";
 
 // ─── Canonical Includes ────────────────────────────────────────
 
@@ -585,4 +585,28 @@ export async function findDistinctRequestCategories(prisma: PrismaClient) {
     select: { category: true },
     distinct: ["category"],
   });
+}
+
+// ─── RequestEvent access (used by requestEventService) ──────────
+
+export async function listRequestEventsByRequestId(
+  prisma: PrismaClient,
+  requestId: string,
+) {
+  return prisma.requestEvent.findMany({
+    where: { requestId },
+    orderBy: { timestamp: "asc" },
+  });
+}
+
+export async function createRequestEventRow(
+  prisma: PrismaClient,
+  data: {
+    requestId: string;
+    contractorId: string;
+    type: RequestEventType;
+    message: string;
+  },
+) {
+  return prisma.requestEvent.create({ data });
 }

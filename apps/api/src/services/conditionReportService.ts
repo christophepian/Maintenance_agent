@@ -123,22 +123,7 @@ export async function createReportFromLease(
   leaseId: string,
   type: ConditionReportType,
 ): Promise<void> {
-  const lease = await prisma.lease.findUnique({
-    where: { id: leaseId },
-    include: {
-      unit: {
-        include: {
-          building: {
-            include: { config: { select: { conditionReportDeadlineDays: true } } },
-          },
-          occupancies: {
-            select: { tenantId: true },
-            take: 1,
-          },
-        },
-      },
-    },
-  });
+  const lease = await repo.findLeaseForReportCreation(prisma, leaseId);
 
   if (!lease || !lease.unitId) {
     console.warn(`[CONDITION-REPORT] Skipping — lease ${leaseId} has no unit`);
@@ -152,9 +137,7 @@ export async function createReportFromLease(
   }
 
   // Guard: don't create duplicate (idempotent)
-  const existing = await prisma.unitConditionReport.findFirst({
-    where: { leaseId, type },
-  });
+  const existing = await repo.findReportByLeaseAndType(prisma, leaseId, type);
   if (existing) return;
 
   const deadlineDays = lease.unit?.building?.config?.conditionReportDeadlineDays ?? 7;

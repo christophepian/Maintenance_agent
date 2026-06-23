@@ -116,3 +116,26 @@ export async function findOwnersByOrg(
   });
 }
 
+// ─── Tenant-identity resolution (used by tenantIdentity service) ──
+
+/** Find a user by id within an org (id-only select). */
+export async function findUserIdByIdInOrg(
+  prisma: PrismaClient,
+  id: string,
+  orgId: string,
+) {
+  return prisma.user.findFirst({ where: { id, orgId }, select: { id: true } });
+}
+
+/** Find the TENANT-role user with a given email in an org (id-only select). */
+export async function findTenantUserIdByEmail(
+  prisma: PrismaClient,
+  orgId: string,
+  email: string,
+) {
+  return prisma.user.findFirst({
+    where: { orgId, email, role: "TENANT" },
+    select: { id: true },
+  });
+}
+

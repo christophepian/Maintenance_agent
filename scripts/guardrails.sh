@@ -150,8 +150,8 @@ fi
 # tightens. Goal: both → 0, at which point flip this to a zero-tolerance check.
 echo ""
 echo "━━━ G20: Checking for new direct Prisma access in services ━━━"
-G20_BASELINE_FILES=28
-G20_BASELINE_LINES=219
+G20_BASELINE_FILES=24
+G20_BASELINE_LINES=212
 G20_CUR_FILES=$(grep -rl 'prisma\.' "$ROOT/apps/api/src/services" --include="*.ts" 2>/dev/null | wc -l | tr -d ' ')
 G20_CUR_LINES=$(grep -rho 'prisma\.' "$ROOT/apps/api/src/services" --include="*.ts" 2>/dev/null | wc -l | tr -d ' ')
 if [ "$G20_CUR_FILES" -gt "$G20_BASELINE_FILES" ] || [ "$G20_CUR_LINES" -gt "$G20_BASELINE_LINES" ]; then

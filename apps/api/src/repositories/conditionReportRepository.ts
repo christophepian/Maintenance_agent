@@ -181,3 +181,31 @@ export async function setStatus(
 ) {
   return prisma.unitConditionReport.update({ where: { id }, data: { status, ...extra } });
 }
+
+// ── Auto-creation lookups (used by createReportFromLease) ──────────────────────
+
+/** Load a lease with the unit/building/config/occupancy shape needed to seed a report. */
+export async function findLeaseForReportCreation(prisma: PrismaClient, leaseId: string) {
+  return prisma.lease.findUnique({
+    where: { id: leaseId },
+    include: {
+      unit: {
+        include: {
+          building: {
+            include: { config: { select: { conditionReportDeadlineDays: true } } },
+          },
+          occupancies: { select: { tenantId: true }, take: 1 },
+        },
+      },
+    },
+  });
+}
+
+/** Idempotency guard: find an existing report for a lease + type. */
+export async function findReportByLeaseAndType(
+  prisma: PrismaClient,
+  leaseId: string,
+  type: ConditionReportType,
+) {
+  return prisma.unitConditionReport.findFirst({ where: { leaseId, type } });
+}
