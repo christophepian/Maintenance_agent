@@ -334,13 +334,13 @@ function BuildingPeriodAnalysis({ buildingId }) {
 
           {/* ── Receivables alert ── */}
           {bf.receivablesCents > 0 && (
-            <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4">
-              <span className="mt-0.5 text-amber-500 text-lg shrink-0">⚠</span>
+            <div className="flex items-start gap-3 rounded-2xl border border-warning-ring bg-warning-light px-5 py-4">
+              <span className="mt-0.5 text-warning-text text-lg shrink-0">⚠</span>
               <div className="flex-1">
-                <p className="text-sm font-semibold text-amber-800 mb-0.5">{rFmtChf(bf.receivablesCents)} in uncollected rent</p>
-                <p className="text-xs text-amber-700">Mark invoices as paid once payment is received.</p>
+                <p className="text-sm font-semibold text-warning-text mb-0.5">{rFmtChf(bf.receivablesCents)} in uncollected rent</p>
+                <p className="text-xs text-warning-text/80">Mark invoices as paid once payment is received.</p>
               </div>
-              <a href="/manager/finance/invoices" className="shrink-0 rounded-lg bg-amber-600 hover:bg-amber-700 px-3 py-1.5 text-xs font-semibold text-white transition-colors no-underline">View invoices</a>
+              <a href="/manager/finance/invoices" className="shrink-0 rounded-lg bg-warning hover:opacity-90 px-3 py-1.5 text-xs font-semibold text-white transition-opacity no-underline">View invoices</a>
             </div>
           )}
 
@@ -353,15 +353,15 @@ function BuildingPeriodAnalysis({ buildingId }) {
                   <p className="text-xs text-foreground-dim mt-0.5">Unpaid rent invoices by days overdue</p>
                 </div>
                 {arrears.totalOverdueCents > 0 && (
-                  <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700">{rFmtChf(arrears.totalOverdueCents)} overdue</span>
+                  <span className="rounded-full bg-destructive-light px-3 py-1 text-xs font-semibold text-destructive-text">{rFmtChf(arrears.totalOverdueCents)} overdue</span>
                 )}
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {[
-                  { label: "Current",    cents: arrears.currentCents,        color: "text-green-700",  bg: "bg-green-50 border-green-200" },
-                  { label: "1–30 days",  cents: arrears.overdue1to30Cents,   color: "text-amber-700",  bg: "bg-amber-50 border-amber-200" },
-                  { label: "31–60 days", cents: arrears.overdue31to60Cents,  color: "text-orange-700", bg: "bg-orange-50 border-orange-200" },
-                  { label: "61+ days",   cents: arrears.overdue61plusCents,  color: "text-red-700",    bg: "bg-red-50 border-red-200" },
+                  { label: "Current",    cents: arrears.currentCents,        color: "text-success-text",     bg: "bg-success-light border-success-ring" },
+                  { label: "1–30 days",  cents: arrears.overdue1to30Cents,   color: "text-warning-text",     bg: "bg-warning-light border-warning-ring" },
+                  { label: "31–60 days", cents: arrears.overdue31to60Cents,  color: "text-orange-text",      bg: "bg-orange-light border-orange-ring" },
+                  { label: "61+ days",   cents: arrears.overdue61plusCents,  color: "text-destructive-text", bg: "bg-destructive-light border-destructive-ring" },
                 ].map(({ label, cents, color, bg }) => (
                   <div key={label} className={cn("rounded-xl border p-4", cents > 0 ? bg : "border-surface-border bg-surface-subtle")}>
                     <div className="text-xs text-foreground-dim">{label}</div>
