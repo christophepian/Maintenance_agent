@@ -91,6 +91,7 @@ export async function attachDelta(
 
 export type SubmitValidationError =
   | { code: "WRONG_STATUS"; current: ConditionReportStatus }
+  | { code: "NOT_INSPECTED_ITEMS"; items: string[] }
   | { code: "UNPHOTOED_DELTAS"; items: string[] };
 
 export async function validateSubmit(
@@ -99,6 +100,14 @@ export async function validateSubmit(
 ): Promise<SubmitValidationError | null> {
   if (report.status !== ConditionReportStatus.PENDING) {
     return { code: "WRONG_STATUS", current: report.status };
+  }
+
+  // Coverage gate: every asset-baselined item must be rated before submit.
+  const notInspected = report.items
+    .filter((it) => it.condition === ItemCondition.NOT_INSPECTED)
+    .map((it) => `${it.roomLabel} — ${it.itemLabel}`);
+  if (notInspected.length > 0) {
+    return { code: "NOT_INSPECTED_ITEMS", items: notInspected };
   }
 
   if (report.type === ConditionReportType.MOVE_OUT) {
@@ -144,7 +153,7 @@ export async function createReportFromLease(
   const dueAt = new Date();
   dueAt.setDate(dueAt.getDate() + deadlineDays);
 
-  await repo.createReport(prisma, {
+  const report = await repo.createReport(prisma, {
     orgId: lease.orgId,
     unitId: lease.unitId,
     tenantId,
@@ -153,7 +162,10 @@ export async function createReportFromLease(
     dueAt,
   });
 
+  // Baseline against the unit's asset inventory so every asset is reported on.
+  const seeded = await repo.seedAssetItems(prisma, report.id, lease.orgId, lease.unitId);
+
   console.log(
-    `[CONDITION-REPORT] Created ${type} report for lease ${leaseId}, due ${dueAt.toISOString()}`,
+    `[CONDITION-REPORT] Created ${type} report for lease ${leaseId}, due ${dueAt.toISOString()}, seeded ${seeded} asset item(s)`,
   );
 }

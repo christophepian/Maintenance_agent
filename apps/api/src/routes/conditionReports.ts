@@ -128,6 +128,8 @@ export function registerConditionReportRoutes(router: Router) {
         type: body.type as ConditionReportType,
         dueAt,
       });
+      // Baseline against the unit's asset inventory so every asset is reported on.
+      await repo.seedAssetItems(prisma, report.id, orgId, params.id);
       sendJson(res, 201, { data: report });
     } catch (e) {
       console.error("[condition-reports/create]", e);
@@ -326,6 +328,11 @@ export function registerConditionReportRoutes(router: Router) {
       if (report.status !== ConditionReportStatus.PENDING) {
         return sendError(res, 409, "CONFLICT", "Report is no longer editable");
       }
+      const meta = await repo.findItemMeta(prisma, params.itemId, params.id);
+      if (!meta) return sendError(res, 404, "NOT_FOUND", "Item not found");
+      if (meta.assetId) {
+        return sendError(res, 409, "ASSET_ITEM_LOCKED", "Asset items are part of the inventory baseline and cannot be removed");
+      }
       await repo.deleteItem(prisma, params.itemId, params.id);
       sendJson(res, 200, { data: { ok: true } });
     } catch (e) {
@@ -454,12 +461,19 @@ export function registerConditionReportRoutes(router: Router) {
         if (err.code === "WRONG_STATUS") {
           return sendError(res, 409, "CONFLICT", `Report is ${err.current}, not submittable`);
         }
+        if (err.code === "NOT_INSPECTED_ITEMS") {
+          return sendError(
+            res, 400, "NOT_INSPECTED_ITEMS",
+            `Rate every item before submitting — still not inspected: ${err.items.join(", ")}`,
+          );
+        }
         if (err.code === "UNPHOTOED_DELTAS") {
           return sendError(
             res, 400, "PHOTOS_REQUIRED",
             `Photos required for degraded items: ${err.items.join(", ")}`,
           );
         }
+        return sendError(res, 400, "VALIDATION_ERROR", "Report is not submittable");
       }
 
       await repo.setStatus(prisma, params.id, ConditionReportStatus.SUBMITTED, {

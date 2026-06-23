@@ -267,6 +267,7 @@
     "selectContractor": "Select contractor"
   },
   "assetInventory": {
+    "lastReportedOn": "Last reported on {{date}}",
     "fullyDepreciated": "Fully depreciated",
     "installUnknown": "Install date unknown",
     "noStandard": "No depreciation standard",

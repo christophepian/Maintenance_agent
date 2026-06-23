@@ -90,6 +90,7 @@ export async function findLatestConditionsForAssets(
   const rows = await prisma.unitConditionReportItem.findMany({
     where: {
       assetId: { in: assetIds },
+      condition: { not: ItemCondition.NOT_INSPECTED }, // ignore un-rated seeded baseline items
       report: { orgId, status: ConditionReportStatus.APPROVED },
     },
     select: {
@@ -130,6 +131,48 @@ export async function createReport(
   return prisma.unitConditionReport.create({ data });
 }
 
+/**
+ * Baseline a freshly-created report against the unit's active asset inventory:
+ * create one asset-linked item per asset (condition NOT_INSPECTED, to be rated
+ * before submit). This guarantees every asset in the unit is reported on.
+ *
+ * Idempotent: skips assets that already have an item on this report, so it is
+ * safe to call more than once. Returns the number of items created.
+ */
+export async function seedAssetItems(
+  prisma: PrismaClient,
+  reportId: string,
+  orgId: string,
+  unitId: string,
+): Promise<number> {
+  const assets = await prisma.asset.findMany({
+    where: { orgId, unitId, isActive: true },
+    select: { id: true, topic: true, name: true },
+    orderBy: [{ topic: "asc" }, { name: "asc" }],
+  });
+  if (assets.length === 0) return 0;
+
+  const existing = await prisma.unitConditionReportItem.findMany({
+    where: { reportId, assetId: { in: assets.map((a) => a.id) } },
+    select: { assetId: true },
+  });
+  const seen = new Set(existing.map((e) => e.assetId));
+
+  const toCreate = assets
+    .filter((a) => !seen.has(a.id))
+    .map((a) => ({
+      reportId,
+      assetId: a.id,
+      roomLabel: a.topic,
+      itemLabel: a.name,
+      condition: ItemCondition.NOT_INSPECTED,
+    }));
+  if (toCreate.length === 0) return 0;
+
+  const result = await prisma.unitConditionReportItem.createMany({ data: toCreate });
+  return result.count;
+}
+
 export async function addItem(
   prisma: PrismaClient,
   reportId: string,
@@ -156,8 +199,18 @@ export async function upsertItem(
   });
 }
 
+/** Lightweight metadata for delete-guard checks (does the item exist, is it asset-baselined?). */
+export async function findItemMeta(prisma: PrismaClient, itemId: string, reportId: string) {
+  return prisma.unitConditionReportItem.findFirst({
+    where: { id: itemId, reportId },
+    select: { id: true, assetId: true },
+  });
+}
+
 export async function deleteItem(prisma: PrismaClient, itemId: string, reportId: string) {
-  return prisma.unitConditionReportItem.deleteMany({ where: { id: itemId, reportId } });
+  // Coverage lock: asset-baselined items (assetId set) can never be deleted — only
+  // free-form extras (assetId null) are removable. Guarantees every asset stays reported on.
+  return prisma.unitConditionReportItem.deleteMany({ where: { id: itemId, reportId, assetId: null } });
 }
 
 export async function addPhoto(

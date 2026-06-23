@@ -910,13 +910,17 @@ export default function AssetInventoryPanel({ assets, onRefresh, scope, parentId
                     <div className="flex-1" />
                     <DepreciationBar depreciation={asset.depreciation} installedAt={asset.installedAt} />
                     {asset.latestCondition && (
-                      <span className={cn(
-                        "text-xs px-1.5 py-0.5 rounded font-medium shrink-0",
-                        asset.latestCondition.condition === "GOOD"    && "bg-success-light text-success-text",
-                        asset.latestCondition.condition === "FAIR"    && "bg-warning-light text-warning-text",
-                        asset.latestCondition.condition === "POOR"    && "bg-warning-light text-warning-text",
-                        asset.latestCondition.condition === "DAMAGED" && "bg-destructive-light text-destructive-text",
-                      )}>
+                      <span
+                        title={asset.latestCondition.reportedAt
+                          ? t("assetInventory.lastReportedOn", { date: formatDate(asset.latestCondition.reportedAt) })
+                          : undefined}
+                        className={cn(
+                          "text-xs px-1.5 py-0.5 rounded font-medium shrink-0",
+                          asset.latestCondition.condition === "GOOD"    && "bg-success-light text-success-text",
+                          asset.latestCondition.condition === "FAIR"    && "bg-warning-light text-warning-text",
+                          asset.latestCondition.condition === "POOR"    && "bg-warning-light text-warning-text",
+                          asset.latestCondition.condition === "DAMAGED" && "bg-destructive-light text-destructive-text",
+                        )}>
                         {asset.latestCondition.condition}
                       </span>
                     )}

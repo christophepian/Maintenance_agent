@@ -364,6 +364,40 @@ export async function getAssetInventoryForUnit(
 
 export type RepairReplaceRecommendation = "REPAIR" | "MONITOR" | "PLAN_REPLACEMENT" | "REPLACE";
 
+type LastConditionStatus = "GOOD" | "FAIR" | "POOR" | "DAMAGED" | null;
+
+const REC_TIERS: RepairReplaceRecommendation[] = ["REPAIR", "MONITOR", "PLAN_REPLACEMENT", "REPLACE"];
+
+/**
+ * Overlay the last reported physical condition onto a depreciation-derived
+ * recommendation. A recent GOOD inspection is evidence an aged asset still
+ * functions — so its replacement can be deferred (downgrade one tier). A
+ * POOR/DAMAGED inspection warrants earlier intervention (upgrade one tier).
+ * FAIR / no report leaves the recommendation unchanged.
+ *
+ * Pure + exported for unit testing.
+ */
+export function applyConditionToRecommendation(
+  recommendation: RepairReplaceRecommendation,
+  reason: string,
+  lastCondition: LastConditionStatus,
+): { recommendation: RepairReplaceRecommendation; recommendationReason: string } {
+  if (lastCondition !== "GOOD" && lastCondition !== "POOR" && lastCondition !== "DAMAGED") {
+    return { recommendation, recommendationReason: reason };
+  }
+  const tier = REC_TIERS.indexOf(recommendation);
+  const shifted = lastCondition === "GOOD" ? tier - 1 : tier + 1;
+  const next = REC_TIERS[Math.max(0, Math.min(REC_TIERS.length - 1, shifted))];
+  if (next === recommendation) {
+    return { recommendation, recommendationReason: reason };
+  }
+  const note =
+    lastCondition === "GOOD"
+      ? "Last inspection rated GOOD — replacement may be deferred despite age."
+      : `Last inspection rated ${lastCondition} — condition warrants earlier intervention.`;
+  return { recommendation: next, recommendationReason: `${reason} ${note}` };
+}
+
 export interface RepairReplaceItem {
   assetId: string;
   assetName: string;
@@ -445,7 +479,7 @@ export async function getRepairReplaceAnalysis(
   const latestReport = await prisma.unitConditionReport.findFirst({
     where: { unitId, orgId, status: { in: ["SUBMITTED", "APPROVED"] } },
     orderBy: { submittedAt: "desc" },
-    select: { items: { where: { assetId: { not: null } }, select: { assetId: true, condition: true } } },
+    select: { items: { where: { assetId: { not: null }, condition: { not: "NOT_INSPECTED" } }, select: { assetId: true, condition: true } } },
   });
   const conditionMap = new Map<string, "GOOD" | "FAIR" | "POOR" | "DAMAGED">();
   if (latestReport) {
@@ -545,6 +579,12 @@ export async function getRepairReplaceAnalysis(
     }
     // Tier 4: REPAIR (default) — already set
 
+    // Overlay last reported condition: GOOD defers, POOR/DAMAGED accelerates.
+    const lastCond = conditionMap.get(asset.id) ?? null;
+    ({ recommendation, recommendationReason } = applyConditionToRecommendation(
+      recommendation, recommendationReason, lastCond,
+    ));
+
     results.push({
       assetId: asset.id,
       assetName: asset.name,
@@ -566,7 +606,7 @@ export async function getRepairReplaceAnalysis(
       warrantyOffsetMonths: DEFAULT_WARRANTY_MONTHS,
       recommendation,
       recommendationReason,
-      lastConditionStatus: conditionMap.get(asset.id) ?? null,
+      lastConditionStatus: lastCond,
       currentLease,
     });
   }

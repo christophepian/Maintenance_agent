@@ -85,7 +85,7 @@ function AssetRow({ item, checked, onToggle, onSimulate }) {
       </div>
       {/* Badges */}
       <div className="flex items-center gap-1 shrink-0">
-        <span className={cn("rounded-full px-2 py-0.5 text-xs font-semibold", rec.badge)}>{rec.label}</span>
+        <span title={item.recommendationReason || undefined} className={cn("rounded-full px-2 py-0.5 text-xs font-semibold", rec.badge)}>{rec.label}</span>
         {cond && (
           <span className={cn("rounded-full px-2 py-0.5 text-xs font-semibold hidden sm:inline", cond)}>
             {item.lastConditionStatus.charAt(0) + item.lastConditionStatus.slice(1).toLowerCase()}

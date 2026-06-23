@@ -267,6 +267,7 @@
     "selectContractor": "Sélectionner un prestataire"
   },
   "assetInventory": {
+    "lastReportedOn": "Dernier état signalé le {{date}}",
     "fullyDepreciated": "Totalement amorti",
     "installUnknown": "Date d'installation inconnue",
     "noStandard": "Aucun standard d'amortissement",
