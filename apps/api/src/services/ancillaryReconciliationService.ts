@@ -336,6 +336,106 @@ export async function setBuildingDistribution(
   return getBuildingDistribution(orgId, buildingId);
 }
 
+// ─── Unit reconciliation (v2 C4) ───────────────────────────────
+export interface UnitReconciliationPreview {
+  leaseId: string;
+  tenantName: string | null;
+  billingPeriodId: string;
+  periodStart: string;
+  periodEnd: string;
+  advancesPaidCents: number;
+  actualCostsCents: number; // apportioned billable share + admin fee
+  adminFeeCents: number;
+  deltaCents: number; // actual − advances (>0 tenant owes; <0 refund)
+  isRefund: boolean;
+  lines: ApportionedLine[];
+}
+
+async function activeLeaseForUnit(orgId: string, unitId: string) {
+  return prisma.lease.findFirst({
+    where: { orgId, unitId, status: "ACTIVE", isTemplate: false },
+    select: { id: true, tenantName: true },
+  });
+}
+
+/** Advances paid vs apportioned actual for a unit's active lease over a period. */
+export async function getUnitReconciliationPreview(
+  orgId: string,
+  unitId: string,
+  billingPeriodId: string,
+): Promise<UnitReconciliationPreview> {
+  const lease = await activeLeaseForUnit(orgId, unitId);
+  if (!lease) throw new Error("No active lease on this unit");
+  const period = await repo.findBillingPeriodById(prisma, billingPeriodId, orgId);
+  if (!period) throw new Error("Billing period not found");
+
+  const apportion = await apportionForLease(orgId, billingPeriodId, lease.id);
+  const advancesPaidCents = await getChargesAdvancesPaidCents(orgId, lease.id, period.startDate, period.endDate);
+  const actualCostsCents = apportion.totalActualCostsCents;
+  const deltaCents = actualCostsCents - advancesPaidCents;
+
+  return {
+    leaseId: lease.id,
+    tenantName: lease.tenantName,
+    billingPeriodId,
+    periodStart: period.startDate.toISOString(),
+    periodEnd: period.endDate.toISOString(),
+    advancesPaidCents,
+    actualCostsCents,
+    adminFeeCents: apportion.adminFeeCents,
+    deltaCents,
+    isRefund: deltaCents < 0,
+    lines: apportion.lines,
+  };
+}
+
+/**
+ * Settle a unit's charges for a period: records a FINALIZED ChargeReconciliation
+ * (single aggregate line: advances vs actual) and runs the existing settle engine
+ * → a debit invoice (tenant owes) or a credit note (refund), plus the 30-day
+ * inspection window. One reconciliation per lease per fiscal year.
+ */
+export async function settleUnitReconciliation(
+  orgId: string,
+  unitId: string,
+  billingPeriodId: string,
+) {
+  const preview = await getUnitReconciliationPreview(orgId, unitId, billingPeriodId);
+  const period = await repo.findBillingPeriodById(prisma, billingPeriodId, orgId);
+  if (!period) throw new Error("Billing period not found");
+  const fiscalYear = period.startDate.getUTCFullYear();
+
+  const existing = await prisma.chargeReconciliation.findFirst({ where: { orgId, leaseId: preview.leaseId, fiscalYear } });
+  if (existing) throw new Error(`A reconciliation already exists for this lease and ${fiscalYear}`);
+
+  const recon = await prisma.chargeReconciliation.create({
+    data: {
+      orgId,
+      leaseId: preview.leaseId,
+      fiscalYear,
+      status: "FINALIZED",
+      billingPeriodId,
+      adminFeeCents: preview.adminFeeCents,
+      totalAcomptePaidCents: preview.advancesPaidCents,
+      totalActualCostsCents: preview.actualCostsCents,
+      balanceCents: preview.deltaCents,
+      lineItems: {
+        create: [{
+          description: `Décompte de charges ${fiscalYear}`,
+          chargeMode: "ACOMPTE",
+          acomptePaidCents: preview.advancesPaidCents,
+          actualCostCents: preview.actualCostsCents,
+          balanceCents: preview.deltaCents,
+        }],
+      },
+    },
+  });
+
+  // Reuse the settle engine (credit note / invoice + inspection window).
+  const { settleReconciliation } = await import("./chargeReconciliationService");
+  return settleReconciliation(prisma, recon.id, orgId);
+}
+
 // ─── Charges advances paid (v2 C3) ─────────────────────────────
 /**
  * Total charges advance a tenant paid over [from, to] — the sum of all

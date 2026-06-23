@@ -15,6 +15,7 @@ import { cn } from "../../../lib/utils";
 import { invoiceVariant, leaseVariant, reconciliationVariant } from "../../../lib/statusVariants";
 import { formatChf, formatDate, formatChfCents } from "../../../lib/format";
 import { authHeaders } from "../../../lib/api";
+import Button from "../../../components/ui/Button";
 import ScrollableTabs from "../../../components/mobile/ScrollableTabs";
 import SortableHeader from "../../../components/SortableHeader";
 import { useLocalSort, clientSort } from "../../../lib/tableUtils";
@@ -491,6 +492,13 @@ export default function UnitDetail() {
     } finally {
       setInvoicesLoading(false);
     }
+  }
+
+  async function refreshRecons() {
+    const res = await fetch(`/api/charge-reconciliations`, { headers: authHeaders() });
+    const j = await res.json();
+    const all = Array.isArray(j) ? j : j?.data || [];
+    setUnitReconciliations(all.filter((r) => r.lease?.unitId === id));
   }
 
   async function loadUnitFinancials() {
@@ -1362,7 +1370,10 @@ export default function UnitDetail() {
               })()}
 
               {financialsSubTab === "reconciliations" && (
-                <Panel title={t("manager:unitsId.title.chargeReconciliationsNebenkosten")}>
+                <UnitChargesReconciliation unit={unit} onSettled={refreshRecons} />
+              )}
+              {financialsSubTab === "reconciliations" && (
+                <Panel title={t("manager:unitsId.title.chargeReconciliationsNebenkosten")} className="mt-6">
                   {unitReconciliations.length === 0 ? (
                     <div className="empty-state-text py-6 text-center italic">No charge reconciliations for this unit.</div>
                   ) : (
@@ -1723,6 +1734,111 @@ export default function UnitDetail() {
       </PageContent>
     </PageShell>
     </AppShell>
+  );
+}
+
+// v2 C4 — per-unit charges reconciliation: advances paid vs apportioned actual
+// for a building cost-pool period, settle to a credit note / extra invoice.
+function UnitChargesReconciliation({ unit, onSettled }) {
+  const [periods, setPeriods] = useState([]);
+  const [periodId, setPeriodId] = useState("");
+  const [preview, setPreview] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [settling, setSettling] = useState(false);
+  const [msg, setMsg] = useState("");
+  const [err, setErr] = useState("");
+
+  useEffect(() => {
+    if (!unit?.buildingId) return;
+    fetch(`/api/billing-periods?buildingId=${unit.buildingId}`, { headers: authHeaders() })
+      .then((r) => r.json())
+      .then((j) => setPeriods(j.data || []))
+      .catch(() => {});
+  }, [unit?.buildingId]);
+
+  useEffect(() => {
+    if (!periodId || !unit?.id) { setPreview(null); return; }
+    setLoading(true); setErr(""); setMsg("");
+    fetch(`/api/unit-reconciliation?unitId=${unit.id}&billingPeriodId=${periodId}`, { headers: authHeaders() })
+      .then(async (r) => { const j = await r.json(); if (!r.ok) throw new Error(j.error?.message || "Failed"); setPreview(j.data); })
+      .catch((e) => { setErr(e.message); setPreview(null); })
+      .finally(() => setLoading(false));
+  }, [periodId, unit?.id]);
+
+  async function settle() {
+    setSettling(true); setErr(""); setMsg("");
+    try {
+      const res = await fetch(`/api/unit-reconciliation/settle`, {
+        method: "POST",
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ unitId: unit.id, billingPeriodId: periodId }),
+      });
+      const j = await res.json();
+      if (!res.ok) throw new Error(j.error?.message || "Failed");
+      setMsg(j.data?.settlementCreditNoteId ? "Refund credit note issued." : "Settlement invoice issued.");
+      setPreview(null); setPeriodId("");
+      onSettled && onSettled();
+    } catch (e) { setErr(e.message); } finally { setSettling(false); }
+  }
+
+  return (
+    <Panel title="Run a charges reconciliation">
+      <p className="text-sm text-muted-text mb-3">Compare what the tenant paid in advance against their apportioned share of the building&apos;s actual costs for a period.</p>
+      {err && <p className="error-banner mb-2">{err}</p>}
+      {msg && <p className="text-sm text-green-700 mb-2">{msg}</p>}
+      <div className="flex items-center gap-2 mb-4">
+        <label className="text-sm font-medium text-muted-text">Period</label>
+        <select className="border border-surface-border rounded-lg px-3 py-1.5 text-sm bg-surface" value={periodId} onChange={(e) => setPeriodId(e.target.value)}>
+          <option value="">Select a period…</option>
+          {periods.map((p) => (
+            <option key={p.id} value={p.id}>{p.startDate?.slice(0, 10)} – {p.endDate?.slice(0, 10)}</option>
+          ))}
+        </select>
+      </div>
+      {loading && <p className="text-sm text-muted-text">Loading…</p>}
+      {preview && (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+            <div className="p-3 rounded-lg bg-surface-subtle">
+              <div className="text-xs text-muted-text">Charges paid (advance)</div>
+              <div className="text-lg font-semibold tabular-nums">{formatChfCents(preview.advancesPaidCents)}</div>
+            </div>
+            <div className="p-3 rounded-lg bg-surface-subtle">
+              <div className="text-xs text-muted-text">Apportioned actual</div>
+              <div className="text-lg font-semibold tabular-nums">{formatChfCents(preview.actualCostsCents)}</div>
+            </div>
+            <div className={cn("p-3 rounded-lg", preview.deltaCents > 0 ? "bg-red-50" : preview.deltaCents < 0 ? "bg-green-50" : "bg-surface-subtle")}>
+              <div className="text-xs text-muted-text">Delta {preview.deltaCents > 0 ? "(tenant owes)" : preview.deltaCents < 0 ? "(refund)" : ""}</div>
+              <div className={cn("text-lg font-semibold tabular-nums", preview.deltaCents > 0 ? "text-red-700" : preview.deltaCents < 0 ? "text-green-700" : "")}>
+                {preview.deltaCents > 0 ? "+" : ""}{formatChfCents(preview.deltaCents)}
+              </div>
+            </div>
+          </div>
+          {preview.lines?.length > 0 && (
+            <div className="overflow-x-auto mb-4">
+              <table className="data-table w-full">
+                <thead>
+                  <tr><th>Category</th><th>Method</th><th className="text-right">Building cost</th><th className="text-right">Unit share</th></tr>
+                </thead>
+                <tbody>
+                  {preview.lines.map((l, i) => (
+                    <tr key={i} className="border-t border-surface-divider">
+                      <td>{l.categoryName}</td>
+                      <td className="text-xs text-muted-text">{l.distributionKey}{l.requiresManual ? " (manual)" : ""}</td>
+                      <td className="text-right tabular-nums">{formatChfCents(l.buildingActualCents)}</td>
+                      <td className="text-right tabular-nums">{l.actualShareCents != null ? formatChfCents(l.actualShareCents) : "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <Button variant="primary" size="sm" onClick={settle} disabled={settling}>
+            {settling ? "Generating…" : preview.deltaCents < 0 ? "Issue refund (credit note)" : "Issue settlement invoice"}
+          </Button>
+        </>
+      )}
+    </Panel>
   );
 }
 

@@ -162,6 +162,41 @@ export function registerBillingPeriodRoutes(router: Router) {
     }),
   );
 
+  // ── Unit reconciliation (v2 C4): advances vs apportioned actual → delta ──
+  router.get(
+    "/unit-reconciliation",
+    withAuthRequired(async ({ req, res, orgId, query }) => {
+      if (!maybeRequireManager(req, res)) return;
+      try {
+        const unitId = first(query, "unitId");
+        const billingPeriodId = first(query, "billingPeriodId");
+        if (!unitId || !billingPeriodId) return sendError(res, 400, "VALIDATION_ERROR", "unitId and billingPeriodId are required");
+        sendJson(res, 200, { data: await service.getUnitReconciliationPreview(orgId, unitId, billingPeriodId) });
+      } catch (err: any) {
+        if (/not found|No active lease|not an active participant/.test(err?.message)) return sendError(res, 404, "NOT_FOUND", err.message);
+        console.error("[unit-reconciliation] preview error:", err);
+        sendError(res, 500, "INTERNAL_ERROR", err.message);
+      }
+    }),
+  );
+
+  router.post(
+    "/unit-reconciliation/settle",
+    withAuthRequired(async ({ req, res, orgId }) => {
+      if (!requireRole(req, res, "MANAGER")) return;
+      try {
+        const body = await readJson(req);
+        if (!body?.unitId || !body?.billingPeriodId) return sendError(res, 400, "VALIDATION_ERROR", "unitId and billingPeriodId are required");
+        sendJson(res, 201, { data: await service.settleUnitReconciliation(orgId, body.unitId, body.billingPeriodId) });
+      } catch (err: any) {
+        if (/not found|No active lease/.test(err?.message)) return sendError(res, 404, "NOT_FOUND", err.message);
+        if (/already exists/.test(err?.message)) return sendError(res, 409, "CONFLICT", err.message);
+        console.error("[unit-reconciliation] settle error:", err);
+        sendError(res, 500, "INTERNAL_ERROR", err.message);
+      }
+    }),
+  );
+
   // ── Per-building per-category distribution config (v2 C2) ──
   router.get(
     "/charge-distribution",

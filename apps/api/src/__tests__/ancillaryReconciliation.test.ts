@@ -16,6 +16,7 @@ import {
   apportionForLease,
   updatePeriod,
   calculateFlatRate,
+  getUnitReconciliationPreview,
 } from "../services/ancillaryReconciliationService";
 import { autoFillActualCostsFromPeriod } from "../services/chargeReconciliationService";
 
@@ -140,6 +141,17 @@ describe("apportionForLease (Phase 2)", () => {
     expect(liftLine.actualCostCents).toBe(30000); // half of 60000
     expect(updated.adminFeeCents).toBeGreaterThan(0);
     expect(updated.billingPeriodId).toBe(periodId);
+  });
+
+  it("unit reconciliation preview: advances vs apportioned actual → delta", async () => {
+    const periodId = (global as any).__periodId as string;
+    const lease = await prisma.lease.findUnique({ where: { id: leaseAId }, select: { unitId: true } });
+    const preview = await getUnitReconciliationPreview(orgId, lease!.unitId!, periodId);
+    // No charge-advance invoices for this lease → advances 0; actual = 60000 (elec) + 30000 (lift) + 2700 admin
+    expect(preview.advancesPaidCents).toBe(0);
+    expect(preview.actualCostsCents).toBe(92700);
+    expect(preview.deltaCents).toBe(92700);
+    expect(preview.isRefund).toBe(false);
   });
 
   it("calculateFlatRate averages prior CLOSED periods", async () => {
