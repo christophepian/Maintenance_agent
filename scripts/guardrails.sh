@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Guardrail Enforcement Script
-# Runs locally (pre-commit) and in CI. Checks G8, F-UI4, F-UI4a, G9, G20, G22,
-# G3, F-UI9, G18, G16, G17, G19, G21.
+# Runs locally (pre-commit) and in CI. Checks G8, F-UI4, F-UI4a, G23, G9, G20,
+# G22, G3, F-UI9, G18, G16, G17, G19, G21.
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 set -euo pipefail
 
@@ -89,6 +89,34 @@ if [ -n "$FUI4A_HITS" ]; then
   echo "$FUI4A_HITS" | while read -r line; do echo "    $line"; done
 else
   pass "No inline status color maps"
+fi
+
+# ─── G23: Raw color tokens / inline styles ratchet ───────────────────────
+# Styling rule: color comes from semantic tokens (bg-surface, text-foreground,
+# border-surface-border, …), never raw slate-*/bg-white; no inline style={{}}.
+# Grandfathered debt (CRITICAL_AUDIT_2026-06-23): ~50 raw-token lines + ~44
+# inline-style lines across apps/web JSX. Ratchet blocks any increase; lines
+# carrying a `/* no-token: <reason> */` marker are excluded, so documenting a
+# real exception lowers the count. Lower the baselines as debt is migrated.
+echo ""
+echo "━━━ G23: Checking raw color tokens / inline styles (ratchet) ━━━"
+G23_BASELINE_RAW=50
+G23_BASELINE_INLINE=44
+G23_CUR_RAW=$(grep -rhnE 'bg-white|text-slate-[0-9]|bg-slate-[0-9]|border-slate-[0-9]' \
+  "$ROOT/apps/web/pages" "$ROOT/apps/web/components" \
+  --include='*.js' --include='*.jsx' 2>/dev/null | grep -v 'no-token' | wc -l | tr -d ' ')
+G23_CUR_INLINE=$(grep -rhnE 'style=\{\{' \
+  "$ROOT/apps/web/pages" "$ROOT/apps/web/components" \
+  --include='*.js' --include='*.jsx' 2>/dev/null | grep -v 'no-token' | wc -l | tr -d ' ')
+if [ "$G23_CUR_RAW" -gt "$G23_BASELINE_RAW" ] || [ "$G23_CUR_INLINE" -gt "$G23_BASELINE_INLINE" ]; then
+  fail "G23: styling debt increased (raw tokens $G23_CUR_RAW vs baseline $G23_BASELINE_RAW, inline styles $G23_CUR_INLINE vs baseline $G23_BASELINE_INLINE)."
+  echo "    Use semantic token classes (bg-surface/text-foreground/border-surface-border) instead of raw"
+  echo "    slate-*/bg-white, and Tailwind classes instead of style={{}}. Genuine exceptions: add a"
+  echo "    /* no-token: <reason> */ marker on the line. If you REMOVED debt, lower the G23 baselines."
+elif [ "$G23_CUR_RAW" -lt "$G23_BASELINE_RAW" ] || [ "$G23_CUR_INLINE" -lt "$G23_BASELINE_INLINE" ]; then
+  warn "G23: styling debt decreased (raw $G23_CUR_RAW≤$G23_BASELINE_RAW, inline $G23_CUR_INLINE≤$G23_BASELINE_INLINE) — lower the baselines in scripts/guardrails.sh to lock in the win."
+else
+  pass "G23: no new raw tokens / inline styles (baseline $G23_BASELINE_RAW raw / $G23_BASELINE_INLINE inline held)"
 fi
 
 # ─── G9: Detect ad-hoc Prisma include trees ──────────────────────────────
