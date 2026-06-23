@@ -30,7 +30,7 @@ import Tooltip from "./Tooltip";
 function fciColor(pct) {
   if (pct < 5)  return "text-success-text";
   if (pct < 10) return "text-warning-text";
-  if (pct < 30) return "text-orange-600";
+  if (pct < 30) return "text-orange-text";
   return "text-destructive-text";
 }
 

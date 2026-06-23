@@ -22,24 +22,24 @@ import RenovationSimulatorDrawer from "./RenovationSimulatorDrawer";
 // ─── Style maps ───────────────────────────────────────────────────────────────
 
 const REC_STYLE = {
-  REPLACE:          { badge: "bg-red-100 text-red-700",       label: "Replace" },
-  PLAN_REPLACEMENT: { badge: "bg-orange-100 text-orange-700", label: "Plan" },
-  MONITOR:          { badge: "bg-amber-100 text-amber-700",   label: "Monitor" },
-  REPAIR:           { badge: "bg-green-100 text-green-700",   label: "Repair" },
+  REPLACE:          { badge: "bg-destructive-light text-destructive-text", label: "Replace" },
+  PLAN_REPLACEMENT: { badge: "bg-orange-light text-orange-text",           label: "Plan" },
+  MONITOR:          { badge: "bg-warning-light text-warning-text",         label: "Monitor" },
+  REPAIR:           { badge: "bg-success-light text-success-text",         label: "Repair" },
 };
 
 const COND_STYLE = {
-  GOOD:    "bg-green-100 text-green-700",
-  FAIR:    "bg-amber-100 text-amber-700",
-  POOR:    "bg-orange-100 text-orange-700",
-  DAMAGED: "bg-red-100 text-red-700",
+  GOOD:    "bg-success-light text-success-text",
+  FAIR:    "bg-warning-light text-warning-text",
+  POOR:    "bg-orange-light text-orange-text",
+  DAMAGED: "bg-destructive-light text-destructive-text",
 };
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function DepBar({ pct }) {
   const capped = Math.min(100, pct ?? 0);
-  const color = capped >= 100 ? "bg-red-500" : capped >= 85 ? "bg-orange-400" : capped >= 65 ? "bg-amber-400" : "bg-green-400";
+  const color = capped >= 100 ? "bg-destructive" : capped >= 85 ? "bg-orange" : capped >= 65 ? "bg-warning" : "bg-success";
   return (
     <div className="flex items-center gap-1.5 min-w-0">
       <div className="flex-1 h-1.5 rounded-full bg-surface-hover overflow-hidden min-w-[40px]">
@@ -65,13 +65,13 @@ function AssetRow({ item, checked, onToggle, onSimulate }) {
   return (
     <div className={cn(
       "flex items-center gap-3 px-4 py-2.5 border-b border-surface-divider last:border-0 transition-colors",
-      checked ? "bg-blue-50" : "hover:bg-surface-subtle/60",
+      checked ? "bg-brand-light" : "hover:bg-surface-subtle/60",
     )}>
       <input
         type="checkbox"
         checked={checked}
         onChange={onToggle}
-        className="h-3.5 w-3.5 shrink-0 rounded border-surface-border accent-slate-800 cursor-pointer"
+        className="h-3.5 w-3.5 shrink-0 rounded border-surface-border accent-brand cursor-pointer"
         onClick={(e) => e.stopPropagation()}
       />
       {/* Name + topic */}
@@ -135,7 +135,7 @@ function UnitRow({ unitNumber, items, selectedIds, onToggleAsset, onSimulate, bu
           ref={(el) => { if (el) el.indeterminate = someChecked; }}
           onChange={toggleUnit}
           onClick={(e) => e.stopPropagation()}
-          className="h-3.5 w-3.5 shrink-0 rounded border-surface-border accent-slate-800 cursor-pointer"
+          className="h-3.5 w-3.5 shrink-0 rounded border-surface-border accent-brand cursor-pointer"
         />
         {open ? <ChevronDown className="h-3.5 w-3.5 text-foreground-dim shrink-0" /> : <ChevronRight className="h-3.5 w-3.5 text-foreground-dim shrink-0" />}
         <span className="text-xs font-medium text-foreground">Unit {unitNumber}</span>
@@ -143,7 +143,7 @@ function UnitRow({ unitNumber, items, selectedIds, onToggleAsset, onSimulate, bu
         {unitSelected.length > 0 && (
           <button
             onClick={(e) => { e.stopPropagation(); onSimulate(unitSelected); }}
-            className="ml-auto text-xs font-medium text-slate-600 hover:text-slate-900 transition-colors"
+            className="ml-auto text-xs font-medium text-muted hover:text-foreground transition-colors"
           >
             Simulate {unitSelected.length} →
           </button>
@@ -223,7 +223,7 @@ function BuildingSection({ buildingId, buildingName, selectedIds, onToggleAsset,
           ref={(el) => { if (el) el.indeterminate = someChecked; }}
           onChange={toggleBuilding}
           onClick={(e) => e.stopPropagation()}
-          className="h-4 w-4 shrink-0 rounded border-surface-border accent-slate-800 cursor-pointer"
+          className="h-4 w-4 shrink-0 rounded border-surface-border accent-brand cursor-pointer"
         />
         {open ? <ChevronDown className="h-4 w-4 text-foreground-dim shrink-0" /> : <ChevronRight className="h-4 w-4 text-foreground-dim shrink-0" />}
         <div className="flex-1 min-w-0">
@@ -233,14 +233,14 @@ function BuildingSection({ buildingId, buildingName, selectedIds, onToggleAsset,
           </p>
         </div>
         {totalAtRiskChf > 0 && (
-          <span className="text-xs font-semibold tabular-nums text-amber-700 shrink-0">
+          <span className="text-xs font-semibold tabular-nums text-warning-text shrink-0">
             CHF {Math.round(totalAtRiskChf).toLocaleString("de-CH")}
           </span>
         )}
         {selectedInBldg.length > 0 && (
           <button
             onClick={(e) => { e.stopPropagation(); onSimulate(items.filter((i) => selectedIds.has(i.assetId))); }}
-            className="text-xs font-semibold bg-slate-800 text-white rounded-lg px-3 py-1 hover:bg-slate-700 transition-colors shrink-0"
+            className="text-xs font-semibold bg-brand text-white rounded-lg px-3 py-1 hover:opacity-90 transition-colors shrink-0"
           >
             Simulate {selectedInBldg.length} →
           </button>
@@ -266,7 +266,7 @@ function BuildingSection({ buildingId, buildingName, selectedIds, onToggleAsset,
         </div>
       )}
       {open && err && (
-        <p className="px-4 py-3 text-xs text-red-600 border-t border-surface-divider">{err}</p>
+        <p className="px-4 py-3 text-xs text-destructive-text border-t border-surface-divider">{err}</p>
       )}
     </div>
   );

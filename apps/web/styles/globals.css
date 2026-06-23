@@ -54,6 +54,13 @@
   --color-info-ring:  #7dd3fc;   /* sky-300  */
   --color-info-text:  #0369a1;   /* sky-700  */
 
+  /* ── Orange (severity ramp: sits between warning/amber and destructive/red) ── */
+  --color-orange:       #ea580c;   /* orange-600 */
+  --color-orange-light: #fff7ed;   /* orange-50  */
+  --color-orange-dark:  #9a3412;   /* orange-800 */
+  --color-orange-ring:  #fdba74;   /* orange-300 */
+  --color-orange-text:  #c2410c;   /* orange-700 */
+
   /* ── Track (progress bars, toggle tracks, step connectors) ── */
   --color-track: #e2e8f0;   /* slate-200 — inactive fill */
 
@@ -144,6 +151,13 @@ html.dark {
   --color-info-dark:  #7dd3fc;
   --color-info-ring:  rgba(125,211,252,.25);
   --color-info-text:  #7dd3fc;
+
+  /* ── Orange ── */
+  --color-orange:       #ea580c;
+  --color-orange-light: rgba(234,88,12,.15);
+  --color-orange-dark:  #fdba74;
+  --color-orange-ring:  rgba(253,186,116,.25);
+  --color-orange-text:  #fdba74;
 
   /* ── Track ── */
   --color-track: rgba(255,255,255,.1);
