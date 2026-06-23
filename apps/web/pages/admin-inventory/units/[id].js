@@ -1752,7 +1752,12 @@ function UnitChargesReconciliation({ unit, onSettled }) {
     if (!unit?.buildingId) return;
     fetch(`/api/billing-periods?buildingId=${unit.buildingId}`, { headers: authHeaders() })
       .then((r) => r.json())
-      .then((j) => setPeriods(j.data || []))
+      .then((j) => {
+        const ps = j.data || [];
+        setPeriods(ps);
+        // Passively show the latest period's ventilation without forcing a pick.
+        setPeriodId((cur) => cur || ps[0]?.id || "");
+      })
       .catch(() => {});
   }, [unit?.buildingId]);
 
@@ -1782,8 +1787,8 @@ function UnitChargesReconciliation({ unit, onSettled }) {
   }
 
   return (
-    <Panel title="Run a charges reconciliation">
-      <p className="text-sm text-muted-text mb-3">Compare what the tenant paid in advance against their apportioned share of the building&apos;s actual costs for a period.</p>
+    <Panel title="Charges ventilation & reconciliation">
+      <p className="text-sm text-muted-text mb-3">The unit&apos;s apportioned share of the building&apos;s actual charges for the selected period, shown against what the tenant paid in advance. Settling is an explicit action.</p>
       {err && <p className="error-banner mb-2">{err}</p>}
       {msg && <p className="text-sm text-green-700 mb-2">{msg}</p>}
       <div className="flex items-center gap-2 mb-4">
@@ -1824,7 +1829,7 @@ function UnitChargesReconciliation({ unit, onSettled }) {
                   {preview.lines.map((l, i) => (
                     <tr key={i} className="border-t border-surface-divider">
                       <td>{l.categoryName}</td>
-                      <td className="text-xs text-muted-text">{l.distributionKey}{l.requiresManual ? " (manual)" : ""}</td>
+                      <td className="text-xs text-muted-text">{l.distributionKey}{l.usedConsumptionFallback ? " (metered → surface)" : ""}{l.requiresManual ? " (manual)" : ""}</td>
                       <td className="text-right tabular-nums">{formatChfCents(l.buildingActualCents)}</td>
                       <td className="text-right tabular-nums">{l.actualShareCents != null ? formatChfCents(l.actualShareCents) : "—"}</td>
                     </tr>

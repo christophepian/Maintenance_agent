@@ -8,6 +8,12 @@ export const InvoiceStatusEnum = z.enum([
   InvoiceStatus.DISPUTED,
 ]);
 
+/** Optional, nullable UUID that also accepts "" (coerced to null). */
+const EmptyToNullUuid = z.preprocess(
+  (v) => (v === '' ? null : v),
+  z.string().uuid().nullable().optional(),
+);
+
 const LineItemSchema = z.object({
   description: z.string().min(1).max(500),
   quantity: z.number().int().min(1).optional(),
@@ -68,8 +74,13 @@ export const UpdateInvoiceSchema = z.object({
   expenseTypeId: z.string().uuid().nullable().optional(),
   accountId: z.string().uuid().nullable().optional(),
   lineItems: z.array(LineItemSchema).optional(),
-  buildingId: z.string().uuid().nullable().optional(),
-  unitId: z.string().uuid().nullable().optional(),
+  // Empty string → null: the invoice page sends "" when no building/unit/category
+  // is chosen; an empty string is an invalid FK and must be coerced before .uuid().
+  buildingId: EmptyToNullUuid,
+  unitId: EmptyToNullUuid,
+  // Ancillary cost classification (v3 remediation)
+  costNature: z.enum(['CHARGE', 'DIRECT']).nullable().optional(),
+  ancillaryCategoryId: EmptyToNullUuid,
 });
 
 export type CreateInvoicePayload = z.infer<typeof CreateInvoiceSchema>;

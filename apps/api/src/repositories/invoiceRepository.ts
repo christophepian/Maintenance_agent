@@ -21,6 +21,7 @@ export const INVOICE_FULL_INCLUDE = {
   lineItems: true,
   classifiedExpenseType: true,
   classifiedAccount: true,
+  ancillaryCategory: { select: { id: true, code: true, name: true } },
   job: { select: { requestId: true } },
 } as const;
 

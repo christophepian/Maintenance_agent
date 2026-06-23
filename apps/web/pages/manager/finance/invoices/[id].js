@@ -97,6 +97,10 @@ export default function InvoiceDetailPage() {
   const [selectedUnitId, setSelectedUnitId] = useState("");
   const [attributionSaving, setAttributionSaving] = useState(false);
   const [attributionMsg, setAttributionMsg] = useState(null); // { type: "ok"|"err", text }
+  // Cost classification (v3): nature + recoverable-charge category
+  const [costNature, setCostNature] = useState(""); // "" | "CHARGE" | "DIRECT"
+  const [ancillaryCategoryId, setAncillaryCategoryId] = useState("");
+  const [chargeCategories, setChargeCategories] = useState([]);
   // Swap state
   const [swapLoading, setSwapLoading] = useState(false);
 
@@ -155,6 +159,22 @@ export default function InvoiceDetailPage() {
     if (invoice?.buildingId) setSelectedBuildingId(invoice.buildingId);
     if (invoice?.unitId) setSelectedUnitId(invoice.unitId);
   }, [invoice?.buildingId, invoice?.unitId]);
+
+  // Sync cost classification from invoice
+  useEffect(() => {
+    if (invoice?.costNature) setCostNature(invoice.costNature);
+    if (invoice?.ancillaryCategoryId) setAncillaryCategoryId(invoice.ancillaryCategoryId);
+  }, [invoice?.costNature, invoice?.ancillaryCategoryId]);
+
+  // Load billable charge categories for the recoverable-charge picker
+  useEffect(() => {
+    fetch("/api/ancillary-cost-categories", { headers: authHeaders() })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (d?.data) setChargeCategories(d.data.filter((c) => c.billability === "BILLABLE" && !c.isAdminFee));
+      })
+      .catch(() => {});
+  }, []);
 
   // Fetch PDF + source file with auth headers → blob URLs for iframe/img
   useEffect(() => {
@@ -263,20 +283,26 @@ export default function InvoiceDetailPage() {
     setAttributionSaving(true);
     setAttributionMsg(null);
     try {
+      const isCharge = costNature === "CHARGE";
+      // A charge is building-level only — never carries a unit. A direct cost
+      // keeps the building/unit attribution and no charge category.
+      const payload = {
+        costNature: costNature || null,
+        buildingId: selectedBuildingId || null,
+        unitId: isCharge ? null : selectedUnitId || null,
+        ancillaryCategoryId: isCharge ? ancillaryCategoryId || null : null,
+      };
       const res = await fetch(`/api/invoices/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json", ...authHeaders() },
-        body: JSON.stringify({
-          buildingId: selectedBuildingId || null,
-          unitId: selectedUnitId || null,
-        }),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) {
         const d = await res.json();
-        throw new Error(d?.error?.message || "Failed to save attribution");
+        throw new Error(d?.error?.message || "Failed to save classification");
       }
       await loadData();
-      setAttributionMsg({ type: "ok", text: "Attribution saved" });
+      setAttributionMsg({ type: "ok", text: "Classification saved" });
       setTimeout(() => setAttributionMsg(null), 3000);
     } catch (e) {
       setAttributionMsg({ type: "err", text: String(e?.message || e) });
@@ -705,8 +731,129 @@ export default function InvoiceDetailPage() {
                   </Panel>
                 )}
 
-                {/* Building / Unit attribution */}
-                {inv.status !== "PAID" && (
+                {/* Cost classification (incoming) / building-unit attribution */}
+                {inv.status !== "PAID" && inv.direction === "INCOMING" && (
+                  <Panel title="Cost classification">
+                    <div className="space-y-4">
+                      {/* Step 1 — nature gates everything below */}
+                      <div>
+                        <label className="block text-xs font-medium text-muted mb-1.5">What is this cost?</label>
+                        <div className="grid grid-cols-2 gap-2">
+                          {[
+                            { v: "CHARGE", label: "Recoverable charge", hint: "Nebenkosten — heating, water, caretaker, elevator…" },
+                            { v: "DIRECT", label: "Direct cost", hint: "Repair, maintenance, capex, insurance, tax…" },
+                          ].map((opt) => (
+                            <button
+                              key={opt.v}
+                              type="button"
+                              onClick={() => setCostNature(opt.v)}
+                              className={
+                                "text-left rounded-lg border px-3 py-2 transition " +
+                                (costNature === opt.v
+                                  ? "border-blue-500 bg-blue-50 ring-1 ring-blue-500"
+                                  : "border-surface-border bg-surface hover:bg-surface-subtle")
+                              }
+                            >
+                              <span className="block text-sm font-medium text-foreground">{opt.label}</span>
+                              <span className="block text-xs text-muted mt-0.5">{opt.hint}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Step 2 — conditional fields */}
+                      {costNature === "CHARGE" && (
+                        <div className="space-y-3">
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-xs font-medium text-muted mb-1">Building <span className="text-red-500">*</span></label>
+                              <select
+                                value={selectedBuildingId}
+                                onChange={(e) => setSelectedBuildingId(e.target.value)}
+                                className="w-full rounded-lg border border-muted-ring bg-surface px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              >
+                                <option value="">— Choose —</option>
+                                {buildings.map((b) => (
+                                  <option key={b.id} value={b.id}>{b.name || b.address || b.id.slice(0, 8)}</option>
+                                ))}
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-muted mb-1">Charge category <span className="text-red-500">*</span></label>
+                              <select
+                                value={ancillaryCategoryId}
+                                onChange={(e) => setAncillaryCategoryId(e.target.value)}
+                                className="w-full rounded-lg border border-muted-ring bg-surface px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              >
+                                <option value="">— Choose —</option>
+                                {chargeCategories.map((c) => (
+                                  <option key={c.id} value={c.id}>{c.name}</option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
+                          <p className="text-xs text-muted bg-surface-subtle border border-surface-border rounded-lg px-3 py-2 m-0">
+                            A recoverable charge is building-level. On approval it is booked to the building cost pool and ventilated to units by the building&apos;s distribution preset — no unit is selected here.
+                          </p>
+                        </div>
+                      )}
+
+                      {costNature === "DIRECT" && (
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-xs font-medium text-muted mb-1">Building</label>
+                            <select
+                              value={selectedBuildingId}
+                              onChange={(e) => { setSelectedBuildingId(e.target.value); setSelectedUnitId(""); }}
+                              className="w-full rounded-lg border border-muted-ring bg-surface px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            >
+                              <option value="">— None —</option>
+                              {buildings.map((b) => (
+                                <option key={b.id} value={b.id}>{b.name || b.address || b.id.slice(0, 8)}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-muted mb-1">Unit</label>
+                            <select
+                              value={selectedUnitId}
+                              onChange={(e) => setSelectedUnitId(e.target.value)}
+                              disabled={!selectedBuildingId || units.length === 0}
+                              className="w-full rounded-lg border border-muted-ring bg-surface px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50"
+                            >
+                              <option value="">— None —</option>
+                              {units.map((u) => (
+                                <option key={u.id} value={u.id}>{u.unitNumber}{u.floor ? ` (floor ${u.floor})` : ""}</option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={saveAttribution}
+                          disabled={
+                            attributionSaving ||
+                            !costNature ||
+                            (costNature === "CHARGE" && (!selectedBuildingId || !ancillaryCategoryId))
+                          }
+                          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition disabled:opacity-50"
+                        >
+                          {attributionSaving ? "Saving…" : "Save classification"}
+                        </button>
+                        {attributionMsg && (
+                          <span className={attributionMsg.type === "ok" ? "text-sm text-green-600 font-medium" : "text-sm text-red-600 font-medium"}>
+                            {attributionMsg.type === "ok" ? "✓ " : "✗ "}{attributionMsg.text}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </Panel>
+                )}
+
+                {/* Building / Unit attribution (outgoing/rent invoices) */}
+                {inv.status !== "PAID" && inv.direction !== "INCOMING" && (
                   <Panel title="Building / Unit Attribution">
                     <div className="space-y-3">
                       <div className="grid grid-cols-2 gap-3">
@@ -755,9 +902,15 @@ export default function InvoiceDetailPage() {
                     </div>
                   </Panel>
                 )}
-                {inv.status === "PAID" && (inv.buildingId || inv.unitId) && (
-                  <Panel title="Building / Unit Attribution">
+
+                {/* Read-only classification / attribution (paid) */}
+                {inv.status === "PAID" && (inv.costNature || inv.buildingId || inv.unitId) && (
+                  <Panel title={inv.costNature === "CHARGE" ? "Recoverable charge" : "Building / Unit Attribution"}>
                     <dl className="grid grid-cols-2 gap-x-6 gap-y-4">
+                      {inv.costNature && (
+                        <Field label="Nature" value={inv.costNature === "CHARGE" ? "Recoverable charge" : "Direct cost"} />
+                      )}
+                      {inv.ancillaryCategory && <Field label="Charge category" value={inv.ancillaryCategory.name} />}
                       {inv.buildingId && (
                         <Field label="Building" value={buildings.find((b) => b.id === inv.buildingId)?.name || inv.buildingId.slice(0, 8)} />
                       )}

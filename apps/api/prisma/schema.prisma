@@ -706,6 +706,12 @@ model Invoice {
   // ── Building/unit attribution (manual) ──────────────────
   buildingId                  String?
   unitId                      String?
+  // ── Ancillary cost classification (v3 remediation) ──────
+  // costNature is set once at the review gate: CHARGE → cost pool (building +
+  // ancillaryCategory, no unit); DIRECT → ledger/billing flow. Nullable until
+  // an incoming invoice is classified. See docs/ANCILLARY_COSTS_V3_REMEDIATION.md.
+  costNature                  CostNature?
+  ancillaryCategoryId         String?
   // ── Raw issuer text (OCR-extracted; editable for swap) ──
   issuerName                  String?
   issuerAddressLine1          String?
@@ -722,6 +728,7 @@ model Invoice {
   attributedUnit              Unit?                      @relation("InvoiceUnitAttribution", fields: [unitId], references: [id], onDelete: SetNull)
   classifiedExpenseType       ExpenseType?               @relation(fields: [expenseTypeId], references: [id], onDelete: SetNull)
   classifiedAccount           Account?                   @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  ancillaryCategory           AncillaryCostCategory?     @relation("InvoiceAncillaryCategory", fields: [ancillaryCategoryId], references: [id], onDelete: SetNull)
   billingSchedule             RecurringBillingSchedule?  @relation(fields: [billingScheduleId], references: [id], onDelete: SetNull)
   contractorBillingSchedule   ContractorBillingSchedule? @relation(fields: [contractorBillingScheduleId], references: [id], onDelete: SetNull)
   expenseCategory             ExpenseCategory?
@@ -1306,6 +1313,15 @@ enum CostBillability {
   NON_BILLABLE
 }
 
+/// The nature of an incoming invoice, decided once at the review gate. CHARGE =
+/// recoverable Nebenkosten → building-level cost pool, ventilated to units.
+/// DIRECT = repair/maintenance/capex/insurance/tax → ledger/billing flow, never
+/// in the cost pool or the décompte. See docs/ANCILLARY_COSTS_V3_REMEDIATION.md.
+enum CostNature {
+  CHARGE
+  DIRECT
+}
+
 /// How a building-level cost is apportioned across leases (clé de répartition).
 enum DistributionKey {
   SURFACE_AREA
@@ -1337,6 +1353,7 @@ model AncillaryCostCategory {
   invoiceLineItems    InvoiceLineItem[]
   reconciliationLines ChargeReconciliationLine[]
   distributions       BuildingChargeDistribution[]
+  invoices            Invoice[]                    @relation("InvoiceAncillaryCategory")
 
   @@unique([orgId, code])
   @@index([orgId])

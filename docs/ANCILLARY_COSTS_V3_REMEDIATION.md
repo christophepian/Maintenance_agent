@@ -1,8 +1,33 @@
 # Ancillary Costs v3 — Remediation Scope
 
-Status: **scoped 2026-06-23, not yet implemented.** Supersedes the data-flow assumptions
+Status: **implemented 2026-06-23** (WS1–WS5 delivered; WS6 was a no-op — the
+mismatched bits were never built). Supersedes the data-flow assumptions
 in `docs/ANCILLARY_COSTS_RECONCILIATION.md` (engine stays; routing/UI corrected).
 Builds on shipped backend P1–P4 + v2 C1–C4.
+
+## Delivery (2026-06-23)
+- **WS1** — `Invoice.costNature CHARGE|DIRECT` + `Invoice.ancillaryCategoryId` FK
+  (migration `20260623020000_add_invoice_cost_nature`). Empty-string FK bug fixed:
+  `updateInvoice` coerces `unitId/buildingId/ancillaryCategoryId "" → null`; the
+  `UpdateInvoiceSchema` preprocesses `"" → null` before `.uuid()`; the PATCH route
+  now validates with the schema and forwards `costNature`/`ancillaryCategoryId`/
+  `expenseTypeId`/`accountId`. Invoice detail page shows a nature-first classifier
+  (charge → category + building, unit hidden; direct → building + unit).
+- **WS2** — `bridgeChargeInvoiceToCostPool()` in `ancillaryReconciliationService`,
+  called (best-effort) from `approveInvoiceWorkflow` when `costNature==='CHARGE'`.
+  Resolves the period by invoice date, auto-creates an OPEN calendar-year period,
+  idempotent on `sourceInvoiceId` (re-approval updates the entry).
+- **WS3** — `getBuildingFinancials` adds cost-pool charges as `recoverableAncillaryCents`
+  (folded into expenses/operating), de-duped against the ledger by source invoice
+  and scoped to the window by invoice date. `getUnitPeriodReport` exposes the
+  unit's `apportionedChargesCents` (passive).
+- **WS4** — `apportionForLease` ventilates CONSUMPTION categories by surface area
+  when no meters (flagged `usedConsumptionFallback`); `getBuildingDistribution`
+  lazily seeds a row per billable category so the editor is never empty.
+- **WS5** — unit page charges panel auto-selects the latest period (passive
+  preview); settle stays explicit; surfaces the consumption→surface fallback.
+- Tests: `ancillaryV3Remediation.test.ts` (5 cases); 91 green across the
+  ancillary/invoice/financials suites; API typecheck clean.
 
 ## The corrected model (owner-confirmed)
 

@@ -7,7 +7,7 @@ import { requireOrgViewer, logEvent } from "./helpers";
 import { requireAnyRole } from "../authz";
 import { getJob, listJobs } from "../services/jobs";
 import { createInvoice, getInvoice, listInvoices, getOrCreateInvoiceForJob } from "../services/invoices";
-import { CreateInvoiceSchema } from "../validation/invoices";
+import { CreateInvoiceSchema, UpdateInvoiceSchema } from "../validation/invoices";
 import { generateInvoiceQRBill, getInvoiceQRCodePNG } from "../services/invoiceQRBill";
 import { generateInvoicePDF } from "../services/invoicePDF";
 import { completeJobWorkflow } from "../workflows/completeJobWorkflow";
@@ -178,18 +178,27 @@ export function registerInvoiceRoutes(router: Router) {
     if (!requireAnyRole(req, res, ["MANAGER", "OWNER"])) return;
     try {
       const body = await readJson(req);
+      const parsed = UpdateInvoiceSchema.safeParse(body);
+      if (!parsed.success) {
+        return sendError(res, 400, "VALIDATION_ERROR", "Invalid invoice update", parsed.error.flatten());
+      }
+      const v = parsed.data;
       const { updateInvoice } = await import("../services/invoices");
       const updated = await updateInvoice(params.id, {
-        ...(body.issuerBillingEntityId !== undefined ? { issuerBillingEntityId: body.issuerBillingEntityId } : {}),
-        ...(body.issuerName !== undefined ? { issuerName: body.issuerName } : {}),
-        ...(body.issuerAddressLine1 !== undefined ? { issuerAddressLine1: body.issuerAddressLine1 } : {}),
-        ...(body.issuerPostalCode !== undefined ? { issuerPostalCode: body.issuerPostalCode } : {}),
-        ...(body.issuerCity !== undefined ? { issuerCity: body.issuerCity } : {}),
-        ...(body.issuerCountry !== undefined ? { issuerCountry: body.issuerCountry } : {}),
-        ...(body.recipientName !== undefined ? { recipientName: body.recipientName } : {}),
-        ...(body.description !== undefined ? { description: body.description } : {}),
-        ...(body.buildingId !== undefined ? { buildingId: body.buildingId } : {}),
-        ...(body.unitId !== undefined ? { unitId: body.unitId } : {}),
+        ...(v.issuerBillingEntityId !== undefined ? { issuerBillingEntityId: v.issuerBillingEntityId } : {}),
+        ...(v.issuerName !== undefined ? { issuerName: v.issuerName } : {}),
+        ...(v.issuerAddressLine1 !== undefined ? { issuerAddressLine1: v.issuerAddressLine1 } : {}),
+        ...(v.issuerPostalCode !== undefined ? { issuerPostalCode: v.issuerPostalCode } : {}),
+        ...(v.issuerCity !== undefined ? { issuerCity: v.issuerCity } : {}),
+        ...(v.issuerCountry !== undefined ? { issuerCountry: v.issuerCountry } : {}),
+        ...(v.recipientName !== undefined ? { recipientName: v.recipientName } : {}),
+        ...(v.description !== undefined ? { description: v.description } : {}),
+        ...(v.buildingId !== undefined ? { buildingId: v.buildingId } : {}),
+        ...(v.unitId !== undefined ? { unitId: v.unitId } : {}),
+        ...(v.expenseTypeId !== undefined ? { expenseTypeId: v.expenseTypeId } : {}),
+        ...(v.accountId !== undefined ? { accountId: v.accountId } : {}),
+        ...(v.costNature !== undefined ? { costNature: v.costNature } : {}),
+        ...(v.ancillaryCategoryId !== undefined ? { ancillaryCategoryId: v.ancillaryCategoryId } : {}),
       });
       sendJson(res, 200, { data: updated });
     } catch (e: any) {

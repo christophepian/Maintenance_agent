@@ -150,6 +150,52 @@ export async function upsertBuildingDistribution(
   });
 }
 
+/**
+ * The billing period whose date range contains `date` for a building, if any.
+ * Used to route an approved charge invoice into the right cost pool. Most-recent
+ * start wins when ranges overlap.
+ */
+export async function findBillingPeriodForDate(
+  prisma: PrismaClient,
+  orgId: string,
+  buildingId: string,
+  date: Date,
+) {
+  return prisma.billingPeriod.findFirst({
+    where: { orgId, buildingId, startDate: { lte: date }, endDate: { gte: date } },
+    include: BILLING_PERIOD_INCLUDE,
+    orderBy: { startDate: "desc" },
+  });
+}
+
+/**
+ * Billable cost-pool entries for a building whose billing period overlaps the
+ * report window [from, to]. Carries the source invoice's date so reporting can
+ * scope to the window precisely and de-dupe against ledger entries by invoice.
+ * Used by getBuildingFinancials (WS3) to surface recoverable charges.
+ */
+export async function findChargeCostEntriesForBuildingWindow(
+  prisma: PrismaClient,
+  orgId: string,
+  buildingId: string,
+  from: Date,
+  to: Date,
+) {
+  return prisma.costEntry.findMany({
+    where: {
+      category: { billability: "BILLABLE" },
+      billingPeriod: { orgId, buildingId, startDate: { lte: to }, endDate: { gte: from } },
+    },
+    select: {
+      id: true,
+      amountCents: true,
+      sourceInvoiceId: true,
+      category: { select: { code: true, name: true } },
+      sourceInvoice: { select: { issueDate: true, createdAt: true } },
+    },
+  });
+}
+
 /** Most recent CLOSED billing periods for a building (for flat-rate 3-yr averaging). */
 export async function findClosedBillingPeriodsForBuilding(
   prisma: PrismaClient,

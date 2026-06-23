@@ -6,6 +6,7 @@ import * as leaseRepo from "../repositories/leaseRepository";
 import * as snapshotRepo from "../repositories/buildingFinancialSnapshotRepository";
 import * as financialsRepo from "../repositories/financialsRepository";
 import * as dailySnapshotRepo from "../repositories/portfolioDailySnapshotRepository";
+import * as billingPeriodRepo from "../repositories/billingPeriodRepository";
 import type { ExpenseLedgerRow, ArrearsAgingDTO } from "../repositories/financialsRepository";
 
 // ==========================================
@@ -44,6 +45,13 @@ export interface BuildingFinancialsDTO {
   operatingTotalCents: number;
   netIncomeCents: number;
   netOperatingIncomeCents: number;
+  /**
+   * Recoverable ancillary charges (Nebenkosten) booked to the building cost pool
+   * for the period, de-duped against ledger entries by source invoice. Included
+   * in expensesTotalCents / operatingTotalCents; exposed separately so a report
+   * can show it as a distinct "recoverable ancillary" line vs landlord expenses.
+   */
+  recoverableAncillaryCents: number;
 
   // Income breakdown (projected, from lease terms)
   rentalIncomeCents: number;
@@ -236,6 +244,7 @@ export async function getBuildingFinancials(
         operatingTotalCents: cached.operatingTotalCents,
         netIncomeCents: cached.netIncomeCents,
         netOperatingIncomeCents: cached.netOperatingIncomeCents,
+        recoverableAncillaryCents: 0, // already folded into cached expensesTotalCents
         rentalIncomeCents: 0,
         serviceChargeIncomeCents: 0,
         receivablesCents: 0,
@@ -347,6 +356,25 @@ export async function getBuildingFinancials(
     financialsRepo.aggregatePaidRentForPeriod(prisma, orgId, buildingId, from, to),
   ]);
 
+  // 9c. Recoverable ancillary charges from the cost pool (WS3). De-dupe against
+  //     the ledger by source invoice so a charge already posted as an expense
+  //     isn't counted twice; scope to the window by the source invoice's date.
+  //     Manual cost entries (no source invoice) are trusted by period overlap.
+  const ledgerInvoiceIdSet = new Set(invoiceIds);
+  const chargeEntries = await billingPeriodRepo.findChargeCostEntriesForBuildingWindow(
+    prisma, orgId, buildingId, from, endOfDayUTC(to),
+  );
+  let recoverableAncillaryCents = 0;
+  for (const e of chargeEntries) {
+    if (e.sourceInvoiceId && ledgerInvoiceIdSet.has(e.sourceInvoiceId)) continue; // already in ledger
+    const d = e.sourceInvoice?.issueDate ?? e.sourceInvoice?.createdAt ?? null;
+    if (d && (d < from || d > endOfDayUTC(to))) continue; // outside the window
+    recoverableAncillaryCents += e.amountCents;
+  }
+  // Fold charges into the expense total (operating, never capex) before deriving
+  // KPIs and persisting the snapshot.
+  expensesTotalCents += recoverableAncillaryCents;
+
   // 10. Derived totals and KPIs
   const operatingTotalCents = expensesTotalCents - capexTotalCents;
   const netIncomeCents = earnedIncomeCents - expensesTotalCents;
@@ -411,6 +439,7 @@ export async function getBuildingFinancials(
     operatingTotalCents,
     netIncomeCents,
     netOperatingIncomeCents,
+    recoverableAncillaryCents,
     rentalIncomeCents: incomeBreakdown.rentalIncomeCents,
     serviceChargeIncomeCents: incomeBreakdown.serviceChargeIncomeCents,
     receivablesCents,
@@ -1639,6 +1668,12 @@ export interface UnitPeriodReportDTO {
     status:           string;
   } | null;
   arrearsCents: number;
+  /**
+   * The unit's apportioned recoverable-charge share from the building cost pool
+   * for the billing period overlapping the window (WS3, passive). null when no
+   * active lease / period / cost pool exists. Settling stays an explicit action.
+   */
+  apportionedChargesCents: number | null;
   monthlyData: Array<{
     month:              number;
     earnedIncomeCents:  number;
@@ -1757,6 +1792,24 @@ export async function getUnitPeriodReport(
   });
   const arrearsCents = arrearsAgg._sum.totalAmount ?? 0;
 
+  // Apportioned recoverable-charge share from the cost pool (WS3, passive). Find
+  // the billing period overlapping the window and apportion this unit's active
+  // lease. Best-effort: any gap (no lease, no period, no costs) yields null.
+  let apportionedChargesCents: number | null = null;
+  try {
+    if (activeLease) {
+      const unitRow = await prisma.unit.findFirst({ where: { id: unitId, orgId }, select: { buildingId: true } });
+      if (unitRow?.buildingId) {
+        const period = await billingPeriodRepo.findBillingPeriodForDate(prisma, orgId, unitRow.buildingId, to);
+        if (period) {
+          const { apportionForLease } = await import("./ancillaryReconciliationService");
+          const apportion = await apportionForLease(orgId, period.id, activeLease.id);
+          apportionedChargesCents = apportion.totalActualCostsCents;
+        }
+      }
+    }
+  } catch { /* no apportionable charges for this unit/period */ }
+
   // Monthly data (YTD)
   let monthlyData: UnitPeriodReportDTO["monthlyData"] = null;
   if (includeMonthly) {
@@ -1804,6 +1857,7 @@ export async function getUnitPeriodReport(
     prev,
     currentLease,
     arrearsCents,
+    apportionedChargesCents,
     monthlyData,
     assetConditionSummary,
   };

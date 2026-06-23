@@ -102,11 +102,12 @@ export interface ApportionedLine {
   categoryId: string;
   categoryCode: string;
   categoryName: string;
-  distributionKey: DistributionKey;
+  distributionKey: DistributionKey; // the effective key used (post-fallback)
   buildingActualCents: number;
   factor: number | null;
   actualShareCents: number | null;
-  requiresManual: boolean; // true when the key can't be auto-computed (e.g. CONSUMPTION / missing data)
+  requiresManual: boolean; // true when even the fallback key can't be computed (no surface areas)
+  usedConsumptionFallback: boolean; // true when a CONSUMPTION key was ventilated by surface area (no meters)
 }
 
 export interface ApportionmentResult {
@@ -152,18 +153,29 @@ export async function apportionForLease(
   const lines: ApportionedLine[] = [];
   let billableShareCents = 0;
   for (const [categoryId, c] of perCategory) {
-    const factor = distributionFactor(me, c.key, participants);
+    // WS4: when a CONSUMPTION category has no meter data, ventilate by surface
+    // area (flagged) instead of falling to "requiresManual" — so heating/water
+    // still distribute. True per-unit metering remains deferred.
+    let effectiveKey: DistributionKey = c.key;
+    let factor = distributionFactor(me, effectiveKey, participants);
+    let usedConsumptionFallback = false;
+    if (factor == null && c.key === "CONSUMPTION") {
+      effectiveKey = "SURFACE_AREA";
+      factor = distributionFactor(me, effectiveKey, participants);
+      usedConsumptionFallback = true;
+    }
     const share = factor == null ? null : Math.round(c.cents * factor);
     if (share != null) billableShareCents += share;
     lines.push({
       categoryId,
       categoryCode: c.code,
       categoryName: c.name,
-      distributionKey: c.key,
+      distributionKey: effectiveKey,
       buildingActualCents: c.cents,
       factor,
       actualShareCents: share,
       requiresManual: factor == null,
+      usedConsumptionFallback,
     });
   }
 
@@ -285,6 +297,70 @@ export async function qualifyInvoiceAsCost(
   return (await getPeriod(orgId, billingPeriodId))!;
 }
 
+/**
+ * WS2 — charge → cost-pool bridge. On approval of an invoice classified as a
+ * CHARGE (Nebenkosten) with a building + ancillary charge category and no unit,
+ * book it as an actual building cost. The period is resolved by the invoice date
+ * (issue date, else creation date); an OPEN calendar-year period is auto-created
+ * when none exists. Idempotent on sourceInvoiceId: a re-approval (or an edited
+ * amount/category) updates the existing CostEntry rather than duplicating it.
+ *
+ * Best-effort: callers invoke this without blocking approval. It silently no-ops
+ * when the invoice isn't a fully-classified charge, and throws only on a genuine
+ * conflict (e.g. the resolved period is CLOSED) so the caller can log it.
+ */
+export async function bridgeChargeInvoiceToCostPool(orgId: string, invoiceId: string): Promise<void> {
+  const invoice = await prisma.invoice.findFirst({ where: { id: invoiceId, orgId } });
+  if (!invoice) return;
+  if ((invoice as any).costNature !== "CHARGE") return; // direct cost / unclassified → not a pool entry
+  const categoryId = (invoice as any).ancillaryCategoryId as string | null;
+  if (!invoice.buildingId || !categoryId) return; // not fully classified yet
+
+  const category = await prisma.ancillaryCostCategory.findFirst({ where: { id: categoryId, orgId } });
+  if (!category) throw new Error("Charge category not found or wrong org");
+
+  const amountCents = invoice.totalAmount ?? 0;
+  const note = invoice.invoiceNumber || invoice.description || null;
+
+  // Idempotent on sourceInvoiceId — keep the entry in sync on re-approval.
+  const existing = await prisma.costEntry.findFirst({
+    where: { sourceInvoiceId: invoiceId, billingPeriod: { orgId } },
+    include: { billingPeriod: { select: { status: true } } },
+  });
+  if (existing) {
+    if (existing.billingPeriod.status === "CLOSED") return; // settled — leave it
+    await repo.updateCostEntry(prisma, existing.id, { amountCents, categoryId, note });
+    return;
+  }
+
+  // Resolve the period by invoice date; auto-create an OPEN calendar-year period.
+  const refDate = invoice.issueDate ?? invoice.createdAt;
+  let period = await repo.findBillingPeriodForDate(prisma, orgId, invoice.buildingId, refDate);
+  if (period && period.status === "CLOSED") {
+    throw new Error("The billing period for this charge is CLOSED; reopen it or adjust the invoice date");
+  }
+  if (!period) {
+    const year = refDate.getUTCFullYear();
+    const start = new Date(Date.UTC(year, 0, 1, 0, 0, 0, 0));
+    const end = new Date(Date.UTC(year, 11, 31, 23, 59, 59, 999));
+    try {
+      period = await repo.createBillingPeriod(prisma, orgId, { buildingId: invoice.buildingId, startDate: start, endDate: end });
+    } catch (e: any) {
+      if (e?.code !== "P2002") throw e; // a concurrent create won — re-fetch
+      period = await repo.findBillingPeriodForDate(prisma, orgId, invoice.buildingId, refDate);
+      if (!period || period.status === "CLOSED") throw e;
+    }
+  }
+
+  await repo.createCostEntry(prisma, {
+    billingPeriodId: period.id,
+    categoryId,
+    amountCents,
+    sourceInvoiceId: invoice.id,
+    note,
+  });
+}
+
 export async function removeCostEntry(orgId: string, billingPeriodId: string, entryId: string): Promise<BillingPeriodDTO> {
   const period = await repo.findBillingPeriodById(prisma, billingPeriodId, orgId);
   if (!period) throw new Error("Billing period not found");
@@ -305,20 +381,41 @@ export interface DistributionConfigRowDTO {
   isDefault: boolean; // true = using the category default (no building override)
 }
 
-/** All billable categories for the org with this building's resolved distribution key. */
+/**
+ * All billable categories for the org with this building's resolved distribution
+ * key. WS4: lazily auto-seeds a BuildingChargeDistribution row from the category
+ * default for any category missing one, so the editor is never empty and the
+ * config is persistent (a manager can then override per category).
+ */
 export async function getBuildingDistribution(orgId: string, buildingId: string): Promise<DistributionConfigRowDTO[]> {
+  const building = await prisma.building.findFirst({ where: { id: buildingId, orgId }, select: { id: true } });
+  if (!building) throw new Error("Building not found or wrong org");
+
   const [cats, rows] = await Promise.all([
     prisma.ancillaryCostCategory.findMany({ where: { orgId, isActive: true, billability: "BILLABLE" }, orderBy: { name: "asc" } }),
     repo.findBuildingDistribution(prisma, orgId, buildingId),
   ]);
   const byCat = new Map(rows.map((r) => [r.categoryId, r.key]));
+
+  // Seed missing rows from category defaults (idempotent, ignores unique races).
+  const missing = cats.filter((c) => !byCat.has(c.id));
+  for (const c of missing) {
+    try {
+      await repo.upsertBuildingDistribution(prisma, orgId, buildingId, c.id, c.defaultKey);
+      byCat.set(c.id, c.defaultKey);
+    } catch (e: any) {
+      if (e?.code !== "P2002") throw e;
+      byCat.set(c.id, c.defaultKey);
+    }
+  }
+
   return cats.map((c) => ({
     categoryId: c.id,
     categoryCode: c.code,
     categoryName: c.name,
     billability: c.billability,
     key: byCat.get(c.id) ?? c.defaultKey,
-    isDefault: !byCat.has(c.id),
+    isDefault: false, // every category now has a persisted row
   }));
 }
 

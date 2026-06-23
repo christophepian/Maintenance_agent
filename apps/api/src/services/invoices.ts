@@ -1,4 +1,4 @@
-import { InvoiceStatus, BillingEntityType, Prisma, InvoiceDirection, InvoiceSourceChannel, IngestionStatus } from '@prisma/client';
+import { InvoiceStatus, BillingEntityType, Prisma, InvoiceDirection, InvoiceSourceChannel, IngestionStatus, CostNature } from '@prisma/client';
 import prisma from './prismaClient';
 import { INVOICE_FULL_INCLUDE, INVOICE_SUMMARY_INCLUDE, findInvoicesWithCount } from '../repositories/invoiceRepository';
 import * as invoiceRepo from '../repositories/invoiceRepository';
@@ -95,6 +95,9 @@ export interface UpdateInvoiceParams {
   // Building/unit attribution
   buildingId?: string | null;
   unitId?: string | null;
+  // Ancillary cost classification (v3): nature + charge category
+  costNature?: CostNature | null;
+  ancillaryCategoryId?: string | null;
 }
 
 export interface InvoiceLineItemDTO {
@@ -154,6 +157,10 @@ export interface InvoiceDTO {
   unitId?: string | null;
   /** Building attribution derived from job.request.unit.buildingId — populated when available */
   buildingId?: string | null;
+  // Ancillary cost classification (v3 remediation)
+  costNature?: CostNature | null;
+  ancillaryCategoryId?: string | null;
+  ancillaryCategory?: { id: string; code: string; name: string } | null;
   // INV-HUB ingestion fields
   direction: InvoiceDirection;
   sourceChannel: InvoiceSourceChannel;
@@ -689,6 +696,13 @@ export async function updateInvoice(
     throw new Error('INVOICE_NOT_FOUND');
   }
 
+  // Coerce empty-string FK attributes to null. The invoice page sends unitId: ""
+  // (and buildingId/ancillaryCategoryId: "") when no value is chosen; an empty
+  // string is an invalid FK and would fail the write. See ANCILLARY_COSTS_V3.
+  if ((params.unitId as any) === '') params.unitId = null;
+  if ((params.buildingId as any) === '') params.buildingId = null;
+  if ((params.ancillaryCategoryId as any) === '') params.ancillaryCategoryId = null;
+
   const mutatingFields =
     params.lineItems ||
     params.amount !== undefined ||
@@ -709,11 +723,13 @@ export async function updateInvoice(
     params.dueDate !== undefined ||
     params.vatRate !== undefined;
 
-  // building/unit attribution and expenseType/account never lock — they're metadata
+  // building/unit attribution, expenseType/account and cost classification never
+  // lock — they're metadata
   const isAttributionOnly =
     !mutatingFields &&
     (params.buildingId !== undefined || params.unitId !== undefined ||
-     params.expenseTypeId !== undefined || params.accountId !== undefined);
+     params.expenseTypeId !== undefined || params.accountId !== undefined ||
+     params.costNature !== undefined || params.ancillaryCategoryId !== undefined);
 
   if (existing.lockedAt && mutatingFields && !isAttributionOnly) {
     throw new Error('INVOICE_LOCKED');
@@ -746,6 +762,10 @@ export async function updateInvoice(
         ...(params.issuerCountry !== undefined && { issuerCountry: params.issuerCountry }),
         ...(params.buildingId !== undefined && { buildingId: params.buildingId }),
         ...(params.unitId !== undefined && { unitId: params.unitId }),
+        ...(params.costNature !== undefined && { costNature: params.costNature }),
+        ...(params.ancillaryCategoryId !== undefined && {
+          ancillaryCategoryId: params.ancillaryCategoryId === null ? null : params.ancillaryCategoryId,
+        }),
         ...(params.recipientName !== undefined && { recipientName: params.recipientName }),
         ...(params.recipientAddressLine1 !== undefined && { recipientAddressLine1: params.recipientAddressLine1 }),
         ...(params.recipientAddressLine2 !== undefined && {
@@ -984,6 +1004,15 @@ function mapInvoiceToDTO(invoice: InvoiceWithFullInclude): InvoiceDTO {
     billingScheduleId: (invoice as any).billingScheduleId ?? null,
     buildingId: (invoice as any).buildingId ?? null,
     unitId: (invoice as any).unitId ?? null,
+    costNature: (invoice as any).costNature ?? null,
+    ancillaryCategoryId: (invoice as any).ancillaryCategoryId ?? null,
+    ancillaryCategory: (invoice as any).ancillaryCategory
+      ? {
+          id: (invoice as any).ancillaryCategory.id,
+          code: (invoice as any).ancillaryCategory.code,
+          name: (invoice as any).ancillaryCategory.name,
+        }
+      : null,
   };
 }
 
