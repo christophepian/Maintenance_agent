@@ -18,6 +18,7 @@ import { authHeaders } from "../lib/api";
 
 import { cn } from "../lib/utils";
 import { topicLabel } from "../lib/topicLabels";
+import HoverTip from "./HoverTip";
 const ASSET_TYPES = ["APPLIANCE", "FIXTURE", "FINISH", "STRUCTURAL", "SYSTEM", "OTHER"];
 
 const TYPE_LABELS = {
@@ -211,6 +212,18 @@ function formatDate(iso) {
   const dd = String(d.getDate()).padStart(2, "0");
   const mm = String(d.getMonth() + 1).padStart(2, "0");
   return `${dd}.${mm}.${d.getFullYear()}`;
+}
+
+// Provenance line for an asset's condition badge hover tooltip.
+// latestCondition comes from APPROVED reports only, so it is always validated.
+function conditionTip(lc, t, fmt) {
+  if (!lc?.reportedAt) return null;
+  const date = fmt(lc.reportedAt);
+  if (!date || date === "—") return null;
+  const key = lc.reportType === "MOVE_OUT" ? "assetInventory.conditionValidatedMoveOut"
+    : lc.reportType === "MOVE_IN" ? "assetInventory.conditionValidatedMoveIn"
+    : "assetInventory.conditionValidated";
+  return t(key, { date });
 }
 
 // topicLabel(key) → English display name, imported from ../lib/topicLabels
@@ -910,19 +923,17 @@ export default function AssetInventoryPanel({ assets, onRefresh, scope, parentId
                     <div className="flex-1" />
                     <DepreciationBar depreciation={asset.depreciation} installedAt={asset.installedAt} />
                     {asset.latestCondition && (
-                      <span
-                        title={asset.latestCondition.reportedAt
-                          ? t("assetInventory.lastReportedOn", { date: formatDate(asset.latestCondition.reportedAt) })
-                          : undefined}
-                        className={cn(
-                          "text-xs px-1.5 py-0.5 rounded font-medium shrink-0",
+                      <HoverTip content={conditionTip(asset.latestCondition, t, formatDate)} className="shrink-0">
+                        <span className={cn(
+                          "text-xs px-1.5 py-0.5 rounded font-medium",
                           asset.latestCondition.condition === "GOOD"    && "bg-success-light text-success-text",
                           asset.latestCondition.condition === "FAIR"    && "bg-warning-light text-warning-text",
                           asset.latestCondition.condition === "POOR"    && "bg-warning-light text-warning-text",
                           asset.latestCondition.condition === "DAMAGED" && "bg-destructive-light text-destructive-text",
                         )}>
-                        {asset.latestCondition.condition}
-                      </span>
+                          {asset.latestCondition.condition}
+                        </span>
+                      </HoverTip>
                     )}
                     {!asset.isPresent && (
                       <span className="text-xs bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-semibold">ABSENT</span>

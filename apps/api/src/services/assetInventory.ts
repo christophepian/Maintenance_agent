@@ -420,6 +420,9 @@ export interface RepairReplaceItem {
   recommendation: RepairReplaceRecommendation;
   recommendationReason: string;
   lastConditionStatus: "GOOD" | "FAIR" | "POOR" | "DAMAGED" | null;
+  lastConditionAt: string | null;            // ISO date the source report was validated/submitted
+  lastConditionReportType: string | null;    // MOVE_IN | MOVE_OUT
+  lastConditionValidated: boolean;           // true = from an APPROVED report
   currentLease: {
     tenantName:      string;
     netRentChf:      number;
@@ -475,13 +478,20 @@ export async function getRepairReplaceAnalysis(
       : null,
   } : null;
 
-  // Pre-fetch: latest condition report items for this unit (assetId → condition)
+  // Pre-fetch: latest condition report items for this unit (assetId → condition).
+  // Capture the report's date/type/validation so the UI can show provenance.
   const latestReport = await prisma.unitConditionReport.findFirst({
     where: { unitId, orgId, status: { in: ["SUBMITTED", "APPROVED"] } },
     orderBy: { submittedAt: "desc" },
-    select: { items: { where: { assetId: { not: null }, condition: { not: "NOT_INSPECTED" } }, select: { assetId: true, condition: true } } },
+    select: {
+      status: true, type: true, approvedAt: true, submittedAt: true,
+      items: { where: { assetId: { not: null }, condition: { not: "NOT_INSPECTED" } }, select: { assetId: true, condition: true } },
+    },
   });
   const conditionMap = new Map<string, "GOOD" | "FAIR" | "POOR" | "DAMAGED">();
+  const lastConditionValidated = latestReport?.status === "APPROVED";
+  const lastConditionAt = latestReport ? (latestReport.approvedAt ?? latestReport.submittedAt ?? null) : null;
+  const lastConditionReportType = latestReport?.type ?? null;
   if (latestReport) {
     for (const item of latestReport.items) {
       if (item.assetId) conditionMap.set(item.assetId, item.condition as "GOOD" | "FAIR" | "POOR" | "DAMAGED");
@@ -607,6 +617,9 @@ export async function getRepairReplaceAnalysis(
       recommendation,
       recommendationReason,
       lastConditionStatus: lastCond,
+      lastConditionAt: lastCond && lastConditionAt ? lastConditionAt.toISOString() : null,
+      lastConditionReportType: lastCond ? lastConditionReportType : null,
+      lastConditionValidated: lastCond ? lastConditionValidated : false,
       currentLease,
     });
   }

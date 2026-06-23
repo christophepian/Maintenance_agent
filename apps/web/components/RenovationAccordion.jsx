@@ -18,6 +18,27 @@ import { ChevronRight, ChevronDown } from "lucide-react";
 import { cn } from "../lib/utils";
 import { authHeaders } from "../lib/api";
 import RenovationSimulatorDrawer from "./RenovationSimulatorDrawer";
+import HoverTip from "./HoverTip";
+
+// Human-readable date for tooltip provenance ("23 May 2026")
+function fmtDate(iso) {
+  if (!iso) return null;
+  const d = new Date(iso);
+  return isNaN(d) ? null : d.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+}
+
+// Provenance line for the condition tag's hover tooltip
+function conditionTip(item) {
+  if (!item.lastConditionStatus) return null;
+  const date = fmtDate(item.lastConditionAt);
+  const kind = item.lastConditionReportType === "MOVE_OUT" ? "move-out"
+    : item.lastConditionReportType === "MOVE_IN" ? "move-in" : null;
+  const suffix = kind ? ` (${kind} inspection)` : "";
+  if (!date) return `Last condition report: ${item.lastConditionStatus}`;
+  return item.lastConditionValidated
+    ? `Condition report validated on ${date}${suffix}`
+    : `Condition reported on ${date}${suffix} · awaiting validation`;
+}
 
 // ─── Style maps ───────────────────────────────────────────────────────────────
 
@@ -85,11 +106,15 @@ function AssetRow({ item, checked, onToggle, onSimulate }) {
       </div>
       {/* Badges */}
       <div className="flex items-center gap-1 shrink-0">
-        <span title={item.recommendationReason || undefined} className={cn("rounded-full px-2 py-0.5 text-xs font-semibold", rec.badge)}>{rec.label}</span>
+        <HoverTip content={item.recommendationReason}>
+          <span className={cn("rounded-full px-2 py-0.5 text-xs font-semibold", rec.badge)}>{rec.label}</span>
+        </HoverTip>
         {cond && (
-          <span className={cn("rounded-full px-2 py-0.5 text-xs font-semibold hidden sm:inline", cond)}>
-            {item.lastConditionStatus.charAt(0) + item.lastConditionStatus.slice(1).toLowerCase()}
-          </span>
+          <HoverTip content={conditionTip(item)} className="hidden sm:inline-flex">
+            <span className={cn("rounded-full px-2 py-0.5 text-xs font-semibold", cond)}>
+              {item.lastConditionStatus.charAt(0) + item.lastConditionStatus.slice(1).toLowerCase()}
+            </span>
+          </HoverTip>
         )}
       </div>
       {/* Due year */}

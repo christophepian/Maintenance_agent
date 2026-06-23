@@ -267,7 +267,9 @@
     "selectContractor": "Select contractor"
   },
   "assetInventory": {
-    "lastReportedOn": "Last reported on {{date}}",
+    "conditionValidated": "Condition report validated on {{date}}",
+    "conditionValidatedMoveIn": "Condition report validated on {{date}} (move-in inspection)",
+    "conditionValidatedMoveOut": "Condition report validated on {{date}} (move-out inspection)",
     "fullyDepreciated": "Fully depreciated",
     "installUnknown": "Install date unknown",
     "noStandard": "No depreciation standard",

@@ -267,7 +267,9 @@
     "selectContractor": "Sélectionner un prestataire"
   },
   "assetInventory": {
-    "lastReportedOn": "Dernier état signalé le {{date}}",
+    "conditionValidated": "État validé le {{date}}",
+    "conditionValidatedMoveIn": "État validé le {{date}} (état des lieux d'entrée)",
+    "conditionValidatedMoveOut": "État validé le {{date}} (état des lieux de sortie)",
     "fullyDepreciated": "Totalement amorti",
     "installUnknown": "Date d'installation inconnue",
     "noStandard": "Aucun standard d'amortissement",
