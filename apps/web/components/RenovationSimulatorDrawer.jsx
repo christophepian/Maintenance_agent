@@ -728,11 +728,6 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId, 
                 }
               />
             </div>
-            <p className="text-xs text-foreground-dim mt-2">
-              {holdIsBest
-                ? "Doing nothing yields the best NPV here. Act Now / At Turnover are dimmed — pick one only to schedule work against the recommendation."
-                : "Tap a scenario to choose which one “Plan this work” schedules."}
-            </p>
             {isSuboptimal && (
               <div className="mt-2 rounded-lg border border-warning-ring bg-warning-light px-3 py-2">
                 <p className="text-xs text-warning-text">
