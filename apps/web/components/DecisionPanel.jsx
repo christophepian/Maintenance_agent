@@ -7,12 +7,14 @@
  * The full plan page reuses the same shared components.
  */
 import { useState, useEffect, useCallback } from "react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "../lib/utils";
 import { authHeaders } from "../lib/api";
 import NPVScenariosPanel from "./NPVScenariosPanel";
 import FinancingPanel from "./FinancingPanel";
 import AssumptionsPanel from "./cashflow/AssumptionsPanel";
 import RfpCandidatesPanel from "./cashflow/RfpCandidatesPanel";
+import CapexEventTable from "./cashflow/CapexEventTable";
 
 const STATUS_BADGE = {
   DRAFT:     "bg-warning-light text-warning-text",
@@ -25,6 +27,7 @@ export default function DecisionPanel({ planId }) {
   const [actionLoading, setActionLoading] = useState(false);
   const [actionError, setActionError] = useState("");
   const [npvRefreshKey, setNpvRefreshKey] = useState(0);
+  const [showDetails, setShowDetails] = useState(false);
 
   const loadPlan = useCallback(async () => {
     if (!planId) return;
@@ -79,6 +82,10 @@ export default function DecisionPanel({ planId }) {
   const isSubmitted = status === "SUBMITTED";
   const isApproved = status === "APPROVED";
 
+  const buckets = plan?.cashflow?.buckets || [];
+  const timingRecs = plan?.cashflow?.timingRecommendations || [];
+  const alignmentMap = plan?.strategyOverlay?.items?.reduce((m, it) => { m[it.assetId] = it; return m; }, {}) || {};
+
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2 min-w-0">
@@ -103,6 +110,31 @@ export default function DecisionPanel({ planId }) {
         mode="plan"
         fetchUrl={`/api/cashflow-plans/${planId}/npv-scenarios`}
       />
+
+      {/* Plan details — the capex schedule (override-timing editor), collapsed by default */}
+      <div className="rounded-xl border border-surface-border bg-surface">
+        <button
+          type="button"
+          onClick={() => setShowDetails((v) => !v)}
+          className="flex w-full items-center justify-between gap-2 px-3 py-2 text-xs font-semibold text-foreground-dim hover:text-foreground transition-colors"
+        >
+          <span>Plan details — capex schedule</span>
+          {showDetails ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+        </button>
+        {showDetails && (
+          <div className="px-3 pb-3">
+            <CapexEventTable
+              buckets={buckets}
+              overrides={plan?.overrides}
+              timingRecommendations={timingRecs}
+              planId={planId}
+              isDraft={isDraft}
+              onRefresh={refreshAfterEdit}
+              alignmentMap={alignmentMap}
+            />
+          </div>
+        )}
+      </div>
 
       {/* Lifecycle: Submit → Approve */}
       {(isDraft || isSubmitted) && (
