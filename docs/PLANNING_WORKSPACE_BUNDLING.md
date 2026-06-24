@@ -1,9 +1,65 @@
 # Planning Workspace — Renovation × Cashflow Plan Bundling
 
 **Date:** 2026-06-24
-**Status:** Scoping — **approved**, ready to implement (phased). Not started.
+**Status:** ✅ **Shipped** — but as a **two-step** design, NOT the single-page Option C
+originally scoped below. The single page proved to be a data mess and hid the cashflow
+chart, so during the build we pivoted. **§0 is the source of truth; §1–§10 are the
+original scoping record, kept for history and partially superseded.**
 **Author:** scoped with Claude
 **Supersedes the flow defined in:** [PLANNING_TAB_REARCHITECTURE.md](./PLANNING_TAB_REARCHITECTURE.md) (the 2026-06-19 three-surface flow)
+
+---
+
+## 0. Revised design — SHIPPED (two-step)
+
+We started building Option C (everything on one page) but it conflated three jobs —
+model, project cash, govern — into one scroll, and the all-in-one panel buried the
+cashflow chart. We split on the natural commit point (**"Plan this work"**) into two
+steps:
+
+### Step 1 — Appraise  (`/manager/finance?tab=planning`, `PlanningWorkspace`)
+- Bundled "Renovation Opportunities" section: building filter **chips** in the header +
+  the Building ▸ Unit ▸ Asset accordion (condition + recommendation tags).
+- Select a bundle → **simulator** slides in full-width beneath (embedded mode of
+  `RenovationSimulatorDrawer`); its scenario cards (Act Now / At Turnover / Do Nothing)
+  are the **interactive verdict**. All renovation assumptions live here (cost, OBLF,
+  **vacancy in days**, discount, cap) plus **Financing & Valuation** (`FinancingPanel`).
+- **"Plan this work"** creates the DRAFT plan and **navigates (same tab) to step 2**.
+
+### Step 2 — Project cash & approve  (`/manager/cashflow/[id]`)
+- **Cashflow timeline chart** + stat cards (restored as the focus).
+- Capex schedule (`CapexEventTable`, override-timing editor).
+- **Read-only** appraisal summary: NPV verdict + levered metrics (DSCR/LTV/equity IRR)
+  via `NPVScenariosPanel`, and assumptions read-only (`AssumptionsPanel isDraft=false`).
+- **Submit → Approve → RFP** (`RfpCandidatesPanel`).
+
+### Decisions that differ from §3
+| Topic | Original (Option C) | Shipped (two-step) |
+|---|---|---|
+| Surfaces | one page | **two steps** (appraise → cash plan), split on "Plan this work" |
+| Cashflow chart | not addressed | **kept on step 2** (it was never deleted, just not surfaced) |
+| Assumptions/financing editing | inline, one page | **step 1 only**; step 2 shows them **read-only** |
+| NPV verdict | one inline panel | **interactive on step 1** (simulator cards) + **read-only summary on step 2** |
+| Levered metrics live on step 1 | implied | **deferred** — need a stateless preview endpoint; today they show on step 2 |
+| `DecisionPanel` (all-in-one) | the core | **removed** |
+
+### Data-model changes that DID ship (still valid from §6)
+- `CashflowOverride.vacancyDays` (+ `oblfPassthroughPct`) — vacancy modeled per-unit in
+  `npvService` so the plan NPV reproduces the simulator. (Originally scoped as
+  `vacancyMonths`; changed to **days** — works can be hours.)
+- `findActiveUnitRents` repo helper (values vacancy lost-rent server-side).
+
+### Key commits
+Phase 1 compose + layout fixes → vacancy/OBLF unification → inline lifecycle →
+**two-step split** (`caffe38`, `6823cc9`). Plus condition-report baselining, asset
+last-state, condition/recommendation hover tooltips, and the `buildingId` schedule fix.
+
+### Deferred / known gaps
+- **Live levered metrics on step 1** (preview endpoint) — accepted gap; financing is set
+  on step 1 but its levered effect shows on step 2.
+- Income-growth rate is still editable on step 2 (treated as a cashflow-projection rate).
+- Shared components live under `apps/web/components/cashflow/`
+  (`AssumptionsPanel`, `RfpCandidatesPanel`, `CapexEventTable`) + `FinancingPanel`.
 
 ---
 
