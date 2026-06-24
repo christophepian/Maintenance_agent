@@ -57,7 +57,7 @@ export interface AddOverrideInput {
   costChf?: number | null;
   rentUpliftChfPerMonth?: number | null;
   riskAvoidedChfPerYear?: number | null;
-  vacancyMonths?: number | null;
+  vacancyDays?: number | null;
   oblfPassthroughPct?: number | null;
 }
 
@@ -156,7 +156,7 @@ export async function addOverrideWorkflow(
     costChf: input.costChf,
     rentUpliftChfPerMonth: input.rentUpliftChfPerMonth,
     riskAvoidedChfPerYear: input.riskAvoidedChfPerYear,
-    vacancyMonths: input.vacancyMonths,
+    vacancyDays: input.vacancyDays,
     oblfPassthroughPct: input.oblfPassthroughPct,
   });
   if (!override) {

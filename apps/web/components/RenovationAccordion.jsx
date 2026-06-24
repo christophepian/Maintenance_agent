@@ -194,6 +194,9 @@ function UnitRow({ unitNumber, items, selectedIds, onToggleAsset, onSimulate, bu
 // ─── Building section ─────────────────────────────────────────────────────────
 
 function BuildingSection({ buildingId, buildingName, selectedIds, onToggleAsset, onSimulate, autoExpand }) {
+  // Inject this section's buildingId into every simulate call (opportunity items
+  // don't carry buildingId, and the workspace needs it to schedule into a plan).
+  const handleSim = useCallback((items) => onSimulate(items, buildingId), [onSimulate, buildingId]);
   const [open,    setOpen]    = useState(autoExpand);
   const [items,   setItems]   = useState([]);
   const [loading, setLoading] = useState(false);
@@ -264,7 +267,7 @@ function BuildingSection({ buildingId, buildingName, selectedIds, onToggleAsset,
         )}
         {selectedInBldg.length > 0 && (
           <button
-            onClick={(e) => { e.stopPropagation(); onSimulate(items.filter((i) => selectedIds.has(i.assetId))); }}
+            onClick={(e) => { e.stopPropagation(); handleSim(items.filter((i) => selectedIds.has(i.assetId))); }}
             className="text-xs font-semibold bg-brand text-white rounded-lg px-3 py-1 hover:opacity-90 transition-colors shrink-0"
           >
             Simulate {selectedInBldg.length} →
@@ -284,7 +287,7 @@ function BuildingSection({ buildingId, buildingName, selectedIds, onToggleAsset,
               items={unitItems}
               selectedIds={selectedIds}
               onToggleAsset={onToggleAsset}
-              onSimulate={onSimulate}
+              onSimulate={handleSim}
               buildingId={buildingId}
             />
           ))}
@@ -303,6 +306,7 @@ export default function RenovationAccordion({ buildings, onSimulate: externalOnS
   // buildings: [{ id, name }]
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [simItems,    setSimItems]    = useState(null);
+  const [simBuildingId, setSimBuildingId] = useState(null);
 
   const onToggleAsset = useCallback((assetId, checked) => {
     setSelectedIds((prev) => {
@@ -314,9 +318,9 @@ export default function RenovationAccordion({ buildings, onSimulate: externalOnS
 
   // When a parent supplies onSimulate (workspace mode), delegate so it can render
   // the simulation inline; otherwise fall back to the self-contained full-screen drawer.
-  const onSimulate = useCallback((items) => {
-    if (externalOnSimulate) externalOnSimulate(items);
-    else setSimItems(items);
+  const onSimulate = useCallback((items, buildingId) => {
+    if (externalOnSimulate) externalOnSimulate(items, buildingId);
+    else { setSimItems(items); setSimBuildingId(buildingId ?? null); }
   }, [externalOnSimulate]);
 
   if (!buildings || buildings.length === 0) {
@@ -326,11 +330,6 @@ export default function RenovationAccordion({ buildings, onSimulate: externalOnS
       </div>
     );
   }
-
-  // Find which building a simulated item belongs to (for buildingId prop)
-  const simBuildingId = simItems?.length > 0
-    ? buildings.find((b) => b.id === simItems[0]?.buildingId)?.id ?? buildings[0]?.id
-    : null;
 
   return (
     <>
@@ -351,8 +350,8 @@ export default function RenovationAccordion({ buildings, onSimulate: externalOnS
       {!externalOnSimulate && simItems && (
         <RenovationSimulatorDrawer
           items={simItems}
-          onClose={() => setSimItems(null)}
-          buildingId={simBuildingId}
+          onClose={() => { setSimItems(null); setSimBuildingId(null); }}
+          buildingId={simBuildingId ?? buildings[0]?.id ?? null}
         />
       )}
     </>

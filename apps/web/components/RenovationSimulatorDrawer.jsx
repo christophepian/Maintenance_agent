@@ -26,7 +26,7 @@ const HINTS = {
   oblf: "How much of the renovation cost Swiss law (OBLF Art. 14) lets you add to the rent — typically 50–70%.",
   discount: "Your yearly hurdle rate: future money is worth less today, so we shrink it by this % per year.",
   capRate: "Used to estimate resale value from rent: a lower cap rate implies a more valuable building.",
-  vacancy: "Months the unit sits empty during the works (no rent collected).",
+  vacancy: "Days the unit sits empty during the works (no rent collected). Use 0 when the work won't stop the unit being rented — e.g. swapping a dishwasher.",
   doNothingRisk: "Expected yearly cost of NOT renovating: likely breakdowns plus rent-reduction risk if the unit degrades.",
   rentUplift: "Extra monthly rent you can charge after the renovation, under OBLF Art. 14.",
 };
@@ -74,7 +74,7 @@ function computeSimulation({
   monthlyDoNothingDeduction,
   discountRatePct,
   yearsHorizon,
-  vacancyMonths,
+  vacancyDays,
   leaseRemainingMonths,
   capRatePct,
 }) {
@@ -82,11 +82,14 @@ function computeSimulation({
   const horizon = yearsHorizon * 12;
   const lrm     = leaseRemainingMonths ?? 24;
   const newRent = monthlyRentChf + totalMonthlyUplift;
+  // Vacancy is measured in days (works can be a matter of hours) → a one-time
+  // lost-rent cost, not a whole-month gap. 0 = work doesn't stop the unit renting.
+  const vacRentLoss = monthlyRentChf * ((vacancyDays ?? 0) / 30.44);
 
   const terminalChf = capRatePct > 0 ? (totalMonthlyUplift * 12) / (capRatePct / 100) : 0;
   const pvTerminal  = terminalChf > 0 ? terminalChf * Math.pow(1 + r, -horizon) : 0;
 
-  let cumNow = -totalCostChf - monthlyRentChf * vacancyMonths;
+  let cumNow = -totalCostChf - vacRentLoss;
   let cumTur = 0;
   let cumNot = 0;
   let turInvested = false;
@@ -100,8 +103,8 @@ function computeSimulation({
     // Do Nothing: current rent minus expected failure/reduction costs
     cumNot += (monthlyRentChf - monthlyDoNothingDeduction) * d;
 
-    // Act Now: vacancy then new rent
-    cumNow += (m > vacancyMonths ? newRent : 0) * d;
+    // Act Now: new rent from month 1 (vacancy already deducted once above)
+    cumNow += newRent * d;
 
     // At Turnover: current (minus risk) until lease ends, then invest + new rent
     if (m <= lrm) {
@@ -109,10 +112,10 @@ function computeSimulation({
     } else {
       if (!turInvested) {
         const dAtTur = r === 0 ? 1 : Math.pow(1 + r, -lrm);
-        cumTur -= (totalCostChf + monthlyRentChf * vacancyMonths) * dAtTur;
+        cumTur -= (totalCostChf + vacRentLoss) * dAtTur;
         turInvested = true;
       }
-      if (m > lrm + vacancyMonths) cumTur += newRent * d;
+      if (m > lrm) cumTur += newRent * d;
     }
 
     if (breakevenNow === null && cumNow >= cumNot) breakevenNow = m;
@@ -394,7 +397,7 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId, 
   const [passthroughPct, setPassthrough]  = useState(50);
   const [discountRate,  setDiscount]      = useState(5);
   const [capRate,       setCapRate]       = useState(5);
-  const [vacancyMonths, setVacancy]       = useState(2);
+  const [vacancyDays,   setVacancy]       = useState(0);
 
   // Per-asset cost overrides (assetId → CHF)
   const [costOverrides, setCostOverrides] = useState({});
@@ -455,10 +458,10 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId, 
     monthlyDoNothingDeduction: monthlyDoNothingDeduct,
     discountRatePct:          discountRate,
     yearsHorizon:             horizon,
-    vacancyMonths,
+    vacancyDays,
     leaseRemainingMonths:     minLeaseRemaining,
     capRatePct:               capRate,
-  }), [totalCostChf, totalMonthlyUplift, unitRents, monthlyDoNothingDeduct, discountRate, horizon, vacancyMonths, minLeaseRemaining, capRate]);
+  }), [totalCostChf, totalMonthlyUplift, unitRents, monthlyDoNothingDeduct, discountRate, horizon, vacancyDays, minLeaseRemaining, capRate]);
 
   // Best scenario — compared across all three, always
   const { npvNow, npvTur, npvNot } = result;
@@ -547,7 +550,7 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId, 
             costChf: Math.round(row.costChf),
             rentUpliftChfPerMonth: Math.round(row.monthlyUpl),
             riskAvoidedChfPerYear: Math.round(row.totalRisk),
-            vacancyMonths,                 // one-time lost rent (valued per unit server-side)
+            vacancyDays,                   // one-time lost rent (valued per unit server-side)
             oblfPassthroughPct: passthroughPct, // audit / reproduction
           }),
         });
@@ -561,7 +564,7 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId, 
     } finally {
       setPlanAdding(false);
     }
-  }, [buildingId, assetRows, selectedPath, minLeaseRemaining, discountRate, capRate, vacancyMonths, passthroughPct, onPlanned]);
+  }, [buildingId, assetRows, selectedPath, minLeaseRemaining, discountRate, capRate, vacancyDays, passthroughPct, onPlanned]);
 
   const title = safeItems.length === 1
     ? safeItems[0].assetName
@@ -613,7 +616,7 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId, 
             <RailNum label="OBLF passthrough" value={passthroughPct} onChange={setPassthrough} suffix="%" min={10} step={5} hint={HINTS.oblf} />
             <RailNum label="Discount rate"    value={discountRate}   onChange={setDiscount}    suffix="%" min={1}  step={0.5} hint={HINTS.discount} />
             <RailNum label="Cap rate"         value={capRate}        onChange={setCapRate}     suffix="%" min={2}  step={0.5} hint={HINTS.capRate} />
-            <RailNum label="Vacancy"          value={vacancyMonths}  onChange={setVacancy}     suffix="mo" min={0} step={1} hint={HINTS.vacancy} />
+            <RailNum label="Vacancy"          value={vacancyDays}    onChange={setVacancy}     suffix="days" min={0} step={1} hint={HINTS.vacancy} />
           </RailSection>
 
           <div className="border-t border-surface-divider" />
@@ -874,11 +877,6 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId, 
             )}
             {planMsg && !planMsg.startsWith("✓") && (
               <p className="text-xs text-red-600">{planMsg}</p>
-            )}
-            {onClose && (
-              <button onClick={onClose} className="text-sm text-foreground-dim hover:text-foreground transition-colors">
-                Back to planning
-              </button>
             )}
           </div>
 

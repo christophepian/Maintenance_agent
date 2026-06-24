@@ -448,7 +448,7 @@ export function registerCashflowPlanRoutes(router: Router) {
         rentUpliftChfPerMonth: o.rentUpliftChfPerMonth ?? 0,
         riskAvoidedChfPerYear: o.riskAvoidedChfPerYear ?? 0,
         unitId: o.asset?.unitId ?? null,
-        vacancyMonths: o.vacancyMonths ?? 0,
+        vacancyDays: o.vacancyDays ?? 0,
         unitMonthlyRentChf: o.asset?.unitId ? (unitRents.get(o.asset.unitId) ?? 0) : 0,
       }));
 

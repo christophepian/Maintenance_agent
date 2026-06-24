@@ -2212,7 +2212,7 @@ model CashflowOverride {
   costChf               Float? /// Renovation cost the simulator used
   rentUpliftChfPerMonth Float? /// OBLF rent uplift captured after the work completes
   riskAvoidedChfPerYear Float? /// Expected failure + CO 259d risk avoided by renovating
-  vacancyMonths         Int? /// Months the unit sits empty during works → one-time lost rent in the NPV
+  vacancyDays           Int? /// Days the unit sits empty during works → one-time lost rent in the NPV (0 = stays rentable)
   oblfPassthroughPct    Float? /// OBLF Art. 14 passthrough % the uplift was derived from (audit/reproduction)
   createdAt             DateTime @default(now())
 

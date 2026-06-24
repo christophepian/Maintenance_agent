@@ -136,7 +136,7 @@ export async function addCashflowOverride(
     costChf?: number | null;
     rentUpliftChfPerMonth?: number | null;
     riskAvoidedChfPerYear?: number | null;
-    vacancyMonths?: number | null;
+    vacancyDays?: number | null;
     oblfPassthroughPct?: number | null;
   },
 ) {
@@ -152,7 +152,7 @@ export async function addCashflowOverride(
       costChf: data.costChf ?? null,
       rentUpliftChfPerMonth: data.rentUpliftChfPerMonth ?? null,
       riskAvoidedChfPerYear: data.riskAvoidedChfPerYear ?? null,
-      vacancyMonths: data.vacancyMonths ?? null,
+      vacancyDays: data.vacancyDays ?? null,
       oblfPassthroughPct: data.oblfPassthroughPct ?? null,
     },
   });

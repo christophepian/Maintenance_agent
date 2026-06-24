@@ -5,12 +5,13 @@
  *   1. One bundled "Renovation Opportunities" section: heading + building filter
  *      chips in the header, the Building ▸ Unit ▸ Asset accordion below.
  *   2. On "Simulate", the simulation card slides in full-width beneath the table.
- *   3. Once work is scheduled, the Decision panel (server NPV verdict) appears below.
+ *   3. Once work is scheduled, the Decision panel (server NPV verdict + lifecycle)
+ *      appears below.
  *
- * NPV is single-building, so simulating a selection that spans buildings is blocked.
+ * Simulation is single-building: each building section's "Simulate" only bundles
+ * that building's assets, so a selection can't span buildings.
  *
- * Phase 1 (per docs/PLANNING_WORKSPACE_BUNDLING.md): composition only — data flow
- * unchanged.
+ * See docs/PLANNING_WORKSPACE_BUNDLING.md.
  */
 import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import { cn } from "../lib/utils";
@@ -21,9 +22,9 @@ import DecisionPanel from "./DecisionPanel";
 export default function PlanningWorkspace({ buildings: allBuildings = [] }) {
   // Building filter: default to all when there's a single building, else none (pick).
   const [selectedBuildingIds, setSelectedBuildingIds] = useState([]);
-  const [simItems, setSimItems]   = useState(null);
-  const [plannedId, setPlannedId] = useState(null);
-  const [simError, setSimError]   = useState("");
+  const [simItems, setSimItems]       = useState(null);
+  const [simBuildingId, setSimBuildingId] = useState(null);
+  const [plannedId, setPlannedId]     = useState(null);
   const simRef = useRef(null);
 
   // Auto-select the only building once loaded.
@@ -42,28 +43,17 @@ export default function PlanningWorkspace({ buildings: allBuildings = [] }) {
     );
   }, []);
 
-  const clear = useCallback(() => { setSimItems(null); setPlannedId(null); setSimError(""); }, []);
-
-  // NPV is single-building → block a selection that spans buildings.
-  const onSimulate = useCallback((items) => {
-    const list = Array.isArray(items) ? items : [];
-    const ids = [...new Set(list.map((i) => i.buildingId))];
-    if (ids.length > 1) {
-      setSimError("Select assets from a single building to simulate them together.");
-      setSimItems(null);
-      setPlannedId(null);
-      return;
-    }
-    setSimError("");
-    setSimItems(list.length ? list : null);
-    setPlannedId(null);
+  const clear = useCallback(() => {
+    setSimItems(null); setSimBuildingId(null); setPlannedId(null);
   }, []);
 
-  const simBuildingId = useMemo(() => {
-    if (!simItems?.length) return null;
-    const bId = simItems[0]?.buildingId;
-    return allBuildings.find((b) => b.id === bId)?.id ?? bId ?? null;
-  }, [simItems, allBuildings]);
+  // buildingId is passed in by the accordion (opportunity items don't carry it).
+  const onSimulate = useCallback((items, buildingId) => {
+    const list = Array.isArray(items) ? items : [];
+    setSimItems(list.length ? list : null);
+    setSimBuildingId(buildingId ?? null);
+    setPlannedId(null);
+  }, []);
 
   // Bring the simulation card into view when it opens.
   useEffect(() => {
@@ -119,10 +109,6 @@ export default function PlanningWorkspace({ buildings: allBuildings = [] }) {
 
       {/* Opportunities accordion (full width) */}
       <RenovationAccordion buildings={selectedBuildings} onSimulate={onSimulate} />
-
-      {simError && (
-        <p className="text-xs text-destructive-text">{simError}</p>
-      )}
 
       {/* Simulation card — full width, brought in beneath the table */}
       {simItems && (

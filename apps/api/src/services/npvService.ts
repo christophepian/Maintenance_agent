@@ -183,8 +183,8 @@ export interface RenovationInput {
   riskAvoidedChfPerYear: number;
   /** Unit the asset belongs to — vacancy is valued per unit, not per asset. */
   unitId?: string | null;
-  /** Months the unit sits empty during works (one-time lost rent in the work year). */
-  vacancyMonths?: number | null;
+  /** Days the unit sits empty during works (one-time lost rent in the work year). */
+  vacancyDays?: number | null;
   /** The unit's active-lease monthly net rent, for valuing vacancy. */
   unitMonthlyRentChf?: number | null;
 }
@@ -386,18 +386,19 @@ export function computeRenovationNoiAdjustments(
   // to match the simulator's unique-unit rent basis when several assets in the
   // same unit are renovated together. Invest bears it at capexYear; Defer at the
   // pushed year; Neglect never renovates, so no vacancy.
-  const unitVac = new Map<string, { months: number; rent: number; investY: number; deferY: number }>();
+  const DAYS_PER_MONTH = 30.44;
+  const unitVac = new Map<string, { days: number; rent: number; investY: number; deferY: number }>();
   for (const r of renovations) {
-    if (!r.unitId || !r.vacancyMonths || !r.unitMonthlyRentChf) continue;
+    if (!r.unitId || !r.vacancyDays || !r.unitMonthlyRentChf) continue;
     const investYear = r.capexYear;
     const deferYear = investYear < fromYear + deferYears ? investYear + deferYears : investYear;
     const prev = unitVac.get(r.unitId);
-    if (!prev || r.vacancyMonths > prev.months) {
-      unitVac.set(r.unitId, { months: r.vacancyMonths, rent: r.unitMonthlyRentChf, investY: investYear, deferY: deferYear });
+    if (!prev || r.vacancyDays > prev.days) {
+      unitVac.set(r.unitId, { days: r.vacancyDays, rent: r.unitMonthlyRentChf, investY: investYear, deferY: deferYear });
     }
   }
   for (const v of unitVac.values()) {
-    const cost = Math.round(v.months * v.rent);
+    const cost = Math.round((v.days / DAYS_PER_MONTH) * v.rent); // days → fraction of monthly rent
     if (cost <= 0) continue;
     addAdj(investNoiAdj, v.investY, -cost);
     addAdj(deferNoiAdj, v.deferY, -cost);
