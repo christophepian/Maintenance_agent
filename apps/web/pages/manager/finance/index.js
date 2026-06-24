@@ -15,7 +15,7 @@ import { InvoicesContent } from "./invoices";
 import ImportedStatementsPanel from "../../../components/ImportedStatementsPanel";
 import BillingEntityManager from "../../../components/BillingEntityManager";
 import CashflowPlansList from "../../../components/CashflowPlansList";
-import RenovationAccordion from "../../../components/RenovationAccordion";
+import PlanningWorkspace from "../../../components/PlanningWorkspace";
 import { cn } from "../../../lib/utils";
 import { FilterToggle, FilterPanelBody, FilterSection, FilterSectionClear, DateField } from "../../../components/ui/FilterPanel";
 import ScrollableTabs from "../../../components/mobile/ScrollableTabs";
@@ -421,7 +421,7 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
                     Simulate any asset or bundle to compute NPV, then plan the work directly into a cashflow plan.
                   </p>
                 </div>
-                <RenovationAccordion
+                <PlanningWorkspace
                   buildings={allBuildings.filter((b) => planningBuildingIds.includes(b.id))}
                 />
               </div>

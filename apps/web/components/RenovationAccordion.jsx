@@ -299,7 +299,7 @@ function BuildingSection({ buildingId, buildingName, selectedIds, onToggleAsset,
 
 // ─── Main export ──────────────────────────────────────────────────────────────
 
-export default function RenovationAccordion({ buildings }) {
+export default function RenovationAccordion({ buildings, onSimulate: externalOnSimulate }) {
   // buildings: [{ id, name }]
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [simItems,    setSimItems]    = useState(null);
@@ -312,7 +312,12 @@ export default function RenovationAccordion({ buildings }) {
     });
   }, []);
 
-  const onSimulate = useCallback((items) => { setSimItems(items); }, []);
+  // When a parent supplies onSimulate (workspace mode), delegate so it can render
+  // the simulation inline; otherwise fall back to the self-contained full-screen drawer.
+  const onSimulate = useCallback((items) => {
+    if (externalOnSimulate) externalOnSimulate(items);
+    else setSimItems(items);
+  }, [externalOnSimulate]);
 
   if (!buildings || buildings.length === 0) {
     return (
@@ -343,7 +348,7 @@ export default function RenovationAccordion({ buildings }) {
         ))}
       </div>
 
-      {simItems && (
+      {!externalOnSimulate && simItems && (
         <RenovationSimulatorDrawer
           items={simItems}
           onClose={() => setSimItems(null)}

@@ -383,7 +383,7 @@ function SummaryStat({ label, value, tone, hint }) {
 
 // ── Main component ─────────────────────────────────────────────────────────────
 
-export default function RenovationSimulatorDrawer({ items, onClose, buildingId }) {
+export default function RenovationSimulatorDrawer({ items, onClose, buildingId, embedded = false, onPlanned }) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
 
@@ -550,12 +550,13 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId }
 
       setPlanId(planId);
       setPlanMsg(`✓ Scheduled in cashflow plan`);
+      onPlanned?.(planId);
     } catch (e) {
       setPlanMsg(`Error: ${e.message}`);
     } finally {
       setPlanAdding(false);
     }
-  }, [buildingId, assetRows, selectedPath, minLeaseRemaining]);
+  }, [buildingId, assetRows, selectedPath, minLeaseRemaining, discountRate, capRate, onPlanned]);
 
   const title = safeItems.length === 1
     ? safeItems[0].assetName
@@ -563,8 +564,8 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId }
 
   if (!mounted || safeItems.length === 0) return null;
 
-  return createPortal(
-    <div className="fixed inset-0 z-50 flex flex-col bg-surface" style={{ isolation: "isolate" }}>
+  const body = (
+    <div className={cn("flex flex-col bg-surface", embedded ? "" : "fixed inset-0 z-50")} style={{ isolation: "isolate" }}>
 
       {/* ── Sticky title bar ── */}
       <div className="shrink-0 flex items-center justify-between gap-4 px-5 py-3 border-b border-surface-border bg-surface-subtle">
@@ -574,16 +575,21 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId }
             {safeItems.map((i) => `Unit ${i.unitNumber}`).filter((v, i, a) => a.indexOf(v) === i).join(" · ")}
           </p>
         </div>
-        <button onClick={onClose} className="rounded-lg p-1.5 text-foreground-dim hover:bg-surface-hover transition-colors shrink-0">
-          <X className="h-4 w-4" />
-        </button>
+        {onClose && (
+          <button onClick={onClose} className="rounded-lg p-1.5 text-foreground-dim hover:bg-surface-hover transition-colors shrink-0">
+            <X className="h-4 w-4" />
+          </button>
+        )}
       </div>
 
       {/* ── Two-column workspace: inputs rail | results ── */}
-      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+      <div className={cn("flex flex-col lg:flex-row", embedded ? "" : "flex-1 overflow-hidden")}>
 
         {/* ── Inputs rail ── */}
-        <aside className="w-full lg:w-80 shrink-0 overflow-y-auto border-b lg:border-b-0 lg:border-r border-surface-border bg-surface-subtle px-5 py-5 space-y-6">
+        <aside className={cn(
+          "w-full lg:w-80 shrink-0 border-b lg:border-b-0 lg:border-r border-surface-border bg-surface-subtle px-5 py-5 space-y-6",
+          embedded ? "" : "overflow-y-auto",
+        )}>
 
           <RailSection title="Scenario">
             <RailToggle label="Action"
@@ -623,7 +629,7 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId }
         </aside>
 
         {/* ── Results column ── */}
-        <div className="flex-1 overflow-y-auto">
+        <div className={cn("flex-1", embedded ? "" : "overflow-y-auto")}>
           <div className="mx-auto max-w-4xl px-5 py-6 space-y-6">
 
           {/* Computed summary strip */}
@@ -848,15 +854,18 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId }
             {planMsg && !planMsg.startsWith("✓") && (
               <p className="text-xs text-red-600">{planMsg}</p>
             )}
-            <button onClick={onClose} className="text-sm text-foreground-dim hover:text-foreground transition-colors">
-              Back to planning
-            </button>
+            {onClose && (
+              <button onClick={onClose} className="text-sm text-foreground-dim hover:text-foreground transition-colors">
+                Back to planning
+              </button>
+            )}
           </div>
 
           </div>
         </div>
       </div>
-    </div>,
-    document.body
+    </div>
   );
+
+  return embedded ? body : createPortal(body, document.body);
 }
