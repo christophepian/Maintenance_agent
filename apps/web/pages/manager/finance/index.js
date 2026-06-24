@@ -89,7 +89,6 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
     router.push({ pathname: router.pathname, query: { ...router.query, tab: key } }, undefined, { shallow: true });
   }, [router]);
 
-  const [planningBuildingIds, setPlanningBuildingIds] = useState([]);
   const [allBuildings, setAllBuildings] = useState([]);
   const [range, setRange] = useState(defaultRange);
   const [portfolio, setPortfolio] = useState(null);
@@ -124,7 +123,6 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
         if (d?.data) {
           const list = d.data.map((b) => ({ id: b.id, name: b.name }));
           setAllBuildings(list);
-          if (list.length === 1) setPlanningBuildingIds([list[0].id]);
         }
       })
       .catch(() => {/* non-critical */});
@@ -385,46 +383,8 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
           {activeTabKey === "planning" && (
             <div className="space-y-6">
 
-              {/* Building selector */}
-              <div className="flex items-center gap-3">
-                <label className="text-sm font-medium text-foreground shrink-0">Buildings</label>
-                <select
-                  multiple
-                  size={Math.min(allBuildings.length, 4)}
-                  value={planningBuildingIds}
-                  onChange={(e) => {
-                    const selected = Array.from(e.target.selectedOptions).map((o) => o.value);
-                    setPlanningBuildingIds(selected);
-                  }}
-                  className="border border-surface-border rounded-lg px-3 py-1.5 text-sm bg-surface text-foreground min-w-[200px] focus:outline-none focus:ring-1 focus:ring-slate-400"
-                >
-                  {allBuildings.map((b) => (
-                    <option key={b.id} value={b.id}>{b.name}</option>
-                  ))}
-                </select>
-                {allBuildings.length > 1 && (
-                  <button
-                    onClick={() => setPlanningBuildingIds(allBuildings.map((b) => b.id))}
-                    className="text-xs text-blue-600 hover:underline"
-                  >
-                    Select all
-                  </button>
-                )}
-              </div>
-
-              {/* Renovation Opportunities */}
-              <div>
-                <div className="mb-3">
-                  <h3 className="text-sm font-semibold text-foreground">Renovation Opportunities</h3>
-                  <p className="text-xs text-foreground-dim mt-0.5">
-                    Assets at risk of end-of-life or flagged in condition reports, sorted by urgency.
-                    Simulate any asset or bundle to compute NPV, then plan the work directly into a cashflow plan.
-                  </p>
-                </div>
-                <PlanningWorkspace
-                  buildings={allBuildings.filter((b) => planningBuildingIds.includes(b.id))}
-                />
-              </div>
+              {/* Renovation Opportunities + simulation workspace (building selector lives in its header) */}
+              <PlanningWorkspace buildings={allBuildings} />
 
               {/* Plans */}
               <div>
