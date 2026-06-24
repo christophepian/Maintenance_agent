@@ -1,7 +1,7 @@
 # Planning Workspace — Renovation × Cashflow Plan Bundling
 
 **Date:** 2026-06-24
-**Status:** Scoping — proposed (Option C, single-building). Not started.
+**Status:** Scoping — **approved**, ready to implement (phased). Not started.
 **Author:** scoped with Claude
 **Supersedes the flow defined in:** [PLANNING_TAB_REARCHITECTURE.md](./PLANNING_TAB_REARCHITECTURE.md) (the 2026-06-19 three-surface flow)
 
@@ -65,6 +65,10 @@ The workspace **is the DRAFT plan's editor.** Selecting assets materialises/loca
 | D7 | Lock on submit | Once SUBMITTED/APPROVED the workspace controls go read-only (mirrors today's plan page) |
 | D8 | Plan collision | Workspace owns **one keyed working DRAFT plan** per building; explicit "New plan" to start fresh (fixes the "first DRAFT plan" catch-all) |
 | D9 | Recompute cadence | **Debounced** server recompute (~400–600ms) + optimistic client preview to keep sliders responsive |
+| D10 | Route | **Keep inside `/manager/finance?tab=planning`** (full-width tab content), not a separate route |
+| D11 | Drawer fate | **Keep `RenovationSimulatorDrawer` as an optional focus mode** (full-screen) alongside the embedded `SimulationPanel`; both render the same body |
+| D12 | Vacancy & OBLF | **Promote both to first-class override fields** (`vacancyMonths`, `oblfPassthroughPct`) so the server NPV reproduces the simulator exactly and the assumptions persist/are auditable. (Vacancy is currently absent server-side → the unified number is otherwise wrong; OBLF's effect is already captured via uplift but the `%` is promoted for auditability.) |
+| D13 | Owner visibility | **Plan permalink only** — owners keep the read-only `/manager/cashflow/[id]`; the workspace stays a manager authoring tool |
 
 ---
 
@@ -122,12 +126,14 @@ must be representable on the plan/override — see §6 API changes.
 
 Most plumbing exists. Gaps to close for true single-number unification:
 
-| Need | Today | Change |
+| Need | Today | Change (per D12) |
 |---|---|---|
-| OBLF passthrough on the plan | only in simulator client NPV | confirm `computeRenovationNoiAdjustments` already derives uplift from the override's `rentUpliftChfPerMonth` (it does) → **no schema change needed**; OBLF stays a simulator input that produces the override's uplift |
-| Vacancy months | simulator-only | decide: bake into override economics, or add `vacancyMonths` to override (small migration). **Proposed: keep as simulator input baked into risk/cost; revisit only if the verdict visibly diverges** |
-| Locate keyed working plan | `GET /cashflow-plans?buildingId=` then pick first DRAFT | add an optional `?intent=working` or client-side ownership key; **proposed client-side**: workspace tracks its `planId` in URL/query (`?plan=<id>`) |
-| Batch override upsert | one POST per asset | optional `PUT /cashflow-plans/:id/overrides` bulk endpoint to cut N round-trips (perf) |
+| Vacancy months | **simulator-only — absent from `CashflowOverride` and `computeRenovationNoiAdjustments`**, so the server NPV silently omits vacancy lost-rent | **Add `vacancyMonths Int?` to `CashflowOverride`** (migration) + model it in `npvService`: subtract `monthlyRent × vacancyMonths` as a one-time cost in the work year for Invest, pushed by `deferYears` for Defer. Mirrors the simulator's `-monthlyRentChf × vacancyMonths`. |
+| OBLF passthrough % | effect captured via `rentUpliftChfPerMonth`; the `%` itself not stored | **Add `oblfPassthroughPct Float?` to `CashflowOverride`** (migration) for auditability/exact reproduction. The uplift continues to drive NOI; the `%` is stored so the plan can show/re-derive it. |
+| Locate keyed working plan | `GET /cashflow-plans?buildingId=` then pick first DRAFT (collision-prone) | workspace tracks its `planId` in URL/query (`?plan=<id>`); **client-side ownership key**, explicit "New plan" to start fresh |
+| Batch override upsert | one POST per asset | add `PUT /cashflow-plans/:id/overrides` bulk endpoint to cut N round-trips (perf) |
+
+Migration: one migration adding `vacancyMonths` + `oblfPassthroughPct` to `CashflowOverride` (both nullable → non-breaking; applied via `server.ts` `migrate deploy`). "Plan this work" / the workspace write both fields; `npvService` reads `vacancyMonths`.
 
 All new/changed DB access stays in repositories (G20/G22). No new service/route `prisma.*`.
 
@@ -183,10 +189,10 @@ Even as the target is C, ship in three reversible phases behind the existing tab
 
 ---
 
-## 10. Open questions
+## 10. Open questions — resolved 2026-06-24
 
-1. **Vacancy/OBLF on the plan** — keep as simulator-only inputs baked into override economics (proposed), or promote to first-class plan/override fields? Affects whether the server NPV can reproduce the simulator exactly.
-2. **Drawer retirement** — fully retire `RenovationSimulatorDrawer` after Phase 1, or keep the full-screen mode as an option for focused single-asset work?
-3. **Route** — keep the workspace inside `/manager/finance?tab=planning`, or promote to a dedicated full-width `/manager/planning` route (more horizontal room, less page chrome)?
-4. **Owner visibility** — should owners see the workspace read-only, or only the plan permalink?
+1. **Vacancy/OBLF on the plan** → **Promote both** to first-class override fields (D12). Required for vacancy (server NPV otherwise wrong); OBLF promoted for auditability.
+2. **Drawer retirement** → **Keep as optional focus mode** (D11).
+3. **Route** → **Keep inside `/manager/finance?tab=planning`** (D10).
+4. **Owner visibility** → **Plan permalink only** (D13).
 ```
