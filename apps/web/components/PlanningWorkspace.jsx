@@ -1,16 +1,17 @@
 /**
  * PlanningWorkspace — single-screen renovation → cashflow-plan workspace.
  *
- * Composes the three regions of the bundled flow on one screen:
- *   Left   — Opportunities (RenovationAccordion)
- *   Center — Simulate & schedule (RenovationSimulatorDrawer, embedded)
- *   Right  — Decide (DecisionPanel: server NPV verdict for the scheduled plan)
+ *   Idle    — the Opportunities accordion takes the full width (readable).
+ *   Active  — once you "Simulate", it splits: accordion (left) | simulator (right);
+ *             the Decision panel (server NPV verdict) appears below once work is
+ *             scheduled. No empty placeholder trays are ever shown.
  *
- * Phase 1 (per docs/PLANNING_WORKSPACE_BUNDLING.md): composition only — the
- * data flow is unchanged. Selecting assets simulates inline instead of opening
- * the full-screen drawer; the verdict appears after "Plan this work".
+ * Phase 1 (per docs/PLANNING_WORKSPACE_BUNDLING.md): composition only — the data
+ * flow is unchanged. Selecting assets simulates inline instead of opening the
+ * full-screen drawer.
  */
 import { useState, useCallback, useMemo } from "react";
+import { cn } from "../lib/utils";
 import RenovationAccordion from "./RenovationAccordion";
 import RenovationSimulatorDrawer from "./RenovationSimulatorDrawer";
 import DecisionPanel from "./DecisionPanel";
@@ -25,42 +26,38 @@ export default function PlanningWorkspace({ buildings }) {
     setPlannedId(null);
   }, []);
 
+  const clear = useCallback(() => { setSimItems(null); setPlannedId(null); }, []);
+
   const simBuildingId = useMemo(() => {
     if (!simItems?.length) return null;
     const bId = simItems[0]?.buildingId;
     return buildings?.find((b) => b.id === bId)?.id ?? bId ?? buildings?.[0]?.id ?? null;
   }, [simItems, buildings]);
 
+  const active = !!simItems;
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
-      {/* Left — Opportunities */}
-      <div className="lg:col-span-4 xl:col-span-3">
+    <div className={cn("grid gap-4 items-start", active ? "lg:grid-cols-12" : "grid-cols-1")}>
+      {/* Opportunities — full width when idle, left column when simulating */}
+      <div className={cn("min-w-0", active && "lg:col-span-4")}>
         <RenovationAccordion buildings={buildings} onSimulate={onSimulate} />
       </div>
 
-      {/* Right — Simulate & decide */}
-      <div className="lg:col-span-8 xl:col-span-9 space-y-4 min-w-0">
-        {simItems ? (
+      {/* Simulate & decide — only rendered once something is being simulated */}
+      {active && (
+        <div className="lg:col-span-8 min-w-0 space-y-4">
           <div className="rounded-2xl border border-surface-border bg-surface overflow-hidden">
             <RenovationSimulatorDrawer
               embedded
               items={simItems}
               buildingId={simBuildingId}
+              onClose={clear}
               onPlanned={setPlannedId}
             />
           </div>
-        ) : (
-          <div className="rounded-2xl border border-dashed border-surface-border bg-surface p-8 text-center">
-            <p className="text-sm font-medium text-foreground">Simulate a renovation</p>
-            <p className="text-xs text-foreground-dim mt-1 max-w-md mx-auto">
-              Select one or more assets on the left and choose “Simulate” to model the
-              NPV here, then schedule the work into a cashflow plan.
-            </p>
-          </div>
-        )}
-
-        <DecisionPanel planId={plannedId} />
-      </div>
+          {plannedId && <DecisionPanel planId={plannedId} />}
+        </div>
+      )}
     </div>
   );
 }
