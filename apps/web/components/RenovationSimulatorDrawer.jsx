@@ -268,7 +268,7 @@ function NpvChart({ nowYearly, turYearly, notYearly }) {
 
 // ── Scenario card ─────────────────────────────────────────────────────────────
 
-function ScenarioCard({ label, hint, npv, summary, isBest, breakeven, selectable, selected, onSelect }) {
+function ScenarioCard({ label, hint, npv, summary, isBest, breakeven, selectable, selected, onSelect, dimmed, selectedLabel = "To plan" }) {
   const Comp = selectable ? "button" : "div";
   return (
     <Comp
@@ -282,6 +282,7 @@ function ScenarioCard({ label, hint, npv, summary, isBest, breakeven, selectable
             ? "border border-brand-ring bg-surface"
             : "border border-surface-border bg-surface",
         selectable && !selected && "hover:border-brand-ring cursor-pointer",
+        dimmed && !selected && "opacity-60",
       )}
     >
       {isBest && (
@@ -291,7 +292,7 @@ function ScenarioCard({ label, hint, npv, summary, isBest, breakeven, selectable
       )}
       {selected && (
         <span className="absolute -top-2.5 right-3 inline-flex items-center gap-1 rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold text-white uppercase tracking-wide">
-          <Check className="h-3 w-3" /> To plan
+          <Check className="h-3 w-3" /> {selectedLabel}
         </span>
       )}
       <div>
@@ -470,12 +471,13 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId, 
   const delta    = bestNpv - npvNot;
   const bestBreakeven = bestKey === "now" ? result.breakevenNow : bestKey === "turnover" ? result.breakevenTur : null;
 
-  // The actionable scenario "Plan this work" will schedule. Defaults to the
-  // recommended path; if recommendation is "do nothing", fall back to the
-  // higher-NPV action so a path is always selectable.
-  const recommendedPath = bestKey === "nothing" ? (npvNow >= npvTur ? "now" : "turnover") : bestKey;
-  const selectedPath = planPath ?? recommendedPath;
-  const selectedLabel = selectedPath === "now" ? "Act Now" : "At Turnover";
+  // Selected scenario. Defaults to the best-NPV one (incl. "nothing" = hold).
+  // Only "now"/"turnover" are schedulable; "nothing" means hold (nothing to plan).
+  const selectedPath  = planPath ?? bestKey; // "now" | "turnover" | "nothing"
+  const isSchedulable = selectedPath === "now" || selectedPath === "turnover";
+  const isSuboptimal  = selectedPath !== bestKey; // selected a worse-than-best scenario
+  const holdIsBest    = bestKey === "nothing";
+  const selectedLabel = selectedPath === "now" ? "Act Now" : selectedPath === "turnover" ? "At Turnover" : "Do Nothing";
 
   // Recommendation text
   const verdict = useMemo(() => {
@@ -490,6 +492,7 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId, 
   // Schedule assets in an existing (or new) DRAFT cashflow plan for the building.
   const handleAddToPlan = useCallback(async () => {
     if (!buildingId || assetRows.length === 0) return;
+    if (selectedPath !== "now" && selectedPath !== "turnover") return; // hold = nothing to schedule
     setPlanAdding(true); setPlanMsg("");
     try {
       // Determine the planned intervention year
@@ -684,6 +687,7 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId, 
                 breakeven={result.breakevenNow}
                 selectable
                 selected={selectedPath === "now"}
+                dimmed={holdIsBest}
                 onSelect={() => setPlanPath("now")}
                 summary={
                   npvNow > npvNot
@@ -699,6 +703,7 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId, 
                 breakeven={result.breakevenTur}
                 selectable
                 selected={selectedPath === "turnover"}
+                dimmed={holdIsBest}
                 onSelect={() => setPlanPath("turnover")}
                 summary={
                   npvTur > npvNot
@@ -712,6 +717,10 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId, 
                 npv={npvNot}
                 isBest={bestKey === "nothing"}
                 breakeven={null}
+                selectable
+                selected={selectedPath === "nothing"}
+                selectedLabel="Holding"
+                onSelect={() => setPlanPath("nothing")}
                 summary={
                   delta > 0
                     ? `${fmtChf(delta)} less than the best renovation scenario.${monthlyDoNothingDeduct > 0 ? ` Includes ${fmtChf(monthlyDoNothingDeduct * 12)}/yr expected failure + tenant risk.` : ""}`
@@ -720,9 +729,18 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId, 
               />
             </div>
             <p className="text-xs text-foreground-dim mt-2">
-              Tap <strong className="text-foreground">Act Now</strong> or <strong className="text-foreground">At Turnover</strong> to choose which one “Plan this work” schedules.
-              {planPath != null && planPath !== recommendedPath && " (overrides the recommendation)"}
+              {holdIsBest
+                ? "Doing nothing yields the best NPV here. Act Now / At Turnover are dimmed — pick one only to schedule work against the recommendation."
+                : "Tap a scenario to choose which one “Plan this work” schedules."}
             </p>
+            {isSuboptimal && (
+              <div className="mt-2 rounded-lg border border-warning-ring bg-warning-light px-3 py-2">
+                <p className="text-xs text-warning-text">
+                  Heads up: <strong>{selectedLabel}</strong> doesn’t yield the best financial outcome
+                  {selectedPath === "nothing" ? "" : " over this horizon"}. You can proceed at your own discretion.
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Recommendation strip */}
@@ -842,14 +860,20 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId, 
           {/* CTA */}
           <div className="flex flex-wrap items-center gap-3 pb-2">
             {!planMsg.startsWith("✓") && (
-              <button
-                onClick={handleAddToPlan}
-                disabled={planAdding}
-                className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors bg-slate-800 text-white hover:bg-slate-700 disabled:opacity-50"
-              >
-                <ArrowRight className="h-4 w-4" />
-                {planAdding ? "Scheduling…" : `Plan this work — ${selectedLabel} (${assetRows.length} asset${assetRows.length !== 1 ? "s" : ""})`}
-              </button>
+              isSchedulable ? (
+                <button
+                  onClick={handleAddToPlan}
+                  disabled={planAdding}
+                  className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors bg-slate-800 text-white hover:bg-slate-700 disabled:opacity-50"
+                >
+                  <ArrowRight className="h-4 w-4" />
+                  {planAdding ? "Scheduling…" : `Plan this work — ${selectedLabel} (${assetRows.length} asset${assetRows.length !== 1 ? "s" : ""})`}
+                </button>
+              ) : (
+                <p className="text-sm text-foreground-dim">
+                  Holding is best — nothing to schedule. Pick <strong className="text-foreground">Act Now</strong> or <strong className="text-foreground">At Turnover</strong> to plan work anyway.
+                </p>
+              )
             )}
             {planMsg && !planMsg.startsWith("✓") && (
               <p className="text-xs text-red-600">{planMsg}</p>
