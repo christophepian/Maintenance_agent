@@ -543,10 +543,12 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId, 
             assetId: row.assetId,
             originalYear,
             overriddenYear,
-            // Renovation economics so the plan NPV credits the same upside/risk
+            // Renovation economics so the plan NPV reproduces the simulator
             costChf: Math.round(row.costChf),
             rentUpliftChfPerMonth: Math.round(row.monthlyUpl),
             riskAvoidedChfPerYear: Math.round(row.totalRisk),
+            vacancyMonths,                 // one-time lost rent (valued per unit server-side)
+            oblfPassthroughPct: passthroughPct, // audit / reproduction
           }),
         });
       }));
@@ -559,7 +561,7 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId, 
     } finally {
       setPlanAdding(false);
     }
-  }, [buildingId, assetRows, selectedPath, minLeaseRemaining, discountRate, capRate, onPlanned]);
+  }, [buildingId, assetRows, selectedPath, minLeaseRemaining, discountRate, capRate, vacancyMonths, passthroughPct, onPlanned]);
 
   const title = safeItems.length === 1
     ? safeItems[0].assetName

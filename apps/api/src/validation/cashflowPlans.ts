@@ -29,6 +29,8 @@ export const AddOverrideSchema = z.object({
   costChf: z.number().min(0).optional().nullable(),
   rentUpliftChfPerMonth: z.number().min(0).optional().nullable(),
   riskAvoidedChfPerYear: z.number().min(0).optional().nullable(),
+  vacancyMonths: z.number().int().min(0).max(36).optional().nullable(),
+  oblfPassthroughPct: z.number().min(0).max(100).optional().nullable(),
 });
 
 export type CreateCashflowPlanInput = z.infer<typeof CreateCashflowPlanSchema>;

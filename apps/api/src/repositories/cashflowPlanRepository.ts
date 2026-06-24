@@ -136,6 +136,8 @@ export async function addCashflowOverride(
     costChf?: number | null;
     rentUpliftChfPerMonth?: number | null;
     riskAvoidedChfPerYear?: number | null;
+    vacancyMonths?: number | null;
+    oblfPassthroughPct?: number | null;
   },
 ) {
   const plan = await prisma.cashflowPlan.findFirst({ where: { id: planId, orgId } });
@@ -150,6 +152,8 @@ export async function addCashflowOverride(
       costChf: data.costChf ?? null,
       rentUpliftChfPerMonth: data.rentUpliftChfPerMonth ?? null,
       riskAvoidedChfPerYear: data.riskAvoidedChfPerYear ?? null,
+      vacancyMonths: data.vacancyMonths ?? null,
+      oblfPassthroughPct: data.oblfPassthroughPct ?? null,
     },
   });
 
@@ -160,6 +164,28 @@ export async function addCashflowOverride(
   });
 
   return override;
+}
+
+/**
+ * Active-lease monthly net rent per unit — used to value vacancy lost-rent
+ * (months × rent) when reconstructing renovation economics for the plan NPV.
+ */
+export async function findActiveUnitRents(
+  prisma: PrismaClient,
+  orgId: string,
+  unitIds: string[],
+): Promise<Map<string, number>> {
+  if (unitIds.length === 0) return new Map();
+  const leases = await prisma.lease.findMany({
+    where: { orgId, unitId: { in: unitIds }, status: { in: ["ACTIVE", "SIGNED"] }, isTemplate: false },
+    select: { unitId: true, netRentChf: true, startDate: true },
+    orderBy: { startDate: "desc" },
+  });
+  const map = new Map<string, number>();
+  for (const l of leases) {
+    if (l.unitId && !map.has(l.unitId)) map.set(l.unitId, l.netRentChf ?? 0);
+  }
+  return map;
 }
 
 export async function removeCashflowOverride(

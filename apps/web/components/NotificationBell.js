@@ -151,23 +151,23 @@ export default function NotificationBell({ role }) {
 
   const getTypeColor = (type) => {
     switch (type) {
-      case "REQUEST_APPROVED": return "bg-green-100 text-green-700";
-      case "INVOICE_PAID": return "bg-blue-100 text-blue-700";
-      case "JOB_COMPLETED": return "bg-purple-100 text-purple-700";
-      case "LEASE_SIGNED": return "bg-green-100 text-green-700";
-      case "LEASE_READY_TO_SIGN": return "bg-sky-100 text-sky-700";
-      case "TENANT_SELECTED": return "bg-indigo-100 text-indigo-700";
-      case "APPLICATION_SUBMITTED": return "bg-amber-100 text-amber-700";
-      case "QUOTE_SUBMITTED": return "bg-orange-100 text-orange-700";
-      case "QUOTE_AWARDED": return "bg-green-100 text-green-700";
-      case "QUOTE_REJECTED": return "bg-red-100 text-red-700";
-      case "SLOT_PROPOSED": return "bg-cyan-100 text-cyan-700";
-      case "SLOT_ACCEPTED": return "bg-green-100 text-green-700";
-      case "SLOT_DECLINED": return "bg-red-100 text-red-700";
-      case "SCHEDULING_ESCALATED": return "bg-yellow-100 text-yellow-700";
-      case "RATING_SUBMITTED": return "bg-violet-100 text-violet-700";
-      case "JOB_CONFIRMED": return "bg-teal-100 text-teal-700";
-      case "INVOICE_OVERDUE": return "bg-red-100 text-red-700";
+      case "REQUEST_APPROVED": return "bg-success-light text-success-text";
+      case "INVOICE_PAID": return "bg-info-light text-info-text";
+      case "JOB_COMPLETED": return "bg-purple-light text-purple-text";
+      case "LEASE_SIGNED": return "bg-success-light text-success-text";
+      case "LEASE_READY_TO_SIGN": return "bg-info-light text-info-text";
+      case "TENANT_SELECTED": return "bg-brand-light text-brand-dark";
+      case "APPLICATION_SUBMITTED": return "bg-warning-light text-warning-text";
+      case "QUOTE_SUBMITTED": return "bg-orange-light text-orange-text";
+      case "QUOTE_AWARDED": return "bg-success-light text-success-text";
+      case "QUOTE_REJECTED": return "bg-destructive-light text-destructive-text";
+      case "SLOT_PROPOSED": return "bg-cyan-light text-cyan-text";
+      case "SLOT_ACCEPTED": return "bg-success-light text-success-text";
+      case "SLOT_DECLINED": return "bg-destructive-light text-destructive-text";
+      case "SCHEDULING_ESCALATED": return "bg-warning-light text-warning-text";
+      case "RATING_SUBMITTED": return "bg-violet-light text-violet-text";
+      case "JOB_CONFIRMED": return "bg-teal-light text-teal-text";
+      case "INVOICE_OVERDUE": return "bg-destructive-light text-destructive-text";
       default: return "bg-surface-hover text-muted-text";
     }
   };
@@ -214,7 +214,7 @@ export default function NotificationBell({ role }) {
             />
           </svg>
           {unreadCount > 0 && (
-            <span className="absolute top-0.5 right-0.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-xs font-bold leading-none text-white bg-red-600 rounded-full">
+            <span className="absolute top-0.5 right-0.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-xs font-bold leading-none text-white bg-destructive rounded-full">
               {unreadCount}
             </span>
           )}
@@ -228,7 +228,7 @@ export default function NotificationBell({ role }) {
           {notifications.length > 0 && (
             <button
               onClick={markAllAsRead}
-              className="text-sm text-blue-600 hover:text-blue-700"
+              className="text-sm text-brand hover:text-brand-dark"
               aria-label={t("notifications.markAllRead")}
             >
               {t("notifications.markAllRead")}
@@ -248,7 +248,7 @@ export default function NotificationBell({ role }) {
                 key={notif.id}
                 role="listitem"
                 onClick={() => handleNotificationClick(notif)}
-                className={cn("px-4 py-3 border-b border-surface-divider hover:bg-surface-subtle", !isNotifRead(notif) ? "bg-blue-50" : "", getNotificationLink(notif) ? "cursor-pointer" : "")}
+                className={cn("px-4 py-3 border-b border-surface-divider hover:bg-surface-subtle", !isNotifRead(notif) ? "bg-brand-light" : "", getNotificationLink(notif) ? "cursor-pointer" : "")}
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
@@ -258,7 +258,7 @@ export default function NotificationBell({ role }) {
                       </span>
                       {!isNotifRead(notif) && (
                         <>
-                          <span className="w-2 h-2 bg-blue-600 rounded-full" aria-hidden="true"></span>
+                          <span className="w-2 h-2 bg-brand rounded-full" aria-hidden="true"></span>
                           <span className="sr-only">{t("notifications.unread")}</span>
                         </>
                       )}
@@ -270,7 +270,7 @@ export default function NotificationBell({ role }) {
                     {!isNotifRead(notif) && (
                       <button
                         onClick={(e) => { e.stopPropagation(); markAsRead(notif.id); }}
-                        className="text-xs text-blue-600 hover:text-blue-700"
+                        className="text-xs text-brand hover:text-brand-dark"
                         aria-label={t("notifications.markRead")}
                       >
                         ✓
@@ -278,7 +278,7 @@ export default function NotificationBell({ role }) {
                     )}
                     <button
                       onClick={(e) => { e.stopPropagation(); deleteNotification(notif.id); }}
-                      className="text-xs text-red-600 hover:text-red-700"
+                      className="text-xs text-destructive hover:text-destructive-dark"
                       aria-label={t("notifications.delete")}
                     >
                       ✕

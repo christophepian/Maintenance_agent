@@ -50,4 +50,22 @@ describe("computeRenovationNoiAdjustments", () => {
     expect(deferNoiAdj.size).toBe(0);
     expect(neglectNoiAdj.size).toBe(0);
   });
+
+  it("vacancy adds a one-time lost-rent cost in the work year (Invest), pushed for Defer, none for Neglect", () => {
+    const RENO_VAC = { ...RENO, unitId: "u1", vacancyMonths: 2, unitMonthlyRentChf: 2_000 }; // 4'000 vacancy
+    const { investNoiAdj, deferNoiAdj, neglectNoiAdj } =
+      computeRenovationNoiAdjustments([RENO_VAC], fromYear, toYear, deferYears);
+    expect(investNoiAdj.get(2026)).toBe(-1_200 - 4_000); // risk + vacancy in work year
+    expect(investNoiAdj.get(2027)).toBe(6_000);          // uplift unaffected
+    expect(deferNoiAdj.get(2029)).toBe(-1_200 - 4_000);  // vacancy at the deferred work year (2029)
+    for (let y = 2026; y <= 2030; y++) expect(neglectNoiAdj.get(y)).toBe(-1_200); // never any vacancy
+  });
+
+  it("vacancy is valued once per unit when multiple assets share a unit", () => {
+    const a = { ...RENO, assetId: "a1", unitId: "u1", vacancyMonths: 2, unitMonthlyRentChf: 2_000 };
+    const b = { ...RENO, assetId: "a2", unitId: "u1", vacancyMonths: 2, unitMonthlyRentChf: 2_000 };
+    const { investNoiAdj } = computeRenovationNoiAdjustments([a, b], fromYear, toYear, deferYears);
+    // two assets in one unit → risk doubles (-2'400) but vacancy counts once (-4'000), not twice
+    expect(investNoiAdj.get(2026)).toBe(-2_400 - 4_000);
+  });
 });

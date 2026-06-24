@@ -29,6 +29,7 @@ import {
   listCashflowPlans,
   findCashflowPlanById,
   updateCashflowPlan,
+  findActiveUnitRents,
 } from "../repositories/cashflowPlanRepository";
 import {
   createPlanWorkflow,
@@ -431,17 +432,25 @@ export function registerCashflowPlanRoutes(router: Router) {
       // Renovation economics from the plan's overrides — make the NPV verdict
       // consistent with the simulator. Only for single-building plans (a building
       // plan's overrides all belong to that building; avoids cross-building mixups).
-      const renovations = plan.buildingId
-        ? (plan.overrides ?? [])
-            .filter((o) => o.rentUpliftChfPerMonth != null || o.costChf != null)
-            .map((o) => ({
-              assetId: o.assetId,
-              capexYear: o.overriddenYear,
-              costChf: o.costChf ?? 0,
-              rentUpliftChfPerMonth: o.rentUpliftChfPerMonth ?? 0,
-              riskAvoidedChfPerYear: o.riskAvoidedChfPerYear ?? 0,
-            }))
+      const renovationOverrides = plan.buildingId
+        ? (plan.overrides ?? []).filter((o) => o.rentUpliftChfPerMonth != null || o.costChf != null)
         : [];
+      // Active unit rents value the vacancy lost-rent (months × rent) server-side.
+      const unitRents = await findActiveUnitRents(
+        prisma,
+        orgId,
+        [...new Set(renovationOverrides.map((o) => o.asset?.unitId).filter((x): x is string => !!x))],
+      );
+      const renovations = renovationOverrides.map((o) => ({
+        assetId: o.assetId,
+        capexYear: o.overriddenYear,
+        costChf: o.costChf ?? 0,
+        rentUpliftChfPerMonth: o.rentUpliftChfPerMonth ?? 0,
+        riskAvoidedChfPerYear: o.riskAvoidedChfPerYear ?? 0,
+        unitId: o.asset?.unitId ?? null,
+        vacancyMonths: o.vacancyMonths ?? 0,
+        unitMonthlyRentChf: o.asset?.unitId ? (unitRents.get(o.asset.unitId) ?? 0) : 0,
+      }));
 
       const result = await computeNPVScenariosForBuildings(prisma, orgId, buildingIds, {
         discountRatePct:     plan.discountRatePct,
