@@ -843,16 +843,20 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId, 
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-green-800">Renovation scheduled in cashflow plan</p>
                 <p className="text-xs text-green-700 mt-0.5">
-                  These assets are now timed in your cashflow plan. The <strong>Invest</strong> scenario in the NPV panel below will reflect this capex automatically.
+                  {embedded
+                    ? "These assets are now timed in your cashflow plan — review the NPV verdict, assumptions and approval below."
+                    : "These assets are now timed in your cashflow plan. The Invest scenario reflects this capex automatically."}
                 </p>
-                <a
-                  href={`/manager/cashflow/${planId}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-xs font-semibold text-green-800 underline underline-offset-2 mt-1.5 hover:text-green-900"
-                >
-                  Open cashflow plan <ArrowRight className="h-3 w-3" />
-                </a>
+                {!embedded && (
+                  <a
+                    href={`/manager/cashflow/${planId}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-green-800 underline underline-offset-2 mt-1.5 hover:text-green-900"
+                  >
+                    Open cashflow plan <ArrowRight className="h-3 w-3" />
+                  </a>
+                )}
               </div>
             </div>
           )}

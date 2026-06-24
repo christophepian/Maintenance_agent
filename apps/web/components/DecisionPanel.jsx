@@ -2,17 +2,17 @@
  * DecisionPanel — the "Decide" region of the planning workspace.
  *
  * Once a renovation is scheduled into a cashflow plan ("Plan this work"), this
- * shows the authoritative server-side NPV verdict (Invest / Defer / Neglect) plus
- * the plan's financing and lifecycle — Submit → Approve — so the whole decision
- * loop happens on one screen. RFP generation (post-approval) stays on the full
- * plan page, reachable via the link.
+ * hosts the whole decide-and-govern surface inline (no leaving the page):
+ *   status · financing · NPV assumptions · NPV verdict · Submit → Approve · RFP.
+ * The full plan page reuses the same shared components.
  */
 import { useState, useEffect, useCallback } from "react";
-import { ArrowRight } from "lucide-react";
 import { cn } from "../lib/utils";
 import { authHeaders } from "../lib/api";
 import NPVScenariosPanel from "./NPVScenariosPanel";
 import FinancingPanel from "./FinancingPanel";
+import AssumptionsPanel from "./cashflow/AssumptionsPanel";
+import RfpCandidatesPanel from "./cashflow/RfpCandidatesPanel";
 
 const STATUS_BADGE = {
   DRAFT:     "bg-warning-light text-warning-text",
@@ -36,6 +36,12 @@ export default function DecisionPanel({ planId }) {
   }, [planId]);
 
   useEffect(() => { loadPlan(); }, [loadPlan]);
+
+  // Assumptions/financing edits → reload the plan and recompute the verdict.
+  const refreshAfterEdit = useCallback(() => {
+    loadPlan();
+    setNpvRefreshKey((k) => k + 1);
+  }, [loadPlan]);
 
   const handleAction = useCallback(async (endpoint) => {
     setActionLoading(true);
@@ -75,29 +81,22 @@ export default function DecisionPanel({ planId }) {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between gap-2 flex-wrap">
-        <div className="flex items-center gap-2 min-w-0">
-          <h3 className="text-sm font-semibold text-foreground m-0">Decision — NPV verdict</h3>
-          {status && (
-            <span className={cn("status-pill", STATUS_BADGE[status] || "bg-surface-hover text-muted-text")}>
-              {status}
-            </span>
-          )}
-        </div>
-        <a
-          href={`/manager/cashflow/${planId}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 text-xs font-semibold text-brand hover:underline"
-        >
-          Open full plan <ArrowRight className="h-3 w-3" />
-        </a>
+      <div className="flex items-center gap-2 min-w-0">
+        <h3 className="text-sm font-semibold text-foreground m-0">Decision — NPV verdict</h3>
+        {status && (
+          <span className={cn("status-pill", STATUS_BADGE[status] || "bg-surface-hover text-muted-text")}>
+            {status}
+          </span>
+        )}
       </div>
 
       {/* Financing (mortgage + market value) drives the levered metrics */}
       {plan?.buildingId && (
-        <FinancingPanel buildingId={plan.buildingId} onChanged={() => setNpvRefreshKey((k) => k + 1)} />
+        <FinancingPanel buildingId={plan.buildingId} onChanged={refreshAfterEdit} />
       )}
+
+      {/* NPV assumptions — editable while DRAFT */}
+      {plan && <AssumptionsPanel plan={plan} isDraft={isDraft} onUpdated={refreshAfterEdit} />}
 
       <NPVScenariosPanel
         key={npvRefreshKey}
@@ -129,26 +128,17 @@ export default function DecisionPanel({ planId }) {
               </button>
             )}
             <p className="text-xs text-foreground-dim">
-              {isDraft ? "Submit this plan for owner / manager approval." : "Approve to enable RFP generation."}
+              {isDraft ? "Submit this plan for owner / manager approval." : "Approve to generate RFPs from the scheduled work."}
             </p>
           </div>
         </div>
       )}
 
+      {/* RFP generation — inline, once approved */}
       {isApproved && (
-        <div className="rounded-xl border border-success-ring bg-success-light p-3">
-          <p className="text-xs text-success-text">
-            Plan approved.{" "}
-            <a
-              href={`/manager/cashflow/${planId}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-semibold underline underline-offset-2"
-            >
-              Open the plan
-            </a>{" "}
-            to generate RFPs from the scheduled work.
-          </p>
+        <div className="space-y-2">
+          <h4 className="text-xs font-semibold text-foreground uppercase tracking-wide m-0">RFP candidates</h4>
+          <RfpCandidatesPanel planId={planId} />
         </div>
       )}
     </div>
