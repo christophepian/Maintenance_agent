@@ -1,12 +1,12 @@
 /**
- * PlanningWorkspace — single-screen renovation → cashflow-plan workspace.
+ * PlanningWorkspace — STEP 1 of the two-step renovation flow: appraise.
  *
- * Layout (vertical, full-width — no cramped columns):
  *   1. One bundled "Renovation Opportunities" section: heading + building filter
  *      chips in the header, the Building ▸ Unit ▸ Asset accordion below.
- *   2. On "Simulate", the simulation card slides in full-width beneath the table.
- *   3. Once work is scheduled, the Decision panel (server NPV verdict + lifecycle)
- *      appears below.
+ *   2. On "Simulate", the simulation card slides in full-width beneath the table,
+ *      with Financing & Valuation alongside (all assumptions in one place).
+ *   3. "Plan this work" creates the DRAFT plan and navigates to STEP 2 — the
+ *      dedicated cashflow plan page (timeline + submit for approval).
  *
  * Simulation is single-building: each building section's "Simulate" only bundles
  * that building's assets, so a selection can't span buildings.
@@ -14,17 +14,18 @@
  * See docs/PLANNING_WORKSPACE_BUNDLING.md.
  */
 import { useState, useCallback, useMemo, useRef, useEffect } from "react";
+import { useRouter } from "next/router";
 import { cn } from "../lib/utils";
 import RenovationAccordion from "./RenovationAccordion";
 import RenovationSimulatorDrawer from "./RenovationSimulatorDrawer";
-import DecisionPanel from "./DecisionPanel";
+import FinancingPanel from "./FinancingPanel";
 
 export default function PlanningWorkspace({ buildings: allBuildings = [] }) {
+  const router = useRouter();
   // Building filter: default to all when there's a single building, else none (pick).
   const [selectedBuildingIds, setSelectedBuildingIds] = useState([]);
-  const [simItems, setSimItems]       = useState(null);
+  const [simItems, setSimItems]           = useState(null);
   const [simBuildingId, setSimBuildingId] = useState(null);
-  const [plannedId, setPlannedId]     = useState(null);
   const simRef = useRef(null);
 
   // Auto-select the only building once loaded.
@@ -43,17 +44,19 @@ export default function PlanningWorkspace({ buildings: allBuildings = [] }) {
     );
   }, []);
 
-  const clear = useCallback(() => {
-    setSimItems(null); setSimBuildingId(null); setPlannedId(null);
-  }, []);
+  const clear = useCallback(() => { setSimItems(null); setSimBuildingId(null); }, []);
 
   // buildingId is passed in by the accordion (opportunity items don't carry it).
   const onSimulate = useCallback((items, buildingId) => {
     const list = Array.isArray(items) ? items : [];
     setSimItems(list.length ? list : null);
     setSimBuildingId(buildingId ?? null);
-    setPlannedId(null);
   }, []);
+
+  // STEP 1 → STEP 2: scheduling the work creates the plan; go to its cashflow page.
+  const onPlanned = useCallback((planId) => {
+    if (planId) router.push(`/manager/cashflow/${planId}`);
+  }, [router]);
 
   // Bring the simulation card into view when it opens.
   useEffect(() => {
@@ -72,7 +75,8 @@ export default function PlanningWorkspace({ buildings: allBuildings = [] }) {
           <h3 className="text-sm font-semibold text-foreground m-0">Renovation Opportunities</h3>
           <p className="text-xs text-foreground-dim mt-0.5 max-w-2xl">
             Assets at risk of end-of-life or flagged in condition reports, sorted by urgency.
-            Select a bundle and simulate to compute NPV, then plan the work into a cashflow plan.
+            Select a bundle, set the assumptions, then plan the work — you’ll review the cash
+            position and approve on the next step.
           </p>
         </div>
         {allBuildings.length > 0 && (
@@ -110,21 +114,32 @@ export default function PlanningWorkspace({ buildings: allBuildings = [] }) {
       {/* Opportunities accordion (full width) */}
       <RenovationAccordion buildings={selectedBuildings} onSimulate={onSimulate} />
 
-      {/* Simulation card — full width, brought in beneath the table */}
+      {/* Simulation + financing — full width, brought in beneath the table */}
       {simItems && (
-        <div ref={simRef} className="rounded-2xl border border-surface-border bg-surface overflow-hidden scroll-mt-4">
-          <RenovationSimulatorDrawer
-            embedded
-            items={simItems}
-            buildingId={simBuildingId}
-            onClose={clear}
-            onPlanned={setPlannedId}
-          />
+        <div ref={simRef} className="space-y-4 scroll-mt-4">
+          <div className="rounded-2xl border border-surface-border bg-surface overflow-hidden">
+            <RenovationSimulatorDrawer
+              embedded
+              items={simItems}
+              buildingId={simBuildingId}
+              onClose={clear}
+              onPlanned={onPlanned}
+            />
+          </div>
+          {simBuildingId && (
+            <div>
+              <div className="mb-2">
+                <h4 className="text-sm font-semibold text-foreground m-0">Financing &amp; Valuation</h4>
+                <p className="text-xs text-foreground-dim mt-0.5">
+                  Building-level — used to compute the levered NPV (DSCR / LTV / equity IRR),
+                  shown on the cash plan after you plan the work.
+                </p>
+              </div>
+              <FinancingPanel buildingId={simBuildingId} onChanged={() => {}} />
+            </div>
+          )}
         </div>
       )}
-
-      {/* Decision verdict — only once work is scheduled */}
-      {plannedId && <DecisionPanel planId={plannedId} />}
     </div>
   );
 }

@@ -17,7 +17,6 @@ import { cn } from "../../../lib/utils";
 import { withServerTranslations } from "../../../lib/i18n";
 import { useTranslation } from "next-i18next";
 import NPVScenariosPanel from "../../../components/NPVScenariosPanel";
-import FinancingPanel from "../../../components/FinancingPanel";
 import AssumptionsPanel from "../../../components/cashflow/AssumptionsPanel";
 import RfpCandidatesPanel from "../../../components/cashflow/RfpCandidatesPanel";
 import CapexEventTable from "../../../components/cashflow/CapexEventTable";
@@ -693,13 +692,8 @@ export default function CashflowPlanDetailPage() {
             />
           </Panel>
 
-          {/* Financing & Valuation — building plans only (drives levered NPV) */}
-          {plan.buildingId && (
-            <FinancingPanel buildingId={plan.buildingId} onChanged={() => setNpvRefreshKey((k) => k + 1)} />
-          )}
-
-          {/* NPV Assumptions */}
-          <AssumptionsPanel plan={plan} isDraft={isDraft} onUpdated={loadPlan} />
+          {/* NPV Assumptions — read-only here; edited in the planning workspace (step 1) */}
+          <AssumptionsPanel plan={plan} isDraft={false} onUpdated={loadPlan} />
 
           {/* NPV Verdict */}
           <NPVScenariosPanel
