@@ -709,6 +709,114 @@ function BuildingBalanceSheet({ buildingId }) {
   );
 }
 
+// WS-C: analytical accounting view — equity bridge, KPIs, account movements.
+function BuildingAnalytical({ buildingId }) {
+  const { t } = useTranslation("manager");
+  const [year, setYear] = useState(new Date().getFullYear());
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!buildingId) return;
+    let cancelled = false;
+    setLoading(true);
+    setError("");
+    fetch(`/api/ledger/analytical?buildingId=${buildingId}&fiscalYear=${year}`, { headers: authHeaders() })
+      .then(async (r) => {
+        const j = await r.json();
+        if (!r.ok) throw new Error(j?.error?.message || t("buildingsId.reporting.failedToLoad"));
+        return j;
+      })
+      .then((j) => { if (!cancelled) setData(j.data ?? null); })
+      .catch(() => { if (!cancelled) setError(t("buildingsId.reporting.failedToLoad")); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [buildingId, year, t]);
+
+  const navBtn = "rounded-lg border border-surface-border px-2 py-1 text-sm text-muted-dark hover:opacity-80";
+  const kpi = (label, value) => (
+    <Panel key={label}>
+      <p className="text-xs text-foreground-dim mb-1">{label}</p>
+      <p className="text-lg font-semibold text-foreground">{value}</p>
+    </Panel>
+  );
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        <button onClick={() => setYear((y) => y - 1)} className={navBtn}>‹</button>
+        <span className="text-sm font-semibold text-foreground w-12 text-center">{year}</span>
+        <button onClick={() => setYear((y) => y + 1)} className={navBtn}>›</button>
+      </div>
+
+      {error && <p className="text-sm text-destructive-text">{error}</p>}
+      {loading && <p className="text-sm text-muted">{t("buildingsId.reporting.loadingEllipsis")}</p>}
+
+      {!loading && !error && data && (
+        <>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {kpi(t("buildingsId.reporting.nav"), rFmtChf(data.kpis.navCents))}
+            {kpi(t("buildingsId.reporting.mortgage"), rFmtChf(data.kpis.mortgageCents))}
+            {kpi(t("buildingsId.reporting.propertyValue"), data.kpis.propertyValueCents != null ? rFmtChf(data.kpis.propertyValueCents) : "—")}
+            {kpi(t("buildingsId.reporting.ltv"), data.kpis.ltvPct != null ? `${data.kpis.ltvPct}%` : "—")}
+          </div>
+
+          <Panel>
+            <h3 className="text-sm font-semibold text-foreground mb-2">{t("buildingsId.reporting.equityBridge")}</h3>
+            <div className="space-y-1 text-sm">
+              {[
+                [t("buildingsId.reporting.ebOpening"), data.equityBridge.openingEquityCents],
+                [t("buildingsId.reporting.ebResult"), data.equityBridge.periodResultCents],
+                [t("buildingsId.reporting.ebDistributions"), -data.equityBridge.distributionsCents],
+              ].map(([label, cents]) => (
+                <div key={label} className="flex justify-between">
+                  <span className="text-muted-dark">{label}</span>
+                  <span className="font-mono text-foreground">{rFmtChf(cents)}</span>
+                </div>
+              ))}
+              <div className="flex justify-between pt-2 mt-1 border-t border-surface-border font-semibold">
+                <span>{t("buildingsId.reporting.ebClosing")}</span>
+                <span className="font-mono">{rFmtChf(data.equityBridge.closingEquityCents)}</span>
+              </div>
+            </div>
+          </Panel>
+
+          {data.accountMovements.length > 0 && (
+            <Panel>
+              <h3 className="text-sm font-semibold text-foreground mb-2">{t("buildingsId.reporting.movements")}</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-xs text-foreground-dim border-b border-surface-border">
+                      <th className="text-left font-medium py-1">{t("buildingsId.reporting.mAccount")}</th>
+                      <th className="text-right font-medium py-1">{t("buildingsId.reporting.mOpening")}</th>
+                      <th className="text-right font-medium py-1">{t("buildingsId.reporting.mDebit")}</th>
+                      <th className="text-right font-medium py-1">{t("buildingsId.reporting.mCredit")}</th>
+                      <th className="text-right font-medium py-1">{t("buildingsId.reporting.mClosing")}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.accountMovements.map((m) => (
+                      <tr key={m.code || m.name} className="border-b border-surface-border/60">
+                        <td className="py-1 text-muted-dark">{m.code ? `${m.code} · ` : ""}{m.name}</td>
+                        <td className="py-1 text-right font-mono text-foreground-dim">{rFmtChf(m.openingCents)}</td>
+                        <td className="py-1 text-right font-mono text-foreground">{rFmtChf(m.debitCents)}</td>
+                        <td className="py-1 text-right font-mono text-foreground">{rFmtChf(m.creditCents)}</td>
+                        <td className="py-1 text-right font-mono text-foreground">{rFmtChf(m.closingCents)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Panel>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
 function BuildingReportingView({ buildingId }) {
   const { t } = useTranslation("manager");
   const [reportingTab, setReportingTab] = useState(0);
@@ -740,7 +848,7 @@ function BuildingReportingView({ buildingId }) {
     <div className="space-y-4">
       {/* Sub-tab strip */}
       <div className="inline-flex rounded-lg border border-surface-border bg-surface-hover p-0.5 gap-0.5">
-        {[t("buildingsId.reporting.periodAnalysis"), t("buildingsId.reporting.performanceCanvas"), t("buildingsId.reporting.financialPosition")].map((label, i) => (
+        {[t("buildingsId.reporting.periodAnalysis"), t("buildingsId.reporting.performanceCanvas"), t("buildingsId.reporting.financialPosition"), t("buildingsId.reporting.analysis")].map((label, i) => (
           <button
             key={label}
             onClick={() => setReportingTab(i)}
@@ -786,6 +894,8 @@ function BuildingReportingView({ buildingId }) {
       )}
 
       {reportingTab === 2 && <BuildingBalanceSheet buildingId={buildingId} />}
+
+      {reportingTab === 3 && <BuildingAnalytical buildingId={buildingId} />}
     </div>
   );
 }

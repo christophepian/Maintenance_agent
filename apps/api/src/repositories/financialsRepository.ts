@@ -50,6 +50,74 @@ export async function aggregateOpeningBalanceFromImport(
   return (agg._sum.debitCents ?? 0) - (agg._sum.creditCents ?? 0);
 }
 
+/** One account's movement over a period (WS-C analytical view). Signed = Dr − Cr. */
+export interface AccountMovement {
+  accountId: string;
+  code: string | null;
+  name: string;
+  accountType: string;
+  openingCents: number;
+  debitCents: number;
+  creditCents: number;
+  closingCents: number;
+}
+
+/**
+ * Per-account opening balance (before periodStart) + period debits/credits +
+ * closing balance, for a building. The accountant's trial-balance-with-opening.
+ */
+export async function aggregateAccountMovements(
+  prisma: PrismaClient,
+  orgId: string,
+  buildingId: string,
+  periodStart: Date,
+  periodEnd: Date,
+): Promise<AccountMovement[]> {
+  const [opening, period] = await Promise.all([
+    prisma.ledgerEntry.groupBy({
+      by: ["accountId"],
+      where: { orgId, buildingId, date: { lt: periodStart } },
+      _sum: { debitCents: true, creditCents: true },
+    }),
+    prisma.ledgerEntry.groupBy({
+      by: ["accountId"],
+      where: { orgId, buildingId, date: { gte: periodStart, lte: periodEnd } },
+      _sum: { debitCents: true, creditCents: true },
+    }),
+  ]);
+
+  const ids = new Set<string>([...opening.map((g) => g.accountId), ...period.map((g) => g.accountId)]);
+  if (ids.size === 0) return [];
+
+  const accounts = await prisma.account.findMany({
+    where: { id: { in: [...ids] } },
+    select: { id: true, code: true, name: true, accountType: true },
+  });
+  const accMap = new Map(accounts.map((a) => [a.id, a]));
+  const openMap = new Map(opening.map((g) => [g.accountId, (g._sum.debitCents ?? 0) - (g._sum.creditCents ?? 0)]));
+  const perMap = new Map(period.map((g) => [g.accountId, { d: g._sum.debitCents ?? 0, c: g._sum.creditCents ?? 0 }]));
+
+  const rows: AccountMovement[] = [];
+  for (const id of ids) {
+    const a = accMap.get(id);
+    if (!a) continue;
+    const openingCents = openMap.get(id) ?? 0;
+    const p = perMap.get(id) ?? { d: 0, c: 0 };
+    rows.push({
+      accountId: id,
+      code: a.code,
+      name: a.name,
+      accountType: a.accountType,
+      openingCents,
+      debitCents: p.d,
+      creditCents: p.c,
+      closingCents: openingCents + p.d - p.c,
+    });
+  }
+  rows.sort((x, y) => (x.code ?? "").localeCompare(y.code ?? ""));
+  return rows;
+}
+
 /**
  * Capex adjustments on EXPENSE accounts for a building in [from, to] (WS-D):
  * - capitalizedCents: CAPITALIZATION credits (capex moved off the P&L to 1500)

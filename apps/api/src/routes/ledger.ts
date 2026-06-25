@@ -37,6 +37,7 @@ import {
   reopenFiscalYear,
   listFiscalCloses,
 } from "../services/fiscalCloseService";
+import { getAnalyticalReport } from "../services/analyticalAccountingService";
 import { issueInvoiceWorkflow } from "../workflows/issueInvoiceWorkflow";
 
 export function registerLedgerRoutes(router: Router) {
@@ -216,6 +217,19 @@ export function registerLedgerRoutes(router: Router) {
       console.error("[POST /ledger/backfill]", e);
       sendError(res, 500, "INTERNAL_ERROR", "Backfill failed");
     }
+  });
+
+  /* ── GET /ledger/analytical ───────────────────────────────── */
+  router.get("/ledger/analytical", async ({ req, res, orgId, prisma }) => {
+    if (!requireAuth(req, res)) return;
+    if (!requireOrgViewer(req, res)) return;
+    const { query } = parseQuery(req.url);
+    const buildingId = first(query, "buildingId");
+    const fiscalYear = Number(first(query, "fiscalYear"));
+    if (!buildingId) return sendError(res, 400, "MISSING_PARAM", "buildingId is required");
+    if (!Number.isInteger(fiscalYear)) return sendError(res, 400, "VALIDATION_ERROR", "fiscalYear is required");
+    const data = await getAnalyticalReport(prisma, orgId, buildingId, fiscalYear);
+    sendJson(res, 200, { data });
   });
 
   /* ── GET /ledger/closes ───────────────────────────────────── */

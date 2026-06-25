@@ -1480,6 +1480,45 @@ components:
         closedAt: { type: string, format: date-time }
         reversedAt: { type: string, format: date-time, nullable: true }
 
+    AnalyticalReport:
+      type: object
+      properties:
+        buildingId: { type: string, format: uuid }
+        buildingName: { type: string }
+        fiscalYear: { type: integer }
+        equityBridge:
+          type: object
+          properties:
+            openingEquityCents: { type: integer }
+            periodResultCents: { type: integer }
+            distributionsCents: { type: integer }
+            closingEquityCents: { type: integer }
+        position:
+          type: object
+          properties:
+            totalAssetsCents: { type: integer }
+            liabilitiesCents: { type: integer }
+            equityCents: { type: integer }
+        kpis:
+          type: object
+          properties:
+            navCents: { type: integer }
+            mortgageCents: { type: integer }
+            propertyValueCents: { type: integer, nullable: true }
+            ltvPct: { type: number, nullable: true }
+        accountMovements:
+          type: array
+          items:
+            type: object
+            properties:
+              code: { type: string, nullable: true }
+              name: { type: string }
+              accountType: { type: string }
+              openingCents: { type: integer }
+              debitCents: { type: integer }
+              creditCents: { type: integer }
+              closingCents: { type: integer }
+
     FixedAsset:
       type: object
       properties:
@@ -7672,6 +7711,26 @@ paths:
                       ledgerIssuedSkipped: { type: integer }
                       ledgerPaidPosted: { type: integer }
                       ledgerPaidSkipped: { type: integer }
+
+  /ledger/analytical:
+    get:
+      tags: [Ledger]
+      summary: Analytical accounting report for a building + fiscal year (equity bridge, movements, KPIs)
+      operationId: getAnalyticalReport
+      parameters:
+        - { name: buildingId, in: query, required: true, schema: { type: string, format: uuid } }
+        - { name: fiscalYear, in: query, required: true, schema: { type: integer } }
+      responses:
+        '200':
+          description: Analytical report
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/AnalyticalReport' }
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /ledger/closes:
     get:
