@@ -5,7 +5,7 @@
 
 ## Database Schema (Prisma)
 
-**Status: ACTIVE AND IN USE — 124 migrations** (shadow DB replay verified clean 2026-03-30)
+**Status: ACTIVE AND IN USE — 127 migrations** (shadow DB replay verified clean 2026-03-30)
 
 **Last verified:** 2026-06-23
 
@@ -67,6 +67,9 @@
 | **LeaseExpenseItem** | leaseId, expenseTypeId?, accountId?, description, mode (ChargeMode: ACOMPTE/FORFAIT), amountChf, isActive | → Lease, ExpenseType?, Account? |
 | **CaptureSession** | orgId, createdBy (userId), token (unique), status (CaptureSessionStatus), expiresAt, sourceChannel, targetType, uploadedFileUrls (String[]), createdInvoiceId? | → Org |
 | **LedgerEntry** | orgId, date, accountId, debitCents, creditCents, description, reference?, sourceType?, sourceId?, journalId (groups posting legs), buildingId?, unitId?, createdBy? | → Org, Account, Building?, Unit? |
+| **FiscalPeriodClose** | orgId, buildingId, fiscalYear, periodStart/End, status (CLOSED\|REVERSED), closingJournalId, reversalJournalId?, retainedEarningsCents (WS-E year-end close → 2900) | → Org, Building. Unique [orgId,buildingId,fiscalYear] |
+| **FixedAsset** | orgId, buildingId, unitId?, name, sourceInvoiceId? (unique), acquisitionDate, costCents, salvageCents, usefulLifeYears, method, accumulatedDepreciationCents, status (WS-D capitalized capex + depreciation) | → Org, Building, Unit? |
+| **OpeningReceivable** | orgId, buildingId, unitId?, tenantName, amountCents, dueDate?, status (OPEN\|SETTLED), settlementJournalId? (WS-F per-tenant opening AR, sub-ledger of the imported 1100 lump) | → Org, Building, Unit? |
 | **CashflowPlan** | orgId, buildingId?, name, status (CashflowPlanStatus), incomeGrowthRatePct, openingBalanceCents (BigInt?), horizonMonths, lastComputedAt? | → Org, Building?, CashflowOverride[], Rfp[] |
 | **CashflowOverride** | planId, assetId, originalYear, overriddenYear | → CashflowPlan, Asset |
 | **TaxRule** | jurisdiction, canton?, assetType, topic, scope (LegalRuleScope), isActive | → TaxRuleVersion[] |

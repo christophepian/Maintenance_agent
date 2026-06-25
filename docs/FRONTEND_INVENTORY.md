@@ -1,6 +1,6 @@
 # Frontend Page Inventory
 
-> **Generated** 2026-06-23 by `scripts/gen-frontend-inventory.js` — do not hand-edit.
+> **Generated** 2026-06-25 by `scripts/gen-frontend-inventory.js` — do not hand-edit.
 > Re-run with `npm run inventory` after adding/removing pages.
 
 ---
@@ -18,7 +18,7 @@
 | admin | 1 |
 | capture | 1 |
 
-**Totals:** 104 UI pages · 289 API proxy files (`apps/web/pages/api/`).
+**Totals:** 104 UI pages · 297 API proxy files (`apps/web/pages/api/`).
 
 Empty-state / loading-state columns are heuristic (token/component grep), useful as a coverage signal, not a guarantee.
 
@@ -35,7 +35,7 @@ Empty-state / loading-state columns are heuristic (token/component grep), useful
 | /manager/billing-schedules | yes | yes |
 | /manager/buildings/[id]/financials | — | yes |
 | /manager/cashflow | — | — |
-| /manager/cashflow/[id] | yes | yes |
+| /manager/cashflow/[id] | — | yes |
 | /manager/charge-reconciliations | yes | yes |
 | /manager/charge-reconciliations/[id] | — | yes |
 | /manager/condition-reports/[id] | — | yes |
