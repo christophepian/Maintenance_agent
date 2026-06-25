@@ -11,7 +11,23 @@ them. No model is removed.
 |---|---|---|---|
 | A | Opening-balance continuity (receivables/payables roll-forward) | Reporting (flow) | ✅ shipped 2026-06-25 (`daf9714`) |
 | B | Building "Financial position" sub-tab | Building page (stock) | ✅ shipped 2026-06-25 (`bf2feb4`) |
-| C | Analytical accounting view (equity bridge + balance-sheet trend) | Accounting section | scoped, not started (needs D1) |
+| E | Year-end closing journals (real equity bridge) | Ledger / accounting | in progress |
+| D | CAPEX capitalization + straight-line depreciation | Ledger + asset register | scoped |
+| C | Analytical accounting view (equity bridge + BS trend) | Accounting section | scoped |
+| F | Per-tenant opening receivables (manual entry, aging, settlement) | Reporting + units | scoped |
+
+**Build order: E → D → C → F** (closing makes the bridge real; depreciation feeds both
+statements; the analytical view then surfaces real equity + depreciation; per-tenant AR last).
+
+### Locked decisions (2026-06-25, owner)
+- **Depreciation (WS-D):** CAPEX invoices **capitalize** to a fixed-asset on the balance
+  sheet, then **straight-line depreciate over the asset's useful life** (reuse existing
+  `usefulLifeYears`). **Building shell held at cost** (not depreciated).
+- **Per-tenant opening AR (WS-F):** **manual per-tenant entry UI** (amount + due date) at
+  switchover; the account-level import lump is the **control total** to reconcile against.
+- **Closing (WS-E):** automated **Dec-31** closing journal moving the period result into
+  **retained earnings (account 2900)**, **reversible** to reopen a period. (Supersedes the
+  earlier D1-a "display-residual only" — that stays as the fallback view when a year is open.)
 
 ---
 
@@ -180,12 +196,72 @@ need the liability/equity side the import captures — see [`reporting_enhanceme
 
 ---
 
-## 4. Out of scope (known limitations to note, not fix)
+### WS-E — Year-end closing journals (real equity bridge)
 
-- Depreciation / capex capitalization (gap #2 above) — would require an asset-register
-  depreciation engine. Note in-product as "performance is pre-depreciation."
-- Real year-end closing journals (D1-b) — separate scoping pass.
+Makes the BS(Y-1)→BS(Y) bridge real: at fiscal year-end, post a closing journal moving the
+net of all REVENUE/EXPENSE account balances into **retained earnings (2900)**, so
+`getBalanceSheet` reconciles (differenceCents → ~0) and equity carries the period result.
+
+- **Model `FiscalPeriodClose`** (orgId, buildingId, fiscalYear, periodEnd, status
+  OPEN→CLOSED, closingJournalId, retainedEarningsCents, closedAt/closedBy, reversedAt).
+  `@@unique([orgId, buildingId, fiscalYear])`.
+- **Service `fiscalCloseService`**: `closeFiscalYear(buildingId, year)` — sum REVENUE −
+  EXPENSE ledger balances for [Jan-1..Dec-31], post one self-balancing journal
+  (`sourceType: "YEAR_END_CLOSE"`) zeroing each P&L account into 2900; `reopenFiscalYear`
+  posts the **reversing** journal and flips status. Idempotent (guarded by the unique row).
+- **Repo** `fiscalPeriodCloseRepository` + ledger reads via existing repo (no service Prisma).
+- **getBalanceSheet impact:** none structurally — once closed, P&L nets to zero so the
+  residual disappears naturally; the WS-B "unclosed result" strip only shows for OPEN years.
+- **Routes** `POST /ledger/close-year`, `POST /ledger/reopen-year`, `GET /ledger/closes`
+  → **new OpenAPI entries** (don't grow the unspecced budget). MANAGER-only.
+- **UI:** a "Year-end close" control in the accounting/ledger area + status surfaced on WS-B.
+- **Account 2900** ensured in COA seed (already present in sample imports).
+
+### WS-D — CAPEX capitalization + straight-line depreciation
+
+Removes the "capex wrongly in net income" + "asset values never decline" gaps.
+
+- **Model `FixedAsset`** (orgId, buildingId, unitId?, name, sourceInvoiceId?,
+  acquisitionDate, costCents, usefulLifeYears, method=STRAIGHT_LINE, salvageCents=0,
+  accumulatedDepreciationCents, status ACTIVE/DISPOSED). Optional link to the existing
+  asset-inventory item for `usefulLifeYears`.
+- **Capitalization:** on approval of a `CAPEX` invoice, instead of (or in addition to)
+  expensing, post `Dr Fixed assets (15xx) / Cr Bank|Payables` and create a `FixedAsset`.
+  *Reporting note:* `getBuildingFinancials` must stop counting capitalized capex as a P&L
+  expense (it already separates `capexTotalCents`; ensure capitalized capex is excluded from
+  `netIncomeCents`, replaced by depreciation).
+- **Depreciation:** `depreciationService` computes annual straight-line
+  `(cost − salvage)/usefulLifeYears`; a periodic job (mirror `BuildingDailySnapshot` job in
+  `server.ts`) posts `Dr Depreciation expense (68xx) / Cr Accumulated depreciation (149x
+  contra-asset)` monthly/annually; idempotent per asset per period.
+- **Building shell:** held at cost — no shell FixedAsset, no shell depreciation.
+- **COA:** ensure fixed-asset (15xx), accumulated-depreciation contra (149x), depreciation-
+  expense (68xx) accounts.
+- **Routes** `GET /fixed-assets?buildingId=`, `POST /fixed-assets/run-depreciation` →
+  new OpenAPI entries. **UI:** fixed-asset register + depreciation line in reporting.
+
+### WS-F — Per-tenant opening receivables (manual entry, aging, settlement)
+
+Refines WS-A from an un-aged lump to real, ageable, settleable per-tenant opening items.
+
+- **Model `OpeningReceivable`** (orgId, buildingId, leaseId/unitId, tenantName, amountCents,
+  dueDate, status OPEN/SETTLED, settledInvoiceId?, sourceImportStatementId?). Manager enters
+  these at switchover.
+- **Control total:** sum of `OpeningReceivable` for a building must reconcile to the
+  account-level import lump (WS-A figure) — show a variance indicator until they match.
+- **Aging:** fold OpeningReceivable into `getArrearsAging` / building arrears by `dueDate`
+  (so day-one arrears age correctly) — extend the existing bucket logic.
+- **Settlement:** mark settled when paid (or generate a catch-up invoice so it flows through
+  the normal payment path). De-dupe vs the WS-A ledger lump so totals don't double-count.
+- **Routes** `GET/POST /opening-receivables`, `POST /opening-receivables/:id/settle` →
+  new OpenAPI entries. **UI:** entry table on the building/units page; replaces the WS-A
+  un-aged strip once entered.
+
+## 4. Still out of scope (after this expansion)
+
 - Consumption metering, multi-building-per-PDF imports — tracked elsewhere.
+- Building-shell depreciation / cantonal tax-rate depreciation (WS-D holds shell at cost).
+- Configurable fiscal year-end (WS-E hard-codes Dec-31; revisit if a non-calendar org appears).
 
 ---
 
