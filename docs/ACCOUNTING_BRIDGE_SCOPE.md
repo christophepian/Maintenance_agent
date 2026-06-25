@@ -7,11 +7,11 @@ accounting view**. Status: **scoped, not started (2026-06-25).**
 This is **additive** — it extends existing entities and services rather than replacing
 them. No model is removed.
 
-| WS | Title | Surface | Depends on |
+| WS | Title | Surface | Status |
 |---|---|---|---|
-| A | Opening-balance continuity (receivables/payables roll-forward) | Reporting (flow) | — |
-| B | Building "Financial position" sub-tab | Building page (stock) | existing `getBalanceSheet` |
-| C | Analytical accounting view (equity bridge + balance-sheet trend) | Accounting section | A, B |
+| A | Opening-balance continuity (receivables/payables roll-forward) | Reporting (flow) | ✅ shipped 2026-06-25 (`daf9714`) |
+| B | Building "Financial position" sub-tab | Building page (stock) | ✅ shipped 2026-06-25 (`bf2feb4`) |
+| C | Analytical accounting view (equity bridge + balance-sheet trend) | Accounting section | scoped, not started (needs D1) |
 
 ---
 
@@ -122,7 +122,7 @@ result → distributions → closing), not just "show the balance sheet next to 
 
 ## 3. Build order
 
-### WS-A — Opening-balance continuity *(highest value-to-effort)*
+### WS-A — Opening-balance continuity ✅ shipped 2026-06-25 (`daf9714`)
 
 **Problem:** A tenant who owed CHF X at switchover is captured in the import on account
 1100, but with no invoice behind it the building's arrears-aging widget shows zero — day-one
@@ -141,7 +141,7 @@ point-in-time, in cached **and** fresh paths), `BuildingFinancialsDTO` (+2 field
 building Reporting tab (new labeled line + EN/FR keys). No migration — computed live, not
 cached on `BuildingFinancialSnapshot`.
 
-### WS-B — Building "Financial position" sub-tab
+### WS-B — Building "Financial position" sub-tab ✅ shipped 2026-06-25 (`bf2feb4`)
 
 Add a third Reporting sub-tab on `/admin-inventory/buildings/[id]?tab=Reporting`
 (alongside Period Analysis + Performance Canvas) that calls the existing building-scoped
