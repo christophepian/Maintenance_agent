@@ -765,7 +765,13 @@
       "open": "Open",
       "closeYear": "Close year",
       "reopenYear": "Reopen",
-      "resultToEquity": "{{amount}} posted to retained earnings"
+      "resultToEquity": "{{amount}} posted to retained earnings",
+      "fixedAssets": "Fixed assets",
+      "runDepreciation": "Run depreciation",
+      "faName": "Asset",
+      "faCost": "Cost",
+      "faAccumDep": "Accum. dep.",
+      "faBookValue": "Book value"
     },
     "strategyEditor": {
       "intro": "Set how this building should be managed — the cashflow recommendation engine uses it to tailor advice for this property.",

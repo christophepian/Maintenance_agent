@@ -31,6 +31,7 @@ import { registerSchedulingRoutes } from "./routes/scheduling";
 import { registerCompletionRoutes } from "./routes/completion";
 import { registerCoaRoutes } from "./routes/coa";
 import { registerLedgerRoutes } from "./routes/ledger";
+import { registerFixedAssetRoutes } from "./routes/fixedAssets";
 import { registerCaptureSessionRoutes } from "./routes/captureSessions";
 import { registerCashflowPlanRoutes } from "./routes/cashflowPlans";
 import { registerMortgageRoutes } from "./routes/mortgages";
@@ -192,6 +193,7 @@ registerSchedulingRoutes(router);
 registerCompletionRoutes(router);
 registerCoaRoutes(router);
 registerLedgerRoutes(router);
+registerFixedAssetRoutes(router);
 registerCaptureSessionRoutes(router);
 registerCashflowPlanRoutes(router);
 registerMortgageRoutes(router);
@@ -597,6 +599,21 @@ async function runBackgroundJobsInner() {
     }
   } catch (e) {
     console.error("[BG-JOBS] Daily building snapshot error:", e);
+  }
+
+  // Post straight-line depreciation due (WS-D). Idempotent: only posts when a
+  // new month is due, so a daily run is safe.
+  try {
+    const { runDepreciation } = await import("./services/fixedAssetService");
+    const orgsForDep = await prisma.org.findMany({ select: { id: true } });
+    let depAssets = 0;
+    for (const org of orgsForDep) {
+      const r = await runDepreciation(prisma, org.id);
+      depAssets += r.assetsDepreciated;
+    }
+    if (depAssets > 0) console.log(`[BG-JOBS] Posted depreciation for ${depAssets} asset(s)`);
+  } catch (e) {
+    console.error("[BG-JOBS] Depreciation run error:", e);
   }
 
   try {

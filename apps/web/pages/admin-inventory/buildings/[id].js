@@ -499,6 +499,7 @@ function BuildingBalanceSheet({ buildingId }) {
   const [asOf, setAsOf] = useState(todayStr);
   const [data, setData] = useState(null);
   const [closes, setCloses] = useState([]);
+  const [fixedAssets, setFixedAssets] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [actionBusy, setActionBusy] = useState(false);
@@ -509,15 +510,18 @@ function BuildingBalanceSheet({ buildingId }) {
     setError("");
     const params = new URLSearchParams({ buildingId, asOf });
     try {
-      const [bsRes, closesRes] = await Promise.all([
+      const [bsRes, closesRes, assetsRes] = await Promise.all([
         fetch(`/api/ledger/balance-sheet?${params}`, { headers: authHeaders() }),
         fetch(`/api/ledger/closes?buildingId=${buildingId}`, { headers: authHeaders() }),
+        fetch(`/api/fixed-assets?buildingId=${buildingId}`, { headers: authHeaders() }),
       ]);
       const bsJson = await bsRes.json();
       if (!bsRes.ok) throw new Error(bsJson?.error?.message || t("buildingsId.reporting.failedToLoad"));
       setData(bsJson.data ?? null);
       const closesJson = await closesRes.json().catch(() => ({}));
       setCloses(closesRes.ok ? (closesJson.data ?? []) : []);
+      const assetsJson = await assetsRes.json().catch(() => ({}));
+      setFixedAssets(assetsRes.ok ? (assetsJson.data ?? []) : []);
     } catch {
       setError(t("buildingsId.reporting.failedToLoad"));
     } finally {
@@ -548,6 +552,25 @@ function BuildingBalanceSheet({ buildingId }) {
       setActionBusy(false);
     }
   }, [buildingId, viewYear, load, t]);
+
+  const runDepreciation = useCallback(async () => {
+    setActionBusy(true);
+    setError("");
+    try {
+      const res = await fetch(`/api/fixed-assets/run-depreciation`, {
+        method: "POST",
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ asOf }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error?.message || t("buildingsId.reporting.failedToLoad"));
+      await load();
+    } catch (e) {
+      setError(e.message || t("buildingsId.reporting.failedToLoad"));
+    } finally {
+      setActionBusy(false);
+    }
+  }, [asOf, load, t]);
 
   const renderLine = (line) => {
     const isDeduction = line.displayCents < 0;
@@ -644,6 +667,42 @@ function BuildingBalanceSheet({ buildingId }) {
               {actionBusy ? t("buildingsId.reporting.loadingEllipsis") : yearClose ? t("buildingsId.reporting.reopenYear") : t("buildingsId.reporting.closeYear")}
             </button>
           </div>
+
+          {/* WS-D: fixed-asset register */}
+          {fixedAssets.length > 0 && (
+            <Panel>
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-semibold text-foreground">{t("buildingsId.reporting.fixedAssets")}</h3>
+                <button
+                  onClick={runDepreciation}
+                  disabled={actionBusy}
+                  className="shrink-0 rounded-lg border border-surface-border px-3 py-1 text-xs font-semibold text-muted-dark hover:opacity-80 disabled:opacity-50"
+                >
+                  {t("buildingsId.reporting.runDepreciation")}
+                </button>
+              </div>
+              <div className="space-y-1">
+                <div className="flex justify-between gap-3 text-xs text-foreground-dim font-medium border-b border-surface-border pb-1">
+                  <span>{t("buildingsId.reporting.faName")}</span>
+                  <span className="flex gap-4">
+                    <span className="w-24 text-right">{t("buildingsId.reporting.faCost")}</span>
+                    <span className="w-24 text-right">{t("buildingsId.reporting.faAccumDep")}</span>
+                    <span className="w-24 text-right">{t("buildingsId.reporting.faBookValue")}</span>
+                  </span>
+                </div>
+                {fixedAssets.map((a) => (
+                  <div key={a.id} className="flex justify-between gap-3 py-1 text-sm">
+                    <span className="text-muted-dark truncate">{a.name}</span>
+                    <span className="flex gap-4 font-mono shrink-0">
+                      <span className="w-24 text-right text-foreground">{rFmtChf(a.costCents)}</span>
+                      <span className="w-24 text-right text-foreground-dim">({rFmtChf(a.accumulatedDepreciationCents)})</span>
+                      <span className="w-24 text-right text-foreground">{rFmtChf(a.bookValueCents)}</span>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </Panel>
+          )}
         </>
       )}
     </div>

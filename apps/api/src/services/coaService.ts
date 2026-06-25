@@ -367,6 +367,8 @@ const SWISS_DEFAULT_ACCOUNTS = [
   { name: "Bank Account",                code: "1020", accountType: "ASSET"     }, // Operating bank account
   { name: "Rent Receivables",            code: "1100", accountType: "ASSET"     }, // Rent receivables outstanding
   { name: "Prepaid Expenses",            code: "1180", accountType: "ASSET"     }, // Prepaid expenses / accruals
+  { name: "Fixed Assets",                code: "1500", accountType: "ASSET"     }, // Capitalized fixed assets (WS-D)
+  { name: "Accumulated Depreciation",    code: "1509", accountType: "ASSET"     }, // Contra-asset: accumulated depreciation (WS-D)
   // ── Liabilities (2xxx) ─────────────────────────────────────────────────────
   { name: "Accounts Payable",            code: "2000", accountType: "LIABILITY" }, // Accounts payable (contractors, suppliers)
   { name: "Mortgage — 1st Rank",         code: "2300", accountType: "LIABILITY" }, // 1st mortgage

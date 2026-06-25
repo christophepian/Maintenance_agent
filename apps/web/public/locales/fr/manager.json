@@ -765,7 +765,13 @@
       "open": "Ouvert",
       "closeYear": "Clôturer l'exercice",
       "reopenYear": "Rouvrir",
-      "resultToEquity": "{{amount}} comptabilisé en fonds propres"
+      "resultToEquity": "{{amount}} comptabilisé en fonds propres",
+      "fixedAssets": "Immobilisations",
+      "runDepreciation": "Calculer l'amortissement",
+      "faName": "Actif",
+      "faCost": "Coût",
+      "faAccumDep": "Amort. cumulé",
+      "faBookValue": "Valeur comptable"
     },
     "strategyEditor": {
       "intro": "Définissez la gestion de ce bâtiment — le moteur de recommandation de trésorerie l'utilise pour adapter ses conseils à ce bien.",

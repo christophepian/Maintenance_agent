@@ -403,8 +403,18 @@ export async function getBuildingFinancials(
   // exposed for display. Done before deriving KPIs and persisting the snapshot.
   expensesTotalCents += recoverableAncillaryCents - chargesAlreadyInLedgerCents;
 
+  // 9d. Capex capitalization + depreciation (WS-D). Capitalized CAPEX is moved
+  //     off the P&L (a CAPITALIZATION credit on the expense account), so net it
+  //     out of expenses; depreciation is the new operating expense, so add it.
+  //     `capexStillExpensedCents` is the capex NOT capitalized (legacy/pre-WS-D),
+  //     which keeps the operating formula correct for both old and new data.
+  const { capitalizedCents, depreciationCents } =
+    await financialsRepo.aggregateCapexAdjustments(prisma, orgId, buildingId, from, to);
+  expensesTotalCents += depreciationCents - capitalizedCents;
+  const capexStillExpensedCents = Math.max(0, capexTotalCents - capitalizedCents);
+
   // 10. Derived totals and KPIs
-  const operatingTotalCents = expensesTotalCents - capexTotalCents;
+  const operatingTotalCents = expensesTotalCents - capexStillExpensedCents;
   const netIncomeCents = collectedIncomeCents - expensesTotalCents;
   const netOperatingIncomeCents = collectedIncomeCents - operatingTotalCents;
   const maintenanceRatio = safeDivide(maintenanceTotalCents, collectedIncomeCents);

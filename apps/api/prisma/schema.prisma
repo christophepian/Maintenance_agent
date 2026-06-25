@@ -204,6 +204,8 @@ model Org {
   conditionReports            UnitConditionReport[]
   // Year-end closing (accounting bridge WS-E)
   fiscalPeriodCloses          FiscalPeriodClose[]
+  // Fixed assets (accounting bridge WS-D)
+  fixedAssets                 FixedAsset[]
 }
 
 model OrgConfig {
@@ -421,6 +423,7 @@ model Building {
   billingPeriods             BillingPeriod[]
   chargeDistributions        BuildingChargeDistribution[]
   fiscalPeriodCloses         FiscalPeriodClose[]
+  fixedAssets                FixedAsset[]
 
   @@index([orgId])
   @@index([managerId])
@@ -523,6 +526,7 @@ model Unit {
   ledgerEntries          LedgerEntry[]
   conditionReports       UnitConditionReport[]
   attributedInvoices     Invoice[]               @relation("InvoiceUnitAttribution")
+  fixedAssets            FixedAsset[]
 
   @@unique([buildingId, unitNumber])
   @@index([buildingId])
@@ -1431,6 +1435,34 @@ model FiscalPeriodClose {
   building Building @relation(fields: [buildingId], references: [id], onDelete: Cascade)
 
   @@unique([orgId, buildingId, fiscalYear])
+  @@index([orgId])
+  @@index([buildingId])
+}
+
+/// Capitalized fixed asset (accounting bridge WS-D). Created when a CAPEX invoice
+/// is capitalized: cost moves from the P&L to the balance sheet (account 1500),
+/// then straight-line depreciates over usefulLifeYears (Dr 4700 / Cr 1509).
+model FixedAsset {
+  id                           String   @id @default(uuid())
+  orgId                        String
+  buildingId                   String
+  unitId                       String?
+  name                         String
+  sourceInvoiceId              String?  @unique /// idempotency: one asset per CAPEX invoice
+  acquisitionDate              DateTime
+  costCents                    Int
+  salvageCents                 Int      @default(0)
+  usefulLifeYears              Int
+  method                       String   @default("STRAIGHT_LINE")
+  accumulatedDepreciationCents Int      @default(0)
+  status                       String   @default("ACTIVE") /// ACTIVE | DISPOSED
+  createdAt                    DateTime @default(now())
+  updatedAt                    DateTime @updatedAt
+
+  org      Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  building Building @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  unit     Unit?    @relation(fields: [unitId], references: [id], onDelete: SetNull)
+
   @@index([orgId])
   @@index([buildingId])
 }

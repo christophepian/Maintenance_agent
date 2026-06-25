@@ -151,6 +151,7 @@ export interface InvoiceDTO {
   leaseId?: string | null;
   expenseTypeId?: string | null;
   accountId?: string | null;
+  expenseCategory?: string | null;
   expenseType?: { id: string; name: string; code: string | null } | null;
   account?: { id: string; name: string; code: string | null } | null;
   /** Unit attribution derived from job.request.unit — populated when available */
@@ -1003,6 +1004,7 @@ function mapInvoiceToDTO(invoice: InvoiceWithFullInclude): InvoiceDTO {
     leaseId: (invoice as any).leaseId || null,
     expenseTypeId: invoice.expenseTypeId || null,
     accountId: invoice.accountId || null,
+    expenseCategory: invoice.expenseCategory || null,
     expenseType: (invoice as any).classifiedExpenseType
       ? { id: (invoice as any).classifiedExpenseType.id, name: (invoice as any).classifiedExpenseType.name, code: (invoice as any).classifiedExpenseType.code }
       : null,

@@ -71,6 +71,16 @@ export async function approveInvoiceWorkflow(
     );
   }
 
+  // ── 3c. Capitalize a CAPEX invoice to the balance sheet (WS-D) ──
+  // CAPEX costs are capitalized (Dr Fixed Assets / Cr expense) and depreciated,
+  // rather than expensed in one shot. Best-effort — never block approval.
+  if ((approved as any).expenseCategory === "CAPEX") {
+    const { capitalizeInvoice } = await import("../services/fixedAssetService");
+    capitalizeInvoice(prisma, orgId, approved).catch((err) =>
+      console.error("[FIXED-ASSET] Failed to capitalize CAPEX invoice", err),
+    );
+  }
+
   // ── 4. Emit event ──────────────────────────────────────────
   emit({
     type: "INVOICE_APPROVED",

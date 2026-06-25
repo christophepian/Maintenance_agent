@@ -50,6 +50,43 @@ export async function aggregateOpeningBalanceFromImport(
   return (agg._sum.debitCents ?? 0) - (agg._sum.creditCents ?? 0);
 }
 
+/**
+ * Capex adjustments on EXPENSE accounts for a building in [from, to] (WS-D):
+ * - capitalizedCents: CAPITALIZATION credits (capex moved off the P&L to 1500)
+ * - depreciationCents: DEPRECIATION debits (the new P&L expense)
+ * Used to net capex out of, and add depreciation into, period expenses.
+ */
+export async function aggregateCapexAdjustments(
+  prisma: PrismaClient,
+  orgId: string,
+  buildingId: string,
+  from: Date,
+  to: Date,
+): Promise<{ capitalizedCents: number; depreciationCents: number }> {
+  const [cap, dep] = await Promise.all([
+    prisma.ledgerEntry.aggregate({
+      where: {
+        orgId, buildingId, sourceType: "CAPITALIZATION",
+        date: { gte: from, lte: endOfDayUTC(to) },
+        account: { accountType: "EXPENSE" },
+      },
+      _sum: { creditCents: true },
+    }),
+    prisma.ledgerEntry.aggregate({
+      where: {
+        orgId, buildingId, sourceType: "DEPRECIATION",
+        date: { gte: from, lte: endOfDayUTC(to) },
+        account: { accountType: "EXPENSE" },
+      },
+      _sum: { debitCents: true },
+    }),
+  ]);
+  return {
+    capitalizedCents: cap._sum.creditCents ?? 0,
+    depreciationCents: dep._sum.debitCents ?? 0,
+  };
+}
+
 /** Find all INVOICE_ISSUED expense debit ledger entries for a building in a period. */
 export async function findExpenseLedgerEntries(
   prisma: PrismaClient,

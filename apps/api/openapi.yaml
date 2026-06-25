@@ -1480,6 +1480,22 @@ components:
         closedAt: { type: string, format: date-time }
         reversedAt: { type: string, format: date-time, nullable: true }
 
+    FixedAsset:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        buildingId: { type: string, format: uuid }
+        unitId: { type: string, format: uuid, nullable: true }
+        name: { type: string }
+        sourceInvoiceId: { type: string, format: uuid, nullable: true }
+        acquisitionDate: { type: string, format: date-time }
+        costCents: { type: integer }
+        salvageCents: { type: integer }
+        usefulLifeYears: { type: integer }
+        accumulatedDepreciationCents: { type: integer }
+        bookValueCents: { type: integer }
+        status: { type: string, enum: [ACTIVE, DISPOSED] }
+
     Pagination:
       type: object
       properties:
@@ -7729,6 +7745,51 @@ paths:
                   data: { $ref: '#/components/schemas/FiscalClose' }
         '404':
           $ref: '#/components/responses/NotFound'
+
+  /fixed-assets:
+    get:
+      tags: [Ledger]
+      summary: List capitalized fixed assets (optionally scoped to a building)
+      operationId: listFixedAssets
+      parameters:
+        - { name: buildingId, in: query, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Fixed-asset register
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/FixedAsset' }
+
+  /fixed-assets/run-depreciation:
+    post:
+      tags: [Ledger]
+      summary: Post straight-line depreciation due as of a date (MANAGER)
+      operationId: runDepreciation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                asOf: { type: string, format: date, description: "Defaults to today" }
+      responses:
+        '200':
+          description: Depreciation run summary
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      assetsDepreciated: { type: integer }
+                      totalCents: { type: integer }
 
   /coa/seed:
     post:
