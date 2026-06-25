@@ -450,4 +450,36 @@ describe("Financial Performance Engine", () => {
       }),
     ).rejects.toThrow("'from' must be before 'to'");
   });
+
+  // ── Imported opening balances (WS-A) ──
+  // BALANCE_SHEET_IMPORT entries on 1100/2000 surface as un-aged opening
+  // receivables/payables and must NOT leak into invoice-based receivablesCents.
+  it("surfaces imported opening AR/AP and keeps them out of invoice receivables", async () => {
+    const arAcc = await prisma.account.create({
+      data: { orgId, name: "Debtors (opening test)", code: "1100", accountType: "ASSET" },
+    });
+    const apAcc = await prisma.account.create({
+      data: { orgId, name: "Creditors (opening test)", code: "2000", accountType: "LIABILITY" },
+    });
+    // Self-balancing opening journal dated before the report window.
+    await prisma.ledgerEntry.createMany({
+      data: [
+        { orgId, buildingId, accountId: arAcc.id, debitCents: 500_00, creditCents: 0,
+          description: "Opening AR", sourceType: "BALANCE_SHEET_IMPORT", journalId: "open-j1", date: new Date("2024-12-31T00:00:00Z") },
+        { orgId, buildingId, accountId: apAcc.id, debitCents: 0, creditCents: 500_00,
+          description: "Opening AP", sourceType: "BALANCE_SHEET_IMPORT", journalId: "open-j1", date: new Date("2024-12-31T00:00:00Z") },
+      ],
+    });
+
+    const dto = await getBuildingFinancials(orgId, buildingId, {
+      from: "2025-01-01",
+      to: "2025-02-01",
+      forceRefresh: true,
+    });
+
+    expect(dto.openingReceivablesCents).toBe(500_00);
+    expect(dto.openingPayablesCents).toBe(500_00);
+    // Opening lumps are not invoices → invoice-based receivables stay 0.
+    expect(dto.receivablesCents).toBe(0);
+  });
 });

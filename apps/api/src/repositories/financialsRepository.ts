@@ -20,6 +20,36 @@ function endOfDayUTC(d: Date): Date {
   return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 23, 59, 59, 999));
 }
 
+/**
+ * Net opening balance for one account (by code) sourced from the imported
+ * balance sheet, as of a date. Scoped to `sourceType: "BALANCE_SHEET_IMPORT"`
+ * so only the imported opening position is counted — operational invoice
+ * activity (a different sourceType) is excluded, making de-dup automatic.
+ *
+ * Returns signed cents (debit − credit). For a receivable account (1100) a
+ * positive result = outstanding receivable; for a payable account (2000) a
+ * negative result = outstanding payable (caller negates).
+ */
+export async function aggregateOpeningBalanceFromImport(
+  prisma: PrismaClient,
+  orgId: string,
+  buildingId: string,
+  accountCode: string,
+  asOf: Date,
+): Promise<number> {
+  const agg = await prisma.ledgerEntry.aggregate({
+    where: {
+      orgId,
+      buildingId,
+      sourceType: "BALANCE_SHEET_IMPORT",
+      date: { lte: endOfDayUTC(asOf) },
+      account: { code: accountCode },
+    },
+    _sum: { debitCents: true, creditCents: true },
+  });
+  return (agg._sum.debitCents ?? 0) - (agg._sum.creditCents ?? 0);
+}
+
 /** Find all INVOICE_ISSUED expense debit ledger entries for a building in a period. */
 export async function findExpenseLedgerEntries(
   prisma: PrismaClient,

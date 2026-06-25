@@ -364,6 +364,21 @@ function BuildingPeriodAnalysis({ buildingId }) {
             </div>
           )}
 
+          {/* ── Opening balances carried in from the imported balance sheet (un-aged) ── */}
+          {(bf.openingReceivablesCents > 0 || bf.openingPayablesCents > 0) && (
+            <div className="flex items-start gap-3 rounded-2xl border border-info-ring bg-info-light px-5 py-4">
+              <span className="mt-0.5 text-info-text text-lg shrink-0">↪</span>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-info-text mb-0.5">
+                  {bf.openingReceivablesCents > 0 && t("buildingsId.reporting.openingReceivable", { amount: rFmtChf(bf.openingReceivablesCents) })}
+                  {bf.openingReceivablesCents > 0 && bf.openingPayablesCents > 0 && " · "}
+                  {bf.openingPayablesCents > 0 && t("buildingsId.reporting.openingPayable", { amount: rFmtChf(bf.openingPayablesCents) })}
+                </p>
+                <p className="text-xs text-info-text/80">{t("buildingsId.reporting.openingHint")}</p>
+              </div>
+            </div>
+          )}
+
           {/* ── Arrears aging ── */}
           {arrears && (arrears.totalOverdueCents > 0 || arrears.currentCents > 0) && (
             <div className="rounded-2xl border border-surface-border bg-surface p-5">

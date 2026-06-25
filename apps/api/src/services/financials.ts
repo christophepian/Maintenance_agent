@@ -60,6 +60,16 @@ export interface BuildingFinancialsDTO {
   // Point-in-time balances
   receivablesCents: number; // ISSUED unpaid lease invoices
   payablesCents: number;    // ISSUED/APPROVED unpaid job invoices
+  /**
+   * Opening receivables/payables carried in from the imported balance sheet
+   * (sourceType BALANCE_SHEET_IMPORT on accounts 1100/2000), as of the report
+   * end date. UN-AGED — these lumps have no due date / tenant / invoice, so they
+   * are surfaced as a distinct "opening balance (from import)" line and are NOT
+   * folded into the dueDate arrears buckets. De-duped from invoice activity by
+   * sourceType, so they do not overlap receivablesCents/payablesCents.
+   */
+  openingReceivablesCents: number;
+  openingPayablesCents: number;
 
   // KPIs
   maintenanceRatio: number;
@@ -215,6 +225,18 @@ export async function getBuildingFinancials(
   startOfCurrentMonth.setUTCHours(0, 0, 0, 0);
   const periodOverlapsCurrentMonth = to >= startOfCurrentMonth;
 
+  // Opening balances carried in from the imported balance sheet (point-in-time,
+  // as of the report end). Cheap aggregate; computed for both cached and fresh
+  // paths. Source-filtered to BALANCE_SHEET_IMPORT so they never double-count
+  // invoice-driven receivables/payables. Receivable = debit balance on 1100;
+  // payable = credit balance on 2000 (negate the signed result).
+  const [openingArSigned, openingApSigned] = await Promise.all([
+    financialsRepo.aggregateOpeningBalanceFromImport(prisma, orgId, buildingId, "1100", to),
+    financialsRepo.aggregateOpeningBalanceFromImport(prisma, orgId, buildingId, "2000", to),
+  ]);
+  const openingReceivablesCents = Math.max(0, openingArSigned);
+  const openingPayablesCents = Math.max(0, -openingApSigned);
+
   if (!params.forceRefresh && !params.groupByAccount && !periodOverlapsCurrentMonth) {
     const cached = await snapshotRepo.findBuildingFinancialSnapshotByPeriod(prisma, orgId, buildingId, from, to);
     if (cached) {
@@ -249,6 +271,8 @@ export async function getBuildingFinancials(
         serviceChargeIncomeCents: 0,
         receivablesCents: 0,
         payablesCents: 0,
+        openingReceivablesCents,
+        openingPayablesCents,
         maintenanceRatio: 0,
         costPerUnitCents: 0,
         collectionRate: cachedCollectionRate,
@@ -448,6 +472,8 @@ export async function getBuildingFinancials(
     serviceChargeIncomeCents: incomeBreakdown.serviceChargeIncomeCents,
     receivablesCents,
     payablesCents,
+    openingReceivablesCents,
+    openingPayablesCents,
     maintenanceRatio: Math.round(maintenanceRatio * 10000) / 10000,
     costPerUnitCents,
     collectionRate: Math.round(collectionRate * 10000) / 10000,
