@@ -202,6 +202,8 @@ model Org {
   letters                     Letter[]
   // Condition reports
   conditionReports            UnitConditionReport[]
+  // Year-end closing (accounting bridge WS-E)
+  fiscalPeriodCloses          FiscalPeriodClose[]
 }
 
 model OrgConfig {
@@ -418,6 +420,7 @@ model Building {
   dailySnapshots             BuildingDailySnapshot[]
   billingPeriods             BillingPeriod[]
   chargeDistributions        BuildingChargeDistribution[]
+  fiscalPeriodCloses         FiscalPeriodClose[]
 
   @@index([orgId])
   @@index([managerId])
@@ -1401,6 +1404,33 @@ model BillingPeriod {
   reconciliations ChargeReconciliation[]
 
   @@unique([buildingId, startDate, endDate])
+  @@index([orgId])
+  @@index([buildingId])
+}
+
+/// Year-end closing of a building's books (accounting bridge WS-E). One row per
+/// building per fiscal year. Records the YEAR_END_CLOSE journal that moves the
+/// net P&L result into retained earnings (2900); reversible to reopen the year.
+model FiscalPeriodClose {
+  id                    String    @id @default(uuid())
+  orgId                 String
+  buildingId            String
+  fiscalYear            Int /// calendar year (Dec-31 close)
+  periodStart           DateTime
+  periodEnd             DateTime
+  status                String    @default("CLOSED") /// CLOSED | REVERSED
+  closingJournalId      String /// journalId of the YEAR_END_CLOSE legs
+  reversalJournalId     String? /// journalId of the reversing legs (set when reopened)
+  retainedEarningsCents Int /// net result posted to 2900 (positive = profit credited to equity)
+  closedAt              DateTime  @default(now())
+  closedBy              String?
+  reversedAt            DateTime?
+  reversedBy            String?
+
+  org      Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  building Building @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, buildingId, fiscalYear])
   @@index([orgId])
   @@index([buildingId])
 }

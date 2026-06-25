@@ -759,7 +759,13 @@
       "bsTotalLiabilities": "Total des passifs",
       "bsUnclosedSurplus": "{{amount}} de résultat de la période non encore clôturé en fonds propres (excédent)",
       "bsUnclosedDeficit": "{{amount}} de résultat de la période non encore clôturé en fonds propres (déficit)",
-      "bsUnclosedHint": "Il s'agit des actifs moins les passifs — le résultat d'exploitation cumulé depuis le bilan initial importé, qui n'a pas encore été comptabilisé dans un compte de fonds propres."
+      "bsUnclosedHint": "Il s'agit des actifs moins les passifs — le résultat d'exploitation cumulé depuis le bilan initial importé, qui n'a pas encore été comptabilisé dans un compte de fonds propres.",
+      "yearEndClose": "Clôture annuelle {{year}}",
+      "closed": "Clôturé",
+      "open": "Ouvert",
+      "closeYear": "Clôturer l'exercice",
+      "reopenYear": "Rouvrir",
+      "resultToEquity": "{{amount}} comptabilisé en fonds propres"
     },
     "strategyEditor": {
       "intro": "Définissez la gestion de ce bâtiment — le moteur de recommandation de trésorerie l'utilise pour adapter ses conseils à ce bien.",

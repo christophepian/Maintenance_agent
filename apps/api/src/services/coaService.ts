@@ -371,6 +371,7 @@ const SWISS_DEFAULT_ACCOUNTS = [
   { name: "Accounts Payable",            code: "2000", accountType: "LIABILITY" }, // Accounts payable (contractors, suppliers)
   { name: "Mortgage — 1st Rank",         code: "2300", accountType: "LIABILITY" }, // 1st mortgage
   { name: "Mortgage — 2nd Rank",         code: "2350", accountType: "LIABILITY" }, // 2nd mortgage / land charge
+  { name: "Retained Earnings",           code: "2900", accountType: "LIABILITY" }, // Equity: carried-forward profit/loss (Report bénéfices-pertes) — year-end close target
   // ── Revenue (3xxx) ─────────────────────────────────────────────────────────
   { name: "Residential Rental Income",   code: "3200", accountType: "REVENUE"   }, // Residential rental income
   { name: "Commercial Rental Income",    code: "3210", accountType: "REVENUE"   }, // Commercial rental income

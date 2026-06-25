@@ -498,8 +498,10 @@ function BuildingBalanceSheet({ buildingId }) {
   const todayStr = new Date().toISOString().slice(0, 10);
   const [asOf, setAsOf] = useState(todayStr);
   const [data, setData] = useState(null);
+  const [closes, setCloses] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [actionBusy, setActionBusy] = useState(false);
 
   const load = useCallback(async () => {
     if (!buildingId) return;
@@ -507,10 +509,15 @@ function BuildingBalanceSheet({ buildingId }) {
     setError("");
     const params = new URLSearchParams({ buildingId, asOf });
     try {
-      const res = await fetch(`/api/ledger/balance-sheet?${params}`, { headers: authHeaders() });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json?.error?.message || t("buildingsId.reporting.failedToLoad"));
-      setData(json.data ?? null);
+      const [bsRes, closesRes] = await Promise.all([
+        fetch(`/api/ledger/balance-sheet?${params}`, { headers: authHeaders() }),
+        fetch(`/api/ledger/closes?buildingId=${buildingId}`, { headers: authHeaders() }),
+      ]);
+      const bsJson = await bsRes.json();
+      if (!bsRes.ok) throw new Error(bsJson?.error?.message || t("buildingsId.reporting.failedToLoad"));
+      setData(bsJson.data ?? null);
+      const closesJson = await closesRes.json().catch(() => ({}));
+      setCloses(closesRes.ok ? (closesJson.data ?? []) : []);
     } catch {
       setError(t("buildingsId.reporting.failedToLoad"));
     } finally {
@@ -519,6 +526,28 @@ function BuildingBalanceSheet({ buildingId }) {
   }, [buildingId, asOf, t]);
 
   useEffect(() => { load(); }, [load]);
+
+  const viewYear = Number(asOf.slice(0, 4));
+  const yearClose = closes.find((c) => c.fiscalYear === viewYear && c.status === "CLOSED");
+
+  const runClose = useCallback(async (reopen) => {
+    setActionBusy(true);
+    setError("");
+    try {
+      const res = await fetch(`/api/ledger/${reopen ? "reopen-year" : "close-year"}`, {
+        method: "POST",
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ buildingId, fiscalYear: viewYear }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error?.message || t("buildingsId.reporting.failedToLoad"));
+      await load();
+    } catch (e) {
+      setError(e.message || t("buildingsId.reporting.failedToLoad"));
+    } finally {
+      setActionBusy(false);
+    }
+  }, [buildingId, viewYear, load, t]);
 
   const renderLine = (line) => {
     const isDeduction = line.displayCents < 0;
@@ -579,7 +608,7 @@ function BuildingBalanceSheet({ buildingId }) {
           </div>
 
           {/* D1(a): assets − liabilities residual = the period result not yet closed to equity */}
-          {Math.abs(differenceCents) >= 2 && (
+          {Math.abs(differenceCents) >= 2 && !yearClose && (
             <div className="flex items-start gap-3 rounded-2xl border border-info-ring bg-info-light px-5 py-4">
               <span className="mt-0.5 text-info-text text-lg shrink-0">≡</span>
               <div className="flex-1">
@@ -590,6 +619,31 @@ function BuildingBalanceSheet({ buildingId }) {
               </div>
             </div>
           )}
+
+          {/* WS-E: year-end close control */}
+          <div className="flex items-center justify-between gap-3 rounded-2xl border border-surface-border bg-surface-hover px-5 py-3">
+            <div className="text-sm">
+              <span className="font-semibold text-foreground">{t("buildingsId.reporting.yearEndClose", { year: viewYear })}</span>
+              <span className={cn("ml-2 rounded-full px-2 py-0.5 text-xs font-medium", yearClose ? "bg-success-light text-success-text" : "bg-warning-light text-warning-text")}>
+                {yearClose ? t("buildingsId.reporting.closed") : t("buildingsId.reporting.open")}
+              </span>
+              {yearClose && (
+                <span className="ml-2 text-xs text-foreground-dim">
+                  {t("buildingsId.reporting.resultToEquity", { amount: rFmtChf(yearClose.retainedEarningsCents) })}
+                </span>
+              )}
+            </div>
+            <button
+              onClick={() => runClose(!!yearClose)}
+              disabled={actionBusy}
+              className={cn(
+                "shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold transition-opacity no-underline disabled:opacity-50",
+                yearClose ? "border border-surface-border text-muted-dark hover:opacity-80" : "bg-brand text-white hover:opacity-90",
+              )}
+            >
+              {actionBusy ? t("buildingsId.reporting.loadingEllipsis") : yearClose ? t("buildingsId.reporting.reopenYear") : t("buildingsId.reporting.closeYear")}
+            </button>
+          </div>
         </>
       )}
     </div>

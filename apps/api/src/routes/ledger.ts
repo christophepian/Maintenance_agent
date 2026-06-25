@@ -32,6 +32,11 @@ import {
 } from "../services/ledgerService";
 import { getInvoice } from "../services/invoices";
 import { seedSwissTaxonomy } from "../services/coaService";
+import {
+  closeFiscalYear,
+  reopenFiscalYear,
+  listFiscalCloses,
+} from "../services/fiscalCloseService";
 import { issueInvoiceWorkflow } from "../workflows/issueInvoiceWorkflow";
 
 export function registerLedgerRoutes(router: Router) {
@@ -211,5 +216,41 @@ export function registerLedgerRoutes(router: Router) {
       console.error("[POST /ledger/backfill]", e);
       sendError(res, 500, "INTERNAL_ERROR", "Backfill failed");
     }
+  });
+
+  /* ── GET /ledger/closes ───────────────────────────────────── */
+  router.get("/ledger/closes", async ({ req, res, orgId, prisma }) => {
+    if (!requireAuth(req, res)) return;
+    if (!requireOrgViewer(req, res)) return;
+    const { query } = parseQuery(req.url);
+    const buildingId = first(query, "buildingId");
+    const data = await listFiscalCloses(prisma, orgId, buildingId);
+    sendJson(res, 200, { data });
+  });
+
+  /* ── POST /ledger/close-year ──────────────────────────────── */
+  router.post("/ledger/close-year", async ({ req, res, orgId, prisma }) => {
+    if (!requireAuth(req, res)) return;
+    if (!requireAnyRole(req, res, ["MANAGER"])) return;
+    const body = await readJson(req);
+    const buildingId = body?.buildingId;
+    const fiscalYear = Number(body?.fiscalYear);
+    if (!buildingId) return sendError(res, 400, "MISSING_PARAM", "buildingId is required");
+    const userId = (req as any).user?.userId ?? null;
+    const data = await closeFiscalYear(prisma, orgId, buildingId, fiscalYear, userId);
+    sendJson(res, 200, { data });
+  });
+
+  /* ── POST /ledger/reopen-year ─────────────────────────────── */
+  router.post("/ledger/reopen-year", async ({ req, res, orgId, prisma }) => {
+    if (!requireAuth(req, res)) return;
+    if (!requireAnyRole(req, res, ["MANAGER"])) return;
+    const body = await readJson(req);
+    const buildingId = body?.buildingId;
+    const fiscalYear = Number(body?.fiscalYear);
+    if (!buildingId) return sendError(res, 400, "MISSING_PARAM", "buildingId is required");
+    const userId = (req as any).user?.userId ?? null;
+    const data = await reopenFiscalYear(prisma, orgId, buildingId, fiscalYear, userId);
+    sendJson(res, 200, { data });
   });
 }

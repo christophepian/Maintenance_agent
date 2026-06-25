@@ -1467,6 +1467,19 @@ components:
         creditCents: { type: integer }
         balanceCents: { type: integer }
 
+    FiscalClose:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        buildingId: { type: string, format: uuid }
+        fiscalYear: { type: integer }
+        status: { type: string, enum: [CLOSED, REVERSED] }
+        retainedEarningsCents: { type: integer, description: "Net result posted to equity (positive = profit)" }
+        closingJournalId: { type: string, format: uuid }
+        reversalJournalId: { type: string, format: uuid, nullable: true }
+        closedAt: { type: string, format: date-time }
+        reversedAt: { type: string, format: date-time, nullable: true }
+
     Pagination:
       type: object
       properties:
@@ -7643,6 +7656,79 @@ paths:
                       ledgerIssuedSkipped: { type: integer }
                       ledgerPaidPosted: { type: integer }
                       ledgerPaidSkipped: { type: integer }
+
+  /ledger/closes:
+    get:
+      tags: [Ledger]
+      summary: List fiscal year-end closes (optionally scoped to a building)
+      operationId: listFiscalCloses
+      parameters:
+        - { name: buildingId, in: query, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Fiscal close records
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/FiscalClose' }
+
+  /ledger/close-year:
+    post:
+      tags: [Ledger]
+      summary: Close a building's fiscal year — post the result to retained earnings (MANAGER)
+      operationId: closeFiscalYear
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [buildingId, fiscalYear]
+              properties:
+                buildingId: { type: string, format: uuid }
+                fiscalYear: { type: integer, example: 2025 }
+      responses:
+        '200':
+          description: The created/updated close record
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/FiscalClose' }
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /ledger/reopen-year:
+    post:
+      tags: [Ledger]
+      summary: Reopen a closed fiscal year by posting a reversing journal (MANAGER)
+      operationId: reopenFiscalYear
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [buildingId, fiscalYear]
+              properties:
+                buildingId: { type: string, format: uuid }
+                fiscalYear: { type: integer, example: 2025 }
+      responses:
+        '200':
+          description: The reversed close record
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/FiscalClose' }
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /coa/seed:
     post:
