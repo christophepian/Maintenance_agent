@@ -12,8 +12,8 @@ them. No model is removed.
 | A | Opening-balance continuity (receivables/payables roll-forward) | Reporting (flow) | ✅ shipped 2026-06-25 (`daf9714`) |
 | B | Building "Financial position" sub-tab | Building page (stock) | ✅ shipped 2026-06-25 (`bf2feb4`) |
 | E | Year-end closing journals (real equity bridge) | Ledger / accounting | ✅ shipped 2026-06-25 (`7e1fdf3`) |
-| D | CAPEX capitalization + straight-line depreciation | Ledger + asset register | next |
-| C | Analytical accounting view (equity bridge + BS trend) | Accounting section | scoped |
+| D | CAPEX capitalization + straight-line depreciation | Ledger + asset register | ✅ shipped 2026-06-25 (`43b3e26`) |
+| C | Analytical accounting view (equity bridge + BS trend) | Accounting section | next |
 | F | Per-tenant opening receivables (manual entry, aging, settlement) | Reporting + units | scoped |
 
 **Build order: E → D → C → F** (closing makes the bridge real; depreciation feeds both
@@ -217,7 +217,7 @@ net of all REVENUE/EXPENSE account balances into **retained earnings (2900)**, s
 - **UI:** a "Year-end close" control in the accounting/ledger area + status surfaced on WS-B.
 - **Account 2900** ensured in COA seed (already present in sample imports).
 
-### WS-D — CAPEX capitalization + straight-line depreciation
+### WS-D — CAPEX capitalization + straight-line depreciation ✅ shipped 2026-06-25 (`43b3e26`)
 
 Removes the "capex wrongly in net income" + "asset values never decline" gaps.
 
