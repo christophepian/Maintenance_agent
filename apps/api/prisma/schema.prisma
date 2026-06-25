@@ -206,6 +206,8 @@ model Org {
   fiscalPeriodCloses          FiscalPeriodClose[]
   // Fixed assets (accounting bridge WS-D)
   fixedAssets                 FixedAsset[]
+  // Per-tenant opening receivables (accounting bridge WS-F)
+  openingReceivables          OpeningReceivable[]
 }
 
 model OrgConfig {
@@ -424,6 +426,7 @@ model Building {
   chargeDistributions        BuildingChargeDistribution[]
   fiscalPeriodCloses         FiscalPeriodClose[]
   fixedAssets                FixedAsset[]
+  openingReceivables         OpeningReceivable[]
 
   @@index([orgId])
   @@index([managerId])
@@ -527,6 +530,7 @@ model Unit {
   conditionReports       UnitConditionReport[]
   attributedInvoices     Invoice[]               @relation("InvoiceUnitAttribution")
   fixedAssets            FixedAsset[]
+  openingReceivables     OpeningReceivable[]
 
   @@unique([buildingId, unitNumber])
   @@index([buildingId])
@@ -1458,6 +1462,32 @@ model FixedAsset {
   status                       String   @default("ACTIVE") /// ACTIVE | DISPOSED
   createdAt                    DateTime @default(now())
   updatedAt                    DateTime @updatedAt
+
+  org      Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  building Building @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  unit     Unit?    @relation(fields: [unitId], references: [id], onDelete: SetNull)
+
+  @@index([orgId])
+  @@index([buildingId])
+}
+
+/// Per-tenant opening receivable carried in at switchover (accounting bridge WS-F).
+/// A sub-ledger breakdown of the imported account-level AR lump (account 1100):
+/// the sum of these is reconciled to that lump (control total). Settling one posts
+/// Dr Bank (1020) / Cr Receivables (1100) — recording the collection.
+model OpeningReceivable {
+  id                  String    @id @default(uuid())
+  orgId               String
+  buildingId          String
+  unitId              String?
+  tenantName          String
+  amountCents         Int
+  dueDate             DateTime?
+  status              String    @default("OPEN") /// OPEN | SETTLED
+  settlementJournalId String?
+  settledAt           DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
   org      Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
   building Building @relation(fields: [buildingId], references: [id], onDelete: Cascade)

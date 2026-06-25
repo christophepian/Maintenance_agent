@@ -709,6 +709,98 @@ function BuildingBalanceSheet({ buildingId }) {
   );
 }
 
+// WS-F: per-tenant opening receivables — entry, control total, aging, settle.
+function OpeningReceivablesPanel({ buildingId }) {
+  const { t } = useTranslation("manager");
+  const [report, setReport] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [form, setForm] = useState({ tenantName: "", amountChf: "", dueDate: "" });
+
+  const load = useCallback(async () => {
+    if (!buildingId) return;
+    try {
+      const res = await fetch(`/api/opening-receivables?buildingId=${buildingId}`, { headers: authHeaders() });
+      const json = await res.json();
+      if (res.ok) setReport(json.data ?? null);
+    } catch { /* leave prior */ }
+  }, [buildingId]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const add = useCallback(async () => {
+    const amountCents = Math.round(parseFloat(form.amountChf) * 100);
+    if (!form.tenantName.trim() || !amountCents || amountCents <= 0) return;
+    setBusy(true); setError("");
+    try {
+      const res = await fetch(`/api/opening-receivables`, {
+        method: "POST",
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ buildingId, tenantName: form.tenantName.trim(), amountCents, dueDate: form.dueDate || null }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error?.message || t("buildingsId.reporting.failedToLoad"));
+      setForm({ tenantName: "", amountChf: "", dueDate: "" });
+      await load();
+    } catch (e) { setError(e.message); } finally { setBusy(false); }
+  }, [buildingId, form, load, t]);
+
+  const settle = useCallback(async (id) => {
+    setBusy(true); setError("");
+    try {
+      const res = await fetch(`/api/opening-receivables/${id}/settle`, { method: "POST", headers: authHeaders() });
+      if (!res.ok) { const j = await res.json().catch(() => ({})); throw new Error(j?.error?.message || t("buildingsId.reporting.failedToLoad")); }
+      await load();
+    } catch (e) { setError(e.message); } finally { setBusy(false); }
+  }, [load, t]);
+
+  if (!report || (report.items.length === 0 && report.control.importLumpCents === 0)) {
+    // Nothing imported and nothing entered — hide the panel entirely.
+    if (!report || report.control.importLumpCents === 0) return null;
+  }
+
+  const variance = report.control.varianceCents;
+  return (
+    <Panel>
+      <h3 className="text-sm font-semibold text-foreground mb-2">{t("buildingsId.reporting.openingReceivables")}</h3>
+      {error && <p className="text-sm text-destructive-text mb-2">{error}</p>}
+
+      <div className="flex flex-wrap gap-4 text-sm mb-3">
+        <span className="text-foreground-dim">{t("buildingsId.reporting.orImportLump")}: <span className="font-mono text-foreground">{rFmtChf(report.control.importLumpCents)}</span></span>
+        <span className="text-foreground-dim">{t("buildingsId.reporting.orEntered")}: <span className="font-mono text-foreground">{rFmtChf(report.control.enteredCents)}</span></span>
+        <span className={cn("rounded-full px-2 py-0.5 text-xs font-medium", variance === 0 ? "bg-success-light text-success-text" : "bg-warning-light text-warning-text")}>
+          {variance === 0 ? t("buildingsId.reporting.orMatched") : t("buildingsId.reporting.orVariance", { amount: rFmtChf(variance) })}
+        </span>
+      </div>
+
+      {report.items.length > 0 && (
+        <div className="space-y-1 mb-3">
+          {report.items.map((it) => (
+            <div key={it.id} className="flex items-center justify-between gap-3 py-1 text-sm border-b border-surface-border/60 last:border-0">
+              <span className="text-muted-dark truncate">{it.tenantName}{it.dueDate ? ` · ${displayDate(it.dueDate)}` : ""}</span>
+              <span className="flex items-center gap-3 shrink-0">
+                <span className="font-mono text-foreground">{rFmtChf(it.amountCents)}</span>
+                {it.status === "OPEN" ? (
+                  <button onClick={() => settle(it.id)} disabled={busy} className="rounded-lg border border-surface-border px-2 py-0.5 text-xs font-semibold text-muted-dark hover:opacity-80 disabled:opacity-50">{t("buildingsId.reporting.orSettle")}</button>
+                ) : (
+                  <span className="rounded-full bg-success-light px-2 py-0.5 text-xs font-medium text-success-text">{t("buildingsId.reporting.orSettled")}</span>
+                )}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="flex flex-wrap items-end gap-2">
+        <input value={form.tenantName} onChange={(e) => setForm({ ...form, tenantName: e.target.value })} placeholder={t("buildingsId.reporting.orTenant")} className="rounded-lg border border-surface-border bg-surface px-3 py-1.5 text-sm text-foreground" />
+        <input value={form.amountChf} onChange={(e) => setForm({ ...form, amountChf: e.target.value })} type="number" placeholder={t("buildingsId.reporting.orAmount")} className="w-28 rounded-lg border border-surface-border bg-surface px-3 py-1.5 text-sm text-foreground" />
+        <input value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} type="date" className="rounded-lg border border-surface-border bg-surface px-3 py-1.5 text-sm text-foreground" />
+        <button onClick={add} disabled={busy} className="rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-50">{t("buildingsId.reporting.orAdd")}</button>
+      </div>
+    </Panel>
+  );
+}
+
 // WS-C: analytical accounting view — equity bridge, KPIs, account movements.
 function BuildingAnalytical({ buildingId }) {
   const { t } = useTranslation("manager");
@@ -893,7 +985,12 @@ function BuildingReportingView({ buildingId }) {
         </div>
       )}
 
-      {reportingTab === 2 && <BuildingBalanceSheet buildingId={buildingId} />}
+      {reportingTab === 2 && (
+        <div className="space-y-4">
+          <BuildingBalanceSheet buildingId={buildingId} />
+          <OpeningReceivablesPanel buildingId={buildingId} />
+        </div>
+      )}
 
       {reportingTab === 3 && <BuildingAnalytical buildingId={buildingId} />}
     </div>

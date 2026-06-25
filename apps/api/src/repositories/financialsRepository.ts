@@ -36,12 +36,13 @@ export async function aggregateOpeningBalanceFromImport(
   buildingId: string,
   accountCode: string,
   asOf: Date,
+  sourceTypes: string[] = ["BALANCE_SHEET_IMPORT"],
 ): Promise<number> {
   const agg = await prisma.ledgerEntry.aggregate({
     where: {
       orgId,
       buildingId,
-      sourceType: "BALANCE_SHEET_IMPORT",
+      sourceType: { in: sourceTypes },
       date: { lte: endOfDayUTC(asOf) },
       account: { code: accountCode },
     },

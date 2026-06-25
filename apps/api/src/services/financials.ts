@@ -231,7 +231,9 @@ export async function getBuildingFinancials(
   // invoice-driven receivables/payables. Receivable = debit balance on 1100;
   // payable = credit balance on 2000 (negate the signed result).
   const [openingArSigned, openingApSigned] = await Promise.all([
-    financialsRepo.aggregateOpeningBalanceFromImport(prisma, orgId, buildingId, "1100", to),
+    // AR nets per-tenant settlements (WS-F) so the figure shrinks as opening
+    // arrears are collected; AP is just the imported lump.
+    financialsRepo.aggregateOpeningBalanceFromImport(prisma, orgId, buildingId, "1100", to, ["BALANCE_SHEET_IMPORT", "OPENING_AR_SETTLEMENT"]),
     financialsRepo.aggregateOpeningBalanceFromImport(prisma, orgId, buildingId, "2000", to),
   ]);
   const openingReceivablesCents = Math.max(0, openingArSigned);

@@ -1519,6 +1519,39 @@ components:
               creditCents: { type: integer }
               closingCents: { type: integer }
 
+    OpeningReceivable:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        buildingId: { type: string, format: uuid }
+        unitId: { type: string, format: uuid, nullable: true }
+        tenantName: { type: string }
+        amountCents: { type: integer }
+        dueDate: { type: string, format: date-time, nullable: true }
+        status: { type: string, enum: [OPEN, SETTLED] }
+        settledAt: { type: string, format: date-time, nullable: true }
+
+    OpeningReceivableReport:
+      type: object
+      properties:
+        buildingId: { type: string, format: uuid }
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/OpeningReceivable' }
+        control:
+          type: object
+          properties:
+            enteredCents: { type: integer }
+            importLumpCents: { type: integer }
+            varianceCents: { type: integer }
+        aging:
+          type: object
+          properties:
+            currentCents: { type: integer }
+            overdue1to30Cents: { type: integer }
+            overdue31to60Cents: { type: integer }
+            overdue61plusCents: { type: integer }
+
     FixedAsset:
       type: object
       properties:
@@ -7849,6 +7882,68 @@ paths:
                     properties:
                       assetsDepreciated: { type: integer }
                       totalCents: { type: integer }
+
+  /opening-receivables:
+    get:
+      tags: [Ledger]
+      summary: Per-tenant opening receivables for a building (items + control total + aging)
+      operationId: getOpeningReceivables
+      parameters:
+        - { name: buildingId, in: query, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Opening-receivable report
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/OpeningReceivableReport' }
+    post:
+      tags: [Ledger]
+      summary: Add a per-tenant opening receivable (MANAGER)
+      operationId: createOpeningReceivable
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [buildingId, tenantName, amountCents]
+              properties:
+                buildingId: { type: string, format: uuid }
+                unitId: { type: string, format: uuid, nullable: true }
+                tenantName: { type: string }
+                amountCents: { type: integer }
+                dueDate: { type: string, format: date, nullable: true }
+      responses:
+        '201':
+          description: The created item
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/OpeningReceivable' }
+
+  /opening-receivables/{id}/settle:
+    post:
+      tags: [Ledger]
+      summary: Record collection of an opening receivable and mark it settled (MANAGER)
+      operationId: settleOpeningReceivable
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: The settled item
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/OpeningReceivable' }
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /coa/seed:
     post:
