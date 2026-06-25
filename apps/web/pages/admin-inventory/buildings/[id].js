@@ -491,6 +491,109 @@ function BuildingPeriodAnalysis({ buildingId }) {
   );
 }
 
+// WS-B: read-only balance sheet (financial position) for one building, as-of a date.
+// Reuses the existing GET /ledger/balance-sheet route — no new backend route.
+function BuildingBalanceSheet({ buildingId }) {
+  const { t } = useTranslation("manager");
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const [asOf, setAsOf] = useState(todayStr);
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const load = useCallback(() => {
+    if (!buildingId) return;
+    setLoading(true);
+    setError("");
+    const params = new URLSearchParams({ buildingId, asOf });
+    fetch(`/api/ledger/balance-sheet?${params}`, { headers: authHeaders() })
+      .then((r) => r.json())
+      .then((d) => {
+        if (d && (d.assets || d.liabilities)) setData(d);
+        else setError(d?.error?.message || t("buildingsId.reporting.failedToLoad"));
+      })
+      .catch(() => setError(t("buildingsId.reporting.failedToLoad")))
+      .finally(() => setLoading(false));
+  }, [buildingId, asOf, t]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const renderLine = (line) => {
+    const isDeduction = line.displayCents < 0;
+    return (
+      <div key={line.accountId} className="flex justify-between gap-3 py-1.5 text-sm border-b border-surface-border/60 last:border-0">
+        <span className="text-muted-dark">{line.accountCode ? `${line.accountCode} · ` : ""}{line.accountName}</span>
+        <span className={cn("font-mono shrink-0", isDeduction ? "text-foreground-dim" : "text-foreground")}>
+          {isDeduction ? `(${rFmtChf(Math.abs(line.displayCents))})` : rFmtChf(line.displayCents)}
+        </span>
+      </div>
+    );
+  };
+
+  const assets = data?.assets ?? [];
+  const liabilities = data?.liabilities ?? [];
+  const differenceCents = data?.differenceCents ?? 0;
+  const hasData = assets.length > 0 || liabilities.length > 0;
+  const resultKey = differenceCents >= 0 ? "bsUnclosedSurplus" : "bsUnclosedDeficit";
+
+  return (
+    <div className="space-y-4">
+      <label className="inline-block text-xs text-muted">
+        {t("buildingsId.reporting.asOf")}
+        <input
+          type="date"
+          value={asOf}
+          max={todayStr}
+          onChange={(e) => setAsOf(e.target.value)}
+          className="block mt-1 rounded-lg border border-surface-border bg-surface px-3 py-1.5 text-sm text-foreground"
+        />
+      </label>
+
+      {error && <p className="text-sm text-destructive-text">{error}</p>}
+      {loading && <p className="text-sm text-muted">{t("buildingsId.reporting.loadingEllipsis")}</p>}
+      {!loading && !error && data && !hasData && (
+        <p className="text-sm text-muted">{t("buildingsId.reporting.bsEmpty")}</p>
+      )}
+
+      {!loading && !error && data && hasData && (
+        <>
+          <div className="grid gap-4 md:grid-cols-2">
+            <Panel>
+              <h3 className="text-sm font-semibold text-foreground mb-2">{t("buildingsId.reporting.bsAssets")}</h3>
+              {assets.map(renderLine)}
+              <div className="flex justify-between pt-2 mt-1 border-t border-surface-border text-sm font-semibold">
+                <span>{t("buildingsId.reporting.bsTotalAssets")}</span>
+                <span className="font-mono">{rFmtChf(data.totalAssetsCents ?? 0)}</span>
+              </div>
+            </Panel>
+            <Panel>
+              <h3 className="text-sm font-semibold text-foreground mb-2">{t("buildingsId.reporting.bsLiabilities")}</h3>
+              {liabilities.map(renderLine)}
+              <div className="flex justify-between pt-2 mt-1 border-t border-surface-border text-sm font-semibold">
+                <span>{t("buildingsId.reporting.bsTotalLiabilities")}</span>
+                <span className="font-mono">{rFmtChf(data.totalLiabilitiesCents ?? 0)}</span>
+              </div>
+            </Panel>
+          </div>
+
+          {/* D1(a): assets − liabilities residual = the period result not yet closed to equity */}
+          {Math.abs(differenceCents) >= 2 && (
+            <div className="flex items-start gap-3 rounded-2xl border border-info-ring bg-info-light px-5 py-4">
+              <span className="mt-0.5 text-info-text text-lg shrink-0">≡</span>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-info-text mb-0.5">
+                  {t(`buildingsId.reporting.${resultKey}`, { amount: rFmtChf(Math.abs(differenceCents)) })}
+                </p>
+                <p className="text-xs text-info-text/80">{t("buildingsId.reporting.bsUnclosedHint")}</p>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
 function BuildingReportingView({ buildingId }) {
   const { t } = useTranslation("manager");
   const [reportingTab, setReportingTab] = useState(0);
@@ -522,7 +625,7 @@ function BuildingReportingView({ buildingId }) {
     <div className="space-y-4">
       {/* Sub-tab strip */}
       <div className="inline-flex rounded-lg border border-surface-border bg-surface-hover p-0.5 gap-0.5">
-        {[t("buildingsId.reporting.periodAnalysis"), t("buildingsId.reporting.performanceCanvas")].map((label, i) => (
+        {[t("buildingsId.reporting.periodAnalysis"), t("buildingsId.reporting.performanceCanvas"), t("buildingsId.reporting.financialPosition")].map((label, i) => (
           <button
             key={label}
             onClick={() => setReportingTab(i)}
@@ -566,6 +669,8 @@ function BuildingReportingView({ buildingId }) {
           )}
         </div>
       )}
+
+      {reportingTab === 2 && <BuildingBalanceSheet buildingId={buildingId} />}
     </div>
   );
 }

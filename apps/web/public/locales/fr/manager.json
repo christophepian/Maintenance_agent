@@ -749,7 +749,17 @@
       "failedToLoad": "Échec du chargement",
       "loadingEllipsis": "Chargement…",
       "periodAnalysis": "Analyse de période",
-      "performanceCanvas": "Canevas de performance"
+      "performanceCanvas": "Canevas de performance",
+      "financialPosition": "Situation financière",
+      "asOf": "Au",
+      "bsEmpty": "Aucune écriture comptable pour cet immeuble. Importez un bilan ou enregistrez des transactions pour alimenter cette vue.",
+      "bsAssets": "Actifs",
+      "bsLiabilities": "Passifs",
+      "bsTotalAssets": "Total des actifs",
+      "bsTotalLiabilities": "Total des passifs",
+      "bsUnclosedSurplus": "{{amount}} de résultat de la période non encore clôturé en fonds propres (excédent)",
+      "bsUnclosedDeficit": "{{amount}} de résultat de la période non encore clôturé en fonds propres (déficit)",
+      "bsUnclosedHint": "Il s'agit des actifs moins les passifs — le résultat d'exploitation cumulé depuis le bilan initial importé, qui n'a pas encore été comptabilisé dans un compte de fonds propres."
     },
     "strategyEditor": {
       "intro": "Définissez la gestion de ce bâtiment — le moteur de recommandation de trésorerie l'utilise pour adapter ses conseils à ce bien.",

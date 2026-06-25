@@ -749,7 +749,17 @@
       "failedToLoad": "Failed to load",
       "loadingEllipsis": "Loading…",
       "periodAnalysis": "Period Analysis",
-      "performanceCanvas": "Performance Canvas"
+      "performanceCanvas": "Performance Canvas",
+      "financialPosition": "Financial position",
+      "asOf": "As of",
+      "bsEmpty": "No ledger activity for this building yet. Import a balance sheet or post transactions to populate this view.",
+      "bsAssets": "Assets (Actifs)",
+      "bsLiabilities": "Liabilities (Passifs)",
+      "bsTotalAssets": "Total assets",
+      "bsTotalLiabilities": "Total liabilities",
+      "bsUnclosedSurplus": "{{amount}} period result not yet closed to equity (surplus)",
+      "bsUnclosedDeficit": "{{amount}} period result not yet closed to equity (deficit)",
+      "bsUnclosedHint": "This is assets minus liabilities — the accumulated operating result since the imported opening balance, which has not yet been posted to an equity account."
     },
     "strategyEditor": {
       "intro": "Set how this building should be managed — the cashflow recommendation engine uses it to tailor advice for this property.",
