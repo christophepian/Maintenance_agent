@@ -118,7 +118,12 @@ export default function PlanningWorkspace({ buildings: allBuildings = [] }) {
       {simItems && (
         <div ref={simRef} className="space-y-4 scroll-mt-4">
           <div className="rounded-2xl border border-surface-border bg-surface overflow-hidden">
+            {/* Key on the simulated selection so a new bundle remounts the drawer
+                with fresh state — otherwise its non-derived state (cost overrides,
+                linked plan, chosen scenario, "scheduled" message) leaks from the
+                previous run (e.g. a whole-building sim into a single-asset sim). */}
             <RenovationSimulatorDrawer
+              key={`${simBuildingId ?? ""}|${simItems.map((i) => i.assetId).join("-")}`}
               embedded
               items={simItems}
               buildingId={simBuildingId}
