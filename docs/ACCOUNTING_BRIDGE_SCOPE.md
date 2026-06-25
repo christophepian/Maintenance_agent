@@ -13,8 +13,12 @@ them. No model is removed.
 | B | Building "Financial position" sub-tab | Building page (stock) | ✅ shipped 2026-06-25 (`bf2feb4`) |
 | E | Year-end closing journals (real equity bridge) | Ledger / accounting | ✅ shipped 2026-06-25 (`7e1fdf3`) |
 | D | CAPEX capitalization + straight-line depreciation | Ledger + asset register | ✅ shipped 2026-06-25 (`43b3e26`) |
-| C | Analytical accounting view (equity bridge + BS trend) | Accounting section | next |
-| F | Per-tenant opening receivables (manual entry, aging, settlement) | Reporting + units | scoped |
+| C | Analytical accounting view (equity bridge + BS trend) | Accounting section | ✅ shipped 2026-06-25 (`519203c`) |
+| F | Per-tenant opening receivables (manual entry, aging, settlement) | Reporting + units | ✅ shipped 2026-06-25 (`2f93e73`) |
+
+**ALL SIX WORKSTREAMS SHIPPED 2026-06-25.** Deferred (noted, not built): balance-sheet
+trend via snapshot columns (on-the-fly only); DSCR KPI; depreciation of the building shell;
+configurable fiscal year-end; consumption metering.
 
 **Build order: E → D → C → F** (closing makes the bridge real; depreciation feeds both
 statements; the analytical view then surfaces real equity + depreciation; per-tenant AR last).
