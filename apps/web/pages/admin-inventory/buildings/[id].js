@@ -501,19 +501,21 @@ function BuildingBalanceSheet({ buildingId }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const load = useCallback(() => {
+  const load = useCallback(async () => {
     if (!buildingId) return;
     setLoading(true);
     setError("");
     const params = new URLSearchParams({ buildingId, asOf });
-    fetch(`/api/ledger/balance-sheet?${params}`, { headers: authHeaders() })
-      .then((r) => r.json())
-      .then((d) => {
-        if (d && (d.assets || d.liabilities)) setData(d);
-        else setError(d?.error?.message || t("buildingsId.reporting.failedToLoad"));
-      })
-      .catch(() => setError(t("buildingsId.reporting.failedToLoad")))
-      .finally(() => setLoading(false));
+    try {
+      const res = await fetch(`/api/ledger/balance-sheet?${params}`, { headers: authHeaders() });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error?.message || t("buildingsId.reporting.failedToLoad"));
+      setData(json.data ?? null);
+    } catch {
+      setError(t("buildingsId.reporting.failedToLoad"));
+    } finally {
+      setLoading(false);
+    }
   }, [buildingId, asOf, t]);
 
   useEffect(() => { load(); }, [load]);
