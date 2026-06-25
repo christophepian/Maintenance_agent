@@ -557,19 +557,13 @@ async function runBackgroundJobsInner() {
   }
 
   try {
-    const invoicesGenerated = await processRecurringBilling(prisma);
-    if (invoicesGenerated > 0) {
-      console.log(`[BG-JOBS] Generated ${invoicesGenerated} recurring invoice(s)`);
-    }
+    await processRecurringBilling(prisma);
   } catch (e) {
     console.error("[BG-JOBS] Recurring billing error:", e);
   }
 
   try {
-    const overdueCount = await processOverdueInvoices(prisma);
-    if (overdueCount > 0) {
-      console.log(`[BG-JOBS] Sent ${overdueCount} overdue invoice notification(s)`);
-    }
+    await processOverdueInvoices(prisma);
   } catch (e) {
     console.error("[BG-JOBS] Overdue invoice error:", e);
   }
@@ -577,13 +571,8 @@ async function runBackgroundJobsInner() {
   try {
     // Compute yesterday's portfolio daily snapshot for all orgs (idempotent — skips if already done)
     const orgs = await prisma.org.findMany({ select: { id: true } });
-    let dailyComputed = 0;
     for (const org of orgs) {
-      const stored = await computeAndStoreDailyPortfolioSnapshot(org.id);
-      if (stored) dailyComputed++;
-    }
-    if (dailyComputed > 0) {
-      console.log(`[BG-JOBS] Stored daily portfolio snapshots for ${dailyComputed} org(s)`);
+      await computeAndStoreDailyPortfolioSnapshot(org.id);
     }
   } catch (e) {
     console.error("[BG-JOBS] Daily portfolio snapshot error:", e);
@@ -591,13 +580,8 @@ async function runBackgroundJobsInner() {
 
   try {
     const buildings = await prisma.building.findMany({ select: { id: true, orgId: true } });
-    let buildingDailyComputed = 0;
     for (const b of buildings) {
-      const stored = await computeAndStoreDailyBuildingSnapshot(b.orgId, b.id);
-      if (stored) buildingDailyComputed++;
-    }
-    if (buildingDailyComputed > 0) {
-      console.log(`[BG-JOBS] Stored daily building snapshots for ${buildingDailyComputed} building(s)`);
+      await computeAndStoreDailyBuildingSnapshot(b.orgId, b.id);
     }
   } catch (e) {
     console.error("[BG-JOBS] Daily building snapshot error:", e);
@@ -608,12 +592,9 @@ async function runBackgroundJobsInner() {
   try {
     const { runDepreciation } = await import("./services/fixedAssetService");
     const orgsForDep = await prisma.org.findMany({ select: { id: true } });
-    let depAssets = 0;
     for (const org of orgsForDep) {
-      const r = await runDepreciation(prisma, org.id);
-      depAssets += r.assetsDepreciated;
+      await runDepreciation(prisma, org.id);
     }
-    if (depAssets > 0) console.log(`[BG-JOBS] Posted depreciation for ${depAssets} asset(s)`);
   } catch (e) {
     console.error("[BG-JOBS] Depreciation run error:", e);
   }
@@ -679,9 +660,6 @@ async function start() {
       process.exit(1);
     }
 
-    const supabaseUrl = process.env.SUPABASE_URL;
-    console.log(`[STARTUP] SUPABASE_URL: ${supabaseUrl ? `set (${supabaseUrl.slice(0, 30)}...)` : "NOT SET — Supabase JWT verification will fail"}`);
-
     await ensureDefaultOrgConfig(prisma);
     await bootstrapLegalEngine(prisma);
     registerEventHandlers(prisma);
@@ -706,7 +684,6 @@ async function start() {
         console.error("[WA-DRAIN] Error:", e);
       }
     }, WA_DRAIN_INTERVAL_MS);
-    console.log("[WA-DRAIN] WhatsApp outbox drain started (interval: 30s)");
   } catch (e) {
     console.error("Failed to start API:", e);
     process.exit(1);

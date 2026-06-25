@@ -10,7 +10,7 @@
  * posted via ledgerService.postJournalEntries.
  */
 
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, FiscalPeriodClose } from "@prisma/client";
 import { ConflictError, NotFoundError, ValidationError } from "../http/errors";
 import { postJournalEntries, JournalLeg } from "./ledgerService";
 import {
@@ -36,7 +36,7 @@ export interface FiscalCloseDTO {
   reversedAt: string | null;
 }
 
-function mapClose(c: any): FiscalCloseDTO {
+function mapClose(c: FiscalPeriodClose): FiscalCloseDTO {
   return {
     id: c.id,
     buildingId: c.buildingId,

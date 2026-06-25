@@ -15,8 +15,20 @@
  * Layering: all Prisma via repositories (G20); journals via ledgerService.
  */
 
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, FixedAsset } from "@prisma/client";
 import { postJournalEntries } from "./ledgerService";
+
+/** The invoice fields capitalization reads (subset of InvoiceDTO). */
+interface CapitalizableInvoice {
+  id: string;
+  invoiceNumber?: string | null;
+  expenseCategory?: string | null;
+  totalAmount?: number;
+  buildingId?: string | null;
+  unitId?: string | null;
+  accountId?: string | null;
+  issueDate?: string | null;
+}
 import {
   findAccountByOrgAndCode,
   upsertAccount,
@@ -45,7 +57,7 @@ export interface FixedAssetDTO {
   status: string;
 }
 
-function mapAsset(a: any): FixedAssetDTO {
+function mapAsset(a: FixedAsset): FixedAssetDTO {
   return {
     id: a.id,
     buildingId: a.buildingId,
@@ -88,14 +100,12 @@ function monthsElapsed(from: Date, to: Date): number {
 export async function capitalizeInvoice(
   prisma: PrismaClient,
   orgId: string,
-  invoice: any,
+  invoice: CapitalizableInvoice,
 ): Promise<FixedAssetDTO | null> {
   if ((invoice?.expenseCategory ?? "") !== "CAPEX") return null;
+  // Best-effort: silently skip when not attributable / not yet collectible.
   const buildingId: string | null = invoice.buildingId ?? null;
-  if (!buildingId) {
-    console.warn(`[FIXED-ASSET] Skip capitalize ${invoice.id} — no building attribution`);
-    return null;
-  }
+  if (!buildingId) return null;
   const existing = await repo.findBySourceInvoice(prisma, orgId, invoice.id);
   if (existing) return mapAsset(existing);
 
@@ -106,10 +116,7 @@ export async function capitalizeInvoice(
   const expenseAcc = invoice.accountId
     ? await findAccountByIdAndOrg(prisma, invoice.accountId, orgId)
     : await findAccountByOrgAndCode(prisma, orgId, DEFAULT_EXPENSE_CODE);
-  if (!expenseAcc) {
-    console.warn(`[FIXED-ASSET] Skip capitalize ${invoice.id} — expense account not found`);
-    return null;
-  }
+  if (!expenseAcc) return null;
 
   const date = invoice.issueDate ? new Date(invoice.issueDate) : new Date();
   const ref = invoice.invoiceNumber || invoice.id;

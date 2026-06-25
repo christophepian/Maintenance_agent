@@ -291,7 +291,7 @@ export async function createExpenseMapping(
       buildingId: data.buildingId ?? null,
     });
     return mapExpenseMapping(mapping);
-  } catch (e: any) {
+  } catch (e) {
     if (e.code === "P2002") {
       throw new ConflictError(
         "An expense mapping for this expense type and building already exists",
@@ -463,7 +463,7 @@ export async function seedSwissTaxonomy(
         buildingId: null,
       });
       mappingsCreated++;
-    } catch (e: any) {
+    } catch (e) {
       if (e.code !== "P2002") throw e; // race-condition safety
     }
   }

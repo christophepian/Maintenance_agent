@@ -10,7 +10,7 @@
  * Layering: Prisma via repositories (G20); journals via ledgerService.
  */
 
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, OpeningReceivable } from "@prisma/client";
 import { ConflictError, NotFoundError, ValidationError } from "../http/errors";
 import { postJournalEntries } from "./ledgerService";
 import { findAccountByOrgAndCode, upsertAccount } from "../repositories/accountRepository";
@@ -32,7 +32,7 @@ export interface OpeningReceivableDTO {
   settledAt: string | null;
 }
 
-function mapItem(r: any): OpeningReceivableDTO {
+function mapItem(r: OpeningReceivable): OpeningReceivableDTO {
   return {
     id: r.id,
     buildingId: r.buildingId,

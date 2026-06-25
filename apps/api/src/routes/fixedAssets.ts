@@ -28,7 +28,7 @@ export function registerFixedAssetRoutes(router: Router) {
   router.post("/fixed-assets/run-depreciation", async ({ req, res, orgId, prisma }) => {
     if (!requireAuth(req, res)) return;
     if (!requireAnyRole(req, res, ["MANAGER"])) return;
-    let body: any = {};
+    let body: { asOf?: string } = {};
     try { body = await readJson(req); } catch { /* body optional */ }
     const asOf = body?.asOf ? new Date(body.asOf) : new Date();
     if (isNaN(asOf.getTime())) return sendError(res, 400, "VALIDATION_ERROR", "Invalid asOf date");

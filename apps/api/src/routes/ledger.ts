@@ -17,7 +17,7 @@ import { Router } from "../http/router";
 import { sendError, sendJson } from "../http/json";
 import { readJson } from "../http/body";
 import { parseQuery, first, getIntParam } from "../http/query";
-import { requireAuth, requireAnyRole } from "../authz";
+import { requireAuth, requireAnyRole, getAuthUser } from "../authz";
 import { requireOrgViewer } from "./helpers";
 import {
   listLedgerEntries,
@@ -66,7 +66,7 @@ export function registerLedgerRoutes(router: Router) {
         data: result.data,
         pagination: { total: result.total, limit: filters.limit, offset: filters.offset },
       });
-    } catch (e: any) {
+    } catch (e) {
       console.error("[GET /ledger]", e);
       sendError(res, 500, "INTERNAL_ERROR", "Failed to load ledger");
     }
@@ -88,7 +88,7 @@ export function registerLedgerRoutes(router: Router) {
     try {
       const data = await getTrialBalance(prisma, orgId, periodFilter);
       sendJson(res, 200, { data });
-    } catch (e: any) {
+    } catch (e) {
       console.error("[GET /ledger/trial-balance]", e);
       sendError(res, 500, "INTERNAL_ERROR", "Failed to load trial balance");
     }
@@ -112,7 +112,7 @@ export function registerLedgerRoutes(router: Router) {
     try {
       const data = await getBalanceSheet(prisma, orgId, buildingId, asOf);
       sendJson(res, 200, { data });
-    } catch (e: any) {
+    } catch (e) {
       console.error("[GET /ledger/balance-sheet]", e);
       sendError(res, 500, "INTERNAL_ERROR", "Failed to load balance sheet");
     }
@@ -138,7 +138,7 @@ export function registerLedgerRoutes(router: Router) {
         return;
       }
       sendJson(res, 200, { data });
-    } catch (e: any) {
+    } catch (e) {
       console.error("[GET /ledger/accounts/:accountId/balance]", e);
       sendError(res, 500, "INTERNAL_ERROR", "Failed to load account balance");
     }
@@ -173,7 +173,7 @@ export function registerLedgerRoutes(router: Router) {
               { invoiceId: invId },
             );
             invoicesIssued++;
-          } catch (e: any) {
+          } catch (e) {
             // Missing billing entity, already issued, etc. — skip gracefully
             console.warn(`[BACKFILL] Skipping DRAFT invoice ${invId}: ${e.message}`);
             invoicesIssuedErrors++;
@@ -213,7 +213,7 @@ export function registerLedgerRoutes(router: Router) {
           ledgerPaidSkipped,
         },
       });
-    } catch (e: any) {
+    } catch (e) {
       console.error("[POST /ledger/backfill]", e);
       sendError(res, 500, "INTERNAL_ERROR", "Backfill failed");
     }
@@ -250,7 +250,7 @@ export function registerLedgerRoutes(router: Router) {
     const buildingId = body?.buildingId;
     const fiscalYear = Number(body?.fiscalYear);
     if (!buildingId) return sendError(res, 400, "MISSING_PARAM", "buildingId is required");
-    const userId = (req as any).user?.userId ?? null;
+    const userId = getAuthUser(req)?.userId ?? null;
     const data = await closeFiscalYear(prisma, orgId, buildingId, fiscalYear, userId);
     sendJson(res, 200, { data });
   });
@@ -263,7 +263,7 @@ export function registerLedgerRoutes(router: Router) {
     const buildingId = body?.buildingId;
     const fiscalYear = Number(body?.fiscalYear);
     if (!buildingId) return sendError(res, 400, "MISSING_PARAM", "buildingId is required");
-    const userId = (req as any).user?.userId ?? null;
+    const userId = getAuthUser(req)?.userId ?? null;
     const data = await reopenFiscalYear(prisma, orgId, buildingId, fiscalYear, userId);
     sendJson(res, 200, { data });
   });

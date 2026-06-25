@@ -10,7 +10,7 @@ import { Router } from "../http/router";
 import { sendError, sendJson } from "../http/json";
 import { readJson } from "../http/body";
 import { parseQuery, first } from "../http/query";
-import { requireAuth, requireAnyRole } from "../authz";
+import { requireAuth, requireAnyRole, getAuthUser } from "../authz";
 import { requireOrgViewer } from "./helpers";
 import {
   createOpeningReceivable,
@@ -49,7 +49,7 @@ export function registerOpeningReceivableRoutes(router: Router) {
   router.post("/opening-receivables/:id/settle", async ({ req, res, params, orgId, prisma }) => {
     if (!requireAuth(req, res)) return;
     if (!requireAnyRole(req, res, ["MANAGER"])) return;
-    const userId = (req as any).user?.userId ?? null;
+    const userId = getAuthUser(req)?.userId ?? null;
     const data = await settleOpeningReceivable(prisma, orgId, params.id, userId);
     sendJson(res, 200, { data });
   });
