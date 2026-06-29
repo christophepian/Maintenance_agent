@@ -30,6 +30,14 @@ export const UpdateUnitSchema = z.object({
   monthlyRentChf: z.number().int().min(0).max(100000).nullable().optional(),
   monthlyChargesChf: z.number().int().min(0).max(50000).nullable().optional(),
 
+  // Valeur intrinsèque worksheet
+  intrinsicPricePerSqmChf: z.number().nonnegative().nullable().optional(),
+  vetustePct: z.number().min(0).max(100).nullable().optional(),
+  gardenAreaSqm: z.number().nonnegative().nullable().optional(),
+  gardenWeightPct: z.number().min(0).max(100).nullable().optional(),
+  extParkingValueChf: z.number().nonnegative().nullable().optional(),
+  garageValueChf: z.number().nonnegative().nullable().optional(),
+
   // Listings
   isListedPublicly: z.boolean().optional(),
 });

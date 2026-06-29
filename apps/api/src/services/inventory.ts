@@ -37,6 +37,20 @@ export async function updateBuilding(
     hasElevator?: boolean;
     hasConcierge?: boolean;
     managedSince?: Date | null;
+    houseRulesText?: string | null;
+    parcelNumber?: string | null;
+    easementsText?: string | null;
+    ecaVolumeM3?: number | null;
+    netAreaSqm?: number | null;
+    weightedAreaSqm?: number | null;
+    lotsApartments?: number | null;
+    lotsGarages?: number | null;
+    lotsExteriorParking?: number | null;
+    constructionDate?: Date | null;
+    lastRenovationDate?: Date | null;
+    fiscalValueChf?: number | null;
+    insuranceValueChf?: number | null;
+    ppeEstimateChf?: number | null;
   }
 ) {
   const existing = await inventoryRepo.findBuildingByIdAndOrg(prisma, buildingId, orgId);
@@ -106,6 +120,12 @@ export async function updateUnit(
     heatingType?: HeatingType;
     monthlyRentChf?: number | null;
     monthlyChargesChf?: number | null;
+    intrinsicPricePerSqmChf?: number | null;
+    vetustePct?: number | null;
+    gardenAreaSqm?: number | null;
+    gardenWeightPct?: number | null;
+    extParkingValueChf?: number | null;
+    garageValueChf?: number | null;
     isListedPublicly?: boolean;
   }
 ) {
@@ -117,6 +137,18 @@ export async function updateUnit(
 
 export async function getUnitById(orgId: string, unitId: string) {
   return inventoryRepo.findUnitByIdAndOrg(prisma, unitId, orgId);
+}
+
+export async function getMarketPriceByZip(orgId: string, postalCode: string) {
+  if (!postalCode) return null;
+  return inventoryRepo.findMarketPriceByZip(prisma, orgId, postalCode);
+}
+
+export async function upsertMarketPriceByZip(
+  orgId: string,
+  data: { postalCode: string; city?: string | null; pricePerSqmChf: number; source?: string | null; asOf?: Date | null },
+) {
+  return inventoryRepo.upsertMarketPriceByZip(prisma, orgId, data);
 }
 
 export async function deactivateUnit(orgId: string, unitId: string) {

@@ -454,10 +454,31 @@
   "buildingsId": {
     "heading": {
       "ownershipManagement": "Propriété & Gestion",
+      "cadastralValuation": "Cadastre & estimations",
       "managementGuidelines": "Directives de gestion",
       "residentialUnits": "Unités résidentielles",
       "commonAreas": "Parties communes",
       "leaseTemplate": "Modèle de bail"
+    },
+    "fields": {
+      "etatLocatifNetChf": "État locatif net (annuel)",
+      "etatLocatifNetHint": "Calculé à partir des baux actifs (loyer net × 12).",
+      "parcelNumber": "Parcelle",
+      "easementsText": "Servitudes actives et passives",
+      "constructionDate": "Date de construction",
+      "lastRenovationDate": "Date de rénovation",
+      "ecaVolumeM3": "Volume ECA (m³)",
+      "netAreaSqm": "Surface nette (m²)",
+      "weightedAreaSqm": "Surface pondérée (m²)",
+      "lotsApartments": "Lots — appartements",
+      "lotsGarages": "Lots — garages",
+      "lotsExteriorParking": "Lots — places extérieures",
+      "fiscalValueChf": "Estimation fiscale (CHF)",
+      "insuranceValueChf": "Valeur d'assurance (CHF)",
+      "ppeEstimateChf": "Estimation en PPE (CHF)",
+      "marketPricePerSqm": "Prix du marché (CHF/m²)",
+      "marketPriceHint": "Prix de référence pour le code postal {{zip}} — partagé par tous les immeubles de ce NPA.",
+      "marketPriceNoZip": "Renseignez d'abord un code postal"
     },
     "placeholder": {
       "buildingName": "Nom de l'immeuble",
@@ -481,7 +502,7 @@
       "backToInventory": "Retour à l'inventaire"
     },
     "tabs": {
-      "buildingInformation": "Informations immeuble",
+      "buildingInformation": "Aperçu",
       "units": "Unités",
       "tenants": "Locataires",
       "assets": "Équipements",
@@ -891,6 +912,7 @@
       "sortSchedules": "Trier les calendriers"
     },
     "tabs": {
+      "overview": "Aperçu",
       "active": "Actif",
       "paused": "En pause",
       "completed": "Terminé",

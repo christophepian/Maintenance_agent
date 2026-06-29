@@ -220,6 +220,78 @@ function UnitPeriodAnalysis({ unitId }) {
     </div>
   );
 }
+// Valeur intrinsèque worksheet — habitation/garden valued from livingAreaSqm × prix/m²,
+// vétusté a % discount, parking/garage flat lines. Mirrors the backend
+// computeUnitIntrinsicValue (apps/api/src/services/unitValuation.ts) — keep in sync.
+const UNIT_VALUATION_FIELDS = [
+  { key: "intrinsicPricePerSqmChf", label: "Price / m² (CHF)" },
+  { key: "vetustePct", label: "Vétusté (%)" },
+  { key: "gardenAreaSqm", label: "Garden area (m²)" },
+  { key: "gardenWeightPct", label: "Garden weighting (%)" },
+  { key: "extParkingValueChf", label: "Exterior parking (CHF)" },
+  { key: "garageValueChf", label: "Garage (CHF)" },
+];
+const DEFAULT_GARDEN_WEIGHT_PCT = 10;
+
+function unitToValuationForm(u) {
+  const out = {};
+  for (const f of UNIT_VALUATION_FIELDS) out[f.key] = u?.[f.key] ?? "";
+  return out;
+}
+
+// Compute the intrinsic-value breakdown from raw (string or number) inputs.
+function computeIntrinsic({ livingAreaSqm, intrinsicPricePerSqmChf, vetustePct, gardenAreaSqm, gardenWeightPct, extParkingValueChf, garageValueChf }) {
+  const n = (v) => (v === "" || v == null || !Number.isFinite(Number(v)) ? 0 : Number(v));
+  const pricePerSqm = n(intrinsicPricePerSqmChf);
+  const habitation = n(livingAreaSqm) * pricePerSqm;
+  const vetuste = habitation * (n(vetustePct) / 100);
+  const gardenWeight = (gardenWeightPct === "" || gardenWeightPct == null ? DEFAULT_GARDEN_WEIGHT_PCT : Number(gardenWeightPct)) / 100;
+  const garden = n(gardenAreaSqm) * pricePerSqm * gardenWeight;
+  const extParking = n(extParkingValueChf);
+  const garage = n(garageValueChf);
+  return { habitation, vetuste, garden, extParking, garage, intrinsic: habitation - vetuste + garden + extParking + garage };
+}
+
+// Renders the valeur intrinsèque line items + total from a computeIntrinsic() result.
+function IntrinsicBreakdown({ b, livingAreaSqm }) {
+  const row = (label, value, sign) => (
+    <div className="flex items-center justify-between py-1 text-sm">
+      <span className="text-muted-dark">{label}</span>
+      <span className="tabular-nums text-foreground">{sign === "-" ? "− " : ""}{formatChf(Math.abs(value))}</span>
+    </div>
+  );
+  return (
+    <div className="rounded-lg border border-surface-border bg-surface-subtle p-4">
+      {row(`Habitation${livingAreaSqm ? ` (${livingAreaSqm} m²)` : ""}`, b.habitation)}
+      {b.vetuste > 0 && row("Vétusté", b.vetuste, "-")}
+      {b.garden > 0 && row("Jardin (pondéré)", b.garden)}
+      {b.extParking > 0 && row("Parking extérieur", b.extParking)}
+      {b.garage > 0 && row("Garage", b.garage)}
+      <div className="flex items-center justify-between border-t border-surface-border mt-2 pt-2">
+        <span className="text-sm font-semibold text-foreground">Valeur intrinsèque</span>
+        <span className="text-base font-bold tabular-nums text-foreground">{formatChf(b.intrinsic)}</span>
+      </div>
+    </div>
+  );
+}
+
+// Market estimate reference (area × zip CHF/m²) — shown alongside, NOT inside,
+// the valeur intrinsèque. Null estimate → renders nothing.
+function MarketEstimateLine({ estimateChf, pricePerSqmChf, asOf }) {
+  if (estimateChf == null) return null;
+  return (
+    <div className="mt-2 flex items-center justify-between rounded-lg border border-dashed border-surface-border px-4 py-2">
+      <div>
+        <span className="text-sm text-muted-dark">Estimation marché</span>
+        <span className="text-xs text-muted-text ml-2">
+          {formatChf(pricePerSqmChf)}/m²{asOf ? ` · ${formatDate(asOf)}` : ""}
+        </span>
+      </div>
+      <span className="text-sm font-semibold tabular-nums text-muted-dark">{formatChf(estimateChf)}</span>
+    </div>
+  );
+}
+
 export default function UnitDetail() {
   const { t } = useTranslation("manager");
   const router = useRouter();
@@ -270,6 +342,7 @@ export default function UnitDetail() {
   const [editHeatingType, setEditHeatingType] = useState("");
   const [editMonthlyRent, setEditMonthlyRent] = useState("");
   const [editMonthlyCharges, setEditMonthlyCharges] = useState("");
+  const [editValuation, setEditValuation] = useState({}); // valeur intrinsèque inputs
   const [rentEstimate, setRentEstimate] = useState(null);
   const [estimateLoading, setEstimateLoading] = useState(false);
   const [estimateError, setEstimateError] = useState(null);
@@ -405,6 +478,7 @@ export default function UnitDetail() {
       setEditHeatingType(u.heatingType || "");
       setEditMonthlyRent(u.monthlyRentChf ?? "");
       setEditMonthlyCharges(u.monthlyChargesChf ?? "");
+      setEditValuation(unitToValuationForm(u));
       await loadTenants();
       await loadAllTenants();
       await loadAssetModels();
@@ -635,6 +709,12 @@ export default function UnitDetail() {
         heatingType: editHeatingType || undefined,
         monthlyRentChf: editMonthlyRent !== "" ? Number(editMonthlyRent) : null,
         monthlyChargesChf: editMonthlyCharges !== "" ? Number(editMonthlyCharges) : null,
+        ...Object.fromEntries(
+          UNIT_VALUATION_FIELDS.map((f) => {
+            const raw = (editValuation[f.key] ?? "").toString().trim();
+            return [f.key, raw === "" ? null : Number(raw)];
+          }),
+        ),
       };
       const data = await fetchJSON(`/units/${id}`, {
         method: "PATCH",
@@ -730,6 +810,17 @@ export default function UnitDetail() {
   const occupancyVariant = occupancyStatus === "OCCUPIED" ? "success" : occupancyStatus === "LISTED" ? "info" : "destructive";
   const orgModels = assetModels.filter((m) => m.orgId);
 
+  // Valeur intrinsèque: live (from edit inputs) while editing, saved (from unit) otherwise.
+  const liveValuation = computeIntrinsic({ livingAreaSqm: editLivingArea, ...editValuation });
+  const savedValuation = computeIntrinsic({ livingAreaSqm: unit?.livingAreaSqm, ...(unit || {}) });
+
+  // Market estimate (reference, from the building's zip) — distinct from intrinsic value.
+  const marketEst = unit?.marketEstimate || null;
+  const marketArea = editMode && editLivingArea !== "" ? Number(editLivingArea) : unit?.livingAreaSqm;
+  const marketEstimateChf = marketEst && marketArea != null && Number.isFinite(Number(marketArea))
+    ? Number(marketArea) * marketEst.pricePerSqmChf
+    : null;
+
   if (loading) {
     return (
       <AppShell role={isOwner ? "OWNER" : "MANAGER"}>
@@ -765,7 +856,7 @@ export default function UnitDetail() {
               <button key={tab} type="button"
                 className={activeTab === tab ? "tab-btn-active" : "tab-btn"}
                 onClick={() => setActiveTab(tab)}>
-                {tab}
+                {tab === "Details" ? t("manager:unitsId.tabs.overview") : tab}
               </button>
             ))}
           </ScrollableTabs>
@@ -793,6 +884,7 @@ export default function UnitDetail() {
                     setEditHeatingType(unit?.heatingType || "");
                     setEditMonthlyRent(unit?.monthlyRentChf ?? "");
                     setEditMonthlyCharges(unit?.monthlyChargesChf ?? "");
+                    setEditValuation(unitToValuationForm(unit));
                   }}>
                   Cancel
                 </button>
@@ -884,6 +976,29 @@ export default function UnitDetail() {
                 </label>
               </div>
             </div>
+
+            {/* ── Valeur intrinsèque worksheet ── */}
+            <div className="mt-5 pt-4 border-t border-surface-border">
+              <h3 className="text-sm font-semibold text-foreground mb-3">Valeur intrinsèque</h3>
+              <div className="grid grid-cols-2 gap-4">
+                {UNIT_VALUATION_FIELDS.map((f) => (
+                  <div key={f.key} className="grid gap-1.5">
+                    <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{f.label}</span>
+                    <input
+                      className="filter-input w-full"
+                      type="number"
+                      step="any"
+                      min="0"
+                      value={editValuation[f.key] ?? ""}
+                      onChange={(e) => setEditValuation((s) => ({ ...s, [f.key]: e.target.value }))}
+                      placeholder={f.key === "gardenWeightPct" ? String(DEFAULT_GARDEN_WEIGHT_PCT) : ""}
+                    />
+                  </div>
+                ))}
+              </div>
+              <IntrinsicBreakdown b={liveValuation} livingAreaSqm={editLivingArea} />
+              {marketEst && <MarketEstimateLine estimateChf={marketEstimateChf} pricePerSqmChf={marketEst.pricePerSqmChf} asOf={marketEst.asOf} />}
+            </div>
           </div>
         ) : (
           <div className="mb-4">
@@ -958,6 +1073,15 @@ export default function UnitDetail() {
                 </div>
               </div>
             </div>
+
+            {/* ── Valeur intrinsèque ── */}
+            {(savedValuation.intrinsic > 0 || marketEst) && (
+              <div className="mt-5 pt-4 border-t border-surface-border">
+                <h3 className="text-sm font-semibold text-foreground mb-3">Valeur intrinsèque</h3>
+                {savedValuation.intrinsic > 0 && <IntrinsicBreakdown b={savedValuation} livingAreaSqm={unit?.livingAreaSqm} />}
+                {marketEst && <MarketEstimateLine estimateChf={marketEstimateChf} pricePerSqmChf={marketEst.pricePerSqmChf} asOf={marketEst.asOf} />}
+              </div>
+            )}
           </div>
         )}
         <button type="button" className="px-4 py-2 rounded-lg border-none bg-red-600 hover:bg-red-700 text-white cursor-pointer font-semibold text-sm" onClick={onDeactivateUnit} disabled={loading}>

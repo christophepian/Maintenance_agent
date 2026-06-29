@@ -5,21 +5,21 @@
 
 ## Database Schema (Prisma)
 
-**Status: ACTIVE AND IN USE — 127 migrations** (shadow DB replay verified clean 2026-03-30)
+**Status: ACTIVE AND IN USE — 130 migrations** (shadow DB replay verified clean 2026-03-30)
 
-**Last verified:** 2026-06-23
+**Last verified:** 2026-06-29
 
-### Models (92 total)
+### Models (96 total)
 
 | Model | Key Fields | Relations |
 |-------|-----------|-----------|
 | **Org** | id, name, mode (MANAGED/OWNER_DIRECT) | → OrgConfig, Users, Buildings, Contractors, ... |
 | **OrgConfig** | orgId, autoApproveLimit, **autoLegalRouting** (Boolean, default false), landlord fields | → Org |
 | **User** | orgId, role (TENANT/CONTRACTOR/MANAGER/OWNER), email, passwordHash | → Org, BuildingOwners |
-| **Building** | orgId, name, address, isActive, managedSince?, canton?, cantonDerivedAt?, yearBuilt?, hasElevator, hasConcierge | → Units, BuildingConfig, ApprovalRules, Notifications, BuildingOwners |
+| **Building** | orgId, name, address, city?, postalCode?, isActive, managedSince?, canton?, cantonDerivedAt?, yearBuilt?, hasElevator, hasConcierge, marketValueChf? (valeur vénale), **cadastral/valuation:** parcelNumber?, easementsText?, ecaVolumeM3?, netAreaSqm?, weightedAreaSqm?, lotsApartments?/lotsGarages?/lotsExteriorParking?, constructionDate?, lastRenovationDate?, fiscalValueChf?, insuranceValueChf?, ppeEstimateChf? (état locatif net = COMPUTED Σ active-lease netRentChf×12) | → Units, BuildingConfig, ApprovalRules, Notifications, BuildingOwners |
 | **BuildingOwner** | id, buildingId, userId, createdAt; @@unique([buildingId, userId]), @@index([buildingId]), @@index([userId]) | → Building, User |
 | **BuildingConfig** | buildingId, orgId, autoApproveLimit, emergencyAutoDispatch, requireOwnerApprovalAbove?, rfpDefaultInviteCount?, rentalIncomeMultiplier?, rentalSignatureDeadlineDays?, rentalManualReviewConfidenceThreshold? | → Building, Org |
-| **Unit** | buildingId, orgId, unitNumber, floor, type (RESIDENTIAL/COMMON_AREA), isActive, isVacant, monthlyRentChf?, monthlyChargesChf?, livingAreaSqm?, rooms?, hasBalcony, hasTerrace, hasParking, locationSegment?, lastRenovationYear?, insulationQuality?, energyLabel?, heatingType? | → Building, Occupancies, Appliances, Requests, Leases, UnitConfig, Assets, Rfps |
+| **Unit** | buildingId, orgId, unitNumber, floor, type (RESIDENTIAL/COMMON_AREA), isActive, isVacant, monthlyRentChf?, monthlyChargesChf?, livingAreaSqm?, rooms?, hasBalcony, hasTerrace, hasParking, locationSegment?, lastRenovationYear?, insulationQuality?, energyLabel?, heatingType?, **valeur intrinsèque inputs:** intrinsicPricePerSqmChf?, vetustePct?, gardenAreaSqm?, gardenWeightPct?, extParkingValueChf?, garageValueChf? (intrinsic value = COMPUTED, services/unitValuation.ts) | → Building, Occupancies, Appliances, Requests, Leases, UnitConfig, Assets, Rfps |
 | **UnitConfig** | unitId, orgId, autoApproveLimit, emergencyAutoDispatch, requireOwnerApprovalAbove? | → Unit, Org |
 | **Tenant** | orgId, name, phone (E.164), email, isActive | → Occupancies, Requests |
 | **Occupancy** | tenantId, unitId (unique pair) | → Tenant, Unit |
@@ -46,6 +46,7 @@
 | **EmailOutbox** | orgId, template (EmailTemplate), toEmail, subject, bodyText, status (EmailOutboxStatus), metaJson? | → Org |
 | **BuildingFinancialSnapshot** | orgId, buildingId, periodStart, periodEnd, **collectedIncomeCents** (cash; was earnedIncomeCents), **accruedIncomeCents** (accrual; was projectedIncomeCents), expensesTotalCents, maintenanceTotalCents, capexTotalCents, operatingTotalCents, netIncomeCents, netOperatingIncomeCents, activeUnitsCount, computedAt | → Org, Building |
 | **RentEstimationConfig** | orgId, canton?, baseRentPerSqmChfMonthly, locationCoefs (prime/standard/periphery), ageCoefs (new/mid/old/veryOld), energyCoefJson (Json), chargesBase (optimistic/pessimistic), heatingChargeAdjJson (Json), serviceChargeAdj (elevator/concierge), chargesMinClamp, chargesMaxClamp | → Org |
+| **MarketPricePerZip** | orgId, postalCode, city?, pricePerSqmChf, source?, asOf? — manual/seeded reference market price (NOT scraped); unique (orgId, postalCode); drives unit "market estimate" reference distinct from valeur intrinsèque | → Org |
 | **LegalSource** | name, jurisdiction, **scope** (LegalSourceScope, default FEDERAL), url?, updateFrequency?, fetcherType?, parserType?, status (LegalSourceStatus), lastCheckedAt?, lastSuccessAt?, lastError? | → LegalVariableVersions, DepreciationStandards |
 | **LegalVariable** | key (unique per jurisdiction+canton), jurisdiction, canton?, unit?, description? | → LegalVariableVersions |
 | **LegalVariableVersion** | variableId, effectiveFrom, effectiveTo?, valueJson (Json), sourceId?, fetchedAt? | → LegalVariable, LegalSource |

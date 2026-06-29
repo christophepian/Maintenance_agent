@@ -454,10 +454,31 @@
   "buildingsId": {
     "heading": {
       "ownershipManagement": "Ownership & Management",
+      "cadastralValuation": "Cadastral & Valuation",
       "managementGuidelines": "Management Guidelines",
       "residentialUnits": "Residential Units",
       "commonAreas": "Common Areas",
       "leaseTemplate": "Lease Template"
+    },
+    "fields": {
+      "etatLocatifNetChf": "Net rent roll (annual)",
+      "etatLocatifNetHint": "Computed from active leases (net rent × 12).",
+      "parcelNumber": "Parcel",
+      "easementsText": "Easements (active & passive)",
+      "constructionDate": "Construction date",
+      "lastRenovationDate": "Renovation date",
+      "ecaVolumeM3": "ECA volume (m³)",
+      "netAreaSqm": "Net area (m²)",
+      "weightedAreaSqm": "Weighted area (m²)",
+      "lotsApartments": "Lots — apartments",
+      "lotsGarages": "Lots — garages",
+      "lotsExteriorParking": "Lots — exterior parking",
+      "fiscalValueChf": "Fiscal valuation (CHF)",
+      "insuranceValueChf": "Insurance value (CHF)",
+      "ppeEstimateChf": "PPE estimate (CHF)",
+      "marketPricePerSqm": "Market price (CHF/m²)",
+      "marketPriceHint": "Reference price for postal code {{zip}} — shared by all buildings in this zip.",
+      "marketPriceNoZip": "Set a postal code first"
     },
     "placeholder": {
       "buildingName": "Building name",
@@ -481,7 +502,7 @@
       "backToInventory": "Back to Inventory"
     },
     "tabs": {
-      "buildingInformation": "Building information",
+      "buildingInformation": "Overview",
       "units": "Units",
       "tenants": "Tenants",
       "assets": "Assets",
@@ -891,6 +912,7 @@
       "sortSchedules": "Sort schedules"
     },
     "tabs": {
+      "overview": "Overview",
       "active": "Active",
       "paused": "Paused",
       "completed": "Completed",

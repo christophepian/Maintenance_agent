@@ -1879,6 +1879,19 @@ components:
           type: array
           items: { $ref: '#/components/schemas/CreditNoteLineDTO' }
 
+    MarketPriceDTO:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        orgId: { type: string, format: uuid }
+        postalCode: { type: string }
+        city: { type: string, nullable: true }
+        pricePerSqmChf: { type: number }
+        source: { type: string, nullable: true }
+        asOf: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
 # ──────────────────────────────────────────────────────────────
 # Paths
 # ──────────────────────────────────────────────────────────────
@@ -4446,6 +4459,61 @@ paths:
       responses:
         '204':
           description: Deleted
+
+  /market-prices:
+    put:
+      tags: [Inventory]
+      summary: Upsert the reference market price (CHF/m²) for a postal code
+      description: >
+        Manually maintained / seeded reference market purchase price per m², keyed
+        by postal code (org-scoped). Not scraped. Drives the unit "market estimate"
+        reference shown alongside the valeur intrinsèque.
+      operationId: upsertMarketPrice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [postalCode, pricePerSqmChf]
+              properties:
+                postalCode: { type: string }
+                city: { type: string, nullable: true }
+                pricePerSqmChf: { type: number }
+                source: { type: string, nullable: true }
+                asOf: { type: string, format: date-time, nullable: true }
+      responses:
+        '200':
+          description: Saved market price
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/MarketPriceDTO' }
+
+  /market-prices/{postalCode}:
+    get:
+      tags: [Inventory]
+      summary: Get the reference market price for a postal code
+      operationId: getMarketPriceByZip
+      parameters:
+        - name: postalCode
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Market price (or null if none on file)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: '#/components/schemas/MarketPriceDTO'
+                      - type: 'null'
 
   /units/{id}/repair-replace-analysis:
     get:

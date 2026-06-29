@@ -16,6 +16,8 @@ import {
   updateUnit,
   deactivateUnit,
   getUnitById,
+  getMarketPriceByZip,
+  upsertMarketPriceByZip,
   listAssetModels,
   createAssetModel,
   updateAssetModel,
@@ -30,7 +32,7 @@ import { listContractors } from "../services/contractorRequests";
 import { listTenants, createOrGetTenant } from "../services/tenants";
 import { propertyFromBuilding } from "../services/adapters/propertyAdapter";
 import { contactFromTenant, contactFromContractor } from "../services/adapters/contactAdapter";
-import { CreateBuildingSchema, UpdateBuildingSchema } from "../validation/buildings";
+import { CreateBuildingSchema, UpdateBuildingSchema, UpsertMarketPriceSchema } from "../validation/buildings";
 import { CreateUnitSchema, UpdateUnitSchema } from "../validation/units";
 import { CreateAssetModelSchema, UpdateAssetModelSchema } from "../validation/assetModels";
 import { UpsertAssetSchema, AddInterventionSchema, PatchAssetSchema } from "../validation/assets";
@@ -43,6 +45,7 @@ import { findDepreciationTopicSuggestions, findAssetTopicSuggestions, findOrgOwn
 import { findUnlinkedJobsByUnit } from "../repositories/jobRepository";
 import { mapBuildingToDetailDTO } from "../dto/buildingDetail";
 import { mapUnitToListDTO } from "../dto/unitList";
+import { computeUnitIntrinsicValue } from "../services/unitValuation";
 import { createBillingEntity } from "../services/billingEntities";
 import { CreateBillingEntitySchema } from "../validation/billingEntities";
 import * as bcrypt from "bcryptjs";
@@ -283,11 +286,17 @@ export function registerInventoryRoutes(router: Router) {
       const parsed = UpdateBuildingSchema.safeParse(raw);
       if (!parsed.success) return sendError(res, 400, "VALIDATION_ERROR", "Invalid building data", parsed.error.flatten());
 
-      // Convert managedSince ISO string → Date | null for Prisma
-      const { managedSince, ...rest } = parsed.data;
+      // Convert ISO date strings → Date | null for Prisma
+      const { managedSince, constructionDate, lastRenovationDate, ...rest } = parsed.data;
       const updateData: Parameters<typeof updateBuilding>[2] = { ...rest };
       if (managedSince !== undefined) {
         updateData.managedSince = managedSince ? new Date(managedSince) : null;
+      }
+      if (constructionDate !== undefined) {
+        updateData.constructionDate = constructionDate ? new Date(constructionDate) : null;
+      }
+      if (lastRenovationDate !== undefined) {
+        updateData.lastRenovationDate = lastRenovationDate ? new Date(lastRenovationDate) : null;
       }
 
       const updated = await updateBuilding(orgId, params.id, updateData);
@@ -478,7 +487,20 @@ export function registerInventoryRoutes(router: Router) {
     try {
       const unit = await getUnitById(orgId, params.id);
       if (!unit) return sendError(res, 404, "NOT_FOUND", "Unit not found");
-      sendJson(res, 200, { data: unit });
+      const intrinsicValuation = computeUnitIntrinsicValue(unit);
+      // Market estimate (reference only) — zip price × living area, kept distinct
+      // from the intrinsic valuation. Null when no price is on file for the zip.
+      const postalCode = (unit as { building?: { postalCode?: string | null } }).building?.postalCode ?? null;
+      const marketPrice = postalCode ? await getMarketPriceByZip(orgId, postalCode) : null;
+      const marketEstimate = marketPrice
+        ? {
+            pricePerSqmChf: marketPrice.pricePerSqmChf,
+            source: marketPrice.source,
+            asOf: marketPrice.asOf,
+            estimateChf: unit.livingAreaSqm != null ? unit.livingAreaSqm * marketPrice.pricePerSqmChf : null,
+          }
+        : null;
+      sendJson(res, 200, { data: { ...unit, intrinsicValuation, marketEstimate } });
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to fetch unit", String(e));
     }
@@ -508,6 +530,35 @@ export function registerInventoryRoutes(router: Router) {
       sendJson(res, 200, { message: "Unit deactivated" });
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to deactivate unit", String(e));
+    }
+  });
+
+  // Reference market price per m² for a postal code (manually maintained / seeded).
+  router.get("/market-prices/:postalCode", withAuthRequired(async ({ res, orgId, params }) => {
+    try {
+      const price = await getMarketPriceByZip(orgId, params.postalCode);
+      sendJson(res, 200, { data: price });
+    } catch (e) {
+      sendError(res, 500, "DB_ERROR", "Failed to fetch market price", String(e));
+    }
+  }));
+
+  router.put("/market-prices", async ({ req, res, orgId }) => {
+    if (!requireRole(req, res, "MANAGER")) return;
+    try {
+      const raw = await readJson(req);
+      const parsed = UpsertMarketPriceSchema.safeParse(raw);
+      if (!parsed.success) return sendError(res, 400, "VALIDATION_ERROR", "Invalid market price", parsed.error.flatten());
+      const { asOf, ...rest } = parsed.data;
+      const saved = await upsertMarketPriceByZip(orgId, {
+        ...rest,
+        asOf: asOf ? new Date(asOf) : null,
+      });
+      sendJson(res, 200, { data: saved });
+    } catch (e: any) {
+      const msg = String(e?.message || e);
+      if (msg === "Invalid JSON") return sendError(res, 400, "INVALID_JSON", "Invalid JSON");
+      sendError(res, 500, "DB_ERROR", "Failed to save market price", String(e));
     }
   });
 

@@ -57,7 +57,7 @@ import { authHeaders } from "../../../lib/api";
 import ScrollableTabs from "../../../components/mobile/ScrollableTabs";
 import SortableHeader from "../../../components/SortableHeader";
 import { useLocalSort, clientSort } from "../../../lib/tableUtils";
-import { formatDate, formatChfCents, formatPercent } from "../../../lib/format";
+import { formatDate, formatChfCents, formatPercent, formatChf, formatNumber } from "../../../lib/format";
 import { cn } from "../../../lib/utils";
 import { ARCHETYPE_LABELS, ARCHETYPE_EXPLANATION_COPY } from "../../../lib/archetypes";
 import KpiInlineGrid from "../../../components/ui/KpiInlineGrid";
@@ -909,7 +909,7 @@ function BuildingAnalytical({ buildingId }) {
   );
 }
 
-function BuildingReportingView({ buildingId }) {
+function BuildingReportingView({ buildingId, etatLocatifNet }) {
   const { t } = useTranslation("manager");
   const [reportingTab, setReportingTab] = useState(0);
   const [canvasRange, setCanvasRange]   = useState("1Y");
@@ -938,6 +938,17 @@ function BuildingReportingView({ buildingId }) {
 
   return (
     <div className="space-y-4">
+      {/* État locatif net — annual net rent roll (computed from active leases) */}
+      {etatLocatifNet != null && (
+        <div className="flex items-baseline justify-between rounded-xl border border-surface-border bg-surface p-4 shadow-sm">
+          <div>
+            <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("buildingsId.fields.etatLocatifNetChf")}</div>
+            <div className="text-xs text-muted-text mt-0.5">{t("buildingsId.fields.etatLocatifNetHint")}</div>
+          </div>
+          <div className="text-xl font-semibold text-foreground">{formatChf(etatLocatifNet)}</div>
+        </div>
+      )}
+
       {/* Sub-tab strip */}
       <div className="inline-flex rounded-lg border border-surface-border bg-surface-hover p-0.5 gap-0.5">
         {[t("buildingsId.reporting.periodAnalysis"), t("buildingsId.reporting.performanceCanvas"), t("buildingsId.reporting.financialPosition"), t("buildingsId.reporting.analysis")].map((label, i) => (
@@ -1009,6 +1020,58 @@ function displayDate(iso) {
 // Role-intent choices an owner can assign to a building (excludes "unspecified").
 const ROLE_INTENT_OPTIONS = ["income", "long_term_quality", "stable_hold", "reposition", "sell"];
 
+// Cadastral / valuation fields editable on the Overview tab. `type` drives both
+// the input rendering and the form↔PATCH conversion below. Labels come from
+// manager:buildingsId.fields.* (en/fr).
+const BUILDING_CADASTRAL_FIELDS = [
+  { key: "parcelNumber", type: "text" },
+  { key: "easementsText", type: "textarea" },
+  { key: "constructionDate", type: "date" },
+  { key: "lastRenovationDate", type: "date" },
+  { key: "ecaVolumeM3", type: "number", unit: "m³" },
+  { key: "netAreaSqm", type: "number", unit: "m²" },
+  { key: "weightedAreaSqm", type: "number", unit: "m²" },
+  { key: "lotsApartments", type: "int" },
+  { key: "lotsGarages", type: "int" },
+  { key: "lotsExteriorParking", type: "int" },
+  { key: "fiscalValueChf", type: "chf" },
+  { key: "insuranceValueChf", type: "chf" },
+  { key: "ppeEstimateChf", type: "chf" },
+];
+
+// Seed the edit-form object (all string values) from a loaded building.
+function buildingToExtraForm(b) {
+  const out = {};
+  for (const f of BUILDING_CADASTRAL_FIELDS) {
+    const v = b?.[f.key];
+    out[f.key] = v == null ? "" : f.type === "date" ? String(v).slice(0, 10) : String(v);
+  }
+  return out;
+}
+
+// Convert the edit-form object back into a PATCH body (typed; "" → null).
+function extraFormToPatch(extra) {
+  const out = {};
+  for (const f of BUILDING_CADASTRAL_FIELDS) {
+    const raw = (extra?.[f.key] ?? "").toString().trim();
+    if (raw === "") { out[f.key] = null; continue; }
+    if (f.type === "int") out[f.key] = parseInt(raw, 10);
+    else if (f.type === "number" || f.type === "chf") out[f.key] = Number(raw);
+    else if (f.type === "date") out[f.key] = new Date(raw).toISOString();
+    else out[f.key] = raw;
+  }
+  return out;
+}
+
+// Read-only display of a stored cadastral value.
+function formatCadastralValue(field, value) {
+  if (value == null || value === "") return "—";
+  if (field.type === "chf") return formatChf(value);
+  if (field.type === "date") return formatDate(value);
+  if (field.type === "number") return `${formatNumber(value)}${field.unit ? ` ${field.unit}` : ""}`;
+  return String(value);
+}
+
 export default function BuildingDetail() {
   const { t } = useTranslation("manager");
   const router = useRouter();
@@ -1034,6 +1097,9 @@ export default function BuildingDetail() {
   const [editElevator, setEditElevator] = useState(false);
   const [editConcierge, setEditConcierge] = useState(false);
   const [editManagedSince, setEditManagedSince] = useState("");
+  const [editExtra, setEditExtra] = useState({}); // cadastral/valuation fields
+  const [marketPrice, setMarketPrice] = useState(null); // MarketPricePerZip record for this zip
+  const [editMarketPrice, setEditMarketPrice] = useState(""); // CHF/m² input
   const [createUnitName, setCreateUnitName] = useState("");
   const [createUnitType, setCreateUnitType] = useState("RESIDENTIAL");
   const [unitAction, setUnitAction] = useState(null);
@@ -1173,7 +1239,20 @@ export default function BuildingDetail() {
       setEditElevator(!!b.hasElevator);
       setEditConcierge(!!b.hasConcierge);
       setEditManagedSince(b.managedSince ? b.managedSince.slice(0, 10) : "");
+      setEditExtra(buildingToExtraForm(b));
       setHouseRulesText(b.houseRulesText || "");
+      // Reference market price for this building's postal code (zip-scoped table).
+      if (b.postalCode) {
+        try {
+          const mp = await fetchJSON(`/market-prices/${encodeURIComponent(b.postalCode)}`);
+          const rec = mp?.data ?? null;
+          setMarketPrice(rec);
+          setEditMarketPrice(rec?.pricePerSqmChf != null ? String(rec.pricePerSqmChf) : "");
+        } catch { /* non-blocking */ }
+      } else {
+        setMarketPrice(null);
+        setEditMarketPrice("");
+      }
       await loadUnits();
       await loadBuildingConfig();
       await loadApprovalRules();
@@ -1506,8 +1585,23 @@ export default function BuildingDetail() {
           hasElevator: editElevator,
           hasConcierge: editConcierge,
           managedSince: editManagedSince ? new Date(editManagedSince).toISOString() : null,
+          ...extraFormToPatch(editExtra),
         }),
       });
+      // Persist the zip-scoped market price separately (not a Building column).
+      const trimmedMp = editMarketPrice.toString().trim();
+      const currentMp = marketPrice?.pricePerSqmChf != null ? String(marketPrice.pricePerSqmChf) : "";
+      if (building?.postalCode && trimmedMp !== "" && trimmedMp !== currentMp) {
+        await fetchJSON(`/market-prices`, {
+          method: "PUT",
+          body: JSON.stringify({
+            postalCode: building.postalCode,
+            city: building.city || null,
+            pricePerSqmChf: Number(trimmedMp),
+            source: "manual",
+          }),
+        });
+      }
       await loadBuilding();
       setEditMode(false);
       setOk("Building updated.");
@@ -1908,6 +2002,7 @@ export default function BuildingDetail() {
                       setEditElevator(!!building?.hasElevator);
                       setEditConcierge(!!building?.hasConcierge);
                       setEditManagedSince(building?.managedSince ? building.managedSince.slice(0, 10) : "");
+                      setEditExtra(buildingToExtraForm(building));
                     }}
                   >
                     {t("manager:buildingsId.btn.cancel")}
@@ -2022,6 +2117,74 @@ export default function BuildingDetail() {
                   </div>
                 </>
               )}
+
+              {/* Cadastre & estimations — always visible; per-field editing in edit mode */}
+              <div className="mt-6 pt-4 border-t border-surface-border">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-semibold text-foreground">{t("manager:buildingsId.heading.cadastralValuation")}</h3>
+                </div>
+
+                {/* État locatif net — computed (annual net rent roll), read-only */}
+                <div className="mb-4 rounded-xl border border-surface-border bg-surface-muted/40 p-4">
+                  <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:buildingsId.fields.etatLocatifNetChf")}</div>
+                  <div className="mt-1 text-lg font-semibold text-foreground">{building?.etatLocatifNetChf != null ? formatChf(building.etatLocatifNetChf) : "—"}</div>
+                  <div className="text-xs text-muted-text mt-0.5">{t("manager:buildingsId.fields.etatLocatifNetHint")}</div>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {BUILDING_CADASTRAL_FIELDS.map((f) => (
+                    <label key={f.key} className={cn("grid gap-2", f.type === "textarea" && "sm:col-span-2")}>
+                      <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t(`manager:buildingsId.fields.${f.key}`)}</span>
+                      {editMode ? (
+                        f.type === "textarea" ? (
+                          <textarea
+                            className="input text-sm text-muted-dark"
+                            rows={2}
+                            value={editExtra[f.key] ?? ""}
+                            onChange={(e) => setEditExtra((s) => ({ ...s, [f.key]: e.target.value }))}
+                          />
+                        ) : (
+                          <input
+                            className="input text-sm text-muted-dark"
+                            type={f.type === "date" ? "date" : f.type === "text" ? "text" : "number"}
+                            step={f.type === "int" ? "1" : f.type === "chf" || f.type === "number" ? "any" : undefined}
+                            min={f.type === "int" || f.type === "chf" || f.type === "number" ? "0" : undefined}
+                            value={editExtra[f.key] ?? ""}
+                            onChange={(e) => setEditExtra((s) => ({ ...s, [f.key]: e.target.value }))}
+                          />
+                        )
+                      ) : (
+                        <span className="text-sm text-muted-dark">{formatCadastralValue(f, building?.[f.key])}</span>
+                      )}
+                    </label>
+                  ))}
+                </div>
+
+                {/* Market price reference (zip-scoped; NOT part of valeur intrinsèque) */}
+                <div className="mt-4 grid gap-2">
+                  <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:buildingsId.fields.marketPricePerSqm")}</span>
+                  {editMode ? (
+                    <>
+                      <input
+                        className="input text-sm text-muted-dark sm:max-w-xs"
+                        type="number"
+                        step="any"
+                        min="0"
+                        value={editMarketPrice}
+                        onChange={(e) => setEditMarketPrice(e.target.value)}
+                        disabled={!building?.postalCode}
+                        placeholder={building?.postalCode ? "" : t("manager:buildingsId.fields.marketPriceNoZip")}
+                      />
+                      <span className="text-xs text-muted-text">{t("manager:buildingsId.fields.marketPriceHint", { zip: building?.postalCode || "—" })}</span>
+                    </>
+                  ) : (
+                    <div className="text-sm text-muted-dark">
+                      {marketPrice?.pricePerSqmChf != null ? formatChf(marketPrice.pricePerSqmChf) : "—"}
+                      {marketPrice?.asOf && <span className="text-xs text-muted-text ml-2">({formatDate(marketPrice.asOf)})</span>}
+                    </div>
+                  )}
+                </div>
+              </div>
 
               {/* Ownership & Management — always visible regardless of edit mode */}
               <div className="mt-6 pt-4 border-t border-surface-border">
@@ -3090,7 +3253,7 @@ export default function BuildingDetail() {
 
           {/* Reporting tab */}
           {activeTab === "Reporting" && id && (
-            <BuildingReportingView buildingId={id} />
+            <BuildingReportingView buildingId={id} etatLocatifNet={building?.etatLocatifNetChf} />
           )}
 
           {/* Correspondence tab — read-only view of letters sent to this building's tenants */}

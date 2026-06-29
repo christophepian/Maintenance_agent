@@ -157,6 +157,7 @@ model Org {
   rentalApplications          RentalApplication[]
   emailOutbox                 EmailOutbox[]
   rentEstimationConfigs       RentEstimationConfig[]
+  marketPricesPerZip          MarketPricePerZip[]
   financialSnapshots          BuildingFinancialSnapshot[]
   portfolioDailySnapshots     PortfolioDailySnapshot[]
   buildingDailySnapshots      BuildingDailySnapshot[]
@@ -401,6 +402,29 @@ model Building {
   // House rules
   houseRulesText String?
 
+  // Cadastral / legal
+  parcelNumber  String? /// Parcelle — land-registry parcel number
+  easementsText String? /// Servitudes actives et passives — easements, active & passive
+
+  // Physical dimensions
+  ecaVolumeM3      Float? /// Volume ECA, m³ (cantonal insurance volume)
+  netAreaSqm       Float? /// Surface nette, m² — net floor area (selon état locatif)
+  weightedAreaSqm  Float? /// Surface pondérée, m² (terraces weighted 1/3, garden 1/10)
+
+  // Lot counts (PPE / cadastral lots)
+  lotsApartments      Int? /// Nombre de lots — appartements
+  lotsGarages         Int? /// Nombre de lots — garages
+  lotsExteriorParking Int? /// Nombre de lots — places extérieures
+
+  // Build / renovation dates
+  constructionDate   DateTime? /// Date de construction
+  lastRenovationDate DateTime? /// Date de rénovation
+
+  // Valuations, CHF (marketValueChf above = valeur vénale)
+  fiscalValueChf    Float? /// Estimation fiscale
+  insuranceValueChf Float? /// Valeur d'assurance
+  ppeEstimateChf    Float? /// Estimation en PPE
+
   createdAt                  DateTime                     @default(now())
   updatedAt                  DateTime                     @updatedAt
   isActive                   Boolean                      @default(true)
@@ -516,6 +540,15 @@ model Unit {
   energyLabel        EnergyLabel?
   heatingType        HeatingType?
 
+  // Valeur intrinsèque worksheet — habitation/garden valued from livingAreaSqm,
+  // parking/garage as flat lines; intrinsic value computed, not stored.
+  intrinsicPricePerSqmChf Float? /// Prix au m² — base price for habitation & garden
+  vetustePct              Float? /// Vétusté — obsolescence discount, % of habitation value
+  gardenAreaSqm           Float? /// Jardin, m²
+  gardenWeightPct         Float? /// Pondération du jardin, % (defaults to 10 when null)
+  extParkingValueChf      Float? /// Parking extérieur — flat value, CHF
+  garageValueChf          Float? /// Garage — flat value, CHF
+
   occupancies            Occupancy[]
   requests               Request[]
   building               Building                @relation(fields: [buildingId], references: [id], onDelete: Cascade)
@@ -575,6 +608,26 @@ model RentEstimationConfig {
   org Org @relation(fields: [orgId], references: [id], onDelete: Cascade)
 
   @@unique([orgId, canton])
+  @@index([orgId])
+}
+
+/// Reference market purchase price per m² for a postal code (e.g. homegate aggregate).
+/// Manually maintained / seeded — NOT live-scraped. Surfaces as a "market estimate"
+/// alongside (not inside) the unit valeur intrinsèque worksheet.
+model MarketPricePerZip {
+  id             String    @id @default(uuid())
+  orgId          String
+  postalCode     String
+  city           String?
+  pricePerSqmChf Float /// Market purchase price, CHF/m²
+  source         String? /// e.g. "homegate", "manual"
+  asOf           DateTime? /// Effective date of the figure
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  org Org @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, postalCode])
   @@index([orgId])
 }
 
