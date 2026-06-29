@@ -292,6 +292,21 @@ function MarketEstimateLine({ estimateChf, pricePerSqmChf, asOf }) {
   );
 }
 
+// Maps each internal unit tab key to its manager:unitsId.tabs.* i18n key.
+// Internal keys stay English (used for activeTab logic); only the label is translated.
+const UNIT_TAB_LABEL_KEYS = {
+  "Details": "overview",
+  "Tenants": "tenants",
+  "Assets": "assets",
+  "Rent Estimate": "rentEstimate",
+  "Documents": "documents",
+  "Financials": "financials",
+  "Contracts": "contracts",
+  "Requests": "requests",
+  "Condition Reports": "conditionReports",
+  "Reporting": "reporting",
+};
+
 export default function UnitDetail() {
   const { t } = useTranslation("manager");
   const router = useRouter();
@@ -856,7 +871,7 @@ export default function UnitDetail() {
               <button key={tab} type="button"
                 className={activeTab === tab ? "tab-btn-active" : "tab-btn"}
                 onClick={() => setActiveTab(tab)}>
-                {tab === "Details" ? t("manager:unitsId.tabs.overview") : tab}
+                {UNIT_TAB_LABEL_KEYS[tab] ? t(`manager:unitsId.tabs.${UNIT_TAB_LABEL_KEYS[tab]}`) : tab}
               </button>
             ))}
           </ScrollableTabs>

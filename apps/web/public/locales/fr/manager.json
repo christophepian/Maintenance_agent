@@ -827,7 +827,16 @@
   },
   "unitsId": {
     "tabs": {
-      "overview": "Aperçu"
+      "overview": "Aperçu",
+      "tenants": "Locataires",
+      "assets": "Équipements",
+      "rentEstimate": "Estimation du loyer",
+      "documents": "Documents",
+      "financials": "Finances",
+      "contracts": "Baux",
+      "requests": "Demandes",
+      "conditionReports": "États des lieux",
+      "reporting": "Rapports"
     },
     "col": {
       "acomptePaid": "Acompte versé",

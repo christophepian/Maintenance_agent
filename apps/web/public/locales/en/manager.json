@@ -827,7 +827,16 @@
   },
   "unitsId": {
     "tabs": {
-      "overview": "Overview"
+      "overview": "Overview",
+      "tenants": "Tenants",
+      "assets": "Assets",
+      "rentEstimate": "Rent Estimate",
+      "documents": "Documents",
+      "financials": "Financials",
+      "contracts": "Contracts",
+      "requests": "Requests",
+      "conditionReports": "Condition Reports",
+      "reporting": "Reporting"
     },
     "col": {
       "acomptePaid": "Acompte Paid",
