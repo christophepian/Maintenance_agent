@@ -2140,6 +2140,11 @@ export default function BuildingDetail() {
                           <textarea
                             className="input text-sm text-muted-dark"
                             rows={2}
+                            name={f.key}
+                            autoComplete="off"
+                            data-lpignore="true"
+                            data-1p-ignore="true"
+                            data-form-type="other"
                             value={editExtra[f.key] ?? ""}
                             onChange={(e) => setEditExtra((s) => ({ ...s, [f.key]: e.target.value }))}
                           />
@@ -2147,6 +2152,12 @@ export default function BuildingDetail() {
                           <input
                             className="input text-sm text-muted-dark"
                             type={f.type === "date" ? "date" : f.type === "text" ? "text" : "number"}
+                            name={f.key}
+                            inputMode={f.type === "int" || f.type === "chf" || f.type === "number" ? "decimal" : undefined}
+                            autoComplete="off"
+                            data-lpignore="true"
+                            data-1p-ignore="true"
+                            data-form-type="other"
                             step={f.type === "int" ? "1" : f.type === "chf" || f.type === "number" ? "any" : undefined}
                             min={f.type === "int" || f.type === "chf" || f.type === "number" ? "0" : undefined}
                             value={editExtra[f.key] ?? ""}
@@ -2168,6 +2179,12 @@ export default function BuildingDetail() {
                       <input
                         className="input text-sm text-muted-dark sm:max-w-xs"
                         type="number"
+                        name="marketPricePerSqm"
+                        inputMode="decimal"
+                        autoComplete="off"
+                        data-lpignore="true"
+                        data-1p-ignore="true"
+                        data-form-type="other"
                         step="any"
                         min="0"
                         value={editMarketPrice}

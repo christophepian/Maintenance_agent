@@ -987,6 +987,12 @@ export default function UnitDetail() {
                     <input
                       className="filter-input w-full"
                       type="number"
+                      name={f.key}
+                      inputMode="decimal"
+                      autoComplete="off"
+                      data-lpignore="true"
+                      data-1p-ignore="true"
+                      data-form-type="other"
                       step="any"
                       min="0"
                       value={editValuation[f.key] ?? ""}
