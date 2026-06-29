@@ -826,6 +826,9 @@
     }
   },
   "unitsId": {
+    "tabs": {
+      "overview": "Overview"
+    },
     "col": {
       "acomptePaid": "Acompte Paid",
       "actualCosts": "Actual Costs",
@@ -912,7 +915,6 @@
       "sortSchedules": "Sort schedules"
     },
     "tabs": {
-      "overview": "Overview",
       "active": "Active",
       "paused": "Paused",
       "completed": "Completed",

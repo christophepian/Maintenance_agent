@@ -826,6 +826,9 @@
     }
   },
   "unitsId": {
+    "tabs": {
+      "overview": "Aperçu"
+    },
     "col": {
       "acomptePaid": "Acompte versé",
       "actualCosts": "Coûts réels",
@@ -912,7 +915,6 @@
       "sortSchedules": "Trier les calendriers"
     },
     "tabs": {
-      "overview": "Aperçu",
       "active": "Actif",
       "paused": "En pause",
       "completed": "Terminé",
