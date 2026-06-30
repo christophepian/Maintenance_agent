@@ -235,7 +235,8 @@ export async function updatePeriod(
     throw new Error("status must be OPEN or CLOSED");
   }
   assertAdminFeeCap(input.adminFeeRatePermille);
-  const updated = await repo.updateBillingPeriod(prisma, id, input);
+  const updated = await repo.updateBillingPeriod(prisma, id, orgId, input);
+  if (!updated) throw new Error("Billing period not found");
   return mapBillingPeriodToDTO(updated);
 }
 
@@ -367,7 +368,7 @@ export async function removeCostEntry(orgId: string, billingPeriodId: string, en
   if (period.status === "CLOSED") throw new Error("Cannot modify cost entries on a CLOSED period");
   const entry = await repo.findCostEntryById(prisma, entryId);
   if (!entry || entry.billingPeriodId !== billingPeriodId) throw new Error("Cost entry not found");
-  await repo.deleteCostEntry(prisma, entryId);
+  await repo.deleteCostEntry(prisma, entryId, orgId);
   return (await getPeriod(orgId, billingPeriodId))!;
 }
 
