@@ -56,16 +56,19 @@ export async function createBillingPeriod(
 export async function updateBillingPeriod(
   prisma: PrismaClient,
   id: string,
+  orgId: string,
   data: { status?: string; adminFeeRatePermille?: number },
 ) {
-  return prisma.billingPeriod.update({
-    where: { id },
+  // Org-scoped mutation (defense-in-depth): updateMany enforces the orgId filter
+  // at the DB; refetch (with include) to preserve the previous return shape.
+  await prisma.billingPeriod.updateMany({
+    where: { id, orgId },
     data: {
       ...(data.status !== undefined ? { status: data.status } : {}),
       ...(data.adminFeeRatePermille !== undefined ? { adminFeeRatePermille: data.adminFeeRatePermille } : {}),
     },
-    include: BILLING_PERIOD_INCLUDE,
   });
+  return prisma.billingPeriod.findFirst({ where: { id, orgId }, include: BILLING_PERIOD_INCLUDE });
 }
 
 // ─── Cost entries ──────────────────────────────────────────────
@@ -88,8 +91,9 @@ export async function updateCostEntry(
   return prisma.costEntry.update({ where: { id }, data });
 }
 
-export async function deleteCostEntry(prisma: PrismaClient, id: string) {
-  return prisma.costEntry.delete({ where: { id } });
+export async function deleteCostEntry(prisma: PrismaClient, id: string, orgId: string) {
+  // CostEntry has no orgId column — scope via its billing period (defense-in-depth).
+  return prisma.costEntry.deleteMany({ where: { id, billingPeriod: { orgId } } });
 }
 
 // ─── Distribution participants ─────────────────────────────────

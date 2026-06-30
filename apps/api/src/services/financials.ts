@@ -8,6 +8,7 @@ import * as financialsRepo from "../repositories/financialsRepository";
 import * as dailySnapshotRepo from "../repositories/portfolioDailySnapshotRepository";
 import * as billingPeriodRepo from "../repositories/billingPeriodRepository";
 import type { ExpenseLedgerRow, ArrearsAgingDTO } from "../repositories/financialsRepository";
+import { mapWithConcurrency } from "../utils/concurrency";
 
 // ==========================================
 // DTOs
@@ -183,17 +184,17 @@ async function getProjectedIncome(
 // Point-in-time balances
 // ==========================================
 
-async function getReceivables(orgId: string, buildingId: string): Promise<number> {
-  const unitIds = await inventoryRepo.findActiveUnitIdsByBuilding(prisma, orgId, buildingId);
+// Receivables/payables operate on the building's active unit IDs. The caller
+// already fetched these (for projected income), so they're passed in rather
+// than re-queried — getBuildingFinancials previously fetched the same active
+// unit list three times per building (here, here, and for projection).
+async function getReceivables(orgId: string, unitIds: string[]): Promise<number> {
   if (unitIds.length === 0) return 0;
-
   return invoiceRepo.aggregateIssuedInvoicesForUnits(prisma, orgId, unitIds);
 }
 
-async function getPayables(orgId: string, buildingId: string): Promise<number> {
-  const unitIds = await inventoryRepo.findActiveUnitIdsByBuilding(prisma, orgId, buildingId);
+async function getPayables(orgId: string, unitIds: string[]): Promise<number> {
   if (unitIds.length === 0) return 0;
-
   return invoiceRepo.aggregatePayableInvoicesForUnits(prisma, orgId, unitIds);
 }
 
@@ -370,8 +371,8 @@ export async function getBuildingFinancials(
 
   // 9. Point-in-time outstanding balances
   const [receivablesCents, payablesCents] = await Promise.all([
-    getReceivables(orgId, buildingId),
-    getPayables(orgId, buildingId),
+    getReceivables(orgId, unitIds),
+    getPayables(orgId, unitIds),
   ]);
 
   // 9b. Invoice-based collection rate — scoped to billing period, not payment date.
@@ -567,20 +568,28 @@ export async function getPortfolioSummary(
 ): Promise<PortfolioSummaryDTO> {
   const buildings = await inventoryRepo.listBuildings(prisma, orgId, undefined, ownerId);
 
-  const buildingResults = await Promise.allSettled(
-    buildings.map((building) =>
-      getBuildingFinancials(orgId, building.id, { from: params.from, to: params.to }),
-    ),
+  // Each getBuildingFinancials issues many queries (and itself fans out
+  // internally), so an unbounded Promise.all over every building would put
+  // buildingCount × ~6 queries in flight at once and saturate Prisma's default
+  // connection pool on large portfolios. Cap the per-building concurrency; a
+  // failed building is skipped (logged) rather than failing the whole summary.
+  const PORTFOLIO_BUILDING_CONCURRENCY = 4;
+  const buildingResults = await mapWithConcurrency(
+    buildings,
+    PORTFOLIO_BUILDING_CONCURRENCY,
+    async (building) => {
+      try {
+        return await getBuildingFinancials(orgId, building.id, { from: params.from, to: params.to });
+      } catch (reason) {
+        console.warn(`[portfolio-summary] Skipping building ${building.id}: ${reason}`);
+        return null;
+      }
+    },
   );
 
   const summaries: BuildingSummaryDTO[] = [];
-  for (let i = 0; i < buildings.length; i++) {
-    const result = buildingResults[i];
-    if (result.status === "rejected") {
-      console.warn(`[portfolio-summary] Skipping building ${buildings[i].id}: ${result.reason}`);
-      continue;
-    }
-    const dto = result.value;
+  for (const dto of buildingResults) {
+    if (!dto) continue;
     summaries.push({
       buildingId: dto.buildingId,
       buildingName: dto.buildingName,
@@ -664,28 +673,34 @@ export async function getPortfolioMonthlyBreakdown(
   const currentYear = now.getFullYear();
   const lastMonth = year < currentYear ? 12 : now.getMonth() + 1;
 
-  const results: MonthlyBreakdownDTO[] = [];
+  const months = Array.from({ length: lastMonth }, (_, i) => i + 1);
 
-  for (let m = 1; m <= lastMonth; m++) {
+  // Each month's getPortfolioSummary already fans out (in parallel) over every
+  // building, so running all 12 months at once would put 12 × buildingCount
+  // computations in flight and saturate the Prisma connection pool. Cap the
+  // month-level concurrency to keep total in-flight work bounded while still
+  // collapsing the previously-serial 12-iteration await loop into a few waves.
+  // mapWithConcurrency preserves order, so results stay month 1..lastMonth.
+  const MONTH_CONCURRENCY = 3;
+
+  return mapWithConcurrency(months, MONTH_CONCURRENCY, async (m): Promise<MonthlyBreakdownDTO> => {
     const from = `${year}-${String(m).padStart(2, "0")}-01`;
     const lastDay = new Date(year, m, 0).getDate();
     const to   = `${year}-${String(m).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
 
     try {
       const summary = await getPortfolioSummary(orgId, { from, to }, ownerId);
-      results.push({
+      return {
         month: m,
         collectedIncomeCents: summary.totalCollectedIncomeCents,
         expensesTotalCents: summary.totalExpensesCents,
         noiCents: summary.totalNetOperatingIncomeCents,
         collectionRate: summary.avgCollectionRate,
-      });
+      };
     } catch {
-      results.push({ month: m, collectedIncomeCents: 0, expensesTotalCents: 0, noiCents: 0, collectionRate: 0 });
+      return { month: m, collectedIncomeCents: 0, expensesTotalCents: 0, noiCents: 0, collectionRate: 0 };
     }
-  }
-
-  return results;
+  });
 }
 
 // ==========================================
