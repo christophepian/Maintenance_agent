@@ -334,8 +334,12 @@ const server = http.createServer(async (req: AuthedRequest, res) => {
        origin (non-production only) → localhost (dev only).
        In production, CORS_ORIGIN must be set — no hardcoded fallbacks apply. */
     const isProd = process.env.NODE_ENV === "production";
-    // Vercel preview/staging URL — allowed in non-production only.
-    // In production add it to the CORS_ORIGIN env var if needed.
+    // Vercel git-main preview/staging URL — a single, stable, first-party origin.
+    // The shared (production) Render backend serves this staging frontend too, so it
+    // must be allowed even when NODE_ENV=production (otherwise the browser-direct
+    // large-file upload to /imported-statements/upload fails CORS preflight).
+    // OTHER preview URLs (per-PR, other branches) are not stable — add them to the
+    // CORS_ORIGIN env var as needed.
     const VERCEL_STAGING_ORIGIN = "https://maintenance-agent-api-git-main-christophepians-projects.vercel.app";
     const DEV_ALLOWED_ORIGINS = ["http://localhost:3000", "http://localhost:3001", "http://127.0.0.1:3000", "http://127.0.0.1:3001"];
     const requestOrigin = req.headers["origin"] as string | undefined;
@@ -347,8 +351,10 @@ const server = http.createServer(async (req: AuthedRequest, res) => {
         corsOrigin = requestOrigin;
       }
     }
-    // Hardcoded convenience origins apply in non-production only
-    if (!corsOrigin && !isProd && requestOrigin === VERCEL_STAGING_ORIGIN) {
+    // The stable git-main staging origin is allowed in every environment (the
+    // production backend is shared with the staging frontend). Other localhost
+    // dev origins remain non-production only.
+    if (!corsOrigin && requestOrigin === VERCEL_STAGING_ORIGIN) {
       corsOrigin = requestOrigin;
     }
     if (!corsOrigin && !isProd && requestOrigin && DEV_ALLOWED_ORIGINS.includes(requestOrigin)) {
