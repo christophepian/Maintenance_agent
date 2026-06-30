@@ -18,14 +18,9 @@ import { useTranslation } from "next-i18next";
  * No auth required — standalone public page.
  */
 
-function PhotoPlaceholder({ seed }) {
-  // Deterministic soft colour from seed string
-  const hue = [...(seed || "a")].reduce((h, c) => h + c.charCodeAt(0), 0) % 360;
+function PhotoPlaceholder() {
   return (
-    <div
-      className="w-full aspect-[4/3] rounded-t-xl flex flex-col items-center justify-center select-none"
-      style={{ "--ph-hue": hue, background: "hsl(var(--ph-hue), 30%, 92%)" }}
-    >
+    <div className="w-full aspect-[4/3] rounded-t-xl bg-surface-subtle flex flex-col items-center justify-center select-none">
       {/* Simple wireframe house icon via SVG */}
       <svg
         viewBox="0 0 64 64"
@@ -89,7 +84,7 @@ export default function ListingsPage() {
       </Head>
 
       {/* Minimal standalone header */}
-      <header className="bg-surface border-b sticky top-0 z-30">
+      <header className="bg-surface border-b border-surface-border sticky top-0 z-30">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <span className="text-2xl">🏠</span>
@@ -97,7 +92,7 @@ export default function ListingsPage() {
           </div>
           <Link
             href="/apply"
-            className="text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline"
+            className="text-sm font-medium text-brand hover:text-brand-dark hover:underline"
           >
             Apply directly →
           </Link>
@@ -121,13 +116,13 @@ export default function ListingsPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={t("tenant:index.placeholder.searchByAddressBuildingNameOrUnit")}
-              className="w-full max-w-md border border-muted-ring rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-surface"
+              className="w-full max-w-md border border-muted-ring rounded-lg px-4 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-brand-ring focus:border-brand bg-surface"
             />
           </div>
 
           {/* Error */}
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700 mb-6">
+            <div className="bg-destructive-light border border-destructive-ring rounded-lg px-4 py-3 text-sm text-destructive-text mb-6">
               {error}
             </div>
           )}
@@ -135,7 +130,7 @@ export default function ListingsPage() {
           {/* Loading */}
           {loading && (
             <div className="text-center py-16 text-foreground-dim">
-              <div className="inline-block w-8 h-8 border-2 border-muted-ring border-t-blue-500 rounded-full animate-spin mb-3" />
+              <div className="inline-block w-8 h-8 border-2 border-muted-ring border-t-brand rounded-full animate-spin mb-3" />
               <p>Loading listings…</p>
             </div>
           )}
@@ -193,7 +188,7 @@ function ListingCard({ unit }) {
   return (
     <div className="bg-surface rounded-xl border border-surface-border shadow-sm hover:shadow-md transition-shadow overflow-hidden flex flex-col">
       {/* Photo placeholder */}
-      <PhotoPlaceholder seed={unit.id} />
+      <PhotoPlaceholder />
 
       {/* Content */}
       <div className="p-5 flex-1 flex flex-col">
@@ -237,7 +232,7 @@ function ListingCard({ unit }) {
         <div className="mt-auto pt-3 border-t border-surface-divider">
           <Link
             href={`/apply?unitId=${unit.id}`}
-            className="block w-full text-center bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm rounded-lg py-2.5 transition-colors"
+            className="block w-full text-center bg-brand hover:bg-brand-dark text-white font-medium text-sm rounded-lg py-2.5 transition-colors"
           >
             Apply for this unit →
           </Link>

@@ -101,7 +101,7 @@ fi
 echo ""
 echo "━━━ G23: Checking raw color tokens / inline styles (ratchet) ━━━"
 G23_BASELINE_RAW=39
-G23_BASELINE_INLINE=44
+G23_BASELINE_INLINE=43
 G23_CUR_RAW=$(grep -rhnE 'bg-white|text-slate-[0-9]|bg-slate-[0-9]|border-slate-[0-9]' \
   "$ROOT/apps/web/pages" "$ROOT/apps/web/components" \
   --include='*.js' --include='*.jsx' 2>/dev/null | grep -v 'no-token' | wc -l | tr -d ' ')
