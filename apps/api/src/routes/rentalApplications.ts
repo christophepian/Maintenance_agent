@@ -338,9 +338,9 @@ export function registerRentalRoutes(router: Router) {
    */
   router.get(
     "/manager/rental-applications/:id",
-    withRole("MANAGER", async ({ res, params }) => {
+    withRole("MANAGER", async ({ res, params, orgId }) => {
       try {
-        const dto = await getApplication(params.id);
+        const dto = await getApplication(params.id, orgId);
         if (!dto) {
           sendError(res, 404, "NOT_FOUND", "Application not found");
           return;
@@ -359,10 +359,10 @@ export function registerRentalRoutes(router: Router) {
    */
   router.post(
     "/manager/rental-application-units/:id/adjust-score",
-    withRole("MANAGER", async ({ req, res, params }) => {
+    withRole("MANAGER", async ({ req, res, params, orgId }) => {
       try {
         const input = await parseBody(req, AdjustScoreSchema);
-        const dto = await adjustEvaluation(params.id, input);
+        const dto = await adjustEvaluation(params.id, input, orgId);
         sendJson(res, 200, { data: dto });
       } catch (e: any) {
         if (e.name === "ValidationError" || e.code === "VALIDATION_ERROR") {
@@ -385,10 +385,10 @@ export function registerRentalRoutes(router: Router) {
    */
   router.post(
     "/manager/rental-application-units/:id/override-disqualification",
-    withRole("MANAGER", async ({ req, res, params }) => {
+    withRole("MANAGER", async ({ req, res, params, orgId }) => {
       try {
         const input = await parseBody(req, OverrideDisqualificationSchema);
-        const dto = await overrideDisqualification(params.id, input.reason);
+        const dto = await overrideDisqualification(params.id, input.reason, orgId);
         sendJson(res, 200, { data: dto });
       } catch (e: any) {
         if (e.name === "ValidationError" || e.code === "VALIDATION_ERROR") {
@@ -487,10 +487,10 @@ export function registerRentalRoutes(router: Router) {
    */
   router.post(
     "/owner/rental-application-units/:id/override-disqualification",
-    withRole("OWNER", async ({ req, res, params }) => {
+    withRole("OWNER", async ({ req, res, params, orgId }) => {
       try {
         const input = await parseBody(req, OverrideDisqualificationSchema);
-        const dto = await overrideDisqualification(params.id, input.reason);
+        const dto = await overrideDisqualification(params.id, input.reason, orgId);
         sendJson(res, 200, { data: dto });
       } catch (e: any) {
         if (e.name === "ValidationError" || e.code === "VALIDATION_ERROR") {
@@ -537,10 +537,10 @@ export function registerRentalRoutes(router: Router) {
    * Download a rental attachment file by its ID.
    * Accessible to MANAGER and OWNER roles.
    */
-  router.get("/rental-attachments/:attachmentId/download", async ({ req, res, params }) => {
+  router.get("/rental-attachments/:attachmentId/download", async ({ req, res, params, orgId }) => {
     if (!maybeRequireManager(req, res)) return;
     try {
-      const attachment = await rentalApplicationRepo.findAttachmentById(prisma, params.attachmentId);
+      const attachment = await rentalApplicationRepo.findAttachmentById(prisma, params.attachmentId, orgId);
       if (!attachment) {
         sendError(res, 404, "NOT_FOUND", "Attachment not found");
         return;
@@ -570,10 +570,10 @@ export function registerRentalRoutes(router: Router) {
    * List documents (applicants + their attachments) for a rental application.
    * Returns applicant names, doc types, and attachment metadata.
    */
-  router.get("/rental-applications/:id/documents", async ({ req, res, params }) => {
+  router.get("/rental-applications/:id/documents", async ({ req, res, params, orgId }) => {
     if (!requireAnyRole(req, res, ["MANAGER", "OWNER"])) return;
     try {
-      const application = await rentalApplicationRepo.findApplicationDocuments(prisma, params.id);
+      const application = await rentalApplicationRepo.findApplicationDocuments(prisma, params.id, orgId);
       if (!application) {
         sendError(res, 404, "NOT_FOUND", "Application not found");
         return;

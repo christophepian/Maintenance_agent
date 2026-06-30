@@ -424,11 +424,14 @@ export function registerConditionReportRoutes(router: Router) {
 
   // ── GET /condition-report-photos/:photoId — serve photo file ─────────────────
   // Accessible to any authenticated user (manager or tenant) — auth enforced by requireAuth.
-  router.get("/condition-report-photos/:photoId", async ({ req, res, prisma, params }) => {
+  router.get("/condition-report-photos/:photoId", async ({ req, res, prisma, params, orgId }) => {
     if (!requireAuth(req, res)) return;
     try {
-      const photo = await prisma.unitConditionReportPhoto.findUnique({
-        where: { id: params.photoId },
+      // Scope to the caller's org via photo → item → report.orgId. The photo
+      // model has no orgId column, so a bare findUnique would serve any org's
+      // photo file to any authenticated user.
+      const photo = await prisma.unitConditionReportPhoto.findFirst({
+        where: { id: params.photoId, item: { report: { orgId } } },
       });
       if (!photo) return sendError(res, 404, "NOT_FOUND", "Photo not found");
 
