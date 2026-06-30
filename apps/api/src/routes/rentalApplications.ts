@@ -84,7 +84,12 @@ export function registerRentalRoutes(router: Router) {
   router.get("/vacant-units", async ({ req, res, orgId }) => {
     try {
       const user = getAuthUser(req);
-      const ownerId = (user?.role === "OWNER" || user?.ownerId) ? (user.ownerId || user.userId) : undefined;
+      // Owner-scope ONLY for real owners (role OWNER). The owner vacancies page
+      // (VacanciesPanel role="OWNER") relies on this. A manager/admin who merely
+      // carries an ownerId (admin-granted owner preview) must NOT be scoped here —
+      // otherwise /manager/vacancies hides vacant units in buildings they manage
+      // but don't own.
+      const ownerId = user?.role === "OWNER" ? (user.ownerId || user.userId) : undefined;
       const units = await listVacantUnits(orgId, ownerId);
       sendJson(res, 200, { data: units });
     } catch (e: any) {
