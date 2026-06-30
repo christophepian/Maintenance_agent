@@ -120,6 +120,10 @@ jobs:
         working-directory: apps/api
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/maint_agent_test
+          # .env.test is gitignored (absent in CI). The test process signs JWTs
+          # with AUTH_SECRET; testHelpers starts the server with "test-secret",
+          # so the jest process must match or token verification 401s.
+          AUTH_SECRET: test-secret
 
       # ── T-08: Production boot guard validation ──
       # Verify the server correctly refuses to start when production safety vars are misconfigured.
