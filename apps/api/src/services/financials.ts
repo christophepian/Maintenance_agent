@@ -8,6 +8,7 @@ import * as financialsRepo from "../repositories/financialsRepository";
 import * as dailySnapshotRepo from "../repositories/portfolioDailySnapshotRepository";
 import * as billingPeriodRepo from "../repositories/billingPeriodRepository";
 import type { ExpenseLedgerRow, ArrearsAgingDTO } from "../repositories/financialsRepository";
+import { mapWithConcurrency } from "../utils/concurrency";
 
 // ==========================================
 // DTOs
@@ -664,28 +665,34 @@ export async function getPortfolioMonthlyBreakdown(
   const currentYear = now.getFullYear();
   const lastMonth = year < currentYear ? 12 : now.getMonth() + 1;
 
-  const results: MonthlyBreakdownDTO[] = [];
+  const months = Array.from({ length: lastMonth }, (_, i) => i + 1);
 
-  for (let m = 1; m <= lastMonth; m++) {
+  // Each month's getPortfolioSummary already fans out (in parallel) over every
+  // building, so running all 12 months at once would put 12 × buildingCount
+  // computations in flight and saturate the Prisma connection pool. Cap the
+  // month-level concurrency to keep total in-flight work bounded while still
+  // collapsing the previously-serial 12-iteration await loop into a few waves.
+  // mapWithConcurrency preserves order, so results stay month 1..lastMonth.
+  const MONTH_CONCURRENCY = 3;
+
+  return mapWithConcurrency(months, MONTH_CONCURRENCY, async (m): Promise<MonthlyBreakdownDTO> => {
     const from = `${year}-${String(m).padStart(2, "0")}-01`;
     const lastDay = new Date(year, m, 0).getDate();
     const to   = `${year}-${String(m).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
 
     try {
       const summary = await getPortfolioSummary(orgId, { from, to }, ownerId);
-      results.push({
+      return {
         month: m,
         collectedIncomeCents: summary.totalCollectedIncomeCents,
         expensesTotalCents: summary.totalExpensesCents,
         noiCents: summary.totalNetOperatingIncomeCents,
         collectionRate: summary.avgCollectionRate,
-      });
+      };
     } catch {
-      results.push({ month: m, collectedIncomeCents: 0, expensesTotalCents: 0, noiCents: 0, collectionRate: 0 });
+      return { month: m, collectedIncomeCents: 0, expensesTotalCents: 0, noiCents: 0, collectionRate: 0 };
     }
-  }
-
-  return results;
+  });
 }
 
 // ==========================================
