@@ -183,6 +183,10 @@ export function registerInvoiceRoutes(router: Router) {
         return sendError(res, 400, "VALIDATION_ERROR", "Invalid invoice update", parsed.error.flatten());
       }
       const v = parsed.data;
+      // Org guard before mutation: updateInvoice resolves by bare id, so confirm
+      // the invoice belongs to the caller's org first (org is immutable → no TOCTOU).
+      const existing = await getInvoice(params.id);
+      if (!existing || existing.orgId !== orgId) return sendError(res, 404, "NOT_FOUND", "Invoice not found");
       const { updateInvoice } = await import("../services/invoices");
       const updated = await updateInvoice(params.id, {
         ...(v.issuerBillingEntityId !== undefined ? { issuerBillingEntityId: v.issuerBillingEntityId } : {}),
@@ -303,8 +307,7 @@ export function registerInvoiceRoutes(router: Router) {
     if (!requireAnyRole(req, res, ["MANAGER", "OWNER"])) return;
     try {
       const { swapInvoiceParties } = await import("../services/invoices");
-      const invoice = await (await import("../services/invoices")).swapInvoiceParties(params.id);
-      if (!invoice || (invoice as any).orgId !== orgId) return sendError(res, 404, "NOT_FOUND", "Invoice not found");
+      const invoice = await swapInvoiceParties(params.id, orgId);
       sendJson(res, 200, { data: invoice });
     } catch (e: any) {
       const msg = String(e?.message || e);

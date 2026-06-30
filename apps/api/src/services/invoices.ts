@@ -850,9 +850,11 @@ export async function updateInvoice(
  * Swap issuer ↔ recipient raw text fields.
  * Clears issuerBillingEntityId so the manager re-links the correct billing entity.
  */
-export async function swapInvoiceParties(invoiceId: string): Promise<InvoiceDTO> {
+export async function swapInvoiceParties(invoiceId: string, orgId: string): Promise<InvoiceDTO> {
   const existing = await invoiceRepo.findInvoiceById(prisma, invoiceId);
-  if (!existing) throw new Error('INVOICE_NOT_FOUND');
+  // Verify org ownership BEFORE mutating (was a TOCTOU: the route checked org
+  // only after the swap had already committed).
+  if (!existing || (existing as any).orgId !== orgId) throw new Error('INVOICE_NOT_FOUND');
 
   const inv = existing as any;
 

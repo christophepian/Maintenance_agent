@@ -628,8 +628,9 @@ export async function uploadRentalAttachment(
  */
 export async function getApplication(
   applicationId: string,
+  orgId: string,
 ): Promise<RentalApplicationDTO | null> {
-  const app = await rentalAppRepo.findApplicationById(prisma, applicationId);
+  const app = await rentalAppRepo.findApplicationByIdAndOrg(prisma, applicationId, orgId);
   return app ? mapApplicationToDTO(app) : null;
 }
 
@@ -659,8 +660,9 @@ export async function listApplicationsForUnit(
 export async function adjustEvaluation(
   applicationUnitId: string,
   input: AdjustScoreInput,
+  orgId: string,
 ): Promise<RentalApplicationUnitDTO> {
-  const au = await rentalAppRepo.findApplicationUnitById(prisma, applicationUnitId);
+  const au = await rentalAppRepo.findApplicationUnitById(prisma, applicationUnitId, orgId);
 
   if (!au) throw new Error("APPLICATION_UNIT_NOT_FOUND");
 
@@ -683,8 +685,9 @@ export async function adjustEvaluation(
 export async function overrideDisqualification(
   applicationUnitId: string,
   reason: string,
+  orgId: string,
 ): Promise<RentalApplicationUnitDTO> {
-  const au = await rentalAppRepo.findApplicationUnitById(prisma, applicationUnitId);
+  const au = await rentalAppRepo.findApplicationUnitById(prisma, applicationUnitId, orgId);
 
   if (!au) throw new Error("APPLICATION_UNIT_NOT_FOUND");
   if (!au.disqualified) throw new Error("NOT_DISQUALIFIED");

@@ -20,13 +20,27 @@ export { RENTAL_APPLICATION_INCLUDE, RENTAL_APPLICATION_UNIT_INCLUDE };
 
 // ─── Query Helpers ─────────────────────────────────────────────
 
-/** Find a rental application by ID with full include. */
+/** Find a rental application by ID with full include. Unscoped — for internal
+ * workflow use only (e.g. the tenant submission flow). Manager/owner-facing
+ * reads MUST use findApplicationByIdAndOrg to prevent cross-org access. */
 export async function findApplicationById(
   prisma: PrismaClient,
   id: string,
 ) {
   return prisma.rentalApplication.findUnique({
     where: { id },
+    include: RENTAL_APPLICATION_INCLUDE,
+  });
+}
+
+/** Find a rental application by ID scoped to an org (manager/owner read paths). */
+export async function findApplicationByIdAndOrg(
+  prisma: PrismaClient,
+  id: string,
+  orgId: string,
+) {
+  return prisma.rentalApplication.findFirst({
+    where: { id, orgId },
     include: RENTAL_APPLICATION_INCLUDE,
   });
 }
@@ -195,13 +209,14 @@ export async function updateApplicationUnitWithInclude(
   });
 }
 
-/** Find an application unit by ID with include. */
+/** Find an application unit by ID, scoped to an org via its parent application. */
 export async function findApplicationUnitById(
   prisma: PrismaClient,
   id: string,
+  orgId: string,
 ) {
-  return prisma.rentalApplicationUnit.findUnique({
-    where: { id },
+  return prisma.rentalApplicationUnit.findFirst({
+    where: { id, application: { orgId } },
     include: {
       unit: { include: { building: true } },
     },
@@ -254,9 +269,10 @@ export const RENTAL_DOCUMENTS_INCLUDE = {
 export async function findAttachmentById(
   prisma: PrismaClient,
   attachmentId: string,
+  orgId: string,
 ) {
-  return prisma.rentalAttachment.findUnique({
-    where: { id: attachmentId },
+  return prisma.rentalAttachment.findFirst({
+    where: { id: attachmentId, application: { orgId } },
   });
 }
 
@@ -267,9 +283,10 @@ export async function findAttachmentById(
 export async function findApplicationDocuments(
   prisma: PrismaClient,
   applicationId: string,
+  orgId: string,
 ) {
-  return prisma.rentalApplication.findUnique({
-    where: { id: applicationId },
+  return prisma.rentalApplication.findFirst({
+    where: { id: applicationId, orgId },
     include: RENTAL_DOCUMENTS_INCLUDE,
   });
 }
