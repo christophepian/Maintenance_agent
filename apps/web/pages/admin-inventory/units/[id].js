@@ -911,6 +911,21 @@ export default function UnitDetail() {
             )}>
             {editMode ? (
               <div className="mb-4">
+                {/* ── Pricing (asking rent — defaults future leases) ── */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4 p-4 bg-surface-subtle rounded-lg border border-surface-border">
+                  <div className="grid gap-1.5">
+                    <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Net rent (CHF/mo)</span>
+                    <input className="filter-input w-full" type="number" step="1" min="0" value={editMonthlyRent} onChange={(e) => setEditMonthlyRent(e.target.value)} placeholder="e.g. 1800" />
+                  </div>
+                  <div className="grid gap-1.5">
+                    <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Charges (CHF/mo)</span>
+                    <input className="filter-input w-full" type="number" step="1" min="0" value={editMonthlyCharges} onChange={(e) => setEditMonthlyCharges(e.target.value)} placeholder="e.g. 200" />
+                  </div>
+                  <div className="grid gap-1.5">
+                    <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Total incl. charges</span>
+                    <div className="text-lg font-bold text-foreground mt-1">{editMonthlyRent !== "" || editMonthlyCharges !== "" ? `CHF ${(Number(editMonthlyRent) || 0) + (Number(editMonthlyCharges) || 0)}.-` : "—"}</div>
+                  </div>
+                </div>
                 <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-1.5">
                 <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Unit number</span>
