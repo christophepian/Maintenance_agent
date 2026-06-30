@@ -63,7 +63,7 @@ export async function approveInvoiceWorkflow(
   // ── 3b. Bridge a recoverable CHARGE into the building cost pool ──
   // A charge invoice (Nebenkosten: building + ancillary category, no unit) becomes
   // an actual building cost on approval, ventilated to units per the building's
-  // preset. Best-effort — never block approval. See ANCILLARY_COSTS_V3_REMEDIATION.
+  // preset. Best-effort — never block approval. See docs/ANCILLARY_COSTS_RECONCILIATION.md.
   if ((approved as any).costNature === "CHARGE") {
     const { bridgeChargeInvoiceToCostPool } = await import("../services/ancillaryReconciliationService");
     bridgeChargeInvoiceToCostPool(orgId, invoiceId).catch((err) =>

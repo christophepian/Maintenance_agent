@@ -773,7 +773,7 @@ model Invoice {
   // ── Ancillary cost classification (v3 remediation) ──────
   // costNature is set once at the review gate: CHARGE → cost pool (building +
   // ancillaryCategory, no unit); DIRECT → ledger/billing flow. Nullable until
-  // an incoming invoice is classified. See docs/ANCILLARY_COSTS_V3_REMEDIATION.md.
+  // an incoming invoice is classified. See docs/ANCILLARY_COSTS_RECONCILIATION.md.
   costNature                  CostNature?
   ancillaryCategoryId         String?
   // ── Raw issuer text (OCR-extracted; editable for swap) ──
@@ -1381,7 +1381,7 @@ enum CostBillability {
 /// The nature of an incoming invoice, decided once at the review gate. CHARGE =
 /// recoverable Nebenkosten → building-level cost pool, ventilated to units.
 /// DIRECT = repair/maintenance/capex/insurance/tax → ledger/billing flow, never
-/// in the cost pool or the décompte. See docs/ANCILLARY_COSTS_V3_REMEDIATION.md.
+/// in the cost pool or the décompte. See docs/ANCILLARY_COSTS_RECONCILIATION.md.
 enum CostNature {
   CHARGE
   DIRECT

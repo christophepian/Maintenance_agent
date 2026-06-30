@@ -11,7 +11,7 @@
  * Simulation is single-building: each building section's "Simulate" only bundles
  * that building's assets, so a selection can't span buildings.
  *
- * See docs/PLANNING_WORKSPACE_BUNDLING.md.
+ * See EPIC_HISTORY.md (two-step planning workspace).
  */
 import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import { useRouter } from "next/router";

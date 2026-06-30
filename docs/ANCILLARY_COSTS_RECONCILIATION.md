@@ -104,7 +104,7 @@ This feature follows the repo conventions enforced by `scripts/guardrails.sh`:
   classNames (F-UI4), `Badge` + `statusVariants.js` for status colours (F-UI4a), and
   never wraps `ConfigurableTable` in a `Panel` (F-UI9).
 - **Docs (G19):** this file lives only in `docs/` (not mirrored to
-  `apps/web/public/docs/`), matching the `PLANNING_TAB_REARCHITECTURE.md` precedent.
+  `apps/web/public/docs/`), matching the established docs-mirroring precedent.
 
 ## Data model
 
