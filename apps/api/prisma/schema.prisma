@@ -813,6 +813,7 @@ model Invoice {
   @@index([contractorBillingScheduleId])
   @@index([buildingId])
   @@index([unitId])
+  @@index([ancillaryCategoryId])
 }
 
 model InvoiceLineItem {
@@ -1407,7 +1408,7 @@ model AncillaryCostCategory {
   accountId     String?
   isActive      Boolean         @default(true)
   createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
+  updatedAt     DateTime        @default(now()) @updatedAt
 
   org                 Org                          @relation(fields: [orgId], references: [id], onDelete: Cascade)
   expenseType         ExpenseType?                 @relation(fields: [expenseTypeId], references: [id], onDelete: SetNull)
@@ -1433,7 +1434,7 @@ model BuildingChargeDistribution {
   categoryId String
   key        DistributionKey
   createdAt  DateTime        @default(now())
-  updatedAt  DateTime        @updatedAt
+  updatedAt  DateTime        @default(now()) @updatedAt
 
   org      Org                   @relation(fields: [orgId], references: [id], onDelete: Cascade)
   building Building              @relation(fields: [buildingId], references: [id], onDelete: Cascade)
@@ -1457,7 +1458,7 @@ model BillingPeriod {
   status               String   @default("OPEN") /// OPEN | CLOSED
   adminFeeRatePermille Int      @default(0) /// ≤30 (3%) enforced in code
   createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  updatedAt            DateTime @default(now()) @updatedAt
 
   org             Org                    @relation(fields: [orgId], references: [id], onDelete: Cascade)
   building        Building               @relation(fields: [buildingId], references: [id], onDelete: Cascade)
@@ -2393,7 +2394,7 @@ model Mortgage {
   fixedUntil            DateTime? /// End of the fixed-rate period (refinancing exposure)
   maturityDate          DateTime? /// Final repayment date (annuity term anchor)
   createdAt             DateTime         @default(now())
-  updatedAt             DateTime         @updatedAt
+  updatedAt             DateTime         @default(now()) @updatedAt
 
   org      Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
   building Building @relation(fields: [buildingId], references: [id], onDelete: Cascade)
@@ -2680,7 +2681,7 @@ model CreditNote {
   description           String?
   lockedAt              DateTime?
   createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
+  updatedAt             DateTime  @default(now()) @updatedAt
 
   org            Org                   @relation(fields: [orgId], references: [id], onDelete: Cascade)
   lease          Lease?                @relation(fields: [leaseId], references: [id], onDelete: SetNull)
