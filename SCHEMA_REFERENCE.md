@@ -86,7 +86,7 @@
 | **WhatsAppOutbox** | orgId, toPhone (E.164), body (Text), status (OutboxStatus, default PENDING), retryCount (default 0), errorMessage?, createdAt, sentAt?; @@index([status, createdAt]) | — |
 
 ### Key Enums (78 total)
-- `CostNature`: CHARGE, DIRECT — set once at the invoice review gate. CHARGE = recoverable Nebenkosten → building cost pool, ventilated to units; DIRECT = repair/maintenance/capex/insurance/tax → ledger/billing flow. See `docs/ANCILLARY_COSTS_V3_REMEDIATION.md`.
+- `CostNature`: CHARGE, DIRECT — set once at the invoice review gate. CHARGE = recoverable Nebenkosten → building cost pool, ventilated to units; DIRECT = repair/maintenance/capex/insurance/tax → ledger/billing flow.
 - `CostBillability`: BILLABLE, NON_BILLABLE · `DistributionKey`: SURFACE_AREA, UNIT_COUNT, CONSUMPTION, OCCUPANT_COUNT, FIXED_SHARE (ancillary-cost taxonomy)
 - `RequestStatus`: PENDING_REVIEW, AUTO_APPROVED, APPROVED, **RFP_PENDING**, ASSIGNED, IN_PROGRESS, COMPLETED, PENDING_OWNER_APPROVAL, **OWNER_REJECTED**
 - `ApprovalSource`: SYSTEM_AUTO, OWNER_APPROVED, OWNER_REJECTED, LEGAL_OBLIGATION

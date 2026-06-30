@@ -145,7 +145,7 @@ Maintenance_Agent/
 ├── infra/               # Docker — PostgreSQL 16
 ├── docs/
 │   ├── blueprint.html   # Live architecture blueprint
-│   ├── AUDIT.md         # 94 findings · 91 resolved
+│   ├── AUDIT.md         # 105 findings · 102 resolved
 │   └── FRONTEND_INVENTORY.md
 └── .github/
     └── copilot-instructions.md  # This file
@@ -155,7 +155,7 @@ Maintenance_Agent/
 
 ## Known Open Issues (check `docs/AUDIT.md` for full list)
 
-- **94 findings total, 91 resolved, 3 remaining** (SI-2/3/4 schema doc drift, TC-11 partial)
+- **105 findings total, 102 resolved, 3 open** (SI-2/3/4 schema doc drift, TC-11 partial)
 - **Multi-org** — `Request` now has a direct `orgId`; `DEFAULT_ORG_ID` still in `authz.ts` fallback (dev only)
 - **Legal DSL** — `LegalVariable` values not wired into DSL condition evaluation
 
