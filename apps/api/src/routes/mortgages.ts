@@ -143,7 +143,7 @@ export function registerMortgageRoutes(router: Router) {
         ...(d.fixedUntil !== undefined ? { fixedUntil: toDate(d.fixedUntil) } : {}),
         ...(d.maturityDate !== undefined ? { maturityDate: toDate(d.maturityDate) } : {}),
       };
-      const mortgage = await updateMortgage(prisma, params.id, data);
+      const mortgage = await updateMortgage(prisma, params.id, orgId, data);
       sendJson(res, 200, { data: mortgage });
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to update mortgage", String(e));
@@ -159,7 +159,7 @@ export function registerMortgageRoutes(router: Router) {
         sendError(res, 404, "NOT_FOUND", "Mortgage not found");
         return;
       }
-      await deleteMortgage(prisma, params.id);
+      await deleteMortgage(prisma, params.id, orgId);
       sendJson(res, 200, { message: "Mortgage deleted" });
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to delete mortgage", String(e));

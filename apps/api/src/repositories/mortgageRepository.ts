@@ -68,13 +68,18 @@ export async function createMortgage(
 export async function updateMortgage(
   prisma: PrismaClient,
   id: string,
+  orgId: string,
   data: Partial<MortgageWriteData>,
 ) {
-  return prisma.mortgage.update({ where: { id }, data });
+  // Org-scoped mutation (defense-in-depth): updateMany so the orgId filter is
+  // enforced at the DB even if a caller skips the pre-check. Refetch the row to
+  // preserve the previous return contract.
+  await prisma.mortgage.updateMany({ where: { id, orgId }, data });
+  return prisma.mortgage.findFirst({ where: { id, orgId } });
 }
 
-export async function deleteMortgage(prisma: PrismaClient, id: string) {
-  return prisma.mortgage.delete({ where: { id } });
+export async function deleteMortgage(prisma: PrismaClient, id: string, orgId: string) {
+  return prisma.mortgage.deleteMany({ where: { id, orgId } });
 }
 
 // ─── Building valuation ────────────────────────────────────────
