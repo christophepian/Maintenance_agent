@@ -184,17 +184,17 @@ async function getProjectedIncome(
 // Point-in-time balances
 // ==========================================
 
-async function getReceivables(orgId: string, buildingId: string): Promise<number> {
-  const unitIds = await inventoryRepo.findActiveUnitIdsByBuilding(prisma, orgId, buildingId);
+// Receivables/payables operate on the building's active unit IDs. The caller
+// already fetched these (for projected income), so they're passed in rather
+// than re-queried — getBuildingFinancials previously fetched the same active
+// unit list three times per building (here, here, and for projection).
+async function getReceivables(orgId: string, unitIds: string[]): Promise<number> {
   if (unitIds.length === 0) return 0;
-
   return invoiceRepo.aggregateIssuedInvoicesForUnits(prisma, orgId, unitIds);
 }
 
-async function getPayables(orgId: string, buildingId: string): Promise<number> {
-  const unitIds = await inventoryRepo.findActiveUnitIdsByBuilding(prisma, orgId, buildingId);
+async function getPayables(orgId: string, unitIds: string[]): Promise<number> {
   if (unitIds.length === 0) return 0;
-
   return invoiceRepo.aggregatePayableInvoicesForUnits(prisma, orgId, unitIds);
 }
 
@@ -371,8 +371,8 @@ export async function getBuildingFinancials(
 
   // 9. Point-in-time outstanding balances
   const [receivablesCents, payablesCents] = await Promise.all([
-    getReceivables(orgId, buildingId),
-    getPayables(orgId, buildingId),
+    getReceivables(orgId, unitIds),
+    getPayables(orgId, unitIds),
   ]);
 
   // 9b. Invoice-based collection rate — scoped to billing period, not payment date.
@@ -568,20 +568,28 @@ export async function getPortfolioSummary(
 ): Promise<PortfolioSummaryDTO> {
   const buildings = await inventoryRepo.listBuildings(prisma, orgId, undefined, ownerId);
 
-  const buildingResults = await Promise.allSettled(
-    buildings.map((building) =>
-      getBuildingFinancials(orgId, building.id, { from: params.from, to: params.to }),
-    ),
+  // Each getBuildingFinancials issues many queries (and itself fans out
+  // internally), so an unbounded Promise.all over every building would put
+  // buildingCount × ~6 queries in flight at once and saturate Prisma's default
+  // connection pool on large portfolios. Cap the per-building concurrency; a
+  // failed building is skipped (logged) rather than failing the whole summary.
+  const PORTFOLIO_BUILDING_CONCURRENCY = 4;
+  const buildingResults = await mapWithConcurrency(
+    buildings,
+    PORTFOLIO_BUILDING_CONCURRENCY,
+    async (building) => {
+      try {
+        return await getBuildingFinancials(orgId, building.id, { from: params.from, to: params.to });
+      } catch (reason) {
+        console.warn(`[portfolio-summary] Skipping building ${building.id}: ${reason}`);
+        return null;
+      }
+    },
   );
 
   const summaries: BuildingSummaryDTO[] = [];
-  for (let i = 0; i < buildings.length; i++) {
-    const result = buildingResults[i];
-    if (result.status === "rejected") {
-      console.warn(`[portfolio-summary] Skipping building ${buildings[i].id}: ${result.reason}`);
-      continue;
-    }
-    const dto = result.value;
+  for (const dto of buildingResults) {
+    if (!dto) continue;
     summaries.push({
       buildingId: dto.buildingId,
       buildingName: dto.buildingName,
