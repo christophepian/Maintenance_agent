@@ -49,10 +49,14 @@ export function startTestServer(
       reject(err);
     };
 
+    // 60 s (was 15 s): the first ts-node server spawn on a cold CI runner
+    // transpiles + loads the whole app and can exceed 15 s, so the earliest
+    // server-spawning suites timed out while later (warm) ones passed.
+    const SERVER_START_TIMEOUT_MS = 60_000;
     const timer = setTimeout(() => {
       cleanup();
-      reject(new Error(`Server on port ${port} did not start within 15 s`));
-    }, 15_000);
+      reject(new Error(`Server on port ${port} did not start within ${SERVER_START_TIMEOUT_MS / 1000} s`));
+    }, SERVER_START_TIMEOUT_MS);
 
     function cleanup() {
       clearTimeout(timer);
