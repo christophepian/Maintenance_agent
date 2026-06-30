@@ -669,6 +669,7 @@
         "cashReceived": "Encaissements",
         "totalExpenses": "Charges totales",
         "onTimeCollection": "Recouvrement à échéance",
+        "rentRoll": "État locatif net",
         "noiMargin": "Marge d'exploitation",
         "opexRatio": "Ratio de charges",
         "occupancy": "Taux d'occupation",

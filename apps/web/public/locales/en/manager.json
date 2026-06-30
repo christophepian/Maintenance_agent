@@ -669,6 +669,7 @@
         "cashReceived": "Cash received",
         "totalExpenses": "Total Expenses",
         "onTimeCollection": "On-time collection",
+        "rentRoll": "Rent roll",
         "noiMargin": "NOI Margin",
         "opexRatio": "OpEx Ratio",
         "occupancy": "Occupancy",

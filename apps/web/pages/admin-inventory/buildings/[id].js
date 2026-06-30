@@ -182,7 +182,7 @@ function buildBuildingWatchItems(bf, arrears, unitData, moveIns, moveOuts, t) {
   return items;
 }
 
-function BuildingPeriodAnalysis({ buildingId }) {
+function BuildingPeriodAnalysis({ buildingId, etatLocatifNet }) {
   const { t, i18n } = useTranslation("manager");
   const locale = i18n.language || "en";
   const now = new Date();
@@ -245,6 +245,15 @@ function BuildingPeriodAnalysis({ buildingId }) {
   const occ      = bf && bf.totalUnitsCount > 0 ? bf.activeUnitsCount / bf.totalUnitsCount : null;
   const noiMargin = earned > 0 ? noi / earned : null;
   const opexRatio = earned > 0 ? expenses / earned : null;
+
+  // Net rent roll (contractual potential income), scaled to the selected period so
+  // it's comparable to the period's actuals. etatLocatifNet is the ANNUAL figure (CHF).
+  const periodMonths = ytdActive
+    ? (year === now.getFullYear() ? now.getMonth() + 1 : 12) // YTD → months elapsed
+    : (mode === "year" ? 12 : 1);                            // full year vs single month
+  const rentRollCents = etatLocatifNet != null
+    ? Math.round(etatLocatifNet * 100 * periodMonths / 12)
+    : null;
 
   const headline  = buildingHeadline(bf, t);
   const drivers   = buildBuildingDrivers(bf, prev, t);
@@ -327,6 +336,7 @@ function BuildingPeriodAnalysis({ buildingId }) {
                   { label: t("buildingsId.reporting.kpi.noiMargin"),   value: noiMargin  !== null ? rFmtPct(noiMargin)  : "—", delta: null },
                   { label: t("buildingsId.reporting.kpi.opexRatio"),   value: opexRatio  !== null ? rFmtPct(opexRatio)  : "—", delta: null },
                   { label: t("buildingsId.reporting.kpi.occupancy"),   value: occ        !== null ? rFmtPct(occ)        : "—", delta: null },
+                  { label: t("buildingsId.reporting.kpi.rentRoll"),    value: rentRollCents != null ? rFmtChf(rentRollCents) : "—", delta: null },
                   { label: t("buildingsId.reporting.kpi.receivables"), value: bf.receivablesCents > 0 ? rFmtChf(bf.receivablesCents) : "—", delta: null },
                 ]}
               />
@@ -938,17 +948,6 @@ function BuildingReportingView({ buildingId, etatLocatifNet }) {
 
   return (
     <div className="space-y-4">
-      {/* État locatif net — annual net rent roll (computed from active leases) */}
-      {etatLocatifNet != null && (
-        <div className="flex items-baseline justify-between rounded-xl border border-surface-border bg-surface p-4 shadow-sm">
-          <div>
-            <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("buildingsId.fields.etatLocatifNetChf")}</div>
-            <div className="text-xs text-muted-text mt-0.5">{t("buildingsId.fields.etatLocatifNetHint")}</div>
-          </div>
-          <div className="text-xl font-semibold text-foreground">{formatChf(etatLocatifNet)}</div>
-        </div>
-      )}
-
       {/* Sub-tab strip */}
       <div className="inline-flex rounded-lg border border-surface-border bg-surface-hover p-0.5 gap-0.5">
         {[t("buildingsId.reporting.periodAnalysis"), t("buildingsId.reporting.performanceCanvas"), t("buildingsId.reporting.financialPosition"), t("buildingsId.reporting.analysis")].map((label, i) => (
@@ -965,7 +964,7 @@ function BuildingReportingView({ buildingId, etatLocatifNet }) {
         ))}
       </div>
 
-      {reportingTab === 0 && <BuildingPeriodAnalysis buildingId={buildingId} />}
+      {reportingTab === 0 && <BuildingPeriodAnalysis buildingId={buildingId} etatLocatifNet={etatLocatifNet} />}
 
       {reportingTab === 1 && (
         <div className="space-y-3">
