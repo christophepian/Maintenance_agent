@@ -86,8 +86,11 @@ jobs:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/maint_agent_test
 
       # ── G7-3: Backend type check ──
+      # Workspaces hoist typescript to the ROOT node_modules; per-app installs
+      # leave no tsc in apps/api, so a bare `npx tsc` fetches the wrong package.
+      # Pin the real compiler explicitly.
       - name: "G7: Type-check backend (tsc --noEmit)"
-        run: npx tsc --noEmit
+        run: npx -p typescript@5.9.3 tsc --noEmit
         working-directory: apps/api
 
       # ── G7-4: Frontend build ──
@@ -100,7 +103,7 @@ jobs:
       # ── G7-4b: Frontend type-check ──
       # next lint was removed in Next.js 16 (no ESLint integration). Use tsc instead.
       - name: "G7: Type-check frontend (tsc --noEmit)"
-        run: npx tsc --noEmit
+        run: npx -p typescript@5.9.3 tsc --noEmit
         working-directory: apps/web
 
       # ── G7-4c: Code-quality no-regression gate ──
