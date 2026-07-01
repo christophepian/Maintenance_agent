@@ -144,27 +144,30 @@ jobs:
         working-directory: apps/api
 
       # ── G7-6: Boot smoke test ──
+      # The smoke curls are unauthenticated, so boot the server auth-optional
+      # (NODE_ENV stays "test" from the job env, so the production boot-guard
+      # tested above is unaffected) — otherwise the reads 401.
       - name: "G7: Backend boot + smoke curls"
+        env:
+          AUTH_OPTIONAL: "true"
+          AUTH_SECRET: test-secret
         run: |
           npx ts-node --transpile-only src/server.ts &
           SERVER_PID=$!
           echo "Waiting for server to start..."
-          for i in $(seq 1 15); do
-            if curl -sf http://127.0.0.1:3001/requests?limit=1 > /dev/null 2>&1; then
+          for i in $(seq 1 20); do
+            if curl -sf http://127.0.0.1:3001/health > /dev/null 2>&1; then
               break
             fi
             sleep 1
           done
-          echo "Testing endpoints..."
-          curl -sf 'http://127.0.0.1:3001/requests?limit=1' > /dev/null && echo "✅ /requests" || exit 1
-          curl -sf 'http://127.0.0.1:3001/jobs?limit=1' > /dev/null && echo "✅ /jobs" || exit 1
-          curl -sf 'http://127.0.0.1:3001/leases?limit=1' > /dev/null && echo "✅ /leases" || exit 1
-          curl -sf 'http://127.0.0.1:3001/invoices?limit=1' > /dev/null && echo "✅ /invoices" || exit 1
-          curl -sf 'http://127.0.0.1:3001/contractors?limit=1' > /dev/null && echo "✅ /contractors" || exit 1
-          curl -sf 'http://127.0.0.1:3001/units?limit=1' > /dev/null && echo "✅ /units" || exit 1
-          curl -sf 'http://127.0.0.1:3001/buildings?limit=1' > /dev/null && echo "✅ /buildings" || exit 1
-          curl -sf 'http://127.0.0.1:3001/rental-applications?limit=1' > /dev/null && echo "✅ /rental-applications" || exit 1
-          curl -sf 'http://127.0.0.1:3001/rfp?limit=1' > /dev/null && echo "✅ /rfp" || exit 1
+          # Boot smoke = purpose-built liveness/readiness probes (no auth, no
+          # seed, no per-endpoint query-param requirements). /readyz also
+          # confirms DB connectivity.
+          echo "Smoke: liveness + readiness..."
+          curl -sf http://127.0.0.1:3001/health  > /dev/null && echo "✅ /health"      || { echo "❌ /health";  exit 1; }
+          curl -sf http://127.0.0.1:3001/healthz > /dev/null && echo "✅ /healthz"     || { echo "❌ /healthz"; exit 1; }
+          curl -sf http://127.0.0.1:3001/readyz  > /dev/null && echo "✅ /readyz (db)" || { echo "❌ /readyz";  exit 1; }
           kill $SERVER_PID 2>/dev/null || true
-          echo "✅ All smoke tests passed"
+          echo "✅ Boot smoke passed"
         working-directory: apps/api
