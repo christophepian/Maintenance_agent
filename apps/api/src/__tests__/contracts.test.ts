@@ -37,7 +37,7 @@ describe('G10: API Contract Tests', () => {
 
   beforeAll(async () => {
     proc = await startTestServer(PORT, { AUTH_OPTIONAL: "true", NODE_ENV: "test" });
-  }, 20000);
+  }, 60000); // cold ts-node server spawn on CI can exceed 20 s
 
   afterAll(() => stopTestServer(proc));
   // ── Requests ──

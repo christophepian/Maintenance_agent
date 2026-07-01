@@ -41,11 +41,12 @@ jobs:
       - name: "Guardrails: automated enforcement"
         run: bash scripts/guardrails.sh
 
-      - name: Install dependencies (backend)
-        run: npm --prefix apps/api install --no-audit --no-fund
-
-      - name: Install dependencies (frontend)
-        run: npm --prefix apps/web install --no-audit --no-fund
+      # Root workspace install. Per-app `npm --prefix` installs left shared,
+      # hoisted deps (typescript, uuid, …) unresolved — anything not declared
+      # directly in the sub-package failed in CI while resolving locally via the
+      # hoisted root node_modules. A root install hoists correctly for all steps.
+      - name: Install dependencies (workspaces)
+        run: npm install --no-audit --no-fund
 
       - name: Create test database
         run: psql -h localhost -U postgres -c "CREATE DATABASE maint_agent_test;" || true
@@ -86,8 +87,11 @@ jobs:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/maint_agent_test
 
       # ── G7-3: Backend type check ──
+      # Workspaces hoist typescript to the ROOT node_modules; per-app installs
+      # leave no tsc in apps/api, so a bare `npx tsc` fetches the wrong package.
+      # Pin the real compiler explicitly.
       - name: "G7: Type-check backend (tsc --noEmit)"
-        run: npx tsc --noEmit
+        run: npx -p typescript@5.9.3 tsc --noEmit
         working-directory: apps/api
 
       # ── G7-4: Frontend build ──
@@ -100,7 +104,7 @@ jobs:
       # ── G7-4b: Frontend type-check ──
       # next lint was removed in Next.js 16 (no ESLint integration). Use tsc instead.
       - name: "G7: Type-check frontend (tsc --noEmit)"
-        run: npx tsc --noEmit
+        run: npx -p typescript@5.9.3 tsc --noEmit
         working-directory: apps/web
 
       # ── G7-4c: Code-quality no-regression gate ──
@@ -116,6 +120,10 @@ jobs:
         working-directory: apps/api
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/maint_agent_test
+          # .env.test is gitignored (absent in CI). The test process signs JWTs
+          # with AUTH_SECRET; testHelpers starts the server with "test-secret",
+          # so the jest process must match or token verification 401s.
+          AUTH_SECRET: test-secret
 
       # ── T-08: Production boot guard validation ──
       # Verify the server correctly refuses to start when production safety vars are misconfigured.
