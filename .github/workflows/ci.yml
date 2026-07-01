@@ -144,7 +144,13 @@ jobs:
         working-directory: apps/api
 
       # ── G7-6: Boot smoke test ──
+      # The smoke curls are unauthenticated, so boot the server auth-optional
+      # (NODE_ENV stays "test" from the job env, so the production boot-guard
+      # tested above is unaffected) — otherwise the reads 401.
       - name: "G7: Backend boot + smoke curls"
+        env:
+          AUTH_OPTIONAL: "true"
+          AUTH_SECRET: test-secret
         run: |
           npx ts-node --transpile-only src/server.ts &
           SERVER_PID=$!
