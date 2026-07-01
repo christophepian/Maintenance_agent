@@ -29,7 +29,7 @@
         "title": "BuildingFinancialSnapshot Engine"
       }
     ],
-    "last_recommendations_at": "2026-07-01 07:52:37 UTC"
+    "last_recommendations_at": "2026-07-01 08:38:35 UTC"
   },
   "project": {
     "name": "Maintenance Agent",
@@ -1857,7 +1857,7 @@
       "phase": "P2",
       "title": "CI: 3 contract tests 401 in CI only (contracts.test contractor/strategy)",
       "type": "task",
-      "status": "planned",
+      "status": "done",
       "persona": "infra",
       "notes": "contracts.test.ts: /contractor/jobs + /contractor/invoices 'rejects non-CONTRACTOR' expect 403 get 401; /strategy/owner-profile expects 200 gets 401. PASS locally, FAIL only in GitHub CI. RULED OUT: token secret (jestSetup.ts sets AUTH_SECRET=test-secret in both envs; server via testHelpers uses same). Needs CI runtime debug (add server-log capture or replicate CI postgres+seed in a container). Likely seed-data or server-env (AUTH_OPTIONAL propagation) specific. Rest of suite 1178/1181 green after the PR#6 infra fixes.",
       "required_tests": [
