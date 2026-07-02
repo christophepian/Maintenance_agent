@@ -1,5 +1,5 @@
 import { useRouter } from "next/router";
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import {
   MONTH_HERO_GRADIENTS,
@@ -1085,6 +1085,9 @@ export default function BuildingDetail() {
     ? router.query.tab
     : "Building information";
   const [activeTab, setActiveTab] = useState(initialTab);
+  // Tracks tabs whose (tab-specific) data has been loaded, so config/rules/lease
+  // templates are fetched once on first tab open rather than on every mount.
+  const loadedTabsRef = useRef(new Set());
 
   // ui object removed — all styles now use Tailwind className
 
@@ -1204,6 +1207,19 @@ export default function BuildingDetail() {
     }
   }, [activeTab]);
 
+  // Load-once, tab-specific datasets deferred out of loadBuilding.
+  useEffect(() => {
+    if (activeTab === "Policies" && !loadedTabsRef.current.has("Policies")) {
+      loadedTabsRef.current.add("Policies");
+      loadBuildingConfig();
+      loadApprovalRules();
+    }
+    if (activeTab === "Documents" && !loadedTabsRef.current.has("Documents")) {
+      loadedTabsRef.current.add("Documents");
+      loadLeaseTemplates();
+    }
+  }, [activeTab]);
+
   function setOk(message) {
     setNotice({ type: "ok", message });
     setTimeout(() => setNotice(null), 4000);
@@ -1258,9 +1274,9 @@ export default function BuildingDetail() {
         setEditMarketPrice("");
       }
       await loadUnits();
-      await loadBuildingConfig();
-      await loadApprovalRules();
-      await loadLeaseTemplates();
+      // buildingConfig + approvalRules (Policies tab) and leaseTemplates
+      // (Documents tab) are deferred to their tabs — see the activeTab effects
+      // below. Previously they were awaited serially on every building mount.
       loadLegalSources();
       loadBuildingKpis();
       if (b.owners && b.owners.length > 0) {
@@ -1567,6 +1583,9 @@ export default function BuildingDetail() {
   }
 
   useEffect(() => {
+    // New building → reset lazy-tab load guards (page component is reused across
+    // /buildings/[id] navigations).
+    loadedTabsRef.current = new Set();
     if (id) loadBuilding();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
