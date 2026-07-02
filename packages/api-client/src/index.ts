@@ -1842,6 +1842,9 @@ function buildInventoryApi(opts: ClientOptions) {
     getBuilding: (id: string) =>
       request<BuildingDTO>(opts, "GET", `/buildings/${id}`),
 
+    getBuildingKpis: (id: string) =>
+      request<{ data: { openRequests: number; openJobs: number } }>(opts, "GET", `/buildings/${id}/kpis`),
+
     createBuilding: (body: { name: string; address: string; city?: string; postalCode?: string }) =>
       request<BuildingDTO>(opts, "POST", "/buildings", body),
 

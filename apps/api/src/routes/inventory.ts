@@ -23,6 +23,8 @@ import {
   updateAssetModel,
   deactivateAssetModel,
   addAssetModelName,
+  getBuildingKpis,
+  BuildingNotFoundError,
 } from "../services/inventory";
 import { getAssetInventoryForUnit, getAssetInventoryForBuilding, getRepairReplaceAnalysis, getBuildingRenovationOpportunities } from "../services/assetInventory";
 import { seedDefaultBuildingAssets, seedDefaultUnitAssets } from "../services/defaultAssets";
@@ -276,6 +278,18 @@ export function registerInventoryRoutes(router: Router) {
       sendJson(res, 200, { data: mapBuildingToDetailDTO(building as any) });
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to fetch building", String(e));
+    }
+  }));
+
+  // GET /buildings/:id/kpis — aggregate operational counts (open requests/jobs)
+  // as scalar DB counts, replacing the client-side fetch-2000-and-filter pattern.
+  router.get("/buildings/:id/kpis", withAuthRequired(async ({ req, res, orgId, params }) => {
+    try {
+      const data = await getBuildingKpis(orgId, params.id);
+      sendJson(res, 200, { data });
+    } catch (e) {
+      if (e instanceof BuildingNotFoundError) return sendError(res, 404, "NOT_FOUND", "Building not found");
+      sendError(res, 500, "DB_ERROR", "Failed to load building KPIs", String(e));
     }
   }));
 

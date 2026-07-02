@@ -29,7 +29,13 @@ export function registerInvoiceRoutes(router: Router) {
       const contractorId = first(query, "contractorId") || undefined;
       const status = first(query, "status") || undefined;
       const view = first(query, "view") as "summary" | "full" | undefined;
-      const result = await listJobs(orgId, { contractorId, status: status as any, view });
+      // Pagination is opt-in: only bound the query when the caller passes limit/offset.
+      // Absent params preserve the historical full-list behaviour list pages rely on.
+      const hasLimit = (first(query, "limit") ?? "") !== "";
+      const hasOffset = (first(query, "offset") ?? "") !== "";
+      const limit = hasLimit ? getIntParam(query, "limit", { defaultValue: 200, min: 1, max: 2000 }) : undefined;
+      const offset = hasOffset ? getIntParam(query, "offset", { defaultValue: 0, min: 0, max: 1_000_000 }) : undefined;
+      const result = await listJobs(orgId, { contractorId, status: status as any, view, limit, offset });
       sendJson(res, 200, { data: result.data, total: result.total });
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to load jobs", String(e));

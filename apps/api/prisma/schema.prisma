@@ -323,6 +323,7 @@ model Request {
   recommendations      RecommendationResult[]
 
   @@index([orgId])
+  @@index([orgId, status])
 }
 
 model MaintenanceAttachment {
@@ -576,6 +577,7 @@ model Unit {
   @@unique([buildingId, unitNumber])
   @@index([buildingId])
   @@index([orgId])
+  @@index([orgId, isVacant])
   @@index([isVacant])
   @@index([linkedFlatId])
 }
@@ -693,6 +695,7 @@ model Job {
   request             Request             @relation(fields: [requestId], references: [id], onDelete: Cascade)
 
   @@index([orgId])
+  @@index([orgId, status])
   @@index([contractorId])
   @@index([requestId])
 }
@@ -823,6 +826,7 @@ model Invoice {
   @@index([buildingId])
   @@index([unitId])
   @@index([ancillaryCategoryId])
+  @@index([orgId, status])
 }
 
 model InvoiceLineItem {
@@ -1342,6 +1346,7 @@ model Lease {
   conditionReports      UnitConditionReport[]
 
   @@index([orgId])
+  @@index([orgId, status])
   @@index([unitId])
   @@index([applicationId])
   @@index([status])

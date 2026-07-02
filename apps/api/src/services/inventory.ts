@@ -2,7 +2,38 @@ import { UnitType, LocationSegment, InsulationQuality, EnergyLabel, HeatingType,
 import prisma from './prismaClient';
 import * as inventoryRepo from "../repositories/inventoryRepository";
 import { countAssetsByModel } from "../repositories/assetRepository";
+import { countOpenRequestsForBuilding } from "../repositories/requestRepository";
+import { countOpenJobsForBuilding } from "../repositories/jobRepository";
 import { seedDefaultBuildingAssets, seedDefaultUnitAssets } from "./defaultAssets";
+
+/** Not-found signal for org-scoped building lookups. */
+export class BuildingNotFoundError extends Error {
+  constructor(message = "Building not found") {
+    super(message);
+    this.name = "BuildingNotFoundError";
+  }
+}
+
+export interface BuildingKpis {
+  openRequests: number;
+  openJobs: number;
+}
+
+/**
+ * Aggregate operational KPIs for a building — open request and job counts —
+ * computed as scalar DB counts. Replaces the frontend anti-pattern of fetching
+ * up to 2,000 requests + 2,000 jobs org-wide and filtering client-side.
+ */
+export async function getBuildingKpis(orgId: string, buildingId: string): Promise<BuildingKpis> {
+  const building = await inventoryRepo.findBuildingByIdAndOrg(prisma, buildingId, orgId);
+  if (!building) throw new BuildingNotFoundError();
+
+  const [openRequests, openJobs] = await Promise.all([
+    countOpenRequestsForBuilding(prisma, orgId, buildingId),
+    countOpenJobsForBuilding(prisma, orgId, buildingId),
+  ]);
+  return { openRequests, openJobs };
+}
 
 const assetModelName = (model: { manufacturer: string; model: string }) => {
   if (!model.manufacturer || model.manufacturer.toLowerCase() === "unknown") return model.model;

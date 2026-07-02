@@ -438,6 +438,33 @@ describe('G10: API Contract Tests', () => {
     });
   });
 
+  describe('GET /buildings/:id/kpis', () => {
+    it('returns BuildingKpisDTO with integer open counts', async () => {
+      const buildings = await fetchJson('/buildings?limit=1');
+      if (buildings.data.length === 0) {
+        console.log('⚠️  Skipping kpis test: no buildings in database');
+        return;
+      }
+      const buildingId = buildings.data[0].id;
+      const body = await fetchJson(`/buildings/${buildingId}/kpis`);
+
+      expect(body).toHaveProperty('data');
+      const dto = body.data;
+      expectKeys(dto, ['openRequests', 'openJobs'], 'BuildingKpisDTO');
+      expect(Number.isInteger(dto.openRequests)).toBe(true);
+      expect(Number.isInteger(dto.openJobs)).toBe(true);
+      expect(dto.openRequests).toBeGreaterThanOrEqual(0);
+      expect(dto.openJobs).toBeGreaterThanOrEqual(0);
+    });
+
+    it('returns 404 for non-existent building', async () => {
+      const res = await fetch(
+        `${API_BASE}/buildings/00000000-0000-0000-0000-000000000000/kpis`,
+      );
+      expect(res.status).toBe(404);
+    });
+  });
+
   describe('GET /financials/portfolio-timeseries', () => {
     it('returns PortfolioTimeSeriesDTO with points array and range', async () => {
       const body = await fetchJson('/financials/portfolio-timeseries?range=1Y');
