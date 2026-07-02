@@ -283,9 +283,19 @@ export async function findUnitByIdAndOrg(
     where: { id: unitId, orgId },
     include: {
       building: true,
+      // SIGNED + ACTIVE = binding leases. Rent/charges are exposed so callers can
+      // mirror the contractual figure and block divergent unit-level edits.
       leases: {
-        where: { status: "ACTIVE" },
-        select: { id: true, tenantName: true, startDate: true, status: true },
+        where: { status: { in: ["SIGNED", "ACTIVE"] } },
+        select: {
+          id: true,
+          tenantName: true,
+          startDate: true,
+          endDate: true,
+          status: true,
+          netRentChf: true,
+          chargesTotalChf: true,
+        },
       },
     },
   });
