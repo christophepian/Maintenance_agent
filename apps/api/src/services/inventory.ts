@@ -132,6 +132,22 @@ export async function updateUnit(
   const existing = await inventoryRepo.findUnitByIdAndOrg(prisma, unitId, orgId);
   if (!existing) return null;
 
+  // Safeguard: net rent / charges are governed by any binding (SIGNED/ACTIVE) lease.
+  // Editing them on the unit would create a discrepancy with the signed lease and the
+  // tenant's invoices (both read from Lease.netRentChf / chargesTotalChf), so reject a
+  // *change* while a binding lease exists. Unchanged values pass through (the edit form
+  // always sends these two fields), so other unit edits still work while occupied.
+  const bindingLeases = existing.leases ?? [];
+  if (bindingLeases.length > 0) {
+    const rentChanged =
+      data.monthlyRentChf !== undefined && data.monthlyRentChf !== existing.monthlyRentChf;
+    const chargesChanged =
+      data.monthlyChargesChf !== undefined && data.monthlyChargesChf !== existing.monthlyChargesChf;
+    if (rentChanged || chargesChanged) {
+      throw new Error("RENT_LOCKED_BY_LEASE");
+    }
+  }
+
   return inventoryRepo.updateUnit(prisma, unitId, data);
 }
 

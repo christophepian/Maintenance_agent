@@ -819,7 +819,15 @@ export default function UnitDetail() {
   }
 
   const assignedTenantIds = new Set(tenants.map((tenant) => tenant.id));
-  const hasActiveLease = (unit?.leases ?? []).length > 0;
+  // unit.leases now includes binding (SIGNED + ACTIVE) leases. Occupancy keeps its
+  // ACTIVE-only meaning; the rent lock uses the wider binding set.
+  const bindingLeases = unit?.leases ?? [];
+  const hasActiveLease = bindingLeases.some((l) => l.status === "ACTIVE");
+  // Net rent / charges are governed by a binding lease — mirror it and lock editing.
+  const rentLocked = bindingLeases.length > 0;
+  const rentLease = bindingLeases.length === 1 ? bindingLeases[0] : null;
+  const displayRentChf = rentLease ? rentLease.netRentChf : unit?.monthlyRentChf;
+  const displayChargesChf = rentLease ? rentLease.chargesTotalChf : unit?.monthlyChargesChf;
   const occupancyStatus = hasActiveLease ? "OCCUPIED" : unit?.isVacant ? "LISTED" : "VACANT";
   const occupancyLabel = occupancyStatus === "OCCUPIED" ? "Occupied" : occupancyStatus === "LISTED" ? "Listed" : "Vacant";
   const occupancyVariant = occupancyStatus === "OCCUPIED" ? "success" : occupancyStatus === "LISTED" ? "info" : "destructive";
@@ -912,6 +920,28 @@ export default function UnitDetail() {
             {editMode ? (
               <div className="mb-4">
                 {/* ── Pricing (asking rent — defaults future leases) ── */}
+                {rentLocked ? (
+                  <div className="mb-4 p-4 bg-surface-subtle rounded-lg border border-surface-border">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div>
+                        <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Net rent</div>
+                        <div className="text-lg font-bold text-foreground mt-1">{displayRentChf != null ? `CHF ${displayRentChf}.-` : "—"}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Charges</div>
+                        <div className="text-lg font-bold text-foreground mt-1">{displayChargesChf != null ? `CHF ${displayChargesChf}.-` : "—"}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Total incl. charges</div>
+                        <div className="text-lg font-bold text-foreground mt-1">{displayRentChf != null || displayChargesChf != null ? `CHF ${(displayRentChf || 0) + (displayChargesChf || 0)}.-` : "—"}</div>
+                      </div>
+                    </div>
+                    <p className="mt-3 text-xs text-foreground-dim">
+                      🔒 {rentLease ? "Set by the active lease" : "Set by the active lease(s)"} — editing here is disabled to keep the unit, the signed lease and invoices in sync.{" "}
+                      <button type="button" className="underline hover:text-foreground" onClick={() => setActiveTab("Contracts")}>Edit the lease →</button>
+                    </p>
+                  </div>
+                ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4 p-4 bg-surface-subtle rounded-lg border border-surface-border">
                   <div className="grid gap-1.5">
                     <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Net rent (CHF/mo)</span>
@@ -926,6 +956,7 @@ export default function UnitDetail() {
                     <div className="text-lg font-bold text-foreground mt-1">{editMonthlyRent !== "" || editMonthlyCharges !== "" ? `CHF ${(Number(editMonthlyRent) || 0) + (Number(editMonthlyCharges) || 0)}.-` : "—"}</div>
                   </div>
                 </div>
+                )}
                 <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-1.5">
                 <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Unit number</span>
@@ -1038,20 +1069,23 @@ export default function UnitDetail() {
           </div>
         ) : (
           <div className="mb-4">
-            {/* ── Pricing ── */}
+            {/* ── Pricing ── (mirrors the binding lease when occupied) */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4 p-4 bg-surface-subtle rounded-lg border border-surface-border">
               <div>
                 <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Net rent</div>
-                <div className="text-lg font-bold text-foreground mt-1">{unit?.monthlyRentChf != null ? `CHF ${unit.monthlyRentChf}.-` : "—"}</div>
+                <div className="text-lg font-bold text-foreground mt-1">{displayRentChf != null ? `CHF ${displayRentChf}.-` : "—"}</div>
               </div>
               <div>
                 <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Charges</div>
-                <div className="text-lg font-bold text-foreground mt-1">{unit?.monthlyChargesChf != null ? `CHF ${unit.monthlyChargesChf}.-` : "—"}</div>
+                <div className="text-lg font-bold text-foreground mt-1">{displayChargesChf != null ? `CHF ${displayChargesChf}.-` : "—"}</div>
               </div>
               <div>
                 <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Total incl. charges</div>
-                <div className="text-lg font-bold text-foreground mt-1">{unit?.monthlyRentChf != null || unit?.monthlyChargesChf != null ? `CHF ${(unit?.monthlyRentChf || 0) + (unit?.monthlyChargesChf || 0)}.-` : "—"}</div>
+                <div className="text-lg font-bold text-foreground mt-1">{displayRentChf != null || displayChargesChf != null ? `CHF ${(displayRentChf || 0) + (displayChargesChf || 0)}.-` : "—"}</div>
               </div>
+              {rentLocked && (
+                <p className="sm:col-span-3 text-xs text-foreground-dim">🔒 From the active lease — the unit, the signed lease and invoices stay in sync.</p>
+              )}
             </div>
             {/* ── Unit details grid ── */}
             <div className="grid grid-cols-2 gap-4">
