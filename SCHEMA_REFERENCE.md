@@ -5,7 +5,7 @@
 
 ## Database Schema (Prisma)
 
-**Status: ACTIVE AND IN USE — 130 migrations** (shadow DB replay verified clean 2026-03-30)
+**Status: ACTIVE AND IN USE — 132 migrations** (shadow DB replay verified clean 2026-03-30)
 
 **Last verified:** 2026-06-29
 
