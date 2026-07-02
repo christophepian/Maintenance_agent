@@ -859,7 +859,7 @@ export default function UnitDetail() {
     <AppShell role={isOwner ? "OWNER" : "MANAGER"}>
       <PageShell variant="embedded">
         <div className="mb-3">
-          <Link href={unit?.building?.id ? `/admin-inventory/buildings/${unit.building.id}${isOwner ? "?role=owner" : ""}` : (isOwner ? "/owner/properties" : "/admin-inventory")} className="text-sm font-medium text-muted-text hover:text-foreground">
+          <Link href={unit?.building?.id ? `/admin-inventory/buildings/${unit.building.id}?tab=Units${isOwner ? "&role=owner" : ""}` : (isOwner ? "/owner/properties" : "/admin-inventory")} className="text-sm font-medium text-muted-text hover:text-foreground">
             ← Back
           </Link>
         </div>
