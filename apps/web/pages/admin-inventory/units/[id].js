@@ -1,5 +1,5 @@
 import { useRouter } from "next/router";
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import Link from "next/link";
 import AppShell from "../../../components/AppShell";
 import PageShell from "../../../components/layout/PageShell";
@@ -331,6 +331,9 @@ export default function UnitDetail() {
   const [editFloor, setEditFloor] = useState("");
   const [editType, setEditType] = useState("");
   const [activeTab, setActiveTab] = useState("Details");
+  // Tracks which tabs have had their (heavier) data loaded, so switching away
+  // and back doesn't refetch the whole-org tenant table / asset inventory.
+  const loadedTabsRef = useRef(new Set());
   const [conditionReports, setConditionReports] = useState([]);
   const [conditionReportsLoading, setConditionReportsLoading] = useState(false);
   const [showCreateReport, setShowCreateReport] = useState(false);
@@ -508,9 +511,10 @@ export default function UnitDetail() {
         } catch {}
       }
       await loadTenants();
-      await loadAllTenants();
-      await loadAssetModels();
-      await loadAssetInventory();
+      // loadAllTenants (whole-org tenant table) + asset model/inventory loads
+      // are deferred to their tabs — see the activeTab effect below. They were
+      // previously fetched on every unit page mount even if those tabs were
+      // never opened.
       // Fetch leases for the unit to find linked rental application IDs
       try {
         const leasesData = await fetchJSON(`/leases?unitId=${id}`);
@@ -654,6 +658,9 @@ export default function UnitDetail() {
   }
 
   useEffect(() => {
+    // New unit → reset lazy-tab load guards (the page component is reused across
+    // /units/[id] navigations, so the ref would otherwise carry over).
+    loadedTabsRef.current = new Set();
     if (id) loadUnit();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
@@ -675,6 +682,16 @@ export default function UnitDetail() {
     if (id && activeTab === "Contracts") loadLeases();
     if (id && activeTab === "Financials") loadUnitFinancials();
     if (id && activeTab === "Requests") loadUnitRequests();
+    // Lazy, load-once datasets for heavier tabs (deferred out of loadUnit).
+    if (id && activeTab === "Tenants" && !loadedTabsRef.current.has("Tenants")) {
+      loadedTabsRef.current.add("Tenants");
+      loadAllTenants();
+    }
+    if (id && activeTab === "Assets" && !loadedTabsRef.current.has("Assets")) {
+      loadedTabsRef.current.add("Assets");
+      loadAssetModels();
+      loadAssetInventory();
+    }
     if (id && activeTab === "Condition Reports") {
       setConditionReportsLoading(true);
       fetch(`/api/units/${id}/condition-reports`, { headers: authHeaders() })
