@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import dynamic from "next/dynamic";
 import { useRouter } from "next/router";
 import AppShell from "../../components/AppShell";
 import Badge from "../../components/ui/Badge";
@@ -10,11 +9,10 @@ import { cn } from "../../lib/utils";
 import { withTranslations } from "../../lib/i18n";
 import { useTranslation } from "next-i18next";
 import { useDetailResource } from "../../lib/hooks/useDetailResource";
-
-const PortfolioCanvasChart = dynamic(
-  () => import("../../components/PortfolioCanvasChart"),
-  { ssr: false },
-);
+// Statically imported (SSR-safe: all canvas work is in useEffect). Was a
+// dynamic(ssr:false) import whose Suspense boundary dropped the global Tailwind
+// stylesheet on client-side navigation under React 19. See fix/unit-css-regression.
+import PortfolioCanvasChart from "../../components/PortfolioCanvasChart";
 /* ─── Constants ──────────────────────────────────────────────── */
 
 const PREVIEW = 3;

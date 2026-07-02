@@ -1,6 +1,5 @@
 import { useRouter } from "next/router";
 import { useEffect, useState, useCallback, useMemo } from "react";
-import dynamic from "next/dynamic";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import {
   MONTH_HERO_GRADIENTS,
@@ -12,7 +11,11 @@ import {
   MonthlyTrendChart,
   OccupancyRow,
 } from "../../../components/reporting/ReportingShared";
-const PortfolioCanvasChart = dynamic(() => import("../../../components/PortfolioCanvasChart"), { ssr: false });
+// Statically imported (SSR-safe: all canvas work is in useEffect). Previously a
+// dynamic(ssr:false) import, which created a Suspense boundary that — under React
+// 19's stylesheet handling in the pages router — dropped the global Tailwind
+// stylesheet on subsequent client-side navigations. See fix/unit-css-regression.
+import PortfolioCanvasChart from "../../../components/PortfolioCanvasChart";
 
 function CorrespondenceTab({ buildingId }) {
   const [letters, setLetters] = useState([]);
