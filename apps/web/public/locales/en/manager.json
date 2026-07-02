@@ -458,7 +458,8 @@
       "managementGuidelines": "Management Guidelines",
       "residentialUnits": "Residential Units",
       "commonAreas": "Common Areas",
-      "leaseTemplate": "Lease Template"
+      "leaseTemplate": "Lease Template",
+      "parking": "Parking"
     },
     "fields": {
       "etatLocatifNetChf": "Net rent roll (annual)",
@@ -605,7 +606,8 @@
       "autoApprove": "Auto-approve",
       "requireManagerReview": "Require manager review",
       "requireOwnerApproval": "Require owner approval",
-      "roleIntent": "Select a role intent"
+      "roleIntent": "Select a role intent",
+      "parking": "Parking"
     },
     "text": {
       "loadingBuilding": "Loading building...",
@@ -824,6 +826,16 @@
     "strategyEditor": {
       "intro": "Set how this building should be managed — the cashflow recommendation engine uses it to tailor advice for this property.",
       "notSet": "No building-specific strategy is set. Set one to tailor cashflow recommendations to this building."
+    },
+    "parking": {
+      "kindLabel": "Parking kind",
+      "exteriorSpot": "Exterior spot",
+      "garageBox": "Garage / box",
+      "assignedToFlat": "Assigned to flat (optional)",
+      "none": "— None (standalone) —",
+      "exterior": "Exterior",
+      "garage": "Garage",
+      "linkedFlat": "↳ flat {{label}}"
     }
   },
   "unitsId": {
@@ -912,6 +924,32 @@
       },
       "poorDamaged_one": "{{count}} asset in poor/damaged condition — consider running a renovation simulation.",
       "poorDamaged_other": "{{count}} assets in poor/damaged condition — consider running a renovation simulation."
+    },
+    "pricing": {
+      "netRentMo": "Net rent (CHF/mo)",
+      "chargesMo": "Charges (CHF/mo)",
+      "netRent": "Net rent",
+      "charges": "Charges",
+      "totalInclCharges": "Total incl. charges",
+      "lockedSingle": "Set by the active lease",
+      "lockedMulti": "Set by the active lease(s)",
+      "lockedNote": " — editing here is disabled to keep the unit, the signed lease and invoices in sync. ",
+      "openLease": "Open the lease →",
+      "viewLease": "View the lease →",
+      "fromLeaseNote": "🔒 From the active lease — the unit, the signed lease and invoices stay in sync."
+    },
+    "actions": {
+      "openRow": "Open →"
+    },
+    "parking": {
+      "garageBox": "Garage / box",
+      "exteriorParking": "Exterior parking",
+      "followsFlatPrefix": "— default tenant follows flat ",
+      "followsFlatSuffix": " (rent to a third party by giving this spot its own lease).",
+      "standalone": "— standalone (not linked to a flat).",
+      "linkedParking": "Linked parking",
+      "exterior": "Exterior",
+      "garage": "Garage"
     }
   },
   "billingSchedules": {

@@ -924,39 +924,39 @@ export default function UnitDetail() {
                   <div className="mb-4 p-4 bg-surface-subtle rounded-lg border border-surface-border">
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div>
-                        <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Net rent</div>
+                        <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:unitsId.pricing.netRent")}</div>
                         <div className="text-lg font-bold text-foreground mt-1">{displayRentChf != null ? `CHF ${displayRentChf}.-` : "—"}</div>
                       </div>
                       <div>
-                        <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Charges</div>
+                        <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:unitsId.pricing.charges")}</div>
                         <div className="text-lg font-bold text-foreground mt-1">{displayChargesChf != null ? `CHF ${displayChargesChf}.-` : "—"}</div>
                       </div>
                       <div>
-                        <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Total incl. charges</div>
+                        <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:unitsId.pricing.totalInclCharges")}</div>
                         <div className="text-lg font-bold text-foreground mt-1">{displayRentChf != null || displayChargesChf != null ? `CHF ${(displayRentChf || 0) + (displayChargesChf || 0)}.-` : "—"}</div>
                       </div>
                     </div>
                     <p className="mt-3 text-xs text-foreground-dim">
-                      🔒 {rentLease ? "Set by the active lease" : "Set by the active lease(s)"} — editing here is disabled to keep the unit, the signed lease and invoices in sync.{" "}
+                      🔒 {rentLease ? t("manager:unitsId.pricing.lockedSingle") : t("manager:unitsId.pricing.lockedMulti")}{t("manager:unitsId.pricing.lockedNote")}
                       {rentLease && !isOwner ? (
-                        <Link href={`/manager/leases/${rentLease.id}`} className="text-blue-600 hover:underline">Open the lease →</Link>
+                        <Link href={`/manager/leases/${rentLease.id}`} className="text-blue-600 hover:underline">{t("manager:unitsId.pricing.openLease")}</Link>
                       ) : (
-                        <button type="button" className="underline hover:text-foreground" onClick={() => setActiveTab("Contracts")}>View the lease →</button>
+                        <button type="button" className="underline hover:text-foreground" onClick={() => setActiveTab("Contracts")}>{t("manager:unitsId.pricing.viewLease")}</button>
                       )}
                     </p>
                   </div>
                 ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4 p-4 bg-surface-subtle rounded-lg border border-surface-border">
                   <div className="grid gap-1.5">
-                    <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Net rent (CHF/mo)</span>
+                    <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:unitsId.pricing.netRentMo")}</span>
                     <input className="filter-input w-full" type="number" step="1" min="0" value={editMonthlyRent} onChange={(e) => setEditMonthlyRent(e.target.value)} placeholder="e.g. 1800" />
                   </div>
                   <div className="grid gap-1.5">
-                    <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Charges (CHF/mo)</span>
+                    <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:unitsId.pricing.chargesMo")}</span>
                     <input className="filter-input w-full" type="number" step="1" min="0" value={editMonthlyCharges} onChange={(e) => setEditMonthlyCharges(e.target.value)} placeholder="e.g. 200" />
                   </div>
                   <div className="grid gap-1.5">
-                    <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Total incl. charges</span>
+                    <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:unitsId.pricing.totalInclCharges")}</span>
                     <div className="text-lg font-bold text-foreground mt-1">{editMonthlyRent !== "" || editMonthlyCharges !== "" ? `CHF ${(Number(editMonthlyRent) || 0) + (Number(editMonthlyCharges) || 0)}.-` : "—"}</div>
                   </div>
                 </div>
@@ -1076,21 +1076,48 @@ export default function UnitDetail() {
             {/* ── Pricing ── (mirrors the binding lease when occupied) */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4 p-4 bg-surface-subtle rounded-lg border border-surface-border">
               <div>
-                <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Net rent</div>
+                <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:unitsId.pricing.netRent")}</div>
                 <div className="text-lg font-bold text-foreground mt-1">{displayRentChf != null ? `CHF ${displayRentChf}.-` : "—"}</div>
               </div>
               <div>
-                <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Charges</div>
+                <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:unitsId.pricing.charges")}</div>
                 <div className="text-lg font-bold text-foreground mt-1">{displayChargesChf != null ? `CHF ${displayChargesChf}.-` : "—"}</div>
               </div>
               <div>
-                <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Total incl. charges</div>
+                <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:unitsId.pricing.totalInclCharges")}</div>
                 <div className="text-lg font-bold text-foreground mt-1">{displayRentChf != null || displayChargesChf != null ? `CHF ${(displayRentChf || 0) + (displayChargesChf || 0)}.-` : "—"}</div>
               </div>
               {rentLocked && (
-                <p className="sm:col-span-3 text-xs text-foreground-dim">🔒 From the active lease — the unit, the signed lease and invoices stay in sync.</p>
+                <p className="sm:col-span-3 text-xs text-foreground-dim">{t("manager:unitsId.pricing.fromLeaseNote")}</p>
               )}
             </div>
+            {/* ── Parking: this spot's link, or a flat's linked spots ── */}
+            {unit?.type === "PARKING" && (
+              <div className="mb-4 p-4 bg-surface-subtle rounded-lg border border-surface-border text-sm">
+                <span className="font-medium text-foreground">🅿 {unit.parkingKind === "GARAGE" ? t("manager:unitsId.parking.garageBox") : t("manager:unitsId.parking.exteriorParking")}</span>
+                {unit.linkedFlat ? (
+                  <span className="ml-2 text-muted-dark">{t("manager:unitsId.parking.followsFlatPrefix")}
+                    <Link href={`/admin-inventory/units/${unit.linkedFlat.id}${isOwner ? "?role=owner" : ""}`} className="text-blue-600 hover:underline">{unit.linkedFlat.unitNumber}</Link>
+                    {t("manager:unitsId.parking.followsFlatSuffix")}
+                  </span>
+                ) : (
+                  <span className="ml-2 text-foreground-dim">{t("manager:unitsId.parking.standalone")}</span>
+                )}
+              </div>
+            )}
+            {unit?.parkingSpots?.length > 0 && (
+              <div className="mb-4 p-4 bg-surface-subtle rounded-lg border border-surface-border">
+                <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim mb-2">{t("manager:unitsId.parking.linkedParking")}</div>
+                <div className="flex flex-wrap gap-2">
+                  {unit.parkingSpots.map((p) => (
+                    <Link key={p.id} href={`/admin-inventory/units/${p.id}${isOwner ? "?role=owner" : ""}`} className="inline-flex items-center gap-1.5 rounded-lg border border-surface-border bg-surface px-2.5 py-1 text-sm hover:bg-surface-hover">
+                      🅿 <span className="font-medium text-foreground">{p.unitNumber}</span>
+                      <span className="text-xs text-foreground-dim">{p.parkingKind === "GARAGE" ? t("manager:unitsId.parking.garage") : t("manager:unitsId.parking.exterior")}{p.monthlyRentChf != null ? ` · CHF ${p.monthlyRentChf}.-` : ""}</span>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
             {/* ── Unit details grid ── */}
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -1758,7 +1785,7 @@ export default function UnitDetail() {
                         <td className="whitespace-nowrap">{formatDate(lease.createdAt)}</td>
                         {!isOwner && (
                           <td className="text-right whitespace-nowrap">
-                            <Link href={`/manager/leases/${lease.id}`} className="text-blue-600 hover:underline">Open →</Link>
+                            <Link href={`/manager/leases/${lease.id}`} className="text-blue-600 hover:underline">{t("manager:unitsId.actions.openRow")}</Link>
                           </td>
                         )}
                       </tr>

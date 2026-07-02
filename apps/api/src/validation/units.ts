@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { UnitType, LocationSegment, InsulationQuality, EnergyLabel, HeatingType } from "@prisma/client";
+import { UnitType, LocationSegment, InsulationQuality, EnergyLabel, HeatingType, ParkingKind } from "@prisma/client";
 
 const currentYear = new Date().getFullYear();
 
@@ -7,12 +7,19 @@ export const CreateUnitSchema = z.object({
   unitNumber: z.string().min(1, "unitNumber is required"),
   floor: z.string().optional(),
   type: z.nativeEnum(UnitType).optional(),
+  // Parking metadata (only meaningful when type === PARKING).
+  parkingKind: z.nativeEnum(ParkingKind).nullable().optional(),
+  linkedFlatId: z.string().uuid().nullable().optional(),
 });
 
 export const UpdateUnitSchema = z.object({
   unitNumber: z.string().min(1).optional(),
   floor: z.string().optional(),
   type: z.nativeEnum(UnitType).optional(),
+
+  // Parking metadata (only meaningful when type === PARKING)
+  parkingKind: z.nativeEnum(ParkingKind).nullable().optional(),
+  linkedFlatId: z.string().uuid().nullable().optional(),
 
   // Rent estimation fields
   livingAreaSqm: z.number().min(5).max(1000).optional(),

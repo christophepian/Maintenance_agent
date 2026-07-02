@@ -1104,6 +1104,8 @@ export default function BuildingDetail() {
   const [editMarketPrice, setEditMarketPrice] = useState(""); // CHF/m² input
   const [createUnitName, setCreateUnitName] = useState("");
   const [createUnitType, setCreateUnitType] = useState("RESIDENTIAL");
+  const [createParkingKind, setCreateParkingKind] = useState("EXTERIOR");
+  const [createLinkedFlatId, setCreateLinkedFlatId] = useState("");
   const [unitAction, setUnitAction] = useState(null);
   const [configMode, setConfigMode] = useState(null);
   const [configAutoApprove, setConfigAutoApprove] = useState("");
@@ -1662,12 +1664,20 @@ export default function BuildingDetail() {
     if (!createUnitName.trim()) return setErr("Unit name is required.");
     try {
       setLoading(true);
+      const body = { unitNumber: createUnitName, type: createUnitType };
+      if (createUnitType === "PARKING") {
+        body.parkingKind = createParkingKind;
+        if (createLinkedFlatId) body.linkedFlatId = createLinkedFlatId;
+      }
       await fetchJSON(`/buildings/${id}/units`, {
         method: "POST",
-        body: JSON.stringify({ unitNumber: createUnitName, type: createUnitType }),
+        body: JSON.stringify(body),
       });
       await loadUnits();
       setCreateUnitName("");
+      setCreateUnitType("RESIDENTIAL");
+      setCreateParkingKind("EXTERIOR");
+      setCreateLinkedFlatId("");
       setUnitAction(null);
       setOk("Unit created.");
     } catch (e) {
@@ -1828,6 +1838,8 @@ export default function BuildingDetail() {
 
   const residentialUnits = units.filter((u) => u.type === "RESIDENTIAL" || !u.type);
   const commonUnits = units.filter((u) => u.type === "COMMON_AREA");
+  const parkingUnits = units.filter((u) => u.type === "PARKING");
+  const flatLabelById = Object.fromEntries(units.map((u) => [u.id, u.unitNumber || u.name || "Unit"]));
 
   // ─── Occupancy counts (always across ALL units) ───
   const occupiedCount = units.filter((u) => u.occupancyStatus === "OCCUPIED").length;
@@ -2497,8 +2509,29 @@ export default function BuildingDetail() {
                       >
                         <option value="RESIDENTIAL">{t("manager:buildingsId.select.residential")}</option>
                         <option value="COMMON_AREA">{t("manager:buildingsId.select.commonArea")}</option>
+                        <option value="PARKING">{t("manager:buildingsId.select.parking")}</option>
                       </select>
                     </label>
+                    {createUnitType === "PARKING" && (
+                      <>
+                        <label className="grid gap-2">
+                          <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:buildingsId.parking.kindLabel")}</span>
+                          <select className="input text-sm text-muted-dark" value={createParkingKind} onChange={(e) => setCreateParkingKind(e.target.value)}>
+                            <option value="EXTERIOR">{t("manager:buildingsId.parking.exteriorSpot")}</option>
+                            <option value="GARAGE">{t("manager:buildingsId.parking.garageBox")}</option>
+                          </select>
+                        </label>
+                        <label className="grid gap-2">
+                          <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:buildingsId.parking.assignedToFlat")}</span>
+                          <select className="input text-sm text-muted-dark" value={createLinkedFlatId} onChange={(e) => setCreateLinkedFlatId(e.target.value)}>
+                            <option value="">{t("manager:buildingsId.parking.none")}</option>
+                            {residentialUnits.map((f) => (
+                              <option key={f.id} value={f.id}>{f.unitNumber || f.name || "Unit"}</option>
+                            ))}
+                          </select>
+                        </label>
+                      </>
+                    )}
                   </div>
                   <button type="submit" className="button-primary" disabled={loading}>
                     {loading ? t("manager:buildingsId.btn.creating") : t("manager:buildingsId.btn.createUnit")}
@@ -2615,6 +2648,39 @@ export default function BuildingDetail() {
                                 <Badge variant="warning" size="sm">{t("manager:buildingsId.text.listed")}</Badge>
                               )}
                             </div>
+                          </div>
+                          <span className="text-blue-600 ml-2 flex-shrink-0">→</span>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {(unitFilter === "ALL" ? parkingUnits : parkingUnits.filter((u) => u.occupancyStatus === unitFilter)).length > 0 && (
+                <>
+                  <h3 className="font-semibold text-foreground mt-4 mb-3">{t("manager:buildingsId.heading.parking")}</h3>
+                  <div className="space-y-2 mb-4">
+                    {(unitFilter === "ALL" ? parkingUnits : parkingUnits.filter((u) => u.occupancyStatus === unitFilter)).map((u) => (
+                      <Link key={u.id} href={`/admin-inventory/units/${u.id}${isOwner ? "?role=owner" : ""}`} className="block border border-surface-border rounded-lg p-3 hover:bg-surface-subtle transition">
+                        <div className="flex justify-between items-center">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-semibold text-foreground">{u.unitNumber || u.name || t("manager:buildingsId.heading.parking")}</span>
+                              <Badge variant="info" size="sm">{u.parkingKind === "GARAGE" ? t("manager:buildingsId.parking.garage") : t("manager:buildingsId.parking.exterior")}</Badge>
+                              {u.linkedFlatId && flatLabelById[u.linkedFlatId] && (
+                                <span className="text-xs text-foreground-dim">{t("manager:buildingsId.parking.linkedFlat", { label: flatLabelById[u.linkedFlatId] })}</span>
+                              )}
+                              {u.occupancyStatus === "OCCUPIED" && <Badge variant="success" size="sm">{t("manager:buildingsId.text.occupied")}</Badge>}
+                              {u.occupancyStatus === "VACANT" && <Badge variant="destructive" size="sm">{t("manager:buildingsId.text.vacant")}</Badge>}
+                              {u.occupancyStatus === "LISTED" && <Badge variant="warning" size="sm">{t("manager:buildingsId.text.listed")}</Badge>}
+                            </div>
+                            {(u.monthlyRentChf != null || u.monthlyChargesChf != null) && (
+                              <div className="text-xs text-muted mt-1">
+                                {u.monthlyRentChf != null && <span className="font-medium text-muted-dark">CHF {u.monthlyRentChf}.-</span>}
+                                {u.monthlyChargesChf != null && <span className="ml-1 text-foreground-dim">+ {u.monthlyChargesChf} charges</span>}
+                              </div>
+                            )}
                           </div>
                           <span className="text-blue-600 ml-2 flex-shrink-0">→</span>
                         </div>

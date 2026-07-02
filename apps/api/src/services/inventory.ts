@@ -1,4 +1,4 @@
-import { UnitType, LocationSegment, InsulationQuality, EnergyLabel, HeatingType } from "@prisma/client";
+import { UnitType, LocationSegment, InsulationQuality, EnergyLabel, HeatingType, ParkingKind } from "@prisma/client";
 import prisma from './prismaClient';
 import * as inventoryRepo from "../repositories/inventoryRepository";
 import { countAssetsByModel } from "../repositories/assetRepository";
@@ -87,10 +87,16 @@ export async function listUnits(
 export async function createUnit(
   orgId: string,
   buildingId: string,
-  data: { unitNumber: string; floor?: string; type?: UnitType }
+  data: { unitNumber: string; floor?: string; type?: UnitType; parkingKind?: ParkingKind | null; linkedFlatId?: string | null }
 ) {
   const building = await inventoryRepo.findBuildingByIdAndOrg(prisma, buildingId, orgId);
   if (!building) return null;
+
+  // A parking spot may only be linked to a flat in the SAME building.
+  if (data.linkedFlatId) {
+    const flat = await inventoryRepo.findUnitByIdAndOrg(prisma, data.linkedFlatId, orgId);
+    if (!flat || flat.buildingId !== buildingId) throw new Error("INVALID_LINKED_FLAT");
+  }
 
   const unit = await inventoryRepo.createUnit(prisma, orgId, buildingId, data);
   // Seed default unit-level assets only for residential units (fire-and-forget)
@@ -108,6 +114,8 @@ export async function updateUnit(
     unitNumber?: string;
     floor?: string;
     type?: UnitType;
+    parkingKind?: ParkingKind | null;
+    linkedFlatId?: string | null;
     livingAreaSqm?: number;
     rooms?: number;
     hasBalcony?: boolean;
@@ -146,6 +154,14 @@ export async function updateUnit(
     if (rentChanged || chargesChanged) {
       throw new Error("RENT_LOCKED_BY_LEASE");
     }
+  }
+
+  // A parking spot may only be linked to another unit in the same building, and
+  // never to itself. (null clears the link.)
+  if (data.linkedFlatId) {
+    if (data.linkedFlatId === unitId) throw new Error("INVALID_LINKED_FLAT");
+    const flat = await inventoryRepo.findUnitByIdAndOrg(prisma, data.linkedFlatId, orgId);
+    if (!flat || flat.buildingId !== existing.buildingId) throw new Error("INVALID_LINKED_FLAT");
   }
 
   return inventoryRepo.updateUnit(prisma, unitId, data);

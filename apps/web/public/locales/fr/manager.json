@@ -458,7 +458,8 @@
       "managementGuidelines": "Directives de gestion",
       "residentialUnits": "Unités résidentielles",
       "commonAreas": "Parties communes",
-      "leaseTemplate": "Modèle de bail"
+      "leaseTemplate": "Modèle de bail",
+      "parking": "Places de parc"
     },
     "fields": {
       "etatLocatifNetChf": "État locatif net (annuel)",
@@ -605,7 +606,8 @@
       "autoApprove": "Approbation automatique",
       "requireManagerReview": "Révision gestionnaire requise",
       "requireOwnerApproval": "Approbation propriétaire requise",
-      "roleIntent": "Sélectionnez un rôle"
+      "roleIntent": "Sélectionnez un rôle",
+      "parking": "Place de parc"
     },
     "text": {
       "loadingBuilding": "Chargement de l’immeuble…",
@@ -824,6 +826,16 @@
     "strategyEditor": {
       "intro": "Définissez la gestion de ce bâtiment — le moteur de recommandation de trésorerie l'utilise pour adapter ses conseils à ce bien.",
       "notSet": "Aucune stratégie spécifique au bâtiment n'est définie. Définissez-en une pour adapter les recommandations de trésorerie à ce bâtiment."
+    },
+    "parking": {
+      "kindLabel": "Type de place",
+      "exteriorSpot": "Place extérieure",
+      "garageBox": "Garage / box",
+      "assignedToFlat": "Rattachée au logement (optionnel)",
+      "none": "— Aucun (indépendante) —",
+      "exterior": "Extérieure",
+      "garage": "Garage",
+      "linkedFlat": "↳ logement {{label}}"
     }
   },
   "unitsId": {
@@ -912,6 +924,32 @@
       },
       "poorDamaged_one": "{{count}} actif en mauvais état / endommagé — envisagez une simulation de rénovation.",
       "poorDamaged_other": "{{count}} actifs en mauvais état / endommagés — envisagez une simulation de rénovation."
+    },
+    "pricing": {
+      "netRentMo": "Loyer net (CHF/mois)",
+      "chargesMo": "Charges (CHF/mois)",
+      "netRent": "Loyer net",
+      "charges": "Charges",
+      "totalInclCharges": "Total charges comprises",
+      "lockedSingle": "Défini par le bail actif",
+      "lockedMulti": "Défini par le(s) bail(s) actif(s)",
+      "lockedNote": " — la modification est désactivée ici afin de garder l'unité, le bail signé et les factures cohérents. ",
+      "openLease": "Ouvrir le bail →",
+      "viewLease": "Voir le bail →",
+      "fromLeaseNote": "🔒 Issu du bail actif — l'unité, le bail signé et les factures restent cohérents."
+    },
+    "actions": {
+      "openRow": "Ouvrir →"
+    },
+    "parking": {
+      "garageBox": "Garage / box",
+      "exteriorParking": "Place de parc extérieure",
+      "followsFlatPrefix": "— locataire par défaut = celui du logement ",
+      "followsFlatSuffix": " (pour louer à un tiers, créez un bail propre à cette place).",
+      "standalone": "— indépendante (non rattachée à un logement).",
+      "linkedParking": "Places de parc rattachées",
+      "exterior": "Extérieure",
+      "garage": "Garage"
     }
   },
   "billingSchedules": {
