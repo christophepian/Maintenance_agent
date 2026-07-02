@@ -938,7 +938,11 @@ export default function UnitDetail() {
                     </div>
                     <p className="mt-3 text-xs text-foreground-dim">
                       🔒 {rentLease ? "Set by the active lease" : "Set by the active lease(s)"} — editing here is disabled to keep the unit, the signed lease and invoices in sync.{" "}
-                      <button type="button" className="underline hover:text-foreground" onClick={() => setActiveTab("Contracts")}>Edit the lease →</button>
+                      {rentLease && !isOwner ? (
+                        <Link href={`/manager/leases/${rentLease.id}`} className="text-blue-600 hover:underline">Open the lease →</Link>
+                      ) : (
+                        <button type="button" className="underline hover:text-foreground" onClick={() => setActiveTab("Contracts")}>View the lease →</button>
+                      )}
                     </p>
                   </div>
                 ) : (
@@ -1696,17 +1700,24 @@ export default function UnitDetail() {
             <>
               {/* Mobile: card list */}
               <div className="sm:hidden space-y-2">
-                {sortedUnitLeases.map((lease) => (
-                  <div key={lease.id} className="rounded-lg border border-surface-border bg-surface-subtle px-3 py-2.5 flex items-center justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-foreground truncate">{lease.tenantName || "—"}</p>
-                      <p className="text-xs text-muted mt-0.5">
-                        {formatDate(lease.startDate)} · {formatChf(lease.netRentChf)}/mo
-                      </p>
+                {sortedUnitLeases.map((lease) => {
+                  const card = (
+                    <div className="rounded-lg border border-surface-border bg-surface-subtle px-3 py-2.5 flex items-center justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-foreground truncate">{lease.tenantName || "—"}</p>
+                        <p className="text-xs text-muted mt-0.5">
+                          {formatDate(lease.startDate)} · {formatChf(lease.netRentChf)}/mo
+                        </p>
+                      </div>
+                      <Badge variant={leaseVariant(lease.status)}>{lease.status}</Badge>
                     </div>
-                    <Badge variant={leaseVariant(lease.status)}>{lease.status}</Badge>
-                  </div>
-                ))}
+                  );
+                  return isOwner ? (
+                    <div key={lease.id}>{card}</div>
+                  ) : (
+                    <Link key={lease.id} href={`/manager/leases/${lease.id}`} className="block hover:opacity-80 transition-opacity">{card}</Link>
+                  );
+                })}
               </div>
               {/* Desktop: table */}
               <div className="hidden sm:block overflow-x-auto">
@@ -1721,6 +1732,7 @@ export default function UnitDetail() {
                       <SortableHeader label="End" field="endDate" sortField={lsSF} sortDir={lsSD} onSort={handleLsSort} />
                       <th>{t("manager:unitsId.col.notice")}</th>
                       <SortableHeader label="Created" field="createdAt" sortField={lsSF} sortDir={lsSD} onSort={handleLsSort} />
+                      {!isOwner && <th className="text-right"></th>}
                     </tr>
                   </thead>
                   <tbody>
@@ -1744,6 +1756,11 @@ export default function UnitDetail() {
                         <td className="whitespace-nowrap">{lease.endDate ? formatDate(lease.endDate) : "Open-ended"}</td>
                         <td className="whitespace-nowrap">{lease.noticeRule || "—"}</td>
                         <td className="whitespace-nowrap">{formatDate(lease.createdAt)}</td>
+                        {!isOwner && (
+                          <td className="text-right whitespace-nowrap">
+                            <Link href={`/manager/leases/${lease.id}`} className="text-blue-600 hover:underline">Open →</Link>
+                          </td>
+                        )}
                       </tr>
                     ))}
                   </tbody>
