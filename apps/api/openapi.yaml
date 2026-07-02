@@ -259,6 +259,21 @@ components:
         points:       { type: array, items: { $ref: '#/components/schemas/TimeSeriesPoint' } }
         earliestDate: { type: string, format: date, nullable: true }
 
+    BuildingKpisDTO:
+      type: object
+      required:
+        - openRequests
+        - openJobs
+      properties:
+        openRequests:
+          type: integer
+          description: Count of open (actionable) requests attributed to the building
+          example: 3
+        openJobs:
+          type: integer
+          description: Count of open (PENDING/IN_PROGRESS) jobs attributed to the building
+          example: 1
+
     AnnualSnapshotDTO:
       type: object
       required:
@@ -6643,6 +6658,29 @@ paths:
                   data: { $ref: '#/components/schemas/BuildingFinancialsDTO' }
         '400':
           $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /buildings/{id}/kpis:
+    get:
+      tags: [Inventory]
+      summary: Aggregate operational KPIs for a building (open request/job counts)
+      description: >-
+        Returns scalar counts of open (actionable) requests and jobs for the
+        building, computed server-side. Replaces the prior client-side pattern
+        of fetching all requests + jobs and filtering in the browser.
+      operationId: getBuildingKpis
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Building operational KPI counts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/BuildingKpisDTO' }
         '404':
           $ref: '#/components/responses/NotFound'
 

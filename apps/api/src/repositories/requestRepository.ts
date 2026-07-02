@@ -610,3 +610,34 @@ export async function createRequestEventRow(
 ) {
   return prisma.requestEvent.create({ data });
 }
+
+// ─── Building KPI counts ───────────────────────────────────────
+
+/** "Open" (actionable) request statuses used for building/portfolio KPI counts. */
+export const OPEN_REQUEST_STATUSES: RequestStatus[] = [
+  RequestStatus.PENDING_REVIEW,
+  RequestStatus.PENDING_OWNER_APPROVAL,
+  RequestStatus.RFP_PENDING,
+  RequestStatus.APPROVED,
+  RequestStatus.ASSIGNED,
+];
+
+/**
+ * Count open requests attributed to a building, scoped by org.
+ * Request has no direct buildingId, so attribution is via the unit relation;
+ * building-level requests without a unit are intentionally excluded to match
+ * the manager building-detail KPI semantics.
+ */
+export async function countOpenRequestsForBuilding(
+  prisma: PrismaClient,
+  orgId: string,
+  buildingId: string,
+): Promise<number> {
+  return prisma.request.count({
+    where: {
+      orgId,
+      status: { in: OPEN_REQUEST_STATUSES },
+      unit: { buildingId },
+    },
+  });
+}

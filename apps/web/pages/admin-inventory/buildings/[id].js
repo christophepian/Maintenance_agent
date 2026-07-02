@@ -1282,23 +1282,19 @@ export default function BuildingDetail() {
       const now = new Date();
       const from = `${now.getFullYear()}-01-01`;
       const to = now.toISOString().slice(0, 10);
-      const [reqRes, jobRes, finRes, portRes] = await Promise.all([
-        fetch("/api/requests?limit=2000&order=desc", { headers: authHeaders() }),
-        fetch("/api/jobs?limit=2000", { headers: authHeaders() }),
+      // Open request/job counts are computed server-side (GET /buildings/:id/kpis)
+      // as scalar DB counts — previously this fetched up to 2,000 requests + 2,000
+      // jobs org-wide and filtered them in the browser on every page load.
+      const [kpiRes, finRes, portRes] = await Promise.all([
+        fetch(`/api/buildings/${id}/kpis`, { headers: authHeaders() }),
         fetch(`/api/buildings/${id}/financial-summary?from=${from}&to=${to}`, { headers: authHeaders() }),
         fetch(`/api/financials/portfolio-summary?from=${from}&to=${to}`, { headers: authHeaders() }),
       ]);
-      const [reqData, jobData, finData, portData] = await Promise.all([
-        reqRes.json(), jobRes.json(), finRes.json(), portRes.json(),
+      const [kpiData, finData, portData] = await Promise.all([
+        kpiRes.json(), finRes.json(), portRes.json(),
       ]);
-      const allRequests = reqData?.data || [];
-      const allJobs = jobData?.data || [];
-      const openRequests = allRequests.filter(
-        (r) => r.unit?.building?.id === id && ["PENDING_REVIEW", "PENDING_OWNER_APPROVAL", "RFP_PENDING", "APPROVED", "ASSIGNED"].includes(r.status)
-      ).length;
-      const openJobs = allJobs.filter(
-        (j) => j.request?.unit?.building?.id === id && ["PENDING", "IN_PROGRESS"].includes(j.status)
-      ).length;
+      const openRequests = kpiData?.data?.openRequests ?? 0;
+      const openJobs = kpiData?.data?.openJobs ?? 0;
       const financials = finData?.data || null;
       const portfolio = portData?.data || null;
       let portfolioComparison = null;
