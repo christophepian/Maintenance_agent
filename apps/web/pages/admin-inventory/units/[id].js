@@ -357,6 +357,9 @@ export default function UnitDetail() {
   const [editHeatingType, setEditHeatingType] = useState("");
   const [editMonthlyRent, setEditMonthlyRent] = useState("");
   const [editMonthlyCharges, setEditMonthlyCharges] = useState("");
+  const [editParkingKind, setEditParkingKind] = useState("EXTERIOR");
+  const [editLinkedFlatId, setEditLinkedFlatId] = useState("");
+  const [siblingFlats, setSiblingFlats] = useState([]); // residential units in the same building (for the assigned-flat picker)
   const [editValuation, setEditValuation] = useState({}); // valeur intrinsèque inputs
   const [rentEstimate, setRentEstimate] = useState(null);
   const [estimateLoading, setEstimateLoading] = useState(false);
@@ -493,7 +496,17 @@ export default function UnitDetail() {
       setEditHeatingType(u.heatingType || "");
       setEditMonthlyRent(u.monthlyRentChf ?? "");
       setEditMonthlyCharges(u.monthlyChargesChf ?? "");
+      setEditParkingKind(u.parkingKind || "EXTERIOR");
+      setEditLinkedFlatId(u.linkedFlatId || "");
       setEditValuation(unitToValuationForm(u));
+      // Sibling residential units (same building) for the parking assigned-flat picker.
+      if (u.building?.id) {
+        try {
+          const bd = await fetchJSON(`/buildings/${u.building.id}/units`);
+          const list = Array.isArray(bd) ? bd : bd?.data || [];
+          setSiblingFlats(list.filter((x) => (x.type === "RESIDENTIAL" || !x.type) && x.id !== u.id));
+        } catch {}
+      }
       await loadTenants();
       await loadAllTenants();
       await loadAssetModels();
@@ -724,6 +737,9 @@ export default function UnitDetail() {
         heatingType: editHeatingType || undefined,
         monthlyRentChf: editMonthlyRent !== "" ? Number(editMonthlyRent) : null,
         monthlyChargesChf: editMonthlyCharges !== "" ? Number(editMonthlyCharges) : null,
+        ...(unit?.type === "PARKING"
+          ? { parkingKind: editParkingKind || undefined, linkedFlatId: editLinkedFlatId === "" ? null : editLinkedFlatId }
+          : {}),
         ...Object.fromEntries(
           UNIT_VALUATION_FIELDS.map((f) => {
             const raw = (editValuation[f.key] ?? "").toString().trim();
@@ -821,6 +837,21 @@ export default function UnitDetail() {
   const assignedTenantIds = new Set(tenants.map((tenant) => tenant.id));
   // unit.leases now includes binding (SIGNED + ACTIVE) leases. Occupancy keeps its
   // ACTIVE-only meaning; the rent lock uses the wider binding set.
+  const isParking = unit?.type === "PARKING";
+  // Parking spots keep only context-relevant valuation inputs (vétusté + the flat
+  // parking/garage value); the habitation/garden worksheet is hidden.
+  const valuationFields = isParking
+    ? UNIT_VALUATION_FIELDS.filter((f) => ["vetustePct", "extParkingValueChf", "garageValueChf"].includes(f.key))
+    : UNIT_VALUATION_FIELDS;
+  const pageTitle = !unit
+    ? t("manager:unitsId.title.unit")
+    : isParking
+      ? (unit.parkingKind === "GARAGE"
+          ? t("manager:unitsId.title.garage", { n: unit.unitNumber || "" })
+          : t("manager:unitsId.title.parkingSpot", { n: unit.unitNumber || "" }))
+      : unit.type === "COMMON_AREA"
+        ? t("manager:unitsId.title.commonArea", { n: unit.unitNumber || "" })
+        : t("manager:unitsId.title.residential", { n: unit.unitNumber || "" });
   const bindingLeases = unit?.leases ?? [];
   const hasActiveLease = bindingLeases.some((l) => l.status === "ACTIVE");
   // Net rent / charges are governed by a binding lease — mirror it and lock editing.
@@ -864,7 +895,7 @@ export default function UnitDetail() {
           </Link>
         </div>
         <PageHeader
-          title={`Unit ${unit?.unitNumber || "Detail"}`}
+          title={pageTitle}
           subtitle={unit?.building?.name ? `Building: ${unit.building.name}` : undefined}
         />
         <PageContent>
@@ -907,6 +938,8 @@ export default function UnitDetail() {
                     setEditHeatingType(unit?.heatingType || "");
                     setEditMonthlyRent(unit?.monthlyRentChf ?? "");
                     setEditMonthlyCharges(unit?.monthlyChargesChf ?? "");
+                    setEditParkingKind(unit?.parkingKind || "EXTERIOR");
+                    setEditLinkedFlatId(unit?.linkedFlatId || "");
                     setEditValuation(unitToValuationForm(unit));
                   }}>
                   Cancel
@@ -970,14 +1003,36 @@ export default function UnitDetail() {
                 <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Floor</span>
                 <input className="filter-input w-full" value={editFloor} onChange={(e) => setEditFloor(e.target.value)} placeholder={t("manager:unitsId.placeholder.eG3")} />
               </div>
-              <div className="grid gap-1.5">
-                <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Type</span>
-                <select className="filter-input w-full" value={editType} onChange={(e) => setEditType(e.target.value)}>
-                  <option value="">— Select type —</option>
-                  <option value="RESIDENTIAL">Residential</option>
-                  <option value="COMMON_AREA">Common area</option>
-                </select>
-              </div>
+              {isParking ? (
+                <>
+                  <div className="grid gap-1.5">
+                    <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:unitsId.parking.kindLabel")}</span>
+                    <select className="filter-input w-full" value={editParkingKind} onChange={(e) => setEditParkingKind(e.target.value)}>
+                      <option value="EXTERIOR">{t("manager:unitsId.parking.exteriorSpot")}</option>
+                      <option value="GARAGE">{t("manager:unitsId.parking.garageBox")}</option>
+                    </select>
+                  </div>
+                  <div className="grid gap-1.5">
+                    <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:unitsId.parking.assignedToFlat")}</span>
+                    <select className="filter-input w-full" value={editLinkedFlatId} onChange={(e) => setEditLinkedFlatId(e.target.value)}>
+                      <option value="">{t("manager:unitsId.parking.none")}</option>
+                      {siblingFlats.map((f) => (
+                        <option key={f.id} value={f.id}>{f.unitNumber || f.name || "Unit"}</option>
+                      ))}
+                    </select>
+                  </div>
+                </>
+              ) : (
+                <div className="grid gap-1.5">
+                  <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Type</span>
+                  <select className="filter-input w-full" value={editType} onChange={(e) => setEditType(e.target.value)}>
+                    <option value="">— Select type —</option>
+                    <option value="RESIDENTIAL">Residential</option>
+                    <option value="COMMON_AREA">Common area</option>
+                  </select>
+                </div>
+              )}
+              {!isParking && (<>
               <div className="grid gap-1.5">
                 <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Living area (m²)</span>
                 <input className="filter-input w-full" type="number" step="0.1" min="0" value={editLivingArea} onChange={(e) => setEditLivingArea(e.target.value)} placeholder={t("manager:unitsId.placeholder.eG75")} />
@@ -986,6 +1041,7 @@ export default function UnitDetail() {
                 <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Rooms</span>
                 <input className="filter-input w-full" type="number" step="0.5" min="0" value={editRooms} onChange={(e) => setEditRooms(e.target.value)} placeholder={t("manager:unitsId.placeholder.eG35")} />
               </div>
+              </>)}
               <div className="grid gap-1.5">
                 <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Location segment</span>
                 <select className="filter-input w-full" value={editLocationSegment} onChange={(e) => setEditLocationSegment(e.target.value)}>
@@ -999,6 +1055,7 @@ export default function UnitDetail() {
                 <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Last renovation year</span>
                 <input className="filter-input w-full" type="number" min="1900" max="2099" value={editLastRenovation} onChange={(e) => setEditLastRenovation(e.target.value)} placeholder={t("manager:unitsId.placeholder.eG2015")} />
               </div>
+              {!isParking && (<>
               <div className="grid gap-1.5">
                 <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Energy label</span>
                 <select className="filter-input w-full" value={editEnergyLabel} onChange={(e) => setEditEnergyLabel(e.target.value)}>
@@ -1040,13 +1097,14 @@ export default function UnitDetail() {
                   <input type="checkbox" checked={editParking} onChange={(e) => setEditParking(e.target.checked)} /> Parking
                 </label>
               </div>
+              </>)}
             </div>
 
             {/* ── Valeur intrinsèque worksheet ── */}
             <div className="mt-5 pt-4 border-t border-surface-border">
               <h3 className="text-sm font-semibold text-foreground mb-3">Valeur intrinsèque</h3>
               <div className="grid grid-cols-2 gap-4">
-                {UNIT_VALUATION_FIELDS.map((f) => (
+                {valuationFields.map((f) => (
                   <div key={f.key} className="grid gap-1.5">
                     <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{f.label}</span>
                     <input
@@ -1132,6 +1190,7 @@ export default function UnitDetail() {
                 <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Type</div>
                 <div className="text-sm text-muted-dark mt-1">{unit?.type || "—"}</div>
               </div>
+              {!isParking && (<>
               <div>
                 <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Living area</div>
                 <div className="text-sm text-muted-dark mt-1">{unit?.livingAreaSqm != null ? `${unit.livingAreaSqm} m²` : "—"}</div>
@@ -1140,6 +1199,7 @@ export default function UnitDetail() {
                 <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Rooms</div>
                 <div className="text-sm text-muted-dark mt-1">{unit?.rooms ?? "—"}</div>
               </div>
+              </>)}
               <div>
                 <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Location</div>
                 <div className="text-sm text-muted-dark mt-1">{unit?.locationSegment || "—"}</div>
@@ -1148,6 +1208,7 @@ export default function UnitDetail() {
                 <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Last renovation</div>
                 <div className="text-sm text-muted-dark mt-1">{unit?.lastRenovationYear || "—"}</div>
               </div>
+              {!isParking && (<>
               <div>
                 <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Energy label</div>
                 <div className="text-sm text-muted-dark mt-1">{unit?.energyLabel || "—"}</div>
@@ -1160,10 +1221,12 @@ export default function UnitDetail() {
                 <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Insulation</div>
                 <div className="text-sm text-muted-dark mt-1">{unit?.insulationQuality ? unit.insulationQuality.toLowerCase() : "—"}</div>
               </div>
+              </>)}
               <div>
                 <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Status</div>
                 <div className="text-sm text-muted-dark mt-1"><Badge variant={occupancyVariant} size="sm">{occupancyLabel}</Badge></div>
               </div>
+              {!isParking && (
               <div className="col-span-full">
                 <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Features</div>
                 <div className="text-sm text-muted-dark mt-1 flex gap-2">
@@ -1173,6 +1236,7 @@ export default function UnitDetail() {
                   {!unit?.hasBalcony && !unit?.hasTerrace && !unit?.hasParking && "—"}
                 </div>
               </div>
+              )}
             </div>
 
             {/* ── Valeur intrinsèque ── */}

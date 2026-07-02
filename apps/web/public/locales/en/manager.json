@@ -883,7 +883,11 @@
       "chargeReconciliationsNebenkosten": "Charge Reconciliations (Nebenkosten)",
       "invoices": "Invoices",
       "contracts": "Contracts",
-      "openRequests": "Open Requests"
+      "openRequests": "Open Requests",
+      "residential": "Residential unit {{n}}",
+      "garage": "Garage {{n}}",
+      "parkingSpot": "Parking spot {{n}}",
+      "commonArea": "Common area {{n}}"
     },
     "reporting": {
       "failed": "Failed to load",
@@ -949,7 +953,12 @@
       "standalone": "— standalone (not linked to a flat).",
       "linkedParking": "Linked parking",
       "exterior": "Exterior",
-      "garage": "Garage"
+      "garage": "Garage",
+      "kindLabel": "Parking kind",
+      "assignedToFlat": "Assigned flat",
+      "none": "— None (standalone) —",
+      "exteriorSpot": "Exterior spot",
+      "typeValue": "Parking"
     }
   },
   "billingSchedules": {
