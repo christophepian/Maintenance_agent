@@ -26,6 +26,9 @@ export const BILLING_SCHEDULE_INCLUDE = {
       chargesTotalChf: true,
       paymentIban: true,
       unitId: true,
+      // Unit context for parking co-billing (a co-billed parking lease is skipped;
+      // a flat's invoice absorbs its linked same-tenant parking spots).
+      unit: { select: { id: true, type: true, linkedFlatId: true, unitNumber: true, parkingKind: true } },
       expenseItems: {
         where: { isActive: true },
         select: {
@@ -68,6 +71,48 @@ export async function findScheduleByLeaseId(
   return prisma.recurringBillingSchedule.findUnique({
     where: { leaseId },
     include: BILLING_SCHEDULE_INCLUDE,
+  });
+}
+
+// ─── Parking co-billing ────────────────────────────────────────
+
+/**
+ * Active parking-spot leases that ride on a flat's invoice: parking units linked
+ * to `flatUnitId`, with an ACTIVE lease held by the same tenant (matched by name).
+ */
+export async function findActiveParkingLeasesForFlat(
+  prisma: PrismaClient,
+  flatUnitId: string,
+  tenantName: string,
+) {
+  return prisma.lease.findMany({
+    where: {
+      status: "ACTIVE",
+      tenantName,
+      unit: { type: "PARKING", linkedFlatId: flatUnitId },
+    },
+    select: {
+      id: true,
+      netRentChf: true,
+      unit: { select: { unitNumber: true, parkingKind: true } },
+    },
+    orderBy: { unit: { unitNumber: "asc" } },
+  });
+}
+
+/**
+ * Is there an ACTIVE flat lease that co-bills this parking spot? i.e. the spot's
+ * linked flat has an active lease held by the same tenant. If so, the parking
+ * lease must not self-bill (its rent is a line on the flat's invoice).
+ */
+export async function findActiveFlatLeaseForParking(
+  prisma: PrismaClient,
+  linkedFlatId: string,
+  tenantName: string,
+) {
+  return prisma.lease.findFirst({
+    where: { status: "ACTIVE", tenantName, unitId: linkedFlatId },
+    select: { id: true },
   });
 }
 

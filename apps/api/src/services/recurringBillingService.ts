@@ -169,12 +169,26 @@ export async function generateInvoiceForPeriod(
     /** The org's configured lead-time days — used to compute issue date. */
     leadTimeDays?: number;
   } = {},
-): Promise<GeneratedInvoice> {
+): Promise<GeneratedInvoice | null> {
   if (!schedule || !schedule.lease) {
     throw new Error("Schedule or lease not found");
   }
 
   const lease = schedule.lease;
+  const leaseUnit = (lease as { unit?: { type?: string; linkedFlatId?: string | null; unitNumber?: string; parkingKind?: string | null } }).unit;
+
+  // Co-billed parking spot → do NOT self-bill this period. When the spot's linked
+  // flat has an active lease held by the same tenant, the parking rent rides on the
+  // flat's invoice instead. Returning null lets the caller advance the schedule
+  // without creating an invoice (so it resumes standalone billing if the flat lease
+  // later ends or the tenant differs).
+  if (leaseUnit?.type === "PARKING" && leaseUnit.linkedFlatId) {
+    const coBillingFlat = await billingRepo.findActiveFlatLeaseForParking(
+      prisma, leaseUnit.linkedFlatId, lease.tenantName,
+    );
+    if (coBillingFlat) return null;
+  }
+
   const isFirstDay = periodStart.getDate() === 1;
   const isProRata = !isFirstDay;
 
@@ -260,6 +274,35 @@ export async function generateInvoiceForPeriod(
     ? `Loyer + charges — ${monthYear} (pro rata du ${periodStart.getDate()})`
     : `Loyer + charges — ${monthYear}`;
 
+  // Co-billed parking: parking spots linked to this (flat) unit and rented to the
+  // same tenant ride on this invoice as extra net-rent lines. Their own lease is
+  // skipped above, so there is no double-billing. Only runs for non-parking units.
+  let parkingCents = 0;
+  if (lease.unitId && leaseUnit?.type !== "PARKING") {
+    const parkingLeases = await billingRepo.findActiveParkingLeasesForFlat(
+      prisma, lease.unitId, lease.tenantName,
+    );
+    for (const pl of parkingLeases) {
+      const cents = Math.round((pl.netRentChf ?? 0) * 100 * fraction);
+      if (cents <= 0) continue;
+      parkingCents += cents;
+      const label = pl.unit?.parkingKind === "GARAGE" ? "Garage" : "Place de parc";
+      const num = pl.unit?.unitNumber ? ` ${pl.unit.unitNumber}` : "";
+      lineItems.push({
+        description: isProRata
+          ? `${label}${num} (pro rata) — ${monthYear}`
+          : `${label}${num} — ${monthYear}`,
+        quantity: 1,
+        unitPrice: cents,
+        vatRate: 0,
+        lineTotal: cents,
+      });
+    }
+  }
+
+  // Grand total includes the co-billed parking rent.
+  const grandTotalCents = totalCents + parkingCents;
+
   // Resolve issuer billing entity (same logic as createLeaseInvoice)
   let issuerBillingEntityId: string | undefined;
   let buildingAddress: string | undefined;
@@ -296,10 +339,10 @@ export async function generateInvoiceForPeriod(
       leaseId: lease.id,
       billingScheduleId: schedule.id,
       description,
-      subtotalAmount: totalCents,
+      subtotalAmount: grandTotalCents,
       vatAmount: 0,
-      totalAmount: totalCents,
-      amount: Math.round(totalCents / 100),
+      totalAmount: grandTotalCents,
+      amount: Math.round(grandTotalCents / 100),
       currency: "CHF",
       vatRate: 0,
       status: "DRAFT",
@@ -355,7 +398,7 @@ export async function generateInvoiceForPeriod(
     invoiceId: invoice.id,
     periodStart,
     periodEnd,
-    totalAmountCents: totalCents,
+    totalAmountCents: grandTotalCents,
     isProRata,
     isBackfilled: options.isBackfilled ?? false,
   };
@@ -424,11 +467,12 @@ export async function processRecurringBilling(
         schedule.lastGeneratedPeriod !== null;
 
       try {
-        await generateInvoiceForPeriod(prisma, schedule, periodStart, {
+        const result = await generateInvoiceForPeriod(prisma, schedule, periodStart, {
           isBackfilled,
           leadTimeDays,
         });
-        generated++;
+        // null = intentionally skipped (co-billed parking); still advance the schedule.
+        if (result) generated++;
 
         // Advance to next period
         const nextStart = periodStart.getDate() === 1
