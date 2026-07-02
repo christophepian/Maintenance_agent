@@ -161,24 +161,24 @@ Remaining known limitation: OCR extracts amount and date reliably from phone pho
 
 | Field | Value | Source |
 |-------|-------|--------|
-| Models | 91 | prisma/schema.prisma — derived |
-| Enums | 78 | prisma/schema.prisma — derived |
-| Migrations | 120 | prisma/migrations/ — derived |
-| Workflows | 32 | src/workflows/ — derived |
+| Models | 96 | prisma/schema.prisma — derived |
+| Enums | 79 | prisma/schema.prisma — derived |
+| Migrations | 132 | prisma/migrations/ — derived |
+| Workflows | 30 | src/workflows/ — derived |
 | Repositories | 55 | src/repositories/ — derived (excl. index.ts) |
-| Route modules | 37 | src/routes/ — derived (excl. helpers.ts utility) |
-| Backend LOC | ~91k | src/ (incl. tests) — derived |
-| Frontend LOC | ~64k | apps/web/ — derived |
-| Frontend pages | 396 | apps/web/pages/ — derived (incl. api proxies) |
-| API operations | 317 | openapi.yaml operationId count — derived |
-| URL paths | 251 | openapi.yaml unique paths — derived |
-| Tests | 69 suites · 1085 tests | jest — derived |
-| Proxy conformance | 235 / 235 | apps/web/pages/api/ — derived |
+| Route modules | 39 | src/routes/ — derived (excl. helpers.ts utility) |
+| Backend LOC | ~99k | src/ (incl. tests) — derived |
+| Frontend LOC | ~66k | apps/web/ — derived |
+| Frontend pages | 409 | apps/web/pages/ — derived (incl. api proxies) |
+| API operations | 331 | openapi.yaml operationId count — derived |
+| URL paths | 264 | openapi.yaml unique paths — derived |
+| Tests | 92 suites · ~1133 tests | jest — derived |
+| Proxy conformance | 301 / 301 | apps/web/pages/api/ — derived |
 | Transition maps | 8 | src/workflows/transitions.ts — derived |
 | Audit findings open | 3 (SI-2/3 broken links; ARCH-1 DT-121–124 remaining) | docs/AUDIT.md — manual |
 | Audit findings resolved | 102 | docs/AUDIT.md — manual |
-| Last auto-sync | 2026-06-19 | blueprint.js — run `npm run blueprint` to refresh derived fields |
-| Last manual review | 2026-06-23 | human |
+| Last auto-sync | 2026-07-02 | blueprint.js — run `npm run blueprint` to refresh derived fields |
+| Last manual review | 2026-07-02 | human |
 
 > Derived fields are auto-updated by `npm run blueprint`. Manual fields must be updated at the end of each slice.
 
