@@ -21,6 +21,8 @@ export interface UnitListDTO {
   unitNumber: string;
   floor: string | null;
   type: string;
+  parkingKind: string | null;
+  linkedFlatId: string | null;
   isActive: boolean;
   isVacant: boolean;
   monthlyRentChf: number | null;
@@ -46,6 +48,8 @@ type UnitWithLeases = {
   unitNumber: string;
   floor: string | null;
   type: string;
+  parkingKind: string | null;
+  linkedFlatId: string | null;
   isActive: boolean;
   isVacant: boolean;
   monthlyRentChf: number | null;
@@ -104,6 +108,8 @@ export function mapUnitToListDTO(unit: UnitWithLeases): UnitListDTO {
     unitNumber: unit.unitNumber,
     floor: unit.floor,
     type: unit.type,
+    parkingKind: unit.parkingKind ?? null,
+    linkedFlatId: unit.linkedFlatId ?? null,
     isActive: unit.isActive,
     isVacant: unit.isVacant,
     monthlyRentChf: unit.monthlyRentChf,

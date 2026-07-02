@@ -9,7 +9,7 @@
  * G9: canonical include constants live here.
  */
 
-import { PrismaClient, UnitType, LocationSegment, InsulationQuality, EnergyLabel, HeatingType, LeaseStatus, RentalOwnerSelectionStatus } from "@prisma/client";
+import { PrismaClient, UnitType, LocationSegment, InsulationQuality, EnergyLabel, HeatingType, LeaseStatus, RentalOwnerSelectionStatus, ParkingKind } from "@prisma/client";
 
 // ─── Canonical Includes (G9) ───────────────────────────────────
 
@@ -297,6 +297,14 @@ export async function findUnitByIdAndOrg(
           chargesTotalChf: true,
         },
       },
+      // The flat this parking spot is assigned to (if any), and — for a flat —
+      // the parking spots linked to it. Summaries only.
+      linkedFlat: { select: { id: true, unitNumber: true, type: true } },
+      parkingSpots: {
+        where: { isActive: true },
+        select: { id: true, unitNumber: true, parkingKind: true, monthlyRentChf: true, type: true },
+        orderBy: { unitNumber: "asc" },
+      },
     },
   });
 }
@@ -305,7 +313,7 @@ export async function createUnit(
   prisma: PrismaClient,
   orgId: string,
   buildingId: string,
-  data: { unitNumber: string; floor?: string | null; type?: UnitType },
+  data: { unitNumber: string; floor?: string | null; type?: UnitType; parkingKind?: ParkingKind | null; linkedFlatId?: string | null },
 ) {
   return prisma.unit.create({
     data: {
@@ -314,6 +322,8 @@ export async function createUnit(
       unitNumber: data.unitNumber,
       floor: data.floor ?? null,
       type: data.type ?? UnitType.RESIDENTIAL,
+      parkingKind: data.parkingKind ?? null,
+      linkedFlatId: data.linkedFlatId ?? null,
     },
   });
 }
@@ -325,6 +335,8 @@ export async function updateUnit(
     unitNumber?: string;
     floor?: string;
     type?: UnitType;
+    parkingKind?: ParkingKind | null;
+    linkedFlatId?: string | null;
     livingAreaSqm?: number;
     rooms?: number;
     hasBalcony?: boolean;
@@ -352,6 +364,8 @@ export async function updateUnit(
       unitNumber: data.unitNumber ?? undefined,
       floor: data.floor ?? undefined,
       type: data.type ?? undefined,
+      ...(data.parkingKind !== undefined ? { parkingKind: data.parkingKind } : {}),
+      ...(data.linkedFlatId !== undefined ? { linkedFlatId: data.linkedFlatId } : {}),
       livingAreaSqm: data.livingAreaSqm ?? undefined,
       rooms: data.rooms ?? undefined,
       hasBalcony: data.hasBalcony ?? undefined,

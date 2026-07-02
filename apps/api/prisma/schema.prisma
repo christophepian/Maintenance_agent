@@ -528,6 +528,12 @@ model Unit {
   monthlyRentChf    Int?
   monthlyChargesChf Int?
 
+  // Parking units (type = PARKING). parkingKind distinguishes exterior spot vs
+  // garage/box. linkedFlatId is the flat this spot is by default assigned to —
+  // drives default-tenant + co-billing. A flat can have many linked parking spots.
+  parkingKind  ParkingKind?
+  linkedFlatId String?
+
   // Rent estimation fields
   livingAreaSqm      Float?
   rooms              Float? // allow 3.5 etc
@@ -553,6 +559,8 @@ model Unit {
   requests               Request[]
   building               Building                @relation(fields: [buildingId], references: [id], onDelete: Cascade)
   org                    Org                     @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  linkedFlat             Unit?                   @relation("FlatParking", fields: [linkedFlatId], references: [id], onDelete: SetNull)
+  parkingSpots           Unit[]                  @relation("FlatParking")
   config                 UnitConfig?
   leases                 Lease[]
   rentalApplicationUnits RentalApplicationUnit[]
@@ -569,6 +577,7 @@ model Unit {
   @@index([buildingId])
   @@index([orgId])
   @@index([isVacant])
+  @@index([linkedFlatId])
 }
 
 model RentEstimationConfig {
@@ -1036,6 +1045,13 @@ enum RequestType {
 enum UnitType {
   RESIDENTIAL
   COMMON_AREA
+  PARKING
+}
+
+// Sub-kind for PARKING units (exterior spot vs enclosed garage/box).
+enum ParkingKind {
+  EXTERIOR
+  GARAGE
 }
 
 enum OrgMode {

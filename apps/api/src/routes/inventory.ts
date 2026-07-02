@@ -469,6 +469,7 @@ export function registerInventoryRoutes(router: Router) {
     } catch (e: any) {
       const msg = String(e?.message || e);
       if (msg === "Invalid JSON") return sendError(res, 400, "INVALID_JSON", "Invalid JSON");
+      if (msg === "INVALID_LINKED_FLAT") return sendError(res, 400, "INVALID_LINKED_FLAT", "The linked flat must be another unit in the same building.");
       sendError(res, 500, "DB_ERROR", "Failed to create unit", String(e));
     }
   });
@@ -520,6 +521,7 @@ export function registerInventoryRoutes(router: Router) {
       if (msg === "Invalid JSON") return sendError(res, 400, "INVALID_JSON", "Invalid JSON");
       if (msg === "RENT_LOCKED_BY_LEASE")
         return sendError(res, 409, "RENT_LOCKED_BY_LEASE", "Net rent and charges are set by the active lease and can't be changed here. Edit the lease instead.");
+      if (msg === "INVALID_LINKED_FLAT") return sendError(res, 400, "INVALID_LINKED_FLAT", "The linked flat must be another unit in the same building.");
       sendError(res, 500, "DB_ERROR", "Failed to update unit", String(e));
     }
   });
