@@ -90,8 +90,14 @@ export function registerImportedStatementRoutes(router: Router) {
     const hintDocType = hintDocTypePart?.data.toString("utf8").trim() || undefined;
 
     const mimeType = filePart.contentType ?? "application/octet-stream";
+    // CSV is detected by extension because browsers report it inconsistently
+    // (text/csv, application/vnd.ms-excel, application/octet-stream, or empty).
+    const isCsv =
+      /\.csv$/i.test(filePart.filename) ||
+      mimeType === "text/csv" ||
+      mimeType === "application/csv";
     const allowedTypes = ["application/pdf", "image/jpeg", "image/png", "image/tiff"];
-    if (!allowedTypes.includes(mimeType)) {
+    if (!isCsv && !allowedTypes.includes(mimeType)) {
       return sendError(res, 415, "UNSUPPORTED_MEDIA_TYPE", `Unsupported file type: ${mimeType}`);
     }
 
@@ -105,6 +111,7 @@ export function registerImportedStatementRoutes(router: Router) {
         fiscalYear,
         buildingId: hintBuildingId,
         hintDocType,
+        isCsv,
       });
       sendJson(res, 202, { data: statement });
     } catch (e: any) {

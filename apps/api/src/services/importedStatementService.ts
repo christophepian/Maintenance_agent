@@ -32,7 +32,9 @@ import { getAnthropicClient } from "./aiClient";
 import { writeAuditLog } from "./auditLog";
 import { createInvoice } from "./invoices";
 import { postJournalEntries } from "./ledgerService";
+import { mapCsvToAccountBalances, mapCsvToInvoiceLines } from "./csvAccountingMapper";
 import * as accountRepo from "../repositories/accountRepository";
+import { updateStatementStatus } from "../repositories/importedStatementRepository";
 import * as crypto from "crypto";
 
 /* ══════════════════════════════════════════════════════════════
@@ -124,6 +126,8 @@ export interface IngestStatementInput {
   uploadedBy: string;
   /** Manager-supplied document type hint — bypasses auto-detection */
   hintDocType?: string;
+  /** True when the uploaded file is a CSV — routes to deterministic CSV parsing instead of OCR */
+  isCsv?: boolean;
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -479,10 +483,18 @@ export async function ingestStatement(
   //    the extraction always completes before the client gets a response.
   //    Trade-off: the upload takes 20–40 s instead of <1 s, but the returned
   //    statement is PENDING_REVIEW (not stuck in PROCESSING).
-  await runIngestionBackground(
-    prisma, batch.id, placeholder.id, orgId, buffer, fileName, mimeType,
-    fiscalYear, buildingId, fileKey, hintDocType,
-  );
+  if (input.isCsv) {
+    // CSV path — deterministic parsing, no OCR. Fast (<1 s).
+    await ingestCsvSections(
+      prisma, batch.id, placeholder.id, orgId, buffer, fileName,
+      fiscalYear, buildingId, fileKey, hintDocType,
+    );
+  } else {
+    await runIngestionBackground(
+      prisma, batch.id, placeholder.id, orgId, buffer, fileName, mimeType,
+      fiscalYear, buildingId, fileKey, hintDocType,
+    );
+  }
 
   // Re-fetch the batch so the response includes all sections created by the run
   // (placeholder now PENDING_REVIEW, and any IS / INVOICES siblings).
@@ -575,135 +587,263 @@ async function runIngestionBackground(
       rawOcrText,
     };
 
-    const orgAccounts = await accountRepo.findAccountsByOrg(prisma, orgId);
-
-    // 4. Classify accounts into balance-sheet vs income-statement by account code prefix.
-    //    Swiss chart of accounts: 1xxx–2xxx = balance sheet, 3xxx–8xxx = income statement.
-    const allBalances = scanResult.accountBalances ?? [];
-    const bsBalances = allBalances.filter((b) => isBalanceSheetAccount(b.rawAccountCode));
-    const isBalances = allBalances.filter((b) => !isBalanceSheetAccount(b.rawAccountCode));
-
-    // 5. Populate the placeholder statement as BALANCE_SHEET (or INCOME_STATEMENT if no BS rows).
-    //    Persist balances BEFORE flipping status to PENDING_REVIEW so the UI never sees
-    //    a PENDING_REVIEW statement with an empty accountBalances array.
-    const firstSectionType = bsBalances.length > 0 || isBalances.length === 0
-      ? StatementSectionType.BALANCE_SHEET
-      : StatementSectionType.INCOME_STATEMENT;
-    const firstSectionBalances = firstSectionType === StatementSectionType.BALANCE_SHEET ? bsBalances : isBalances;
-
-    await prisma.importedStatement.update({
-      where: { id: placeholderStatementId },
-      data: { ...metadataUpdate, sectionType: firstSectionType },
+    // 4–7. Classify balances into sections, persist, and create invoices.
+    //       Shared with the CSV import path (ingestCsvSections) so both sources
+    //       produce identical review-gate section shapes.
+    await persistExtractedSections(prisma, {
+      batchId,
+      placeholderStatementId,
+      orgId,
+      fileKey,
+      metadata: metadataUpdate,
+      accountBalances: scanResult.accountBalances ?? [],
+      invoiceLines: scanResult.invoiceLines ?? [],
+      logPrefix: "[IMPORT] [bg]",
     });
-
-    if (firstSectionBalances.length > 0) {
-      await persistBalances(prisma, orgId, placeholderStatementId, firstSectionBalances, orgAccounts);
-    }
-
-    // Status flip happens last — after balances are committed
-    await prisma.importedStatement.update({
-      where: { id: placeholderStatementId },
-      data: { status: ImportedStatementStatus.PENDING_REVIEW },
-    });
-
-    // 6. Create a separate INCOME_STATEMENT record if we have both section types.
-    //    Same ordering: persist balances, then set PENDING_REVIEW.
-    if (bsBalances.length > 0 && isBalances.length > 0) {
-      const uploader = (await prisma.uploadBatch.findFirst({ where: { id: batchId }, select: { uploadedBy: true } }))?.uploadedBy ?? "";
-      const isStatement = await prisma.importedStatement.create({
-        data: {
-          orgId,
-          uploadBatchId: batchId,
-          sectionType: StatementSectionType.INCOME_STATEMENT,
-          sourceFileUrl: fileKey,
-          uploadedBy: uploader,
-          status: ImportedStatementStatus.PROCESSING,
-          ...metadataUpdate,
-        },
-      });
-      await persistBalances(prisma, orgId, isStatement.id, isBalances, orgAccounts);
-      await prisma.importedStatement.update({
-        where: { id: isStatement.id },
-        data: { status: ImportedStatementStatus.PENDING_REVIEW },
-      });
-      console.log(`[IMPORT] [bg] Created INCOME_STATEMENT section: id=${isStatement.id} rows=${isBalances.length}`);
-    }
-
-    // 7. Create Invoice records from extracted invoice lines
-    const invoiceLines = scanResult.invoiceLines ?? [];
-    if (invoiceLines.length > 0) {
-      // Create a dedicated INVOICES section statement to group them
-      let invoiceStatementId: string | null = null;
-      if (finalBuildingId) {
-        const uploader = (await prisma.uploadBatch.findFirst({ where: { id: batchId }, select: { uploadedBy: true } }))?.uploadedBy ?? "";
-        const invStatement = await prisma.importedStatement.create({
-          data: {
-            orgId,
-            uploadBatchId: batchId,
-            sectionType: StatementSectionType.INVOICES,
-            sourceFileUrl: fileKey,
-            uploadedBy: uploader,
-            status: ImportedStatementStatus.PROCESSING,
-            ...metadataUpdate,
-          },
-        });
-        invoiceStatementId = invStatement.id;
-        console.log(`[IMPORT] [bg] Created INVOICES section: id=${invStatement.id}`);
-      }
-
-      for (const line of invoiceLines) {
-        try {
-          await resolveUnitFromLine(prisma, orgId, finalBuildingId ?? "", line.unitHint, line.tenantHint);
-          await resolveContractorFromLine(prisma, orgId, line.vendorName);
-
-          const totalChf    = line.totalAmount ?? null;
-          const vatChf      = line.vatAmount   ?? null;
-          const subtotalChf = line.subtotal    ?? null;
-          let netAmount: number | undefined;
-          if (subtotalChf != null)                     netAmount = subtotalChf;
-          else if (totalChf != null && vatChf != null) netAmount = totalChf - vatChf;
-          else                                          netAmount = totalChf ?? undefined;
-
-          await createInvoice({
-            orgId,
-            direction: InvoiceDirection.INCOMING,
-            sourceChannel: InvoiceSourceChannel.BROWSER_UPLOAD,
-            ingestionStatus: IngestionStatus.PENDING_REVIEW,
-            rawOcrText: truncate(JSON.stringify(line), 4000),
-            ocrConfidence: scanResult.confidence,
-            sourceFileUrl: fileKey,
-            amount: netAmount,
-            description: line.description ?? `[Imported] ${line.vendorName ?? "Invoice"}`,
-            recipientName: line.vendorName ?? undefined,
-            iban: line.iban ?? undefined,
-            paymentReference: line.paymentReference ?? undefined,
-            currency: line.currency ?? undefined,
-            vatRate: vatChf != null && netAmount ? Math.round((vatChf / netAmount) * 10000) / 100 : 0,
-            issueDate: line.invoiceDate ? parseDateField(line.invoiceDate) : undefined,
-            dueDate:   line.dueDate     ? parseDateField(line.dueDate)     : undefined,
-            matchedJobId:      undefined,
-            matchedLeaseId:    undefined,
-            matchedBuildingId: finalBuildingId ?? undefined,
-          });
-        } catch (lineErr) {
-          console.warn(`[IMPORT] [bg] Failed to create invoice for "${line.vendorName}":`, lineErr);
-        }
-      }
-
-      // Mark the INVOICES section as PENDING_REVIEW if created
-      if (invoiceStatementId) {
-        await prisma.importedStatement.update({
-          where: { id: invoiceStatementId },
-          data: { status: ImportedStatementStatus.PENDING_REVIEW },
-        });
-      }
-      console.log(`[IMPORT] [bg] Processed ${invoiceLines.length} invoice line(s)`);
-    }
 
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : String(err);
     console.error(`[IMPORT] [bg] Processing failed for batch ${batchId}: ${errorMsg}`);
     await markPlaceholderFailed(errorMsg);
+  }
+}
+
+/** Shared metadata applied to every section statement in a batch. */
+interface SectionMetadata {
+  buildingId: string | null;
+  buildingMatchConfidence: MatchConfidence | null;
+  fiscalYear: number;
+  periodStart: Date | null;
+  periodEnd: Date | null;
+  ocrConfidence: number | null;
+  rawOcrText: string | null;
+}
+
+interface PersistSectionsInput {
+  batchId: string;
+  placeholderStatementId: string;
+  orgId: string;
+  fileKey: string;
+  metadata: SectionMetadata;
+  accountBalances: ExtractedAccountBalance[];
+  invoiceLines: ExtractedInvoiceLine[];
+  logPrefix: string;
+}
+
+/**
+ * Classify extracted account balances into BALANCE_SHEET / INCOME_STATEMENT
+ * sections, persist them, then create Invoice records from extracted invoice
+ * lines — all behind the review gate (status flips to PENDING_REVIEW only after
+ * balances are committed, to avoid the empty-balances polling race).
+ *
+ * Shared by the OCR path (runIngestionBackground) and the CSV path
+ * (ingestCsvSections) so both produce identical section shapes.
+ */
+async function persistExtractedSections(
+  prisma: PrismaClient,
+  input: PersistSectionsInput,
+): Promise<void> {
+  const { batchId, placeholderStatementId, orgId, fileKey, metadata, logPrefix } = input;
+  const finalBuildingId = metadata.buildingId;
+  const orgAccounts = await accountRepo.findAccountsByOrg(prisma, orgId);
+
+  // 4. Classify accounts into balance-sheet vs income-statement by account code prefix.
+  //    Swiss chart of accounts: 1xxx–2xxx = balance sheet, 3xxx–8xxx = income statement.
+  const allBalances = input.accountBalances;
+  const bsBalances = allBalances.filter((b) => isBalanceSheetAccount(b.rawAccountCode));
+  const isBalances = allBalances.filter((b) => !isBalanceSheetAccount(b.rawAccountCode));
+
+  // 5. Populate the placeholder statement as BALANCE_SHEET (or INCOME_STATEMENT if no BS rows).
+  //    Persist balances BEFORE flipping status to PENDING_REVIEW so the UI never sees
+  //    a PENDING_REVIEW statement with an empty accountBalances array.
+  const firstSectionType = bsBalances.length > 0 || isBalances.length === 0
+    ? StatementSectionType.BALANCE_SHEET
+    : StatementSectionType.INCOME_STATEMENT;
+  const firstSectionBalances = firstSectionType === StatementSectionType.BALANCE_SHEET ? bsBalances : isBalances;
+
+  await prisma.importedStatement.update({
+    where: { id: placeholderStatementId },
+    data: { ...metadata, sectionType: firstSectionType },
+  });
+
+  if (firstSectionBalances.length > 0) {
+    await persistBalances(prisma, orgId, placeholderStatementId, firstSectionBalances, orgAccounts);
+  }
+
+  // Status flip happens last — after balances are committed
+  await prisma.importedStatement.update({
+    where: { id: placeholderStatementId },
+    data: { status: ImportedStatementStatus.PENDING_REVIEW },
+  });
+
+  // 6. Create a separate INCOME_STATEMENT record if we have both section types.
+  //    Same ordering: persist balances, then set PENDING_REVIEW.
+  if (bsBalances.length > 0 && isBalances.length > 0) {
+    const uploader = (await prisma.uploadBatch.findFirst({ where: { id: batchId }, select: { uploadedBy: true } }))?.uploadedBy ?? "";
+    const isStatement = await prisma.importedStatement.create({
+      data: {
+        orgId,
+        uploadBatchId: batchId,
+        sectionType: StatementSectionType.INCOME_STATEMENT,
+        sourceFileUrl: fileKey,
+        uploadedBy: uploader,
+        status: ImportedStatementStatus.PROCESSING,
+        ...metadata,
+      },
+    });
+    await persistBalances(prisma, orgId, isStatement.id, isBalances, orgAccounts);
+    await prisma.importedStatement.update({
+      where: { id: isStatement.id },
+      data: { status: ImportedStatementStatus.PENDING_REVIEW },
+    });
+    console.log(`${logPrefix} Created INCOME_STATEMENT section: id=${isStatement.id} rows=${isBalances.length}`);
+  }
+
+  // 7. Create Invoice records from extracted invoice lines
+  const invoiceLines = input.invoiceLines;
+  if (invoiceLines.length > 0) {
+    // Create a dedicated INVOICES section statement to group them
+    let invoiceStatementId: string | null = null;
+    if (finalBuildingId) {
+      const uploader = (await prisma.uploadBatch.findFirst({ where: { id: batchId }, select: { uploadedBy: true } }))?.uploadedBy ?? "";
+      const invStatement = await prisma.importedStatement.create({
+        data: {
+          orgId,
+          uploadBatchId: batchId,
+          sectionType: StatementSectionType.INVOICES,
+          sourceFileUrl: fileKey,
+          uploadedBy: uploader,
+          status: ImportedStatementStatus.PROCESSING,
+          ...metadata,
+        },
+      });
+      invoiceStatementId = invStatement.id;
+      console.log(`${logPrefix} Created INVOICES section: id=${invStatement.id}`);
+    }
+
+    for (const line of invoiceLines) {
+      try {
+        await resolveUnitFromLine(prisma, orgId, finalBuildingId ?? "", line.unitHint, line.tenantHint);
+        await resolveContractorFromLine(prisma, orgId, line.vendorName);
+
+        const totalChf    = line.totalAmount ?? null;
+        const vatChf      = line.vatAmount   ?? null;
+        const subtotalChf = line.subtotal    ?? null;
+        let netAmount: number | undefined;
+        if (subtotalChf != null)                     netAmount = subtotalChf;
+        else if (totalChf != null && vatChf != null) netAmount = totalChf - vatChf;
+        else                                          netAmount = totalChf ?? undefined;
+
+        await createInvoice({
+          orgId,
+          direction: InvoiceDirection.INCOMING,
+          sourceChannel: InvoiceSourceChannel.BROWSER_UPLOAD,
+          ingestionStatus: IngestionStatus.PENDING_REVIEW,
+          rawOcrText: truncate(JSON.stringify(line), 4000),
+          ocrConfidence: metadata.ocrConfidence ?? undefined,
+          sourceFileUrl: fileKey,
+          amount: netAmount,
+          description: line.description ?? `[Imported] ${line.vendorName ?? "Invoice"}`,
+          recipientName: line.vendorName ?? undefined,
+          iban: line.iban ?? undefined,
+          paymentReference: line.paymentReference ?? undefined,
+          currency: line.currency ?? undefined,
+          vatRate: vatChf != null && netAmount ? Math.round((vatChf / netAmount) * 10000) / 100 : 0,
+          issueDate: line.invoiceDate ? parseDateField(line.invoiceDate) : undefined,
+          dueDate:   line.dueDate     ? parseDateField(line.dueDate)     : undefined,
+          matchedJobId:      undefined,
+          matchedLeaseId:    undefined,
+          matchedBuildingId: finalBuildingId ?? undefined,
+        });
+      } catch (lineErr) {
+        console.warn(`${logPrefix} Failed to create invoice for "${line.vendorName}":`, lineErr);
+      }
+    }
+
+    // Mark the INVOICES section as PENDING_REVIEW if created
+    if (invoiceStatementId) {
+      await prisma.importedStatement.update({
+        where: { id: invoiceStatementId },
+        data: { status: ImportedStatementStatus.PENDING_REVIEW },
+      });
+    }
+    console.log(`${logPrefix} Processed ${invoiceLines.length} invoice line(s)`);
+  }
+}
+
+/**
+ * CSV ingestion — deterministic alternative to OCR extraction.
+ *
+ * Parses the uploaded CSV into the same ExtractedAccountBalance /
+ * ExtractedInvoiceLine shapes the scanner produces, then reuses
+ * persistExtractedSections so the review gate + ledger posting are identical.
+ *
+ *   hintDocType === "INVOICE"  → invoices CSV
+ *   otherwise                  → account-balance CSV (auto-classified BS/IS)
+ */
+async function ingestCsvSections(
+  prisma: PrismaClient,
+  batchId: string,
+  placeholderStatementId: string,
+  orgId: string,
+  buffer: Buffer,
+  fileName: string,
+  fiscalYear: number,
+  buildingId: string | null,
+  fileKey: string,
+  hintDocType: string | undefined,
+): Promise<void> {
+  try {
+    const text = buffer.toString("utf8");
+    const isInvoices = hintDocType === "INVOICE";
+
+    const balanceResult = isInvoices ? { items: [], skipped: [] } : mapCsvToAccountBalances(text);
+    const invoiceResult = isInvoices ? mapCsvToInvoiceLines(text) : { items: [], skipped: [] };
+    const skipped = [...balanceResult.skipped, ...invoiceResult.skipped];
+
+    console.log(
+      `${"[CSV IMPORT]"} batch=${batchId} file="${fileName}" ` +
+      `balances=${balanceResult.items.length} invoices=${invoiceResult.items.length} skipped=${skipped.length}`,
+    );
+
+    const metadata: SectionMetadata = {
+      buildingId,
+      buildingMatchConfidence: buildingId ? MatchConfidence.MANUAL : null,
+      fiscalYear,
+      periodStart: new Date(`${fiscalYear}-01-01T00:00:00Z`),
+      periodEnd: new Date(`${fiscalYear}-12-31T00:00:00Z`),
+      ocrConfidence: 1,
+      rawOcrText:
+        `CSV import — ${fileName}\n` +
+        `${balanceResult.items.length} balance row(s), ${invoiceResult.items.length} invoice row(s)` +
+        (skipped.length ? `\nSkipped rows:\n- ${skipped.join("\n- ")}` : ""),
+    };
+
+    await persistExtractedSections(prisma, {
+      batchId,
+      placeholderStatementId,
+      orgId,
+      fileKey,
+      metadata,
+      accountBalances: balanceResult.items,
+      invoiceLines: invoiceResult.items,
+      logPrefix: "[CSV IMPORT]",
+    });
+
+    // Record skipped-row notes on the placeholder so the manager sees them.
+    if (skipped.length > 0) {
+      await updateStatementStatus(prisma, placeholderStatementId, orgId, {
+        status: ImportedStatementStatus.PENDING_REVIEW,
+        notes: `CSV import skipped ${skipped.length} row(s):\n- ${skipped.join("\n- ")}`,
+      }).catch(() => { /* best-effort */ });
+    }
+  } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    console.error(`[CSV IMPORT] Processing failed for batch ${batchId}: ${errorMsg}`);
+    await updateStatementStatus(prisma, placeholderStatementId, orgId, {
+      status: ImportedStatementStatus.PENDING_REVIEW,
+      notes: `CSV import error: ${errorMsg}`,
+    }).catch(() => { /* best-effort */ });
   }
 }
 

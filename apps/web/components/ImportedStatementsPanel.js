@@ -142,14 +142,14 @@ function UploadModal({ onClose, onUploaded }) {
             <input
               ref={fileInputRef}
               type="file"
-              accept=".pdf,image/jpeg,image/png,image/tiff"
+              accept=".pdf,.csv,text/csv,image/jpeg,image/png,image/tiff"
               className="hidden"
               onChange={(e) => setFile(e.target.files[0] || null)}
             />
             {file ? (
               <p className="text-sm text-brand-dark font-medium">{file.name}</p>
             ) : (
-              <p className="text-sm text-muted">Drop a PDF or image here, or click to select</p>
+              <p className="text-sm text-muted">{t("manager:financeImports.text.dropZone")}</p>
             )}
           </div>
 
@@ -165,6 +165,22 @@ function UploadModal({ onClose, onUploaded }) {
                 <option key={o.value} value={o.value}>{o.label}</option>
               ))}
             </select>
+          </div>
+
+          {/* CSV templates + hint */}
+          <div className="text-xs text-muted space-y-1">
+            <p>{t("manager:financeImports.text.csvHint")}</p>
+            <p className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <span className="font-medium text-foreground-dim">
+                {t("manager:financeImports.text.csvTemplates")}
+              </span>
+              <a href="/templates/accounting-invoices.csv" download className="text-brand-dark underline">
+                {t("manager:financeImports.text.templateInvoices")}
+              </a>
+              <a href="/templates/accounting-balances.csv" download className="text-brand-dark underline">
+                {t("manager:financeImports.text.templateBalances")}
+              </a>
+            </p>
           </div>
 
           {/* Fiscal year */}

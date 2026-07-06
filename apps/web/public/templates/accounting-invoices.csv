@@ -1,0 +1,3 @@
+invoiceDate,dueDate,vendorName,description,subtotalChf,vatChf,totalChf,currency,iban,paymentReference,unitHint,tenantHint,invoiceNumber
+2026-03-01,2026-03-31,Acme Plomberie SA,Réparation chauffage,1000.00,77.00,1077.00,CHF,CH9300762011623852957,210000000003139471430009017,Apt 3B,,INV-2026-0042
+2026-03-05,2026-04-04,Régie Électrique,Entretien ascenseur,500.00,38.50,538.50,CHF,,,,,,
