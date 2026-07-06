@@ -209,6 +209,8 @@ model Org {
   fixedAssets                 FixedAsset[]
   // Per-tenant opening receivables (accounting bridge WS-F)
   openingReceivables          OpeningReceivable[]
+  // Bulk CSV import (buildings & units)
+  importBatches               ImportBatch[]
 }
 
 model OrgConfig {
@@ -3324,4 +3326,62 @@ model AuditLog {
   @@index([orgId, createdAt])
   @@index([action, createdAt])
   @@index([entityType, entityId])
+}
+
+// ── Bulk CSV Import (buildings & units) ──────────────────────
+// Generic staging + review gate: uploaded CSV rows are parsed and validated
+// into ImportRow records, then written to the real Building/Unit tables only
+// when the manager commits the batch.
+
+enum ImportEntityType {
+  BUILDING
+  UNIT
+}
+
+enum ImportBatchStatus {
+  PENDING_REVIEW /// Parsed & validated; awaiting manager commit
+  COMMITTED /// Valid rows written to their real tables
+  REJECTED /// Discarded without writing
+}
+
+enum ImportRowStatus {
+  VALID /// Passed validation; will be created on commit
+  ERROR /// Failed validation; skipped on commit
+  COMMITTED /// Successfully written to a real table
+}
+
+/// One CSV bulk-import upload (buildings or units).
+model ImportBatch {
+  id          String            @id @default(uuid())
+  orgId       String
+  entityType  ImportEntityType
+  fileName    String
+  uploadedBy  String /// userId of the manager who uploaded
+  status      ImportBatchStatus @default(PENDING_REVIEW)
+  rowCount    Int               @default(0) /// total data rows parsed
+  validCount  Int               @default(0) /// rows that passed validation
+  errorCount  Int               @default(0) /// rows that failed validation
+  createdAt   DateTime          @default(now())
+  committedAt DateTime?
+
+  org  Org         @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  rows ImportRow[]
+
+  @@index([orgId])
+  @@index([orgId, status])
+}
+
+/// One parsed CSV row within an ImportBatch.
+model ImportRow {
+  id              String          @id @default(uuid())
+  batchId         String
+  rowIndex        Int /// 1-based data-row number (excludes the header line)
+  rawJson         Json /// The parsed, normalized row payload
+  status          ImportRowStatus @default(VALID)
+  errorMessage    String? /// Validation error message when status = ERROR
+  createdEntityId String? /// id of the Building/Unit created on commit
+
+  batch ImportBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+  @@index([batchId])
 }
