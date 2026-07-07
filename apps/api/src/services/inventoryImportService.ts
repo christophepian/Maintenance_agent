@@ -15,12 +15,19 @@
 
 import {
   PrismaClient,
+  Prisma,
   ImportEntityType,
   ImportBatchStatus,
   ImportRowStatus,
 } from "@prisma/client";
-import { parseCsv } from "../utils/csvParser";
-import { validateRow, isBlankRow, ImportEntity } from "../validation/inventoryImport";
+import { parseCsv, ParsedCsv } from "../utils/csvParser";
+import {
+  validateRow,
+  isBlankRow,
+  ImportEntity,
+  BuildingImportInput,
+  UnitImportInput,
+} from "../validation/inventoryImport";
 import * as importRepo from "../repositories/importBatchRepository";
 import { mapImportBatchToDTO, ImportBatchDTO } from "../dto/importBatch";
 import {
@@ -60,11 +67,11 @@ export async function previewImport(
 ): Promise<ImportBatchDTO> {
   const entity = input.entityType as ImportEntity;
 
-  let parsed;
+  let parsed: ParsedCsv;
   try {
     parsed = parseCsv(input.csvText);
-  } catch (e: any) {
-    throw new InventoryImportError("INVALID_CSV", e?.message || "Could not parse CSV");
+  } catch (e) {
+    throw new InventoryImportError("INVALID_CSV", e instanceof Error ? e.message : "Could not parse CSV");
   }
 
   const newRows: importRepo.NewImportRow[] = [];
@@ -75,13 +82,13 @@ export async function previewImport(
     if (res.ok && res.data) {
       newRows.push({
         rowIndex,
-        rawJson: clean(res.data as Record<string, unknown>) as any,
+        rawJson: clean(res.data as Record<string, unknown>) as Prisma.InputJsonValue,
         status: ImportRowStatus.VALID,
       });
     } else {
       newRows.push({
         rowIndex,
-        rawJson: clean(raw) as any,
+        rawJson: clean(raw) as Prisma.InputJsonValue,
         status: ImportRowStatus.ERROR,
         errorMessage: res.error ?? "Invalid row",
       });
@@ -130,11 +137,11 @@ export async function commitImport(
       errors++;
       continue;
     }
-    const data = (row.rawJson as Record<string, any>) ?? {};
     try {
       let entityId: string;
 
       if (batch.entityType === ImportEntityType.BUILDING) {
+        const data = row.rawJson as unknown as BuildingImportInput;
         const { name, address, ...rest } = data;
         const building = await createBuilding(orgId, { name, address });
         if (Object.keys(rest).length > 0) {
@@ -142,6 +149,7 @@ export async function commitImport(
         }
         entityId = building.id;
       } else {
+        const data = row.rawJson as unknown as UnitImportInput;
         // Resolve buildingRef at commit time so units can be imported right
         // after their buildings in the same session.
         const resolved = await importRepo.resolveBuildingRef(prisma, orgId, String(data.buildingRef ?? ""));
@@ -151,7 +159,7 @@ export async function commitImport(
         if (resolved === "AMBIGUOUS") {
           throw new Error(`buildingRef "${data.buildingRef}" matches more than one building — use the building id`);
         }
-        const { buildingRef, unitNumber, floor, type, parkingKind, ...rest } = data;
+        const { buildingRef: _buildingRef, unitNumber, floor, type, parkingKind, ...rest } = data;
         const unit = await createUnit(orgId, resolved, { unitNumber, floor, type, parkingKind });
         if (!unit) throw new Error("Building not found while creating unit");
         if (Object.keys(rest).length > 0) {
@@ -166,10 +174,10 @@ export async function commitImport(
         errorMessage: null,
       });
       committed++;
-    } catch (e: any) {
+    } catch (e) {
       await importRepo.updateRow(prisma, row.id, {
         status: ImportRowStatus.ERROR,
-        errorMessage: String(e?.message || e),
+        errorMessage: e instanceof Error ? e.message : String(e),
       });
       errors++;
     }

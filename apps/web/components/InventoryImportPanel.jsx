@@ -13,7 +13,6 @@ import Panel from "./layout/Panel";
 import Badge from "./ui/Badge";
 import { authHeaders } from "../lib/api";
 import { formatDate } from "../lib/format";
-import { cn } from "../lib/utils";
 
 const ENTITY_OPTIONS = [
   { value: "BUILDING", label: "Buildings", template: "/templates/buildings.csv" },
@@ -138,8 +137,9 @@ export default function InventoryImportPanel({ onCommitted }) {
         <div className="flex flex-wrap items-end gap-4">
           {/* Entity type */}
           <div>
-            <label className="form-label">Import type</label>
+            <label className="form-label" htmlFor="imp-entity">Import type</label>
             <select
+              id="imp-entity"
               className="form-input"
               value={entityType}
               onChange={(e) => { setEntityType(e.target.value); reset(); }}
@@ -152,8 +152,9 @@ export default function InventoryImportPanel({ onCommitted }) {
 
           {/* File */}
           <div>
-            <label className="form-label">CSV file</label>
+            <label className="form-label" htmlFor="imp-file">CSV file</label>
             <input
+              id="imp-file"
               ref={fileRef}
               type="file"
               accept=".csv,text/csv"

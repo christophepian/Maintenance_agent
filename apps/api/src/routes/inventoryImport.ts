@@ -29,6 +29,8 @@ import {
 /** 10 MB limit for inventory CSVs — generous for tens of thousands of rows. */
 const IMPORT_MAX_BYTES = 10 * 1024 * 1024;
 
+const errDetail = (e: unknown): string => (e instanceof Error ? e.message : String(e));
+
 function parseEntityType(raw: string | undefined): ImportEntityType | null {
   const up = (raw ?? "").trim().toUpperCase();
   if (up === "BUILDING" || up === "UNIT") return up as ImportEntityType;
@@ -76,12 +78,12 @@ export function registerInventoryImportRoutes(router: Router) {
         uploadedBy: user.userId,
       });
       sendJson(res, 201, { data: batch });
-    } catch (e: any) {
+    } catch (e) {
       if (e instanceof InventoryImportError) {
         return sendError(res, 400, e.code, e.message);
       }
       console.error("[INV IMPORT] upload error:", e);
-      sendError(res, 500, "INTERNAL_ERROR", "Failed to parse import", e.message);
+      sendError(res, 500, "INTERNAL_ERROR", "Failed to parse import", errDetail(e));
     }
   });
 
@@ -100,9 +102,9 @@ export function registerInventoryImportRoutes(router: Router) {
         data: result.data,
         pagination: { total: result.total, limit, offset },
       });
-    } catch (e: any) {
+    } catch (e) {
       console.error("[INV IMPORT] list error:", e);
-      sendError(res, 500, "INTERNAL_ERROR", "Failed to list import batches", e.message);
+      sendError(res, 500, "INTERNAL_ERROR", "Failed to list import batches", errDetail(e));
     }
   });
 
@@ -118,13 +120,13 @@ export function registerInventoryImportRoutes(router: Router) {
         actorUserId: user.userId,
       });
       sendJson(res, 200, { data: result });
-    } catch (e: any) {
+    } catch (e) {
       if (e instanceof InventoryImportError) {
         const status = e.code === "NOT_FOUND" ? 404 : 400;
         return sendError(res, status, e.code, e.message);
       }
       console.error("[INV IMPORT] commit error:", e);
-      sendError(res, 500, "INTERNAL_ERROR", "Failed to commit import", e.message);
+      sendError(res, 500, "INTERNAL_ERROR", "Failed to commit import", errDetail(e));
     }
   });
 
@@ -135,9 +137,9 @@ export function registerInventoryImportRoutes(router: Router) {
       const batch = await getBatch(prisma, params.id, orgId);
       if (!batch) return sendError(res, 404, "NOT_FOUND", "Import batch not found");
       sendJson(res, 200, { data: batch });
-    } catch (e: any) {
+    } catch (e) {
       console.error("[INV IMPORT] get error:", e);
-      sendError(res, 500, "INTERNAL_ERROR", "Failed to get import batch", e.message);
+      sendError(res, 500, "INTERNAL_ERROR", "Failed to get import batch", errDetail(e));
     }
   });
 
@@ -149,9 +151,9 @@ export function registerInventoryImportRoutes(router: Router) {
       const count = await deleteBatch(prisma, params.id, orgId);
       if (count === 0) return sendError(res, 404, "NOT_FOUND", "Import batch not found");
       sendJson(res, 200, { data: { deleted: count } });
-    } catch (e: any) {
+    } catch (e) {
       console.error("[INV IMPORT] delete error:", e);
-      sendError(res, 500, "INTERNAL_ERROR", "Failed to delete import batch", e.message);
+      sendError(res, 500, "INTERNAL_ERROR", "Failed to delete import batch", errDetail(e));
     }
   });
 }
