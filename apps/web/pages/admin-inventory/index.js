@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import Link from "next/link";
 import AppShell from "../../components/AppShell";
 import PageShell from "../../components/layout/PageShell";
@@ -7,30 +7,31 @@ import PageContent from "../../components/layout/PageContent";
 import Panel from "../../components/layout/Panel";
 import { authHeaders } from "../../lib/api";
 import { ErrorBanner } from "../../components/ui";
+import InventoryImportPanel from "../../components/InventoryImportPanel";
 
 export default function BuildingsListPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [buildings, setBuildings] = useState([]);
   const [search, setSearch] = useState("");
+  const [showImport, setShowImport] = useState(false);
 
-  useEffect(() => {
-    async function load() {
-      setLoading(true);
-      setError("");
-      try {
-        const res = await fetch("/api/buildings", { headers: authHeaders() });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data?.error?.message || "Failed to load buildings");
-        setBuildings(data?.data || []);
-      } catch (e) {
-        setError(String(e?.message || e));
-      } finally {
-        setLoading(false);
-      }
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch("/api/buildings", { headers: authHeaders() });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error?.message || "Failed to load buildings");
+      setBuildings(data?.data || []);
+    } catch (e) {
+      setError(String(e?.message || e));
+    } finally {
+      setLoading(false);
     }
-    load();
   }, []);
+
+  useEffect(() => { load(); }, [load]);
 
   const filtered = useMemo(() => {
     if (!search) return buildings;
@@ -45,9 +46,22 @@ export default function BuildingsListPage() {
   return (
     <AppShell role="MANAGER">
       <PageShell>
-        <PageHeader title="Buildings" />
+        <PageHeader
+          title="Buildings"
+          actions={
+            <button className="button-secondary text-sm" onClick={() => setShowImport((v) => !v)}>
+              {showImport ? "Hide import" : "Import from CSV"}
+            </button>
+          }
+        />
         <PageContent>
           <ErrorBanner error={error} onDismiss={() => setError("")} />
+
+          {showImport && (
+            <div className="mb-4">
+              <InventoryImportPanel onCommitted={load} />
+            </div>
+          )}
 
           {/* Search */}
           <div className="mb-4">

@@ -882,4 +882,57 @@ describe('G10: API Contract Tests', () => {
       expect(res.status).toBe(401);
     });
   });
+
+  // ── Inventory CSV import (buildings & units) ──
+  describe('Inventory CSV import', () => {
+    it('uploads → previews → commits a buildings CSV with the expected DTO shape', async () => {
+      const uniq = `CSVTest ${Date.now()}`;
+      const csv = `name,address,yearBuilt,hasElevator\n${uniq},Rue du Test 1,1990,true\n,,,\n`;
+      const form = new FormData();
+      form.append('file', new Blob([csv], { type: 'text/csv' }), 'buildings.csv');
+      form.append('entityType', 'BUILDING');
+
+      const uploadRes = await fetch(`${API_BASE}/imports/inventory`, { method: 'POST', body: form });
+      expect(uploadRes.status).toBe(201);
+      const { data: batch } = await uploadRes.json();
+      expectKeys(
+        batch,
+        ['id', 'entityType', 'fileName', 'status', 'rowCount', 'validCount', 'errorCount', 'createdAt', 'rows'],
+        'ImportBatch',
+      );
+      expect(batch.entityType).toBe('BUILDING');
+      expect(batch.status).toBe('PENDING_REVIEW');
+      expect(batch.validCount).toBe(1); // blank row skipped
+      expect(Array.isArray(batch.rows)).toBe(true);
+      const row = batch.rows[0];
+      expectKeys(row, ['id', 'rowIndex', 'status', 'errorMessage', 'createdEntityId', 'data'], 'ImportRow');
+      expect(row.status).toBe('VALID');
+
+      // list
+      const listRes = await fetch(`${API_BASE}/imports/inventory?entityType=BUILDING&limit=5`);
+      expect(listRes.status).toBe(200);
+      const listBody = await listRes.json();
+      expect(Array.isArray(listBody.data)).toBe(true);
+      expect(listBody).toHaveProperty('pagination');
+
+      // commit
+      const commitRes = await fetch(`${API_BASE}/imports/inventory/${batch.id}/commit`, { method: 'POST' });
+      expect(commitRes.status).toBe(200);
+      const { data: result } = await commitRes.json();
+      expectKeys(result, ['batch', 'committed', 'errors'], 'CommitResult');
+      expect(result.committed).toBe(1);
+      expect(result.batch.status).toBe('COMMITTED');
+      const committedRow = result.batch.rows.find((r: any) => r.status === 'COMMITTED');
+      expect(committedRow).toBeTruthy();
+      expect(committedRow.createdEntityId).toBeTruthy();
+    }, 30000);
+
+    it('rejects an unknown entityType', async () => {
+      const form = new FormData();
+      form.append('file', new Blob(['name\nFoo'], { type: 'text/csv' }), 'x.csv');
+      form.append('entityType', 'WIDGET');
+      const res = await fetch(`${API_BASE}/imports/inventory`, { method: 'POST', body: form });
+      expect(res.status).toBe(400);
+    });
+  });
 });
