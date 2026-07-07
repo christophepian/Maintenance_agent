@@ -43,6 +43,26 @@ describe("parseCsv", () => {
     expect(() => parseCsv("")).toThrow(/no header row/);
     expect(() => parseCsv("\n\n")).toThrow(/no header row/);
   });
+
+  it("auto-detects a semicolon delimiter (Swiss/European Excel export)", () => {
+    const csv = "accountCode;accountName;balanceChf\n1000;Caisse;1234,50\n2000;Créanciers;5000";
+    const { headers, rows } = parseCsv(csv);
+    expect(headers).toEqual(["accountCode", "accountName", "balanceChf"]);
+    expect(rows[0]).toEqual({ accountCode: "1000", accountName: "Caisse", balanceChf: "1234,50" });
+    expect(rows[1].accountName).toBe("Créanciers");
+  });
+
+  it("auto-detects a tab delimiter", () => {
+    const csv = "a\tb\tc\n1\t2\t3";
+    const { headers, rows } = parseCsv(csv);
+    expect(headers).toEqual(["a", "b", "c"]);
+    expect(rows[0]).toEqual({ a: "1", b: "2", c: "3" });
+  });
+
+  it("keeps commas inside a semicolon-delimited file as data (European decimals)", () => {
+    const { rows } = parseCsv("desc;amount\nPlumbing, urgent;1'077.00");
+    expect(rows[0]).toEqual({ desc: "Plumbing, urgent", amount: "1'077.00" });
+  });
 });
 
 describe("parseChf", () => {

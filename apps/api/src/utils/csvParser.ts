@@ -20,8 +20,40 @@ export interface ParsedCsv {
   rows: Record<string, string>[];
 }
 
+/** Candidate field delimiters, in tie-break preference order. */
+const DELIMITERS = [",", ";", "\t"] as const;
+
+/**
+ * Detect the field delimiter from the header line. Swiss/European Excel exports
+ * use ';' (comma is the decimal separator); some tools use tabs. Picks whichever
+ * candidate appears most in the first non-empty line; defaults to ','.
+ */
+function detectDelimiter(text: string): string {
+  let firstLine = "";
+  const start = text.charCodeAt(0) === 0xfeff ? 1 : 0;
+  for (let i = start; i < text.length; i += 1) {
+    const ch = text[i];
+    if (ch === "\n" || ch === "\r") {
+      if (firstLine.trim() !== "") break;
+      continue; // skip leading blank lines
+    }
+    firstLine += ch;
+  }
+
+  let best = ",";
+  let bestCount = 0;
+  for (const d of DELIMITERS) {
+    const count = firstLine.split(d).length - 1;
+    if (count > bestCount) {
+      bestCount = count;
+      best = d;
+    }
+  }
+  return best;
+}
+
 /** Tokenise raw CSV text into a matrix of string cells. */
-function tokenize(text: string): string[][] {
+function tokenize(text: string, delimiter: string): string[][] {
   const rows: string[][] = [];
   let field = "";
   let row: string[] = [];
@@ -68,7 +100,7 @@ function tokenize(text: string): string[][] {
       i += 1;
       continue;
     }
-    if (ch === ",") {
+    if (ch === delimiter) {
       pushField();
       i += 1;
       continue;
@@ -104,7 +136,8 @@ function tokenize(text: string): string[][] {
  * @throws Error if the input has no header row.
  */
 export function parseCsv(text: string): ParsedCsv {
-  const matrix = tokenize(text ?? "");
+  const input = text ?? "";
+  const matrix = tokenize(input, detectDelimiter(input));
 
   // Drop fully-empty rows (e.g. blank lines between records).
   const nonEmpty = matrix.filter(
