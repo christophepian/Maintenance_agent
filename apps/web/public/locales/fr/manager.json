@@ -3106,7 +3106,7 @@
       "linkedInvoices": "Factures liées"
     },
     "action": {
-      "upload": "Importer PDF",
+      "upload": "Importer",
       "approve": "Approuver",
       "reject": "Rejeter",
       "resolveAccount": "Résoudre le compte",
@@ -3139,7 +3139,7 @@
       "matchedAccount": "Compte associé"
     },
     "text": {
-      "noStatements": "Aucun relevé importé. Déposez un PDF de votre gérant pour commencer.",
+      "noStatements": "Aucun relevé importé. Déposez un PDF ou un CSV pour commencer.",
       "uploading": "Chargement et analyse en cours…",
       "uploadSuccess": "Relevé importé. Vérifiez les données extraites ci-dessous.",
       "uploadError": "Échec de l'importation",
@@ -3148,7 +3148,12 @@
       "unmatchedWarning": "Certains soldes de comptes n'ont pas pu être associés. Résolvez-les manuellement avant d'approuver.",
       "loading": "Chargement…",
       "notFound": "Relevé introuvable.",
-      "noBuildingAssigned": "Aucun immeuble attribué — sélectionnez-en un avant d'approuver."
+      "noBuildingAssigned": "Aucun immeuble attribué — sélectionnez-en un avant d'approuver.",
+      "dropZone": "Déposez un PDF, une image ou un CSV ici, ou cliquez pour sélectionner",
+      "csvTemplates": "Modèles CSV :",
+      "templateInvoices": "Factures",
+      "templateBalances": "Soldes de comptes",
+      "csvHint": "Le CSV est traité instantanément (sans OCR). Faites correspondre le type de document ci-dessus à votre fichier."
     },
     "form": {
       "fiscalYear": "Exercice fiscal",

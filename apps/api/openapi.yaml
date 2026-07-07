@@ -274,6 +274,55 @@ components:
           description: Count of open (PENDING/IN_PROGRESS) jobs attributed to the building
           example: 1
 
+    ImportRowDTO:
+      type: object
+      required:
+        - id
+        - rowIndex
+        - status
+      properties:
+        id: { type: string, format: uuid }
+        rowIndex:
+          type: integer
+          description: 1-based data-row number (excludes the header line)
+        status: { type: string, enum: [VALID, ERROR, COMMITTED] }
+        errorMessage: { type: string, nullable: true }
+        createdEntityId:
+          type: string
+          nullable: true
+          description: id of the Building/Unit created on commit
+        data:
+          type: object
+          additionalProperties: true
+          description: The parsed, normalized row payload as uploaded
+
+    ImportBatchDTO:
+      type: object
+      required:
+        - id
+        - entityType
+        - fileName
+        - status
+        - rowCount
+        - validCount
+        - errorCount
+        - createdAt
+        - rows
+      properties:
+        id: { type: string, format: uuid }
+        entityType: { type: string, enum: [BUILDING, UNIT] }
+        fileName: { type: string }
+        uploadedBy: { type: string }
+        status: { type: string, enum: [PENDING_REVIEW, COMMITTED, REJECTED] }
+        rowCount: { type: integer }
+        validCount: { type: integer }
+        errorCount: { type: integer }
+        createdAt: { type: string, format: date-time }
+        committedAt: { type: string, format: date-time, nullable: true }
+        rows:
+          type: array
+          items: { $ref: '#/components/schemas/ImportRowDTO' }
+
     AnnualSnapshotDTO:
       type: object
       required:
@@ -9681,3 +9730,144 @@ paths:
                         createdAt: { type: string, format: date-time }
         '401':
           $ref: '#/components/responses/Unauthorized'
+
+  /imports/inventory:
+    post:
+      tags: [Inventory]
+      summary: Upload a CSV of buildings or units and validate it into a staging batch
+      description: >
+        Parses and validates the CSV without writing to real tables. Returns an
+        ImportBatch with per-row VALID/ERROR status for manager review; commit
+        separately to create the records.
+      operationId: importInventoryUpload
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, entityType]
+              properties:
+                file: { type: string, format: binary }
+                entityType: { type: string, enum: [BUILDING, UNIT] }
+      responses:
+        '201':
+          description: Staging batch created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/ImportBatchDTO' }
+        '400': { description: Invalid CSV, missing file, or bad entityType }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '413': { description: File exceeds size limit }
+    get:
+      tags: [Inventory]
+      summary: List inventory import batches
+      operationId: listInventoryImportBatches
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: entityType
+          in: query
+          required: false
+          schema: { type: string, enum: [BUILDING, UNIT] }
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, default: 50, maximum: 100 }
+        - name: offset
+          in: query
+          required: false
+          schema: { type: integer, default: 0 }
+      responses:
+        '200':
+          description: Paginated list of import batches
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/ImportBatchDTO' }
+                  pagination: { $ref: '#/components/schemas/Pagination' }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /imports/inventory/{id}:
+    get:
+      tags: [Inventory]
+      summary: Get a single inventory import batch with its rows
+      operationId: getInventoryImportBatch
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Import batch
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/ImportBatchDTO' }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404': { description: Import batch not found }
+    delete:
+      tags: [Inventory]
+      summary: Discard an inventory import batch
+      operationId: deleteInventoryImportBatch
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Batch deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      deleted: { type: integer }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404': { description: Import batch not found }
+
+  /imports/inventory/{id}/commit:
+    post:
+      tags: [Inventory]
+      summary: Commit an import batch — create Building/Unit records for valid rows
+      operationId: commitInventoryImport
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Commit result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      batch: { $ref: '#/components/schemas/ImportBatchDTO' }
+                      committed: { type: integer }
+                      errors: { type: integer }
+        '400': { description: Batch already committed or rejected }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404': { description: Import batch not found }

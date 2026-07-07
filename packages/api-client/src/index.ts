@@ -615,6 +615,33 @@ export interface BillingEntityDTO {
   updatedAt: string;
 }
 
+export type ImportEntityType = "BUILDING" | "UNIT";
+export type ImportBatchStatus = "PENDING_REVIEW" | "COMMITTED" | "REJECTED";
+export type ImportRowStatus = "VALID" | "ERROR" | "COMMITTED";
+
+export interface ImportRowDTO {
+  id: string;
+  rowIndex: number;
+  status: ImportRowStatus;
+  errorMessage: string | null;
+  createdEntityId: string | null;
+  data: Record<string, unknown>;
+}
+
+export interface ImportBatchDTO {
+  id: string;
+  entityType: ImportEntityType;
+  fileName: string;
+  uploadedBy: string;
+  status: ImportBatchStatus;
+  rowCount: number;
+  validCount: number;
+  errorCount: number;
+  createdAt: string;
+  committedAt: string | null;
+  rows: ImportRowDTO[];
+}
+
 export interface BuildingDTO {
   id: string;
   orgId: string;
@@ -1923,6 +1950,21 @@ function buildInventoryApi(opts: ClientOptions) {
 
     addAssetIntervention: (assetId: string, body: AddInterventionBody) =>
       request<unknown>(opts, "POST", `/assets/${assetId}/interventions`, body),
+
+    /* Bulk CSV import (buildings & units) */
+    listInventoryImports: (params?: { entityType?: ImportEntityType; limit?: number; offset?: number }) =>
+      request<{ data: ImportBatchDTO[]; pagination: { total: number; limit: number; offset: number } }>(
+        opts, "GET", "/imports/inventory", undefined, params as Record<string, string | number | boolean | undefined>),
+
+    getInventoryImport: (id: string) =>
+      request<{ data: ImportBatchDTO }>(opts, "GET", `/imports/inventory/${id}`),
+
+    commitInventoryImport: (id: string) =>
+      request<{ data: { batch: ImportBatchDTO; committed: number; errors: number } }>(
+        opts, "POST", `/imports/inventory/${id}/commit`),
+
+    deleteInventoryImport: (id: string) =>
+      request<{ data: { deleted: number } }>(opts, "DELETE", `/imports/inventory/${id}`),
   };
 }
 

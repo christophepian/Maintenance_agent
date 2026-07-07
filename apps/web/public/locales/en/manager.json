@@ -3107,7 +3107,7 @@
       "linkedInvoices": "Linked Invoices"
     },
     "action": {
-      "upload": "Upload PDF",
+      "upload": "Upload",
       "approve": "Approve",
       "reject": "Reject",
       "resolveAccount": "Resolve Account",
@@ -3140,7 +3140,7 @@
       "matchedAccount": "Matched Account"
     },
     "text": {
-      "noStatements": "No imported statements yet. Upload a PDF from your property manager to get started.",
+      "noStatements": "No imported statements yet. Upload a PDF or CSV to get started.",
       "uploading": "Uploading and scanning…",
       "uploadSuccess": "Statement uploaded. Review the extracted data below.",
       "uploadError": "Upload failed",
@@ -3149,7 +3149,12 @@
       "unmatchedWarning": "Some account balances could not be matched. Resolve them manually before approving.",
       "loading": "Loading…",
       "notFound": "Statement not found.",
-      "noBuildingAssigned": "No building assigned — select one below before approving."
+      "noBuildingAssigned": "No building assigned — select one below before approving.",
+      "dropZone": "Drop a PDF, image, or CSV here, or click to select",
+      "csvTemplates": "CSV templates:",
+      "templateInvoices": "Invoices",
+      "templateBalances": "Account balances",
+      "csvHint": "CSV is parsed instantly (no OCR). Match the document type above to your file."
     },
     "form": {
       "fiscalYear": "Fiscal Year",

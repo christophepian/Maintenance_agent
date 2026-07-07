@@ -1,0 +1,4 @@
+buildingRef,unitNumber,floor,type,parkingKind,livingAreaSqm,rooms,hasBalcony,monthlyRentChf,monthlyChargesChf,energyLabel,isListedPublicly
+Résidence du Lac,A1,0,RESIDENTIAL,,72,3.5,true,1850,220,C,false
+Résidence du Lac,A2,1,RESIDENTIAL,,95,4.5,true,2400,300,C,false
+Résidence du Lac,P1,-1,PARKING,GARAGE,,,,150,0,,false
