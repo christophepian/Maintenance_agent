@@ -564,7 +564,7 @@ function LegalScopeFilterBar({ sources, activeFilter, onFilter }) {
               : "bg-surface-hover text-muted-text hover:bg-surface-border"
           )}
         >
-          {t(`owner:settings.tabs.${tab.key.toLowerCase()}`)}
+          {tab.label}
         </button>
       ))}
     </div>
