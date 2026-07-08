@@ -35,8 +35,36 @@ describe("mapCsvToAccountBalances", () => {
     const { items, skipped } = mapCsvToAccountBalances(csv);
     expect(items.map((i) => i.rawAccountCode)).toEqual(["4001"]);
     expect(skipped).toHaveLength(2);
-    expect(skipped[0]).toMatch(/missing accountCode/);
-    expect(skipped[1]).toMatch(/invalid balanceChf/);
+    expect(skipped[0]).toMatch(/missing account code/);
+    expect(skipped[1]).toMatch(/invalid balance/);
+  });
+
+  it("resolves French headers (Compte/Libellé/Solde) case/accent-insensitively", () => {
+    const csv = "Compte;Libellé;Solde\n1000;Caisse;1'234.50\n2000;Créanciers;5000";
+    const { items, skipped } = mapCsvToAccountBalances(csv);
+    expect(skipped).toEqual([]);
+    expect(items).toHaveLength(2);
+    expect(items[0]).toMatchObject({ rawAccountCode: "1000", rawAccountName: "Caisse", balanceChf: 1234.5, documentSection: "ACTIF" });
+    expect(items[1]).toMatchObject({ rawAccountCode: "2000", documentSection: "PASSIF" });
+  });
+
+  it("handles a trial balance with separate Débit / Crédit columns", () => {
+    const csv =
+      "Compte;Désignation;Débit;Crédit\n" +
+      "1000;Caisse;1234.50;\n" + //   asset in debit
+      "2000;Créanciers;;5000.00\n" + // liability in credit
+      "3000;Produits;;9000";
+    const { items, skipped } = mapCsvToAccountBalances(csv);
+    expect(skipped).toEqual([]);
+    expect(items[0]).toMatchObject({ rawAccountCode: "1000", balanceChf: 1234.5, balanceType: "DEBIT", documentSection: "ACTIF" });
+    expect(items[1]).toMatchObject({ rawAccountCode: "2000", balanceChf: 5000, balanceType: "CREDIT", documentSection: "PASSIF" });
+    expect(items[2]).toMatchObject({ rawAccountCode: "3000", balanceType: "CREDIT", documentSection: "REVENUE" });
+  });
+
+  it("reports a clear note when no recognizable columns are present", () => {
+    const { items, skipped } = mapCsvToAccountBalances("foo;bar\n1;2");
+    expect(items).toEqual([]);
+    expect(skipped[0]).toMatch(/No account-code column/);
   });
 });
 
