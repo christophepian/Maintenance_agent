@@ -88,35 +88,109 @@ function normalizeSectionInput(raw: string | undefined): DocumentSection | null 
   if (up === "ACTIF" || up === "PASSIF" || up === "REVENUE" || up === "EXPENSE" || up === "OTHER") {
     return up as DocumentSection;
   }
+  // Common French/German section words.
+  if (["ACTIFS", "AKTIVEN", "AKTIVA", "ASSET", "ASSETS"].includes(up)) return "ACTIF";
+  if (["PASSIFS", "PASSIVEN", "PASSIVA", "LIABILITY", "LIABILITIES", "EQUITY", "FONDS PROPRES"].includes(up)) return "PASSIF";
+  if (["PRODUITS", "PRODUIT", "REVENUS", "ERTRAG", "ERTRÄGE", "REVENUE"].includes(up)) return "REVENUE";
+  if (["CHARGES", "CHARGE", "AUFWAND", "EXPENSE", "EXPENSES"].includes(up)) return "EXPENSE";
   return null;
 }
 
+/* ── Tolerant header resolution (real-world exports rarely use template names) ─ */
+
+/** lowercase, strip accents, drop all non-alphanumerics → stable lookup key. */
+function normHeader(h: string): string {
+  return h
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "") // strip combining diacritics (é→e)
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+}
+
+const HEADER_ALIASES: Record<string, string[]> = {
+  accountCode: ["accountcode", "compte", "ncompte", "nocompte", "numerocompte", "numcompte", "comptenumero", "konto", "kontonummer", "kontonr", "code", "accountno", "accountnumber", "numero"],
+  accountName: ["accountname", "libelle", "designation", "intitule", "bezeichnung", "kontobezeichnung", "description", "texte", "text", "nom", "name", "wording", "compteintitule"],
+  balanceChf: ["balancechf", "balance", "solde", "soldechf", "saldo", "montant", "montantchf", "betrag", "amount", "valeur", "soldefinal"],
+  debit: ["debit", "debitchf", "soll", "debita"],
+  credit: ["credit", "creditchf", "haben", "credita"],
+  documentSection: ["documentsection", "section", "classe", "class", "categorie", "kategorie", "rubrique", "groupe", "group"],
+};
+
+/** Map each canonical field to the actual header key present in the CSV, if any. */
+function resolveHeaders(headers: string[]): Partial<Record<keyof typeof HEADER_ALIASES, string>> {
+  const byNorm = new Map<string, string>();
+  for (const h of headers) {
+    const n = normHeader(h);
+    if (n && !byNorm.has(n)) byNorm.set(n, h);
+  }
+  const resolved: Partial<Record<string, string>> = {};
+  for (const [canonical, aliases] of Object.entries(HEADER_ALIASES)) {
+    for (const alias of aliases) {
+      if (byNorm.has(alias)) {
+        resolved[canonical] = byNorm.get(alias);
+        break;
+      }
+    }
+  }
+  return resolved;
+}
+
 export function mapCsvToAccountBalances(text: string): CsvMapResult<ExtractedAccountBalance> {
-  const { rows } = parseCsv(text);
+  const { headers, rows } = parseCsv(text);
+  const h = resolveHeaders(headers);
   const items: ExtractedAccountBalance[] = [];
   const skipped: string[] = [];
 
-  rows.forEach((row, i) => {
-    const code = (row.accountCode ?? "").trim();
-    const name = (row.accountName ?? "").trim();
-    const chf = parseChf(row.balanceChf);
+  if (!h.accountCode) {
+    skipped.push(
+      `No account-code column found. Expected one of: accountCode, Compte, Konto, Code (got: ${headers.join(", ")})`,
+    );
+    return { items, skipped };
+  }
+  if (!h.balanceChf && !(h.debit || h.credit)) {
+    skipped.push(
+      `No balance column found. Expected a Solde/Montant/balanceChf column, or Débit + Crédit columns (got: ${headers.join(", ")})`,
+    );
+    return { items, skipped };
+  }
 
-    if (!code && !name) return; // silently skip fully-blank rows
+  rows.forEach((row, i) => {
+    const code = (row[h.accountCode!] ?? "").trim();
+    const name = (h.accountName ? row[h.accountName] ?? "" : "").trim();
+
+    // Resolve the balance: prefer a single signed balance column, else Débit/Crédit.
+    let chf: number | null = null;
+    let explicitType: "DEBIT" | "CREDIT" | null = null;
+    if (h.balanceChf) {
+      chf = parseChf(row[h.balanceChf]);
+    } else {
+      const d = h.debit ? parseChf(row[h.debit]) : null;
+      const c = h.credit ? parseChf(row[h.credit]) : null;
+      if (d != null && d !== 0) {
+        chf = d;
+        explicitType = "DEBIT";
+      } else if (c != null && c !== 0) {
+        chf = c;
+        explicitType = "CREDIT";
+      }
+    }
+
+    if (!code && !name && chf == null) return; // silently skip fully-blank rows
     if (!code) {
-      skipped.push(`Row ${i + 2}: missing accountCode`);
+      skipped.push(`Row ${i + 2}: missing account code`);
       return;
     }
     if (chf == null) {
-      skipped.push(`Row ${i + 2} (${code}): missing or invalid balanceChf`);
+      skipped.push(`Row ${i + 2} (${code}): missing or invalid balance`);
       return;
     }
 
-    const section = normalizeSectionInput(row.documentSection) ?? deriveSection(code);
+    const section = normalizeSectionInput(h.documentSection ? row[h.documentSection] : undefined) ?? deriveSection(code);
     items.push({
       rawAccountCode: code,
       rawAccountName: name || code,
       balanceChf: chf,
-      balanceType: deriveBalanceType(section, chf),
+      balanceType: explicitType ?? deriveBalanceType(section, chf),
       documentSection: section,
     });
   });
