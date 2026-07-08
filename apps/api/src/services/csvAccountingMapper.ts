@@ -125,8 +125,25 @@ const HEADER_ALIASES: Record<string, string[]> = {
  */
 const NON_LEAF_ROW_TYPES = new Set([
   "groupe", "sousgroupe", "total", "soustotal", "totalgeneral", "grandtotal",
-  "section", "titre", "entete", "categorie", "rubrique", "subtotal", "summary", "header",
+  "totalsection", "sousdetail", "detail", "section", "titre", "entete",
+  "categorie", "rubrique", "subtotal", "summary", "header",
 ]);
+
+/**
+ * Designations of a year-end result line. Such a line is booked as an equity
+ * account even though hierarchical exports present it as a code-less total
+ * (e.g. "Bénéfice", "Résultat de l'exercice"). Restricted to balance-sheet
+ * sections so P&L result subtotals aren't mistaken for it.
+ */
+const RESULT_KEYWORDS = ["benefice", "perte", "resultat", "gewinn", "verlust", "ergebnis"];
+/** Swiss KMU chart: 2979 = résultat de l'exercice (equity). */
+const RESULT_ACCOUNT_CODE = "2979";
+
+function isResultDesignation(name: string): boolean {
+  const n = normHeader(name);
+  if (!n || n.startsWith("total")) return false;
+  return RESULT_KEYWORDS.some((k) => n.startsWith(k));
+}
 
 /** Map each canonical field to the actual header key present in the CSV, if any. */
 function resolveHeaders(headers: string[]): Partial<Record<keyof typeof HEADER_ALIASES, string>> {
@@ -167,13 +184,7 @@ export function mapCsvToAccountBalances(text: string): CsvMapResult<ExtractedAcc
   }
 
   rows.forEach((row, i) => {
-    // Hierarchical exports label each row (compte / groupe / sous_groupe / total).
-    // Skip structural/aggregate rows silently so they don't double-count.
-    if (h.rowType) {
-      const rt = normHeader(String(row[h.rowType] ?? ""));
-      if (rt && NON_LEAF_ROW_TYPES.has(rt)) return;
-    }
-
+    const rawType = h.rowType ? normHeader(String(row[h.rowType] ?? "")) : "";
     const code = (row[h.accountCode!] ?? "").trim();
     const name = (h.accountName ? row[h.accountName] ?? "" : "").trim();
 
@@ -194,6 +205,26 @@ export function mapCsvToAccountBalances(text: string): CsvMapResult<ExtractedAcc
       }
     }
 
+    const explicitSection = normalizeSectionInput(h.documentSection ? row[h.documentSection] : undefined);
+
+    // Year-end result line (e.g. "Bénéfice") — the export presents it as a
+    // code-less total, but it must be booked into equity for the bilan to
+    // balance. Handled BEFORE the structural-row skip (it is a `total` row).
+    if (!code && chf != null && isResultDesignation(name) && (explicitSection === "ACTIF" || explicitSection === "PASSIF")) {
+      items.push({
+        rawAccountCode: RESULT_ACCOUNT_CODE,
+        rawAccountName: name,
+        balanceChf: chf,
+        balanceType: deriveBalanceType(explicitSection, chf),
+        documentSection: explicitSection,
+      });
+      return;
+    }
+
+    // Skip structural/aggregate rows silently so they don't double-count
+    // (section titles, group headers, subtotals, sub-detail breakdowns).
+    if (rawType && NON_LEAF_ROW_TYPES.has(rawType)) return;
+
     if (!code && !name && chf == null) return; // silently skip fully-blank rows
     if (!code) {
       skipped.push(`Row ${i + 2}: missing account code`);
@@ -204,7 +235,7 @@ export function mapCsvToAccountBalances(text: string): CsvMapResult<ExtractedAcc
       return;
     }
 
-    const section = normalizeSectionInput(h.documentSection ? row[h.documentSection] : undefined) ?? deriveSection(code);
+    const section = explicitSection ?? deriveSection(code);
     items.push({
       rawAccountCode: code,
       rawAccountName: name || code,
