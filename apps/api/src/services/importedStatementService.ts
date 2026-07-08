@@ -32,7 +32,7 @@ import { getAnthropicClient } from "./aiClient";
 import { writeAuditLog } from "./auditLog";
 import { createInvoice } from "./invoices";
 import { postJournalEntries } from "./ledgerService";
-import { mapCsvToAccountBalances, mapCsvToInvoiceLines } from "./csvAccountingMapper";
+import { mapCsvToAccountBalances, mapCsvToInvoiceLines, ReconciliationLine, CsvMapResult } from "./csvAccountingMapper";
 import * as accountRepo from "../repositories/accountRepository";
 import { updateStatementStatus } from "../repositories/importedStatementRepository";
 import * as crypto from "crypto";
@@ -781,6 +781,29 @@ async function persistExtractedSections(
  *   hintDocType === "INVOICE"  → invoices CSV
  *   otherwise                  → account-balance CSV (auto-classified BS/IS)
  */
+/**
+ * Render the balance reconciliation as a human-readable block for the review
+ * gate: shows, per section and for the Actif=Passif identity, whether the
+ * extracted totals tie out to the document's own declared totals.
+ */
+function formatReconciliation(recon: ReconciliationLine[]): string {
+  if (!recon.length) return "";
+  const fmt = (n: number) => n.toLocaleString("de-CH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const allOk = recon.every((r) => r.ok);
+  const header = allOk
+    ? "✓ Reconciliation passed — extracted totals tie out to the document."
+    : "⚠ Reconciliation: extracted totals differ from the document —";
+  const lines = recon.map((r) => {
+    const mark = r.ok ? "✓" : "⚠";
+    const cmp =
+      r.statedChf == null
+        ? fmt(r.computedChf)
+        : `${fmt(r.computedChf)} vs ${fmt(r.statedChf)}` + (r.ok ? "" : ` (off by ${fmt(r.diffChf)})`);
+    return `  ${mark} ${r.scope}: ${cmp}`;
+  });
+  return [header, ...lines].join("\n");
+}
+
 async function ingestCsvSections(
   prisma: PrismaClient,
   batchId: string,
@@ -797,9 +820,11 @@ async function ingestCsvSections(
     const text = buffer.toString("utf8");
     const isInvoices = hintDocType === "INVOICE";
 
-    const balanceResult = isInvoices ? { items: [], skipped: [] } : mapCsvToAccountBalances(text);
+    const emptyBalance: CsvMapResult<ExtractedAccountBalance> = { items: [], skipped: [] };
+    const balanceResult = isInvoices ? emptyBalance : mapCsvToAccountBalances(text);
     const invoiceResult = isInvoices ? mapCsvToInvoiceLines(text) : { items: [], skipped: [] };
     const skipped = [...balanceResult.skipped, ...invoiceResult.skipped];
+    const reconSummary = formatReconciliation(balanceResult.reconciliation ?? []);
 
     console.log(
       `${"[CSV IMPORT]"} batch=${batchId} file="${fileName}" ` +
@@ -816,6 +841,7 @@ async function ingestCsvSections(
       rawOcrText:
         `CSV import — ${fileName}\n` +
         `${balanceResult.items.length} balance row(s), ${invoiceResult.items.length} invoice row(s)` +
+        (reconSummary ? `\n\n${reconSummary}` : "") +
         (skipped.length ? `\nSkipped rows:\n- ${skipped.join("\n- ")}` : ""),
     };
 
@@ -830,11 +856,15 @@ async function ingestCsvSections(
       logPrefix: "[CSV IMPORT]",
     });
 
-    // Record skipped-row notes on the placeholder so the manager sees them.
-    if (skipped.length > 0) {
+    // Surface the reconciliation status + any skipped rows on the placeholder so
+    // the manager sees, up front, whether the extracted totals tie out.
+    const noteParts: string[] = [];
+    if (reconSummary) noteParts.push(reconSummary);
+    if (skipped.length > 0) noteParts.push(`Skipped ${skipped.length} row(s):\n- ${skipped.join("\n- ")}`);
+    if (noteParts.length > 0) {
       await updateStatementStatus(prisma, placeholderStatementId, orgId, {
         status: ImportedStatementStatus.PENDING_REVIEW,
-        notes: `CSV import skipped ${skipped.length} row(s):\n- ${skipped.join("\n- ")}`,
+        notes: noteParts.join("\n\n"),
       }).catch(() => { /* best-effort */ });
     }
   } catch (err) {

@@ -15,10 +15,25 @@ import { parseCsv, parseChf } from "../utils/csvParser";
 
 type DocumentSection = ExtractedAccountBalance["documentSection"];
 
+/**
+ * One reconciliation check: the extracted leaf accounts for a scope, compared
+ * against the value the source document itself declares (its own "Total …"
+ * rows). Turns "did we parse it right?" into a checkable invariant.
+ */
+export interface ReconciliationLine {
+  scope: string;              // e.g. "Actifs", "Passifs", "Bilan (Actif = Passif)"
+  computedChf: number;        // sum of extracted leaf accounts
+  statedChf: number | null;   // the document's own declared total (null if absent)
+  diffChf: number;            // computed − stated
+  ok: boolean;                // within rounding tolerance
+}
+
 export interface CsvMapResult<T> {
   items: T[];
   /** Human-readable notes about skipped/invalid rows, surfaced to the manager. */
   skipped: string[];
+  /** Present for account balances: extracted-vs-document-declared totals. */
+  reconciliation?: ReconciliationLine[];
 }
 
 /* ── Templates (exact headers the parser expects) ─────────────────────────── */
@@ -169,6 +184,9 @@ export function mapCsvToAccountBalances(text: string): CsvMapResult<ExtractedAcc
   const h = resolveHeaders(headers);
   const items: ExtractedAccountBalance[] = [];
   const skipped: string[] = [];
+  // The document's own declared section grand-totals (from total_section rows) —
+  // ground truth for reconciliation.
+  const statedTotals = new Map<DocumentSection, number>();
 
   if (!h.accountCode) {
     skipped.push(
@@ -223,7 +241,14 @@ export function mapCsvToAccountBalances(text: string): CsvMapResult<ExtractedAcc
 
     // Skip structural/aggregate rows silently so they don't double-count
     // (section titles, group headers, subtotals, sub-detail breakdowns).
-    if (rawType && NON_LEAF_ROW_TYPES.has(rawType)) return;
+    if (rawType && NON_LEAF_ROW_TYPES.has(rawType)) {
+      // A section grand-total is the document's own ground truth — keep it for
+      // reconciliation before discarding the row.
+      if (rawType === "totalsection" && explicitSection && chf != null) {
+        statedTotals.set(explicitSection, chf);
+      }
+      return;
+    }
 
     if (!code && !name && chf == null) return; // silently skip fully-blank rows
     if (!code) {
@@ -245,7 +270,46 @@ export function mapCsvToAccountBalances(text: string): CsvMapResult<ExtractedAcc
     });
   });
 
-  return { items, skipped };
+  return { items, skipped, reconciliation: buildReconciliation(items, statedTotals) };
+}
+
+const round2 = (n: number): number => Math.round(n * 100) / 100;
+
+/**
+ * Reconcile the extracted leaf accounts against the document's own declared
+ * section totals, plus the Actif = Passif identity. A 1-rappen tolerance
+ * absorbs rounding. Returns [] when the document declares no totals to check.
+ */
+function buildReconciliation(
+  items: ExtractedAccountBalance[],
+  statedTotals: Map<DocumentSection, number>,
+): ReconciliationLine[] {
+  const TOL = 0.01;
+  const computed = new Map<DocumentSection, number>();
+  for (const it of items) {
+    computed.set(it.documentSection, (computed.get(it.documentSection) ?? 0) + it.balanceChf);
+  }
+
+  const lines: ReconciliationLine[] = [];
+  const SECTION_LABELS: [DocumentSection, string][] = [
+    ["ACTIF", "Actifs"], ["PASSIF", "Passifs"], ["REVENUE", "Produits"], ["EXPENSE", "Charges"],
+  ];
+  for (const [section, label] of SECTION_LABELS) {
+    const stated = statedTotals.get(section);
+    if (stated == null) continue;
+    const c = round2(computed.get(section) ?? 0);
+    const diff = round2(c - stated);
+    lines.push({ scope: label, computedChf: c, statedChf: round2(stated), diffChf: diff, ok: Math.abs(diff) <= TOL });
+  }
+
+  // Balance-sheet identity: total assets must equal total liabilities + equity.
+  const actif = computed.get("ACTIF");
+  const passif = computed.get("PASSIF");
+  if (actif != null && passif != null) {
+    const diff = round2(actif - passif);
+    lines.push({ scope: "Bilan (Actif = Passif)", computedChf: round2(actif), statedChf: round2(passif), diffChf: diff, ok: Math.abs(diff) <= TOL });
+  }
+  return lines;
 }
 
 /* ── Invoice mapping ──────────────────────────────────────────────────────── */

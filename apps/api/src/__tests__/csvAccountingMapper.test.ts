@@ -123,6 +123,30 @@ describe("mapCsvToAccountBalances", () => {
       balanceType: "CREDIT",
     });
   });
+
+  const BALANCED = (totalActifs: string) =>
+    "section\tcompte\tdesignation\tmontant_chf\ttype\n" +
+    "Actifs\t10200\tBanque\t100\tcompte\n" +
+    `Actifs\t\tTotal Actifs\t${totalActifs}\ttotal_section\n` +
+    "Passifs\t20000\tCréancier\t30\tcompte\n" +
+    "Passifs\t29000\tReport\t-50\tcompte\n" +
+    "Passifs\t\tBénéfice\t120\ttotal\n" +
+    "Passifs\t\tTotal Passifs\t100\ttotal_section\n";
+
+  it("reconciles extracted totals against the document's own section totals (balanced)", () => {
+    const { reconciliation } = mapCsvToAccountBalances(BALANCED("100"));
+    const byScope = Object.fromEntries((reconciliation ?? []).map((r) => [r.scope, r]));
+    expect(byScope["Actifs"]).toMatchObject({ computedChf: 100, statedChf: 100, ok: true });
+    expect(byScope["Passifs"]).toMatchObject({ computedChf: 100, statedChf: 100, ok: true });
+    expect(byScope["Bilan (Actif = Passif)"]).toMatchObject({ ok: true, diffChf: 0 });
+  });
+
+  it("flags a section whose extracted sum differs from the document's stated total", () => {
+    // Document claims Total Actifs = 200 but the leaf accounts only sum to 100.
+    const { reconciliation } = mapCsvToAccountBalances(BALANCED("200"));
+    const actifs = (reconciliation ?? []).find((r) => r.scope === "Actifs");
+    expect(actifs).toMatchObject({ computedChf: 100, statedChf: 200, diffChf: -100, ok: false });
+  });
 });
 
 describe("mapCsvToInvoiceLines", () => {
