@@ -66,6 +66,32 @@ describe("mapCsvToAccountBalances", () => {
     expect(items).toEqual([]);
     expect(skipped[0]).toMatch(/No account-code column/);
   });
+
+  it("handles a hierarchical export with a type column (imports only leaf accounts)", () => {
+    const csv =
+      "section\tgroupe\tsous_groupe\tcompte\tdesignation\tmontant_chf\ttype\n" +
+      "Produit\t300\t\t\tProduit des loyers\t\tgroupe\n" +
+      "Produit\t300\t3000\t\tLoyers pour tiers\t\tsous_groupe\n" +
+      "Produit\t300\t3000\t30000\tLoyer net\t162672\tcompte\n" +
+      "Produit\t300\t3000\t\tTotal Loyers\t162672\ttotal\n" +
+      "Produit\t300\t\t\tTotal Produit des loyers\t162672\ttotal\n" +
+      "Actif\t100\t1000\t10000\tCaisse\t5000\tcompte\n";
+    const { items, skipped } = mapCsvToAccountBalances(csv);
+    expect(skipped).toEqual([]); // groupe/sous_groupe/total rows skipped silently
+    expect(items).toHaveLength(2); // only the two type=compte rows
+    expect(items[0]).toMatchObject({
+      rawAccountCode: "30000",
+      rawAccountName: "Loyer net",
+      balanceChf: 162672,
+      documentSection: "REVENUE",
+      balanceType: "CREDIT",
+    });
+    expect(items[1]).toMatchObject({
+      rawAccountCode: "10000",
+      documentSection: "ACTIF",
+      balanceType: "DEBIT",
+    });
+  });
 });
 
 describe("mapCsvToInvoiceLines", () => {

@@ -114,7 +114,19 @@ const HEADER_ALIASES: Record<string, string[]> = {
   debit: ["debit", "debitchf", "soll", "debita"],
   credit: ["credit", "creditchf", "haben", "credita"],
   documentSection: ["documentsection", "section", "classe", "class", "categorie", "kategorie", "rubrique", "groupe", "group"],
+  rowType: ["type", "typeligne", "typedeligne", "rowtype", "niveau", "level", "nature"],
 };
+
+/**
+ * Normalized `type`-column values that mark a structural/aggregate row (section
+ * title, group header, subtotal, total) rather than a postable account. When a
+ * type column is present these rows are skipped silently — importing them would
+ * double-count. Anything else (e.g. "compte"/"account") is treated as a leaf.
+ */
+const NON_LEAF_ROW_TYPES = new Set([
+  "groupe", "sousgroupe", "total", "soustotal", "totalgeneral", "grandtotal",
+  "section", "titre", "entete", "categorie", "rubrique", "subtotal", "summary", "header",
+]);
 
 /** Map each canonical field to the actual header key present in the CSV, if any. */
 function resolveHeaders(headers: string[]): Partial<Record<keyof typeof HEADER_ALIASES, string>> {
@@ -155,6 +167,13 @@ export function mapCsvToAccountBalances(text: string): CsvMapResult<ExtractedAcc
   }
 
   rows.forEach((row, i) => {
+    // Hierarchical exports label each row (compte / groupe / sous_groupe / total).
+    // Skip structural/aggregate rows silently so they don't double-count.
+    if (h.rowType) {
+      const rt = normHeader(String(row[h.rowType] ?? ""));
+      if (rt && NON_LEAF_ROW_TYPES.has(rt)) return;
+    }
+
     const code = (row[h.accountCode!] ?? "").trim();
     const name = (h.accountName ? row[h.accountName] ?? "" : "").trim();
 
