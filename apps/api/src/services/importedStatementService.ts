@@ -1670,42 +1670,56 @@ export function mapBatchDTO(batch: any, statements: any[]): UploadBatchDTO {
   };
 }
 
-function mapDTO(s: any, linkedInvoices: any[] = []): ImportedStatementDTO {
-  const balances: any[] = s.accountBalances ?? [];
+export interface BalanceRowForCheck {
+  rawAccountCode: string | null;
+  balanceCents: number;
+  balanceType: string;
+  documentSection: string | null;
+}
 
-  // Accounting equation check.
-  // Uses account code prefix as the authoritative section indicator:
-  //   1xxx → ACTIF (assets)       2xxx → PASSIF (liabilities + equity)
-  //   3xxx → REVENUE              4xxx–9xxx → EXPENSE
-  // This overrides Claude's documentSection label, which can be wrong for
-  // equity accounts like 2900 Bénéfice that Claude may call REVENUE.
-  // Signed amounts: negative within a section = contra-account / deduction.
-  let balanceImbalanceCents: number | null = null;
-  if (balances.length > 0) {
-    let actifTotal = 0, passifTotal = 0, revenueTotal = 0, expenseTotal = 0;
-    for (const ab of balances) {
-      const code = ((ab.rawAccountCode ?? "") as string).trim().replace(/\D/g, "");
-      const first = code ? parseInt(code[0], 10) : NaN;
-      if (first === 1) actifTotal  += ab.balanceCents;
-      else if (first === 2) passifTotal += ab.balanceCents;
-      else if (first === 3) revenueTotal += ab.balanceCents;
-      else if (first >= 4 && first <= 9) expenseTotal += ab.balanceCents;
-      else {
-        // No recognised code — fall back to stored balanceType
-        if (ab.balanceType === "DEBIT") actifTotal  += Math.abs(ab.balanceCents);
-        else                            passifTotal += Math.abs(ab.balanceCents);
-      }
-    }
-    if (actifTotal !== 0 || passifTotal !== 0) {
-      // Balance sheet: Total Actifs must equal Total Passifs
-      balanceImbalanceCents = actifTotal - passifTotal;
-    } else if (revenueTotal !== 0 || expenseTotal !== 0) {
-      // P&L: show net income (Revenue − Expenses). Not expected to be zero.
-      balanceImbalanceCents = revenueTotal - expenseTotal;
-    } else {
-      balanceImbalanceCents = 0;
+/**
+ * Accounting-equation check. For a balance sheet returns Total Actifs − Total
+ * Passifs (0 when balanced); for a P&L returns net income (Revenue − Expenses,
+ * not expected to be zero); null when there are no balances.
+ *
+ * The document's own section (documentSection) is authoritative for the
+ * Actif/Passif split — an account may be presented under any section the
+ * accountant chose, regardless of its code (e.g. receivable 11200 "Créances
+ * diverses" placed under Passifs). The CSV import sets this from the file's
+ * section column. Only when documentSection is NOT a definite balance-sheet
+ * side (REVENUE / EXPENSE / OTHER / UNKNOWN — e.g. Claude mislabelling equity
+ * 2900 Bénéfice as REVENUE on the OCR path) do we fall back to the account-code
+ * prefix: 1xxx → ACTIF, 2xxx → PASSIF, 3xxx → REVENUE, 4xxx–9xxx → EXPENSE.
+ * Signed amounts: negative within a section = contra-account / deduction.
+ */
+export function computeBalanceImbalanceCents(balances: BalanceRowForCheck[]): number | null {
+  if (!balances.length) return null;
+  let actifTotal = 0, passifTotal = 0, revenueTotal = 0, expenseTotal = 0;
+  for (const ab of balances) {
+    const ds = ab.documentSection;
+    if (ds === "ACTIF") { actifTotal += ab.balanceCents; continue; }
+    if (ds === "PASSIF") { passifTotal += ab.balanceCents; continue; }
+
+    const code = ((ab.rawAccountCode ?? "") as string).trim().replace(/\D/g, "");
+    const first = code ? parseInt(code[0], 10) : NaN;
+    if (first === 1) actifTotal += ab.balanceCents;
+    else if (first === 2) passifTotal += ab.balanceCents;
+    else if (first === 3) revenueTotal += ab.balanceCents;
+    else if (first >= 4 && first <= 9) expenseTotal += ab.balanceCents;
+    else {
+      // No recognised code — fall back to stored balanceType
+      if (ab.balanceType === "DEBIT") actifTotal += Math.abs(ab.balanceCents);
+      else passifTotal += Math.abs(ab.balanceCents);
     }
   }
+  if (actifTotal !== 0 || passifTotal !== 0) return actifTotal - passifTotal;
+  if (revenueTotal !== 0 || expenseTotal !== 0) return revenueTotal - expenseTotal;
+  return 0;
+}
+
+function mapDTO(s: any, linkedInvoices: any[] = []): ImportedStatementDTO {
+  const balances: any[] = s.accountBalances ?? [];
+  const balanceImbalanceCents = computeBalanceImbalanceCents(balances);
 
   return {
     id: s.id,
