@@ -92,6 +92,37 @@ describe("mapCsvToAccountBalances", () => {
       balanceType: "DEBIT",
     });
   });
+
+  it("skips sous_detail/total_section rows and books the result line (real bilan)", () => {
+    const csv =
+      "section\tgroupe\tsous_groupe\tcompte\tdesignation\tmontant_chf\ttype\n" +
+      "Actifs\t100\t1020\t10200\tBanque\t12858.88\tcompte\n" +
+      "Actifs\t\t\t\tTotal Actifs\t-7807.67\ttotal_section\n" +
+      "Passifs\t200\t2000\t20000\tAvances loyer\t11120\tcompte\n" +
+      "Passifs\t200\t2000\t531100.01.0101.16\tFROISSE Marcel\t3200\tsous_detail\n" +
+      "Passifs\t200\t2000\t531100.01.0201.13\tBRICELET Nick\t3660\tsous_detail\n" +
+      "Passifs\t200\t2000\t\tTotal Avances loyer\t11120\ttotal\n" +
+      "Passifs\t290\t2900\t29000\tReport des bénéfices/pertes\t-27455.8\tcompte\n" +
+      "Passifs\t\t\t\tBénéfice\t114790.68\ttotal\n" +
+      "Passifs\t\t\t\tTotal Passifs\t-7807.67\ttotal_section\n";
+    const { items, skipped } = mapCsvToAccountBalances(csv);
+    expect(skipped).toEqual([]);
+
+    // leaf accounts + booked result; NO sous_detail double-count
+    expect(items.map((i) => i.rawAccountCode).sort()).toEqual(["10200", "20000", "29000", "2979"]);
+    expect(items.some((i) => i.rawAccountCode.startsWith("531100"))).toBe(false);
+
+    // the 20000 parent account keeps its full value (not the sub-detail split)
+    expect(items.find((i) => i.rawAccountCode === "20000")).toMatchObject({ balanceChf: 11120, balanceType: "CREDIT" });
+
+    // the year's result is booked into equity so the bilan can close
+    expect(items.find((i) => i.rawAccountCode === "2979")).toMatchObject({
+      rawAccountName: "Bénéfice",
+      balanceChf: 114790.68,
+      documentSection: "PASSIF",
+      balanceType: "CREDIT",
+    });
+  });
 });
 
 describe("mapCsvToInvoiceLines", () => {
