@@ -1076,4 +1076,62 @@ describe('G10: API Contract Tests', () => {
       expect(res.status).toBe(400);
     });
   });
+
+  // ── Contractor-invoice onboarding from a régie general ledger ──
+  describe('Invoice onboarding (general ledger)', () => {
+    const LEDGER =
+      'groupe\tcompte\tlibelle_compte\tdate_valeur\tno_piece\ttexte_ecriture\tmontant_chf\n' +
+      '3000\t30000\tLoyer net\t01.01.2025\t\t\t-13556\n' + // revenue → skipped
+      '4110\t41100\tEntretien de l’immeuble\t21.05.2025\t1073348\tG. BURGOS Sàrl / Infiltration\t2964\n' +
+      '4120\t41200\tEntretien des appartements\t17.01.2025\t1065720\t531100.01.0001: DVM Carrelage / Muret\t451\n' +
+      '4600\t46000\tHonoraires de gestion\t31.01.2025\t48700\tRILSA SA / Honoraires\t609.95\n' + // mgmt fee → skipped
+      '6900\t69000\tImpôts et taxes\t01.12.2025\t1087133\tCOMMUNE DE LUTRY / Impôt foncier\t1957.9\n';
+
+    it('previews contractor invoices with the expected DTO shape', async () => {
+      const buildings = await fetchJson('/buildings?limit=1');
+      if (!buildings.data?.length) { console.log('⚠️  Skipping invoice onboarding preview: no buildings'); return; }
+      const form = new FormData();
+      form.append('file', new Blob([LEDGER], { type: 'text/csv' }), 'gl.csv');
+      const res = await fetch(`${API_BASE}/buildings/${buildings.data[0].id}/onboarding/invoices/preview`, {
+        method: 'POST', headers: { 'x-dev-role': 'MANAGER' }, body: form,
+      });
+      expect(res.status).toBe(200);
+      const { data } = await res.json();
+      expectKeys(data, ['buildingId', 'buildingName', 'summary', 'invoices', 'warnings'], 'InvoiceOnboardingPreviewDTO');
+      expectKeys(data.summary, ['total', 'newInvoices', 'alreadyImported', 'unitAttributed', 'totalChf', 'byAccount'], 'summary');
+      expect(data.summary.total).toBe(3); // BURGOS + DVM + COMMUNE; rent + mgmt fee skipped
+      const line = data.invoices[0];
+      expectKeys(line, ['compte', 'accountName', 'noPiece', 'vendorName', 'description', 'amountChf', 'unitNumber', 'matchedUnitNumber', 'alreadyImported'], 'InvoiceOnboardingPreviewLineDTO');
+    }, 30000);
+
+    it('commits invoices to a fresh building and is idempotent on re-commit', async () => {
+      const created = await fetch(`${API_BASE}/buildings`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-dev-role': 'MANAGER' },
+        body: JSON.stringify({ name: `Invoice Onboarding ${Date.now()}` }),
+      });
+      const buildingId = (await created.json()).data.id;
+
+      const form = new FormData();
+      form.append('file', new Blob([LEDGER], { type: 'text/csv' }), 'gl.csv');
+      const res = await fetch(`${API_BASE}/buildings/${buildingId}/onboarding/invoices/commit`, {
+        method: 'POST', headers: { 'x-dev-role': 'MANAGER' }, body: form,
+      });
+      expect(res.status).toBe(201);
+      const { data } = await res.json();
+      expectKeys(data, ['buildingId', 'created', 'posted', 'skippedAlreadyImported', 'errors'], 'InvoiceOnboardingCommitResult');
+      expect(data.created).toBe(3);
+      expect(data.skippedAlreadyImported).toBe(0);
+
+      // Second commit skips everything already imported (piece-number idempotency).
+      const form2 = new FormData();
+      form2.append('file', new Blob([LEDGER], { type: 'text/csv' }), 'gl.csv');
+      const res2 = await fetch(`${API_BASE}/buildings/${buildingId}/onboarding/invoices/commit`, {
+        method: 'POST', headers: { 'x-dev-role': 'MANAGER' }, body: form2,
+      });
+      expect(res2.status).toBe(201);
+      const { data: data2 } = await res2.json();
+      expect(data2.created).toBe(0);
+      expect(data2.skippedAlreadyImported).toBe(3);
+    }, 30000);
+  });
 });

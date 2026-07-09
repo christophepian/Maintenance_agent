@@ -401,6 +401,72 @@ components:
           type: array
           items: { type: string }
 
+    InvoiceOnboardingPreviewLineDTO:
+      type: object
+      required: [compte, accountName, noPiece, vendorName, description, amountChf, unitNumber, matchedUnitNumber, alreadyImported]
+      properties:
+        compte: { type: string }
+        accountName: { type: string }
+        date: { type: string, format: date, nullable: true }
+        noPiece: { type: string }
+        vendorName: { type: string }
+        description: { type: string }
+        amountChf: { type: number }
+        unitNumber: { type: string, nullable: true }
+        matchedUnitNumber:
+          type: string
+          nullable: true
+          description: Existing unit this invoice attributes to; null = building-level
+        alreadyImported: { type: boolean }
+
+    InvoiceOnboardingPreviewDTO:
+      type: object
+      required: [buildingId, buildingName, summary, invoices, warnings]
+      properties:
+        buildingId: { type: string, format: uuid }
+        buildingName: { type: string }
+        summary:
+          type: object
+          required: [total, newInvoices, alreadyImported, unitAttributed, totalChf, byAccount]
+          properties:
+            total: { type: integer }
+            newInvoices: { type: integer }
+            alreadyImported: { type: integer }
+            unitAttributed: { type: integer }
+            totalChf: { type: number }
+            byAccount:
+              type: array
+              items:
+                type: object
+                required: [compte, accountName, count, totalChf]
+                properties:
+                  compte: { type: string }
+                  accountName: { type: string }
+                  count: { type: integer }
+                  totalChf: { type: number }
+        invoices:
+          type: array
+          items: { $ref: '#/components/schemas/InvoiceOnboardingPreviewLineDTO' }
+        warnings:
+          type: array
+          items: { type: string }
+
+    InvoiceOnboardingCommitResultDTO:
+      type: object
+      required: [buildingId, created, posted, skippedAlreadyImported, errors]
+      properties:
+        buildingId: { type: string, format: uuid }
+        created: { type: integer }
+        posted:
+          type: integer
+          description: Invoices whose accrual was posted to the ledger (feeds NOI)
+        skippedAlreadyImported:
+          type: integer
+          description: Piece numbers already imported on a prior commit (idempotent)
+        errors:
+          type: array
+          items: { type: string }
+
     AnnualSnapshotDTO:
       type: object
       required:
@@ -6857,6 +6923,81 @@ paths:
                 properties:
                   data: { $ref: '#/components/schemas/OnboardingCommitResultDTO' }
         '400': { description: Invalid rent roll, bad billingMode, or building already onboarded }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404': { description: Building not found }
+
+  /buildings/{id}/onboarding/invoices/preview:
+    post:
+      tags: [Inventory]
+      summary: Preview contractor-invoice onboarding from a régie general ledger (no writes)
+      description: >
+        Parses an uploaded régie general-ledger (grand livre) CSV and returns the
+        discrete third-party contractor invoices that would be created, attributed
+        to the building and (where the row is unit-scoped) to a unit. Does not
+        persist anything.
+      operationId: previewInvoiceOnboarding
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+      responses:
+        '200':
+          description: Invoice onboarding preview
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/InvoiceOnboardingPreviewDTO' }
+        '400': { description: Invalid or empty ledger }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404': { description: Building not found }
+
+  /buildings/{id}/onboarding/invoices/commit:
+    post:
+      tags: [Inventory]
+      summary: Commit contractor invoices from a régie general ledger
+      description: >
+        Creates an INCOMING invoice for each contractor invoice in the ledger,
+        attributes it to the building/unit, classifies it under an expense account
+        matching the régie account code, issues it at its historical date and posts
+        the accrual to the ledger so it feeds the building's NOI. Idempotent: piece
+        numbers already imported on a prior commit are skipped.
+      operationId: commitInvoiceOnboarding
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+      responses:
+        '201':
+          description: Invoices committed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/InvoiceOnboardingCommitResultDTO' }
+        '400': { description: Invalid ledger }
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404': { description: Building not found }
