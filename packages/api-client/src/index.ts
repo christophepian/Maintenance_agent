@@ -2241,6 +2241,8 @@ export interface BuildingFinancialsDTO {
   expensesByCategory: ExpenseCategoryTotalDTO[];
   topContractorsBySpend: ContractorSpendDTO[];
   expensesByAccount?: AccountTotalDTO[];
+  /** "operational" = live leases/invoices; "imported" = from an approved imported income statement for this FY */
+  source: "operational" | "imported";
 }
 
 export interface BuildingSummaryDTO {

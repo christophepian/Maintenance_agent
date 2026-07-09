@@ -5,7 +5,7 @@
  * G9: all DB access for this domain goes through this file.
  */
 
-import { ImportedStatementStatus, MatchConfidence, PrismaClient } from "@prisma/client";
+import { ImportedStatementStatus, MatchConfidence, StatementSectionType, PrismaClient } from "@prisma/client";
 
 /* ── statement includes ─────────────────────────────────────── */
 
@@ -48,6 +48,30 @@ export async function findStatementsByOrg(
     prisma.importedStatement.count({ where }),
   ]);
   return { rows, total };
+}
+
+/**
+ * The approved INCOME_STATEMENT for a building + fiscal year, with its account
+ * balances. Used by reporting to substitute imported actuals for a covered year.
+ * Returns the most recently approved one if several exist.
+ */
+export async function findApprovedIncomeStatementForYear(
+  prisma: PrismaClient,
+  orgId: string,
+  buildingId: string,
+  fiscalYear: number,
+) {
+  return prisma.importedStatement.findFirst({
+    where: {
+      orgId,
+      buildingId,
+      fiscalYear,
+      status: ImportedStatementStatus.APPROVED,
+      sectionType: StatementSectionType.INCOME_STATEMENT,
+    },
+    include: STATEMENT_INCLUDE,
+    orderBy: { approvedAt: "desc" },
+  });
 }
 
 /* ── single ─────────────────────────────────────────────────── */

@@ -821,7 +821,9 @@
       "orSettled": "Réglé",
       "orTenant": "Nom du locataire",
       "orAmount": "Montant",
-      "orAdd": "Ajouter"
+      "orAdd": "Ajouter",
+      "importedActuals": "Chiffres importés · Ex. {{year}}",
+      "importedActualsTooltip": "Ces chiffres proviennent d'un compte de résultat importé et approuvé pour cet exercice, et non de transactions saisies dans l'outil."
     },
     "strategyEditor": {
       "intro": "Définissez la gestion de ce bâtiment — le moteur de recommandation de trésorerie l'utilise pour adapter ses conseils à ce bien.",
