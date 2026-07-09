@@ -1011,22 +1011,27 @@ describe('G10: API Contract Tests', () => {
       });
       expect(res.status).toBe(201);
       const { data } = await res.json();
-      expectKeys(data, ['buildingId', 'billingMode', 'created', 'errors'], 'OnboardingCommitResult');
+      expectKeys(data, ['buildingId', 'billingMode', 'created', 'skippedExistingUnits', 'errors'], 'OnboardingCommitResult');
       expect(data.billingMode).toBe('snapshot');
       expect(data.created.units).toBe(3); // 1 apartment + 2 garages
       expect(data.created.tenants).toBe(1); // JACCARD (occupies apt + garage); 9003 vacant
       expect(data.created.leases).toBe(2); // apt + occupied garage (both have rent)
       expect(data.created.activated).toBe(0); // snapshot — no billing
+      expect(data.skippedExistingUnits).toBe(0);
       expect(data.errors).toEqual([]);
 
-      // A second commit must be blocked (building now has units).
+      // A second commit MERGES: all units already exist → nothing new created.
       const form2 = new FormData();
       form2.append('file', new Blob([RENT_ROLL], { type: 'text/csv' }), 'rentroll.csv');
       form2.append('billingMode', 'snapshot');
       const res2 = await fetch(`${API_BASE}/buildings/${buildingId}/onboarding/commit`, {
         method: 'POST', headers: { 'x-dev-role': 'MANAGER' }, body: form2,
       });
-      expect(res2.status).toBe(400); // ALREADY_ONBOARDED
+      expect(res2.status).toBe(201);
+      const { data: data2 } = await res2.json();
+      expect(data2.created.units).toBe(0); // no duplicates
+      expect(data2.created.leases).toBe(0); // existing active/draft leases not duplicated
+      expect(data2.skippedExistingUnits).toBe(3);
     }, 30000);
 
     it('rejects a bad billingMode', async () => {

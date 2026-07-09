@@ -377,7 +377,7 @@ components:
 
     OnboardingCommitResultDTO:
       type: object
-      required: [buildingId, billingMode, created, errors]
+      required: [buildingId, billingMode, created, skippedExistingUnits, errors]
       properties:
         buildingId: { type: string, format: uuid }
         billingMode: { type: string, enum: [activate, snapshot] }
@@ -389,6 +389,9 @@ components:
             tenants: { type: integer }
             leases: { type: integer }
             activated: { type: integer }
+        skippedExistingUnits:
+          type: integer
+          description: Objects whose unit already existed and were merged (not duplicated)
         errors:
           type: array
           items: { type: string }
