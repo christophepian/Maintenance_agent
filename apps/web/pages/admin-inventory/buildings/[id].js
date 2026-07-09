@@ -1913,7 +1913,7 @@ export default function BuildingDetail() {
 
           {showOnboard && !isOwner && (
             <div className="mb-4">
-              <RentRollOnboardingPanel buildingId={id} onClose={() => setShowOnboard(false)} />
+              <RentRollOnboardingPanel buildingId={id} onClose={() => setShowOnboard(false)} onCommitted={loadUnits} />
             </div>
           )}
 
