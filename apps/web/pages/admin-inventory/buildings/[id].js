@@ -58,6 +58,7 @@ import AssetInventoryPanel from "../../../components/AssetInventoryPanel";
 import BuildingFinancialsView from "../../../components/BuildingFinancialsView";
 import { authHeaders } from "../../../lib/api";
 import ScrollableTabs from "../../../components/mobile/ScrollableTabs";
+import RentRollOnboardingPanel from "../../../components/RentRollOnboardingPanel";
 import SortableHeader from "../../../components/SortableHeader";
 import { useLocalSort, clientSort } from "../../../lib/tableUtils";
 import { formatDate, formatChfCents, formatPercent, formatChf, formatNumber } from "../../../lib/format";
@@ -1093,6 +1094,7 @@ export default function BuildingDetail() {
     ? router.query.tab
     : "Building information";
   const [activeTab, setActiveTab] = useState(initialTab);
+  const [showOnboard, setShowOnboard] = useState(false);
   // Tracks tabs whose (tab-specific) data has been loaded, so config/rules/lease
   // templates are fetched once on first tab open rather than on every mount.
   const loadedTabsRef = useRef(new Set());
@@ -1892,6 +1894,13 @@ export default function BuildingDetail() {
               <ChevronLeft className="h-5 w-5" />
             </button>
           }
+          actions={
+            !isOwner ? (
+              <button className="button-secondary text-sm" onClick={() => setShowOnboard((v) => !v)}>
+                {showOnboard ? "Hide onboarding" : "Onboard from rent roll"}
+              </button>
+            ) : null
+          }
         />
         <PageContent>
           {notice && (
@@ -1900,6 +1909,12 @@ export default function BuildingDetail() {
                 {notice.message}
               </div>
             </Panel>
+          )}
+
+          {showOnboard && !isOwner && (
+            <div className="mb-4">
+              <RentRollOnboardingPanel buildingId={id} onClose={() => setShowOnboard(false)} />
+            </div>
           )}
 
           {/* Tabs Navigation */}

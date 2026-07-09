@@ -937,4 +937,46 @@ describe('G10: API Contract Tests', () => {
       expect(res.status).toBe(400);
     });
   });
+
+  // ── Building onboarding preview (rent roll) ──
+  describe('Building onboarding preview', () => {
+    it('previews Units/Tenants/Leases from a rent roll with the expected DTO shape', async () => {
+      const buildings = await fetchJson('/buildings?limit=1');
+      if (!Array.isArray(buildings.data) || buildings.data.length === 0) {
+        console.log('⚠️  Skipping onboarding preview test: no buildings');
+        return;
+      }
+      const buildingId = buildings.data[0].id;
+      const csv =
+        'objet\tlocataire_principal\ttype_objet\tetage\tpieces\tm2\tentree\tsortie\tloyer_net_mensuel_chf\tcharges_acompte_chf\n' +
+        '531100.01.0001\tJACCARD Jacques-Henri\tAppartement\trez\t4.5\t96\t01.12.2016\t\t2646\t190\n' +
+        '531100.01.9001\tJACCARD Jacques-Henri\tGarage\trez\t\t0\t01.12.2016\t\t150\t0\n' +
+        '531100.01.9003\tVacant\tGarage\trez\t\t0\t01.06.2020\t\t280\t0\n' +
+        'Total\t\t\t\t\t\t\t\t\t\n';
+      const form = new FormData();
+      form.append('file', new Blob([csv], { type: 'text/csv' }), 'rentroll.csv');
+
+      const res = await fetch(`${API_BASE}/buildings/${buildingId}/onboarding/preview`, { method: 'POST', body: form });
+      expect(res.status).toBe(200);
+      const { data } = await res.json();
+      expectKeys(data, ['buildingId', 'buildingName', 'summary', 'units', 'warnings'], 'OnboardingPreviewDTO');
+      expectKeys(data.summary, ['totalObjects', 'apartments', 'garages', 'vacant', 'tenants', 'leases', 'annualNetRentChf'], 'summary');
+      expect(data.summary.totalObjects).toBe(3); // Total row dropped
+      expect(data.summary.apartments).toBe(1);
+      expect(data.summary.garages).toBe(2);
+      expect(data.summary.vacant).toBe(1);
+      // the garage is linked to the apartment (same tenant)
+      const garage = data.units.find((u: any) => u.objet === '531100.01.9001');
+      expect(garage.linkedApartmentObjet).toBe('531100.01.0001');
+      // annual net rent = (2646 + 150) × 12
+      expect(data.summary.annualNetRentChf).toBe((2646 + 150) * 12);
+    }, 30000);
+
+    it('404s for an unknown building', async () => {
+      const form = new FormData();
+      form.append('file', new Blob(['objet\n531100.01.0001'], { type: 'text/csv' }), 'r.csv');
+      const res = await fetch(`${API_BASE}/buildings/00000000-0000-0000-0000-000000000000/onboarding/preview`, { method: 'POST', body: form });
+      expect(res.status).toBe(404);
+    });
+  });
 });

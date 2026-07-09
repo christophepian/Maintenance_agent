@@ -331,6 +331,50 @@ components:
           type: array
           items: { $ref: '#/components/schemas/ImportRowDTO' }
 
+    OnboardingUnitPreviewDTO:
+      type: object
+      required: [objet, unitNumber, unitType, isVacant, willCreateLease]
+      properties:
+        objet: { type: string }
+        unitNumber: { type: string }
+        unitType: { type: string, enum: [RESIDENTIAL, PARKING] }
+        parkingKind: { type: string, enum: [GARAGE], nullable: true }
+        floor: { type: string, nullable: true }
+        rooms: { type: number, nullable: true }
+        areaSqm: { type: number, nullable: true }
+        tenantName: { type: string, nullable: true }
+        isVacant: { type: boolean }
+        startDate: { type: string, format: date-time, nullable: true }
+        endDate: { type: string, format: date-time, nullable: true }
+        netRentChf: { type: integer, nullable: true }
+        chargesChf: { type: integer, nullable: true }
+        linkedApartmentObjet: { type: string, nullable: true }
+        willCreateLease: { type: boolean }
+
+    OnboardingPreviewDTO:
+      type: object
+      required: [buildingId, buildingName, summary, units, warnings]
+      properties:
+        buildingId: { type: string, format: uuid }
+        buildingName: { type: string }
+        summary:
+          type: object
+          required: [totalObjects, apartments, garages, vacant, tenants, leases, annualNetRentChf]
+          properties:
+            totalObjects: { type: integer }
+            apartments: { type: integer }
+            garages: { type: integer }
+            vacant: { type: integer }
+            tenants: { type: integer }
+            leases: { type: integer }
+            annualNetRentChf: { type: integer }
+        units:
+          type: array
+          items: { $ref: '#/components/schemas/OnboardingUnitPreviewDTO' }
+        warnings:
+          type: array
+          items: { type: string }
+
     AnnualSnapshotDTO:
       type: object
       required:
@@ -6717,6 +6761,41 @@ paths:
           $ref: '#/components/responses/ValidationError'
         '404':
           $ref: '#/components/responses/NotFound'
+
+  /buildings/{id}/onboarding/preview:
+    post:
+      tags: [Inventory]
+      summary: Preview onboarding an (empty) building from a régie rent roll (no writes)
+      description: >
+        Parses an uploaded rent-roll CSV and returns the Units / Tenants / Leases
+        that would be created, plus warnings. Does not persist anything.
+      operationId: previewBuildingOnboarding
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+      responses:
+        '200':
+          description: Onboarding preview
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/OnboardingPreviewDTO' }
+        '400': { description: Invalid or empty rent roll }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404': { description: Building not found }
 
   /buildings/{id}/kpis:
     get:
