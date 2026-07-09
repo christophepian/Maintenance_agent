@@ -153,6 +153,9 @@ export default function RentRollOnboardingPanel({ buildingId, onClose, onCommitt
             <span><span className="text-muted">Tenants:</span> <b>{s.tenants}</b></span>
             <span><span className="text-muted">Leases:</span> <b>{s.leases}</b></span>
             <span><span className="text-muted">Annual net rent:</span> <b>{fmtChf(s.annualNetRentChf)}</b></span>
+            {s.matchedExistingUnits > 0 && (
+              <span><span className="text-muted">Match existing:</span> <b>{s.matchedExistingUnits}</b></span>
+            )}
           </div>
 
           {/* Warnings */}
@@ -171,6 +174,7 @@ export default function RentRollOnboardingPanel({ buildingId, onClose, onCommitt
               <thead>
                 <tr>
                   <th>Object</th>
+                  <th>Unit</th>
                   <th>Type</th>
                   <th>Tenant</th>
                   <th>Start</th>
@@ -183,6 +187,11 @@ export default function RentRollOnboardingPanel({ buildingId, onClose, onCommitt
                 {preview.units.map((u) => (
                   <tr key={u.objet}>
                     <td className="font-mono text-xs">{u.objet}</td>
+                    <td>
+                      {u.matchedUnitNumber
+                        ? <Badge variant="warning">→ {u.matchedUnitNumber}</Badge>
+                        : <Badge variant="success">new</Badge>}
+                    </td>
                     <td>
                       <Badge variant={u.unitType === "PARKING" ? "default" : "info"}>
                         {u.unitType === "PARKING" ? (u.parkingKind || "PARKING") : "APARTMENT"}
