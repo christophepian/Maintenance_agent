@@ -115,32 +115,47 @@ export function unitMatchKey(unitType: string, floor: string | null | undefined,
   return `${unitType}|${f}|${netRentChf}`;
 }
 
-interface ExistingUnitRef { id: string; unitNumber: string; }
+interface ExistingUnitRef { id: string; unitNumber: string; isActive: boolean; }
 interface ExistingLookup {
-  byNumber: Map<string, ExistingUnitRef>;
-  byKey: Map<string, ExistingUnitRef | null>; // null = ambiguous (2+ units share the key)
+  byNumber: Map<string, ExistingUnitRef>;      // all units (incl. deactivated) — numbers stay unique
+  byKey: Map<string, ExistingUnitRef | null>;  // ACTIVE units only; null = ambiguous
 }
 
-function buildExistingLookup(
-  units: { id: string; unitNumber: string; type: string; floor: string | null; monthlyRentChf: number | null }[],
-): ExistingLookup {
+interface ExistingUnitRow {
+  id: string;
+  unitNumber: string;
+  type: string;
+  floor: string | null;
+  monthlyRentChf: number | null;
+  isActive?: boolean;
+}
+
+function buildExistingLookup(units: ExistingUnitRow[]): ExistingLookup {
   const byNumber = new Map<string, ExistingUnitRef>();
   const byKey = new Map<string, ExistingUnitRef | null>();
   for (const u of units) {
-    const ref = { id: u.id, unitNumber: u.unitNumber };
-    byNumber.set(u.unitNumber, ref);
-    const key = unitMatchKey(u.type, u.floor, u.monthlyRentChf);
-    if (key) byKey.set(key, byKey.has(key) ? null : ref); // second hit → ambiguous
+    const isActive = u.isActive !== false;
+    const ref = { id: u.id, unitNumber: u.unitNumber, isActive };
+    byNumber.set(u.unitNumber, ref); // numbers are unique per building regardless of active
+    if (isActive) {
+      const key = unitMatchKey(u.type, u.floor, u.monthlyRentChf);
+      if (key) byKey.set(key, byKey.has(key) ? null : ref); // second active hit → ambiguous
+    }
   }
   return { byNumber, byKey };
 }
 
-/** Find the existing unit a rent-roll object maps to: exact number first, then floor+rent. */
+/**
+ * Find the existing unit a rent-roll object maps to. Floor+rent against ACTIVE
+ * units first (so an object merges into the live unit rather than a leftover
+ * same-numbered shell), then an exact number match against ANY unit (incl.
+ * deactivated — their number is still reserved by the unique constraint).
+ */
 function matchExistingUnit(r: RentRollRow, lookup: ExistingLookup): ExistingUnitRef | null {
-  const byNum = lookup.byNumber.get(r.unitNumber);
-  if (byNum) return byNum;
   const key = unitMatchKey(r.unitType, r.floor, r.netRentChf);
-  return key ? lookup.byKey.get(key) ?? null : null;
+  const byKey = key ? lookup.byKey.get(key) : undefined;
+  if (byKey) return byKey;
+  return lookup.byNumber.get(r.unitNumber) ?? null;
 }
 
 export async function previewOnboarding(
@@ -160,9 +175,9 @@ export async function previewOnboarding(
   const links = resolveGarageLinks(rows);
   const warnings = [...skipped];
 
-  // Match against existing ACTIVE units so onboarding merges (by number, or
-  // floor+rent) instead of duplicating a building that's already partly set up.
-  const existingUnits = await inventoryRepo.listUnits(prisma, orgId, buildingId, false);
+  // Match against existing units (incl. deactivated — their number is still
+  // reserved) so onboarding merges instead of duplicating a partly-set-up building.
+  const existingUnits = await inventoryRepo.listUnits(prisma, orgId, buildingId, true);
   const lookup = buildExistingLookup(existingUnits);
   let matchedCount = 0;
 
@@ -286,9 +301,10 @@ export async function commitOnboarding(
   const { rows } = mapRentRoll(csvText);
   if (rows.length === 0) throw new OnboardingError("EMPTY_RENT_ROLL", "No rent-roll rows found in the CSV");
 
-  // Merge, don't block: an object matching an existing ACTIVE unit (by number,
-  // or floor + rent) is reused, not duplicated. Only missing units are created.
-  const existing = await inventoryRepo.listUnits(prisma, orgId, buildingId, false);
+  // Merge, don't block: an object matching an existing unit (by floor+rent on an
+  // active unit, or exact number incl. a deactivated unit whose number is still
+  // reserved) is reused, not duplicated. A matched deactivated unit is reactivated.
+  const existing = await inventoryRepo.listUnits(prisma, orgId, buildingId, true);
   const lookup = buildExistingLookup(existing);
 
   const links = resolveGarageLinks(rows);
@@ -299,10 +315,23 @@ export async function commitOnboarding(
   const apartments = rows.filter((r) => r.unitType === "RESIDENTIAL");
   const garages = rows.filter((r) => r.unitType === "PARKING");
 
+  // Reactivate + backfill a matched deactivated unit so its reserved number is reused.
+  const reviveIfInactive = async (match: ExistingUnitRef, r: RentRollRow) => {
+    if (!match.isActive) {
+      await inventoryRepo.reactivateUnit(prisma, match.id);
+      await applyUnitFields(orgId, match.id, r);
+    }
+  };
+
   // Pass 1 — apartments (must exist before garages can link to them).
   for (const r of apartments) {
     const match = matchExistingUnit(r, lookup);
-    if (match) { unitIdByObjet.set(r.objet, match.id); skippedExistingUnits += 1; continue; }
+    if (match) {
+      unitIdByObjet.set(r.objet, match.id);
+      skippedExistingUnits += 1;
+      try { await reviveIfInactive(match, r); } catch (e) { errors.push(`Unit ${r.objet}: ${errMsg(e)}`); }
+      continue;
+    }
     try {
       const unit = await createUnit(orgId, buildingId, { unitNumber: r.unitNumber, type: "RESIDENTIAL", floor: r.floor ?? undefined });
       unitIdByObjet.set(r.objet, unit.id);
@@ -315,11 +344,22 @@ export async function commitOnboarding(
 
   // Pass 2 — garages, linked to their apartment.
   for (const r of garages) {
+    const linkedObjet = links.get(r.objet) ?? null;
+    const linkedFlatId = linkedObjet ? unitIdByObjet.get(linkedObjet) : undefined;
     const match = matchExistingUnit(r, lookup);
-    if (match) { unitIdByObjet.set(r.objet, match.id); skippedExistingUnits += 1; continue; }
+    if (match) {
+      unitIdByObjet.set(r.objet, match.id);
+      skippedExistingUnits += 1;
+      try {
+        await reviveIfInactive(match, r);
+        // Re-point the link to the (now current) apartment unit.
+        if (linkedFlatId) await updateUnit(orgId, match.id, { linkedFlatId });
+      } catch (e) {
+        errors.push(`Garage ${r.objet}: ${errMsg(e)}`);
+      }
+      continue;
+    }
     try {
-      const linkedObjet = links.get(r.objet) ?? null;
-      const linkedFlatId = linkedObjet ? unitIdByObjet.get(linkedObjet) : undefined;
       const unit = await createUnit(orgId, buildingId, {
         unitNumber: r.unitNumber, type: "PARKING", parkingKind: "GARAGE", floor: r.floor ?? undefined, linkedFlatId,
       });

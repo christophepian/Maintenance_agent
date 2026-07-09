@@ -399,6 +399,17 @@ export async function deactivateUnit(
   });
 }
 
+/** Re-activate a previously deactivated unit (used by onboarding-merge to reuse it). */
+export async function reactivateUnit(
+  prisma: PrismaClient,
+  unitId: string,
+) {
+  return prisma.unit.update({
+    where: { id: unitId },
+    data: { isActive: true },
+  });
+}
+
 export async function countActiveUnits(
   prisma: PrismaClient,
   buildingId: string,
