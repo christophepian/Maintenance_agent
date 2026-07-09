@@ -628,6 +628,40 @@ export interface ImportRowDTO {
   data: Record<string, unknown>;
 }
 
+export interface OnboardingUnitPreviewDTO {
+  objet: string;
+  unitNumber: string;
+  unitType: "RESIDENTIAL" | "PARKING";
+  parkingKind: "GARAGE" | null;
+  floor: string | null;
+  rooms: number | null;
+  areaSqm: number | null;
+  tenantName: string | null;
+  isVacant: boolean;
+  startDate: string | null;
+  endDate: string | null;
+  netRentChf: number | null;
+  chargesChf: number | null;
+  linkedApartmentObjet: string | null;
+  willCreateLease: boolean;
+}
+
+export interface OnboardingPreviewDTO {
+  buildingId: string;
+  buildingName: string;
+  summary: {
+    totalObjects: number;
+    apartments: number;
+    garages: number;
+    vacant: number;
+    tenants: number;
+    leases: number;
+    annualNetRentChf: number;
+  };
+  units: OnboardingUnitPreviewDTO[];
+  warnings: string[];
+}
+
 export interface ImportBatchDTO {
   id: string;
   entityType: ImportEntityType;
