@@ -375,6 +375,24 @@ components:
           type: array
           items: { type: string }
 
+    OnboardingCommitResultDTO:
+      type: object
+      required: [buildingId, billingMode, created, errors]
+      properties:
+        buildingId: { type: string, format: uuid }
+        billingMode: { type: string, enum: [activate, snapshot] }
+        created:
+          type: object
+          required: [units, tenants, leases, activated]
+          properties:
+            units: { type: integer }
+            tenants: { type: integer }
+            leases: { type: integer }
+            activated: { type: integer }
+        errors:
+          type: array
+          items: { type: string }
+
     AnnualSnapshotDTO:
       type: object
       required:
@@ -6793,6 +6811,44 @@ paths:
                 properties:
                   data: { $ref: '#/components/schemas/OnboardingPreviewDTO' }
         '400': { description: Invalid or empty rent roll }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404': { description: Building not found }
+
+  /buildings/{id}/onboarding/commit:
+    post:
+      tags: [Inventory]
+      summary: Commit onboarding — create Units/Tenants/Leases from a rent roll
+      description: >
+        Creates the Units, Tenants and Leases for an empty building from the
+        uploaded rent roll. billingMode "activate" makes leases active and starts
+        recurring billing; "snapshot" leaves them as DRAFT records. Fails if the
+        building already has units.
+      operationId: commitBuildingOnboarding
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, billingMode]
+              properties:
+                file: { type: string, format: binary }
+                billingMode: { type: string, enum: [activate, snapshot] }
+      responses:
+        '201':
+          description: Onboarding committed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/OnboardingCommitResultDTO' }
+        '400': { description: Invalid rent roll, bad billingMode, or building already onboarded }
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404': { description: Building not found }

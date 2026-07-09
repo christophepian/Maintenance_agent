@@ -15,11 +15,14 @@ import { cn } from "../lib/utils";
 
 const fmtChf = (n) => (n == null ? "—" : `CHF ${Number(n).toLocaleString("de-CH")}`);
 
-export default function RentRollOnboardingPanel({ buildingId, onClose }) {
+export default function RentRollOnboardingPanel({ buildingId, onClose, onCommitted }) {
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [billingMode, setBillingMode] = useState("snapshot");
+  const [committing, setCommitting] = useState(false);
+  const [result, setResult] = useState(null);
   const fileRef = useRef(null);
 
   async function handlePreview(e) {
@@ -39,6 +42,7 @@ export default function RentRollOnboardingPanel({ buildingId, onClose }) {
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error?.message || "Preview failed");
       setPreview(json.data);
+      setResult(null);
     } catch (e) {
       setError(String(e?.message || e));
     } finally {
@@ -46,7 +50,34 @@ export default function RentRollOnboardingPanel({ buildingId, onClose }) {
     }
   }
 
+  async function handleCommit() {
+    if (!file) return;
+    const modeLabel = billingMode === "activate" ? "activate leases and start billing" : "create records only (snapshot)";
+    if (!window.confirm(`Create these records for the building and ${modeLabel}? This cannot be undone.`)) return;
+    setCommitting(true);
+    setError("");
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      form.append("billingMode", billingMode);
+      const res = await fetch(`/api/buildings/${buildingId}/onboarding/commit`, {
+        method: "POST",
+        headers: authHeaders(),
+        body: form,
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error?.message || "Commit failed");
+      setResult(json.data);
+      onCommitted?.();
+    } catch (e) {
+      setError(String(e?.message || e));
+    } finally {
+      setCommitting(false);
+    }
+  }
+
   const s = preview?.summary;
+  const committed = !!result;
 
   return (
     <Panel
@@ -167,6 +198,51 @@ export default function RentRollOnboardingPanel({ buildingId, onClose }) {
               </tbody>
             </table>
           </div>
+
+          {/* Commit */}
+          {!committed && (
+            <div className="rounded-lg border border-surface-border p-4 space-y-3">
+              <p className="text-sm font-medium text-foreground">Create these records?</p>
+              <div className="space-y-2">
+                <label className="flex items-start gap-2 text-sm cursor-pointer">
+                  <input type="radio" name="billingMode" checked={billingMode === "snapshot"} onChange={() => setBillingMode("snapshot")} className="mt-0.5" />
+                  <span>
+                    <b>Snapshot / reference-only</b> — create units, tenants and leases as records. No rent
+                    invoices or billing are generated. Reporting uses the imported statements.
+                  </span>
+                </label>
+                <label className="flex items-start gap-2 text-sm cursor-pointer">
+                  <input type="radio" name="billingMode" checked={billingMode === "activate"} onChange={() => setBillingMode("activate")} className="mt-0.5" />
+                  <span>
+                    <b>Activate for ongoing management</b> — leases become active and start generating
+                    recurring rent invoices from the current period. Choose this to manage the building day-to-day.
+                  </span>
+                </label>
+              </div>
+              <button className="button-primary text-sm" onClick={handleCommit} disabled={committing}>
+                {committing ? "Creating…" : `Commit — create ${s.apartments + s.garages} unit(s), ${s.tenants} tenant(s), ${s.leases} lease(s)`}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Commit result */}
+      {result && (
+        <div className="mt-4 space-y-2">
+          <div className="notice notice-ok text-sm">
+            Onboarded: <b>{result.created.units}</b> unit(s), <b>{result.created.tenants}</b> tenant(s),{" "}
+            <b>{result.created.leases}</b> lease(s)
+            {result.billingMode === "activate" ? <>, <b>{result.created.activated}</b> activated (billing started)</> : " (snapshot — no billing)"}.
+          </div>
+          {result.errors.length > 0 && (
+            <div className="rounded-lg border border-warning-ring bg-warning-light p-3 text-sm text-warning-text">
+              <p className="font-medium mb-1">⚠ {result.errors.length} issue(s)</p>
+              <ul className="list-disc pl-5 space-y-0.5">
+                {result.errors.map((w, i) => <li key={i}>{w}</li>)}
+              </ul>
+            </div>
+          )}
         </div>
       )}
     </Panel>

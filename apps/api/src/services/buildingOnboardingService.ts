@@ -9,9 +9,15 @@
  * same file. Reuses `rentRollMapper` + the inventory repository.
  */
 
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, LeaseStatus } from "@prisma/client";
 import * as inventoryRepo from "../repositories/inventoryRepository";
+import * as leaseRepo from "../repositories/leaseRepository";
 import { mapRentRoll, RentRollRow } from "./rentRollMapper";
+import { createUnit, updateUnit } from "./inventory";
+import { createOrGetTenant } from "./tenants";
+import { createLease } from "./leases";
+import { writeAuditLog } from "./auditLog";
+import { activateLeaseWorkflow } from "../workflows/activateLeaseWorkflow";
 
 export class OnboardingError extends Error {
   code: string;
@@ -159,5 +165,176 @@ export async function previewOnboarding(
     },
     units,
     warnings,
+  };
+}
+
+/* ── Commit ───────────────────────────────────────────────────────────────── */
+
+export type OnboardingBillingMode = "activate" | "snapshot";
+
+export interface OnboardingCommitResult {
+  buildingId: string;
+  billingMode: OnboardingBillingMode;
+  created: { units: number; tenants: number; leases: number; activated: number };
+  errors: string[];
+}
+
+const errMsg = (e: unknown): string => (e instanceof Error ? e.message : String(e));
+
+/**
+ * Deterministic non-dialable placeholder phone for an imported tenant (the rent
+ * roll carries no phone, but Tenant.phone is required + unique). Same building +
+ * name → same phone, so a tenant occupying several objects dedups to one record.
+ * Flag/edit later. `+41` + 9 digits satisfies E.164 normalization.
+ */
+export function synthTenantPhone(buildingId: string, name: string): string {
+  const key = `${buildingId}|${name}`;
+  let h = 0;
+  for (let i = 0; i < key.length; i += 1) h = (Math.imul(h, 31) + key.charCodeAt(i)) >>> 0;
+  return `+41${String(h % 1_000_000_000).padStart(9, "0")}`;
+}
+
+/** Apply the rich unit fields from a rent-roll row (skips invalid values). */
+async function applyUnitFields(orgId: string, unitId: string, r: RentRollRow): Promise<void> {
+  const data: Record<string, number> = {};
+  if (r.areaSqm != null && r.areaSqm >= 5) data.livingAreaSqm = r.areaSqm; // schema min 5
+  if (r.rooms != null && r.rooms >= 0.5) data.rooms = r.rooms;
+  if (r.netRentChf != null) data.monthlyRentChf = r.netRentChf;
+  if (r.chargesChf != null) data.monthlyChargesChf = r.chargesChf;
+  if (Object.keys(data).length > 0) await updateUnit(orgId, unitId, data);
+}
+
+/**
+ * Create Units + Tenants + Leases for an empty building from a rent roll.
+ * billingMode "activate" → leases become ACTIVE and start recurring billing
+ * (apartment leases activated before their garages so the parking rent co-bills
+ * on the flat's invoice); "snapshot" → leases stay DRAFT (records only).
+ * Best-effort: per-object failures are collected, not fatal.
+ */
+export async function commitOnboarding(
+  prisma: PrismaClient,
+  orgId: string,
+  buildingId: string,
+  csvText: string,
+  opts: { billingMode: OnboardingBillingMode; actorUserId?: string },
+): Promise<OnboardingCommitResult> {
+  const building = await inventoryRepo.findBuildingByIdAndOrg(prisma, buildingId, orgId);
+  if (!building) throw new OnboardingError("BUILDING_NOT_FOUND", "Building not found");
+
+  const existingUnits = await inventoryRepo.countTotalUnitsByBuilding(prisma, orgId, buildingId);
+  if (existingUnits > 0) {
+    throw new OnboardingError(
+      "ALREADY_ONBOARDED",
+      `Building already has ${existingUnits} unit(s). Onboarding is only for an empty building.`,
+    );
+  }
+
+  const { rows } = mapRentRoll(csvText);
+  if (rows.length === 0) throw new OnboardingError("EMPTY_RENT_ROLL", "No rent-roll rows found in the CSV");
+
+  const links = resolveGarageLinks(rows);
+  const errors: string[] = [];
+  const unitIdByObjet = new Map<string, string>();
+  const apartments = rows.filter((r) => r.unitType === "RESIDENTIAL");
+  const garages = rows.filter((r) => r.unitType === "PARKING");
+
+  // Pass 1 — apartments (must exist before garages can link to them).
+  for (const r of apartments) {
+    try {
+      const unit = await createUnit(orgId, buildingId, { unitNumber: r.unitNumber, type: "RESIDENTIAL", floor: r.floor ?? undefined });
+      unitIdByObjet.set(r.objet, unit.id);
+      await applyUnitFields(orgId, unit.id, r);
+    } catch (e) {
+      errors.push(`Unit ${r.objet}: ${errMsg(e)}`);
+    }
+  }
+
+  // Pass 2 — garages, linked to their apartment.
+  for (const r of garages) {
+    try {
+      const linkedObjet = links.get(r.objet) ?? null;
+      const linkedFlatId = linkedObjet ? unitIdByObjet.get(linkedObjet) : undefined;
+      const unit = await createUnit(orgId, buildingId, {
+        unitNumber: r.unitNumber, type: "PARKING", parkingKind: "GARAGE", floor: r.floor ?? undefined, linkedFlatId,
+      });
+      unitIdByObjet.set(r.objet, unit.id);
+      await applyUnitFields(orgId, unit.id, r);
+    } catch (e) {
+      errors.push(`Garage ${r.objet}: ${errMsg(e)}`);
+    }
+  }
+
+  // Pass 3 — tenants (+ occupancy) and DRAFT leases.
+  const tenantNames = new Set<string>();
+  let leaseCount = 0;
+  const leasesToActivate: { leaseId: string; isApartment: boolean }[] = [];
+  for (const r of [...apartments, ...garages]) {
+    const unitId = unitIdByObjet.get(r.objet);
+    if (!unitId) continue; // unit creation failed above
+    if (r.isVacant || !r.tenantName) {
+      if (r.isVacant) await inventoryRepo.setUnitVacantByOrg(prisma, unitId, orgId).catch(() => {});
+      continue;
+    }
+    const phone = synthTenantPhone(buildingId, r.tenantName);
+    try {
+      await createOrGetTenant({ orgId, phone, name: r.tenantName, unitId });
+      tenantNames.add(r.tenantName);
+    } catch (e) {
+      errors.push(`Tenant ${r.tenantName} (${r.objet}): ${errMsg(e)}`);
+    }
+    if (willCreateLease(r)) {
+      try {
+        const startDate = (r.startDate ?? new Date()).toISOString();
+        const lease = await createLease(orgId, {
+          unitId,
+          tenantName: r.tenantName,
+          tenantPhone: phone,
+          startDate,
+          netRentChf: r.netRentChf!,
+          ...(r.chargesChf != null ? { chargesTotalChf: r.chargesChf } : {}),
+        });
+        leaseCount += 1;
+        leasesToActivate.push({ leaseId: lease.id, isApartment: r.unitType === "RESIDENTIAL" });
+      } catch (e) {
+        errors.push(`Lease ${r.objet}: ${errMsg(e)}`);
+      }
+    }
+  }
+
+  // Pass 4 — activation (apartments first, so garage rent co-bills on the flat).
+  let activated = 0;
+  if (opts.billingMode === "activate") {
+    const ordered = [
+      ...leasesToActivate.filter((l) => l.isApartment),
+      ...leasesToActivate.filter((l) => !l.isApartment),
+    ];
+    for (const l of ordered) {
+      try {
+        // Imported leases skip the signature flow — set SIGNED, then activate
+        // through the workflow so LEASE_STATUS_CHANGED fires (creates the
+        // schedule + first invoice, anchored to the current period).
+        await leaseRepo.updateLeaseRaw(prisma, l.leaseId, { status: LeaseStatus.SIGNED });
+        await activateLeaseWorkflow({ orgId, prisma, actorUserId: opts.actorUserId }, { leaseId: l.leaseId });
+        activated += 1;
+      } catch (e) {
+        errors.push(`Activate lease ${l.leaseId}: ${errMsg(e)}`);
+      }
+    }
+  }
+
+  await writeAuditLog(prisma, {
+    action: "BUILDING_ONBOARDED",
+    orgId,
+    actorUserId: opts.actorUserId,
+    entityType: "Building",
+    entityId: buildingId,
+    metadata: { billingMode: opts.billingMode, units: unitIdByObjet.size, tenants: tenantNames.size, leases: leaseCount, activated },
+  });
+
+  return {
+    buildingId,
+    billingMode: opts.billingMode,
+    created: { units: unitIdByObjet.size, tenants: tenantNames.size, leases: leaseCount, activated },
+    errors,
   };
 }

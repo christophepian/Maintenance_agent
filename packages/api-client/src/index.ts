@@ -662,6 +662,13 @@ export interface OnboardingPreviewDTO {
   warnings: string[];
 }
 
+export interface OnboardingCommitResultDTO {
+  buildingId: string;
+  billingMode: "activate" | "snapshot";
+  created: { units: number; tenants: number; leases: number; activated: number };
+  errors: string[];
+}
+
 export interface ImportBatchDTO {
   id: string;
   entityType: ImportEntityType;
