@@ -3,15 +3,16 @@
   "established": "2026-06-22",
   "metrics": {
     "eslint_err": 0,
-    "eslint_warn": 2445,
+    "eslint_warn": 2447,
     "tsc": 0,
     "any": 723,
-    "console": 520,
+    "console": 522,
     "todo": 4,
     "suppress": 36,
     "bigfiles": 14
   },
   "notes": {
+    "rebaselined_2026-07-09b": "Invoice onboarding from a régie general ledger (preview + commit route catches in routes/buildingOnboarding.ts) — +2 console (520->522) plus the 2 matching no-console eslint_warn (2445->2447). Same universal route-error-logging pattern; no logger abstraction. Accepted as the new floor, NOT silenced.",
     "rebaselined_2026-07-09": "Building onboarding (rent-roll preview + commit) — +2 console total across the preview and commit route catches in routes/buildingOnboarding.ts (the universal route-error-logging pattern; no logger abstraction): 518->520, plus one matching no-console eslint_warn 2444->2445. Accepted as the new floor, NOT silenced.",
     "rebaselined_2026-07-07": "CSV import epic (accounting CSV into finance/Imports + buildings/units importer on Properties). vs prior floor: console 512->518 (+6, the per-catch console.error in routes/inventoryImport.ts — the universal route-error-logging pattern; no logger abstraction exists yet), eslint_warn 2438->2444 (+6, the matching no-console warnings). any 730->723 (-7): the new code uses no `any` and the shared persistExtractedSections refactor removed several. Accepted as the new floor, NOT silenced.",
     "rebaselined_2026-06-23": "Re-baselined to main HEAD (post ancillary-v3 / levered-NPV / reporting-i18n epics). vs 2026-06-22: eslint_warn 2380->2438 (+58), any 695->730 (+35), console 496->512 (+16), suppress 35->36 (+1). All from feature code merged since the prior baseline. Accepted as the new floor, NOT silenced — burn-down notes below still stand. tsc was momentarily 1 (CONDITION_ORDINAL missing the NOT_INSPECTED enum key in conditionReportService.ts) and was FIXED in the same pass, held at 0. From this commit the strict gate (scripts/code-quality-report.sh --strict) runs in CI, so these numbers can only go down.",

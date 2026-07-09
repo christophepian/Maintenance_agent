@@ -397,3 +397,26 @@ export async function sumInvoiceTotals(
   return result._sum.totalAmount ?? 0;
 }
 
+/**
+ * All `paymentReference` values for a building's INCOMING invoices whose
+ * reference starts with a given prefix — used by régie-ledger onboarding to
+ * skip invoices already imported (idempotent re-commit).
+ */
+export async function findBuildingInvoicePaymentRefs(
+  prisma: PrismaClient,
+  orgId: string,
+  buildingId: string,
+  refPrefix: string,
+): Promise<string[]> {
+  const rows = await prisma.invoice.findMany({
+    where: {
+      orgId,
+      buildingId,
+      direction: "INCOMING",
+      paymentReference: { startsWith: refPrefix },
+    },
+    select: { paymentReference: true },
+  });
+  return rows.map((r) => r.paymentReference).filter((r): r is string => !!r);
+}
+

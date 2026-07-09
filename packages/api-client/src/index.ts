@@ -673,6 +673,45 @@ export interface OnboardingCommitResultDTO {
   errors: string[];
 }
 
+export interface InvoiceOnboardingPreviewLineDTO {
+  compte: string;
+  accountName: string;
+  date: string | null;
+  noPiece: string;
+  vendorName: string;
+  description: string;
+  amountChf: number;
+  unitNumber: string | null;
+  /** Existing unit this invoice attributes to; null = building-level. */
+  matchedUnitNumber: string | null;
+  alreadyImported: boolean;
+}
+
+export interface InvoiceOnboardingPreviewDTO {
+  buildingId: string;
+  buildingName: string;
+  summary: {
+    total: number;
+    newInvoices: number;
+    alreadyImported: number;
+    unitAttributed: number;
+    totalChf: number;
+    byAccount: { compte: string; accountName: string; count: number; totalChf: number }[];
+  };
+  invoices: InvoiceOnboardingPreviewLineDTO[];
+  warnings: string[];
+}
+
+export interface InvoiceOnboardingCommitResultDTO {
+  buildingId: string;
+  created: number;
+  /** Invoices whose accrual was posted to the ledger (feeds NOI). */
+  posted: number;
+  /** Piece numbers already imported on a prior commit (idempotent). */
+  skippedAlreadyImported: number;
+  errors: string[];
+}
+
 export interface ImportBatchDTO {
   id: string;
   entityType: ImportEntityType;
