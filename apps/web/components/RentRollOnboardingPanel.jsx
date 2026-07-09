@@ -11,6 +11,7 @@ import Panel from "./layout/Panel";
 import Badge from "./ui/Badge";
 import { authHeaders } from "../lib/api";
 import { formatDate } from "../lib/format";
+import { cn } from "../lib/utils";
 
 const fmtChf = (n) => (n == null ? "—" : `CHF ${Number(n).toLocaleString("de-CH")}`);
 
@@ -56,23 +57,52 @@ export default function RentRollOnboardingPanel({ buildingId, onClose }) {
         ) : null
       }
     >
-      <form onSubmit={handlePreview} className="flex flex-wrap items-end gap-3">
-        <div>
-          <label className="form-label" htmlFor="rr-file">Rent-roll CSV</label>
+      <form onSubmit={handlePreview} className="space-y-3">
+        {/* Drop zone */}
+        <div
+          className={cn(
+            "border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors",
+            file ? "border-brand-ring bg-brand-light" : "border-muted-ring hover:border-brand-ring",
+          )}
+          onClick={() => fileRef.current?.click()}
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={(e) => {
+            e.preventDefault();
+            const dropped = e.dataTransfer.files[0];
+            if (dropped) setFile(dropped);
+          }}
+        >
           <input
-            id="rr-file"
             ref={fileRef}
             type="file"
             accept=".csv,text/csv,.tsv,text/tab-separated-values"
-            className="form-input"
+            className="hidden"
             onChange={(e) => setFile(e.target.files[0] || null)}
             aria-label="Rent-roll CSV"
           />
+          {file ? (
+            <p className="text-sm text-brand-dark font-medium">{file.name}</p>
+          ) : (
+            <p className="text-sm text-muted">Drop a rent-roll CSV here, or click to select</p>
+          )}
         </div>
-        <button type="submit" className="button-primary text-sm" disabled={!file || loading}>
-          {loading ? "Reading…" : "Preview"}
-        </button>
-        <p className="w-full text-xs text-muted">
+
+        <div className="flex items-center gap-3">
+          <button type="submit" className="button-primary text-sm" disabled={!file || loading}>
+            {loading ? "Reading…" : "Preview"}
+          </button>
+          {file && (
+            <button
+              type="button"
+              className="button-secondary text-sm"
+              onClick={() => { setFile(null); setPreview(null); if (fileRef.current) fileRef.current.value = ""; }}
+            >
+              Clear
+            </button>
+          )}
+        </div>
+
+        <p className="text-xs text-muted">
           Columns like <code>objet</code>, <code>locataire_principal</code>, <code>type_objet</code>,{" "}
           <code>entree</code>/<code>sortie</code>, <code>loyer_net_mensuel_chf</code>. One row per object
           (apartment or garage). Nothing is created yet — this is a preview.
