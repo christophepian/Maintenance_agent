@@ -960,7 +960,7 @@ describe('G10: API Contract Tests', () => {
       expect(res.status).toBe(200);
       const { data } = await res.json();
       expectKeys(data, ['buildingId', 'buildingName', 'summary', 'units', 'warnings'], 'OnboardingPreviewDTO');
-      expectKeys(data.summary, ['totalObjects', 'apartments', 'garages', 'vacant', 'tenants', 'leases', 'annualNetRentChf'], 'summary');
+      expectKeys(data.summary, ['totalObjects', 'apartments', 'garages', 'vacant', 'tenants', 'leases', 'annualNetRentChf', 'matchedExistingUnits'], 'summary');
       expect(data.summary.totalObjects).toBe(3); // Total row dropped
       expect(data.summary.apartments).toBe(1);
       expect(data.summary.garages).toBe(2);
@@ -978,6 +978,36 @@ describe('G10: API Contract Tests', () => {
       const res = await fetch(`${API_BASE}/buildings/00000000-0000-0000-0000-000000000000/onboarding/preview`, { method: 'POST', body: form });
       expect(res.status).toBe(404);
     });
+
+    it('matches an existing unit by floor + net rent across different numbering', async () => {
+      // Fresh building + one existing unit "RdC" (rez, net rent 2646) — the older-style numbering.
+      const cr = await fetch(`${API_BASE}/buildings`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-dev-role': 'MANAGER' },
+        body: JSON.stringify({ name: `Match Test ${Date.now()}` }),
+      });
+      const buildingId = (await cr.json()).data.id;
+      const ur = await fetch(`${API_BASE}/buildings/${buildingId}/units`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-dev-role': 'MANAGER' },
+        body: JSON.stringify({ unitNumber: 'RdC', floor: 'Rez de Chaussée', type: 'RESIDENTIAL' }),
+      });
+      const unit = (await ur.json()).data ?? (await ur.json());
+      // set its net rent so floor+rent matching can key on it
+      await fetch(`${API_BASE}/units/${unit.id}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json', 'x-dev-role': 'MANAGER' },
+        body: JSON.stringify({ monthlyRentChf: 2646 }),
+      });
+
+      // rent roll uses a different number (0001, rez-de-chaussée, net 2646) → should match "RdC"
+      const csv = 'objet\tlocataire_principal\ttype_objet\tetage\tloyer_net_mensuel_chf\n531100.01.0001\tJACCARD\tAppartement\trez-de-chaussée\t2646\n';
+      const form = new FormData();
+      form.append('file', new Blob([csv], { type: 'text/csv' }), 'r.csv');
+      const res = await fetch(`${API_BASE}/buildings/${buildingId}/onboarding/preview`, { method: 'POST', body: form });
+      expect(res.status).toBe(200);
+      const { data } = await res.json();
+      const obj = data.units.find((u: any) => u.objet === '531100.01.0001');
+      expect(obj.matchedUnitNumber).toBe('RdC'); // matched the existing unit, not a new one
+      expect(data.summary.matchedExistingUnits).toBe(1);
+    }, 30000);
   });
 
   // ── Building onboarding commit (snapshot mode — no billing side effects) ──

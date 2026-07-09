@@ -644,6 +644,7 @@ export interface OnboardingUnitPreviewDTO {
   chargesChf: number | null;
   linkedApartmentObjet: string | null;
   willCreateLease: boolean;
+  matchedUnitNumber: string | null;
 }
 
 export interface OnboardingPreviewDTO {
@@ -657,6 +658,7 @@ export interface OnboardingPreviewDTO {
     tenants: number;
     leases: number;
     annualNetRentChf: number;
+    matchedExistingUnits: number;
   };
   units: OnboardingUnitPreviewDTO[];
   warnings: string[];

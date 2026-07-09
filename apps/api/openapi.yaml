@@ -350,6 +350,10 @@ components:
         chargesChf: { type: integer, nullable: true }
         linkedApartmentObjet: { type: string, nullable: true }
         willCreateLease: { type: boolean }
+        matchedUnitNumber:
+          type: string
+          nullable: true
+          description: Existing unit this object matches (merged, not duplicated); null = will be created
 
     OnboardingPreviewDTO:
       type: object
@@ -359,7 +363,7 @@ components:
         buildingName: { type: string }
         summary:
           type: object
-          required: [totalObjects, apartments, garages, vacant, tenants, leases, annualNetRentChf]
+          required: [totalObjects, apartments, garages, vacant, tenants, leases, annualNetRentChf, matchedExistingUnits]
           properties:
             totalObjects: { type: integer }
             apartments: { type: integer }
@@ -368,6 +372,7 @@ components:
             tenants: { type: integer }
             leases: { type: integer }
             annualNetRentChf: { type: integer }
+            matchedExistingUnits: { type: integer }
         units:
           type: array
           items: { $ref: '#/components/schemas/OnboardingUnitPreviewDTO' }
