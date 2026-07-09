@@ -821,7 +821,9 @@
       "orSettled": "Settled",
       "orTenant": "Tenant name",
       "orAmount": "Amount",
-      "orAdd": "Add"
+      "orAdd": "Add",
+      "importedActuals": "Imported actuals · FY {{year}}",
+      "importedActualsTooltip": "These figures come from an approved imported income statement for this fiscal year, not from live transactions in the tool."
     },
     "strategyEditor": {
       "intro": "Set how this building should be managed — the cashflow recommendation engine uses it to tailor advice for this property.",

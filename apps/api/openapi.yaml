@@ -186,6 +186,7 @@ components:
         - activeUnitsCount
         - expensesByCategory
         - topContractorsBySpend
+        - source
       properties:
         buildingId: { type: string, format: uuid }
         buildingName: { type: string }
@@ -213,6 +214,13 @@ components:
           type: array
           description: Only present when groupByAccount=true
           items: { $ref: '#/components/schemas/AccountTotalDTO' }
+        source:
+          type: string
+          enum: [operational, imported]
+          description: >
+            Provenance of the figures. "operational" = computed from live
+            leases/invoices; "imported" = substituted from an approved imported
+            income statement covering this fiscal year.
 
     BuildingCapexScheduleDTO:
       type: object

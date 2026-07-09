@@ -314,6 +314,14 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet }) {
               <div className="inline-flex items-center rounded-full border border-black/20 dark:border-white/20 bg-black/5 dark:bg-white/10 px-3 py-1 text-xs font-medium text-foreground/70 mb-3">
                 {periodLabel} · {t("buildingsId.reporting.monthlyReport")}
               </div>
+              {bf.source === "imported" && (
+                <div
+                  className="inline-flex items-center rounded-full border border-brand-ring bg-brand-light px-3 py-1 text-xs font-medium text-brand-dark mb-3 ml-2"
+                  title={t("buildingsId.reporting.importedActualsTooltip")}
+                >
+                  {t("buildingsId.reporting.importedActuals", { year })}
+                </div>
+              )}
               <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground">{headline}</h1>
               <p className="mt-2 text-sm leading-6 text-muted-text max-w-2xl">
                 {earned > 0 ? <>{t("buildingsId.reporting.rentCollected")} <span className="font-semibold text-foreground">{rFmtChf(earned)}</span>. </> : ""}

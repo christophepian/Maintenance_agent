@@ -7,6 +7,7 @@ import * as snapshotRepo from "../repositories/buildingFinancialSnapshotReposito
 import * as financialsRepo from "../repositories/financialsRepository";
 import * as dailySnapshotRepo from "../repositories/portfolioDailySnapshotRepository";
 import * as billingPeriodRepo from "../repositories/billingPeriodRepository";
+import * as importedStatementRepo from "../repositories/importedStatementRepository";
 import type { ExpenseLedgerRow, ArrearsAgingDTO } from "../repositories/financialsRepository";
 import { mapWithConcurrency } from "../utils/concurrency";
 
@@ -87,6 +88,12 @@ export interface BuildingFinancialsDTO {
   expensesByCategory: ExpenseCategoryTotalDTO[];
   topContractorsBySpend: ContractorSpendDTO[];
   expensesByAccount?: AccountTotalDTO[];
+  /**
+   * Provenance of the figures. "operational" = computed from live leases/invoices;
+   * "imported" = substituted from an approved imported income statement that covers
+   * this fiscal year (the régie's own actuals for a year not managed in the tool).
+   */
+  source: "operational" | "imported";
 }
 
 // ==========================================
@@ -202,6 +209,121 @@ async function getPayables(orgId: string, unitIds: string[]): Promise<number> {
 // Main entry point
 // ==========================================
 
+type ApprovedIncomeStatement = NonNullable<
+  Awaited<ReturnType<typeof importedStatementRepo.findApprovedIncomeStatementForYear>>
+>;
+
+/**
+ * True when the requested [from,to] range encompasses the whole period the
+ * imported statement covers — so we substitute the annual actuals for the yearly
+ * review, but not for a sub-period (e.g. a single month) request.
+ */
+function requestCoversStatementPeriod(stmt: ApprovedIncomeStatement, from: Date, to: Date): boolean {
+  const ps = stmt.periodStart ?? new Date(`${stmt.fiscalYear}-01-01T00:00:00.000Z`);
+  const pe = stmt.periodEnd ?? new Date(`${stmt.fiscalYear}-12-31T00:00:00.000Z`);
+  return from <= ps && to >= pe;
+}
+
+export interface ImportedPnlBalanceRow {
+  documentSection: string | null;
+  balanceCents: number;
+  rawAccountName: string;
+  rawAccountCode: string | null;
+  accountId?: string | null;
+  account?: { id: string; code: string | null; name: string } | null;
+}
+
+/**
+ * Aggregate an imported income statement's account balances into revenue vs
+ * expense totals (signed cents; REVENUE positive = income, EXPENSE positive =
+ * expense), plus a per-account expense breakdown sorted desc.
+ */
+export function aggregateImportedPnl(balances: ImportedPnlBalanceRow[]): {
+  revenueCents: number;
+  expenseCents: number;
+  expensesByAccount: AccountTotalDTO[];
+} {
+  let revenueCents = 0;
+  let expenseCents = 0;
+  const expensesByAccount: AccountTotalDTO[] = [];
+  for (const ab of balances) {
+    if (ab.documentSection === "REVENUE") {
+      revenueCents += ab.balanceCents;
+    } else if (ab.documentSection === "EXPENSE") {
+      expenseCents += ab.balanceCents;
+      expensesByAccount.push({
+        accountId: ab.account?.id ?? ab.accountId ?? "",
+        accountName: ab.account?.name ?? ab.rawAccountName,
+        accountCode: ab.account?.code ?? ab.rawAccountCode ?? null,
+        totalCents: ab.balanceCents,
+      });
+    }
+  }
+  expensesByAccount.sort((a, b) => b.totalCents - a.totalCents);
+  return { revenueCents, expenseCents, expensesByAccount };
+}
+
+/**
+ * Build a BuildingFinancialsDTO from an approved imported income statement.
+ * Revenue = Σ REVENUE balances, expenses = Σ EXPENSE balances (signed cents);
+ * a closed year's actuals are treated as fully realized (collectionRate = 1).
+ */
+async function buildImportedFinancialsDTO(
+  orgId: string,
+  stmt: ApprovedIncomeStatement,
+  ctx: {
+    building: { id: string; name: string };
+    params: { from: string; to: string };
+    from: Date;
+    to: Date;
+    openingReceivablesCents: number;
+    openingPayablesCents: number;
+  },
+): Promise<BuildingFinancialsDTO> {
+  const { building, params, from, to, openingReceivablesCents, openingPayablesCents } = ctx;
+
+  const { revenueCents, expenseCents, expensesByAccount } = aggregateImportedPnl(stmt.accountBalances);
+  const netCents = revenueCents - expenseCents;
+
+  const [totalUnitsCount, activeUnitsCount] = await Promise.all([
+    inventoryRepo.countTotalUnitsByBuilding(prisma, orgId, building.id),
+    inventoryRepo.countLeasedUnitsByBuilding(prisma, orgId, building.id, from, to),
+  ]);
+
+  return {
+    buildingId: building.id,
+    buildingName: building.name,
+    from: params.from,
+    to: params.to,
+    collectedIncomeCents: revenueCents,
+    accruedIncomeCents: revenueCents,
+    expensesTotalCents: expenseCents,
+    maintenanceTotalCents: 0,
+    capexTotalCents: 0,
+    operatingTotalCents: expenseCents,
+    netIncomeCents: netCents,
+    netOperatingIncomeCents: netCents,
+    recoverableAncillaryCents: 0,
+    rentalIncomeCents: revenueCents,
+    serviceChargeIncomeCents: 0,
+    receivablesCents: 0,
+    payablesCents: 0,
+    openingReceivablesCents,
+    openingPayablesCents,
+    maintenanceRatio: 0,
+    costPerUnitCents: totalUnitsCount > 0 ? Math.round(expenseCents / totalUnitsCount) : 0,
+    collectionRate: 1,
+    invoicedForPeriodCents: revenueCents,
+    paidForPeriodCents: revenueCents,
+    activeUnitsCount,
+    totalUnitsCount,
+    expensesByCategory: [],
+    topContractorsBySpend: [],
+    expensesByAccount,
+    source: "imported",
+  };
+}
+
 export async function getBuildingFinancials(
   orgId: string,
   buildingId: string,
@@ -239,6 +361,21 @@ export async function getBuildingFinancials(
   ]);
   const openingReceivablesCents = Math.max(0, openingArSigned);
   const openingPayablesCents = Math.max(0, -openingApSigned);
+
+  // Imported-actuals substitution: when the requested period fully covers an
+  // approved imported income statement's fiscal year, report the régie's own
+  // actuals for that year (a year not managed in the tool). Sits ahead of the
+  // snapshot cache so no stale operational figures are served, and reads
+  // ImportedAccountBalance directly because income statements are stored
+  // reference-only (no ledger entries) once operational activity exists.
+  const importedIncome = await importedStatementRepo.findApprovedIncomeStatementForYear(
+    prisma, orgId, buildingId, to.getUTCFullYear(),
+  );
+  if (importedIncome && requestCoversStatementPeriod(importedIncome, from, to)) {
+    return buildImportedFinancialsDTO(orgId, importedIncome, {
+      building, params, from, to, openingReceivablesCents, openingPayablesCents,
+    });
+  }
 
   if (!params.forceRefresh && !params.groupByAccount && !periodOverlapsCurrentMonth) {
     const cached = await snapshotRepo.findBuildingFinancialSnapshotByPeriod(prisma, orgId, buildingId, from, to);
@@ -285,6 +422,7 @@ export async function getBuildingFinancials(
         totalUnitsCount: cachedTotalUnits,
         expensesByCategory: [],
         topContractorsBySpend: [],
+        source: "operational",
       };
     }
   }
@@ -497,6 +635,7 @@ export async function getBuildingFinancials(
     expensesByCategory,
     topContractorsBySpend,
     ...(expensesByAccount !== undefined && { expensesByAccount }),
+    source: "operational",
   };
 }
 

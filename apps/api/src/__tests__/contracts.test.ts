@@ -380,7 +380,9 @@ describe('G10: API Contract Tests', () => {
         'activeUnitsCount',
         'expensesByCategory',
         'topContractorsBySpend',
+        'source',
       ], 'BuildingFinancialsDTO');
+      expect(['operational', 'imported']).toContain(dto.source);
 
       // All numeric totals must be numbers (never undefined/null)
       for (const key of [
