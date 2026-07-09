@@ -330,6 +330,22 @@ export async function findActiveLeaseForUnit(
 }
 
 /**
+ * Any live lease on a unit (DRAFT/READY_TO_SIGN/SIGNED/ACTIVE — i.e. not
+ * terminated/cancelled/deleted). Used by onboarding-merge to avoid duplicating
+ * a lease on a unit that already has one (DRAFT snapshot leases included).
+ */
+export async function findAnyLiveLeaseForUnit(
+  prisma: PrismaClient,
+  unitId: string,
+) {
+  return prisma.lease.findFirst({
+    where: { unitId, deletedAt: null, status: { notIn: ["TERMINATED", "CANCELLED"] } },
+    orderBy: { startDate: "desc" },
+    select: { id: true },
+  });
+}
+
+/**
  * Find active leases for a building (via unit relation).
  * Returns rentTotalChf for income projection fallback.
  */

@@ -15,6 +15,7 @@ import * as leaseRepo from "../repositories/leaseRepository";
 import { mapRentRoll, RentRollRow } from "./rentRollMapper";
 import { createUnit, updateUnit } from "./inventory";
 import { createOrGetTenant } from "./tenants";
+import { linkTenantToUnit } from "./occupancies";
 import { createLease } from "./leases";
 import { writeAuditLog } from "./auditLog";
 import { activateLeaseWorkflow } from "../workflows/activateLeaseWorkflow";
@@ -110,7 +111,7 @@ export async function previewOnboarding(
   const existingUnits = await inventoryRepo.countTotalUnitsByBuilding(prisma, orgId, buildingId);
   if (existingUnits > 0) {
     warnings.push(
-      `Building already has ${existingUnits} unit(s). Onboarding is intended for an empty building — importing may create duplicates.`,
+      `Building already has ${existingUnits} unit(s). Onboarding will merge — objects that already exist are skipped, only missing units/tenants/leases are created (no duplicates).`,
     );
   }
 
@@ -176,6 +177,8 @@ export interface OnboardingCommitResult {
   buildingId: string;
   billingMode: OnboardingBillingMode;
   created: { units: number; tenants: number; leases: number; activated: number };
+  /** Objects whose unit already existed and were skipped (merge — no duplicates). */
+  skippedExistingUnits: number;
   errors: string[];
 }
 
@@ -221,29 +224,31 @@ export async function commitOnboarding(
   const building = await inventoryRepo.findBuildingByIdAndOrg(prisma, buildingId, orgId);
   if (!building) throw new OnboardingError("BUILDING_NOT_FOUND", "Building not found");
 
-  const existingUnits = await inventoryRepo.countTotalUnitsByBuilding(prisma, orgId, buildingId);
-  if (existingUnits > 0) {
-    throw new OnboardingError(
-      "ALREADY_ONBOARDED",
-      `Building already has ${existingUnits} unit(s). Onboarding is only for an empty building.`,
-    );
-  }
-
   const { rows } = mapRentRoll(csvText);
   if (rows.length === 0) throw new OnboardingError("EMPTY_RENT_ROLL", "No rent-roll rows found in the CSV");
+
+  // Merge, don't block: an object whose unit already exists (by unit number) is
+  // reused, not duplicated. Only missing units/tenants/leases are created.
+  const existing = await inventoryRepo.listUnits(prisma, orgId, buildingId, true);
+  const existingByNumber = new Map(existing.map((u) => [u.unitNumber, u.id]));
 
   const links = resolveGarageLinks(rows);
   const errors: string[] = [];
   const unitIdByObjet = new Map<string, string>();
+  let unitsCreated = 0;
+  let skippedExistingUnits = 0;
   const apartments = rows.filter((r) => r.unitType === "RESIDENTIAL");
   const garages = rows.filter((r) => r.unitType === "PARKING");
 
   // Pass 1 — apartments (must exist before garages can link to them).
   for (const r of apartments) {
+    const existingId = existingByNumber.get(r.unitNumber);
+    if (existingId) { unitIdByObjet.set(r.objet, existingId); skippedExistingUnits += 1; continue; }
     try {
       const unit = await createUnit(orgId, buildingId, { unitNumber: r.unitNumber, type: "RESIDENTIAL", floor: r.floor ?? undefined });
       unitIdByObjet.set(r.objet, unit.id);
       await applyUnitFields(orgId, unit.id, r);
+      unitsCreated += 1;
     } catch (e) {
       errors.push(`Unit ${r.objet}: ${errMsg(e)}`);
     }
@@ -251,6 +256,8 @@ export async function commitOnboarding(
 
   // Pass 2 — garages, linked to their apartment.
   for (const r of garages) {
+    const existingId = existingByNumber.get(r.unitNumber);
+    if (existingId) { unitIdByObjet.set(r.objet, existingId); skippedExistingUnits += 1; continue; }
     try {
       const linkedObjet = links.get(r.objet) ?? null;
       const linkedFlatId = linkedObjet ? unitIdByObjet.get(linkedObjet) : undefined;
@@ -259,12 +266,13 @@ export async function commitOnboarding(
       });
       unitIdByObjet.set(r.objet, unit.id);
       await applyUnitFields(orgId, unit.id, r);
+      unitsCreated += 1;
     } catch (e) {
       errors.push(`Garage ${r.objet}: ${errMsg(e)}`);
     }
   }
 
-  // Pass 3 — tenants (+ occupancy) and DRAFT leases.
+  // Pass 3 — tenants (+ occupancy) and DRAFT leases, only where missing.
   const tenantNames = new Set<string>();
   let leaseCount = 0;
   const leasesToActivate: { leaseId: string; isApartment: boolean }[] = [];
@@ -272,17 +280,21 @@ export async function commitOnboarding(
     const unitId = unitIdByObjet.get(r.objet);
     if (!unitId) continue; // unit creation failed above
     if (r.isVacant || !r.tenantName) {
-      if (r.isVacant) await inventoryRepo.setUnitVacantByOrg(prisma, unitId, orgId).catch(() => {});
+      if (r.isVacant && !existingByNumber.has(r.unitNumber)) await inventoryRepo.setUnitVacantByOrg(prisma, unitId, orgId).catch(() => {});
       continue;
     }
     const phone = synthTenantPhone(buildingId, r.tenantName);
     try {
-      await createOrGetTenant({ orgId, phone, name: r.tenantName, unitId });
+      const tenant = await createOrGetTenant({ orgId, phone, name: r.tenantName });
+      await linkTenantToUnit(orgId, tenant.id, unitId); // idempotent occupancy upsert
       tenantNames.add(r.tenantName);
     } catch (e) {
       errors.push(`Tenant ${r.tenantName} (${r.objet}): ${errMsg(e)}`);
     }
     if (willCreateLease(r)) {
+      // Skip when a live lease already exists on the unit (incl. DRAFT) — merge, no duplicate.
+      const existingLease = await leaseRepo.findAnyLiveLeaseForUnit(prisma, unitId);
+      if (existingLease) continue;
       try {
         const startDate = (r.startDate ?? new Date()).toISOString();
         const lease = await createLease(orgId, {
@@ -328,13 +340,14 @@ export async function commitOnboarding(
     actorUserId: opts.actorUserId,
     entityType: "Building",
     entityId: buildingId,
-    metadata: { billingMode: opts.billingMode, units: unitIdByObjet.size, tenants: tenantNames.size, leases: leaseCount, activated },
+    metadata: { billingMode: opts.billingMode, unitsCreated, skippedExistingUnits, tenants: tenantNames.size, leases: leaseCount, activated },
   });
 
   return {
     buildingId,
     billingMode: opts.billingMode,
-    created: { units: unitIdByObjet.size, tenants: tenantNames.size, leases: leaseCount, activated },
+    created: { units: unitsCreated, tenants: tenantNames.size, leases: leaseCount, activated },
+    skippedExistingUnits,
     errors,
   };
 }

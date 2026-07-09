@@ -666,6 +666,8 @@ export interface OnboardingCommitResultDTO {
   buildingId: string;
   billingMode: "activate" | "snapshot";
   created: { units: number; tenants: number; leases: number; activated: number };
+  /** Objects whose unit already existed and were merged (not duplicated). */
+  skippedExistingUnits: number;
   errors: string[];
 }
 

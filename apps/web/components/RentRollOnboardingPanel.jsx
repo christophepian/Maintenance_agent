@@ -220,8 +220,13 @@ export default function RentRollOnboardingPanel({ buildingId, onClose, onCommitt
                 </label>
               </div>
               <button className="button-primary text-sm" onClick={handleCommit} disabled={committing}>
-                {committing ? "Creating…" : `Commit — create ${s.apartments + s.garages} unit(s), ${s.tenants} tenant(s), ${s.leases} lease(s)`}
+                {committing ? "Creating…" : `Commit — up to ${s.apartments + s.garages} unit(s), ${s.tenants} tenant(s), ${s.leases} lease(s)`}
               </button>
+              <p className="text-xs text-muted">
+                Objects whose unit already exists are merged (never duplicated) — only missing units,
+                tenants and leases are created.
+              </p>
+              {error && <div className="notice notice-err text-sm">{error}</div>}
             </div>
           )}
         </div>
@@ -231,9 +236,10 @@ export default function RentRollOnboardingPanel({ buildingId, onClose, onCommitt
       {result && (
         <div className="mt-4 space-y-2">
           <div className="notice notice-ok text-sm">
-            Onboarded: <b>{result.created.units}</b> unit(s), <b>{result.created.tenants}</b> tenant(s),{" "}
+            Onboarded: <b>{result.created.units}</b> new unit(s), <b>{result.created.tenants}</b> tenant(s),{" "}
             <b>{result.created.leases}</b> lease(s)
             {result.billingMode === "activate" ? <>, <b>{result.created.activated}</b> activated (billing started)</> : " (snapshot — no billing)"}.
+            {result.skippedExistingUnits > 0 && <> {result.created.units === 0 ? "" : "· "}<b>{result.skippedExistingUnits}</b> object(s) already existed and were merged.</>}
           </div>
           {result.errors.length > 0 && (
             <div className="rounded-lg border border-warning-ring bg-warning-light p-3 text-sm text-warning-text">
