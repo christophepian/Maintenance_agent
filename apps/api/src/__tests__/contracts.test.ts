@@ -979,4 +979,66 @@ describe('G10: API Contract Tests', () => {
       expect(res.status).toBe(404);
     });
   });
+
+  // ── Building onboarding commit (snapshot mode — no billing side effects) ──
+  describe('Building onboarding commit', () => {
+    const RENT_ROLL =
+      'objet\tlocataire_principal\ttype_objet\tm2\tentree\tloyer_net_mensuel_chf\n' +
+      '531100.01.0001\tJACCARD Jacques-Henri\tAppartement\t96\t01.12.2016\t2646\n' +
+      '531100.01.9001\tJACCARD Jacques-Henri\tGarage\t0\t01.12.2016\t150\n' +
+      '531100.01.9003\tVacant\tGarage\t0\t01.06.2020\t280\n' +
+      'Total\t\t\t\t\t\n';
+
+    it('creates Units/Tenants/Leases for a fresh building (snapshot)', async () => {
+      // Fresh, empty building so onboarding isn't blocked.
+      const created = await fetch(`${API_BASE}/buildings`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-dev-role': 'MANAGER' },
+        body: JSON.stringify({ name: `Onboarding Test ${Date.now()}` }),
+      });
+      expect(created.status).toBe(201);
+      const cb = await created.json();
+      const buildingId = cb?.data?.id ?? cb?.id;
+      expect(buildingId).toBeTruthy();
+
+      const form = new FormData();
+      form.append('file', new Blob([RENT_ROLL], { type: 'text/csv' }), 'rentroll.csv');
+      form.append('billingMode', 'snapshot');
+      const res = await fetch(`${API_BASE}/buildings/${buildingId}/onboarding/commit`, {
+        method: 'POST',
+        headers: { 'x-dev-role': 'MANAGER' },
+        body: form,
+      });
+      expect(res.status).toBe(201);
+      const { data } = await res.json();
+      expectKeys(data, ['buildingId', 'billingMode', 'created', 'errors'], 'OnboardingCommitResult');
+      expect(data.billingMode).toBe('snapshot');
+      expect(data.created.units).toBe(3); // 1 apartment + 2 garages
+      expect(data.created.tenants).toBe(1); // JACCARD (occupies apt + garage); 9003 vacant
+      expect(data.created.leases).toBe(2); // apt + occupied garage (both have rent)
+      expect(data.created.activated).toBe(0); // snapshot — no billing
+      expect(data.errors).toEqual([]);
+
+      // A second commit must be blocked (building now has units).
+      const form2 = new FormData();
+      form2.append('file', new Blob([RENT_ROLL], { type: 'text/csv' }), 'rentroll.csv');
+      form2.append('billingMode', 'snapshot');
+      const res2 = await fetch(`${API_BASE}/buildings/${buildingId}/onboarding/commit`, {
+        method: 'POST', headers: { 'x-dev-role': 'MANAGER' }, body: form2,
+      });
+      expect(res2.status).toBe(400); // ALREADY_ONBOARDED
+    }, 30000);
+
+    it('rejects a bad billingMode', async () => {
+      const buildings = await fetchJson('/buildings?limit=1');
+      if (!buildings.data?.length) return;
+      const form = new FormData();
+      form.append('file', new Blob(['objet\n531100.01.0001'], { type: 'text/csv' }), 'r.csv');
+      form.append('billingMode', 'nope');
+      const res = await fetch(`${API_BASE}/buildings/${buildings.data[0].id}/onboarding/commit`, {
+        method: 'POST', headers: { 'x-dev-role': 'MANAGER' }, body: form,
+      });
+      expect(res.status).toBe(400);
+    });
+  });
 });
