@@ -95,6 +95,8 @@ export interface UpdateInvoiceParams {
   // Building/unit attribution
   buildingId?: string | null;
   unitId?: string | null;
+  // Vendor (supplier) attribution — used by régie-ledger invoice onboarding
+  contractorId?: string | null;
   // Ancillary cost classification (v3): nature + charge category
   costNature?: CostNature | null;
   ancillaryCategoryId?: string | null;
@@ -729,6 +731,7 @@ export async function updateInvoice(
   const isAttributionOnly =
     !mutatingFields &&
     (params.buildingId !== undefined || params.unitId !== undefined ||
+     params.contractorId !== undefined ||
      params.expenseTypeId !== undefined || params.accountId !== undefined ||
      params.costNature !== undefined || params.ancillaryCategoryId !== undefined);
 
@@ -763,6 +766,7 @@ export async function updateInvoice(
         ...(params.issuerCountry !== undefined && { issuerCountry: params.issuerCountry }),
         ...(params.buildingId !== undefined && { buildingId: params.buildingId }),
         ...(params.unitId !== undefined && { unitId: params.unitId }),
+        ...(params.contractorId !== undefined && { contractorId: params.contractorId === null ? null : params.contractorId }),
         ...(params.costNature !== undefined && { costNature: params.costNature }),
         ...(params.ancillaryCategoryId !== undefined && {
           ancillaryCategoryId: params.ancillaryCategoryId === null ? null : params.ancillaryCategoryId,

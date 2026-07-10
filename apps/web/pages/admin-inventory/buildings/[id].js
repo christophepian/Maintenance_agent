@@ -201,6 +201,7 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet }) {
   const [outsExpanded, setOutsExpanded]   = useState(false);
   const [report, setReport]   = useState(null);
   const [unitData, setUnitData] = useState([]);
+  const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState("");
 
@@ -223,8 +224,9 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet }) {
     Promise.all([
       fetch(`/api/buildings/${buildingId}/period-report?${q}`, { headers: authHeaders() }).then((r) => r.json()),
       fetch(`/api/buildings/${buildingId}/unit-financials?from=${from}&to=${to}`, { headers: authHeaders() }).then((r) => r.json()),
+      fetch(`/api/buildings/${buildingId}/vendor-spend?from=${from}&to=${to}`, { headers: authHeaders() }).then((r) => r.json()).catch(() => null),
     ])
-      .then(([rpt, uf]) => { setReport(rpt?.data ?? null); setUnitData(uf?.data ?? []); })
+      .then(([rpt, uf, vs]) => { setReport(rpt?.data ?? null); setUnitData(uf?.data ?? []); setVendors(vs?.data ?? []); })
       .catch(() => setError(t("buildingsId.reporting.failedToLoad")))
       .finally(() => setLoading(false));
   }, [buildingId, from, to, isYtd, t]);
@@ -505,6 +507,35 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet }) {
                     : (outsExpanded ? moveOuts : moveOuts.slice(0, 3)).map((l) => <OccupancyRow key={l.id} type="out" tenantName={l.tenantName} unitLabel={l.unitNumber} date={l.endDate} />)}
                   {moveOuts.length > 3 && <button onClick={() => setOutsExpanded((v) => !v)} className="mt-2 text-xs font-medium text-muted-dark hover:text-foreground">{outsExpanded ? t("buildingsId.reporting.showLess") : t("buildingsId.reporting.moreCount", { count: moveOuts.length - 3 })}</button>}
                 </div>
+              </div>
+            </div>
+          )}
+
+          {vendors.length > 0 && (
+            <div className="rounded-3xl border border-surface-border bg-surface p-5">
+              <h2 className="text-base font-semibold text-foreground mb-1">{t("buildingsId.reporting.topVendors")}</h2>
+              <p className="text-xs text-foreground-dim mb-4">{t("buildingsId.reporting.topVendorsSub")}</p>
+              <div className="space-y-2">
+                {vendors.slice(0, 8).map((v, i) => {
+                  const max = vendors[0]?.totalCents || 1;
+                  const pct = Math.max(2, Math.round((v.totalCents / max) * 100));
+                  return (
+                    <div key={v.contractorId || `${v.vendorName}-${i}`} className="flex items-center gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-baseline justify-between gap-2">
+                          <span className="truncate text-sm font-medium text-foreground" title={v.vendorName}>{v.vendorName}</span>
+                          <span className="shrink-0 text-sm font-semibold text-foreground tabular-nums">{rFmtChf(v.totalCents)}</span>
+                        </div>
+                        <div className="mt-1 flex items-center gap-2">
+                          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-hover">
+                            <div className="h-full rounded-full bg-brand" style={{ width: `${pct}%` /* no-token: dynamic spend-bar width */ }} />
+                          </div>
+                          <span className="shrink-0 text-xs text-foreground-dim tabular-nums">{v.invoiceCount}×</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}

@@ -4,29 +4,37 @@
  *
  * Extracts discrete third-party contractor invoices (see regieLedgerMapper),
  * attributes each to the building (and unit, when the row is unit-scoped),
- * classifies it under an expense account matching the régie account code, and
- * — on commit — creates an INCOMING invoice, issues it at its historical date,
- * and posts the accrual to the ledger so it feeds the building's NOI for that
- * fiscal year. Reporting substitution (imported income statement) still wins for
- * years that have one, so covered years are never double-counted.
+ * links a deduplicated vendor Contractor (so reporting can rank spend by
+ * vendor), and classifies it under an expense account matching the régie code.
  *
- * Idempotent: each imported invoice carries `paymentReference = "GL:<no_piece>"`;
- * a re-commit skips piece numbers already present on the building.
+ * REFERENCE-ONLY: the invoices are NOT posted to the ledger. A régie year-end
+ * package's imported balance sheet + income statement are the financial source
+ * of truth for those historical years (reporting substitution already serves
+ * NOI from the imported income statement). Posting the invoices would double-
+ * count the imported bilan's payables and unbalance the balance sheet by the
+ * P&L result, so onboarded invoices exist purely as attributed records for
+ * per-unit maintenance history and vendor-spend analytics.
+ *
+ * Idempotent + self-healing: each imported invoice carries
+ * `paymentReference = "GL:<no_piece>"`; a re-commit skips piece numbers already
+ * present, reverses any ledger accrual a prior (posting) import left behind, and
+ * backfills the vendor link on existing rows.
  */
 
 import { PrismaClient } from "@prisma/client";
 import * as inventoryRepo from "../repositories/inventoryRepository";
 import * as invoiceRepo from "../repositories/invoiceRepository";
-import * as billingEntityRepo from "../repositories/billingEntityRepository";
+import * as contractorRepo from "../repositories/contractorRepository";
+import * as ledgerRepo from "../repositories/ledgerEntryRepository";
 import { findAccountByOrgAndCode, upsertAccount } from "../repositories/accountRepository";
-import { createInvoice, updateInvoice, issueInvoice } from "./invoices";
-import { postInvoiceIssued } from "./ledgerService";
+import { createInvoice, updateInvoice } from "./invoices";
+import { createContractor } from "./contractors";
 import { writeAuditLog } from "./auditLog";
 import { mapRegieLedger } from "./regieLedgerMapper";
 import { OnboardingError } from "./buildingOnboardingService";
 
 const REF_PREFIX = "GL:";
-const PAYABLE_CODE = "2000";
+const REVERSIBLE_SOURCE_TYPES = ["INVOICE_ISSUED", "INVOICE_PAID"];
 
 /* ── DTOs ─────────────────────────────────────────────────────────────────── */
 
@@ -61,7 +69,8 @@ export interface InvoiceOnboardingPreviewDTO {
 export interface InvoiceOnboardingCommitResult {
   buildingId: string;
   created: number;
-  posted: number;
+  vendorsLinked: number;
+  reversedLedgerEntries: number; // accrual postings a prior import left behind
   skippedAlreadyImported: number;
   errors: string[];
 }
@@ -73,6 +82,44 @@ async function ensureExpenseAccount(prisma: PrismaClient, orgId: string, code: s
   const existing = await findAccountByOrgAndCode(prisma, orgId, code);
   if (existing) return existing;
   return upsertAccount(prisma, orgId, name, { code, accountType: "EXPENSE" });
+}
+
+/** Deterministic, non-dialable sentinels so a vendor Contractor provisions cleanly. */
+function synthVendorContact(orgId: string, name: string): { phone: string; email: string; slug: string } {
+  const key = `${orgId}|${name.trim().toLowerCase()}`;
+  let h = 0;
+  for (let i = 0; i < key.length; i++) h = (Math.imul(h, 31) + key.charCodeAt(i)) >>> 0;
+  const slug = name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "vendor";
+  return {
+    phone: `+41${String(h % 1_000_000_000).padStart(9, "0")}`,
+    email: `${slug}.${h.toString(36)}@imported.vendor`,
+    slug,
+  };
+}
+
+/** Find (by deterministic email) or create a vendor Contractor; returns its id. */
+async function ensureVendorContractor(
+  prisma: PrismaClient,
+  orgId: string,
+  name: string,
+  cache: Map<string, string>,
+): Promise<string> {
+  const cached = cache.get(name);
+  if (cached) return cached;
+  const contact = synthVendorContact(orgId, name);
+  const existing = await contractorRepo.findContractorByOrgAndEmail(prisma, contact.email, orgId);
+  const id = existing
+    ? existing.id
+    : (
+        await createContractor(prisma, orgId, {
+          name,
+          phone: contact.phone,
+          email: contact.email,
+          serviceCategories: ["IMPORTED"],
+        })
+      ).id;
+  cache.set(name, id);
+  return id;
 }
 
 /** unitNumber → existing unit id, from active + inactive units (exact match). */
@@ -103,7 +150,9 @@ export async function previewInvoiceOnboarding(
 
   const unitByNumber = await buildUnitLookup(prisma, orgId, buildingId);
   const existingRefs = new Set(
-    await invoiceRepo.findBuildingInvoicePaymentRefs(prisma, orgId, buildingId, REF_PREFIX),
+    (await invoiceRepo.findBuildingImportedInvoices(prisma, orgId, buildingId, REF_PREFIX)).map(
+      (i) => i.paymentReference,
+    ),
   );
 
   let newInvoices = 0;
@@ -169,25 +218,38 @@ export async function commitInvoiceOnboarding(
   const errors: string[] = [];
 
   const unitByNumber = await buildUnitLookup(prisma, orgId, buildingId);
-  const existingRefs = new Set(
-    await invoiceRepo.findBuildingInvoicePaymentRefs(prisma, orgId, buildingId, REF_PREFIX),
+  const existing = await invoiceRepo.findBuildingImportedInvoices(prisma, orgId, buildingId, REF_PREFIX);
+  const existingRefs = new Set(existing.map((i) => i.paymentReference));
+
+  // Heal prior (posting) imports: reverse any ledger accrual left on already-
+  // imported invoices so the balance sheet isn't corrupted by phantom payables.
+  const reversedLedgerEntries = await ledgerRepo.deleteLedgerEntriesBySource(
+    prisma,
+    orgId,
+    existing.map((i) => i.id),
+    REVERSIBLE_SOURCE_TYPES,
   );
 
-  // Resolve the ORG billing entity once — issuing an invoice requires it, and
-  // ensure the payable account exists so the accrual posting doesn't skip.
-  const orgBillingEntity = await billingEntityRepo.findOrgBillingEntity(prisma, orgId);
-  await ensureExpenseAccount(prisma, orgId, PAYABLE_CODE, "Kreditoren"); // idempotent; keeps a real code
-  if (!orgBillingEntity) {
-    errors.push(
-      "No organisation billing entity found — invoices were created but could not be issued or posted to the ledger.",
-    );
-  }
-
+  const accountCache = new Map<string, string>(); // compte → accountId
+  const vendorCache = new Map<string, string>(); // vendorName → contractorId
   let created = 0;
-  let posted = 0;
+  let vendorsLinked = 0;
   let skipped = 0;
 
-  const accountCache = new Map<string, string>(); // compte → accountId
+  // Backfill the vendor link on already-imported invoices missing one.
+  for (const inv of existing) {
+    if (inv.contractorId) continue;
+    // Match the ref back to a parsed row to recover the vendor name.
+    const row = invoices.find((r) => `${REF_PREFIX}${r.noPiece}` === inv.paymentReference);
+    if (!row) continue;
+    try {
+      const contractorId = await ensureVendorContractor(prisma, orgId, row.vendorName, vendorCache);
+      await updateInvoice(inv.id, { contractorId });
+      vendorsLinked += 1;
+    } catch (e) {
+      errors.push(`Piece ${row.noPiece}: vendor link failed — ${e instanceof Error ? e.message : String(e)}`);
+    }
+  }
 
   for (const r of invoices) {
     const ref = `${REF_PREFIX}${r.noPiece}`;
@@ -197,17 +259,18 @@ export async function commitInvoiceOnboarding(
     }
 
     try {
-      // Expense account by régie code (cached per commit).
       let accountId = accountCache.get(r.compte);
       if (!accountId) {
         const acc = await ensureExpenseAccount(prisma, orgId, r.compte, r.accountName);
         accountId = acc.id;
         accountCache.set(r.compte, accountId);
       }
-
+      const contractorId = await ensureVendorContractor(prisma, orgId, r.vendorName, vendorCache);
       const unitId = r.unitNumber ? unitByNumber.get(r.unitNumber) ?? null : null;
 
-      // 1. Create the INCOMING invoice (rappen preserved via a single VAT-free line).
+      // Create the INCOMING invoice (rappen preserved via a single VAT-free line).
+      // No issuer billing entity: the vendor is the issuer (issuerName), and these
+      // are reference records, not invoices we issue.
       const invoice = await createInvoice({
         orgId,
         description: `${r.vendorName} / ${r.description}`.slice(0, 500),
@@ -223,24 +286,11 @@ export async function commitInvoiceOnboarding(
         lineItems: [{ description: r.description || r.vendorName, quantity: 1, unitPrice: r.amountChf, vatRate: 0 }],
       });
 
-      // 2. Attribute to building (and unit when known).
-      await updateInvoice(invoice.id, { buildingId, unitId });
+      // Attribute to building/unit/vendor (reference-only — no ledger posting).
+      await updateInvoice(invoice.id, { buildingId, unitId, contractorId });
       existingRefs.add(ref);
       created += 1;
-
-      // 3. Issue at the historical date + post the accrual so it feeds NOI.
-      if (orgBillingEntity && r.date) {
-        try {
-          const issued = await issueInvoice(invoice.id, {
-            issuerBillingEntityId: orgBillingEntity.id,
-            issueDate: r.date,
-          });
-          const result = await postInvoiceIssued(prisma, orgId, issued);
-          if (result) posted += 1;
-        } catch (e) {
-          errors.push(`Piece ${r.noPiece}: created but not posted — ${e instanceof Error ? e.message : String(e)}`);
-        }
-      }
+      vendorsLinked += 1;
     } catch (e) {
       errors.push(`Piece ${r.noPiece} (${r.vendorName}): ${e instanceof Error ? e.message : String(e)}`);
     }
@@ -252,8 +302,15 @@ export async function commitInvoiceOnboarding(
     action: "BUILDING_INVOICES_ONBOARDED",
     entityType: "Building",
     entityId: buildingId,
-    metadata: { created, posted, skipped },
-  }).catch(() => {});
+    metadata: { created, vendorsLinked, reversedLedgerEntries, skipped },
+  });
 
-  return { buildingId, created, posted, skippedAlreadyImported: skipped, errors };
+  return {
+    buildingId,
+    created,
+    vendorsLinked,
+    reversedLedgerEntries,
+    skippedAlreadyImported: skipped,
+    errors,
+  };
 }

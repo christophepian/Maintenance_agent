@@ -705,11 +705,20 @@ export interface InvoiceOnboardingPreviewDTO {
 export interface InvoiceOnboardingCommitResultDTO {
   buildingId: string;
   created: number;
-  /** Invoices whose accrual was posted to the ledger (feeds NOI). */
-  posted: number;
+  /** Invoices linked to a deduplicated vendor Contractor. */
+  vendorsLinked: number;
+  /** Ledger accrual entries a prior (posting) import left behind, now reversed. */
+  reversedLedgerEntries: number;
   /** Piece numbers already imported on a prior commit (idempotent). */
   skippedAlreadyImported: number;
   errors: string[];
+}
+
+export interface VendorSpendDTO {
+  contractorId: string | null;
+  vendorName: string;
+  totalCents: number;
+  invoiceCount: number;
 }
 
 export interface ImportBatchDTO {
@@ -2377,6 +2386,16 @@ function buildFinancialsApi(opts: ClientOptions) {
           ...(params.forceRefresh ? { forceRefresh: "true" } : {}),
           ...(params.groupByAccount ? { groupByAccount: "true" } : {}),
         },
+      ),
+
+    /** Top vendors by expenditure for a building over a period (from INCOMING invoices). */
+    getBuildingVendorSpend: (buildingId: string, params: { from: string; to: string }) =>
+      request<{ data: VendorSpendDTO[] }>(
+        opts,
+        "GET",
+        `/buildings/${buildingId}/vendor-spend`,
+        undefined,
+        { from: params.from, to: params.to },
       ),
 
     /** Get building financial summary including income breakdown, receivables, and payables. */

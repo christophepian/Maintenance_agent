@@ -398,25 +398,57 @@ export async function sumInvoiceTotals(
 }
 
 /**
- * All `paymentReference` values for a building's INCOMING invoices whose
- * reference starts with a given prefix — used by régie-ledger onboarding to
- * skip invoices already imported (idempotent re-commit).
+ * A building's INCOMING invoices whose paymentReference starts with a given
+ * prefix — used by régie-ledger onboarding to skip invoices already imported
+ * (idempotent re-commit) and to heal/reverse prior postings on re-run.
  */
-export async function findBuildingInvoicePaymentRefs(
+export async function findBuildingImportedInvoices(
   prisma: PrismaClient,
   orgId: string,
   buildingId: string,
   refPrefix: string,
-): Promise<string[]> {
-  const rows = await prisma.invoice.findMany({
+): Promise<{ id: string; paymentReference: string | null; contractorId: string | null }[]> {
+  return prisma.invoice.findMany({
     where: {
       orgId,
       buildingId,
       direction: "INCOMING",
       paymentReference: { startsWith: refPrefix },
     },
-    select: { paymentReference: true },
+    select: { id: true, paymentReference: true, contractorId: true },
   });
-  return rows.map((r) => r.paymentReference).filter((r): r is string => !!r);
+}
+
+/**
+ * Sum INCOMING-invoice totals for a building grouped by contractor over a date
+ * window (by issueDate) — powers the "top vendors by spend" reporting card.
+ * Uncontractored invoices are grouped under a null contractorId.
+ */
+export async function aggregateBuildingSpendByVendor(
+  prisma: PrismaClient,
+  orgId: string,
+  buildingId: string,
+  from: Date,
+  to: Date,
+): Promise<{ contractorId: string | null; issuerName: string | null; totalCents: number; count: number }[]> {
+  const rows = await prisma.invoice.findMany({
+    where: {
+      orgId,
+      buildingId,
+      direction: "INCOMING",
+      issueDate: { gte: from, lte: to },
+    },
+    select: { contractorId: true, issuerName: true, totalAmount: true, contractor: { select: { name: true } } },
+  });
+  const byVendor = new Map<string, { contractorId: string | null; issuerName: string | null; totalCents: number; count: number }>();
+  for (const r of rows) {
+    const key = r.contractorId ?? `name:${r.issuerName ?? "Unknown"}`;
+    const name = r.contractor?.name ?? r.issuerName ?? "Unknown";
+    const cur = byVendor.get(key) ?? { contractorId: r.contractorId ?? null, issuerName: name, totalCents: 0, count: 0 };
+    cur.totalCents += r.totalAmount;
+    cur.count += 1;
+    byVendor.set(key, cur);
+  }
+  return [...byVendor.values()].sort((a, b) => b.totalCents - a.totalCents);
 }
 
