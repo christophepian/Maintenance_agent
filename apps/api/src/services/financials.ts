@@ -1617,7 +1617,7 @@ export async function getUnitFinancialSummaries(
   const units = await prisma.unit.findMany({
     where: { orgId, buildingId, isActive: true },
     orderBy: [{ unitNumber: "asc" }],
-    select: { id: true, unitNumber: true, floor: true },
+    select: { id: true, unitNumber: true, floor: true, monthlyRentChf: true },
   });
 
   if (units.length === 0) return [];
@@ -1692,6 +1692,28 @@ export async function getUnitFinancialSummaries(
     if (row.unitId) expensesByUnit[row.unitId] = row._sum.debitCents ?? 0;
   }
 
+  // Reference-only per-unit expenses: INCOMING invoices attributed to a unit that
+  // were NOT posted to the ledger — the régie-ledger onboarding invoices. These
+  // carry real per-unit maintenance costs for imported/snapshot years; de-duped
+  // against the ledger agg above (by invoice id) so operational invoices, which
+  // already appear as INVOICE_ISSUED entries, are never counted twice.
+  const [postedEntries, incomingInvoices] = await Promise.all([
+    prisma.ledgerEntry.findMany({
+      where: { orgId, unitId: { in: unitIds }, sourceType: "INVOICE_ISSUED", date: { gte: from, lte: to } },
+      select: { sourceId: true },
+    }),
+    prisma.invoice.findMany({
+      where: { orgId, direction: "INCOMING", unitId: { in: unitIds }, issueDate: { gte: from, lte: to } },
+      select: { id: true, unitId: true, totalAmount: true },
+    }),
+  ]);
+  const postedInvoiceIds = new Set(postedEntries.map((e) => e.sourceId).filter(Boolean));
+  for (const inv of incomingInvoices) {
+    if (inv.unitId && !postedInvoiceIds.has(inv.id)) {
+      expensesByUnit[inv.unitId] = (expensesByUnit[inv.unitId] ?? 0) + inv.totalAmount;
+    }
+  }
+
   // Active leases (for tenant name + occupancy + charge apportionment)
   const activeLeases = await prisma.lease.findMany({
     where: {
@@ -1730,13 +1752,27 @@ export async function getUnitFinancialSummaries(
     );
   }
 
+  // Months spanned by the period, for prorating contractual rent.
+  const monthsInPeriod = Math.max(
+    1,
+    (to.getUTCFullYear() - from.getUTCFullYear()) * 12 + (to.getUTCMonth() - from.getUTCMonth()) + 1,
+  );
+
   return units.map((u) => {
-    const projected = projectedByUnit[u.id] ?? 0;
-    const earned    = earnedByUnit[u.id]    ?? 0;
+    const occupied  = !!leaseByUnit[u.id];
+    const invoicedIncome = projectedByUnit[u.id] ?? 0;
+    // Fallback for imported/snapshot years with no rent invoices: show the unit's
+    // contractual net rent prorated over the period (état locatif), so an occupied
+    // unit isn't blank. Only when there's no invoiced income (no double-count).
+    const contractualIncome =
+      invoicedIncome === 0 && occupied && u.monthlyRentChf
+        ? u.monthlyRentChf * 100 * monthsInPeriod
+        : 0;
+    const projected = invoicedIncome || contractualIncome;
+    const earned    = (earnedByUnit[u.id] ?? 0) || contractualIncome;
     const ledgerExp = expensesByUnit[u.id]  ?? 0;
     const charges   = apportionedByUnit[u.id] ?? 0;
     const expenses  = ledgerExp + charges; // charges fold into expenses, mirroring the building total
-    const occupied  = !!leaseByUnit[u.id];
     return {
       unitId:               u.id,
       unitNumber:           u.unitNumber,
