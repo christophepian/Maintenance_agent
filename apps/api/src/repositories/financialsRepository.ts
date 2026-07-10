@@ -312,3 +312,35 @@ export async function aggregateLedgerIncome(
   });
   return agg._sum.debitCents ?? 0;
 }
+
+/**
+ * Reference-only per-unit expenses: INCOMING invoices attributed to a unit
+ * alongside the set of invoice ids already posted to the ledger as
+ * INVOICE_ISSUED, so the caller can add only the un-posted (onboarded) ones
+ * without double-counting operational invoices.
+ */
+export async function findUnitAttributedInvoices(
+  prisma: PrismaClient,
+  orgId: string,
+  unitIds: string[],
+  from: Date,
+  to: Date,
+): Promise<{
+  postedInvoiceIds: string[];
+  incoming: { id: string; unitId: string | null; totalAmount: number }[];
+}> {
+  const [postedEntries, incoming] = await Promise.all([
+    prisma.ledgerEntry.findMany({
+      where: { orgId, unitId: { in: unitIds }, sourceType: "INVOICE_ISSUED", date: { gte: from, lte: to } },
+      select: { sourceId: true },
+    }),
+    prisma.invoice.findMany({
+      where: { orgId, direction: "INCOMING", unitId: { in: unitIds }, issueDate: { gte: from, lte: to } },
+      select: { id: true, unitId: true, totalAmount: true },
+    }),
+  ]);
+  return {
+    postedInvoiceIds: postedEntries.map((e) => e.sourceId).filter((s): s is string => !!s),
+    incoming,
+  };
+}
