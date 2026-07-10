@@ -18,7 +18,7 @@ import { detectDocumentType, PackageDocType } from "./packageDetector";
 import { mapRentRoll } from "./rentRollMapper";
 import { mapRegieLedger } from "./regieLedgerMapper";
 import { mapCsvToAccountBalances } from "./csvAccountingMapper";
-import { computeBalanceImbalanceCents, ingestStatement } from "./importedStatementService";
+import { computeBalanceImbalanceCents, ingestStatement, approveStatement } from "./importedStatementService";
 import { commitOnboarding, OnboardingError, OnboardingBillingMode } from "./buildingOnboardingService";
 import { commitInvoiceOnboarding } from "./invoiceOnboardingService";
 
@@ -302,9 +302,11 @@ export async function commitPackage(
           detail: r.errors.length ? `${r.errors.length} issue(s)` : "ok",
         });
       } else {
-        // BALANCE_SHEET / INCOME_STATEMENT → into the imported-statement review
-        // gate (not auto-approved; the manager approves in finance/Imports).
-        await ingestStatement(prisma, {
+        // BALANCE_SHEET / INCOME_STATEMENT → ingest, then approve so reporting is
+        // populated immediately (the analyze step already reconciled the figures).
+        // Approving posts the balance sheet to the ledger and lets the building's
+        // yearly review substitute the imported income statement (Phase 1).
+        const batch = await ingestStatement(prisma, {
           buffer: Buffer.from(f.text, "utf8"),
           fileName: f.fileName,
           mimeType: "text/csv",
@@ -314,11 +316,21 @@ export async function commitPackage(
           fiscalYear: opts.fiscalYear || undefined,
           isCsv: true,
         });
+        let approved = 0;
+        for (const s of batch.statements) {
+          if (s.status !== "PENDING_REVIEW") continue;
+          try {
+            await approveStatement(prisma, s.id, orgId, opts.actorUserId ?? "system");
+            approved += 1;
+          } catch (e) {
+            warnings.push(`${f.fileName}: ingested but not approved — ${errMsg(e)}`);
+          }
+        }
         results.push({
           fileName: f.fileName,
           type: f.type,
-          outcome: "sent to review",
-          detail: "Approve it in Finance → Imports to populate reporting.",
+          outcome: approved > 0 ? "imported + approved" : "sent to review",
+          detail: approved > 0 ? "Reporting populated." : "Approve it in Finance → Imports.",
         });
       }
     } catch (e) {

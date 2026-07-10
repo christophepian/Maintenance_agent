@@ -243,24 +243,28 @@ export function aggregateImportedPnl(balances: ImportedPnlBalanceRow[]): {
   expenseCents: number;
   expensesByAccount: AccountTotalDTO[];
 } {
-  let revenueCents = 0;
-  let expenseCents = 0;
+  // Régie exports differ in sign convention: some store revenue as a positive
+  // amount, others credit-negative (like the general ledger's −13556). A P&L
+  // revenue/expense total is a magnitude, so we sum each section signed (so a
+  // contra line still nets correctly) and take the absolute value of the total.
+  let revenueSigned = 0;
+  let expenseSigned = 0;
   const expensesByAccount: AccountTotalDTO[] = [];
   for (const ab of balances) {
     if (ab.documentSection === "REVENUE") {
-      revenueCents += ab.balanceCents;
+      revenueSigned += ab.balanceCents;
     } else if (ab.documentSection === "EXPENSE") {
-      expenseCents += ab.balanceCents;
+      expenseSigned += ab.balanceCents;
       expensesByAccount.push({
         accountId: ab.account?.id ?? ab.accountId ?? "",
         accountName: ab.account?.name ?? ab.rawAccountName,
         accountCode: ab.account?.code ?? ab.rawAccountCode ?? null,
-        totalCents: ab.balanceCents,
+        totalCents: Math.abs(ab.balanceCents),
       });
     }
   }
   expensesByAccount.sort((a, b) => b.totalCents - a.totalCents);
-  return { revenueCents, expenseCents, expensesByAccount };
+  return { revenueCents: Math.abs(revenueSigned), expenseCents: Math.abs(expenseSigned), expensesByAccount };
 }
 
 /**
