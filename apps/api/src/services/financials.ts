@@ -1891,15 +1891,35 @@ export async function getBuildingPeriodReport(
     const now2 = new Date();
     const lastMonth = year < now2.getFullYear() ? 12 : now2.getMonth() + 1;
     monthlyData = [];
-    for (let m = 1; m <= lastMonth; m++) {
-      const mf = `${year}-${String(m).padStart(2, "0")}-01`;
-      const lastDay = new Date(year, m, 0).getDate();
-      const mt = `${year}-${String(m).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
-      try {
-        const s = await getBuildingFinancials(orgId, buildingId, { from: mf, to: mt });
-        monthlyData.push({ month: m, collectedIncomeCents: s.collectedIncomeCents, expensesTotalCents: s.expensesTotalCents, noiCents: s.netOperatingIncomeCents, collectionRate: s.collectionRate });
-      } catch {
-        monthlyData.push({ month: m, collectedIncomeCents: 0, expensesTotalCents: 0, noiCents: 0, collectionRate: 0 });
+    if (financials.source === "imported") {
+      // An imported income statement is annual — it has no monthly detail — so a
+      // per-month query returns 0 (it can't encompass the annual statement). Spread
+      // the annual actuals evenly across the year so the trendline isn't flat-zero;
+      // the last month absorbs the rounding remainder so the months sum to the year.
+      const split = (total: number, m: number): number => {
+        const base = Math.trunc(total / lastMonth);
+        return m === lastMonth ? total - base * (lastMonth - 1) : base;
+      };
+      for (let m = 1; m <= lastMonth; m++) {
+        monthlyData.push({
+          month: m,
+          collectedIncomeCents: split(financials.collectedIncomeCents, m),
+          expensesTotalCents: split(financials.expensesTotalCents, m),
+          noiCents: split(financials.netOperatingIncomeCents, m),
+          collectionRate: financials.collectionRate,
+        });
+      }
+    } else {
+      for (let m = 1; m <= lastMonth; m++) {
+        const mf = `${year}-${String(m).padStart(2, "0")}-01`;
+        const lastDay = new Date(year, m, 0).getDate();
+        const mt = `${year}-${String(m).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+        try {
+          const s = await getBuildingFinancials(orgId, buildingId, { from: mf, to: mt });
+          monthlyData.push({ month: m, collectedIncomeCents: s.collectedIncomeCents, expensesTotalCents: s.expensesTotalCents, noiCents: s.netOperatingIncomeCents, collectionRate: s.collectionRate });
+        } catch {
+          monthlyData.push({ month: m, collectedIncomeCents: 0, expensesTotalCents: 0, noiCents: 0, collectionRate: 0 });
+        }
       }
     }
   }
