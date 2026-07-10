@@ -341,7 +341,7 @@ export async function findAnyLiveLeaseForUnit(
   return prisma.lease.findFirst({
     where: { unitId, deletedAt: null, status: { notIn: ["TERMINATED", "CANCELLED"] } },
     orderBy: { startDate: "desc" },
-    select: { id: true },
+    select: { id: true, status: true },
   });
 }
 
