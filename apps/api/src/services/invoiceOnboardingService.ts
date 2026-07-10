@@ -163,7 +163,7 @@ export async function previewInvoiceOnboarding(
     const matchedUnitId = r.unitNumber ? unitByNumber.get(r.unitNumber) : undefined;
     const matchedUnitNumber = matchedUnitId ? r.unitNumber : null;
     if (r.unitNumber && !matchedUnitId) unmatchedUnits += 1;
-    const already = existingRefs.has(`${REF_PREFIX}${r.noPiece}`);
+    const already = existingRefs.has(`${REF_PREFIX}${r.pieceKey}`);
     if (already) alreadyImported += 1;
     else newInvoices += 1;
     return {
@@ -221,14 +221,19 @@ export async function commitInvoiceOnboarding(
   const existing = await invoiceRepo.findBuildingImportedInvoices(prisma, orgId, buildingId, REF_PREFIX);
   const existingRefs = new Set(existing.map((i) => i.paymentReference));
 
-  // Heal prior (posting) imports: reverse any ledger accrual left on already-
-  // imported invoices so the balance sheet isn't corrupted by phantom payables.
+  // Heal prior (posting) imports on the already-imported invoices:
+  //  (a) reverse any ledger accrual so the balance sheet isn't corrupted by
+  //      phantom payables;
+  //  (b) reset the issuance stamping so they show the vendor as issuer, not our
+  //      org (the earlier import issued them as if outgoing).
+  const existingIds = existing.map((i) => i.id);
   const reversedLedgerEntries = await ledgerRepo.deleteLedgerEntriesBySource(
     prisma,
     orgId,
-    existing.map((i) => i.id),
+    existingIds,
     REVERSIBLE_SOURCE_TYPES,
   );
+  await invoiceRepo.resetImportedInvoiceIssuance(prisma, orgId, existingIds);
 
   const accountCache = new Map<string, string>(); // compte → accountId
   const vendorCache = new Map<string, string>(); // vendorName → contractorId
@@ -240,7 +245,7 @@ export async function commitInvoiceOnboarding(
   for (const inv of existing) {
     if (inv.contractorId) continue;
     // Match the ref back to a parsed row to recover the vendor name.
-    const row = invoices.find((r) => `${REF_PREFIX}${r.noPiece}` === inv.paymentReference);
+    const row = invoices.find((r) => `${REF_PREFIX}${r.pieceKey}` === inv.paymentReference);
     if (!row) continue;
     try {
       const contractorId = await ensureVendorContractor(prisma, orgId, row.vendorName, vendorCache);
@@ -252,7 +257,7 @@ export async function commitInvoiceOnboarding(
   }
 
   for (const r of invoices) {
-    const ref = `${REF_PREFIX}${r.noPiece}`;
+    const ref = `${REF_PREFIX}${r.pieceKey}`;
     if (existingRefs.has(ref)) {
       skipped += 1;
       continue;

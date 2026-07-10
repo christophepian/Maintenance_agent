@@ -61,6 +61,19 @@ describe("mapRegieLedger", () => {
     expect(zurich.date?.toISOString().slice(0, 10)).toBe("2025-01-01");
   });
 
+  it("disambiguates one supplier invoice split across accounts (same no_piece)", () => {
+    const split = [
+      "groupe\tcompte\tlibelle_compte\tdate_valeur\tno_piece\ttexte_ecriture\tmontant_chf",
+      "4500\t45000\tElectricité\t10.07.2025\t1077159\tSI LUTRY / Acpte électricité\t797",
+      "4560\t45600\tEau\t10.07.2025\t1077159\tSI LUTRY / Acpte eau\t336.55",
+    ].join("\n");
+    const { invoices } = mapRegieLedger(split);
+    expect(invoices).toHaveLength(2); // both lines kept, not deduped away
+    const keys = invoices.map((i) => i.pieceKey).sort();
+    expect(keys).toEqual(["1077159", "1077159:45600"]); // first bare, later suffixed by account
+    expect(invoices.map((i) => i.amountChf).sort((a, b) => a - b)).toEqual([336.55, 797]);
+  });
+
   it("summarises count, total and unit attribution", () => {
     expect(summary.total).toBe(6);
     expect(summary.unitAttributed).toBe(1);
