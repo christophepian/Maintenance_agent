@@ -1697,19 +1697,10 @@ export async function getUnitFinancialSummaries(
   // carry real per-unit maintenance costs for imported/snapshot years; de-duped
   // against the ledger agg above (by invoice id) so operational invoices, which
   // already appear as INVOICE_ISSUED entries, are never counted twice.
-  const [postedEntries, incomingInvoices] = await Promise.all([
-    prisma.ledgerEntry.findMany({
-      where: { orgId, unitId: { in: unitIds }, sourceType: "INVOICE_ISSUED", date: { gte: from, lte: to } },
-      select: { sourceId: true },
-    }),
-    prisma.invoice.findMany({
-      where: { orgId, direction: "INCOMING", unitId: { in: unitIds }, issueDate: { gte: from, lte: to } },
-      select: { id: true, unitId: true, totalAmount: true },
-    }),
-  ]);
-  const postedInvoiceIds = new Set(postedEntries.map((e) => e.sourceId).filter(Boolean));
-  for (const inv of incomingInvoices) {
-    if (inv.unitId && !postedInvoiceIds.has(inv.id)) {
+  const { postedInvoiceIds, incoming } = await financialsRepo.findUnitAttributedInvoices(prisma, orgId, unitIds, from, to);
+  const postedInvoiceIdSet = new Set(postedInvoiceIds);
+  for (const inv of incoming) {
+    if (inv.unitId && !postedInvoiceIdSet.has(inv.id)) {
       expensesByUnit[inv.unitId] = (expensesByUnit[inv.unitId] ?? 0) + inv.totalAmount;
     }
   }
