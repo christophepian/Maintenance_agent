@@ -528,7 +528,7 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet }) {
                         </div>
                         <div className="mt-1 flex items-center gap-2">
                           <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-hover">
-                            <div className="h-full rounded-full bg-brand" style={{ width: `${pct}%` }} />
+                            <div className="h-full rounded-full bg-brand" style={{ width: `${pct}%` /* no-token: dynamic spend-bar width */ }} />
                           </div>
                           <span className="shrink-0 text-xs text-foreground-dim tabular-nums">{v.invoiceCount}×</span>
                         </div>
