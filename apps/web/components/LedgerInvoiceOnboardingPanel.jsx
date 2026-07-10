@@ -55,7 +55,10 @@ export default function LedgerInvoiceOnboardingPanel({ buildingId, onClose, onCo
   async function handleCommit() {
     if (!file) return;
     const n = preview?.summary?.newInvoices ?? 0;
-    if (!window.confirm(`Create ${n} contractor invoice(s) for this building and post them to the ledger? This cannot be undone.`)) return;
+    const msg = n > 0
+      ? `Import ${n} contractor invoice(s) for this building?`
+      : `No new invoices — re-sync the ${preview?.summary?.total ?? 0} already-imported one(s)? This reverses any stale ledger postings and links vendors.`;
+    if (!window.confirm(msg)) return;
     setCommitting(true);
     setError("");
     try {
@@ -214,23 +217,37 @@ export default function LedgerInvoiceOnboardingPanel({ buildingId, onClose, onCo
           </div>
 
           {/* Commit */}
-          {!committed && s.newInvoices > 0 && (
+          {!committed && s.total > 0 && (
             <div className="rounded-lg border border-surface-border p-4 space-y-3">
-              <p className="text-sm font-medium text-foreground">Import these invoices?</p>
-              <p className="text-sm text-muted">
-                Each becomes an INCOMING invoice attributed to the building (and unit where known),
-                classified by its régie account code, and posted to the ledger at its historical date
-                so it feeds building NOI. Years covered by an imported income statement keep using
-                that statement (no double-count).
-              </p>
+              {s.newInvoices > 0 ? (
+                <>
+                  <p className="text-sm font-medium text-foreground">Import these invoices?</p>
+                  <p className="text-sm text-muted">
+                    Each becomes an INCOMING invoice attributed to the building (and unit where known),
+                    classified by its régie account code, and linked to a deduplicated vendor. Reference
+                    records only — reporting keeps using the imported statements, so the ledger and
+                    balance sheet are untouched.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm font-medium text-foreground">All {s.total} invoice(s) already imported — re-sync?</p>
+                  <p className="text-sm text-muted">
+                    Re-syncing reverses any stale ledger postings from an earlier import (fixing the
+                    balance sheet) and links each invoice to a deduplicated vendor for spend reporting.
+                    No new invoices are created.
+                  </p>
+                </>
+              )}
               <button className="button-primary text-sm" onClick={handleCommit} disabled={committing}>
-                {committing ? "Importing…" : `Import ${s.newInvoices} invoice(s) — ${fmtChf(s.totalChf)}`}
+                {committing
+                  ? (s.newInvoices > 0 ? "Importing…" : "Re-syncing…")
+                  : s.newInvoices > 0
+                    ? `Import ${s.newInvoices} invoice(s) — ${fmtChf(s.totalChf)}`
+                    : `Re-sync ${s.total} invoice(s)`}
               </button>
               {error && <div className="notice notice-err text-sm">{error}</div>}
             </div>
-          )}
-          {!committed && s.newInvoices === 0 && s.total > 0 && (
-            <div className="notice text-sm">All invoices in this ledger were already imported.</div>
           )}
         </div>
       )}
@@ -239,8 +256,9 @@ export default function LedgerInvoiceOnboardingPanel({ buildingId, onClose, onCo
       {result && (
         <div className="mt-4 space-y-2">
           <div className="notice notice-ok text-sm">
-            Imported <b>{result.created}</b> invoice(s), <b>{result.posted}</b> posted to the ledger.
-            {result.skippedAlreadyImported > 0 && <> <b>{result.skippedAlreadyImported}</b> already existed and were skipped.</>}
+            Imported <b>{result.created}</b> invoice(s), <b>{result.vendorsLinked}</b> linked to a vendor.
+            {result.reversedLedgerEntries > 0 && <> Reversed <b>{result.reversedLedgerEntries}</b> stale ledger entr{result.reversedLedgerEntries === 1 ? "y" : "ies"}.</>}
+            {result.skippedAlreadyImported > 0 && <> <b>{result.skippedAlreadyImported}</b> already existed.</>}
           </div>
           {result.errors.length > 0 && (
             <div className="rounded-lg border border-warning-ring bg-warning-light p-3 text-sm text-warning-text">
