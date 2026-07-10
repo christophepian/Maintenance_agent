@@ -1147,4 +1147,54 @@ describe('G10: API Contract Tests', () => {
       expect(vsData[0].totalCents).toBeGreaterThanOrEqual(vsData[1].totalCents);
     }, 30000);
   });
+
+  // ── Whole-package onboarding (detect + reconcile) ──
+  describe('Package onboarding', () => {
+    const RENT_ROLL = 'objet\tlocataire_principal\ttype_objet\tloyer_net_mensuel_chf\n531100.01.0001\tJACCARD\tAppartement\t2646\n';
+    const LEDGER = 'groupe\tcompte\tlibelle_compte\tdate_valeur\tno_piece\ttexte_ecriture\tmontant_chf\n4110\t41100\tEntretien\t21.05.2025\t1073348\tBURGOS / Infiltration\t2964\n3000\t30000\tLoyer net\t01.01.2025\t\t\t-2646\n';
+    const INCOME = 'section\tcompte\tdesignation\tmontant_chf\ttype\nProduits\t30000\tLoyer net\t-2646\tcompte\nCharges\t41100\tEntretien\t2964\tcompte\n';
+
+    it('detects each file, reconciles, and reports the expected DTO shape', async () => {
+      const buildings = await fetchJson('/buildings?limit=1');
+      if (!buildings.data?.length) { console.log('⚠️  Skipping package analyze: no buildings'); return; }
+      const form = new FormData();
+      form.append('file', new Blob([RENT_ROLL], { type: 'text/csv' }), 'rentroll.csv');
+      form.append('file', new Blob([LEDGER], { type: 'text/csv' }), 'grandlivre.csv');
+      form.append('file', new Blob([INCOME], { type: 'text/csv' }), 'resultat.csv');
+      const res = await fetch(`${API_BASE}/buildings/${buildings.data[0].id}/onboarding/package/analyze`, {
+        method: 'POST', headers: { 'x-dev-role': 'MANAGER' }, body: form,
+      });
+      expect(res.status).toBe(200);
+      const { data } = await res.json();
+      expectKeys(data, ['buildingId', 'buildingName', 'fiscalYear', 'documents', 'reconciliation', 'warnings'], 'PackageAnalysisDTO');
+      const types = data.documents.map((d: any) => d.type).sort();
+      expect(types).toEqual(['GENERAL_LEDGER', 'INCOME_STATEMENT', 'RENT_ROLL']);
+      expect(data.fiscalYear).toBe(2025); // from the ledger dates
+      expect(data.reconciliation.length).toBeGreaterThan(0);
+      expectKeys(data.reconciliation[0], ['label', 'expectedChf', 'actualChf', 'deltaChf', 'ok', 'note'], 'ReconciliationCheckDTO');
+    }, 30000);
+
+    it('commits a package to a fresh building in dependency order', async () => {
+      const created = await fetch(`${API_BASE}/buildings`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-dev-role': 'MANAGER' },
+        body: JSON.stringify({ name: `Package Onboarding ${Date.now()}` }),
+      });
+      const buildingId = (await created.json()).data.id;
+      const form = new FormData();
+      form.append('file', new Blob([RENT_ROLL], { type: 'text/csv' }), 'rentroll.csv');
+      form.append('file', new Blob([LEDGER], { type: 'text/csv' }), 'grandlivre.csv');
+      form.append('file', new Blob([INCOME], { type: 'text/csv' }), 'resultat.csv');
+      form.append('billingMode', 'snapshot');
+      form.append('fiscalYear', '2025');
+      const res = await fetch(`${API_BASE}/buildings/${buildingId}/onboarding/package/commit`, {
+        method: 'POST', headers: { 'x-dev-role': 'MANAGER' }, body: form,
+      });
+      expect(res.status).toBe(201);
+      const { data } = await res.json();
+      expectKeys(data, ['buildingId', 'fiscalYear', 'results', 'warnings'], 'PackageCommitResultDTO');
+      expect(data.results.length).toBe(3);
+      const rr = data.results.find((r: any) => r.type === 'RENT_ROLL');
+      expect(rr.outcome).toMatch(/unit/);
+    }, 45000);
+  });
 });
