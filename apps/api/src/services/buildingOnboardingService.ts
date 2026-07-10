@@ -391,9 +391,16 @@ export async function commitOnboarding(
       errors.push(`Tenant ${r.tenantName} (${r.objet}): ${errMsg(e)}`);
     }
     if (willCreateLease(r)) {
-      // Skip when a live lease already exists on the unit (incl. DRAFT) — merge, no duplicate.
+      // Don't duplicate a live lease on the unit. But if one already exists and
+      // isn't ACTIVE yet (e.g. a prior snapshot import left it DRAFT), still queue
+      // it for activation so a re-run heals occupancy.
       const existingLease = await leaseRepo.findAnyLiveLeaseForUnit(prisma, unitId);
-      if (existingLease) continue;
+      if (existingLease) {
+        if (existingLease.status !== LeaseStatus.ACTIVE) {
+          leasesToActivate.push({ leaseId: existingLease.id, isApartment: r.unitType === "RESIDENTIAL" });
+        }
+        continue;
+      }
       try {
         const startDate = (r.startDate ?? new Date()).toISOString();
         const lease = await createLease(orgId, {
