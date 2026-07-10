@@ -47,6 +47,11 @@ export interface RegieLedgerResult {
     totalChf: number;
     unitAttributed: number;
     byAccount: RegieAccountSummary[];
+    // Gross totals across ALL ledger rows (not just extracted contractor
+    // invoices) — the income-statement equivalents, for cross-document
+    // reconciliation. Expenses = code ≥ 40000; revenue = 30000–39999 (abs).
+    grossExpenseChf: number;
+    grossRevenueChf: number;
   };
 }
 
@@ -126,16 +131,31 @@ export function mapRegieLedger(text: string): RegieLedgerResult {
     skipped.push(
       `Missing required columns. Expected account code, entry text and amount (got: ${headers.join(", ")})`,
     );
-    return { invoices, skipped, summary: { total: 0, totalChf: 0, unitAttributed: 0, byAccount: [] } };
+    return {
+      invoices,
+      skipped,
+      summary: { total: 0, totalChf: 0, unitAttributed: 0, byAccount: [], grossExpenseChf: 0, grossRevenueChf: 0 },
+    };
   }
 
+  let grossExpenseChf = 0;
+  let grossRevenueChf = 0;
   const seenPiece = new Set<string>();
   rows.forEach((row) => {
     const compte = (row[h.compte!] ?? "").trim();
-    const rawText = (row[h.text!] ?? "").trim();
-    if (!compte || !rawText) return; // blank row
-
     const code = parseInt(compte, 10);
+    const amount = parseChf(row[h.amountChf!]);
+
+    // Gross totals across ALL rows (the income-statement equivalents) — computed
+    // before any filter, since revenue (rent) rows carry no entry text.
+    if (compte && Number.isFinite(code) && amount != null) {
+      if (code >= 40000) grossExpenseChf += amount;
+      else if (code >= 30000) grossRevenueChf += -amount;
+    }
+
+    const rawText = (row[h.text!] ?? "").trim();
+    if (!compte || !rawText) return; // blank row (contractor extraction needs text)
+
     // Expenses only: revenue (rent) detail lives below 40000.
     if (!Number.isFinite(code) || code < 40000) return;
 
@@ -144,7 +164,6 @@ export function mapRegieLedger(text: string): RegieLedgerResult {
     // Skip recurring internal charges (management fee, bank/postal fees, rounding).
     if (INTERNAL_CHARGE_CODES.has(compte) || INTERNAL_CHARGE_RE.test(accountName)) return;
 
-    const amount = parseChf(row[h.amountChf!]);
     if (amount == null || amount === 0) return;
 
     const noPiece = (h.noPiece ? row[h.noPiece] ?? "" : "").trim();
@@ -197,6 +216,8 @@ export function mapRegieLedger(text: string): RegieLedgerResult {
       totalChf: Math.round(totalChf * 100) / 100,
       unitAttributed,
       byAccount,
+      grossExpenseChf: Math.round(grossExpenseChf * 100) / 100,
+      grossRevenueChf: Math.round(grossRevenueChf * 100) / 100,
     },
   };
 }

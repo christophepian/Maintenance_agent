@@ -60,6 +60,7 @@ import { authHeaders } from "../../../lib/api";
 import ScrollableTabs from "../../../components/mobile/ScrollableTabs";
 import RentRollOnboardingPanel from "../../../components/RentRollOnboardingPanel";
 import LedgerInvoiceOnboardingPanel from "../../../components/LedgerInvoiceOnboardingPanel";
+import PackageOnboardingPanel from "../../../components/PackageOnboardingPanel";
 import SortableHeader from "../../../components/SortableHeader";
 import { useLocalSort, clientSort } from "../../../lib/tableUtils";
 import { formatDate, formatChfCents, formatPercent, formatChf, formatNumber } from "../../../lib/format";
@@ -1128,6 +1129,7 @@ export default function BuildingDetail() {
   const [activeTab, setActiveTab] = useState(initialTab);
   const [showOnboard, setShowOnboard] = useState(false);
   const [showInvoiceOnboard, setShowInvoiceOnboard] = useState(false);
+  const [showPackageOnboard, setShowPackageOnboard] = useState(false);
   // Tracks tabs whose (tab-specific) data has been loaded, so config/rules/lease
   // templates are fetched once on first tab open rather than on every mount.
   const loadedTabsRef = useRef(new Set());
@@ -1930,11 +1932,14 @@ export default function BuildingDetail() {
           actions={
             !isOwner ? (
               <div className="flex items-center gap-2">
-                <button className="button-secondary text-sm" onClick={() => { setShowOnboard((v) => !v); setShowInvoiceOnboard(false); }}>
-                  {showOnboard ? "Hide onboarding" : "Onboard from rent roll"}
+                <button className="button-secondary text-sm" onClick={() => { setShowPackageOnboard((v) => !v); setShowOnboard(false); setShowInvoiceOnboard(false); }}>
+                  {showPackageOnboard ? "Hide package" : "Onboard package"}
                 </button>
-                <button className="button-secondary text-sm" onClick={() => { setShowInvoiceOnboard((v) => !v); setShowOnboard(false); }}>
-                  {showInvoiceOnboard ? "Hide invoices" : "Onboard invoices"}
+                <button className="button-secondary text-sm" onClick={() => { setShowOnboard((v) => !v); setShowInvoiceOnboard(false); setShowPackageOnboard(false); }}>
+                  {showOnboard ? "Hide onboarding" : "Rent roll"}
+                </button>
+                <button className="button-secondary text-sm" onClick={() => { setShowInvoiceOnboard((v) => !v); setShowOnboard(false); setShowPackageOnboard(false); }}>
+                  {showInvoiceOnboard ? "Hide invoices" : "Invoices"}
                 </button>
               </div>
             ) : null
@@ -1947,6 +1952,12 @@ export default function BuildingDetail() {
                 {notice.message}
               </div>
             </Panel>
+          )}
+
+          {showPackageOnboard && !isOwner && (
+            <div className="mb-4">
+              <PackageOnboardingPanel buildingId={id} onClose={() => setShowPackageOnboard(false)} onCommitted={loadUnits} />
+            </div>
           )}
 
           {showOnboard && !isOwner && (

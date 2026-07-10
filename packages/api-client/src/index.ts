@@ -721,6 +721,45 @@ export interface VendorSpendDTO {
   invoiceCount: number;
 }
 
+export type PackageDocType =
+  | "RENT_ROLL"
+  | "GENERAL_LEDGER"
+  | "BALANCE_SHEET"
+  | "INCOME_STATEMENT"
+  | "UNKNOWN";
+
+export interface PackageDocumentDTO {
+  fileName: string;
+  type: PackageDocType;
+  summary: Record<string, number>;
+  detail: string;
+}
+
+export interface ReconciliationCheckDTO {
+  label: string;
+  expectedChf: number;
+  actualChf: number;
+  deltaChf: number;
+  ok: boolean;
+  note: string;
+}
+
+export interface PackageAnalysisDTO {
+  buildingId: string;
+  buildingName: string;
+  fiscalYear: number;
+  documents: PackageDocumentDTO[];
+  reconciliation: ReconciliationCheckDTO[];
+  warnings: string[];
+}
+
+export interface PackageCommitResultDTO {
+  buildingId: string;
+  fiscalYear: number;
+  results: { fileName: string; type: PackageDocType; outcome: string; detail: string }[];
+  warnings: string[];
+}
+
 export interface ImportBatchDTO {
   id: string;
   entityType: ImportEntityType;

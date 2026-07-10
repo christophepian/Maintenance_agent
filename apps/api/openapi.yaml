@@ -479,6 +479,65 @@ components:
         totalCents: { type: integer }
         invoiceCount: { type: integer }
 
+    PackageDocumentDTO:
+      type: object
+      required: [fileName, type, summary, detail]
+      properties:
+        fileName: { type: string }
+        type: { type: string, enum: [RENT_ROLL, GENERAL_LEDGER, BALANCE_SHEET, INCOME_STATEMENT, UNKNOWN] }
+        summary:
+          type: object
+          additionalProperties: { type: number }
+        detail: { type: string }
+
+    ReconciliationCheckDTO:
+      type: object
+      required: [label, expectedChf, actualChf, deltaChf, ok, note]
+      properties:
+        label: { type: string }
+        expectedChf: { type: number }
+        actualChf: { type: number }
+        deltaChf: { type: number }
+        ok: { type: boolean }
+        note: { type: string }
+
+    PackageAnalysisDTO:
+      type: object
+      required: [buildingId, buildingName, fiscalYear, documents, reconciliation, warnings]
+      properties:
+        buildingId: { type: string, format: uuid }
+        buildingName: { type: string }
+        fiscalYear: { type: integer }
+        documents:
+          type: array
+          items: { $ref: '#/components/schemas/PackageDocumentDTO' }
+        reconciliation:
+          type: array
+          items: { $ref: '#/components/schemas/ReconciliationCheckDTO' }
+        warnings:
+          type: array
+          items: { type: string }
+
+    PackageCommitResultDTO:
+      type: object
+      required: [buildingId, fiscalYear, results, warnings]
+      properties:
+        buildingId: { type: string, format: uuid }
+        fiscalYear: { type: integer }
+        results:
+          type: array
+          items:
+            type: object
+            required: [fileName, type, outcome, detail]
+            properties:
+              fileName: { type: string }
+              type: { type: string, enum: [RENT_ROLL, GENERAL_LEDGER, BALANCE_SHEET, INCOME_STATEMENT, UNKNOWN] }
+              outcome: { type: string }
+              detail: { type: string }
+        warnings:
+          type: array
+          items: { type: string }
+
     AnnualSnapshotDTO:
       type: object
       required:
@@ -7046,6 +7105,85 @@ paths:
                 properties:
                   data: { $ref: '#/components/schemas/InvoiceOnboardingCommitResultDTO' }
         '400': { description: Invalid ledger }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404': { description: Building not found }
+
+  /buildings/{id}/onboarding/package/analyze:
+    post:
+      tags: [Inventory]
+      summary: Detect + reconcile a whole régie year-end package (no writes)
+      description: >
+        Accepts several CSVs (balance sheet, income statement, rent roll, general
+        ledger, in any combination), classifies each, and cross-checks them
+        (rent-roll net × 12 vs income-statement rental income; general-ledger
+        totals vs the income statement; balance-sheet Actif = Passif). Read-only.
+      operationId: analyzePackageOnboarding
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: array
+                  items: { type: string, format: binary }
+      responses:
+        '200':
+          description: Package analysis
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/PackageAnalysisDTO' }
+        '400': { description: No files or invalid request }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404': { description: Building not found }
+
+  /buildings/{id}/onboarding/package/commit:
+    post:
+      tags: [Inventory]
+      summary: Commit a whole régie year-end package
+      description: >
+        Routes each detected file to its onboarder in dependency order: rent roll
+        (units/tenants/leases) → general ledger (contractor invoices) → balance
+        sheet / income statement (sent to the Finance → Imports review gate).
+      operationId: commitPackageOnboarding
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, billingMode, fiscalYear]
+              properties:
+                file:
+                  type: array
+                  items: { type: string, format: binary }
+                billingMode: { type: string, enum: [activate, snapshot] }
+                fiscalYear: { type: integer }
+      responses:
+        '201':
+          description: Package committed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/PackageCommitResultDTO' }
+        '400': { description: No files, bad billingMode or fiscalYear }
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404': { description: Building not found }
