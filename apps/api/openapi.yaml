@@ -453,19 +453,31 @@ components:
 
     InvoiceOnboardingCommitResultDTO:
       type: object
-      required: [buildingId, created, posted, skippedAlreadyImported, errors]
+      required: [buildingId, created, vendorsLinked, reversedLedgerEntries, skippedAlreadyImported, errors]
       properties:
         buildingId: { type: string, format: uuid }
         created: { type: integer }
-        posted:
+        vendorsLinked:
           type: integer
-          description: Invoices whose accrual was posted to the ledger (feeds NOI)
+          description: Invoices linked to a deduplicated vendor Contractor
+        reversedLedgerEntries:
+          type: integer
+          description: Ledger accrual entries a prior (posting) import left behind, now reversed
         skippedAlreadyImported:
           type: integer
           description: Piece numbers already imported on a prior commit (idempotent)
         errors:
           type: array
           items: { type: string }
+
+    VendorSpendDTO:
+      type: object
+      required: [contractorId, vendorName, totalCents, invoiceCount]
+      properties:
+        contractorId: { type: string, nullable: true }
+        vendorName: { type: string }
+        totalCents: { type: integer }
+        invoiceCount: { type: integer }
 
     AnnualSnapshotDTO:
       type: object
@@ -6849,6 +6861,42 @@ paths:
                 type: object
                 properties:
                   data: { $ref: '#/components/schemas/BuildingFinancialsDTO' }
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /buildings/{id}/vendor-spend:
+    get:
+      tags: [Financials]
+      summary: Top vendors by expenditure for a building over a period
+      description: >
+        Aggregates INCOMING invoices attributed to the building (by issueDate),
+        grouped by vendor Contractor, sorted by total spend descending. Amounts in
+        cents. Independent of the ledger, so it includes imported/reference-only
+        invoices from régie-ledger onboarding.
+      operationId: getBuildingVendorSpend
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+        - name: from
+          in: query
+          required: true
+          schema: { type: string, format: date, example: '2025-01-01' }
+        - name: to
+          in: query
+          required: true
+          schema: { type: string, format: date, example: '2025-12-31' }
+      responses:
+        '200':
+          description: Vendors ranked by spend
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/VendorSpendDTO' }
         '400':
           $ref: '#/components/responses/ValidationError'
         '404':

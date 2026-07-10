@@ -1118,8 +1118,9 @@ describe('G10: API Contract Tests', () => {
       });
       expect(res.status).toBe(201);
       const { data } = await res.json();
-      expectKeys(data, ['buildingId', 'created', 'posted', 'skippedAlreadyImported', 'errors'], 'InvoiceOnboardingCommitResult');
+      expectKeys(data, ['buildingId', 'created', 'vendorsLinked', 'reversedLedgerEntries', 'skippedAlreadyImported', 'errors'], 'InvoiceOnboardingCommitResult');
       expect(data.created).toBe(3);
+      expect(data.vendorsLinked).toBe(3); // each invoice linked to a deduped vendor
       expect(data.skippedAlreadyImported).toBe(0);
 
       // Second commit skips everything already imported (piece-number idempotency).
@@ -1132,6 +1133,18 @@ describe('G10: API Contract Tests', () => {
       const { data: data2 } = await res2.json();
       expect(data2.created).toBe(0);
       expect(data2.skippedAlreadyImported).toBe(3);
+
+      // Vendor-spend reporting reflects the imported invoices (reference-only).
+      const vs = await fetch(`${API_BASE}/buildings/${buildingId}/vendor-spend?from=2025-01-01&to=2025-12-31`, {
+        headers: { 'x-dev-role': 'MANAGER' },
+      });
+      expect(vs.status).toBe(200);
+      const { data: vsData } = await vs.json();
+      expect(Array.isArray(vsData)).toBe(true);
+      expect(vsData.length).toBe(3);
+      expectKeys(vsData[0], ['contractorId', 'vendorName', 'totalCents', 'invoiceCount'], 'VendorSpendDTO');
+      // sorted by spend desc — COMMUNE DE LUTRY (1957.90) is the largest
+      expect(vsData[0].totalCents).toBeGreaterThanOrEqual(vsData[1].totalCents);
     }, 30000);
   });
 });

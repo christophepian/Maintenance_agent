@@ -11,6 +11,7 @@ import {
   getPortfolioTimeSeries,
   getBuildingTimeSeries,
   getUnitFinancialSummaries,
+  getBuildingVendorSpend,
   getBuildingPeriodReport,
   getUnitPeriodReport,
   setInvoiceExpenseCategory,
@@ -112,6 +113,30 @@ export function registerFinancialRoutes(router: Router) {
         }
         console.error("[GET /buildings/:id/financial-summary]", e);
         sendError(res, 500, "INTERNAL_ERROR", "Failed to load financial summary");
+      }
+    },
+  );
+
+  // ── GET /buildings/:id/vendor-spend ───────────────────────
+  router.get(
+    "/buildings/:id/vendor-spend",
+    async ({ req, res, params, query, orgId }) => {
+      if (!requireAuth(req, res)) return;
+      if (!requireOrgViewer(req, res)) return;
+
+      const from = first(query, "from");
+      const to = first(query, "to");
+      if (!from || !to) {
+        return sendError(res, 400, "VALIDATION_ERROR", "from and to (YYYY-MM-DD) are required");
+      }
+
+      try {
+        const data = await getBuildingVendorSpend(orgId, params.id, { from, to });
+        sendJson(res, 200, { data });
+      } catch (e) {
+        if (e instanceof NotFoundError) return sendError(res, 404, "NOT_FOUND", e.message);
+        console.error("[GET /buildings/:id/vendor-spend]", e);
+        sendError(res, 500, "INTERNAL_ERROR", "Failed to load vendor spend");
       }
     },
   );

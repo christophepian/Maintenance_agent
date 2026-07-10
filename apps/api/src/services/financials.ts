@@ -885,6 +885,42 @@ export interface AnnualSnapshotDTO {
 }
 
 /** List all stored financial snapshots for a building. */
+export interface VendorSpendDTO {
+  contractorId: string | null;
+  vendorName: string;
+  totalCents: number;
+  invoiceCount: number;
+}
+
+/**
+ * Top vendors by expenditure for a building over a period, aggregated from
+ * INCOMING invoices (by issueDate). Independent of the ledger, so it works for
+ * imported/reference-only invoices (régie-ledger onboarding) as well as
+ * operational ones. Amounts are in cents.
+ */
+export async function getBuildingVendorSpend(
+  orgId: string,
+  buildingId: string,
+  params: { from: string; to: string },
+): Promise<VendorSpendDTO[]> {
+  const building = await inventoryRepo.findBuildingByIdAndOrg(prisma, buildingId, orgId);
+  if (!building) throw new NotFoundError(`Building ${buildingId} not found`);
+
+  const rows = await invoiceRepo.aggregateBuildingSpendByVendor(
+    prisma,
+    orgId,
+    buildingId,
+    new Date(params.from),
+    new Date(params.to + "T23:59:59.999Z"),
+  );
+  return rows.map((r) => ({
+    contractorId: r.contractorId,
+    vendorName: r.issuerName ?? "Unknown",
+    totalCents: r.totalCents,
+    invoiceCount: r.count,
+  }));
+}
+
 export async function listBuildingSnapshots(
   orgId: string,
   buildingId: string,

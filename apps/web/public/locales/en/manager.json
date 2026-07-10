@@ -717,6 +717,8 @@
       "unitLabelFloor": "Unit {{number}} (fl. {{floor}})",
       "chargesTooltip": "Apportioned recoverable charges (Nebenkosten)",
       "tenantMovements": "Tenant movements",
+      "topVendors": "Top vendors by spend",
+      "topVendorsSub": "Supplier expenditure for this period, ranked by total.",
       "moveIns": "Move-ins",
       "moveOuts": "Move-outs",
       "noMoveIns": "No move-ins this period",

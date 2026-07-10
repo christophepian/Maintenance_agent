@@ -717,6 +717,8 @@
       "unitLabelFloor": "Lot {{number}} (ét. {{floor}})",
       "chargesTooltip": "Quote-part des charges récupérables (Nebenkosten)",
       "tenantMovements": "Mouvements de locataires",
+      "topVendors": "Principaux fournisseurs par dépense",
+      "topVendorsSub": "Dépenses fournisseurs sur la période, classées par total.",
       "moveIns": "Entrées",
       "moveOuts": "Départs",
       "noMoveIns": "Aucune entrée cette période",
