@@ -420,6 +420,30 @@ export async function findBuildingImportedInvoices(
 }
 
 /**
+ * Reset the issuance stamping on onboarded invoices back to reference-only:
+ * clears the (org) issuer billing entity, the system invoice number and the
+ * lock, and returns them to DRAFT. Used to heal invoices that an earlier
+ * (posting) régie-ledger import issued as if outgoing — so they display the
+ * vendor (issuerName) as issuer instead of our org. Returns the count updated.
+ */
+export async function resetImportedInvoiceIssuance(
+  prisma: PrismaClient,
+  orgId: string,
+  invoiceIds: string[],
+): Promise<number> {
+  if (invoiceIds.length === 0) return 0;
+  const result = await prisma.invoice.updateMany({
+    where: {
+      orgId,
+      id: { in: invoiceIds },
+      OR: [{ issuerBillingEntityId: { not: null } }, { invoiceNumber: { not: null } }, { lockedAt: { not: null } }],
+    },
+    data: { issuerBillingEntityId: null, invoiceNumber: null, lockedAt: null, status: "DRAFT" },
+  });
+  return result.count;
+}
+
+/**
  * Sum INCOMING-invoice totals for a building grouped by contractor over a date
  * window (by issueDate) — powers the "top vendors by spend" reporting card.
  * Uncontractored invoices are grouped under a null contractorId.

@@ -20,6 +20,11 @@ export interface RegieInvoiceRow {
   accountName: string; // libelle_compte, e.g. "Entretien des appartements"
   date: Date | null; // date_valeur
   noPiece: string; // supplier/piece number, e.g. "1062728"
+  // Idempotency key. Usually the piece number, but when one supplier invoice is
+  // split across several accounts (same no_piece on multiple rows, e.g. an SI
+  // Lutry bill charged to both electricity and water) the later rows are suffixed
+  // with their account code so each line imports instead of being dropped.
+  pieceKey: string;
   vendorName: string; // "ACE Electroménager"
   description: string; // "Remplacement 2 ampoules hotte"
   unitObjet: string | null; // "531100.01.0001" when the row is unit-scoped
@@ -124,6 +129,7 @@ export function mapRegieLedger(text: string): RegieLedgerResult {
     return { invoices, skipped, summary: { total: 0, totalChf: 0, unitAttributed: 0, byAccount: [] } };
   }
 
+  const seenPiece = new Set<string>();
   rows.forEach((row) => {
     const compte = (row[h.compte!] ?? "").trim();
     const rawText = (row[h.text!] ?? "").trim();
@@ -148,11 +154,17 @@ export function mapRegieLedger(text: string): RegieLedgerResult {
     const vd = splitVendorDescription(rest);
     if (!vd) return; // no "SUPPLIER / description" → not a supplier invoice
 
+    // One supplier invoice split across accounts shares a no_piece across rows;
+    // suffix later rows with their account so every line imports.
+    const pieceKey = seenPiece.has(noPiece) ? `${noPiece}:${compte}` : noPiece;
+    seenPiece.add(noPiece);
+
     invoices.push({
       compte,
       accountName: accountName || `Account ${compte}`,
       date: h.date ? parseSwissDate(row[h.date]) : null,
       noPiece,
+      pieceKey,
       vendorName: vd.vendor,
       description: vd.description || accountName || vd.vendor,
       unitObjet: objet,
