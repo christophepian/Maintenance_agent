@@ -224,6 +224,22 @@ function requestCoversStatementPeriod(stmt: ApprovedIncomeStatement, from: Date,
   return from <= ps && to >= pe;
 }
 
+/**
+ * When the statement period fully contains the requested (sub-)period, return the
+ * fraction of the statement the request spans (request days ÷ statement days) so
+ * an annual imported statement can be prorated to a month/day for rolling charts.
+ * Returns null when the request isn't wholly inside the statement period.
+ */
+function statementCoversRequestFactor(stmt: ApprovedIncomeStatement, from: Date, to: Date): number | null {
+  const ps = stmt.periodStart ?? new Date(`${stmt.fiscalYear}-01-01T00:00:00.000Z`);
+  const pe = stmt.periodEnd ?? new Date(`${stmt.fiscalYear}-12-31T00:00:00.000Z`);
+  if (from < ps || to > pe) return null;
+  const dayMs = 24 * 60 * 60 * 1000;
+  const stmtDays = Math.max(1, Math.round((pe.getTime() - ps.getTime()) / dayMs) + 1);
+  const reqDays = Math.max(1, Math.round((to.getTime() - from.getTime()) / dayMs) + 1);
+  return Math.min(1, reqDays / stmtDays);
+}
+
 export interface ImportedPnlBalanceRow {
   documentSection: string | null;
   balanceCents: number;
@@ -282,11 +298,17 @@ async function buildImportedFinancialsDTO(
     to: Date;
     openingReceivablesCents: number;
     openingPayablesCents: number;
+    /** Scale factor for sub-period requests (request days ÷ statement days). Default 1. */
+    prorationFactor?: number;
   },
 ): Promise<BuildingFinancialsDTO> {
   const { building, params, from, to, openingReceivablesCents, openingPayablesCents } = ctx;
 
-  const { revenueCents, expenseCents, expensesByAccount } = aggregateImportedPnl(stmt.accountBalances);
+  const f = ctx.prorationFactor ?? 1;
+  const raw = aggregateImportedPnl(stmt.accountBalances);
+  const revenueCents = Math.round(raw.revenueCents * f);
+  const expenseCents = Math.round(raw.expenseCents * f);
+  const expensesByAccount = raw.expensesByAccount.map((a) => ({ ...a, totalCents: Math.round(a.totalCents * f) }));
   const netCents = revenueCents - expenseCents;
 
   const [totalUnitsCount, activeUnitsCount] = await Promise.all([
@@ -378,6 +400,16 @@ export async function getBuildingFinancials(
   if (importedIncome && requestCoversStatementPeriod(importedIncome, from, to)) {
     return buildImportedFinancialsDTO(orgId, importedIncome, {
       building, params, from, to, openingReceivablesCents, openingPayablesCents,
+    });
+  }
+  // Sub-period of a covered year (e.g. a single month/day for the monthly
+  // trendline or performance canvas): the imported statement is annual with no
+  // finer detail, so prorate its actuals by the fraction of the statement period
+  // the request spans. This keeps every rolling chart populated for imported years.
+  const subPeriodFactor = importedIncome ? statementCoversRequestFactor(importedIncome, from, to) : null;
+  if (importedIncome && subPeriodFactor !== null) {
+    return buildImportedFinancialsDTO(orgId, importedIncome, {
+      building, params, from, to, openingReceivablesCents, openingPayablesCents, prorationFactor: subPeriodFactor,
     });
   }
 
