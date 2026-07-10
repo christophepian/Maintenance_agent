@@ -431,6 +431,17 @@ export async function commitOnboarding(
         errors.push(`Activate lease ${l.leaseId}: ${errMsg(e)}`);
       }
     }
+  } else {
+    // Snapshot: mark leases ACTIVE so the unit shows its tenant as occupied, but
+    // create NO billing schedule — processRecurringBilling only bills existing
+    // schedules, so these active-but-unscheduled leases never generate invoices.
+    for (const l of leasesToActivate) {
+      try {
+        await leaseRepo.updateLeaseRaw(prisma, l.leaseId, { status: LeaseStatus.ACTIVE, activatedAt: new Date() });
+      } catch (e) {
+        errors.push(`Occupy lease ${l.leaseId}: ${errMsg(e)}`);
+      }
+    }
   }
 
   await writeAuditLog(prisma, {

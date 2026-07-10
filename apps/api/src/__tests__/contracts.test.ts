@@ -1195,6 +1195,13 @@ describe('G10: API Contract Tests', () => {
       expect(data.results.length).toBe(3);
       const rr = data.results.find((r: any) => r.type === 'RENT_ROLL');
       expect(rr.outcome).toMatch(/unit/);
+      // Income statement is approved → reporting substitutes it (positive income).
+      const is = data.results.find((r: any) => r.type === 'INCOME_STATEMENT');
+      expect(is.outcome).toBe('imported + approved');
+      const fin = await fetch(`${API_BASE}/buildings/${buildingId}/financials?from=2025-01-01&to=2025-12-31`, { headers: { 'x-dev-role': 'MANAGER' } });
+      const { data: finData } = await fin.json();
+      expect(finData.source).toBe('imported');
+      expect(finData.collectedIncomeCents).toBe(264600); // 2646 CHF, sign-normalised
     }, 45000);
   });
 });
