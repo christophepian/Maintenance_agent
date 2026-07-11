@@ -41,12 +41,13 @@ function ChartLegend({ items }) {
 // surfaces that period's health rates (collection, occupancy, NOI margin, OpEx),
 // so they read in the context of the month rather than as a separate chart.
 
-// Two shades of the brand accent (design tokens, so light + dark both work):
-// Expenses is the lighter shade, NOI the deep accent; a loss (negative NOI) uses
+// Two shades of the brand accent (design tokens, so light + dark both work).
+// Expenses is the deep accent at the base (the costs you read first); NOI is the
+// lighter shade on top — the margin that's left over. A loss (negative NOI) uses
 // the warning token so it still stands out without reintroducing red/green.
 const CHF_STACK = [
-  { key: "expensesCents", label: "Expenses", varName: "--color-brand-ring" },
-  { key: "noiCents",      label: "NOI",      varName: "--color-brand"      },
+  { key: "expensesCents", label: "Expenses", varName: "--color-brand"      },
+  { key: "noiCents",      label: "NOI",      varName: "--color-brand-ring" },
 ];
 const CHF_LOSS_VAR = "--color-warning";
 
@@ -62,8 +63,8 @@ function ChfPanel({ points, t }) {
     // reading them here means light + dark both render correctly.
     const root = document.documentElement;
     const cssVar = (name, fb) => getComputedStyle(root).getPropertyValue(name).trim() || fb;
-    const cExpense = cssVar("--color-brand-ring", "#a5b4fc");
-    const cNoi     = cssVar("--color-brand", "#4f46e5");
+    const cExpense = cssVar("--color-brand", "#4f46e5");
+    const cNoi     = cssVar("--color-brand-ring", "#a5b4fc");
     const cLoss    = cssVar(CHF_LOSS_VAR, "#d97706");
     const cTick    = cssVar("--color-foreground-dim", "#94a3b8");
     const cGrid    = cssVar("--color-surface-border", "rgba(148,163,184,0.25)");
@@ -144,8 +145,8 @@ function ChfPanel({ points, t }) {
         {t ? t("reporting.canvas.chfPanel") : "CHF Performance"}
       </div>
       <div className="text-xs text-foreground-dim mb-2">
-        {t ? t("reporting.canvas.chfSub", { defaultValue: "Bar height = income · red = expenses · green = NOI kept · hover a month for its rates" })
-           : "Bar height = income · red = expenses · green = NOI kept · hover a month for its rates"}
+        {t ? t("reporting.canvas.chfSub", { defaultValue: "Bar height = income · expenses at the base, the rest is your NOI margin · hover a month for its rates" })
+           : "Bar height = income · expenses at the base, the rest is your NOI margin · hover a month for its rates"}
       </div>
       <div className="relative h-52">
         <canvas ref={ref} />
