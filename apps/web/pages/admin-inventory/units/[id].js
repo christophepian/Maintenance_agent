@@ -24,7 +24,7 @@ import { useTranslation } from "next-i18next";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import {
   MONTH_HERO_GRADIENTS, fmtChf, fmtPct,
-  TrendArrow, KpiRow, KpiTable, MonthlyTrendChart,
+  TrendArrow, KpiRow, KpiTable,
 } from "../../../components/reporting/ReportingShared";
 
 // ── Unit Period Analysis component ─────────────────────────────────────────
@@ -64,7 +64,7 @@ function UnitPeriodAnalysis({ unitId }) {
     if (!unitId) return;
     setLoading(true); setErr("");
     try {
-      const qs = new URLSearchParams({ from, to, includeMonthly: ytd ? "true" : "false" });
+      const qs = new URLSearchParams({ from, to });
       const res = await fetch(`/api/units/${unitId}/period-report?${qs}`, { headers: authHeaders() });
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error?.message || t("unitsId.reporting.failed"));
@@ -173,14 +173,6 @@ function UnitPeriodAnalysis({ unitId }) {
           />
         )}
       </div>
-
-      {/* Monthly NOI trendline (YTD only) */}
-      {ytd && report?.monthlyData?.length > 0 && (
-        <div className="rounded-2xl border border-surface-border bg-surface p-4 shadow-sm">
-          <p className="text-xs font-medium text-foreground-dim uppercase tracking-wide mb-3">{t("unitsId.reporting.monthlyNoi", { year })}</p>
-          <MonthlyTrendChart data={report.monthlyData} />
-        </div>
-      )}
 
       {/* Arrears alert */}
       {(report?.arrearsCents ?? 0) > 0 && (

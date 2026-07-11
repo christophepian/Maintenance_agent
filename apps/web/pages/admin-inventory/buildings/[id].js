@@ -8,7 +8,6 @@ import {
   KpiTable,
   DriverItem,
   WatchItem,
-  MonthlyTrendChart,
   OccupancyRow,
 } from "../../../components/reporting/ReportingShared";
 // Statically imported (SSR-safe: all canvas work is in useEffect). Previously a
@@ -221,7 +220,7 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet }) {
     if (!buildingId) return;
     setLoading(true);
     setError("");
-    const q = new URLSearchParams({ from, to, includeMonthly: String(isYtd) }).toString();
+    const q = new URLSearchParams({ from, to }).toString();
     Promise.all([
       fetch(`/api/buildings/${buildingId}/period-report?${q}`, { headers: authHeaders() }).then((r) => r.json()),
       fetch(`/api/buildings/${buildingId}/unit-financials?from=${from}&to=${to}`, { headers: authHeaders() }).then((r) => r.json()),
@@ -244,7 +243,6 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet }) {
   const arrears   = report?.arrears ?? null;
   const moveIns   = report?.moveIns  ?? [];
   const moveOuts  = report?.moveOuts ?? [];
-  const monthly   = report?.monthlyData ?? null;
 
   const noi      = bf?.netOperatingIncomeCents ?? 0;
   const earned   = bf?.collectedIncomeCents       ?? 0;
@@ -358,25 +356,6 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet }) {
               />
             )}
           </div>
-
-          {/* ── Monthly NOI trendline (YTD only) ── */}
-          {isYtd && monthly && monthly.length > 0 && (
-            <div className="rounded-3xl border border-surface-border bg-surface p-5">
-              <div className="mb-4 flex items-center justify-between">
-                <div>
-                  <h2 className="text-base font-semibold text-foreground">{t("buildingsId.reporting.monthlyNoiTitle")}</h2>
-                  <p className="text-xs text-foreground-dim mt-0.5">{t("buildingsId.reporting.monthlyNoiSub", { year })}</p>
-                </div>
-                <div className="text-right">
-                  <div className="text-xs text-foreground-dim">{t("buildingsId.reporting.bestMonth")}</div>
-                  <div className="text-sm font-semibold text-green-700">
-                    {rFmtChf([...monthly].sort((a, b) => b.noiCents - a.noiCents)[0]?.noiCents ?? 0)}
-                  </div>
-                </div>
-              </div>
-              <MonthlyTrendChart data={monthly} />
-            </div>
-          )}
 
           {/* ── Receivables alert ── */}
           {bf.receivablesCents > 0 && (
