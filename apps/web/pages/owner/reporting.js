@@ -462,43 +462,6 @@ function BuildingRow({ name, earned, expenses, net, collectionRate, occupancy, h
   );
 }
 
-function MonthlyTrendChart({ data, locale }) {
-  if (!data || data.length === 0) return null;
-
-  const CHART_H = 80;
-  const LABEL_H = 18;
-  const BAR_W   = 28;
-  const GAP      = 6;
-  const TOTAL_H  = CHART_H + LABEL_H;
-  const WIDTH    = data.length * (BAR_W + GAP) - GAP;
-  const ZERO_Y   = CHART_H / 2;
-
-  const maxAbs = Math.max(...data.map((d) => Math.abs(d.noiCents)), 1);
-  const monthLabel = (m) =>
-    new Intl.DateTimeFormat(locale ?? "fr-CH", { month: "short" }).format(new Date(2024, m - 1, 1));
-
-  return (
-    <svg viewBox={`0 0 ${WIDTH} ${TOTAL_H}`} className="w-full" style={{ maxHeight: 98 }}>
-      <line x1="0" y1={ZERO_Y} x2={WIDTH} y2={ZERO_Y} stroke="#e5e7eb" strokeWidth="1" />
-      {data.map((d, i) => {
-        const x    = i * (BAR_W + GAP);
-        const barH = Math.max(2, (Math.abs(d.noiCents) / maxAbs) * (ZERO_Y - 6));
-        const isPos = d.noiCents >= 0;
-        const barY  = isPos ? ZERO_Y - barH : ZERO_Y;
-        return (
-          <g key={d.month}>
-            <rect x={x} y={barY} width={BAR_W} height={barH} rx="3"
-              fill={isPos ? "#16a34a" : "#dc2626"} fillOpacity="0.72" />
-            <text x={x + BAR_W / 2} y={TOTAL_H - 2}
-              textAnchor="middle" fontSize="8" fill="#9ca3af">
-              {monthLabel(d.month)}
-            </text>
-          </g>
-        );
-      })}
-    </svg>
-  );
-}
 
 function OccupancyEvent({ type, tenantName, unitLabel, buildingName, date }) {
   const { t } = useTranslation("owner");
@@ -747,7 +710,6 @@ export default function OwnerReportingPage() {
 
   const [moveIns, setMoveIns]       = useState([]);
   const [moveOuts, setMoveOuts]     = useState([]);
-  const [monthlyData, setMonthlyData] = useState(null);
 
   const [insExpanded,   setInsExpanded]   = useState(false);
   const [outsExpanded,  setOutsExpanded]  = useState(false);
@@ -831,25 +793,17 @@ export default function OwnerReportingPage() {
       return json?.data ?? [];
     };
 
-    const fetchMonthly = ytdMode
-      ? fetch(`/api/financials/portfolio-monthly?year=${selYear}`, { headers: authHeaders() })
-          .then((r) => r.ok ? r.json() : null)
-          .then((d) => d?.data ?? null)
-      : Promise.resolve(null);
-
     Promise.all([
       fetchPeriod(from, to),
       fetchPeriod(prevFrom, prevTo),
       fetchLeases({ startDateFrom: from, startDateTo: to, limit: 50 }),
       fetchLeases({ endDateFrom: from, endDateTo: to, limit: 50 }),
-      fetchMonthly,
-    ]).then(([curr, prev, ins, outs, monthly]) => {
+    ]).then(([curr, prev, ins, outs]) => {
       if (!cancelled) {
         setCurrData(curr);
         setPrevData(prev);
         setMoveIns(ins);
         setMoveOuts(outs);
-        setMonthlyData(monthly);
         setLoading(false);
       }
     });
@@ -1097,29 +1051,6 @@ export default function OwnerReportingPage() {
           )}
         </div>
 
-        {/* ── MONTHLY NOI TRENDLINES (YTD only) ───────────────── */}
-        {ytdMode && !loading && monthlyData && monthlyData.length > 0 && (
-          <section className="mb-6">
-            <div className="rounded-3xl border border-surface-border bg-surface p-5">
-              <div className="mb-4 flex items-center justify-between">
-                <div>
-                  <h2 className="text-base font-semibold text-foreground">{t("reporting.heading.monthlyNoi")}</h2>
-                  <p className="text-xs text-foreground-dim mt-0.5">{t("reporting.text.noiPerMonth", { year: selYear })}</p>
-                </div>
-                <div className="text-right">
-                  <div className="text-xs text-foreground-dim">{t("reporting.text.bestMonth")}</div>
-                  <div className="text-sm font-semibold text-green-700">
-                    {(() => {
-                      const best = [...monthlyData].sort((a, b) => b.noiCents - a.noiCents)[0];
-                      return best ? fmtChf(best.noiCents) : "—";
-                    })()}
-                  </div>
-                </div>
-              </div>
-              <MonthlyTrendChart data={monthlyData} locale={locale} />
-            </div>
-          </section>
-        )}
 
         {/* ── ALERTS (receivables + arrears aging) ─────────────── */}
         {!loading && receivables > 0 && (
