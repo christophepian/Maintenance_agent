@@ -41,13 +41,14 @@ function ChartLegend({ items }) {
 // surfaces that period's health rates (collection, occupancy, NOI margin, OpEx),
 // so they read in the context of the month rather than as a separate chart.
 
-// Two shades of the brand accent (design tokens, so light + dark both work).
-// Expenses is the deep accent at the base (the costs you read first); NOI is the
-// lighter shade on top — the margin that's left over. A loss (negative NOI) uses
-// the warning token so it still stands out without reintroducing red/green.
+// Two SOLID shades of the brand accent (both --color-brand and --color-brand-dark
+// are opaque fills in light and dark — unlike --color-brand-light/-ring, which are
+// translucent in dark and would render nearly invisible on the dark surface).
+// Expenses is the base, NOI the contrasting shade on top; a loss (negative NOI)
+// uses the warning token so it still stands out without reintroducing red/green.
 const CHF_STACK = [
   { key: "expensesCents", label: "Expenses", varName: "--color-brand"      },
-  { key: "noiCents",      label: "NOI",      varName: "--color-brand-ring" },
+  { key: "noiCents",      label: "NOI",      varName: "--color-brand-dark" },
 ];
 const CHF_LOSS_VAR = "--color-warning";
 
@@ -64,7 +65,7 @@ function ChfPanel({ points, t }) {
     const root = document.documentElement;
     const cssVar = (name, fb) => getComputedStyle(root).getPropertyValue(name).trim() || fb;
     const cExpense = cssVar("--color-brand", "#4f46e5");
-    const cNoi     = cssVar("--color-brand-ring", "#a5b4fc");
+    const cNoi     = cssVar("--color-brand-dark", "#818cf8");
     const cLoss    = cssVar(CHF_LOSS_VAR, "#d97706");
     const cTick    = cssVar("--color-foreground-dim", "#94a3b8");
     const cGrid    = cssVar("--color-surface-border", "rgba(148,163,184,0.25)");
