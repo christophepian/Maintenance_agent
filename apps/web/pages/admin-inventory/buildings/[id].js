@@ -1,6 +1,5 @@
 import { useRouter } from "next/router";
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
-import { ChevronDown, ChevronUp } from "lucide-react";
 import {
   MONTH_HERO_GRADIENTS,
   fmtChf as rFmtChf,
@@ -60,6 +59,7 @@ import ScrollableTabs from "../../../components/mobile/ScrollableTabs";
 import RentRollOnboardingPanel from "../../../components/RentRollOnboardingPanel";
 import LedgerInvoiceOnboardingPanel from "../../../components/LedgerInvoiceOnboardingPanel";
 import PackageOnboardingPanel from "../../../components/PackageOnboardingPanel";
+import Carousel from "../../../components/Carousel";
 import SortableHeader from "../../../components/SortableHeader";
 import { useLocalSort, clientSort } from "../../../lib/tableUtils";
 import { formatDate, formatChfCents, formatPercent, formatChf, formatNumber } from "../../../lib/format";
@@ -195,7 +195,6 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet }) {
   const [month, setMonth] = useState(now.getMonth());
   const [mode, setMode]   = useState("month");
   const [ytdActive, setYtd] = useState(false);
-  const [kpiOpen, setKpiOpen] = useState(false);
   const [unitsExpanded, setUnitsExpanded] = useState(false);
   const [insExpanded, setInsExpanded]     = useState(false);
   const [outsExpanded, setOutsExpanded]   = useState(false);
@@ -302,17 +301,16 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet }) {
       {error && <p className="text-sm text-red-600">{error}</p>}
       {loading && <div className="space-y-3">{[1,2,3].map((i) => <div key={i} className="h-24 rounded-3xl animate-pulse bg-surface-hover" />)}</div>}
 
-      {!loading && bf && (
-        <>
-          {/* ── Hero ── */}
+      {!loading && bf && (() => {
+        // ── Slide 1: Hero + KPIs (always shown; no expand toggle) ──
+        const heroSlide = (
           <div>
             <header className={cn(
-              "border border-surface-border bg-gradient-to-br p-6 shadow-sm",
+              "border border-surface-border bg-gradient-to-br p-6 shadow-sm rounded-t-3xl",
               // Dark-aware override: the light month gradient is unreadable behind
               // text-foreground (white) in dark mode — swap to brand/info tokens.
               "dark:from-brand-light dark:via-info-light dark:to-transparent",
               heroGradient,
-              kpiOpen ? "rounded-t-3xl" : "rounded-3xl",
             )}>
               <div className="inline-flex items-center rounded-full border border-black/20 dark:border-white/20 bg-black/5 dark:bg-white/10 px-3 py-1 text-xs font-medium text-foreground/70 mb-3">
                 {periodLabel} · {t("buildingsId.reporting.monthlyReport")}
@@ -332,87 +330,29 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet }) {
                 {bf.recoverableAncillaryCents > 0 ? <>{t("buildingsId.reporting.recoverableCharges")} <span className="font-semibold text-foreground">{rFmtChf(bf.recoverableAncillaryCents)}</span>. </> : ""}
                 {bf.totalUnitsCount > 0 ? <>{t("buildingsId.reporting.unitsLeased", { active: bf.activeUnitsCount, total: bf.totalUnitsCount })}</> : ""}
               </p>
-              <button onClick={() => setKpiOpen((v) => !v)} className="mt-4 flex items-center gap-1.5 text-sm font-medium text-foreground/60 hover:text-foreground transition-colors">
-                {kpiOpen ? <><ChevronUp className="w-4 h-4" /> {t("buildingsId.reporting.hideDetails")}</> : <><ChevronDown className="w-4 h-4" /> {t("buildingsId.reporting.viewDetails")}</>}
-              </button>
             </header>
-            {kpiOpen && (
-              <KpiTable
-                attached
-                isLoading={false}
-                left={[
-                  { label: t("buildingsId.reporting.kpi.noi"),            value: rFmtChf(noi),   delta: prev ? buildingDelta(noi, prev.netOperatingIncomeCents) : null },
-                  { label: t("buildingsId.reporting.kpi.cashReceived"),   value: rFmtChf(earned), delta: prev ? buildingDelta(earned, prev.collectedIncomeCents) : null },
-                  { label: t("buildingsId.reporting.kpi.totalExpenses"),  value: rFmtChf(expenses), delta: prev ? buildingDelta(-expenses, -prev.expensesTotalCents) : null },
-                  { label: t("buildingsId.reporting.kpi.onTimeCollection"), value: rFmtPct(coll),  delta: prev ? buildingDelta(coll, prev.collectionRate) : null },
-                ]}
-                right={[
-                  { label: t("buildingsId.reporting.kpi.noiMargin"),   value: noiMargin  !== null ? rFmtPct(noiMargin)  : "—", delta: null },
-                  { label: t("buildingsId.reporting.kpi.opexRatio"),   value: opexRatio  !== null ? rFmtPct(opexRatio)  : "—", delta: null },
-                  { label: t("buildingsId.reporting.kpi.occupancy"),   value: occ        !== null ? rFmtPct(occ)        : "—", delta: null },
-                  { label: t("buildingsId.reporting.kpi.rentRoll"),    value: rentRollCents != null ? rFmtChf(rentRollCents) : "—", delta: null },
-                  { label: t("buildingsId.reporting.kpi.receivables"), value: bf.receivablesCents > 0 ? rFmtChf(bf.receivablesCents) : "—", delta: null },
-                ]}
-              />
-            )}
+            <KpiTable
+              attached
+              isLoading={false}
+              left={[
+                { label: t("buildingsId.reporting.kpi.noi"),            value: rFmtChf(noi),   delta: prev ? buildingDelta(noi, prev.netOperatingIncomeCents) : null },
+                { label: t("buildingsId.reporting.kpi.cashReceived"),   value: rFmtChf(earned), delta: prev ? buildingDelta(earned, prev.collectedIncomeCents) : null },
+                { label: t("buildingsId.reporting.kpi.totalExpenses"),  value: rFmtChf(expenses), delta: prev ? buildingDelta(-expenses, -prev.expensesTotalCents) : null },
+                { label: t("buildingsId.reporting.kpi.onTimeCollection"), value: rFmtPct(coll),  delta: prev ? buildingDelta(coll, prev.collectionRate) : null },
+              ]}
+              right={[
+                { label: t("buildingsId.reporting.kpi.noiMargin"),   value: noiMargin  !== null ? rFmtPct(noiMargin)  : "—", delta: null },
+                { label: t("buildingsId.reporting.kpi.opexRatio"),   value: opexRatio  !== null ? rFmtPct(opexRatio)  : "—", delta: null },
+                { label: t("buildingsId.reporting.kpi.occupancy"),   value: occ        !== null ? rFmtPct(occ)        : "—", delta: null },
+                { label: t("buildingsId.reporting.kpi.rentRoll"),    value: rentRollCents != null ? rFmtChf(rentRollCents) : "—", delta: null },
+                { label: t("buildingsId.reporting.kpi.receivables"), value: bf.receivablesCents > 0 ? rFmtChf(bf.receivablesCents) : "—", delta: null },
+              ]}
+            />
           </div>
+        );
 
-          {/* ── Receivables alert ── */}
-          {bf.receivablesCents > 0 && (
-            <div className="flex items-start gap-3 rounded-2xl border border-warning-ring bg-warning-light px-5 py-4">
-              <span className="mt-0.5 text-warning-text text-lg shrink-0">⚠</span>
-              <div className="flex-1">
-                <p className="text-sm font-semibold text-warning-text mb-0.5">{t("buildingsId.reporting.uncollectedRent", { amount: rFmtChf(bf.receivablesCents) })}</p>
-                <p className="text-xs text-warning-text/80">{t("buildingsId.reporting.markPaidHint")}</p>
-              </div>
-              <a href="/manager/finance/invoices" className="shrink-0 rounded-lg bg-warning hover:opacity-90 px-3 py-1.5 text-xs font-semibold text-white transition-opacity no-underline">{t("buildingsId.reporting.viewInvoices")}</a>
-            </div>
-          )}
-
-          {/* ── Opening balances carried in from the imported balance sheet (un-aged) ── */}
-          {(bf.openingReceivablesCents > 0 || bf.openingPayablesCents > 0) && (
-            <div className="flex items-start gap-3 rounded-2xl border border-info-ring bg-info-light px-5 py-4">
-              <span className="mt-0.5 text-info-text text-lg shrink-0">↪</span>
-              <div className="flex-1">
-                <p className="text-sm font-semibold text-info-text mb-0.5">
-                  {bf.openingReceivablesCents > 0 && t("buildingsId.reporting.openingReceivable", { amount: rFmtChf(bf.openingReceivablesCents) })}
-                  {bf.openingReceivablesCents > 0 && bf.openingPayablesCents > 0 && " · "}
-                  {bf.openingPayablesCents > 0 && t("buildingsId.reporting.openingPayable", { amount: rFmtChf(bf.openingPayablesCents) })}
-                </p>
-                <p className="text-xs text-info-text/80">{t("buildingsId.reporting.openingHint")}</p>
-              </div>
-            </div>
-          )}
-
-          {/* ── Arrears aging ── */}
-          {arrears && (arrears.totalOverdueCents > 0 || arrears.currentCents > 0) && (
-            <div className="rounded-2xl border border-surface-border bg-surface p-5">
-              <div className="mb-4 flex items-center justify-between">
-                <div>
-                  <h2 className="text-base font-semibold text-foreground">{t("buildingsId.reporting.arrearsTitle")}</h2>
-                  <p className="text-xs text-foreground-dim mt-0.5">{t("buildingsId.reporting.arrearsSub")}</p>
-                </div>
-                {arrears.totalOverdueCents > 0 && (
-                  <span className="rounded-full bg-destructive-light px-3 py-1 text-xs font-semibold text-destructive-text">{t("buildingsId.reporting.overdueBadge", { amount: rFmtChf(arrears.totalOverdueCents) })}</span>
-                )}
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {[
-                  { label: t("buildingsId.reporting.arrears.current"),    cents: arrears.currentCents,        color: "text-success-text",     bg: "bg-success-light border-success-ring" },
-                  { label: t("buildingsId.reporting.arrears.days1to30"),  cents: arrears.overdue1to30Cents,   color: "text-warning-text",     bg: "bg-warning-light border-warning-ring" },
-                  { label: t("buildingsId.reporting.arrears.days31to60"), cents: arrears.overdue31to60Cents,  color: "text-orange-text",      bg: "bg-orange-light border-orange-ring" },
-                  { label: t("buildingsId.reporting.arrears.days61plus"), cents: arrears.overdue61plusCents,  color: "text-destructive-text", bg: "bg-destructive-light border-destructive-ring" },
-                ].map(({ label, cents, color, bg }) => (
-                  <div key={label} className={cn("rounded-xl border p-4", cents > 0 ? bg : "border-surface-border bg-surface-subtle")}>
-                    <div className="text-xs text-foreground-dim">{label}</div>
-                    <div className={cn("mt-2 text-lg font-semibold", cents > 0 ? color : "text-foreground-dim")}>{cents > 0 ? rFmtChf(cents) : "—"}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* ── What drove it / What to watch ── */}
+        // ── Slide 2: What drove it / What to watch ──
+        const driversSlide = (
           <div className="rounded-3xl border border-surface-border bg-surface overflow-hidden">
             <div className="grid lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-surface-border">
               <div className="flex flex-col">
@@ -443,8 +383,10 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet }) {
               </div>
             </div>
           </div>
+        );
 
-          {/* ── By unit ── */}
+        // ── Slide 3: By unit ──
+        const byUnitSlide = (
           <div className="rounded-3xl border border-surface-border bg-surface p-5">
             <div className="flex items-center justify-between mb-4">
               <div>
@@ -461,66 +403,129 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet }) {
               ? <p className="text-sm text-muted italic">{t("buildingsId.reporting.noUnits")}</p>
               : <div className="space-y-2">{visibleUnits.map((u) => <UnitRow key={u.unitId} unitNumber={u.unitNumber} floor={u.floor} tenantName={u.tenantName} earned={u.collectedIncomeCents} expenses={u.expensesCents} charges={u.apportionedChargesCents} net={u.netIncomeCents} collectionRate={u.collectionRate} occupancyRate={u.occupancyRate} />)}</div>}
           </div>
+        );
 
-          {/* ── Occupancy movements ── */}
-          {(moveIns.length > 0 || moveOuts.length > 0) && (
-            <div className="rounded-3xl border border-surface-border bg-surface p-5">
-              <h2 className="text-base font-semibold text-foreground mb-4">{t("buildingsId.reporting.tenantMovements")}</h2>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-success-light text-xs font-semibold text-success-text">↓</span>
-                    <span className="text-sm font-semibold text-foreground">{t("buildingsId.reporting.moveIns")} <span className="ml-1 text-foreground-dim font-normal">({moveIns.length})</span></span>
-                  </div>
-                  {moveIns.length === 0
-                    ? <p className="text-sm text-foreground-dim">{t("buildingsId.reporting.noMoveIns")}</p>
-                    : (insExpanded ? moveIns : moveIns.slice(0, 3)).map((l) => <OccupancyRow key={l.id} type="in" tenantName={l.tenantName} unitLabel={l.unitNumber} date={l.startDate} />)}
-                  {moveIns.length > 3 && <button onClick={() => setInsExpanded((v) => !v)} className="mt-2 text-xs font-medium text-muted-dark hover:text-foreground">{insExpanded ? t("buildingsId.reporting.showLess") : t("buildingsId.reporting.moreCount", { count: moveIns.length - 3 })}</button>}
-                </div>
-                <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-surface-hover text-xs font-semibold text-muted">↑</span>
-                    <span className="text-sm font-semibold text-foreground">{t("buildingsId.reporting.moveOuts")} <span className="ml-1 text-foreground-dim font-normal">({moveOuts.length})</span></span>
-                  </div>
-                  {moveOuts.length === 0
-                    ? <p className="text-sm text-foreground-dim">{t("buildingsId.reporting.noMoveOuts")}</p>
-                    : (outsExpanded ? moveOuts : moveOuts.slice(0, 3)).map((l) => <OccupancyRow key={l.id} type="out" tenantName={l.tenantName} unitLabel={l.unitNumber} date={l.endDate} />)}
-                  {moveOuts.length > 3 && <button onClick={() => setOutsExpanded((v) => !v)} className="mt-2 text-xs font-medium text-muted-dark hover:text-foreground">{outsExpanded ? t("buildingsId.reporting.showLess") : t("buildingsId.reporting.moreCount", { count: moveOuts.length - 3 })}</button>}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {vendors.length > 0 && (
-            <div className="rounded-3xl border border-surface-border bg-surface p-5">
-              <h2 className="text-base font-semibold text-foreground mb-1">{t("buildingsId.reporting.topVendors")}</h2>
-              <p className="text-xs text-foreground-dim mb-4">{t("buildingsId.reporting.topVendorsSub")}</p>
-              <div className="space-y-2">
-                {vendors.slice(0, 8).map((v, i) => {
-                  const max = vendors[0]?.totalCents || 1;
-                  const pct = Math.max(2, Math.round((v.totalCents / max) * 100));
-                  return (
-                    <div key={v.contractorId || `${v.vendorName}-${i}`} className="flex items-center gap-3">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-baseline justify-between gap-2">
-                          <span className="truncate text-sm font-medium text-foreground" title={v.vendorName}>{v.vendorName}</span>
-                          <span className="shrink-0 text-sm font-semibold text-foreground tabular-nums">{rFmtChf(v.totalCents)}</span>
+        // ── Slide 4 (optional): Top vendors by spend ──
+        const vendorsSlide = (
+          <div className="rounded-3xl border border-surface-border bg-surface p-5">
+            <h2 className="text-base font-semibold text-foreground mb-1">{t("buildingsId.reporting.topVendors")}</h2>
+            <p className="text-xs text-foreground-dim mb-4">{t("buildingsId.reporting.topVendorsSub")}</p>
+            <div className="space-y-2">
+              {vendors.slice(0, 8).map((v, i) => {
+                const max = vendors[0]?.totalCents || 1;
+                const pct = Math.max(2, Math.round((v.totalCents / max) * 100));
+                return (
+                  <div key={v.contractorId || `${v.vendorName}-${i}`} className="flex items-center gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-baseline justify-between gap-2">
+                        <span className="truncate text-sm font-medium text-foreground" title={v.vendorName}>{v.vendorName}</span>
+                        <span className="shrink-0 text-sm font-semibold text-foreground tabular-nums">{rFmtChf(v.totalCents)}</span>
+                      </div>
+                      <div className="mt-1 flex items-center gap-2">
+                        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-hover">
+                          <div className="h-full rounded-full bg-brand" style={{ width: `${pct}%` /* no-token: dynamic spend-bar width */ }} />
                         </div>
-                        <div className="mt-1 flex items-center gap-2">
-                          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-hover">
-                            <div className="h-full rounded-full bg-brand" style={{ width: `${pct}%` /* no-token: dynamic spend-bar width */ }} />
-                          </div>
-                          <span className="shrink-0 text-xs text-foreground-dim tabular-nums">{v.invoiceCount}×</span>
-                        </div>
+                        <span className="shrink-0 text-xs text-foreground-dim tabular-nums">{v.invoiceCount}×</span>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
+                  </div>
+                );
+              })}
             </div>
-          )}
-        </>
-      )}
+          </div>
+        );
+
+        const slides = [heroSlide, driversSlide, byUnitSlide];
+        const slideLabels = [periodLabel, t("buildingsId.reporting.whatDrove"), t("buildingsId.reporting.byUnit")];
+        if (vendors.length > 0) { slides.push(vendorsSlide); slideLabels.push(t("buildingsId.reporting.topVendors")); }
+
+        return (
+          <>
+            {/* ── Alert banners (kept above the carousel so warnings stay visible) ── */}
+            {bf.receivablesCents > 0 && (
+              <div className="flex items-start gap-3 rounded-2xl border border-warning-ring bg-warning-light px-5 py-4">
+                <span className="mt-0.5 text-warning-text text-lg shrink-0">⚠</span>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-warning-text mb-0.5">{t("buildingsId.reporting.uncollectedRent", { amount: rFmtChf(bf.receivablesCents) })}</p>
+                  <p className="text-xs text-warning-text/80">{t("buildingsId.reporting.markPaidHint")}</p>
+                </div>
+                <a href="/manager/finance/invoices" className="shrink-0 rounded-lg bg-warning hover:opacity-90 px-3 py-1.5 text-xs font-semibold text-white transition-opacity no-underline">{t("buildingsId.reporting.viewInvoices")}</a>
+              </div>
+            )}
+            {(bf.openingReceivablesCents > 0 || bf.openingPayablesCents > 0) && (
+              <div className="flex items-start gap-3 rounded-2xl border border-info-ring bg-info-light px-5 py-4">
+                <span className="mt-0.5 text-info-text text-lg shrink-0">↪</span>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-info-text mb-0.5">
+                    {bf.openingReceivablesCents > 0 && t("buildingsId.reporting.openingReceivable", { amount: rFmtChf(bf.openingReceivablesCents) })}
+                    {bf.openingReceivablesCents > 0 && bf.openingPayablesCents > 0 && " · "}
+                    {bf.openingPayablesCents > 0 && t("buildingsId.reporting.openingPayable", { amount: rFmtChf(bf.openingPayablesCents) })}
+                  </p>
+                  <p className="text-xs text-info-text/80">{t("buildingsId.reporting.openingHint")}</p>
+                </div>
+              </div>
+            )}
+            {arrears && (arrears.totalOverdueCents > 0 || arrears.currentCents > 0) && (
+              <div className="rounded-2xl border border-surface-border bg-surface p-5">
+                <div className="mb-4 flex items-center justify-between">
+                  <div>
+                    <h2 className="text-base font-semibold text-foreground">{t("buildingsId.reporting.arrearsTitle")}</h2>
+                    <p className="text-xs text-foreground-dim mt-0.5">{t("buildingsId.reporting.arrearsSub")}</p>
+                  </div>
+                  {arrears.totalOverdueCents > 0 && (
+                    <span className="rounded-full bg-destructive-light px-3 py-1 text-xs font-semibold text-destructive-text">{t("buildingsId.reporting.overdueBadge", { amount: rFmtChf(arrears.totalOverdueCents) })}</span>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {[
+                    { label: t("buildingsId.reporting.arrears.current"),    cents: arrears.currentCents,        color: "text-success-text",     bg: "bg-success-light border-success-ring" },
+                    { label: t("buildingsId.reporting.arrears.days1to30"),  cents: arrears.overdue1to30Cents,   color: "text-warning-text",     bg: "bg-warning-light border-warning-ring" },
+                    { label: t("buildingsId.reporting.arrears.days31to60"), cents: arrears.overdue31to60Cents,  color: "text-orange-text",      bg: "bg-orange-light border-orange-ring" },
+                    { label: t("buildingsId.reporting.arrears.days61plus"), cents: arrears.overdue61plusCents,  color: "text-destructive-text", bg: "bg-destructive-light border-destructive-ring" },
+                  ].map(({ label, cents, color, bg }) => (
+                    <div key={label} className={cn("rounded-xl border p-4", cents > 0 ? bg : "border-surface-border bg-surface-subtle")}>
+                      <div className="text-xs text-foreground-dim">{label}</div>
+                      <div className={cn("mt-2 text-lg font-semibold", cents > 0 ? color : "text-foreground-dim")}>{cents > 0 ? rFmtChf(cents) : "—"}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* ── Period-analysis carousel: hero · drivers · by-unit · vendors ── */}
+            <Carousel slides={slides} labels={slideLabels} />
+
+            {/* ── Occupancy movements (kept below the carousel) ── */}
+            {(moveIns.length > 0 || moveOuts.length > 0) && (
+              <div className="rounded-3xl border border-surface-border bg-surface p-5">
+                <h2 className="text-base font-semibold text-foreground mb-4">{t("buildingsId.reporting.tenantMovements")}</h2>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-success-light text-xs font-semibold text-success-text">↓</span>
+                      <span className="text-sm font-semibold text-foreground">{t("buildingsId.reporting.moveIns")} <span className="ml-1 text-foreground-dim font-normal">({moveIns.length})</span></span>
+                    </div>
+                    {moveIns.length === 0
+                      ? <p className="text-sm text-foreground-dim">{t("buildingsId.reporting.noMoveIns")}</p>
+                      : (insExpanded ? moveIns : moveIns.slice(0, 3)).map((l) => <OccupancyRow key={l.id} type="in" tenantName={l.tenantName} unitLabel={l.unitNumber} date={l.startDate} />)}
+                    {moveIns.length > 3 && <button onClick={() => setInsExpanded((v) => !v)} className="mt-2 text-xs font-medium text-muted-dark hover:text-foreground">{insExpanded ? t("buildingsId.reporting.showLess") : t("buildingsId.reporting.moreCount", { count: moveIns.length - 3 })}</button>}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-surface-hover text-xs font-semibold text-muted">↑</span>
+                      <span className="text-sm font-semibold text-foreground">{t("buildingsId.reporting.moveOuts")} <span className="ml-1 text-foreground-dim font-normal">({moveOuts.length})</span></span>
+                    </div>
+                    {moveOuts.length === 0
+                      ? <p className="text-sm text-foreground-dim">{t("buildingsId.reporting.noMoveOuts")}</p>
+                      : (outsExpanded ? moveOuts : moveOuts.slice(0, 3)).map((l) => <OccupancyRow key={l.id} type="out" tenantName={l.tenantName} unitLabel={l.unitNumber} date={l.endDate} />)}
+                    {moveOuts.length > 3 && <button onClick={() => setOutsExpanded((v) => !v)} className="mt-2 text-xs font-medium text-muted-dark hover:text-foreground">{outsExpanded ? t("buildingsId.reporting.showLess") : t("buildingsId.reporting.moreCount", { count: moveOuts.length - 3 })}</button>}
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
+        );
+      })()}
     </div>
   );
 }
