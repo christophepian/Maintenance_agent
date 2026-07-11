@@ -1383,6 +1383,47 @@ function buildingSummaryToPoint(
   };
 }
 
+/**
+ * For a year served by an imported (annual) income statement, precompute a
+ * realistic monthly split: income is even (rent is monthly-flat), and expenses
+ * follow the actual dates of the attributed invoices, with the remainder of the
+ * statement's expense total (recurring/non-contractor items we don't hold as
+ * dated invoices) spread evenly. This reconciles to the annual statement while
+ * reflecting when costs were actually incurred — instead of day-prorating the
+ * annual total into a wobbly-income / flat-expense curve.
+ */
+interface ImportedYearSplit {
+  monthly: Map<number, { incomeCents: number; expensesCents: number }>;
+  dto: BuildingFinancialsDTO;
+}
+async function buildImportedYearSplit(
+  orgId: string,
+  buildingId: string,
+  year: number,
+): Promise<ImportedYearSplit | null> {
+  const dto = await getBuildingFinancials(orgId, buildingId, { from: `${year}-01-01`, to: `${year}-12-31` });
+  if (dto.source !== "imported") return null;
+
+  const invoices = await financialsRepo.findBuildingIncomingInvoiceDates(
+    prisma, orgId, buildingId, new Date(`${year}-01-01T00:00:00.000Z`), new Date(`${year}-12-31T23:59:59.999Z`),
+  );
+  const datedByMonth = new Array(13).fill(0);
+  let totalDated = 0;
+  for (const inv of invoices) {
+    if (!inv.issueDate) continue;
+    datedByMonth[inv.issueDate.getUTCMonth() + 1] += inv.totalAmount;
+    totalDated += inv.totalAmount;
+  }
+  const remainderPerMonth = Math.round(Math.max(0, dto.expensesTotalCents - totalDated) / 12);
+  const incomePerMonth = Math.round(dto.collectedIncomeCents / 12);
+
+  const monthly = new Map<number, { incomeCents: number; expensesCents: number }>();
+  for (let mm = 1; mm <= 12; mm++) {
+    monthly.set(mm, { incomeCents: incomePerMonth, expensesCents: datedByMonth[mm] + remainderPerMonth });
+  }
+  return { monthly, dto };
+}
+
 async function getBuildingMonthlyPoints(
   orgId: string,
   buildingId: string,
@@ -1395,6 +1436,7 @@ async function getBuildingMonthlyPoints(
   let y = fromYear;
   let m = fromMonth;
   const now = new Date();
+  const importedByYear = new Map<number, ImportedYearSplit | null>();
 
   while (y < toYear || (y === toYear && m <= toMonth)) {
     if (new Date(y, m - 1, 1) > now) break;
@@ -1403,8 +1445,28 @@ async function getBuildingMonthlyPoints(
     const to      = `${y}-${String(m).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
     const label   = `${monthLabel(y, m)} ${toYear - fromYear >= 1 ? y : ""}`.trim();
     try {
-      const dto = await getBuildingFinancials(orgId, buildingId, { from, to });
-      points.push(buildingSummaryToPoint(dto, from, to, label));
+      if (!importedByYear.has(y)) importedByYear.set(y, await buildImportedYearSplit(orgId, buildingId, y));
+      const imported = importedByYear.get(y);
+      if (imported) {
+        const md = imported.monthly.get(m)!;
+        const noi = md.incomeCents - md.expensesCents;
+        const d = imported.dto;
+        points.push({
+          periodStart: from,
+          periodEnd: to,
+          label,
+          noiCents: noi,
+          collectedIncomeCents: md.incomeCents,
+          expensesCents: md.expensesCents,
+          collectionRate: d.collectionRate,
+          noiMarginPct: safePct(noi, md.incomeCents),
+          opexRatioPct: safePct(md.expensesCents, md.incomeCents),
+          occupancyRate: d.totalUnitsCount > 0 ? Math.round((d.activeUnitsCount / d.totalUnitsCount) * 10000) / 10000 : null,
+        });
+      } else {
+        const dto = await getBuildingFinancials(orgId, buildingId, { from, to });
+        points.push(buildingSummaryToPoint(dto, from, to, label));
+      }
     } catch {
       // skip months with no data
     }

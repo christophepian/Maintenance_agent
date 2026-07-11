@@ -344,3 +344,21 @@ export async function findUnitAttributedInvoices(
     incoming,
   };
 }
+
+/**
+ * Attributed INCOMING invoices for a building over a window (issueDate + amount
+ * in cents), for distributing an imported year's expenses across the months when
+ * they were actually dated rather than smearing the annual total evenly.
+ */
+export async function findBuildingIncomingInvoiceDates(
+  prisma: PrismaClient,
+  orgId: string,
+  buildingId: string,
+  from: Date,
+  to: Date,
+): Promise<{ issueDate: Date | null; totalAmount: number }[]> {
+  return prisma.invoice.findMany({
+    where: { orgId, buildingId, direction: "INCOMING", issueDate: { gte: from, lte: to } },
+    select: { issueDate: true, totalAmount: true },
+  });
+}
