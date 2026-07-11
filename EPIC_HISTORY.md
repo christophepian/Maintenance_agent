@@ -5,6 +5,36 @@
 
 ---
 
+## Session 2026-07-09 → 07-11 — Régie Package Onboarding + Imported-Actuals Reporting (PRs #34–#56)
+
+Ingest a Swiss régie's year-end package (mixed CSVs: balance sheet, income statement, rent roll, general ledger) to hydrate a building — either for ongoing management or as a snapshot where the imported figures *are* the reporting. Builds on the CSV accounting-import work; the onboarding is per-building, behind preview→commit gates, and reuses the existing create services. Full working memory: `~/.claude/projects/.../memory/project_csv_import.md`.
+
+### Phase 1 — Imported-actuals reporting (PR #34)
+`getBuildingFinancials` (`services/financials.ts`) substitutes an **approved `INCOME_STATEMENT`** for a covered fiscal year ahead of the snapshot cache: `aggregateImportedPnl` sums REVENUE/EXPENSE `ImportedAccountBalance` rows (source = balances, **not** the ledger — income statements are stored reference-only once operational activity exists). `BuildingFinancialsDTO.source: "operational" | "imported"`; building UI shows an "Imported actuals · FY" badge. Substitution keys on "approved statement covers this FY" so operational and imported never double-feed a year.
+
+### Phase 2 — Rent-roll onboarding (PRs #35–#40)
+`services/rentRollMapper.ts` (tolerant FR/DE headers, dd.mm.yyyy, apt vs garage by type/9xxx code) + `services/buildingOnboardingService.ts` `previewOnboarding`/`commitOnboarding`. Creates Units → Tenants (synthesised deterministic placeholder phone, since rent rolls carry no contact) → DRAFT Leases; garages link to their flat and co-bill by identical `tenantName`. **Billing mode per building at commit:** `activate` walks `markLeaseReady→SIGNED→activateLeaseWorkflow` (emits `LEASE_STATUS_CHANGED` → schedule + first invoice, anchored to now, no backfill); `snapshot` keeps leases as records. **Merge, don't duplicate:** `matchExistingUnit` = exact unit number OR floor+net-rent key (`normalizeFloor`), so onboarding hydrates buildings that already have units; matched deactivated units are reactivated on re-run.
+
+### Phase 3 — General-ledger contractor invoices (PRs #41–#45)
+`services/regieLedgerMapper.ts` parses the *grand livre* (one row per posting): keeps only discrete third-party contractor invoices (expense code ≥ 40000 with a `SUPPLIER / description` and a piece number; excludes management fee, bank/postal charges, rounding, payroll). `services/invoiceOnboardingService.ts` is **reference-only** — creates an INCOMING invoice per row, attributes it to building + unit (by objet prefix) + a deduplicated vendor `Contractor`, classified under an EXPENSE account by régie code; **not posted to the ledger** (the imported statement is authoritative; posting double-counts the bilan's payables and unbalances the balance sheet). Idempotent + self-healing via `paymentReference = "GL:<pieceKey>"`; a re-run reverses stale ledger entries a prior (posting) import left, backfills the vendor link, and resets any issuer stamping. **Split invoices:** one supplier invoice split across accounts shares a `no_piece` on multiple rows — `pieceKey` suffixes later rows with the account so every line imports. New `GET /buildings/:id/vendor-spend` powers a top-vendors reporting card from the invoices.
+
+### Phase 4 — Whole-package detection, reconciliation & commit (PR #46)
+`services/packageDetector.ts` classifies each CSV (rent roll / general ledger / balance sheet / income statement) from headers + content (BS vs IS by Actif/Passif vs Produit/Charge sections, code-range fallback). `services/packageOnboardingService.ts` `analyzePackage` (read-only) runs every mapper and cross-checks the documents — rent-roll net × 12 vs income-statement rental income, GL gross totals vs the income statement, balance-sheet Actif = Passif — returning "✓ ties out / ⚠ off by X". `commitPackage` routes each file to its onboarder in dependency order (rent roll → ledger → statements ingested + auto-approved into the review gate). `POST /buildings/:id/onboarding/package/{analyze,commit}` (multi-file). One `PackageOnboardingPanel` on the building page.
+
+### Reporting for imported/snapshot years (PRs #47–#51)
+Successive fixes so a package-onboarded year isn't blank: (a) snapshot leases go **ACTIVE without a billing schedule** so units show their tenant (`processRecurringBilling` only bills existing schedules) — and a re-run heals pre-existing DRAFT leases; (b) package commit **auto-approves** the ingested statements so Phase-1 substitution fires; (c) `aggregateImportedPnl` normalises the **sign** (régie revenue is credit-negative — sum signed, take the magnitude — so income isn't negative); (d) per-unit financials fall back to **contractual rent** (income) + attributed reference-only invoices (expenses); (e) monthly / performance-canvas points **prorate/distribute the annual statement** rather than day-slicing it (`statementCoversRequestFactor` + `buildImportedYearSplit`: even income, expenses on real invoice dates + evenly-spread remainder, reconciling to the statement).
+
+### Performance-canvas chart redesign (PRs #52–#55)
+`components/PortfolioCanvasChart.jsx`: replaced grouped bars with one **stacked income bar** (Expenses base + NOI margin = income); folded the four health-rate KPIs into the bar's **hover tooltip** (removed the separate "Portfolio Health" section); recoloured to **brand-accent design tokens** (`--color-brand` / `--color-brand-dark` — solid fills that work in light *and* dark; `--color-brand-ring`/`-light` are translucent in dark and unusable as fills); a loss uses `--color-warning`.
+
+### Cleanup (PR #56)
+Removed the "Monthly NOI" trend card from the building, unit and owner-portfolio reporting boards (kept the manager-dashboard "Historical NOI" panel); dropped `includeMonthly` from those period-report requests.
+
+### Key decisions & gotchas
+Régie **sign conventions vary** (bilan totals were negative; revenue credit-negative) → treat P&L revenue/expense as magnitudes. An imported income statement is **annual with no monthly detail** → sub-period reporting must prorate/distribute it; substitution only fires on full-encompass. Onboarded invoices are **reference-only** (imported statement is the authoritative annual total; contractor invoices are a subset). Web proxies `/api/*` via **explicit per-endpoint Next.js route files** — every new backend endpoint needs a matching proxy page or Next serves an HTML 404. `npm run blueprint` regenerates the served `blueprint.html` but not the root mirror → sync it (G19). All shipped behind the standard gates (tsc, jest, openApiSync budget, blueprint/check-docs, strict quality gate, guardrails); several console rebaselines for route-catch logging.
+
+---
+
 ## Session 2026-06-23 — Governance audit remediation (`docs/CRITICAL_AUDIT_2026-06-23.md`)
 
 ### Commits (pushed to origin/main)
