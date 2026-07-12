@@ -575,7 +575,7 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet }) {
                       className="flex w-full items-center gap-3 px-3 py-2.5 text-left"
                       aria-expanded={open}
                     >
-                      <span className={`shrink-0 text-foreground-dim text-xs transition-transform ${open ? "rotate-90" : ""}`}>▶</span>
+                      <span className={cn("shrink-0 text-foreground-dim text-xs transition-transform", open && "rotate-90")}>▶</span>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-baseline justify-between gap-2">
                           <span className="truncate text-sm font-medium text-foreground capitalize">{monthLabel(mo.month)}</span>
