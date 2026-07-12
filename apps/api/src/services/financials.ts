@@ -1696,6 +1696,7 @@ export interface UnitFinancialSummaryDTO {
   netIncomeCents:       number;
   collectionRate:       number;
   occupancyRate:        number; // 0 or 1 per unit (vacant / occupied)
+  monthlyRentChf:       number | null; // asking/contractual monthly net rent — foregone rent when vacant
 }
 
 export async function getUnitFinancialSummaries(
@@ -1870,6 +1871,7 @@ export async function getUnitFinancialSummaries(
       netIncomeCents:       earned - expenses,
       collectionRate:       projected > 0 ? Math.min(1, earned / projected) : 0,
       occupancyRate:        occupied ? 1 : 0,
+      monthlyRentChf:       u.monthlyRentChf ?? null,
     };
   });
 }
@@ -1893,6 +1895,8 @@ export interface BuildingPeriodReportDTO {
   moveIns:     Array<{ id: string; unitId: string; unitNumber: string; tenantName: string; startDate: string }>;
   moveOuts:    Array<{ id: string; unitId: string; unitNumber: string; tenantName: string; endDate: string }>;
   monthlyData: BuildingMonthlyBreakdownDTO[] | null;
+  /** Live leases whose fixed term ends within the next ~6 months (outlook). */
+  leaseExpiries: Array<{ unitNumber: string; tenantName: string; endDate: string; netRentChf: number }>;
 }
 
 export async function getBuildingPeriodReport(
@@ -1955,6 +1959,20 @@ export async function getBuildingPeriodReport(
   });
   const unitNumMap: Record<string, string> = {};
   for (const u of buildingUnitRows) unitNumMap[u.id] = u.unitNumber;
+
+  // Lease expiries in the next ~6 months (forward outlook).
+  const expiryFrom = new Date();
+  const expiryTo = new Date(expiryFrom);
+  expiryTo.setMonth(expiryTo.getMonth() + 6);
+  const expiringLeases = await leaseRepo.findLeasesExpiringForUnits(prisma, buildingUnitRows.map((u) => u.id), expiryFrom, expiryTo);
+  const leaseExpiries = expiringLeases
+    .filter((l) => l.unitId && l.endDate)
+    .map((l) => ({
+      unitNumber: unitNumMap[l.unitId!] ?? "?",
+      tenantName: l.tenantName,
+      endDate: l.endDate!.toISOString().slice(0, 10),
+      netRentChf: l.netRentChf,
+    }));
 
   // Move-ins: leases starting in period for this building
   const moveInLeases = await prisma.lease.findMany({
@@ -2037,6 +2055,7 @@ export async function getBuildingPeriodReport(
       endDate: l.endDate!.toISOString().slice(0, 10),
     })),
     monthlyData,
+    leaseExpiries,
   };
 }
 

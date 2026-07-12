@@ -95,6 +95,31 @@ export async function listLeases(
   });
 }
 
+/**
+ * Live leases on a set of units whose fixed term ends within a window — powers
+ * the reporting "leases expiring soon" outlook. Open-ended (null endDate) leases
+ * are naturally excluded by the endDate range.
+ */
+export async function findLeasesExpiringForUnits(
+  prisma: PrismaClient,
+  unitIds: string[],
+  from: Date,
+  to: Date,
+) {
+  if (unitIds.length === 0) return [];
+  return prisma.lease.findMany({
+    where: {
+      unitId: { in: unitIds },
+      status: { in: ["ACTIVE", "SIGNED"] },
+      deletedAt: null,
+      isTemplate: false,
+      endDate: { gte: from, lte: to },
+    },
+    orderBy: { endDate: "asc" },
+    select: { id: true, unitId: true, tenantName: true, endDate: true, netRentChf: true },
+  });
+}
+
 // ─── Mutation Helpers ──────────────────────────────────────────
 
 /** Create a new lease record. */

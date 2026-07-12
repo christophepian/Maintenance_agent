@@ -16,6 +16,7 @@ import ImportedStatementsPanel from "../../../components/ImportedStatementsPanel
 import BillingEntityManager from "../../../components/BillingEntityManager";
 import CashflowPlansList from "../../../components/CashflowPlansList";
 import PlanningWorkspace from "../../../components/PlanningWorkspace";
+import { BuildingBalanceSheet, OpeningReceivablesPanel, BuildingAnalytical } from "../../../components/reporting/BuildingStatements";
 import { cn } from "../../../lib/utils";
 import { FilterToggle, FilterPanelBody, FilterSection, FilterSectionClear, DateField } from "../../../components/ui/FilterPanel";
 import ScrollableTabs from "../../../components/mobile/ScrollableTabs";
@@ -90,6 +91,7 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
   }, [router]);
 
   const [allBuildings, setAllBuildings] = useState([]);
+  const [acctBuildingId, setAcctBuildingId] = useState("");
   const [range, setRange] = useState(defaultRange);
   const [portfolio, setPortfolio] = useState(null);
   const [portfolioLoading, setPortfolioLoading] = useState(true);
@@ -362,21 +364,54 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
 
           {/* ── Accounting ── */}
           {activeTabKey === "accounting" && (
-            <Panel>
-              <div className="flex flex-col gap-4">
-                <p className="text-sm text-muted-text">
-                  Double-entry ledger and account structure for your portfolio.
-                </p>
-                <div className="flex flex-wrap gap-3">
-                  <Link href="/manager/finance/ledger" className="button-secondary text-sm">
-                    General Ledger
-                  </Link>
-                  <Link href="/manager/finance/chart-of-accounts" className="button-secondary text-sm">
-                    Chart of Accounts
-                  </Link>
+            <div className="space-y-6">
+              <Panel>
+                <div className="flex flex-col gap-4">
+                  <p className="text-sm text-muted-text">
+                    Double-entry ledger and account structure for your portfolio.
+                  </p>
+                  <div className="flex flex-wrap gap-3">
+                    <Link href="/manager/finance/ledger" className="button-secondary text-sm">
+                      General Ledger
+                    </Link>
+                    <Link href="/manager/finance/chart-of-accounts" className="button-secondary text-sm">
+                      Chart of Accounts
+                    </Link>
+                  </div>
                 </div>
-              </div>
-            </Panel>
+              </Panel>
+
+              {/* Per-building financial statements (relocated from building reporting). */}
+              {allBuildings.length > 0 && (() => {
+                const effId = acctBuildingId || allBuildings[0]?.id || "";
+                return (
+                  <>
+                    <div className="flex items-center gap-2">
+                      <label htmlFor="acct-building" className="text-sm text-muted-text">Building</label>
+                      <select
+                        id="acct-building"
+                        value={effId}
+                        onChange={(e) => setAcctBuildingId(e.target.value)}
+                        className="rounded-lg border border-surface-border bg-surface px-3 py-1.5 text-sm text-foreground"
+                      >
+                        {allBuildings.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+                      </select>
+                    </div>
+                    {effId && (
+                      <div className="space-y-6">
+                        <Section title={t("financeIndex.accounting.financialPosition", { defaultValue: "Financial position" })}>
+                          <BuildingBalanceSheet buildingId={effId} />
+                          <OpeningReceivablesPanel buildingId={effId} />
+                        </Section>
+                        <Section title={t("financeIndex.accounting.analytical", { defaultValue: "Analytical" })}>
+                          <BuildingAnalytical buildingId={effId} />
+                        </Section>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+            </div>
           )}
 
           {/* ── Planning ── */}
