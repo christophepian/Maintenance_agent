@@ -657,6 +657,27 @@
       "date": "Date"
     },
     "reporting": {
+      "summary": {
+        "result": "Collected {{income}} in rent and spent {{expenses}} — {{noi}} of net operating income.",
+        "noiUp": "NOI rose {{amount}}{{pct}} versus the prior period.",
+        "noiDown": "NOI fell {{amount}}{{pct}} versus the prior period.",
+        "noiFlat": "NOI held roughly flat versus the prior period.",
+        "driver": {
+          "incomeUp": "The main driver was {{amount}} more rental income.",
+          "incomeDown": "The main driver was {{amount}} less rental income.",
+          "costsUp": "The main driver was {{amount}} more in {{category}} costs.",
+          "costsDown": "The main driver was {{amount}} less in {{category}} costs."
+        },
+        "topCost": "The largest cost was {{amount}} for {{line}}.",
+        "topVendor": "{{vendor}} was the biggest supplier.",
+        "benchmark": {
+          "above": "Its NOI margin of {{margin}} is above the portfolio median of {{median}}.",
+          "below": "Its NOI margin of {{margin}} is below the portfolio median of {{median}}.",
+          "inLine": "Its NOI margin of {{margin}} is in line with the portfolio median of {{median}}."
+        },
+        "vacancy": "{{count}} unit(s) sit vacant, about {{amount}}/month in foregone rent.",
+        "expiries": "{{count}} lease(s) expire within six months (units {{units}})."
+      },
       "months": "Months",
       "year": "Year",
       "monthlyReport": "Monthly report",

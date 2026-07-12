@@ -657,6 +657,27 @@
       "date": "Date"
     },
     "reporting": {
+      "summary": {
+        "result": "{{income}} de loyers encaissés pour {{expenses}} de charges — {{noi}} de résultat opérationnel net.",
+        "noiUp": "Le RON a augmenté de {{amount}}{{pct}} par rapport à la période précédente.",
+        "noiDown": "Le RON a diminué de {{amount}}{{pct}} par rapport à la période précédente.",
+        "noiFlat": "Le RON est resté globalement stable par rapport à la période précédente.",
+        "driver": {
+          "incomeUp": "Principalement grâce à {{amount}} de loyers supplémentaires.",
+          "incomeDown": "Principalement en raison de {{amount}} de loyers en moins.",
+          "costsUp": "Principalement en raison de {{amount}} de charges « {{category}} » supplémentaires.",
+          "costsDown": "Principalement grâce à {{amount}} de charges « {{category}} » en moins."
+        },
+        "topCost": "La plus grosse charge était {{amount}} pour {{line}}.",
+        "topVendor": "{{vendor}} était le principal fournisseur.",
+        "benchmark": {
+          "above": "Sa marge RON de {{margin}} est supérieure à la médiane du portefeuille de {{median}}.",
+          "below": "Sa marge RON de {{margin}} est inférieure à la médiane du portefeuille de {{median}}.",
+          "inLine": "Sa marge RON de {{margin}} est conforme à la médiane du portefeuille de {{median}}."
+        },
+        "vacancy": "{{count}} logement(s) vacant(s), soit environ {{amount}}/mois de loyers non perçus.",
+        "expiries": "{{count}} bail(baux) arrive(nt) à échéance dans les six mois (logements {{units}})."
+      },
       "months": "Mois",
       "year": "Année",
       "monthlyReport": "Rapport mensuel",
