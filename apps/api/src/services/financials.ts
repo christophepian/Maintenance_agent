@@ -957,6 +957,51 @@ export async function getBuildingVendorSpend(
   }));
 }
 
+export interface ExpenseBreakdownVendorDTO {
+  contractorId: string | null;
+  vendorName: string;
+  totalCents: number;
+  invoiceCount: number;
+}
+
+export interface ExpenseBreakdownAccountDTO {
+  accountId: string | null;
+  accountCode: string | null;
+  accountName: string | null;
+  totalCents: number;
+}
+
+export interface ExpenseBreakdownMonthDTO {
+  month: string; // YYYY-MM
+  totalCents: number;
+  vendors: ExpenseBreakdownVendorDTO[];
+  accounts: ExpenseBreakdownAccountDTO[];
+}
+
+/**
+ * Building expenses broken down by month, and within each month by vendor and by
+ * ledger account. Aggregated from INCOMING invoices (by issueDate) — the same
+ * source as vendor-spend, so it covers imported/reference-only invoices too.
+ * Powers the reporting "expenses by month" drill-down into the filtered invoices
+ * view. Amounts are in cents.
+ */
+export async function getBuildingExpenseBreakdown(
+  orgId: string,
+  buildingId: string,
+  params: { from: string; to: string },
+): Promise<ExpenseBreakdownMonthDTO[]> {
+  const building = await inventoryRepo.findBuildingByIdAndOrg(prisma, buildingId, orgId);
+  if (!building) throw new NotFoundError(`Building ${buildingId} not found`);
+
+  return invoiceRepo.aggregateBuildingExpenseBreakdown(
+    prisma,
+    orgId,
+    buildingId,
+    new Date(params.from),
+    new Date(params.to + "T23:59:59.999Z"),
+  );
+}
+
 export async function listBuildingSnapshots(
   orgId: string,
   buildingId: string,

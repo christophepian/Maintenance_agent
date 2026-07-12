@@ -476,3 +476,82 @@ export async function aggregateBuildingSpendByVendor(
   return [...byVendor.values()].sort((a, b) => b.totalCents - a.totalCents);
 }
 
+export interface ExpenseBreakdownMonthRow {
+  month: string; // YYYY-MM
+  totalCents: number;
+  vendors: { contractorId: string | null; vendorName: string; totalCents: number; invoiceCount: number }[];
+  accounts: { accountId: string | null; accountCode: string | null; accountName: string | null; totalCents: number }[];
+}
+
+/**
+ * Break a building's INCOMING-invoice spend (by issueDate) into months, and
+ * within each month by vendor and by ledger account — powers the reporting
+ * "expenses by month" drill-down. Invoice-based (like vendor-spend), so it works
+ * for imported/reference-only invoices as well as operational ones. Months are
+ * returned chronologically; vendors/accounts within a month sorted desc by spend.
+ */
+export async function aggregateBuildingExpenseBreakdown(
+  prisma: PrismaClient,
+  orgId: string,
+  buildingId: string,
+  from: Date,
+  to: Date,
+): Promise<ExpenseBreakdownMonthRow[]> {
+  const rows = await prisma.invoice.findMany({
+    where: {
+      orgId,
+      buildingId,
+      direction: "INCOMING",
+      issueDate: { gte: from, lte: to },
+    },
+    select: {
+      issueDate: true,
+      totalAmount: true,
+      contractorId: true,
+      issuerName: true,
+      contractor: { select: { name: true } },
+      accountId: true,
+      classifiedAccount: { select: { code: true, name: true } },
+    },
+  });
+
+  type VendorAgg = { contractorId: string | null; vendorName: string; totalCents: number; invoiceCount: number };
+  type AccountAgg = { accountId: string | null; accountCode: string | null; accountName: string | null; totalCents: number };
+  const byMonth = new Map<string, { totalCents: number; vendors: Map<string, VendorAgg>; accounts: Map<string, AccountAgg> }>();
+
+  for (const r of rows) {
+    if (!r.issueDate) continue;
+    const month = r.issueDate.toISOString().slice(0, 7); // YYYY-MM
+    const m = byMonth.get(month) ?? { totalCents: 0, vendors: new Map(), accounts: new Map() };
+    m.totalCents += r.totalAmount;
+
+    const vKey = r.contractorId ?? `name:${r.issuerName ?? "Unknown"}`;
+    const vName = r.contractor?.name ?? r.issuerName ?? "Unknown";
+    const v = m.vendors.get(vKey) ?? { contractorId: r.contractorId ?? null, vendorName: vName, totalCents: 0, invoiceCount: 0 };
+    v.totalCents += r.totalAmount;
+    v.invoiceCount += 1;
+    m.vendors.set(vKey, v);
+
+    const aKey = r.accountId ?? "none";
+    const a = m.accounts.get(aKey) ?? {
+      accountId: r.accountId ?? null,
+      accountCode: r.classifiedAccount?.code ?? null,
+      accountName: r.classifiedAccount?.name ?? null,
+      totalCents: 0,
+    };
+    a.totalCents += r.totalAmount;
+    m.accounts.set(aKey, a);
+
+    byMonth.set(month, m);
+  }
+
+  return [...byMonth.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([month, m]) => ({
+      month,
+      totalCents: m.totalCents,
+      vendors: [...m.vendors.values()].sort((x, y) => y.totalCents - x.totalCents),
+      accounts: [...m.accounts.values()].sort((x, y) => y.totalCents - x.totalCents),
+    }));
+}
+

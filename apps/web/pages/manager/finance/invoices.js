@@ -561,6 +561,12 @@ export function InvoicesContent() {
   // Dispute modal state
   const [disputeInvoiceId, setDisputeInvoiceId] = useState(null);
 
+  // Context filter driven by URL params (reporting → invoices drill-down):
+  // filters the list to one vendor/account + period + building, shown as a
+  // dismissible banner. Consumed once from the URL, then stripped.
+  const [ctx, setCtx] = useState(null);
+  const ctxConsumed = useRef(false);
+
   // Upload & capture modals
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showCaptureModal, setShowCaptureModal] = useState(false);
@@ -618,6 +624,14 @@ export function InvoicesContent() {
         params.set("status", statusFilter);
       }
       if (categoryFilter) params.set("expenseCategory", categoryFilter);
+      if (ctx) {
+        if (ctx.vendorContractorId) params.set("vendorContractorId", ctx.vendorContractorId);
+        if (ctx.issuerName) params.set("issuerName", ctx.issuerName);
+        if (ctx.accountId) params.set("accountId", ctx.accountId);
+        if (ctx.issueDateFrom) params.set("issueDateFrom", ctx.issueDateFrom);
+        if (ctx.issueDateTo) params.set("issueDateTo", ctx.issueDateTo);
+        if (ctx.buildingId) params.set("buildingId", ctx.buildingId);
+      }
       if (searchTerm.trim()) params.set("search", searchTerm.trim());
       params.set("sortField", toServerSortField(sortField));
       params.set("sortDir", sortDir);
@@ -631,7 +645,7 @@ export function InvoicesContent() {
     } finally {
       setLoading(false);
     }
-  }, [direction, statusFilter, categoryFilter, searchTerm, sortField, sortDir, offset]);
+  }, [direction, statusFilter, categoryFilter, searchTerm, sortField, sortDir, offset, ctx]);
 
   // Pending-review tab count — independent of the active page/filters.
   const loadPendingCount = useCallback(async () => {
@@ -657,7 +671,30 @@ export function InvoicesContent() {
   // Any filter / sort / search change returns to the first page.
   useEffect(() => {
     setOffset(0);
-  }, [direction, statusFilter, categoryFilter, searchTerm, sortField, sortDir]);
+  }, [direction, statusFilter, categoryFilter, searchTerm, sortField, sortDir, ctx]);
+
+  // Consume the reporting drill-down context from the URL once, then strip it.
+  useEffect(() => {
+    if (!router.isReady || ctxConsumed.current) return;
+    const q = router.query;
+    if (!q.issueDateFrom && !q.vendorContractorId && !q.issuerName && !q.accountId) return;
+    ctxConsumed.current = true;
+    setCtx({
+      vendorContractorId: q.vendorContractorId || null,
+      issuerName: q.issuerName || null,
+      accountId: q.accountId || null,
+      issueDateFrom: q.issueDateFrom || null,
+      issueDateTo: q.issueDateTo || null,
+      buildingId: q.buildingId || null,
+      ctxVendor: q.ctxVendor || null,
+      ctxPeriod: q.ctxPeriod || null,
+    });
+    if (q.direction === "incoming") setDirection("incoming");
+    // Strip the drill-down params, keeping the tab selection.
+    const rest = { ...q };
+    ["issueDateFrom", "issueDateTo", "vendorContractorId", "issuerName", "accountId", "buildingId", "ctxVendor", "ctxPeriod", "direction"].forEach((k) => delete rest[k]);
+    router.replace({ pathname: router.pathname, query: rest }, undefined, { shallow: true });
+  }, [router.isReady, router.query]);
 
   // Deep-link: auto-open invoice overlay from ?invoiceId= query param.
   // Use a ref so this only fires once per mount — hot-reloads re-mount the
@@ -891,6 +928,14 @@ export function InvoicesContent() {
         <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 mb-4 flex items-center justify-between">
           <span className="text-sm text-red-700"><strong>{t("manager:financeInvoices.text.error")}</strong> {error}</span>
           <button onClick={() => setError("")} className="text-xs text-red-500 hover:text-red-700 ml-4">{t("manager:financeInvoices.text.dismiss")}</button>
+        </div>
+      )}
+
+      {ctx && (
+        <div className="flex items-center gap-2 rounded-xl border border-info-ring bg-info-light px-3 py-2 mb-3">
+          <span className="text-sm text-info-text">{t("manager:financeInvoices.contextFilter.label")}</span>
+          <span className="text-sm font-semibold text-info-text truncate">{[ctx.ctxVendor, ctx.ctxPeriod].filter(Boolean).join(" · ")}</span>
+          <button onClick={() => setCtx(null)} className="ml-auto shrink-0 text-xs font-medium text-info-text underline hover:opacity-80">{t("manager:financeInvoices.contextFilter.clear")}</button>
         </div>
       )}
 

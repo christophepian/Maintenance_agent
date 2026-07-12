@@ -740,6 +740,13 @@
       "tenantMovements": "Tenant movements",
       "topVendors": "Top vendors by spend",
       "topVendorsSub": "Supplier expenditure for this period, ranked by total.",
+      "expenseBreakdown": {
+        "title": "Expenses by month",
+        "sub": "Expand a month to see which suppliers and cost centers drove it. Tap a row to open its invoices.",
+        "suppliers": "Top suppliers",
+        "costCenters": "By cost center",
+        "unclassified": "Unclassified"
+      },
       "moveIns": "Move-ins",
       "moveOuts": "Move-outs",
       "noMoveIns": "No move-ins this period",
@@ -1441,6 +1448,10 @@
     }
   },
   "financeInvoices": {
+    "contextFilter": {
+      "label": "Filtered from reporting:",
+      "clear": "Clear filter"
+    },
     "heading": {
       "disputeInvoice": "Dispute Invoice",
       "uploadInvoice": "Upload Invoice"
