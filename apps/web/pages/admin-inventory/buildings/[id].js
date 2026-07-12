@@ -277,6 +277,8 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet }) {
   const [report, setReport]   = useState(null);
   const [unitData, setUnitData] = useState([]);
   const [vendors, setVendors] = useState([]);
+  const [breakdown, setBreakdown] = useState([]);
+  const [expandedMonth, setExpandedMonth] = useState(null);
   const [benchmark, setBenchmark] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState("");
@@ -302,9 +304,11 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet }) {
       fetch(`/api/buildings/${buildingId}/unit-financials?from=${from}&to=${to}`, { headers: authHeaders() }).then((r) => r.json()),
       fetch(`/api/buildings/${buildingId}/vendor-spend?from=${from}&to=${to}`, { headers: authHeaders() }).then((r) => r.json()).catch(() => null),
       fetch(`/api/financials/portfolio-summary?from=${from}&to=${to}`, { headers: authHeaders() }).then((r) => r.json()).catch(() => null),
+      fetch(`/api/buildings/${buildingId}/expense-breakdown?from=${from}&to=${to}`, { headers: authHeaders() }).then((r) => r.json()).catch(() => null),
     ])
-      .then(([rpt, uf, vs, ps]) => {
+      .then(([rpt, uf, vs, ps, eb]) => {
         setReport(rpt?.data ?? null); setUnitData(uf?.data ?? []); setVendors(vs?.data ?? []);
+        setBreakdown(eb?.data ?? []); setExpandedMonth(null);
         // Portfolio benchmark: median NOI margin / OpEx ratio across the org's buildings.
         const bs = (ps?.data?.buildings ?? []).filter((b) => b.collectedIncomeCents > 0);
         const median = (arr) => { const s = [...arr].sort((a, b) => a - b); return s.length ? s[Math.floor((s.length - 1) / 2)] : 0; };
@@ -522,8 +526,112 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet }) {
           </div>
         );
 
+        // ── Slide (optional): Expenses by month → drivers ──
+        const monthLabel = (key) => {
+          const [y, m] = key.split("-").map(Number);
+          return new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(new Date(y, m - 1, 1));
+        };
+        // Drill from a month's driver into the filtered invoices view.
+        const drillBase = (key) => {
+          const [y, m] = key.split("-").map(Number);
+          const lastDay = new Date(y, m, 0).getDate();
+          const p = new URLSearchParams({
+            tab: "invoices",
+            direction: "incoming",
+            buildingId,
+            issueDateFrom: `${key}-01`,
+            issueDateTo: `${key}-${String(lastDay).padStart(2, "0")}`,
+            ctxPeriod: monthLabel(key),
+          });
+          return p;
+        };
+        const vendorDrillHref = (v, key) => {
+          const p = drillBase(key);
+          p.set("ctxVendor", v.vendorName);
+          if (v.contractorId) p.set("vendorContractorId", v.contractorId);
+          else p.set("issuerName", v.vendorName);
+          return `/manager/finance?${p.toString()}`;
+        };
+        const accountDrillHref = (a, key) => {
+          const p = drillBase(key);
+          if (a.accountId) p.set("accountId", a.accountId);
+          p.set("ctxVendor", a.accountCode ? `${a.accountCode} · ${a.accountName ?? ""}`.trim() : (a.accountName ?? t("buildingsId.reporting.expenseBreakdown.unclassified")));
+          return `/manager/finance?${p.toString()}`;
+        };
+        const bdMax = Math.max(1, ...breakdown.map((mo) => mo.totalCents));
+        const expenseBreakdownSlide = (
+          <div className="rounded-3xl border border-surface-border bg-surface p-5">
+            <h2 className="text-base font-semibold text-foreground mb-1">{t("buildingsId.reporting.expenseBreakdown.title")}</h2>
+            <p className="text-xs text-foreground-dim mb-4">{t("buildingsId.reporting.expenseBreakdown.sub")}</p>
+            <div className="space-y-1.5">
+              {breakdown.map((mo) => {
+                const open = expandedMonth === mo.month;
+                const pct = Math.max(2, Math.round((mo.totalCents / bdMax) * 100));
+                return (
+                  <div key={mo.month} className="rounded-2xl border border-surface-border/70">
+                    <button
+                      type="button"
+                      onClick={() => setExpandedMonth(open ? null : mo.month)}
+                      className="flex w-full items-center gap-3 px-3 py-2.5 text-left"
+                      aria-expanded={open}
+                    >
+                      <span className={`shrink-0 text-foreground-dim text-xs transition-transform ${open ? "rotate-90" : ""}`}>▶</span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-baseline justify-between gap-2">
+                          <span className="truncate text-sm font-medium text-foreground capitalize">{monthLabel(mo.month)}</span>
+                          <span className="shrink-0 text-sm font-semibold text-foreground tabular-nums">{rFmtChf(mo.totalCents)}</span>
+                        </div>
+                        <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-surface-hover">
+                          <div className="h-full rounded-full bg-brand" style={{ width: `${pct}%` /* no-token: dynamic spend-bar width */ }} />
+                        </div>
+                      </div>
+                    </button>
+                    {open && (
+                      <div className="border-t border-surface-border/70 px-3 py-3 space-y-3">
+                        <div>
+                          <p className="text-[11px] font-semibold uppercase tracking-wide text-foreground-dim mb-1.5">{t("buildingsId.reporting.expenseBreakdown.suppliers")}</p>
+                          <div className="space-y-1">
+                            {mo.vendors.slice(0, 6).map((v, i) => (
+                              <a
+                                key={v.contractorId || `${v.vendorName}-${i}`}
+                                href={vendorDrillHref(v, mo.month)}
+                                className="flex items-center justify-between gap-2 rounded-lg px-2 py-1 hover:bg-surface-hover no-underline group"
+                              >
+                                <span className="truncate text-sm text-foreground" title={v.vendorName}>{v.vendorName} <span className="text-xs text-foreground-dim">· {v.invoiceCount}×</span></span>
+                                <span className="flex shrink-0 items-center gap-1.5 text-sm font-medium text-foreground tabular-nums">{rFmtChf(v.totalCents)}<span className="text-foreground-dim opacity-0 group-hover:opacity-100 transition-opacity">→</span></span>
+                              </a>
+                            ))}
+                          </div>
+                        </div>
+                        {mo.accounts.some((a) => a.accountId || a.accountCode) && (
+                          <div>
+                            <p className="text-[11px] font-semibold uppercase tracking-wide text-foreground-dim mb-1.5">{t("buildingsId.reporting.expenseBreakdown.costCenters")}</p>
+                            <div className="space-y-1">
+                              {mo.accounts.slice(0, 6).map((a, i) => (
+                                <a
+                                  key={a.accountId || `acct-${i}`}
+                                  href={accountDrillHref(a, mo.month)}
+                                  className="flex items-center justify-between gap-2 rounded-lg px-2 py-1 hover:bg-surface-hover no-underline group"
+                                >
+                                  <span className="truncate text-sm text-foreground">{a.accountCode ? <span className="text-foreground-dim tabular-nums">{a.accountCode}</span> : null} {a.accountName ?? t("buildingsId.reporting.expenseBreakdown.unclassified")}</span>
+                                  <span className="flex shrink-0 items-center gap-1.5 text-sm font-medium text-foreground tabular-nums">{rFmtChf(a.totalCents)}<span className="text-foreground-dim opacity-0 group-hover:opacity-100 transition-opacity">→</span></span>
+                                </a>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+
         const slides = [heroSlide, driversSlide, byUnitSlide];
         const slideLabels = [periodLabel, t("buildingsId.reporting.whatDrove"), t("buildingsId.reporting.byUnit")];
+        if (breakdown.length > 0) { slides.push(expenseBreakdownSlide); slideLabels.push(t("buildingsId.reporting.expenseBreakdown.title")); }
         if (vendors.length > 0) { slides.push(vendorsSlide); slideLabels.push(t("buildingsId.reporting.topVendors")); }
 
         return (

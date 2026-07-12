@@ -1145,6 +1145,22 @@ describe('G10: API Contract Tests', () => {
       expectKeys(vsData[0], ['contractorId', 'vendorName', 'totalCents', 'invoiceCount'], 'VendorSpendDTO');
       // sorted by spend desc — COMMUNE DE LUTRY (1957.90) is the largest
       expect(vsData[0].totalCents).toBeGreaterThanOrEqual(vsData[1].totalCents);
+
+      // Expense breakdown splits the same spend by month → vendor + account.
+      const eb = await fetch(`${API_BASE}/buildings/${buildingId}/expense-breakdown?from=2025-01-01&to=2025-12-31`, {
+        headers: { 'x-dev-role': 'MANAGER' },
+      });
+      expect(eb.status).toBe(200);
+      const { data: ebData } = await eb.json();
+      expect(Array.isArray(ebData)).toBe(true);
+      expect(ebData.length).toBeGreaterThan(0);
+      expectKeys(ebData[0], ['month', 'totalCents', 'vendors', 'accounts'], 'ExpenseBreakdownMonthDTO');
+      expect(ebData[0].month).toMatch(/^\d{4}-\d{2}$/);
+      expectKeys(ebData[0].vendors[0], ['contractorId', 'vendorName', 'totalCents', 'invoiceCount'], 'ExpenseBreakdownVendorDTO');
+      // Months are chronological; the total across months ties to the vendor-spend grand total.
+      const ebGrand = ebData.reduce((s: number, m: any) => s + m.totalCents, 0);
+      const vsGrand = vsData.reduce((s: number, v: any) => s + v.totalCents, 0);
+      expect(ebGrand).toBe(vsGrand);
     }, 30000);
   });
 

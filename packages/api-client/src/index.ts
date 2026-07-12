@@ -721,6 +721,23 @@ export interface VendorSpendDTO {
   invoiceCount: number;
 }
 
+export interface ExpenseBreakdownMonthDTO {
+  month: string; // YYYY-MM
+  totalCents: number;
+  vendors: {
+    contractorId: string | null;
+    vendorName: string;
+    totalCents: number;
+    invoiceCount: number;
+  }[];
+  accounts: {
+    accountId: string | null;
+    accountCode: string | null;
+    accountName: string | null;
+    totalCents: number;
+  }[];
+}
+
 export type PackageDocType =
   | "RENT_ROLL"
   | "GENERAL_LEDGER"
@@ -2433,6 +2450,16 @@ function buildFinancialsApi(opts: ClientOptions) {
         opts,
         "GET",
         `/buildings/${buildingId}/vendor-spend`,
+        undefined,
+        { from: params.from, to: params.to },
+      ),
+
+    /** Building expenses by month, broken down by vendor and ledger account. */
+    getBuildingExpenseBreakdown: (buildingId: string, params: { from: string; to: string }) =>
+      request<{ data: ExpenseBreakdownMonthDTO[] }>(
+        opts,
+        "GET",
+        `/buildings/${buildingId}/expense-breakdown`,
         undefined,
         { from: params.from, to: params.to },
       ),

@@ -3,15 +3,16 @@
   "established": "2026-06-22",
   "metrics": {
     "eslint_err": 0,
-    "eslint_warn": 2450,
+    "eslint_warn": 2453,
     "tsc": 0,
     "any": 723,
-    "console": 525,
+    "console": 526,
     "todo": 4,
     "suppress": 36,
     "bigfiles": 14
   },
   "notes": {
+    "rebaselined_2026-07-12": "Reporting expense-breakdown drill-down (GET /buildings/:id/expense-breakdown + reporting 'Expenses by month' slide + invoices context-filter). +1 console (525->526) + its matching no-console eslint_warn from the expense-breakdown route catch in routes/financials.ts (same route-error-logging pattern). +2 more eslint_warn (2450->2453 total): the URL-param context-filter consumer effect in invoices.js calls setCtx/setDirection synchronously in the effect body — the identical 'setState in effect' pattern already accepted for the sibling ?invoiceId= deep-link effect. Accepted as the new floor, NOT silenced.",
     "rebaselined_2026-07-10c": "Phase 4 package onboarding (packageDetector + packageOnboardingService analyze/commit + 2 routes in routes/buildingOnboarding.ts) — +2 console (523->525) + 2 matching no-console eslint_warn (2448->2450) for the analyze + commit route catches. Same route-error-logging pattern. Accepted as the new floor, NOT silenced.",
     "rebaselined_2026-07-10": "Invoice onboarding correctness follow-up (reference-only invoices + vendor Contractor dedup + GET /buildings/:id/vendor-spend reporting) — +1 console (522->523) + its matching no-console eslint_warn (2447->2448) from the vendor-spend route catch in routes/financials.ts. Same route-error-logging pattern; no logger abstraction. Accepted as the new floor, NOT silenced.",
     "rebaselined_2026-07-09b": "Invoice onboarding from a régie general ledger (preview + commit route catches in routes/buildingOnboarding.ts) — +2 console (520->522) plus the 2 matching no-console eslint_warn (2445->2447). Same universal route-error-logging pattern; no logger abstraction. Accepted as the new floor, NOT silenced.",

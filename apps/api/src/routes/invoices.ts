@@ -88,6 +88,10 @@ export function registerInvoiceRoutes(router: Router) {
       const buildingId = first(query, "buildingId") || undefined;
       const paidAfter = first(query, "paidAfter") || undefined;
       const paidBefore = first(query, "paidBefore") || undefined;
+      const issueDateFrom = first(query, "issueDateFrom") || undefined;
+      const issueDateTo = first(query, "issueDateTo") || undefined;
+      const issuerName = first(query, "issuerName") || undefined;
+      const vendorContractorId = first(query, "vendorContractorId") || undefined;
       const expenseTypeId = first(query, "expenseTypeId") || undefined;
       const accountId = first(query, "accountId") || undefined;
       const direction = first(query, "direction") || undefined;
@@ -100,7 +104,7 @@ export function registerInvoiceRoutes(router: Router) {
       const categorized = first(query, "categorized") === "true" ? true : undefined;
       const limit = getIntParam(query, "limit", { defaultValue: 50, min: 1, max: 200 });
       const offset = getIntParam(query, "offset", { defaultValue: 0, min: 0, max: 1_000_000 });
-      const result = await listInvoices(orgId, { jobId, status: status as any, statusIn, view, contractorId, expenseCategory, buildingId, paidAfter, paidBefore, expenseTypeId, accountId, direction, ingestionStatus, unitId, search, sortField, sortDir, categorized, limit, offset });
+      const result = await listInvoices(orgId, { jobId, status: status as any, statusIn, view, contractorId, expenseCategory, buildingId, paidAfter, paidBefore, issueDateFrom, issueDateTo, issuerName, vendorContractorId, expenseTypeId, accountId, direction, ingestionStatus, unitId, search, sortField, sortDir, categorized, limit, offset });
       sendJson(res, 200, { data: result.data, total: result.total });
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to load invoices", String(e));

@@ -740,6 +740,13 @@
       "tenantMovements": "Mouvements de locataires",
       "topVendors": "Principaux fournisseurs par dépense",
       "topVendorsSub": "Dépenses fournisseurs sur la période, classées par total.",
+      "expenseBreakdown": {
+        "title": "Dépenses par mois",
+        "sub": "Dépliez un mois pour voir quels fournisseurs et centres de coûts l'ont fait varier. Cliquez une ligne pour ouvrir ses factures.",
+        "suppliers": "Principaux fournisseurs",
+        "costCenters": "Par centre de coûts",
+        "unclassified": "Non classé"
+      },
       "moveIns": "Entrées",
       "moveOuts": "Départs",
       "noMoveIns": "Aucune entrée cette période",
@@ -1441,6 +1448,10 @@
     }
   },
   "financeInvoices": {
+    "contextFilter": {
+      "label": "Filtré depuis le reporting :",
+      "clear": "Effacer le filtre"
+    },
     "heading": {
       "disputeInvoice": "Contester la facture",
       "uploadInvoice": "Téléverser une facture"

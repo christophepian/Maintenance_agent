@@ -479,6 +479,33 @@ components:
         totalCents: { type: integer }
         invoiceCount: { type: integer }
 
+    ExpenseBreakdownMonthDTO:
+      type: object
+      required: [month, totalCents, vendors, accounts]
+      properties:
+        month: { type: string, example: '2025-02', description: YYYY-MM }
+        totalCents: { type: integer }
+        vendors:
+          type: array
+          items:
+            type: object
+            required: [contractorId, vendorName, totalCents, invoiceCount]
+            properties:
+              contractorId: { type: string, nullable: true }
+              vendorName: { type: string }
+              totalCents: { type: integer }
+              invoiceCount: { type: integer }
+        accounts:
+          type: array
+          items:
+            type: object
+            required: [accountId, accountCode, accountName, totalCents]
+            properties:
+              accountId: { type: string, nullable: true }
+              accountCode: { type: string, nullable: true }
+              accountName: { type: string, nullable: true }
+              totalCents: { type: integer }
+
     PackageDocumentDTO:
       type: object
       required: [fileName, type, summary, detail]
@@ -3436,6 +3463,22 @@ paths:
           in: query
           schema: { type: string, format: date }
           description: Filter by paidAt ≤ value
+        - name: issueDateFrom
+          in: query
+          schema: { type: string, format: date }
+          description: Filter by issueDate ≥ value (period drill-down)
+        - name: issueDateTo
+          in: query
+          schema: { type: string, format: date }
+          description: Filter by issueDate ≤ value (period drill-down)
+        - name: issuerName
+          in: query
+          schema: { type: string }
+          description: Filter incoming invoices by supplier/issuer name (case-insensitive exact match)
+        - name: vendorContractorId
+          in: query
+          schema: { type: string, format: uuid }
+          description: Filter by the invoice's own resolved vendor Contractor (not the job relation)
       responses:
         '200':
           description: Invoice list
@@ -6956,6 +6999,43 @@ paths:
                   data:
                     type: array
                     items: { $ref: '#/components/schemas/VendorSpendDTO' }
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /buildings/{id}/expense-breakdown:
+    get:
+      tags: [Financials]
+      summary: Building expenses broken down by month, vendor and ledger account
+      description: >
+        Splits a building's INCOMING-invoice spend (by issueDate) into months, and
+        within each month by vendor and by ledger account. Same source as
+        vendor-spend, so it includes imported/reference-only invoices. Powers the
+        reporting "expenses by month" drill-down into the filtered invoices view.
+        Amounts in cents; months chronological.
+      operationId: getBuildingExpenseBreakdown
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+        - name: from
+          in: query
+          required: true
+          schema: { type: string, format: date, example: '2025-01-01' }
+        - name: to
+          in: query
+          required: true
+          schema: { type: string, format: date, example: '2025-12-31' }
+      responses:
+        '200':
+          description: Expenses by month
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/ExpenseBreakdownMonthDTO' }
         '400':
           $ref: '#/components/responses/ValidationError'
         '404':

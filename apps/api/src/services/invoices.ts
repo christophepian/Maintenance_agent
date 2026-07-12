@@ -528,6 +528,10 @@ export async function listInvoices(
     paidBefore?: string;
     createdAfter?: string;
     createdBefore?: string;
+    issueDateFrom?: string;
+    issueDateTo?: string;
+    issuerName?: string;
+    vendorContractorId?: string;
     expenseTypeId?: string;
     accountId?: string;
     direction?: string;
@@ -554,7 +558,19 @@ export async function listInvoices(
     ...(filters?.accountId && { accountId: filters.accountId }),
     ...(filters?.direction && { direction: filters.direction }),
     ...(filters?.ingestionStatus && { ingestionStatus: filters.ingestionStatus }),
+    // Vendor drill-down (reporting → invoices): match the invoice's own attribution,
+    // not the job relation. contractorId identifies a resolved vendor Contractor;
+    // issuerName matches uncontractored incoming invoices by supplier name.
+    ...(filters?.vendorContractorId && { contractorId: filters.vendorContractorId }),
+    ...(filters?.issuerName && { issuerName: { equals: filters.issuerName, mode: "insensitive" } }),
   };
+
+  // Date range on issueDate (period drill-down: a specific month/year).
+  if (filters?.issueDateFrom || filters?.issueDateTo) {
+    where.issueDate = {};
+    if (filters?.issueDateFrom) where.issueDate.gte = new Date(filters.issueDateFrom);
+    if (filters?.issueDateTo) where.issueDate.lte = new Date(filters.issueDateTo + "T23:59:59.999Z");
+  }
 
   // Restrict to invoices that carry an expense category (expenses surface).
   if (filters?.categorized && !filters?.expenseCategory) {
