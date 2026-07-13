@@ -341,36 +341,40 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
 
       {bf && (() => {
         // ── Slide 1: Hero + KPIs (always shown; no expand toggle) ──
+        // Hero band — narrative only; the KPI table moved into its own tab.
         const heroSlide = (
-          <div>
-            <header className={cn(
-              "bg-gradient-to-br p-6",
-              // Dark-aware override: the light month gradient is unreadable behind
-              // text-foreground (white) in dark mode — swap to brand/info tokens.
-              "dark:from-brand-light dark:via-info-light dark:to-transparent",
-              heroGradient,
-            )}>
-              <div className="inline-flex items-center rounded-full border border-black/20 dark:border-white/20 bg-black/5 dark:bg-white/10 px-3 py-1 text-xs font-medium text-foreground/70 mb-3">
-                {periodLabel} · {t("buildingsId.reporting.monthlyReport")}
+          <header className={cn(
+            "bg-gradient-to-br p-6",
+            // Dark-aware override: the light month gradient is unreadable behind
+            // text-foreground (white) in dark mode — swap to brand/info tokens.
+            "dark:from-brand-light dark:via-info-light dark:to-transparent",
+            heroGradient,
+          )}>
+            <div className="inline-flex items-center rounded-full border border-black/20 dark:border-white/20 bg-black/5 dark:bg-white/10 px-3 py-1 text-xs font-medium text-foreground/70 mb-3">
+              {periodLabel} · {t("buildingsId.reporting.monthlyReport")}
+            </div>
+            {bf.source === "imported" && (
+              <div
+                className="inline-flex items-center rounded-full border border-brand-ring bg-brand-light px-3 py-1 text-xs font-medium text-brand-dark mb-3 ml-2"
+                title={t("buildingsId.reporting.importedActualsTooltip")}
+              >
+                {t("buildingsId.reporting.importedActuals", { year })}
               </div>
-              {bf.source === "imported" && (
-                <div
-                  className="inline-flex items-center rounded-full border border-brand-ring bg-brand-light px-3 py-1 text-xs font-medium text-brand-dark mb-3 ml-2"
-                  title={t("buildingsId.reporting.importedActualsTooltip")}
-                >
-                  {t("buildingsId.reporting.importedActuals", { year })}
-                </div>
-              )}
-              <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground">{headline}</h1>
-              {/* Executive summary — a deterministic narrative (result · why · benchmark · outlook). */}
-              <div className="mt-2 space-y-1.5 max-w-2xl">
-                {summaryParas.map((para, i) => (
-                  <p key={i} className="text-sm leading-6 text-muted-text">{para}</p>
-                ))}
-              </div>
-            </header>
+            )}
+            <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground">{headline}</h1>
+            {/* Executive summary — a deterministic narrative (result · why · benchmark · outlook). */}
+            <div className="mt-2 space-y-1.5 max-w-2xl">
+              {summaryParas.map((para, i) => (
+                <p key={i} className="text-sm leading-6 text-muted-text">{para}</p>
+              ))}
+            </div>
+          </header>
+        );
+
+        // ── Tab: KPIs ──
+        const kpiSlide = (
+          <div className="p-5">
             <KpiTable
-              attached
               isLoading={false}
               left={[
                 { label: t("buildingsId.reporting.kpi.noi"),            value: rFmtChf(noi),   delta: prev ? buildingDelta(noi, prev.netOperatingIncomeCents) : null },
@@ -562,7 +566,7 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
           </div>
         );
 
-        const activePanel = tab === "drivers" ? driversSlide : tab === "byunit" ? byUnitSlide : revexSlide;
+        const activePanel = tab === "kpi" ? kpiSlide : tab === "drivers" ? driversSlide : tab === "byunit" ? byUnitSlide : revexSlide;
         const hasAlerts = bf.receivablesCents > 0 || bf.openingReceivablesCents > 0 || bf.openingPayablesCents > 0 || (arrears && (arrears.totalOverdueCents > 0 || arrears.currentCents > 0));
 
         return (
@@ -628,7 +632,7 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
             {/* ── Detail: tab strip + sliding panel (default: Revenue & expenses) ── */}
             <div className="border-t border-surface-border">
               <div className="flex gap-1 px-4 pt-2 overflow-x-auto">
-                {[["drivers", t("buildingsId.reporting.whatDrove")], ["revex", t("buildingsId.reporting.revex.title")], ["byunit", t("buildingsId.reporting.byUnit")]].map(([k, l]) => (
+                {[["kpi", t("buildingsId.reporting.kpiTab")], ["drivers", t("buildingsId.reporting.whatDrove")], ["revex", t("buildingsId.reporting.revex.title")], ["byunit", t("buildingsId.reporting.byUnit")]].map(([k, l]) => (
                   <button key={k} onClick={() => setTab(k)} aria-pressed={tab === k}
                     className={cn("-mb-px shrink-0 border-b-2 px-3 py-2 text-sm font-medium transition-colors", tab === k ? "border-brand text-brand" : "border-transparent text-muted hover:text-foreground")}>{l}</button>
                 ))}

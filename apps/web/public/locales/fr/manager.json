@@ -755,6 +755,7 @@
         "prev": "Période précédente",
         "next": "Période suivante"
       },
+      "kpiTab": "Indicateurs",
       "revex": {
         "title": "Produits & charges",
         "sub": "Produits, charges et RNE dans le temps. Cliquez une barre ou glissez pour sélectionner une plage — le résumé suit.",
