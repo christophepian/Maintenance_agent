@@ -11,9 +11,11 @@ const CSP_REPORT_ONLY = [
   "default-src 'self'",
   // Next.js hydration + the static investor pitchdeck need inline/eval today.
   "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
-  "style-src 'self' 'unsafe-inline'",
+  // Google Fonts stylesheet host (Inter / DM Serif Display / Playfair Display wordmark)
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "img-src 'self' data: blob: https:",
-  "font-src 'self' data:",
+  // Google Fonts webfont files are served from fonts.gstatic.com
+  "font-src 'self' data: https://fonts.gstatic.com",
   // Self (Next API proxies) + Supabase/Render over https (auth, storage).
   "connect-src 'self' https:",
   "frame-ancestors 'none'",
