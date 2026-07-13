@@ -714,7 +714,9 @@
         "current": "Current",
         "days1to30": "1–30 days",
         "days31to60": "31–60 days",
-        "days61plus": "61+ days"
+        "days61plus": "61+ days",
+        "uncollectedShort": "{{amount}} uncollected rent",
+        "overdueShort": "{{amount}} overdue"
       },
       "whatDrove": "What drove performance",
       "whatDroveSub": "The main forces behind this period's numbers — green helped, red weighed on results",
