@@ -758,6 +758,17 @@
         "next": "Next period"
       },
       "kpiTab": "KPIs",
+      "compare": {
+        "button": "Compare to",
+        "comparing": "vs {{period}}",
+        "prior": "Prior period",
+        "lastYear": "Same period last year",
+        "clear": "Clear",
+        "vs": "Comparing to",
+        "metric": "Metric",
+        "whatChanged": "What changed — biggest cost-centre moves",
+        "loading": "Loading comparison…"
+      },
       "revex": {
         "title": "Revenue & expenses",
         "sub": "Income vs expenses for this period, and where each side came from.",
