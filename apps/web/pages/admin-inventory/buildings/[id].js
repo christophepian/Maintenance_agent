@@ -341,6 +341,15 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
 
       {bf && (() => {
         // ── Slide 1: Hero + KPIs (always shown; no expand toggle) ──
+        // Rent-arrears aging buckets — folded into the hero highlight below.
+        const agingBuckets = arrears ? [
+          { key: "current", label: t("buildingsId.reporting.arrears.current"),    cents: arrears.currentCents,       bar: "bg-success" },
+          { key: "d1",      label: t("buildingsId.reporting.arrears.days1to30"),  cents: arrears.overdue1to30Cents,  bar: "bg-warning" },
+          { key: "d2",      label: t("buildingsId.reporting.arrears.days31to60"), cents: arrears.overdue31to60Cents, bar: "bg-orange" },
+          { key: "d3",      label: t("buildingsId.reporting.arrears.days61plus"), cents: arrears.overdue61plusCents, bar: "bg-destructive" },
+        ].filter((b) => b.cents > 0) : [];
+        const agingTotal = agingBuckets.reduce((s, b) => s + b.cents, 0);
+
         // Hero band — narrative only; the KPI table moved into its own tab.
         const heroSlide = (
           <header className={cn(
@@ -368,6 +377,37 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
                 <p key={i} className="text-sm leading-6 text-muted-text">{para}</p>
               ))}
             </div>
+
+            {/* Rent-arrears highlight — folds the old uncollected-rent banner + aging
+                panel into one compact block (warning tint · icon · CTA · aging bar). */}
+            {bf.receivablesCents > 0 && (
+              <div className="mt-3 rounded-xl border border-warning-ring bg-warning-light p-2.5">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <span className="shrink-0 text-sm text-warning-text">⚠</span>
+                  <span className="text-sm font-semibold text-foreground">
+                    {t("buildingsId.reporting.arrears.uncollectedShort", { amount: rFmtChf(bf.receivablesCents) })}
+                    {arrears && arrears.totalOverdueCents > 0 && <span className="font-normal text-muted"> · {t("buildingsId.reporting.arrears.overdueShort", { amount: rFmtChf(arrears.totalOverdueCents) })}</span>}
+                  </span>
+                  <a href="/manager/finance/invoices" className="ml-auto shrink-0 rounded-lg border border-warning-ring px-2.5 py-1 text-xs font-semibold text-warning-text transition-colors hover:bg-warning hover:text-white no-underline">{t("buildingsId.reporting.viewInvoices")} →</a>
+                </div>
+                {agingTotal > 0 && (
+                  <>
+                    <div className="mt-2 flex h-2 gap-px overflow-hidden rounded-full">
+                      {agingBuckets.map((b) => (
+                        <div key={b.key} className={b.bar} style={{ width: `${Math.max(3, Math.round((b.cents / agingTotal) * 100))}%` /* no-token: dynamic aging-segment width */ }} title={`${b.label} · ${rFmtChf(b.cents)}`} />
+                      ))}
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+                      {agingBuckets.map((b) => (
+                        <span key={b.key} className="inline-flex items-center gap-1.5 text-[11.5px] text-muted">
+                          <span className={cn("h-2.5 w-2.5 rounded-sm", b.bar)} />{b.label} <b className="font-semibold text-foreground">{rFmtChf(b.cents)}</b>
+                        </span>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
           </header>
         );
 
@@ -567,7 +607,9 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
         );
 
         const activePanel = tab === "kpi" ? kpiSlide : tab === "drivers" ? driversSlide : tab === "byunit" ? byUnitSlide : revexSlide;
-        const hasAlerts = bf.receivablesCents > 0 || bf.openingReceivablesCents > 0 || bf.openingPayablesCents > 0 || (arrears && (arrears.totalOverdueCents > 0 || arrears.currentCents > 0));
+        // Uncollected rent + arrears aging now live in the hero highlight; only the
+        // opening-balance carry-in banner remains in the alerts strip.
+        const hasAlerts = bf.openingReceivablesCents > 0 || bf.openingPayablesCents > 0;
 
         return (
           <>
@@ -577,16 +619,6 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
             {/* ── Alerts, folded into the card below the hero ── */}
             {hasAlerts && (
             <div className="space-y-3 border-t border-surface-border p-4">
-            {bf.receivablesCents > 0 && (
-              <div className="flex items-start gap-3 rounded-2xl border border-warning-ring bg-warning-light px-5 py-4">
-                <span className="mt-0.5 text-warning-text text-lg shrink-0">⚠</span>
-                <div className="flex-1">
-                  <p className="text-sm font-semibold text-warning-text mb-0.5">{t("buildingsId.reporting.uncollectedRent", { amount: rFmtChf(bf.receivablesCents) })}</p>
-                  <p className="text-xs text-warning-text/80">{t("buildingsId.reporting.markPaidHint")}</p>
-                </div>
-                <a href="/manager/finance/invoices" className="shrink-0 rounded-lg bg-warning hover:opacity-90 px-3 py-1.5 text-xs font-semibold text-white transition-opacity no-underline">{t("buildingsId.reporting.viewInvoices")}</a>
-              </div>
-            )}
             {(bf.openingReceivablesCents > 0 || bf.openingPayablesCents > 0) && (
               <div className="flex items-start gap-3 rounded-2xl border border-info-ring bg-info-light px-5 py-4">
                 <span className="mt-0.5 text-info-text text-lg shrink-0">↪</span>
@@ -597,32 +629,6 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
                     {bf.openingPayablesCents > 0 && t("buildingsId.reporting.openingPayable", { amount: rFmtChf(bf.openingPayablesCents) })}
                   </p>
                   <p className="text-xs text-info-text/80">{t("buildingsId.reporting.openingHint")}</p>
-                </div>
-              </div>
-            )}
-            {arrears && (arrears.totalOverdueCents > 0 || arrears.currentCents > 0) && (
-              <div className="rounded-2xl border border-surface-border bg-surface p-5">
-                <div className="mb-4 flex items-center justify-between">
-                  <div>
-                    <h2 className="text-base font-semibold text-foreground">{t("buildingsId.reporting.arrearsTitle")}</h2>
-                    <p className="text-xs text-foreground-dim mt-0.5">{t("buildingsId.reporting.arrearsSub")}</p>
-                  </div>
-                  {arrears.totalOverdueCents > 0 && (
-                    <span className="rounded-full bg-destructive-light px-3 py-1 text-xs font-semibold text-destructive-text">{t("buildingsId.reporting.overdueBadge", { amount: rFmtChf(arrears.totalOverdueCents) })}</span>
-                  )}
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  {[
-                    { label: t("buildingsId.reporting.arrears.current"),    cents: arrears.currentCents,        color: "text-success-text",     bg: "bg-success-light border-success-ring" },
-                    { label: t("buildingsId.reporting.arrears.days1to30"),  cents: arrears.overdue1to30Cents,   color: "text-warning-text",     bg: "bg-warning-light border-warning-ring" },
-                    { label: t("buildingsId.reporting.arrears.days31to60"), cents: arrears.overdue31to60Cents,  color: "text-orange-text",      bg: "bg-orange-light border-orange-ring" },
-                    { label: t("buildingsId.reporting.arrears.days61plus"), cents: arrears.overdue61plusCents,  color: "text-destructive-text", bg: "bg-destructive-light border-destructive-ring" },
-                  ].map(({ label, cents, color, bg }) => (
-                    <div key={label} className={cn("rounded-xl border p-4", cents > 0 ? bg : "border-surface-border bg-surface-subtle")}>
-                      <div className="text-xs text-foreground-dim">{label}</div>
-                      <div className={cn("mt-2 text-lg font-semibold", cents > 0 ? color : "text-foreground-dim")}>{cents > 0 ? rFmtChf(cents) : "—"}</div>
-                    </div>
-                  ))}
                 </div>
               </div>
             )}

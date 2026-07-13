@@ -714,7 +714,9 @@
         "current": "À jour",
         "days1to30": "1–30 jours",
         "days31to60": "31–60 jours",
-        "days61plus": "61+ jours"
+        "days61plus": "61+ jours",
+        "uncollectedShort": "{{amount}} de loyers non encaissés",
+        "overdueShort": "{{amount}} en retard"
       },
       "whatDrove": "Facteurs de performance",
       "whatDroveSub": "Les principaux facteurs derrière les chiffres de la période — le vert a aidé, le rouge a pesé",
