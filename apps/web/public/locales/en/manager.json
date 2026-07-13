@@ -747,6 +747,22 @@
         "costCenters": "By cost center",
         "unclassified": "Unclassified"
       },
+      "histogram": {
+        "horizon": "Horizon",
+        "expenses": "Expenses",
+        "noi": "NOI",
+        "income": "Income",
+        "collection": "Collection",
+        "occupancy": "Occupancy",
+        "noiMargin": "NOI margin",
+        "legendHint": "Bar height = income · hover a bar for its rates",
+        "showing": "Showing",
+        "showingHint": "click a bar to change · drag to select a span",
+        "jumpMonth": "Latest month",
+        "jumpYtd": "YTD",
+        "jumpYear": "This year",
+        "empty": "No performance history for this building yet."
+      },
       "moveIns": "Move-ins",
       "moveOuts": "Move-outs",
       "noMoveIns": "No move-ins this period",

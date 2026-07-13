@@ -13,7 +13,7 @@ import {
 // dynamic(ssr:false) import, which created a Suspense boundary that — under React
 // 19's stylesheet handling in the pages router — dropped the global Tailwind
 // stylesheet on subsequent client-side navigations. See fix/unit-css-regression.
-import PortfolioCanvasChart from "../../../components/PortfolioCanvasChart";
+import ReportingHistogram from "../../../components/reporting/ReportingHistogram";
 
 function CorrespondenceTab({ buildingId }) {
   const [letters, setLetters] = useState([]);
@@ -68,15 +68,6 @@ import { ARCHETYPE_LABELS, ARCHETYPE_EXPLANATION_COPY } from "../../../lib/arche
 import KpiInlineGrid from "../../../components/ui/KpiInlineGrid";
 import { withServerTranslations } from "../../../lib/i18n";
 import { useTranslation } from "next-i18next";
-const RANGES = [
-  { key: "1W",  dailyOnly: true  },
-  { key: "1M",  dailyOnly: true  },
-  { key: "6M",  dailyOnly: false },
-  { key: "1Y",  dailyOnly: false },
-  { key: "2Y",  dailyOnly: false },
-  { key: "5Y",  dailyOnly: false },
-  { key: "10Y", dailyOnly: false },
-];
 
 /* ── Building reporting helpers ─────────────────────────── */
 
@@ -263,14 +254,11 @@ function buildExecutiveSummary({ bf, prev, unitData, vendors, benchmark, leaseEx
   return paras;
 }
 
-function BuildingPeriodAnalysis({ buildingId, etatLocatifNet }) {
+// The reporting detail for one period. The period ([from,to] + its label) is
+// chosen by the histogram navigator above (BuildingReportingView) and passed in.
+function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLabel }) {
   const { t, i18n } = useTranslation("manager");
   const locale = i18n.language || "en";
-  const now = new Date();
-  const [year, setYear]   = useState(now.getFullYear());
-  const [month, setMonth] = useState(now.getMonth());
-  const [mode, setMode]   = useState("month");
-  const [ytdActive, setYtd] = useState(false);
   const [unitsExpanded, setUnitsExpanded] = useState(false);
   const [insExpanded, setInsExpanded]     = useState(false);
   const [outsExpanded, setOutsExpanded]   = useState(false);
@@ -283,16 +271,10 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet }) {
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState("");
 
-  const { from, to, periodLabel, isYtd } = useMemo(() => {
-    const ytd = ytdActive || mode === "year";
-    if (ytd) {
-      return { from: `${year}-01-01`, to: `${year}-12-31`, periodLabel: ytdActive ? `YTD ${year}` : String(year), isYtd: ytdActive };
-    }
-    const lastDay = new Date(year, month + 1, 0).getDate();
-    const mm = String(month + 1).padStart(2, "0");
-    const label = new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(new Date(year, month, 1));
-    return { from: `${year}-${mm}-01`, to: `${year}-${mm}-${String(lastDay).padStart(2, "0")}`, periodLabel: label, isYtd: false };
-  }, [year, month, mode, ytdActive, locale]);
+  // Display bits derived from the focused window's end.
+  const toDate = new Date(to);
+  const year = toDate.getFullYear();
+  const month = toDate.getMonth();
 
   useEffect(() => {
     if (!buildingId) return;
@@ -308,7 +290,8 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet }) {
     ])
       .then(([rpt, uf, vs, ps, eb]) => {
         setReport(rpt?.data ?? null); setUnitData(uf?.data ?? []); setVendors(vs?.data ?? []);
-        setBreakdown(eb?.data ?? []); setExpandedMonth(null);
+        const bd = eb?.data ?? [];
+        setBreakdown(bd); setExpandedMonth(bd.length === 1 ? bd[0].month : null);
         // Portfolio benchmark: median NOI margin / OpEx ratio across the org's buildings.
         const bs = (ps?.data?.buildings ?? []).filter((b) => b.collectedIncomeCents > 0);
         const median = (arr) => { const s = [...arr].sort((a, b) => a - b); return s.length ? s[Math.floor((s.length - 1) / 2)] : 0; };
@@ -318,14 +301,7 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet }) {
       })
       .catch(() => setError(t("buildingsId.reporting.failedToLoad")))
       .finally(() => setLoading(false));
-  }, [buildingId, from, to, isYtd, t]);
-
-  const monthsShort = useMemo(() => Array.from({ length: 12 }, (_, i) =>
-    new Intl.DateTimeFormat(locale, { month: "short" }).format(new Date(2024, i, 1))), [locale]);
-  const yearRange = useMemo(() => {
-    const start = Math.floor((year - 1) / 4) * 4 - 2;
-    return Array.from({ length: 9 }, (_, i) => start + i);
-  }, [year]);
+  }, [buildingId, from, to, t]);
 
   const bf   = report?.financials ?? null;
   const prev = report?.prevFinancials ?? null;
@@ -343,9 +319,9 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet }) {
 
   // Net rent roll (contractual potential income), scaled to the selected period so
   // it's comparable to the period's actuals. etatLocatifNet is the ANNUAL figure (CHF).
-  const periodMonths = ytdActive
-    ? (year === now.getFullYear() ? now.getMonth() + 1 : 12) // YTD → months elapsed
-    : (mode === "year" ? 12 : 1);                            // full year vs single month
+  // Months spanned by the focused window (inclusive), for scaling the rent roll.
+  const fromDate = new Date(from);
+  const periodMonths = Math.max(1, (year - fromDate.getFullYear()) * 12 + (month - fromDate.getMonth()) + 1);
   const rentRollCents = etatLocatifNet != null
     ? Math.round(etatLocatifNet * 100 * periodMonths / 12)
     : null;
@@ -355,40 +331,12 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet }) {
   const watchItems = buildBuildingWatchItems(bf, arrears, unitData, moveIns, moveOuts, t);
   const summaryParas = buildExecutiveSummary({ bf, prev, unitData, vendors, benchmark, leaseExpiries: report?.leaseExpiries ?? [], t });
 
-  const heroGradient = ytdActive ? "from-violet-50 via-sky-50 to-green-50" : MONTH_HERO_GRADIENTS[month] ?? MONTH_HERO_GRADIENTS[0];
+  const heroGradient = MONTH_HERO_GRADIENTS[month] ?? MONTH_HERO_GRADIENTS[0];
 
   const visibleUnits = unitsExpanded ? unitData : unitData.slice(0, PREVIEW_UNITS);
 
   return (
     <div className="space-y-6">
-      {/* ── Date nav ── */}
-      <div className="rounded-xl border border-surface-border bg-surface shadow-sm px-4 py-3 flex items-center gap-3 overflow-x-auto">
-        {mode === "month" ? (
-          <div className="flex items-center gap-1 shrink-0">
-            <button onClick={() => setYear((y) => y - 1)} className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-surface-hover text-muted transition-colors text-sm">‹</button>
-            <button onClick={() => setMode("year")} className="rounded-full px-3 py-1 text-sm font-semibold text-muted-dark hover:bg-surface-hover transition-colors tabular-nums">{year}</button>
-            <button onClick={() => setYear((y) => y + 1)} className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-surface-hover text-muted transition-colors text-sm">›</button>
-          </div>
-        ) : (
-          <button onClick={() => setMode("month")} className="shrink-0 rounded-full px-3 py-1 text-sm font-medium text-muted hover:bg-surface-hover transition-colors">← {t("buildingsId.reporting.months")}</button>
-        )}
-        <div className="w-px h-5 bg-surface-border shrink-0" />
-        <button onClick={() => { setYtd((v) => !v); setMode("month"); }} className={cn("shrink-0 rounded-full px-3 py-1 text-sm font-semibold transition-colors", ytdActive ? "bg-violet-600 text-white" : "text-muted-text hover:bg-surface-hover")}>{t("buildingsId.reporting.year")}</button>
-        <div className="w-px h-5 bg-surface-border shrink-0" />
-        <div className="flex gap-1.5 overflow-x-auto scrollbar-none flex-1">
-          {mode === "month"
-            ? monthsShort.map((m, i) => {
-                const sel = i === month && !ytdActive;
-                const fut = new Date(year, i, 1) > now;
-                return <button key={i} disabled={fut} onClick={() => { setMonth(i); setYtd(false); }} className={cn("shrink-0 rounded-full px-3 py-1 text-sm font-medium transition-colors", sel ? "bg-slate-900 text-white" : fut ? "text-foreground-dim cursor-not-allowed" : "text-muted-text hover:bg-surface-hover")}>{m}</button>;
-              })
-            : yearRange.map((y) => {
-                const sel = y === year, fut = y > now.getFullYear();
-                return <button key={y} disabled={fut} onClick={() => { setYear(y); setMode("month"); }} className={cn("shrink-0 rounded-full px-4 py-1 text-sm font-medium tabular-nums transition-colors", sel ? "bg-slate-900 text-white" : fut ? "text-foreground-dim cursor-not-allowed" : "text-muted-text hover:bg-surface-hover")}>{y}</button>;
-              })}
-        </div>
-      </div>
-
       {error && <p className="text-sm text-red-600">{error}</p>}
       {loading && <div className="space-y-3">{[1,2,3].map((i) => <div key={i} className="h-24 rounded-3xl animate-pulse bg-surface-hover" />)}</div>}
 
@@ -725,82 +673,92 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet }) {
   );
 }
 
+const REPORTING_HORIZONS = ["1Y", "2Y", "5Y", "10Y"];
+
+// The merged building reporting surface: a stacked income histogram is the time
+// navigator (pick a horizon; granularity adapts month→quarter→year server-side),
+// and the focused bar/span drives the [from,to] of the period detail below.
 function BuildingReportingView({ buildingId, etatLocatifNet }) {
   const { t } = useTranslation("manager");
-  const [reportingTab, setReportingTab] = useState(0);
-  const [canvasRange, setCanvasRange]   = useState("1Y");
-  const [tsData, setTsData]             = useState(null);
-  const [tsLoading, setTsLoading]       = useState(false);
-  const [tsError, setTsError]           = useState("");
+  const [horizon, setHorizon] = useState("2Y");
+  const [points, setPoints]   = useState([]);
+  const [focus, setFocus]     = useState({ s: 0, e: 0 });
+  const [tsLoading, setTsLoading] = useState(false);
+  const [tsError, setTsError]     = useState("");
 
   useEffect(() => {
-    if (reportingTab !== 1 || !buildingId) return;
+    if (!buildingId) return;
     setTsLoading(true);
     setTsError("");
-    fetch(`/api/buildings/${buildingId}/timeseries?range=${canvasRange}`, { headers: authHeaders() })
+    fetch(`/api/buildings/${buildingId}/timeseries?range=${horizon}`, { headers: authHeaders() })
       .then((r) => r.json())
       .then((d) => {
-        if (d?.data) setTsData(d.data);
-        else setTsError(d?.error?.message || t("buildingsId.reporting.failedToLoad"));
+        const pts = d?.data?.points ?? [];
+        setPoints(pts);
+        setFocus({ s: Math.max(0, pts.length - 1), e: Math.max(0, pts.length - 1) });
+        if (!d?.data) setTsError(d?.error?.message || t("buildingsId.reporting.failedToLoad"));
       })
       .catch(() => setTsError(t("buildingsId.reporting.failedToLoad")))
       .finally(() => setTsLoading(false));
-  }, [buildingId, canvasRange, reportingTab, t]);
+  }, [buildingId, horizon, t]);
 
-  const earliestDate = tsData?.earliestDate ? new Date(tsData.earliestDate) : null;
-  const daysSinceEarliest = earliestDate
-    ? Math.floor((Date.now() - earliestDate.getTime()) / 86400000)
-    : 0;
+  // The focused window → [from,to] + label fed to the period detail.
+  const { from, to, periodLabel } = useMemo(() => {
+    if (!points.length) {
+      const y = new Date().getFullYear();
+      return { from: `${y}-01-01`, to: `${y}-12-31`, periodLabel: String(y) };
+    }
+    const s = Math.min(focus.s, focus.e), e = Math.max(focus.s, focus.e);
+    const a = points[Math.min(s, points.length - 1)];
+    const b = points[Math.min(e, points.length - 1)];
+    return { from: a.periodStart, to: b.periodEnd, periodLabel: s === e ? a.label : `${a.label} – ${b.label}` };
+  }, [points, focus]);
+
+  function quickJump(kind) {
+    if (kind === "month") { setHorizon("1Y"); setFocus({ s: points.length - 1, e: points.length - 1 }); }
+    else if (kind === "year") { setHorizon("10Y"); setFocus({ s: points.length - 1, e: points.length - 1 }); }
+    else if (kind === "ytd") {
+      const y = new Date().getFullYear();
+      const idxs = points.map((p, i) => (new Date(p.periodStart).getFullYear() === y ? i : -1)).filter((i) => i >= 0);
+      if (idxs.length) setFocus({ s: idxs[0], e: idxs[idxs.length - 1] });
+    }
+  }
 
   return (
     <div className="space-y-4">
-      {/* Sub-tab strip */}
-      <div className="inline-flex rounded-lg border border-surface-border bg-surface-hover p-0.5 gap-0.5">
-        {[t("buildingsId.reporting.periodAnalysis"), t("buildingsId.reporting.performanceCanvas")].map((label, i) => (
-          <button
-            key={label}
-            onClick={() => setReportingTab(i)}
-            className={cn(
-              "rounded-lg px-4 py-1.5 text-sm font-medium transition-colors",
-              reportingTab === i ? "bg-surface text-foreground shadow-sm" : "text-muted hover:text-muted-dark",
-            )}
-          >
-            {label}
-          </button>
-        ))}
+      {/* ── Time navigator controls ── */}
+      <div className="flex flex-wrap items-center gap-3">
+        <span className="text-[11px] font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.histogram.horizon")}</span>
+        <div className="inline-flex rounded-lg border border-surface-border bg-surface-hover p-0.5 gap-0.5">
+          {REPORTING_HORIZONS.map((h) => (
+            <button key={h} onClick={() => setHorizon(h)} aria-pressed={horizon === h}
+              className={cn("rounded-md px-3 py-1 text-sm font-medium transition-colors", horizon === h ? "bg-surface text-foreground shadow-sm" : "text-muted hover:text-muted-dark")}>{h}</button>
+          ))}
+        </div>
+        <div className="ml-auto flex gap-1.5">
+          {[["month", t("buildingsId.reporting.histogram.jumpMonth")], ["ytd", t("buildingsId.reporting.histogram.jumpYtd")], ["year", t("buildingsId.reporting.histogram.jumpYear")]].map(([k, l]) => (
+            <button key={k} onClick={() => quickJump(k)} className="rounded-lg border border-surface-border bg-surface px-2.5 py-1 text-xs text-muted hover:border-brand hover:text-brand transition-colors">{l}</button>
+          ))}
+        </div>
       </div>
 
-      {reportingTab === 0 && <BuildingPeriodAnalysis buildingId={buildingId} etatLocatifNet={etatLocatifNet} />}
-
-      {reportingTab === 1 && (
-        <div className="space-y-3">
-          <div className="flex flex-wrap gap-1.5">
-            {RANGES.map(({ key, dailyOnly }) => {
-              const minDays = key === "1W" ? 7 : 30;
-              const enabled = !dailyOnly || daysSinceEarliest >= minDays;
-              return (
-                <button
-                  key={key}
-                  onClick={() => enabled && setCanvasRange(key)}
-                  disabled={!enabled}
-                  className={cn(
-                    "px-3 py-1 rounded-full text-xs font-medium border transition",
-                    canvasRange === key ? "bg-blue-600 text-white border-blue-600"
-                      : enabled ? "bg-surface text-muted-dark border-surface-border hover:border-blue-400"
-                      : "bg-surface text-foreground-dim border-surface-border opacity-40 cursor-not-allowed",
-                  )}
-                >{key}</button>
-              );
-            })}
-          </div>
-          {tsError && <p className="text-sm text-destructive-text">{tsError}</p>}
-          {tsLoading && <p className="text-sm text-muted">{t("buildingsId.reporting.loadingEllipsis")}</p>}
-          {!tsLoading && !tsError && (
-            <PortfolioCanvasChart points={tsData?.points ?? []} range={canvasRange} />
-          )}
-        </div>
+      {tsError && <p className="text-sm text-destructive-text">{tsError}</p>}
+      {tsLoading && <div className="h-56 rounded-2xl bg-surface-hover animate-pulse" />}
+      {!tsLoading && points.length > 0 && (
+        <ReportingHistogram points={points} focus={focus} onFocusChange={(s, e) => setFocus({ s, e })} t={t} />
+      )}
+      {!tsLoading && !tsError && points.length === 0 && (
+        <p className="text-sm text-muted">{t("buildingsId.reporting.histogram.empty")}</p>
       )}
 
+      {/* ── Focused-period label ── */}
+      <div className="flex flex-wrap items-center gap-2 text-sm text-muted">
+        <span>{t("buildingsId.reporting.histogram.showing")}</span>
+        <span className="rounded-full bg-brand-light px-3 py-0.5 text-[12.5px] font-semibold text-brand-dark">{periodLabel}</span>
+        <span className="text-xs text-foreground-dim">{t("buildingsId.reporting.histogram.showingHint")}</span>
+      </div>
+
+      <BuildingPeriodAnalysis buildingId={buildingId} etatLocatifNet={etatLocatifNet} from={from} to={to} periodLabel={periodLabel} />
     </div>
   );
 }

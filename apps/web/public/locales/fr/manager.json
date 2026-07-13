@@ -747,6 +747,22 @@
         "costCenters": "Par centre de coûts",
         "unclassified": "Non classé"
       },
+      "histogram": {
+        "horizon": "Horizon",
+        "expenses": "Charges",
+        "noi": "RNE",
+        "income": "Produits",
+        "collection": "Encaissement",
+        "occupancy": "Occupation",
+        "noiMargin": "Marge RNE",
+        "legendHint": "Hauteur de la barre = produits · survolez une barre pour ses taux",
+        "showing": "Affichage",
+        "showingHint": "cliquez une barre pour changer · glissez pour sélectionner une plage",
+        "jumpMonth": "Dernier mois",
+        "jumpYtd": "Cumul annuel",
+        "jumpYear": "Cette année",
+        "empty": "Pas encore d'historique de performance pour cet immeuble."
+      },
       "moveIns": "Entrées",
       "moveOuts": "Départs",
       "noMoveIns": "Aucune entrée cette période",
