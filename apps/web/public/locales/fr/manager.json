@@ -758,6 +758,17 @@
         "next": "Période suivante"
       },
       "kpiTab": "Indicateurs",
+      "compare": {
+        "button": "Comparer à",
+        "comparing": "vs {{period}}",
+        "prior": "Période précédente",
+        "lastYear": "Même période l'an dernier",
+        "clear": "Effacer",
+        "vs": "Comparaison avec",
+        "metric": "Indicateur",
+        "whatChanged": "Ce qui a changé — principaux mouvements par centre de coûts",
+        "loading": "Chargement de la comparaison…"
+      },
       "revex": {
         "title": "Produits & charges",
         "sub": "Produits et charges pour cette période, et l'origine de chacun.",

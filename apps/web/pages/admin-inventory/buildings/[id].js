@@ -256,7 +256,7 @@ function buildExecutiveSummary({ bf, prev, unitData, vendors, benchmark, leaseEx
 // chosen by the period navigator above (BuildingReportingView); the time-series
 // points + focus are passed in so the Revenue & expenses slide can render the
 // histogram and let a bar click/brush re-drive the period.
-function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLabel }) {
+function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLabel, compareWith, compareFrom, compareTo, compareLabel, onChangeCompare, onClearCompare }) {
   const { t } = useTranslation("manager");
   const [unitsExpanded, setUnitsExpanded] = useState(false);
   const [insExpanded, setInsExpanded]     = useState(false);
@@ -265,7 +265,8 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
   const [unitData, setUnitData] = useState([]);
   const [vendors, setVendors] = useState([]);
   const [expView, setExpView] = useState("acc"); // Revenue & expenses: cost-center | vendor
-  const [tab, setTab] = useState("revex");       // detail tab: drivers | revex | byunit
+  const [tab, setTab] = useState("revex");       // detail tab: kpi | drivers | revex | byunit
+  const [benchReport, setBenchReport] = useState(null); // "Compare to…" benchmark period
   const [benchmark, setBenchmark] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState("");
@@ -298,6 +299,18 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
       .catch(() => setError(t("buildingsId.reporting.failedToLoad")))
       .finally(() => setLoading(false));
   }, [buildingId, from, to, t]);
+
+  // Benchmark period for "Compare to…" (fetched only while a comparison is active).
+  useEffect(() => {
+    if (!compareFrom || !compareTo) { setBenchReport(null); return; }
+    let cancelled = false;
+    fetch(`/api/buildings/${buildingId}/period-report?from=${compareFrom}&to=${compareTo}`, { headers: authHeaders() })
+      .then((r) => r.json()).then((d) => { if (!cancelled) setBenchReport(d?.data ?? null); })
+      .catch(() => { if (!cancelled) setBenchReport(null); });
+    return () => { cancelled = true; };
+  }, [buildingId, compareFrom, compareTo]);
+  // A fresh comparison lands you on the KPIs tab, where it's shown.
+  useEffect(() => { if (compareWith) setTab("kpi"); }, [compareWith]);
 
   const bf   = report?.financials ?? null;
   const prev = report?.prevFinancials ?? null;
@@ -410,26 +423,109 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
           </header>
         );
 
-        // ── Tab: KPIs ──
+        // ── Tab: KPIs (with optional "Compare to…" side-by-side) ──
+        const benchBf = benchReport?.financials ?? null;
+        const cmpFmt = (type, v) => (v == null ? "—" : type === "pct" ? rFmtPct(v) : rFmtChf(v));
+        const cmpDelta = (cur, be, type, better) => {
+          if (cur == null || be == null) return { txt: "—", cls: "text-foreground-dim" };
+          if (type === "pct") {
+            const pp = Math.round((cur - be) * 100);
+            const good = better === 0 ? null : (pp > 0 ? better > 0 : better < 0);
+            return { txt: `${pp > 0 ? "▲ +" : pp < 0 ? "▼ " : "– "}${Math.abs(pp)}pp`, cls: pp === 0 || good === null ? "text-foreground-dim" : good ? "text-success-text" : "text-destructive-text" };
+          }
+          const d = cur - be, p = be ? Math.round((d / be) * 100) : 0;
+          const good = better === 0 ? null : (d > 0 ? better > 0 : better < 0);
+          return { txt: `${d > 0 ? "▲ +" : d < 0 ? "▼ " : "– "}${rFmtChf(Math.abs(d))}${be ? ` (${Math.abs(p)}%)` : ""}`, cls: d === 0 || good === null ? "text-foreground-dim" : good ? "text-success-text" : "text-destructive-text" };
+        };
+        const cmpMetrics = benchBf ? [
+          { label: t("buildingsId.reporting.kpi.noi"),             cur: noi,       be: benchBf.netOperatingIncomeCents, type: "chf", better: 1 },
+          { label: t("buildingsId.reporting.kpi.cashReceived"),    cur: earned,    be: benchBf.collectedIncomeCents,    type: "chf", better: 1 },
+          { label: t("buildingsId.reporting.kpi.totalExpenses"),   cur: expenses,  be: benchBf.expensesTotalCents,      type: "chf", better: -1 },
+          { label: t("buildingsId.reporting.kpi.onTimeCollection"),cur: coll,      be: benchBf.collectionRate,          type: "pct", better: 1 },
+          { label: t("buildingsId.reporting.kpi.noiMargin"),       cur: noiMargin, be: benchBf.collectedIncomeCents > 0 ? benchBf.netOperatingIncomeCents / benchBf.collectedIncomeCents : null, type: "pct", better: 1 },
+          { label: t("buildingsId.reporting.kpi.opexRatio"),       cur: opexRatio, be: benchBf.collectedIncomeCents > 0 ? benchBf.expensesTotalCents / benchBf.collectedIncomeCents : null, type: "pct", better: -1 },
+          { label: t("buildingsId.reporting.kpi.occupancy"),       cur: occ,       be: benchBf.totalUnitsCount > 0 ? benchBf.activeUnitsCount / benchBf.totalUnitsCount : null, type: "pct", better: 1 },
+          { label: t("buildingsId.reporting.kpi.receivables"),     cur: bf.receivablesCents, be: benchBf.receivablesCents, type: "chf", better: -1 },
+        ] : [];
+        const cmpMovers = benchBf ? (() => {
+          const beMap = new Map((benchBf.expensesByAccount ?? []).map((a) => [a.accountId ?? a.accountName, a]));
+          const seen = new Set();
+          const rows = (bf.expensesByAccount ?? []).map((a) => { const k = a.accountId ?? a.accountName; seen.add(k); return { name: a.accountName ?? a.accountCode ?? "—", d: a.totalCents - (beMap.get(k)?.totalCents ?? 0) }; });
+          for (const a of (benchBf.expensesByAccount ?? [])) { const k = a.accountId ?? a.accountName; if (!seen.has(k)) rows.push({ name: a.accountName ?? a.accountCode ?? "—", d: -a.totalCents }); }
+          return rows.filter((x) => Math.abs(x.d) >= 20000).sort((x, y) => Math.abs(y.d) - Math.abs(x.d)).slice(0, 5);
+        })() : [];
+
+        const normalKpis = (
+          <KpiTable
+            flush
+            isLoading={false}
+            left={[
+              { label: t("buildingsId.reporting.kpi.noi"),            value: rFmtChf(noi),   delta: prev ? buildingDelta(noi, prev.netOperatingIncomeCents) : null },
+              { label: t("buildingsId.reporting.kpi.cashReceived"),   value: rFmtChf(earned), delta: prev ? buildingDelta(earned, prev.collectedIncomeCents) : null },
+              { label: t("buildingsId.reporting.kpi.totalExpenses"),  value: rFmtChf(expenses), delta: prev ? buildingDelta(-expenses, -prev.expensesTotalCents) : null },
+              { label: t("buildingsId.reporting.kpi.onTimeCollection"), value: rFmtPct(coll),  delta: prev ? buildingDelta(coll, prev.collectionRate) : null },
+            ]}
+            right={[
+              { label: t("buildingsId.reporting.kpi.noiMargin"),   value: noiMargin  !== null ? rFmtPct(noiMargin)  : "—", delta: null },
+              { label: t("buildingsId.reporting.kpi.opexRatio"),   value: opexRatio  !== null ? rFmtPct(opexRatio)  : "—", delta: null },
+              { label: t("buildingsId.reporting.kpi.occupancy"),   value: occ        !== null ? rFmtPct(occ)        : "—", delta: null },
+              { label: t("buildingsId.reporting.kpi.rentRoll"),    value: rentRollCents != null ? rFmtChf(rentRollCents) : "—", delta: null },
+              { label: t("buildingsId.reporting.kpi.receivables"), value: bf.receivablesCents > 0 ? rFmtChf(bf.receivablesCents) : "—", delta: null },
+            ]}
+          />
+        );
         const kpiSlide = (
           <div className="p-5">
-            <KpiTable
-              flush
-              isLoading={false}
-              left={[
-                { label: t("buildingsId.reporting.kpi.noi"),            value: rFmtChf(noi),   delta: prev ? buildingDelta(noi, prev.netOperatingIncomeCents) : null },
-                { label: t("buildingsId.reporting.kpi.cashReceived"),   value: rFmtChf(earned), delta: prev ? buildingDelta(earned, prev.collectedIncomeCents) : null },
-                { label: t("buildingsId.reporting.kpi.totalExpenses"),  value: rFmtChf(expenses), delta: prev ? buildingDelta(-expenses, -prev.expensesTotalCents) : null },
-                { label: t("buildingsId.reporting.kpi.onTimeCollection"), value: rFmtPct(coll),  delta: prev ? buildingDelta(coll, prev.collectionRate) : null },
-              ]}
-              right={[
-                { label: t("buildingsId.reporting.kpi.noiMargin"),   value: noiMargin  !== null ? rFmtPct(noiMargin)  : "—", delta: null },
-                { label: t("buildingsId.reporting.kpi.opexRatio"),   value: opexRatio  !== null ? rFmtPct(opexRatio)  : "—", delta: null },
-                { label: t("buildingsId.reporting.kpi.occupancy"),   value: occ        !== null ? rFmtPct(occ)        : "—", delta: null },
-                { label: t("buildingsId.reporting.kpi.rentRoll"),    value: rentRollCents != null ? rFmtChf(rentRollCents) : "—", delta: null },
-                { label: t("buildingsId.reporting.kpi.receivables"), value: bf.receivablesCents > 0 ? rFmtChf(bf.receivablesCents) : "—", delta: null },
-              ]}
-            />
+            {!compareWith ? normalKpis : !benchBf ? (
+              <p className="text-sm text-muted">{t("buildingsId.reporting.compare.loading")}</p>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-sm text-muted">{t("buildingsId.reporting.compare.vs")}</span>
+                  <span className="rounded-full bg-brand-light px-3 py-0.5 text-[12.5px] font-semibold text-brand-dark">{compareLabel}</span>
+                  <select value={compareWith} onChange={(e) => onChangeCompare(e.target.value)}
+                    className="rounded-lg border border-surface-border bg-surface px-2 py-1 text-xs text-foreground">
+                    <option value="prior">{t("buildingsId.reporting.compare.prior")}</option>
+                    <option value="ly">{t("buildingsId.reporting.compare.lastYear")}</option>
+                  </select>
+                  <button onClick={onClearCompare} className="ml-auto rounded-lg border border-surface-border px-2.5 py-1 text-xs text-muted transition-colors hover:border-destructive-ring hover:text-destructive-text">✕ {t("buildingsId.reporting.compare.clear")}</button>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-[10.5px] uppercase tracking-wide text-foreground-dim">
+                        <th className="py-2 pr-2 text-left font-semibold">{t("buildingsId.reporting.compare.metric")}</th>
+                        <th className="py-2 px-2 text-right font-semibold">{periodLabel}</th>
+                        <th className="py-2 px-2 text-right font-semibold">{compareLabel}</th>
+                        <th className="py-2 pl-2 text-right font-semibold">Δ</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {cmpMetrics.map((m, i) => { const dd = cmpDelta(m.cur, m.be, m.type, m.better); return (
+                        <tr key={i} className="border-t border-surface-divider">
+                          <td className="py-2 pr-2 text-muted">{m.label}</td>
+                          <td className="py-2 px-2 text-right font-semibold text-foreground tabular-nums">{cmpFmt(m.type, m.cur)}</td>
+                          <td className="py-2 px-2 text-right text-muted tabular-nums">{cmpFmt(m.type, m.be)}</td>
+                          <td className={cn("whitespace-nowrap py-2 pl-2 text-right font-medium tabular-nums", dd.cls)}>{dd.txt}</td>
+                        </tr>); })}
+                    </tbody>
+                  </table>
+                </div>
+                {cmpMovers.length > 0 && (
+                  <div>
+                    <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.compare.whatChanged")}</p>
+                    <div className="space-y-1">
+                      {cmpMovers.map((x, i) => (
+                        <div key={i} className="flex items-center justify-between gap-2 rounded-lg px-2 py-1 odd:bg-surface-subtle">
+                          <span className="truncate text-sm text-foreground">{x.name}</span>
+                          <span className={cn("shrink-0 text-sm font-semibold tabular-nums", x.d > 0 ? "text-destructive-text" : "text-success-text")}>{x.d > 0 ? "▲ +" : "▼ "}{rFmtChf(Math.abs(x.d))}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         );
 
@@ -698,12 +794,23 @@ function BuildingReportingView({ buildingId, etatLocatifNet }) {
   const [pkYear, setPkYear] = useState(new Date().getFullYear());
   const pickerRef = useRef(null);
 
+  const [compareWith, setCompareWith] = useState(null); // null | "prior" | "ly"
+  const [cmpMenuOpen, setCmpMenuOpen] = useState(false);
+  const cmpRef = useRef(null);
+
   useEffect(() => {
     if (!pickerOpen) return;
     const onDown = (e) => { if (pickerRef.current && !pickerRef.current.contains(e.target)) setPickerOpen(false); };
     document.addEventListener("mousedown", onDown);
     return () => document.removeEventListener("mousedown", onDown);
   }, [pickerOpen]);
+
+  useEffect(() => {
+    if (!cmpMenuOpen) return;
+    const onDown = (e) => { if (cmpRef.current && !cmpRef.current.contains(e.target)) setCmpMenuOpen(false); };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [cmpMenuOpen]);
 
   useEffect(() => {
     if (!buildingId) return;
@@ -744,6 +851,26 @@ function BuildingReportingView({ buildingId, etatLocatifNet }) {
     const b = points[Math.min(e, points.length - 1)];
     return { from: a.periodStart, to: b.periodEnd, periodLabel: s === e ? a.label : `${a.label} – ${b.label}` };
   }, [points, focus]);
+
+  // Benchmark window for "Compare to…" — prior = same-length span just before the
+  // focus; ly = the same window a year earlier. Computed from the current selection.
+  const compare = useMemo(() => {
+    if (!compareWith || !points.length) return null;
+    const f0 = Math.min(focus.s, focus.e), f1 = Math.max(focus.s, focus.e);
+    if (compareWith === "prior") {
+      const len = f1 - f0 + 1, bs = f0 - len, be = f0 - 1;
+      if (bs < 0) return null; // no prior period available in the loaded window
+      const a = points[bs], b = points[be];
+      return { from: a.periodStart, to: b.periodEnd, label: bs === be ? a.label : `${a.label} – ${b.label}` };
+    }
+    // same period last year
+    const shift = (iso) => { const d = new Date(iso); d.setFullYear(d.getFullYear() - 1); return d.toISOString().slice(0, 10); };
+    const lyLabel = (iso) => { const d = new Date(iso); const yy = String(d.getFullYear()).slice(2); return gran === "year" ? String(d.getFullYear()) : gran === "quarter" ? `Q${Math.floor(d.getMonth() / 3) + 1} ${yy}` : `${new Intl.DateTimeFormat(undefined, { month: "short" }).format(d)} ${yy}`; };
+    const bf = shift(from), bt = shift(to);
+    const s = Math.min(focus.s, focus.e), e = Math.max(focus.s, focus.e);
+    return { from: bf, to: bt, label: s === e ? lyLabel(bf) : `${lyLabel(bf)} – ${lyLabel(bt)}` };
+  }, [compareWith, points, focus, from, to, gran]);
+  const priorAvailable = points.length > 0 && Math.min(focus.s, focus.e) - (Math.max(focus.s, focus.e) - Math.min(focus.s, focus.e) + 1) >= 0;
 
   function step(d) {
     let i = Math.max(0, Math.min(points.length - 1, Math.max(focus.s, focus.e) + d));
@@ -817,10 +944,29 @@ function BuildingReportingView({ buildingId, etatLocatifNet }) {
             </div>
           )}
         </div>
-        <div className="ml-auto flex gap-1.5">
+        <div className="flex gap-1.5">
           {[["latest", t("buildingsId.reporting.histogram.jumpMonth")], ["ytd", t("buildingsId.reporting.histogram.jumpYtd")], ["year", t("buildingsId.reporting.histogram.jumpYear")]].map(([k, l]) => (
             <button key={k} onClick={() => { setPickerOpen(false); jump(k); }} className="rounded-lg border border-surface-border bg-surface px-2.5 py-1 text-xs text-muted transition-colors hover:border-brand hover:text-brand">{l}</button>
           ))}
+        </div>
+        {/* Compare to… — deliberate period-vs-period comparison (progressive disclosure) */}
+        <div className="relative ml-auto" ref={cmpRef}>
+          <button onClick={() => setCmpMenuOpen((v) => !v)} aria-expanded={cmpMenuOpen}
+            className={cn("rounded-lg border px-2.5 py-1 text-xs font-semibold transition-colors", compareWith ? "border-brand bg-brand-light text-brand-dark" : "border-surface-border bg-surface text-brand hover:border-brand")}>
+            {compareWith ? t("buildingsId.reporting.compare.comparing", { period: compare?.label ?? "" }) : `${t("buildingsId.reporting.compare.button")} ▾`}
+          </button>
+          {cmpMenuOpen && (
+            <div className="absolute right-0 top-full z-30 mt-2 w-56 rounded-xl border border-surface-border bg-surface p-1.5 shadow-lg">
+              {[["prior", t("buildingsId.reporting.compare.prior"), priorAvailable], ["ly", t("buildingsId.reporting.compare.lastYear"), true]].map(([k, l, ok]) => (
+                <button key={k} disabled={!ok} onClick={() => { setCompareWith(k); setCmpMenuOpen(false); }}
+                  className="block w-full rounded-lg px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-surface-hover disabled:opacity-40 disabled:cursor-not-allowed">{l}</button>
+              ))}
+              {compareWith && (
+                <button onClick={() => { setCompareWith(null); setCmpMenuOpen(false); }}
+                  className="mt-1 block w-full rounded-lg border-t border-surface-border px-3 py-2 text-left text-sm text-muted transition-colors hover:bg-surface-hover">✕ {t("buildingsId.reporting.compare.clear")}</button>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -828,7 +974,9 @@ function BuildingReportingView({ buildingId, etatLocatifNet }) {
 
       {/* ── Report card: hero + tabs + panel ── */}
       <div className="overflow-hidden rounded-2xl border border-surface-border bg-surface shadow-sm">
-        <BuildingPeriodAnalysis buildingId={buildingId} etatLocatifNet={etatLocatifNet} from={from} to={to} periodLabel={periodLabel} />
+        <BuildingPeriodAnalysis buildingId={buildingId} etatLocatifNet={etatLocatifNet} from={from} to={to} periodLabel={periodLabel}
+          compareWith={compareWith} compareFrom={compare?.from ?? null} compareTo={compare?.to ?? null} compareLabel={compare?.label ?? null}
+          onChangeCompare={setCompareWith} onClearCompare={() => setCompareWith(null)} />
       </div>
     </div>
   );
