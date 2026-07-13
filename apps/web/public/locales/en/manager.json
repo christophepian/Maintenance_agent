@@ -760,7 +760,7 @@
       "kpiTab": "KPIs",
       "revex": {
         "title": "Revenue & expenses",
-        "sub": "Income, expenses and NOI over time. Click a bar or drag to select a span — the hero follows.",
+        "sub": "Income vs expenses for this period, and where each side came from.",
         "income": "Income · by unit",
         "byCostCenter": "Cost-center",
         "byVendor": "Vendor",
