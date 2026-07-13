@@ -1,4 +1,4 @@
-import { useRef, useState, useMemo } from "react";
+import { useRef, useState, useMemo, useEffect } from "react";
 import { fmtChf, fmtPct } from "./ReportingShared";
 import { cn } from "../../lib/utils";
 
@@ -29,31 +29,57 @@ function niceCeil(v) {
  * focus:  { s, e } inclusive index range. onFocusChange(s, e) on click/drag/keys.
  */
 export default function ReportingHistogram({ points, focus, onFocusChange, t }) {
-  const [tip, setTip] = useState(null); // { i, x, y } | null
+  const [tip, setTip] = useState(null);   // { i, x, y } | null
+  const [drag, setDrag] = useState(null); // live { s, e } while dragging — visual only
   const dragging = useRef(false);
-  const dragStart = useRef(0);
+  const startRef = useRef(0);
+  const endRef = useRef(0);
 
   const axisMax = useMemo(() => niceCeil(Math.max(1, ...points.map((p) => p.collectedIncomeCents ?? 0))), [points]);
   const AREA = 190; // px height of the plot area (bars grow into this)
 
-  const f0 = Math.min(focus.s, focus.e);
-  const f1 = Math.max(focus.s, focus.e);
+  // While dragging, highlight from local state and DON'T notify the parent —
+  // committing the [from,to] on every bar would refetch the whole detail per bar.
+  // The parent (and its expensive detail fetch) is only told on release.
+  const hi = drag ?? { s: focus.s, e: focus.e };
+  const f0 = Math.min(hi.s, hi.e);
+  const f1 = Math.max(hi.s, hi.e);
+
+  function commitDrag() {
+    if (!dragging.current) return;
+    dragging.current = false;
+    const s = startRef.current, e = endRef.current;
+    setDrag(null);
+    onFocusChange(s, e);
+  }
+
+  // Commit even if the mouse is released outside the chart. Attach the listener
+  // once and route through a ref to the latest handler (updated post-render) so
+  // hover re-renders neither churn the listener nor read a ref during render.
+  const commitRef = useRef(null);
+  useEffect(() => { commitRef.current = commitDrag; });
+  useEffect(() => {
+    const h = () => commitRef.current && commitRef.current();
+    window.addEventListener("mouseup", h);
+    return () => window.removeEventListener("mouseup", h);
+  }, []);
 
   function startDrag(i, e) {
     dragging.current = true;
-    dragStart.current = i;
-    onFocusChange(i, i);
+    startRef.current = i;
+    endRef.current = i;
+    setDrag({ s: i, e: i });
+    setTip(null);
     e.preventDefault();
   }
   function enterBar(i, e) {
-    if (dragging.current) onFocusChange(dragStart.current, i);
+    if (dragging.current) { endRef.current = i; setDrag({ s: startRef.current, e: i }); }
     else setTip({ i, x: e.clientX, y: e.clientY });
   }
-  function endDrag() { dragging.current = false; }
 
   function onKeyDown(e) {
     if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
-    let i = f1 + (e.key === "ArrowRight" ? 1 : -1);
+    let i = Math.max(focus.s, focus.e) + (e.key === "ArrowRight" ? 1 : -1);
     i = Math.max(0, Math.min(points.length - 1, i));
     onFocusChange(i, i);
     e.preventDefault();
@@ -83,7 +109,6 @@ export default function ReportingHistogram({ points, focus, onFocusChange, t }) 
         <div
           className="relative flex select-none items-end gap-[3px]"
           style={{ height: `${AREA + 20}px`, minWidth: `${points.length * 13}px` /* no-token: bar-count driven min width */ }}
-          onMouseUp={endDrag}
         >
           {/* axis cap + baseline */}
           <div className="pointer-events-none absolute inset-x-0 border-t border-dashed border-surface-border" style={{ bottom: "20px" /* no-token: chart baseline */ }} />

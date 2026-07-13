@@ -1469,6 +1469,12 @@ async function buildImportedYearSplit(
   return { monthly, dto };
 }
 
+// Bucket financials feeding the reporting histogram are computed per-bucket via
+// getBuildingFinancials (heavy). Bound the fan-out so a 25-month range doesn't
+// run 25 serial computes on the reporting critical path, without saturating the
+// connection pool (this runs alongside the period-detail fetches).
+const TIMESERIES_CONCURRENCY = 4;
+
 async function getBuildingMonthlyPoints(
   orgId: string,
   buildingId: string,
@@ -1477,29 +1483,40 @@ async function getBuildingMonthlyPoints(
   toYear: number,
   toMonth: number,
 ): Promise<TimeSeriesPoint[]> {
-  const points: TimeSeriesPoint[] = [];
-  let y = fromYear;
-  let m = fromMonth;
   const now = new Date();
-  const importedByYear = new Map<number, ImportedYearSplit | null>();
 
+  // 1. Enumerate the months in range.
+  const periods: { y: number; m: number; from: string; to: string; label: string }[] = [];
+  let y = fromYear, m = fromMonth;
   while (y < toYear || (y === toYear && m <= toMonth)) {
     if (new Date(y, m - 1, 1) > now) break;
     const from    = `${y}-${String(m).padStart(2, "0")}-01`;
     const lastDay = new Date(y, m, 0).getDate();
     const to      = `${y}-${String(m).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
     const label   = `${monthLabel(y, m)} ${toYear - fromYear >= 1 ? y : ""}`.trim();
+    periods.push({ y, m, from, to, label });
+    m++;
+    if (m > 12) { m = 1; y++; }
+  }
+
+  // 2. Resolve each year's imported (annual→monthly) split once, in parallel.
+  const years = [...new Set(periods.map((p) => p.y))];
+  const splits = await Promise.all(years.map((yy) => buildImportedYearSplit(orgId, buildingId, yy).catch(() => null)));
+  const importedByYear = new Map<number, ImportedYearSplit | null>();
+  years.forEach((yy, i) => importedByYear.set(yy, splits[i]));
+
+  // 3. Build each point with bounded concurrency (imported = local, else fetch).
+  const points = await mapWithConcurrency(periods, TIMESERIES_CONCURRENCY, async (p): Promise<TimeSeriesPoint | null> => {
     try {
-      if (!importedByYear.has(y)) importedByYear.set(y, await buildImportedYearSplit(orgId, buildingId, y));
-      const imported = importedByYear.get(y);
+      const imported = importedByYear.get(p.y);
       if (imported) {
-        const md = imported.monthly.get(m)!;
+        const md = imported.monthly.get(p.m)!;
         const noi = md.incomeCents - md.expensesCents;
         const d = imported.dto;
-        points.push({
-          periodStart: from,
-          periodEnd: to,
-          label,
+        return {
+          periodStart: p.from,
+          periodEnd: p.to,
+          label: p.label,
           noiCents: noi,
           collectedIncomeCents: md.incomeCents,
           expensesCents: md.expensesCents,
@@ -1507,18 +1524,15 @@ async function getBuildingMonthlyPoints(
           noiMarginPct: safePct(noi, md.incomeCents),
           opexRatioPct: safePct(md.expensesCents, md.incomeCents),
           occupancyRate: d.totalUnitsCount > 0 ? Math.round((d.activeUnitsCount / d.totalUnitsCount) * 10000) / 10000 : null,
-        });
-      } else {
-        const dto = await getBuildingFinancials(orgId, buildingId, { from, to });
-        points.push(buildingSummaryToPoint(dto, from, to, label));
+        };
       }
+      const dto = await getBuildingFinancials(orgId, buildingId, { from: p.from, to: p.to });
+      return buildingSummaryToPoint(dto, p.from, p.to, p.label);
     } catch {
-      // skip months with no data
+      return null; // skip months with no data
     }
-    m++;
-    if (m > 12) { m = 1; y++; }
-  }
-  return points;
+  });
+  return points.filter((p): p is TimeSeriesPoint => p !== null);
 }
 
 async function getBuildingQuarterlyPoints(
@@ -1527,26 +1541,28 @@ async function getBuildingQuarterlyPoints(
   fromYear: number,
   toYear: number,
 ): Promise<TimeSeriesPoint[]> {
-  const points: TimeSeriesPoint[] = [];
   const now = new Date();
-
+  const periods: { from: string; to: string; label: string }[] = [];
   for (let y = fromYear; y <= toYear; y++) {
     for (let q = 1; q <= 4; q++) {
       const qStart  = (q - 1) * 3 + 1;
       const qEnd    = q * 3;
+      if (new Date(y, qStart - 1, 1) > now) break;
       const from    = `${y}-${String(qStart).padStart(2, "0")}-01`;
       const lastDay = new Date(y, qEnd, 0).getDate();
       const to      = `${y}-${String(qEnd).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
-      if (new Date(y, qStart - 1, 1) > now) break;
-      try {
-        const dto = await getBuildingFinancials(orgId, buildingId, { from, to });
-        points.push(buildingSummaryToPoint(dto, from, to, `Q${q} ${y}`));
-      } catch {
-        // skip quarters with no data
-      }
+      periods.push({ from, to, label: `Q${q} ${y}` });
     }
   }
-  return points;
+  const points = await mapWithConcurrency(periods, TIMESERIES_CONCURRENCY, async (p): Promise<TimeSeriesPoint | null> => {
+    try {
+      const dto = await getBuildingFinancials(orgId, buildingId, { from: p.from, to: p.to });
+      return buildingSummaryToPoint(dto, p.from, p.to, p.label);
+    } catch {
+      return null; // skip quarters with no data
+    }
+  });
+  return points.filter((p): p is TimeSeriesPoint => p !== null);
 }
 
 async function getBuildingAnnualPoints(
@@ -1555,21 +1571,21 @@ async function getBuildingAnnualPoints(
   fromYear: number,
   toYear: number,
 ): Promise<TimeSeriesPoint[]> {
-  const points: TimeSeriesPoint[] = [];
   const now = new Date();
-
+  const periods: { from: string; to: string; label: string }[] = [];
   for (let y = fromYear; y <= toYear; y++) {
     if (y > now.getFullYear()) break;
-    const from = `${y}-01-01`;
-    const to   = y < now.getFullYear() ? `${y}-12-31` : isoDate(now);
-    try {
-      const dto = await getBuildingFinancials(orgId, buildingId, { from, to });
-      points.push(buildingSummaryToPoint(dto, from, to, String(y)));
-    } catch {
-      // skip years with no data
-    }
+    periods.push({ from: `${y}-01-01`, to: y < now.getFullYear() ? `${y}-12-31` : isoDate(now), label: String(y) });
   }
-  return points;
+  const points = await mapWithConcurrency(periods, TIMESERIES_CONCURRENCY, async (p): Promise<TimeSeriesPoint | null> => {
+    try {
+      const dto = await getBuildingFinancials(orgId, buildingId, { from: p.from, to: p.to });
+      return buildingSummaryToPoint(dto, p.from, p.to, p.label);
+    } catch {
+      return null; // skip years with no data
+    }
+  });
+  return points.filter((p): p is TimeSeriesPoint => p !== null);
 }
 
 async function getBuildingDailyPoints(
