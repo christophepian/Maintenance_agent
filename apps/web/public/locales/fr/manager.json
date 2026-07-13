@@ -760,7 +760,7 @@
       "kpiTab": "Indicateurs",
       "revex": {
         "title": "Produits & charges",
-        "sub": "Produits, charges et RNE dans le temps. Cliquez une barre ou glissez pour sélectionner une plage — le résumé suit.",
+        "sub": "Produits et charges pour cette période, et l'origine de chacun.",
         "income": "Produits · par lot",
         "byCostCenter": "Centre de coûts",
         "byVendor": "Fournisseur",

@@ -13,7 +13,6 @@ import {
 // dynamic(ssr:false) import, which created a Suspense boundary that — under React
 // 19's stylesheet handling in the pages router — dropped the global Tailwind
 // stylesheet on subsequent client-side navigations. See fix/unit-css-regression.
-import ReportingHistogram from "../../../components/reporting/ReportingHistogram";
 
 function CorrespondenceTab({ buildingId }) {
   const [letters, setLetters] = useState([]);
@@ -257,7 +256,7 @@ function buildExecutiveSummary({ bf, prev, unitData, vendors, benchmark, leaseEx
 // chosen by the period navigator above (BuildingReportingView); the time-series
 // points + focus are passed in so the Revenue & expenses slide can render the
 // histogram and let a bar click/brush re-drive the period.
-function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLabel, points = [], focus = { s: 0, e: 0 }, onFocusChange }) {
+function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLabel }) {
   const { t } = useTranslation("manager");
   const [unitsExpanded, setUnitsExpanded] = useState(false);
   const [insExpanded, setInsExpanded]     = useState(false);
@@ -519,9 +518,6 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
               <h2 className="text-base font-semibold text-foreground mb-1">{t("buildingsId.reporting.revex.title")}</h2>
               <p className="text-xs text-foreground-dim">{t("buildingsId.reporting.revex.sub")}</p>
             </div>
-            {points.length > 0
-              ? <ReportingHistogram points={points} focus={focus} onFocusChange={onFocusChange} t={t} bare />
-              : <p className="text-sm text-muted italic">{t("buildingsId.reporting.histogram.empty")}</p>}
 
             {/* Income − Expenses = NOI */}
             <div className="flex items-stretch overflow-hidden rounded-2xl border border-surface-border text-center">
@@ -829,8 +825,7 @@ function BuildingReportingView({ buildingId, etatLocatifNet }) {
 
       {tsError && <p className="p-3 text-sm text-destructive-text">{tsError}</p>}
 
-      <BuildingPeriodAnalysis buildingId={buildingId} etatLocatifNet={etatLocatifNet} from={from} to={to} periodLabel={periodLabel}
-        points={points} focus={focus} onFocusChange={(s, e) => setFocus({ s, e })} />
+      <BuildingPeriodAnalysis buildingId={buildingId} etatLocatifNet={etatLocatifNet} from={from} to={to} periodLabel={periodLabel} />
     </div>
   );
 }
