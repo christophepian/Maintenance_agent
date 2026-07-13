@@ -762,6 +762,8 @@
         "byCostCenter": "Cost-center",
         "byVendor": "Vendor",
         "vacant": "vacant",
+        "otherExpenses": "Other (unclassified)",
+        "itemisedNote": "{{itemised}} itemised of {{total}} — the rest was posted directly to the ledger (no supplier invoice).",
         "noExpenses": "No expenses recorded for this period."
       },
       "histogram": {

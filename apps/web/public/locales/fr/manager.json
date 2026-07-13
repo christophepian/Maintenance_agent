@@ -762,6 +762,8 @@
         "byCostCenter": "Centre de coûts",
         "byVendor": "Fournisseur",
         "vacant": "vacant",
+        "otherExpenses": "Autres (non classé)",
+        "itemisedNote": "{{itemised}} détaillés sur {{total}} — le reste a été comptabilisé directement au grand livre (sans facture fournisseur).",
         "noExpenses": "Aucune charge enregistrée pour cette période."
       },
       "histogram": {
