@@ -680,7 +680,7 @@ const REPORTING_HORIZONS = ["1Y", "2Y", "5Y", "10Y"];
 // and the focused bar/span drives the [from,to] of the period detail below.
 function BuildingReportingView({ buildingId, etatLocatifNet }) {
   const { t } = useTranslation("manager");
-  const [horizon, setHorizon] = useState("2Y");
+  const [horizon, setHorizon] = useState("1Y");
   const [points, setPoints]   = useState([]);
   const [focus, setFocus]     = useState({ s: 0, e: 0 });
   const [tsLoading, setTsLoading] = useState(false);
@@ -705,8 +705,13 @@ function BuildingReportingView({ buildingId, etatLocatifNet }) {
   // The focused window → [from,to] + label fed to the period detail.
   const { from, to, periodLabel } = useMemo(() => {
     if (!points.length) {
-      const y = new Date().getFullYear();
-      return { from: `${y}-01-01`, to: `${y}-12-31`, periodLabel: String(y) };
+      // Default to the current month so the detail loads immediately (without
+      // waiting on the histogram) and matches the eventual last 1Y bucket — so
+      // the focus reset on timeseries load doesn't trigger a second detail fetch.
+      const d = new Date();
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const last = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+      return { from: `${d.getFullYear()}-${mm}-01`, to: `${d.getFullYear()}-${mm}-${String(last).padStart(2, "0")}`, periodLabel: d.toLocaleDateString(undefined, { month: "long", year: "numeric" }) };
     }
     const s = Math.min(focus.s, focus.e), e = Math.max(focus.s, focus.e);
     const a = points[Math.min(s, points.length - 1)];
