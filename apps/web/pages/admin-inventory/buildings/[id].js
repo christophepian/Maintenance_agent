@@ -255,10 +255,11 @@ function buildExecutiveSummary({ bf, prev, unitData, vendors, benchmark, leaseEx
 }
 
 // The reporting detail for one period. The period ([from,to] + its label) is
-// chosen by the histogram navigator above (BuildingReportingView) and passed in.
-function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLabel }) {
-  const { t, i18n } = useTranslation("manager");
-  const locale = i18n.language || "en";
+// chosen by the period navigator above (BuildingReportingView); the time-series
+// points + focus are passed in so the Revenue & expenses slide can render the
+// histogram and let a bar click/brush re-drive the period.
+function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLabel, points = [], focus = { s: 0, e: 0 }, onFocusChange }) {
+  const { t } = useTranslation("manager");
   const [unitsExpanded, setUnitsExpanded] = useState(false);
   const [insExpanded, setInsExpanded]     = useState(false);
   const [outsExpanded, setOutsExpanded]   = useState(false);
@@ -266,7 +267,7 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
   const [unitData, setUnitData] = useState([]);
   const [vendors, setVendors] = useState([]);
   const [breakdown, setBreakdown] = useState([]);
-  const [expandedMonth, setExpandedMonth] = useState(null);
+  const [expView, setExpView] = useState("acc"); // Revenue & expenses: cost-center | vendor
   const [benchmark, setBenchmark] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState("");
@@ -290,8 +291,7 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
     ])
       .then(([rpt, uf, vs, ps, eb]) => {
         setReport(rpt?.data ?? null); setUnitData(uf?.data ?? []); setVendors(vs?.data ?? []);
-        const bd = eb?.data ?? [];
-        setBreakdown(bd); setExpandedMonth(bd.length === 1 ? bd[0].month : null);
+        setBreakdown(eb?.data ?? []);
         // Portfolio benchmark: median NOI margin / OpEx ratio across the org's buildings.
         const bs = (ps?.data?.buildings ?? []).filter((b) => b.collectedIncomeCents > 0);
         const median = (arr) => { const s = [...arr].sort((a, b) => a - b); return s.length ? s[Math.floor((s.length - 1) / 2)] : 0; };
@@ -444,146 +444,120 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
           </div>
         );
 
-        // ── Slide 4 (optional): Top vendors by spend ──
-        const vendorsSlide = (
-          <div className="rounded-3xl border border-surface-border bg-surface p-5">
-            <h2 className="text-base font-semibold text-foreground mb-1">{t("buildingsId.reporting.topVendors")}</h2>
-            <p className="text-xs text-foreground-dim mb-4">{t("buildingsId.reporting.topVendorsSub")}</p>
-            <div className="space-y-2">
-              {vendors.slice(0, 8).map((v, i) => {
-                const max = vendors[0]?.totalCents || 1;
-                const pct = Math.max(2, Math.round((v.totalCents / max) * 100));
-                return (
-                  <div key={v.contractorId || `${v.vendorName}-${i}`} className="flex items-center gap-3">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-baseline justify-between gap-2">
-                        <span className="truncate text-sm font-medium text-foreground" title={v.vendorName}>{v.vendorName}</span>
-                        <span className="shrink-0 text-sm font-semibold text-foreground tabular-nums">{rFmtChf(v.totalCents)}</span>
-                      </div>
-                      <div className="mt-1 flex items-center gap-2">
-                        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-hover">
-                          <div className="h-full rounded-full bg-brand" style={{ width: `${pct}%` /* no-token: dynamic spend-bar width */ }} />
-                        </div>
-                        <span className="shrink-0 text-xs text-foreground-dim tabular-nums">{v.invoiceCount}×</span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        );
+        // ── Revenue & expenses (P&L): trend histogram + income vs expense attribution ──
+        // Drill from a row into the invoices view, filtered to this period + vendor/account.
+        const drillHref = ({ contractorId, issuerName, accountId, ctxVendor }) => {
+          const p = new URLSearchParams({ tab: "invoices", direction: "incoming", buildingId, issueDateFrom: from, issueDateTo: to, ctxPeriod: periodLabel });
+          if (ctxVendor) p.set("ctxVendor", ctxVendor);
+          if (contractorId) p.set("vendorContractorId", contractorId);
+          else if (issuerName) p.set("issuerName", issuerName);
+          if (accountId) p.set("accountId", accountId);
+          return `/manager/finance?${p.toString()}`;
+        };
+        // Aggregate the per-month expense breakdown into period-level cost centers.
+        const acctMap = new Map();
+        for (const mo of breakdown) for (const a of mo.accounts) {
+          const key = a.accountId ?? a.accountCode ?? a.accountName ?? "none";
+          const cur = acctMap.get(key) ?? { accountId: a.accountId, accountCode: a.accountCode, accountName: a.accountName, totalCents: 0 };
+          cur.totalCents += a.totalCents; acctMap.set(key, cur);
+        }
+        const periodAccounts = [...acctMap.values()].sort((x, y) => y.totalCents - x.totalCents);
+        const incomeUnits = [...unitData].sort((a, b) => (b.collectedIncomeCents ?? 0) - (a.collectedIncomeCents ?? 0));
+        const incMax = Math.max(1, ...incomeUnits.map((u) => u.collectedIncomeCents ?? 0));
+        const expRows = expView === "vend" ? vendors : periodAccounts;
 
-        // ── Slide (optional): Expenses by month → drivers ──
-        const monthLabel = (key) => {
-          const [y, m] = key.split("-").map(Number);
-          return new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(new Date(y, m - 1, 1));
-        };
-        // Drill from a month's driver into the filtered invoices view.
-        const drillBase = (key) => {
-          const [y, m] = key.split("-").map(Number);
-          const lastDay = new Date(y, m, 0).getDate();
-          const p = new URLSearchParams({
-            tab: "invoices",
-            direction: "incoming",
-            buildingId,
-            issueDateFrom: `${key}-01`,
-            issueDateTo: `${key}-${String(lastDay).padStart(2, "0")}`,
-            ctxPeriod: monthLabel(key),
-          });
-          return p;
-        };
-        const vendorDrillHref = (v, key) => {
-          const p = drillBase(key);
-          p.set("ctxVendor", v.vendorName);
-          if (v.contractorId) p.set("vendorContractorId", v.contractorId);
-          else p.set("issuerName", v.vendorName);
-          return `/manager/finance?${p.toString()}`;
-        };
-        const accountDrillHref = (a, key) => {
-          const p = drillBase(key);
-          if (a.accountId) p.set("accountId", a.accountId);
-          p.set("ctxVendor", a.accountCode ? `${a.accountCode} · ${a.accountName ?? ""}`.trim() : (a.accountName ?? t("buildingsId.reporting.expenseBreakdown.unclassified")));
-          return `/manager/finance?${p.toString()}`;
-        };
-        const bdMax = Math.max(1, ...breakdown.map((mo) => mo.totalCents));
-        const expenseBreakdownSlide = (
-          <div className="rounded-3xl border border-surface-border bg-surface p-5">
-            <h2 className="text-base font-semibold text-foreground mb-1">{t("buildingsId.reporting.expenseBreakdown.title")}</h2>
-            <p className="text-xs text-foreground-dim mb-4">{t("buildingsId.reporting.expenseBreakdown.sub")}</p>
-            <div className="space-y-1.5">
-              {breakdown.map((mo) => {
-                const open = expandedMonth === mo.month;
-                const pct = Math.max(2, Math.round((mo.totalCents / bdMax) * 100));
-                return (
-                  <div key={mo.month} className="rounded-2xl border border-surface-border/70">
-                    <button
-                      type="button"
-                      onClick={() => setExpandedMonth(open ? null : mo.month)}
-                      className="flex w-full items-center gap-3 px-3 py-2.5 text-left"
-                      aria-expanded={open}
-                    >
-                      <span className={cn("shrink-0 text-foreground-dim text-xs transition-transform", open && "rotate-90")}>▶</span>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-baseline justify-between gap-2">
-                          <span className="truncate text-sm font-medium text-foreground capitalize">{monthLabel(mo.month)}</span>
-                          <span className="shrink-0 text-sm font-semibold text-foreground tabular-nums">{rFmtChf(mo.totalCents)}</span>
-                        </div>
-                        <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-surface-hover">
-                          <div className="h-full rounded-full bg-brand" style={{ width: `${pct}%` /* no-token: dynamic spend-bar width */ }} />
-                        </div>
-                      </div>
-                    </button>
-                    {open && (
-                      <div className="border-t border-surface-border/70 px-3 py-3 space-y-3">
-                        <div>
-                          <p className="text-[11px] font-semibold uppercase tracking-wide text-foreground-dim mb-1.5">{t("buildingsId.reporting.expenseBreakdown.suppliers")}</p>
-                          <div className="space-y-1">
-                            {mo.vendors.slice(0, 6).map((v, i) => (
-                              <a
-                                key={v.contractorId || `${v.vendorName}-${i}`}
-                                href={vendorDrillHref(v, mo.month)}
-                                className="flex items-center justify-between gap-2 rounded-lg px-2 py-1 hover:bg-surface-hover no-underline group"
-                              >
-                                <span className="truncate text-sm text-foreground" title={v.vendorName}>{v.vendorName} <span className="text-xs text-foreground-dim">· {v.invoiceCount}×</span></span>
-                                <span className="flex shrink-0 items-center gap-1.5 text-sm font-medium text-foreground tabular-nums">{rFmtChf(v.totalCents)}<span className="text-foreground-dim opacity-0 group-hover:opacity-100 transition-opacity">→</span></span>
-                              </a>
-                            ))}
-                          </div>
-                        </div>
-                        {mo.accounts.some((a) => a.accountId || a.accountCode) && (
-                          <div>
-                            <p className="text-[11px] font-semibold uppercase tracking-wide text-foreground-dim mb-1.5">{t("buildingsId.reporting.expenseBreakdown.costCenters")}</p>
-                            <div className="space-y-1">
-                              {mo.accounts.slice(0, 6).map((a, i) => (
-                                <a
-                                  key={a.accountId || `acct-${i}`}
-                                  href={accountDrillHref(a, mo.month)}
-                                  className="flex items-center justify-between gap-2 rounded-lg px-2 py-1 hover:bg-surface-hover no-underline group"
-                                >
-                                  <span className="truncate text-sm text-foreground">{a.accountCode ? <span className="text-foreground-dim tabular-nums">{a.accountCode}</span> : null} {a.accountName ?? t("buildingsId.reporting.expenseBreakdown.unclassified")}</span>
-                                  <span className="flex shrink-0 items-center gap-1.5 text-sm font-medium text-foreground tabular-nums">{rFmtChf(a.totalCents)}<span className="text-foreground-dim opacity-0 group-hover:opacity-100 transition-opacity">→</span></span>
-                                </a>
-                              ))}
+        const revexSlide = (
+          <div className="rounded-3xl border border-surface-border bg-surface p-5 space-y-4">
+            <div>
+              <h2 className="text-base font-semibold text-foreground mb-1">{t("buildingsId.reporting.revex.title")}</h2>
+              <p className="text-xs text-foreground-dim">{t("buildingsId.reporting.revex.sub")}</p>
+            </div>
+            {points.length > 0
+              ? <ReportingHistogram points={points} focus={focus} onFocusChange={onFocusChange} t={t} bare />
+              : <p className="text-sm text-muted italic">{t("buildingsId.reporting.histogram.empty")}</p>}
+
+            {/* Income − Expenses = NOI */}
+            <div className="flex items-stretch overflow-hidden rounded-2xl border border-surface-border text-center">
+              <div className="flex-1 px-3 py-2.5">
+                <div className="text-[10px] font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.histogram.income")}</div>
+                <div className="text-base font-bold tabular-nums text-foreground">{rFmtChf(earned)}</div>
+              </div>
+              <div className="grid w-7 place-items-center bg-surface-hover text-foreground-dim">−</div>
+              <div className="flex-1 px-3 py-2.5">
+                <div className="text-[10px] font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.histogram.expenses")}</div>
+                <div className="text-base font-bold tabular-nums text-foreground">{rFmtChf(expenses)}</div>
+              </div>
+              <div className="grid w-7 place-items-center bg-surface-hover text-foreground-dim">=</div>
+              <div className="flex-1 bg-surface-hover px-3 py-2.5">
+                <div className="text-[10px] font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.histogram.noi")}</div>
+                <div className={cn("text-base font-bold tabular-nums", noi >= 0 ? "text-success-text" : "text-destructive-text")}>{rFmtChf(noi)}</div>
+              </div>
+            </div>
+
+            {/* Income sources (units) | Expense sinks (vendors / cost centers) */}
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+              <div>
+                <p className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.revex.income")}</p>
+                {incomeUnits.length === 0
+                  ? <p className="text-sm text-muted italic px-1">{t("buildingsId.reporting.noUnits")}</p>
+                  : <div className="space-y-1">
+                      {incomeUnits.slice(0, 5).map((u) => {
+                        const vacant = !u.collectedIncomeCents;
+                        return (
+                          <div key={u.unitId} className="min-w-0 px-2 py-1">
+                            <div className="flex items-baseline justify-between gap-2">
+                              <span className="truncate text-sm text-foreground">{u.unitNumber}{u.tenantName ? <span className="text-foreground-dim"> · {u.tenantName}</span> : null}</span>
+                              <span className={cn("shrink-0 text-sm font-medium tabular-nums", vacant ? "text-destructive-text" : "text-foreground")}>{vacant ? t("buildingsId.reporting.revex.vacant") : rFmtChf(u.collectedIncomeCents)}</span>
                             </div>
+                            {!vacant && <div className="mt-1 h-1 overflow-hidden rounded-full bg-surface-hover"><div className="h-full rounded-full bg-brand" style={{ width: `${Math.max(4, Math.round((u.collectedIncomeCents / incMax) * 100))}%` /* no-token: dynamic income-bar width */ }} /></div>}
                           </div>
-                        )}
-                      </div>
-                    )}
+                        );
+                      })}
+                    </div>}
+              </div>
+              <div>
+                <div className="mb-2 flex items-center justify-between gap-2 px-1">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.histogram.expenses")}</p>
+                  <div className="inline-flex rounded-lg border border-surface-border bg-surface-hover p-0.5 gap-0.5">
+                    {[["acc", t("buildingsId.reporting.revex.byCostCenter")], ["vend", t("buildingsId.reporting.revex.byVendor")]].map(([k, l]) => (
+                      <button key={k} onClick={() => setExpView(k)} aria-pressed={expView === k}
+                        className={cn("rounded-md px-2 py-0.5 text-xs font-medium transition-colors", expView === k ? "bg-surface text-foreground shadow-sm" : "text-muted hover:text-muted-dark")}>{l}</button>
+                    ))}
                   </div>
-                );
-              })}
+                </div>
+                {expRows.length === 0
+                  ? <p className="text-sm text-muted italic px-1">{t("buildingsId.reporting.revex.noExpenses")}</p>
+                  : <div className="space-y-1">
+                      {expRows.slice(0, 5).map((r, i) => {
+                        const isVend = expView === "vend";
+                        const name = isVend ? r.vendorName : (r.accountName ?? t("buildingsId.reporting.expenseBreakdown.unclassified"));
+                        const href = isVend
+                          ? drillHref({ contractorId: r.contractorId, issuerName: r.vendorName, ctxVendor: r.vendorName })
+                          : drillHref({ accountId: r.accountId, ctxVendor: r.accountCode ? `${r.accountCode} · ${r.accountName ?? ""}`.trim() : name });
+                        return (
+                          <a key={(isVend ? r.contractorId : r.accountId) || `${name}-${i}`} href={href}
+                            className="flex items-center justify-between gap-2 rounded-lg px-2 py-1 hover:bg-surface-hover no-underline group">
+                            <span className="min-w-0 flex-1 truncate text-sm text-foreground">{!isVend && r.accountCode ? <span className="text-foreground-dim tabular-nums">{r.accountCode} </span> : null}{name}{isVend && r.invoiceCount ? <span className="text-xs text-foreground-dim"> · {r.invoiceCount}×</span> : null}</span>
+                            <span className="flex shrink-0 items-center gap-1.5 text-sm font-medium tabular-nums text-foreground">{rFmtChf(r.totalCents)}<span className="text-foreground-dim opacity-0 group-hover:opacity-100 transition-opacity">→</span></span>
+                          </a>
+                        );
+                      })}
+                    </div>}
+              </div>
             </div>
           </div>
         );
 
-        const slides = [heroSlide, driversSlide, byUnitSlide];
-        const slideLabels = [periodLabel, t("buildingsId.reporting.whatDrove"), t("buildingsId.reporting.byUnit")];
-        if (breakdown.length > 0) { slides.push(expenseBreakdownSlide); slideLabels.push(t("buildingsId.reporting.expenseBreakdown.title")); }
-        if (vendors.length > 0) { slides.push(vendorsSlide); slideLabels.push(t("buildingsId.reporting.topVendors")); }
+        // Hero is pulled OUT of the carousel — it's the always-visible main
+        // attraction; the carousel holds the secondary drill-downs.
+        const slides = [driversSlide, revexSlide, byUnitSlide];
+        const slideLabels = [t("buildingsId.reporting.whatDrove"), t("buildingsId.reporting.revex.title"), t("buildingsId.reporting.byUnit")];
 
         return (
           <>
+            {/* ── Hero — the main attraction, always visible ── */}
+            {heroSlide}
+
             {/* ── Alert banners (kept above the carousel so warnings stay visible) ── */}
             {bf.receivablesCents > 0 && (
               <div className="flex items-start gap-3 rounded-2xl border border-warning-ring bg-warning-light px-5 py-4">
@@ -635,7 +609,7 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
               </div>
             )}
 
-            {/* ── Period-analysis carousel: hero · drivers · by-unit · vendors ── */}
+            {/* ── Detail carousel: what drove it · revenue & expenses · by unit ── */}
             <Carousel slides={slides} labels={slideLabels} />
 
             {/* ── Occupancy movements (kept below the carousel) ── */}
@@ -673,41 +647,52 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
   );
 }
 
-const REPORTING_HORIZONS = ["1Y", "2Y", "5Y", "10Y"];
+const REPORTING_GRANS = ["month", "quarter", "year"];
+// Period type → the backend time-series range that yields that granularity.
+const GRAN_RANGE = { month: "2Y", quarter: "5Y", year: "10Y" };
 
-// The merged building reporting surface: a stacked income histogram is the time
-// navigator (pick a horizon; granularity adapts month→quarter→year server-side),
-// and the focused bar/span drives the [from,to] of the period detail below.
+// The building reporting surface. A period bar (Month/Quarter/Year + scrubber +
+// presets) chooses the period the HERO reports on; the time-series drives both
+// the scrubber and the histogram (which now lives in the Revenue & expenses
+// slide, where a bar click/brush re-drives the period).
 function BuildingReportingView({ buildingId, etatLocatifNet }) {
   const { t } = useTranslation("manager");
-  const [horizon, setHorizon] = useState("1Y");
-  const [points, setPoints]   = useState([]);
-  const [focus, setFocus]     = useState({ s: 0, e: 0 });
+  const [gran, setGran]   = useState("month");
+  const [points, setPoints] = useState([]);
+  const [focus, setFocus]   = useState({ s: 0, e: 0 });
   const [tsLoading, setTsLoading] = useState(false);
   const [tsError, setTsError]     = useState("");
+  const pendingJump = useRef(null); // "ytd" — applied after the async re-fetch
 
   useEffect(() => {
     if (!buildingId) return;
     setTsLoading(true);
     setTsError("");
-    fetch(`/api/buildings/${buildingId}/timeseries?range=${horizon}`, { headers: authHeaders() })
+    fetch(`/api/buildings/${buildingId}/timeseries?range=${GRAN_RANGE[gran]}`, { headers: authHeaders() })
       .then((r) => r.json())
       .then((d) => {
         const pts = d?.data?.points ?? [];
         setPoints(pts);
-        setFocus({ s: Math.max(0, pts.length - 1), e: Math.max(0, pts.length - 1) });
+        const last = Math.max(0, pts.length - 1);
+        if (pendingJump.current === "ytd") {
+          const y = new Date().getFullYear();
+          const idxs = pts.map((p, i) => (new Date(p.periodStart).getFullYear() === y ? i : -1)).filter((i) => i >= 0);
+          setFocus(idxs.length ? { s: idxs[0], e: idxs[idxs.length - 1] } : { s: last, e: last });
+        } else {
+          setFocus({ s: last, e: last });
+        }
+        pendingJump.current = null;
         if (!d?.data) setTsError(d?.error?.message || t("buildingsId.reporting.failedToLoad"));
       })
       .catch(() => setTsError(t("buildingsId.reporting.failedToLoad")))
       .finally(() => setTsLoading(false));
-  }, [buildingId, horizon, t]);
+  }, [buildingId, gran, t]);
 
-  // The focused window → [from,to] + label fed to the period detail.
+  // The focused window → [from,to] + label fed to the period detail + hero.
   const { from, to, periodLabel } = useMemo(() => {
     if (!points.length) {
       // Default to the current month so the detail loads immediately (without
-      // waiting on the histogram) and matches the eventual last 1Y bucket — so
-      // the focus reset on timeseries load doesn't trigger a second detail fetch.
+      // waiting on the histogram) and matches the eventual last monthly bucket.
       const d = new Date();
       const mm = String(d.getMonth() + 1).padStart(2, "0");
       const last = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
@@ -719,51 +704,56 @@ function BuildingReportingView({ buildingId, etatLocatifNet }) {
     return { from: a.periodStart, to: b.periodEnd, periodLabel: s === e ? a.label : `${a.label} – ${b.label}` };
   }, [points, focus]);
 
-  function quickJump(kind) {
-    if (kind === "month") { setHorizon("1Y"); setFocus({ s: points.length - 1, e: points.length - 1 }); }
-    else if (kind === "year") { setHorizon("10Y"); setFocus({ s: points.length - 1, e: points.length - 1 }); }
-    else if (kind === "ytd") {
-      const y = new Date().getFullYear();
-      const idxs = points.map((p, i) => (new Date(p.periodStart).getFullYear() === y ? i : -1)).filter((i) => i >= 0);
-      if (idxs.length) setFocus({ s: idxs[0], e: idxs[idxs.length - 1] });
+  function step(d) {
+    let i = Math.max(0, Math.min(points.length - 1, Math.max(focus.s, focus.e) + d));
+    setFocus({ s: i, e: i });
+  }
+  function jump(kind) {
+    pendingJump.current = null;
+    if (kind === "latest") { if (gran === "month") setFocus({ s: points.length - 1, e: points.length - 1 }); else setGran("month"); }
+    else if (kind === "year") { if (gran === "year") setFocus({ s: points.length - 1, e: points.length - 1 }); else setGran("year"); }
+    else { // ytd
+      if (gran === "month") {
+        const y = new Date().getFullYear();
+        const idxs = points.map((p, i) => (new Date(p.periodStart).getFullYear() === y ? i : -1)).filter((i) => i >= 0);
+        if (idxs.length) setFocus({ s: idxs[0], e: idxs[idxs.length - 1] });
+      } else { pendingJump.current = "ytd"; setGran("month"); }
     }
   }
+  const atStart = Math.min(focus.s, focus.e) <= 0;
+  const atEnd = Math.max(focus.s, focus.e) >= points.length - 1;
 
   return (
     <div className="space-y-4">
-      {/* ── Time navigator controls ── */}
-      <div className="flex flex-wrap items-center gap-3">
-        <span className="text-[11px] font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.histogram.horizon")}</span>
-        <div className="inline-flex rounded-lg border border-surface-border bg-surface-hover p-0.5 gap-0.5">
-          {REPORTING_HORIZONS.map((h) => (
-            <button key={h} onClick={() => setHorizon(h)} aria-pressed={horizon === h}
-              className={cn("rounded-md px-3 py-1 text-sm font-medium transition-colors", horizon === h ? "bg-surface text-foreground shadow-sm" : "text-muted hover:text-muted-dark")}>{h}</button>
-          ))}
+      {/* ── Period navigator — everything here changes the hero ── */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-surface-border bg-surface px-3 py-2 shadow-sm">
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.period.label")}</span>
+          <div className="inline-flex rounded-lg border border-surface-border bg-surface-hover p-0.5 gap-0.5">
+            {REPORTING_GRANS.map((g) => (
+              <button key={g} onClick={() => { pendingJump.current = null; setGran(g); }} aria-pressed={gran === g}
+                className={cn("rounded-md px-3 py-1 text-sm font-medium transition-colors", gran === g ? "bg-brand text-white" : "text-muted hover:text-muted-dark")}>{t(`buildingsId.reporting.period.${g}`)}</button>
+            ))}
+          </div>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <button onClick={() => step(-1)} disabled={atStart || tsLoading} aria-label={t("buildingsId.reporting.period.prev")}
+            className="grid h-7 w-7 place-items-center rounded-lg border border-surface-border text-muted transition-colors hover:border-brand hover:text-brand disabled:opacity-40 disabled:cursor-not-allowed">‹</button>
+          <span className="min-w-[130px] text-center text-sm font-semibold text-foreground">{periodLabel}</span>
+          <button onClick={() => step(1)} disabled={atEnd || tsLoading} aria-label={t("buildingsId.reporting.period.next")}
+            className="grid h-7 w-7 place-items-center rounded-lg border border-surface-border text-muted transition-colors hover:border-brand hover:text-brand disabled:opacity-40 disabled:cursor-not-allowed">›</button>
         </div>
         <div className="ml-auto flex gap-1.5">
-          {[["month", t("buildingsId.reporting.histogram.jumpMonth")], ["ytd", t("buildingsId.reporting.histogram.jumpYtd")], ["year", t("buildingsId.reporting.histogram.jumpYear")]].map(([k, l]) => (
-            <button key={k} onClick={() => quickJump(k)} className="rounded-lg border border-surface-border bg-surface px-2.5 py-1 text-xs text-muted hover:border-brand hover:text-brand transition-colors">{l}</button>
+          {[["latest", t("buildingsId.reporting.histogram.jumpMonth")], ["ytd", t("buildingsId.reporting.histogram.jumpYtd")], ["year", t("buildingsId.reporting.histogram.jumpYear")]].map(([k, l]) => (
+            <button key={k} onClick={() => jump(k)} className="rounded-lg border border-surface-border bg-surface px-2.5 py-1 text-xs text-muted transition-colors hover:border-brand hover:text-brand">{l}</button>
           ))}
         </div>
       </div>
 
       {tsError && <p className="text-sm text-destructive-text">{tsError}</p>}
-      {tsLoading && <div className="h-56 rounded-2xl bg-surface-hover animate-pulse" />}
-      {!tsLoading && points.length > 0 && (
-        <ReportingHistogram points={points} focus={focus} onFocusChange={(s, e) => setFocus({ s, e })} t={t} />
-      )}
-      {!tsLoading && !tsError && points.length === 0 && (
-        <p className="text-sm text-muted">{t("buildingsId.reporting.histogram.empty")}</p>
-      )}
 
-      {/* ── Focused-period label ── */}
-      <div className="flex flex-wrap items-center gap-2 text-sm text-muted">
-        <span>{t("buildingsId.reporting.histogram.showing")}</span>
-        <span className="rounded-full bg-brand-light px-3 py-0.5 text-[12.5px] font-semibold text-brand-dark">{periodLabel}</span>
-        <span className="text-xs text-foreground-dim">{t("buildingsId.reporting.histogram.showingHint")}</span>
-      </div>
-
-      <BuildingPeriodAnalysis buildingId={buildingId} etatLocatifNet={etatLocatifNet} from={from} to={to} periodLabel={periodLabel} />
+      <BuildingPeriodAnalysis buildingId={buildingId} etatLocatifNet={etatLocatifNet} from={from} to={to} periodLabel={periodLabel}
+        points={points} focus={focus} onFocusChange={(s, e) => setFocus({ s, e })} />
     </div>
   );
 }

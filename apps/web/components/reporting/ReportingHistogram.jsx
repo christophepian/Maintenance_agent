@@ -28,7 +28,7 @@ function niceCeil(v) {
  *   noiCents, collectedIncomeCents, collectionRate, noiMarginPct, occupancyRate }.
  * focus:  { s, e } inclusive index range. onFocusChange(s, e) on click/drag/keys.
  */
-export default function ReportingHistogram({ points, focus, onFocusChange, t }) {
+export default function ReportingHistogram({ points, focus, onFocusChange, t, bare }) {
   const [tip, setTip] = useState(null);   // { i, x, y } | null
   const [drag, setDrag] = useState(null); // live { s, e } while dragging — visual only
   const dragging = useRef(false);
@@ -88,7 +88,7 @@ export default function ReportingHistogram({ points, focus, onFocusChange, t }) 
   const tp = tip != null ? points[tip.i] : null;
 
   return (
-    <div className="rounded-2xl border border-surface-border bg-surface p-4 shadow-sm">
+    <div className={bare ? "" : "rounded-2xl border border-surface-border bg-surface p-4 shadow-sm"}>
       <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1">
         <span className="inline-flex items-center gap-1.5 text-xs text-muted">
           <i className="inline-block h-2.5 w-2.5 rounded-sm bg-brand/40" />{t("buildingsId.reporting.histogram.expenses")}

@@ -747,6 +747,23 @@
         "costCenters": "Par centre de coûts",
         "unclassified": "Non classé"
       },
+      "period": {
+        "label": "Période",
+        "month": "Mois",
+        "quarter": "Trimestre",
+        "year": "Année",
+        "prev": "Période précédente",
+        "next": "Période suivante"
+      },
+      "revex": {
+        "title": "Produits & charges",
+        "sub": "Produits, charges et RNE dans le temps. Cliquez une barre ou glissez pour sélectionner une plage — le résumé suit.",
+        "income": "Produits · par lot",
+        "byCostCenter": "Centre de coûts",
+        "byVendor": "Fournisseur",
+        "vacant": "vacant",
+        "noExpenses": "Aucune charge enregistrée pour cette période."
+      },
       "histogram": {
         "horizon": "Horizon",
         "expenses": "Charges",
