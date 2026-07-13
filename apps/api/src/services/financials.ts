@@ -1970,8 +1970,10 @@ export async function getBuildingPeriodReport(
   const building = await inventoryRepo.findBuildingByIdAndOrg(prisma, buildingId, orgId);
   if (!building) throw new NotFoundError(`Building ${buildingId} not found`);
 
-  // Current period financials
-  const financials = await getBuildingFinancials(orgId, buildingId, { from, to });
+  // Current period financials. groupByAccount so the reporting "Revenue &
+  // expenses" cost-center breakdown is driven by the ledger decomposition
+  // (which reconciles to expensesTotalCents) rather than invoices alone.
+  const financials = await getBuildingFinancials(orgId, buildingId, { from, to, groupByAccount: true });
 
   // Prev period: same duration, immediately before
   const fromDate = new Date(from + "T00:00:00Z");

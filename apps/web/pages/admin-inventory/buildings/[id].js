@@ -59,7 +59,6 @@ import ScrollableTabs from "../../../components/mobile/ScrollableTabs";
 import RentRollOnboardingPanel from "../../../components/RentRollOnboardingPanel";
 import LedgerInvoiceOnboardingPanel from "../../../components/LedgerInvoiceOnboardingPanel";
 import PackageOnboardingPanel from "../../../components/PackageOnboardingPanel";
-import Carousel from "../../../components/Carousel";
 import SortableHeader from "../../../components/SortableHeader";
 import { useLocalSort, clientSort } from "../../../lib/tableUtils";
 import { formatDate, formatChfCents, formatPercent, formatChf, formatNumber } from "../../../lib/format";
@@ -266,8 +265,8 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
   const [report, setReport]   = useState(null);
   const [unitData, setUnitData] = useState([]);
   const [vendors, setVendors] = useState([]);
-  const [breakdown, setBreakdown] = useState([]);
   const [expView, setExpView] = useState("acc"); // Revenue & expenses: cost-center | vendor
+  const [tab, setTab] = useState("revex");       // detail tab: drivers | revex | byunit
   const [benchmark, setBenchmark] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState("");
@@ -287,11 +286,9 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
       fetch(`/api/buildings/${buildingId}/unit-financials?from=${from}&to=${to}`, { headers: authHeaders() }).then((r) => r.json()),
       fetch(`/api/buildings/${buildingId}/vendor-spend?from=${from}&to=${to}`, { headers: authHeaders() }).then((r) => r.json()).catch(() => null),
       fetch(`/api/financials/portfolio-summary?from=${from}&to=${to}`, { headers: authHeaders() }).then((r) => r.json()).catch(() => null),
-      fetch(`/api/buildings/${buildingId}/expense-breakdown?from=${from}&to=${to}`, { headers: authHeaders() }).then((r) => r.json()).catch(() => null),
     ])
-      .then(([rpt, uf, vs, ps, eb]) => {
+      .then(([rpt, uf, vs, ps]) => {
         setReport(rpt?.data ?? null); setUnitData(uf?.data ?? []); setVendors(vs?.data ?? []);
-        setBreakdown(eb?.data ?? []);
         // Portfolio benchmark: median NOI margin / OpEx ratio across the org's buildings.
         const bs = (ps?.data?.buildings ?? []).filter((b) => b.collectedIncomeCents > 0);
         const median = (arr) => { const s = [...arr].sort((a, b) => a - b); return s.length ? s[Math.floor((s.length - 1) / 2)] : 0; };
@@ -336,16 +333,18 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
   const visibleUnits = unitsExpanded ? unitData : unitData.slice(0, PREVIEW_UNITS);
 
   return (
-    <div className="space-y-6">
-      {error && <p className="text-sm text-red-600">{error}</p>}
-      {loading && <div className="space-y-3">{[1,2,3].map((i) => <div key={i} className="h-24 rounded-3xl animate-pulse bg-surface-hover" />)}</div>}
+    <div>
+      {error && <p className="text-sm text-red-600 p-4">{error}</p>}
+      {/* First load only — once we have data we keep it on screen during refetch
+          (stale-while-revalidate) so period changes don't blank/reset the tab. */}
+      {!bf && loading && <div className="space-y-3">{[1,2,3].map((i) => <div key={i} className="h-24 rounded-3xl animate-pulse bg-surface-hover" />)}</div>}
 
-      {!loading && bf && (() => {
+      {bf && (() => {
         // ── Slide 1: Hero + KPIs (always shown; no expand toggle) ──
         const heroSlide = (
           <div>
             <header className={cn(
-              "border border-surface-border bg-gradient-to-br p-6 shadow-sm rounded-t-3xl",
+              "bg-gradient-to-br p-6",
               // Dark-aware override: the light month gradient is unreadable behind
               // text-foreground (white) in dark mode — swap to brand/info tokens.
               "dark:from-brand-light dark:via-info-light dark:to-transparent",
@@ -392,7 +391,7 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
 
         // ── Slide 2: What drove it / What to watch ──
         const driversSlide = (
-          <div className="rounded-3xl border border-surface-border bg-surface overflow-hidden">
+          <div className="overflow-hidden">
             <div className="grid lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-surface-border">
               <div className="flex flex-col">
                 <div className="px-7 py-4 bg-surface-subtle border-b border-surface-border">
@@ -426,7 +425,7 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
 
         // ── Slide 3: By unit ──
         const byUnitSlide = (
-          <div className="rounded-3xl border border-surface-border bg-surface p-5">
+          <div className="p-5">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h2 className="text-base font-semibold text-foreground">{t("buildingsId.reporting.byUnit")}</h2>
@@ -454,20 +453,24 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
           if (accountId) p.set("accountId", accountId);
           return `/manager/finance?${p.toString()}`;
         };
-        // Aggregate the per-month expense breakdown into period-level cost centers.
-        const acctMap = new Map();
-        for (const mo of breakdown) for (const a of mo.accounts) {
-          const key = a.accountId ?? a.accountCode ?? a.accountName ?? "none";
-          const cur = acctMap.get(key) ?? { accountId: a.accountId, accountCode: a.accountCode, accountName: a.accountName, totalCents: 0 };
-          cur.totalCents += a.totalCents; acctMap.set(key, cur);
-        }
-        const periodAccounts = [...acctMap.values()].sort((x, y) => y.totalCents - x.totalCents);
+        // Cost-centers come from the financials' ledger decomposition (reconciles to
+        // the expense total), NOT invoices — so they're populated even when a period's
+        // expenses are ledger-only. Any gap to the total lands in an "Other" row.
+        const acctRows = (bf.expensesByAccount ?? []).map((a) => ({ accountId: a.accountId, accountCode: a.accountCode, accountName: a.accountName, totalCents: a.totalCents }));
+        const acctSum = acctRows.reduce((s, a) => s + a.totalCents, 0);
+        const otherCents = expenses - acctSum;
+        const periodAccounts = otherCents > 5000
+          ? [...acctRows, { accountId: null, accountCode: null, accountName: t("buildingsId.reporting.revex.otherExpenses"), totalCents: otherCents }]
+          : acctRows;
+        // Vendor lens is invoice-based and may cover only part of the total.
+        const vendItemised = vendors.reduce((s, v) => s + v.totalCents, 0);
+        const uncoveredCents = expenses - vendItemised;
         const incomeUnits = [...unitData].sort((a, b) => (b.collectedIncomeCents ?? 0) - (a.collectedIncomeCents ?? 0));
         const incMax = Math.max(1, ...incomeUnits.map((u) => u.collectedIncomeCents ?? 0));
         const expRows = expView === "vend" ? vendors : periodAccounts;
 
         const revexSlide = (
-          <div className="rounded-3xl border border-surface-border bg-surface p-5 space-y-4">
+          <div className="p-5 space-y-4">
             <div>
               <h2 className="text-base font-semibold text-foreground mb-1">{t("buildingsId.reporting.revex.title")}</h2>
               <p className="text-xs text-foreground-dim">{t("buildingsId.reporting.revex.sub")}</p>
@@ -528,37 +531,48 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
                 {expRows.length === 0
                   ? <p className="text-sm text-muted italic px-1">{t("buildingsId.reporting.revex.noExpenses")}</p>
                   : <div className="space-y-1">
-                      {expRows.slice(0, 5).map((r, i) => {
+                      {expRows.slice(0, 6).map((r, i) => {
                         const isVend = expView === "vend";
                         const name = isVend ? r.vendorName : (r.accountName ?? t("buildingsId.reporting.expenseBreakdown.unclassified"));
-                        const href = isVend
-                          ? drillHref({ contractorId: r.contractorId, issuerName: r.vendorName, ctxVendor: r.vendorName })
-                          : drillHref({ accountId: r.accountId, ctxVendor: r.accountCode ? `${r.accountCode} · ${r.accountName ?? ""}`.trim() : name });
-                        return (
-                          <a key={(isVend ? r.contractorId : r.accountId) || `${name}-${i}`} href={href}
-                            className="flex items-center justify-between gap-2 rounded-lg px-2 py-1 hover:bg-surface-hover no-underline group">
+                        const drillable = isVend ? true : !!r.accountId; // the "Other" remainder isn't invoice-filterable
+                        const inner = (
+                          <>
                             <span className="min-w-0 flex-1 truncate text-sm text-foreground">{!isVend && r.accountCode ? <span className="text-foreground-dim tabular-nums">{r.accountCode} </span> : null}{name}{isVend && r.invoiceCount ? <span className="text-xs text-foreground-dim"> · {r.invoiceCount}×</span> : null}</span>
-                            <span className="flex shrink-0 items-center gap-1.5 text-sm font-medium tabular-nums text-foreground">{rFmtChf(r.totalCents)}<span className="text-foreground-dim opacity-0 group-hover:opacity-100 transition-opacity">→</span></span>
-                          </a>
+                            <span className="flex shrink-0 items-center gap-1.5 text-sm font-medium tabular-nums text-foreground">{rFmtChf(r.totalCents)}{drillable && <span className="text-foreground-dim opacity-0 group-hover:opacity-100 transition-opacity">→</span>}</span>
+                          </>
+                        );
+                        return drillable ? (
+                          <a key={(isVend ? r.contractorId : r.accountId) || `${name}-${i}`}
+                            href={drillHref(isVend ? { contractorId: r.contractorId, issuerName: r.vendorName, ctxVendor: r.vendorName } : { accountId: r.accountId, ctxVendor: r.accountCode ? `${r.accountCode} · ${r.accountName ?? ""}`.trim() : name })}
+                            className="flex items-center justify-between gap-2 rounded-lg px-2 py-1 hover:bg-surface-hover no-underline group">{inner}</a>
+                        ) : (
+                          <div key={`${name}-${i}`} className="flex items-center justify-between gap-2 px-2 py-1">{inner}</div>
                         );
                       })}
                     </div>}
+                {/* Vendor lens is invoice-based — flag when it covers only part of the ledger total. */}
+                {expView === "vend" && uncoveredCents > 5000 && (
+                  <p className="mt-2 flex items-start gap-1.5 px-1 text-[11.5px] text-warning-text">
+                    <span aria-hidden>⚠</span>
+                    <span>{t("buildingsId.reporting.revex.itemisedNote", { itemised: rFmtChf(vendItemised), total: rFmtChf(expenses) })}</span>
+                  </p>
+                )}
               </div>
             </div>
           </div>
         );
 
-        // Hero is pulled OUT of the carousel — it's the always-visible main
-        // attraction; the carousel holds the secondary drill-downs.
-        const slides = [driversSlide, revexSlide, byUnitSlide];
-        const slideLabels = [t("buildingsId.reporting.whatDrove"), t("buildingsId.reporting.revex.title"), t("buildingsId.reporting.byUnit")];
+        const activePanel = tab === "drivers" ? driversSlide : tab === "byunit" ? byUnitSlide : revexSlide;
+        const hasAlerts = bf.receivablesCents > 0 || bf.openingReceivablesCents > 0 || bf.openingPayablesCents > 0 || (arrears && (arrears.totalOverdueCents > 0 || arrears.currentCents > 0));
 
         return (
           <>
-            {/* ── Hero — the main attraction, always visible ── */}
+            {/* ── Hero band — the always-visible main attraction ── */}
             {heroSlide}
 
-            {/* ── Alert banners (kept above the carousel so warnings stay visible) ── */}
+            {/* ── Alerts, folded into the card below the hero ── */}
+            {hasAlerts && (
+            <div className="space-y-3 border-t border-surface-border p-4">
             {bf.receivablesCents > 0 && (
               <div className="flex items-start gap-3 rounded-2xl border border-warning-ring bg-warning-light px-5 py-4">
                 <span className="mt-0.5 text-warning-text text-lg shrink-0">⚠</span>
@@ -608,13 +622,23 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
                 </div>
               </div>
             )}
+            </div>
+            )}
 
-            {/* ── Detail carousel: what drove it · revenue & expenses · by unit ── */}
-            <Carousel slides={slides} labels={slideLabels} />
+            {/* ── Detail: tab strip + sliding panel (default: Revenue & expenses) ── */}
+            <div className="border-t border-surface-border">
+              <div className="flex gap-1 px-4 pt-2 overflow-x-auto">
+                {[["drivers", t("buildingsId.reporting.whatDrove")], ["revex", t("buildingsId.reporting.revex.title")], ["byunit", t("buildingsId.reporting.byUnit")]].map(([k, l]) => (
+                  <button key={k} onClick={() => setTab(k)} aria-pressed={tab === k}
+                    className={cn("-mb-px shrink-0 border-b-2 px-3 py-2 text-sm font-medium transition-colors", tab === k ? "border-brand text-brand" : "border-transparent text-muted hover:text-foreground")}>{l}</button>
+                ))}
+              </div>
+              <div className={cn("border-t border-surface-border", loading && "opacity-60 transition-opacity")}>{activePanel}</div>
+            </div>
 
-            {/* ── Occupancy movements (kept below the carousel) ── */}
+            {/* ── Occupancy movements (folded into the card, below the panel) ── */}
             {(moveIns.length > 0 || moveOuts.length > 0) && (
-              <div className="rounded-3xl border border-surface-border bg-surface p-5">
+              <div className="border-t border-surface-border p-5">
                 <h2 className="text-base font-semibold text-foreground mb-4">{t("buildingsId.reporting.tenantMovements")}</h2>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
@@ -663,6 +687,16 @@ function BuildingReportingView({ buildingId, etatLocatifNet }) {
   const [tsLoading, setTsLoading] = useState(false);
   const [tsError, setTsError]     = useState("");
   const pendingJump = useRef(null); // "ytd" — applied after the async re-fetch
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pkYear, setPkYear] = useState(new Date().getFullYear());
+  const pickerRef = useRef(null);
+
+  useEffect(() => {
+    if (!pickerOpen) return;
+    const onDown = (e) => { if (pickerRef.current && !pickerRef.current.contains(e.target)) setPickerOpen(false); };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [pickerOpen]);
 
   useEffect(() => {
     if (!buildingId) return;
@@ -722,35 +756,68 @@ function BuildingReportingView({ buildingId, etatLocatifNet }) {
   }
   const atStart = Math.min(focus.s, focus.e) <= 0;
   const atEnd = Math.max(focus.s, focus.e) >= points.length - 1;
+  const focusIdx = Math.max(focus.s, focus.e);
+  const pickerYears = [...new Set(points.map((p) => new Date(p.periodStart).getFullYear()))];
+  const monShort = Array.from({ length: 12 }, (_, mi) => new Intl.DateTimeFormat(undefined, { month: "short" }).format(new Date(2024, mi, 1)));
+  function openPicker() { setPkYear(points[focusIdx] ? new Date(points[focusIdx].periodStart).getFullYear() : new Date().getFullYear()); setPickerOpen((v) => !v); }
+  function pickIndex(i) { if (i >= 0) { setFocus({ s: i, e: i }); setPickerOpen(false); } }
+  const pkBtn = (label, i, key) => (
+    <button key={key} disabled={i < 0} aria-pressed={i === focusIdx} onClick={() => pickIndex(i)}
+      className={cn("rounded-md border px-2 py-1.5 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-30",
+        i === focusIdx ? "border-brand bg-brand text-white" : "border-surface-border text-foreground hover:border-brand hover:text-brand")}>{label}</button>
+  );
 
   return (
-    <div className="space-y-4">
-      {/* ── Period navigator — everything here changes the hero ── */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-surface-border bg-surface px-3 py-2 shadow-sm">
+    <div className="overflow-hidden rounded-2xl border border-surface-border bg-surface shadow-sm">
+      {/* ── Toolbar: period navigator (everything here changes the hero) ── */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-surface-border bg-surface-subtle px-3 py-2">
         <div className="flex items-center gap-2">
           <span className="text-[11px] font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.period.label")}</span>
-          <div className="inline-flex rounded-lg border border-surface-border bg-surface-hover p-0.5 gap-0.5">
+          <div className="inline-flex rounded-lg border border-surface-border bg-surface p-0.5 gap-0.5">
             {REPORTING_GRANS.map((g) => (
-              <button key={g} onClick={() => { pendingJump.current = null; setGran(g); }} aria-pressed={gran === g}
+              <button key={g} onClick={() => { pendingJump.current = null; setPickerOpen(false); setGran(g); }} aria-pressed={gran === g}
                 className={cn("rounded-md px-3 py-1 text-sm font-medium transition-colors", gran === g ? "bg-brand text-white" : "text-muted hover:text-muted-dark")}>{t(`buildingsId.reporting.period.${g}`)}</button>
             ))}
           </div>
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="relative flex items-center gap-1.5" ref={pickerRef}>
           <button onClick={() => step(-1)} disabled={atStart || tsLoading} aria-label={t("buildingsId.reporting.period.prev")}
-            className="grid h-7 w-7 place-items-center rounded-lg border border-surface-border text-muted transition-colors hover:border-brand hover:text-brand disabled:opacity-40 disabled:cursor-not-allowed">‹</button>
-          <span className="min-w-[130px] text-center text-sm font-semibold text-foreground">{periodLabel}</span>
+            className="grid h-7 w-7 place-items-center rounded-lg border border-surface-border bg-surface text-muted transition-colors hover:border-brand hover:text-brand disabled:opacity-40 disabled:cursor-not-allowed">‹</button>
+          <button onClick={openPicker} aria-expanded={pickerOpen}
+            className="min-w-[128px] rounded-lg border border-transparent px-2 py-1 text-center text-sm font-semibold text-foreground transition-colors hover:border-surface-border hover:bg-surface">
+            {periodLabel} <span className="text-foreground-dim">▾</span>
+          </button>
           <button onClick={() => step(1)} disabled={atEnd || tsLoading} aria-label={t("buildingsId.reporting.period.next")}
-            className="grid h-7 w-7 place-items-center rounded-lg border border-surface-border text-muted transition-colors hover:border-brand hover:text-brand disabled:opacity-40 disabled:cursor-not-allowed">›</button>
+            className="grid h-7 w-7 place-items-center rounded-lg border border-surface-border bg-surface text-muted transition-colors hover:border-brand hover:text-brand disabled:opacity-40 disabled:cursor-not-allowed">›</button>
+          {pickerOpen && points.length > 0 && (
+            <div className="absolute left-1/2 top-full z-30 mt-2 w-64 -translate-x-1/2 rounded-xl border border-surface-border bg-surface p-3 shadow-lg">
+              {gran === "year" ? (
+                <div className="grid grid-cols-3 gap-1.5">{points.map((p, i) => pkBtn(p.label, i, i))}</div>
+              ) : (
+                <>
+                  <div className="mb-2 flex items-center justify-between">
+                    <button onClick={() => setPkYear((y) => y - 1)} disabled={pkYear <= pickerYears[0]} className="grid h-6 w-6 place-items-center rounded-md border border-surface-border text-muted hover:border-brand hover:text-brand disabled:opacity-30">‹</button>
+                    <span className="text-sm font-semibold text-foreground tabular-nums">{pkYear}</span>
+                    <button onClick={() => setPkYear((y) => y + 1)} disabled={pkYear >= pickerYears[pickerYears.length - 1]} className="grid h-6 w-6 place-items-center rounded-md border border-surface-border text-muted hover:border-brand hover:text-brand disabled:opacity-30">›</button>
+                  </div>
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {gran === "quarter"
+                      ? [1, 2, 3, 4].map((q) => pkBtn(`Q${q}`, points.findIndex((p) => { const d = new Date(p.periodStart); return d.getFullYear() === pkYear && Math.floor(d.getMonth() / 3) + 1 === q; }), q))
+                      : monShort.map((mm, mi) => pkBtn(mm, points.findIndex((p) => { const d = new Date(p.periodStart); return d.getFullYear() === pkYear && d.getMonth() === mi; }), mi))}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </div>
         <div className="ml-auto flex gap-1.5">
           {[["latest", t("buildingsId.reporting.histogram.jumpMonth")], ["ytd", t("buildingsId.reporting.histogram.jumpYtd")], ["year", t("buildingsId.reporting.histogram.jumpYear")]].map(([k, l]) => (
-            <button key={k} onClick={() => jump(k)} className="rounded-lg border border-surface-border bg-surface px-2.5 py-1 text-xs text-muted transition-colors hover:border-brand hover:text-brand">{l}</button>
+            <button key={k} onClick={() => { setPickerOpen(false); jump(k); }} className="rounded-lg border border-surface-border bg-surface px-2.5 py-1 text-xs text-muted transition-colors hover:border-brand hover:text-brand">{l}</button>
           ))}
         </div>
       </div>
 
-      {tsError && <p className="text-sm text-destructive-text">{tsError}</p>}
+      {tsError && <p className="p-3 text-sm text-destructive-text">{tsError}</p>}
 
       <BuildingPeriodAnalysis buildingId={buildingId} etatLocatifNet={etatLocatifNet} from={from} to={to} periodLabel={periodLabel}
         points={points} focus={focus} onFocusChange={(s, e) => setFocus({ s, e })} />
