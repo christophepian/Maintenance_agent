@@ -747,6 +747,23 @@
         "costCenters": "By cost center",
         "unclassified": "Unclassified"
       },
+      "period": {
+        "label": "Period",
+        "month": "Month",
+        "quarter": "Quarter",
+        "year": "Year",
+        "prev": "Previous period",
+        "next": "Next period"
+      },
+      "revex": {
+        "title": "Revenue & expenses",
+        "sub": "Income, expenses and NOI over time. Click a bar or drag to select a span — the hero follows.",
+        "income": "Income · by unit",
+        "byCostCenter": "Cost-center",
+        "byVendor": "Vendor",
+        "vacant": "vacant",
+        "noExpenses": "No expenses recorded for this period."
+      },
       "histogram": {
         "horizon": "Horizon",
         "expenses": "Expenses",
