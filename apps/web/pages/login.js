@@ -1,9 +1,9 @@
 /**
- * Login page — split-screen redesign (Stripe-benchmarked, Sencilo brand).
+ * Login page — split-screen redesign (Stripe-benchmarked, Propfolio brand).
  *
  * Layout:
  *   Left  — immersive dark hero panel reusing the marketing hero photo
- *           (/website/assets/hero-bg.png) with Sencilo branding + tagline.
+ *           (/website/assets/hero-bg.png) with Propfolio branding + tagline.
  *           Hidden below lg; on mobile a compact brand header shows instead.
  *   Right — fixed light card with the auth form (Stripe-minimal).
  *
@@ -88,7 +88,7 @@ function MethodTab({ active, onClick, children }) {
   );
 }
 
-/* Sencilo gradient logo mark — matches the marketing hero */
+/* Propfolio gradient logo mark — matches the marketing hero */
 function BrandMark({ size = "md" }) {
   const dim = size === "lg" ? "w-10 h-10 text-base" : "w-9 h-9 text-sm";
   return (
@@ -99,7 +99,7 @@ function BrandMark({ size = "md" }) {
       )}
       aria-hidden="true"
     >
-      S
+      P
     </div>
   );
 }
@@ -192,8 +192,12 @@ function AuthShell({ children, footer }) {
       {/* ── Brand mark — pinned top-left on desktop ───────────── */}
       <div className="hidden lg:flex absolute z-20 top-12 left-12 xl:top-16 xl:left-16 items-center gap-3 text-white">
         <BrandMark size="lg" />
-        <span className="text-xl font-semibold tracking-tight">
-          {process.env.NEXT_PUBLIC_SANDBOX === "true" ? "Sandbox" : "Sencilo"}
+        <span className="text-2xl">
+          {process.env.NEXT_PUBLIC_SANDBOX === "true" ? (
+            <span className="font-semibold tracking-tight">Sandbox</span>
+          ) : (
+            <span className="brand-wordmark">prop<span className="brand-wordmark-bold">folio</span></span>
+          )}
         </span>
       </div>
 
@@ -222,8 +226,12 @@ function AuthShell({ children, footer }) {
               {/* Mobile brand header (hero hidden below lg) */}
               <div className="flex items-center gap-2.5 mb-8 lg:hidden">
                 <BrandMark />
-                <span className="text-lg font-semibold tracking-tight text-white">
-                  {process.env.NEXT_PUBLIC_SANDBOX === "true" ? "Sandbox" : "Sencilo"}
+                <span className="text-xl text-white">
+                  {process.env.NEXT_PUBLIC_SANDBOX === "true" ? (
+                    <span className="font-semibold tracking-tight">Sandbox</span>
+                  ) : (
+                    <span className="brand-wordmark">prop<span className="brand-wordmark-bold">folio</span></span>
+                  )}
                 </span>
               </div>
 

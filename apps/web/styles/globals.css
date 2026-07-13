@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&display=swap');
 @source "../pages/**/*.{js,jsx,ts,tsx}";
 @source "../components/**/*.{js,jsx,ts,tsx}";
 
@@ -340,6 +341,17 @@ h1, h2 {
  */
 
 @layer components {
+  /* ── Brand wordmark — Playfair Display "prop" (400) + "folio" (700).
+     Color is inherited from the parent so it adapts to light/dark surfaces. */
+  .brand-wordmark {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-weight: 400;
+    letter-spacing: -0.03em;
+    line-height: 1;
+    color: inherit;
+  }
+  .brand-wordmark-bold { font-weight: 700; }
+
   /* ── KPI grid — 2-col on mobile, expands at larger breakpoints via page-level overrides.
      Rule: if the last card would sit alone on a mobile row, add col-span-2 [breakpoint]:col-span-1
      to it so it fills the row. Never use a single-column grid for KPI sections. */
