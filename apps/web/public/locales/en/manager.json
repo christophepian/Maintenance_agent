@@ -755,6 +755,7 @@
         "prev": "Previous period",
         "next": "Next period"
       },
+      "kpiTab": "KPIs",
       "revex": {
         "title": "Revenue & expenses",
         "sub": "Income, expenses and NOI over time. Click a bar or drag to select a span — the hero follows.",
