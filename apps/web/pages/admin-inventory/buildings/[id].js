@@ -265,7 +265,7 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
   const [unitData, setUnitData] = useState([]);
   const [vendors, setVendors] = useState([]);
   const [expView, setExpView] = useState("acc"); // Revenue & expenses: cost-center | vendor
-  const [tab, setTab] = useState("revex");       // detail tab: kpi | drivers | revex | byunit
+  const [tab, setTab] = useState("kpi");         // detail tab: kpi | drivers | revex | byunit
   const [benchReport, setBenchReport] = useState(null); // "Compare to…" benchmark period
   const [benchmark, setBenchmark] = useState(null);
   const [loading, setLoading] = useState(false);
