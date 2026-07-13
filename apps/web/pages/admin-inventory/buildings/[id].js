@@ -1269,46 +1269,56 @@ export default function BuildingDetail() {
   async function loadBuildingKpis() {
     if (!id) return;
     setKpisLoading(true);
-    try {
-      const now = new Date();
-      const from = `${now.getFullYear()}-01-01`;
-      const to = now.toISOString().slice(0, 10);
-      // Open request/job counts are computed server-side (GET /buildings/:id/kpis)
-      // as scalar DB counts — previously this fetched up to 2,000 requests + 2,000
-      // jobs org-wide and filtered them in the browser on every page load.
-      const [kpiRes, finRes, portRes] = await Promise.all([
-        fetch(`/api/buildings/${id}/kpis`, { headers: authHeaders() }),
-        fetch(`/api/buildings/${id}/financial-summary?from=${from}&to=${to}`, { headers: authHeaders() }),
-        fetch(`/api/financials/portfolio-summary?from=${from}&to=${to}`, { headers: authHeaders() }),
-      ]);
-      const [kpiData, finData, portData] = await Promise.all([
-        kpiRes.json(), finRes.json(), portRes.json(),
-      ]);
-      const openRequests = kpiData?.data?.openRequests ?? 0;
-      const openJobs = kpiData?.data?.openJobs ?? 0;
-      const financials = finData?.data || null;
-      const portfolio = portData?.data || null;
-      let portfolioComparison = null;
-      if (portfolio && portfolio.buildingCount > 0 && financials) {
-        const buildingNoi = financials.netIncomeCents ?? 0;
-        const portfolioBuildings = portfolio.buildings || [];
-        if (portfolioBuildings.length > 1) {
-          const otherBuildings = portfolioBuildings.filter((b) => b.buildingId !== id);
-          if (otherBuildings.length > 0) {
-            const avgOtherNoi = otherBuildings.reduce((sum, b) => sum + (b.netIncomeCents ?? 0), 0) / otherBuildings.length;
-            if (avgOtherNoi !== 0) {
-              const pct = ((buildingNoi - avgOtherNoi) / Math.abs(avgOtherNoi)) * 100;
-              portfolioComparison = { pct: Math.round(pct), better: pct >= 0 };
-            }
+    const now = new Date();
+    const from = `${now.getFullYear()}-01-01`;
+    const to = now.toISOString().slice(0, 10);
+
+    // Parse each endpoint independently. A single slow/failing call — e.g. the
+    // portfolio fan-out timing out behind a gateway that returns an HTML 504,
+    // which makes res.json() throw — must NOT blank every card. In particular
+    // the cheap open-requests/open-jobs counts (GET /buildings/:id/kpis) should
+    // still render even when the heavier financial endpoints are unavailable.
+    // (These counts are scalar DB counts server-side; the page used to fetch up
+    // to 2,000 requests + 2,000 jobs org-wide and filter them in the browser.)
+    async function safeJson(url) {
+      try {
+        const res = await fetch(url, { headers: authHeaders() });
+        if (!res.ok) return null;
+        return await res.json();
+      } catch {
+        return null;
+      }
+    }
+
+    const [kpiData, finData, portData] = await Promise.all([
+      safeJson(`/api/buildings/${id}/kpis`),
+      safeJson(`/api/buildings/${id}/financial-summary?from=${from}&to=${to}`),
+      safeJson(`/api/financials/portfolio-summary?from=${from}&to=${to}`),
+    ]);
+
+    // null (not 0) when the counts endpoint itself failed, so the card shows
+    // "—" (unknown) rather than a misleading "0".
+    const openRequests = kpiData?.data?.openRequests ?? null;
+    const openJobs = kpiData?.data?.openJobs ?? null;
+    const financials = finData?.data || null;
+    const portfolio = portData?.data || null;
+    let portfolioComparison = null;
+    if (portfolio && portfolio.buildingCount > 0 && financials) {
+      const buildingNoi = financials.netIncomeCents ?? 0;
+      const portfolioBuildings = portfolio.buildings || [];
+      if (portfolioBuildings.length > 1) {
+        const otherBuildings = portfolioBuildings.filter((b) => b.buildingId !== id);
+        if (otherBuildings.length > 0) {
+          const avgOtherNoi = otherBuildings.reduce((sum, b) => sum + (b.netIncomeCents ?? 0), 0) / otherBuildings.length;
+          if (avgOtherNoi !== 0) {
+            const pct = ((buildingNoi - avgOtherNoi) / Math.abs(avgOtherNoi)) * 100;
+            portfolioComparison = { pct: Math.round(pct), better: pct >= 0 };
           }
         }
       }
-      setBuildingKpis({ openRequests, openJobs, financials, portfolioComparison });
-    } catch (e) {
-      // non-fatal — KPIs just won't show
-    } finally {
-      setKpisLoading(false);
     }
+    setBuildingKpis({ openRequests, openJobs, financials, portfolioComparison });
+    setKpisLoading(false);
   }
 
   async function loadOwnerStrategyProfiles(ownerIds) {
