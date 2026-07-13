@@ -414,6 +414,7 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
         const kpiSlide = (
           <div className="p-5">
             <KpiTable
+              flush
               isLoading={false}
               left={[
                 { label: t("buildingsId.reporting.kpi.noi"),            value: rFmtChf(noi),   delta: prev ? buildingDelta(noi, prev.netOperatingIncomeCents) : null },
@@ -774,9 +775,9 @@ function BuildingReportingView({ buildingId, etatLocatifNet }) {
   );
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-surface-border bg-surface shadow-sm">
-      {/* ── Toolbar: period navigator (everything here changes the hero) ── */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-surface-border bg-surface-subtle px-3 py-2">
+    <div className="space-y-3">
+      {/* ── Period selector — a quiet standalone bar above the report card ── */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-surface-border bg-surface px-3 py-2 shadow-sm">
         <div className="flex items-center gap-2">
           <span className="text-[11px] font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.period.label")}</span>
           <div className="inline-flex rounded-lg border border-surface-border bg-surface p-0.5 gap-0.5">
@@ -823,9 +824,12 @@ function BuildingReportingView({ buildingId, etatLocatifNet }) {
         </div>
       </div>
 
-      {tsError && <p className="p-3 text-sm text-destructive-text">{tsError}</p>}
+      {tsError && <p className="text-sm text-destructive-text">{tsError}</p>}
 
-      <BuildingPeriodAnalysis buildingId={buildingId} etatLocatifNet={etatLocatifNet} from={from} to={to} periodLabel={periodLabel} />
+      {/* ── Report card: hero + tabs + panel ── */}
+      <div className="overflow-hidden rounded-2xl border border-surface-border bg-surface shadow-sm">
+        <BuildingPeriodAnalysis buildingId={buildingId} etatLocatifNet={etatLocatifNet} from={from} to={to} periodLabel={periodLabel} />
+      </div>
     </div>
   );
 }

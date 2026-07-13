@@ -53,11 +53,13 @@ export function KpiRow({ label, value, delta, isLoading }) {
   );
 }
 
-export function KpiTable({ left, right, isLoading, attached = false }) {
+export function KpiTable({ left, right, isLoading, attached = false, flush = false }) {
   return (
     <div className={cn(
-      "border border-surface-border bg-surface shadow-sm overflow-hidden",
-      attached ? "rounded-b-2xl rounded-t-none border-t-0" : "rounded-2xl"
+      // `flush` drops the card chrome so the table sits directly in a tab panel
+      // (no card-within-a-card); the internal row/column dividers still structure it.
+      flush ? "overflow-hidden" : "border border-surface-border bg-surface shadow-sm overflow-hidden",
+      !flush && (attached ? "rounded-b-2xl rounded-t-none border-t-0" : "rounded-2xl")
     )}>
       <div className="grid grid-cols-1 sm:grid-cols-2 sm:divide-x sm:divide-surface-divider">
         <div>
