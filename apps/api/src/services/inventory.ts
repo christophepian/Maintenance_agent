@@ -48,10 +48,10 @@ export async function listBuildings(orgId: string, includeInactive?: boolean, ow
 }
 export async function createBuilding(
   orgId: string,
-  data: { name: string; address?: string; managerId?: string | null },
+  data: { name: string; address?: string; managerId?: string | null; city?: string; postalCode?: string },
 ) {
   const address = data.address?.trim() || data.name;
-  const building = await inventoryRepo.createBuilding(prisma, orgId, { name: data.name, address, managerId: data.managerId });
+  const building = await inventoryRepo.createBuilding(prisma, orgId, { name: data.name, address, managerId: data.managerId, city: data.city, postalCode: data.postalCode });
   // Seed default building-level assets (fire-and-forget; non-blocking)
   seedDefaultBuildingAssets(prisma, orgId, building.id, { hasElevator: false }).catch((e) =>
     console.warn("[createBuilding] Failed to seed default assets:", e),

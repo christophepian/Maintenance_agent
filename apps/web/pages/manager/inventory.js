@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import PackageOnboardingPanel from "../../components/PackageOnboardingPanel";
 import { useRouter } from "next/router";
 import AppShell from "../../components/AppShell";
 import PageShell from "../../components/layout/PageShell";
@@ -308,7 +309,7 @@ export default function ManagerInventoryPage() {
   const [buildingCantonFilter, setBuildingCantonFilter] = useState("");
   const [buildingFilterOpen, setBuildingFilterOpen] = useState(false);
   const [buildingFormVisible, setBuildingFormVisible] = useState(false);
-  const [formMode, setFormMode] = useState("create"); // "create" | "import"
+  const [showImportPanel, setShowImportPanel] = useState(false);
   const [addMenuOpen, setAddMenuOpen] = useState(false);
   const addMenuRef = useRef(null);
   const [buildingAddress, setBuildingAddress] = useState("");
@@ -342,11 +343,6 @@ export default function ManagerInventoryPage() {
       setBuildingCity("");
       setBuildingCountry("");
       setBuildingFormVisible(false);
-      // "Import" flow: hand off to the package importer on the new building.
-      if (formMode === "import" && json?.data?.id) {
-        router.push(`/admin-inventory/buildings/${json.data.id}?from=/manager/inventory&onboard=package`);
-        return;
-      }
       await loadData();
     } catch (e) {
       setError(String(e?.message || e));
@@ -362,9 +358,14 @@ export default function ManagerInventoryPage() {
     return () => document.removeEventListener("mousedown", onDown);
   }, [addMenuOpen]);
 
-  function openForm(mode) {
-    setFormMode(mode);
+  function openCreate() {
     setBuildingFormVisible(true);
+    setShowImportPanel(false);
+    setAddMenuOpen(false);
+  }
+  function openImport() {
+    setShowImportPanel(true);
+    setBuildingFormVisible(false);
     setAddMenuOpen(false);
   }
 
@@ -435,11 +436,14 @@ export default function ManagerInventoryPage() {
           {/* Buildings tab */}
           <div className={activeTab === 0 ? "tab-panel-active" : "tab-panel"}>
             <div className="pt-1 pb-2 flex flex-col gap-4">
+              {showImportPanel && (
+                <PackageOnboardingPanel
+                  onClose={() => setShowImportPanel(false)}
+                  onCreated={(id) => router.push(`/admin-inventory/buildings/${id}?from=/manager/inventory`)}
+                />
+              )}
               {buildingFormVisible && (
                 <form onSubmit={onCreateBuilding} className="rounded-xl border border-brand bg-brand-light/30 p-4 grid gap-4">
-                {formMode === "import" && (
-                  <p className="text-sm text-muted">{t("manager:inventory.add.importHint")}</p>
-                )}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="col-span-full">
                     <label className="filter-label">{t("manager:inventory.text.address")}</label>
@@ -460,7 +464,7 @@ export default function ManagerInventoryPage() {
                 </div>
                 <div className="flex justify-end gap-2">
                   <button type="button" className="button-secondary" onClick={() => setBuildingFormVisible(false)}>{t("manager:inventory.text.cancel")}</button>
-                  <button type="submit" className="button-primary" disabled={loading}>{formMode === "import" ? t("manager:inventory.add.createAndImport") : t("manager:inventory.text.saveBuilding")}</button>
+                  <button type="submit" className="button-primary" disabled={loading}>{t("manager:inventory.text.saveBuilding")}</button>
                 </div>
               </form>
               )}
@@ -470,15 +474,15 @@ export default function ManagerInventoryPage() {
                   <button
                     type="button"
                     className="flex shrink-0 items-center gap-1.5 rounded-lg border border-brand bg-brand px-3 py-2 text-sm font-medium text-white hover:bg-brand-dark transition-colors"
-                    onClick={() => { if (buildingFormVisible) { setBuildingFormVisible(false); } else { setAddMenuOpen((v) => !v); } }}
+                    onClick={() => { if (buildingFormVisible || showImportPanel) { setBuildingFormVisible(false); setShowImportPanel(false); } else { setAddMenuOpen((v) => !v); } }}
                     aria-expanded={addMenuOpen}
                   >
-                    {buildingFormVisible ? t("manager:inventory.text.cancel") : `+ ${t("manager:inventory.add.button")} ▾`}
+                    {buildingFormVisible || showImportPanel ? t("manager:inventory.text.cancel") : `+ ${t("manager:inventory.add.button")} ▾`}
                   </button>
-                  {addMenuOpen && !buildingFormVisible && (
+                  {addMenuOpen && !buildingFormVisible && !showImportPanel && (
                     <div className="absolute right-0 top-full z-30 mt-1.5 w-48 overflow-hidden rounded-lg border border-surface-border bg-surface shadow-lg">
-                      <button type="button" className="block w-full px-3 py-2.5 text-left text-sm text-foreground hover:bg-surface-hover" onClick={() => openForm("create")}>{t("manager:inventory.add.createNew")}</button>
-                      <button type="button" className="block w-full border-t border-surface-border px-3 py-2.5 text-left text-sm text-foreground hover:bg-surface-hover" onClick={() => openForm("import")}>{t("manager:inventory.add.import")}</button>
+                      <button type="button" className="block w-full px-3 py-2.5 text-left text-sm text-foreground hover:bg-surface-hover" onClick={openCreate}>{t("manager:inventory.add.createNew")}</button>
+                      <button type="button" className="block w-full border-t border-surface-border px-3 py-2.5 text-left text-sm text-foreground hover:bg-surface-hover" onClick={openImport}>{t("manager:inventory.add.import")}</button>
                     </div>
                   )}
                 </div>

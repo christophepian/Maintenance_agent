@@ -12,7 +12,7 @@ import { requireAnyRole } from "../authz";
 import { readRawBody, parseMultipart } from "../storage/attachments";
 import { previewOnboarding, commitOnboarding, OnboardingError } from "../services/buildingOnboardingService";
 import { previewInvoiceOnboarding, commitInvoiceOnboarding } from "../services/invoiceOnboardingService";
-import { analyzePackage, commitPackage } from "../services/packageOnboardingService";
+import { analyzePackage, analyzePackageForNewBuilding, commitPackage } from "../services/packageOnboardingService";
 
 /** 10 MB limit — a rent roll is small even for a large portfolio. */
 const ONBOARDING_MAX_BYTES = 10 * 1024 * 1024;
@@ -171,6 +171,34 @@ export function registerBuildingOnboardingRoutes(router: Router) {
       }
       console.error("[ONBOARDING] invoice commit error:", e);
       sendError(res, 500, "INTERNAL_ERROR", "Failed to commit invoice onboarding", errDetail(e));
+    }
+  });
+
+  // ── New-building package analyze (no building yet — extract its identity) ──
+  router.post("/onboarding/package/analyze", async ({ req, res }) => {
+    const user = requireAnyRole(req, res, ["MANAGER"]);
+    if (!user) return;
+
+    const contentType = req.headers["content-type"] ?? "";
+    const boundaryMatch = contentType.match(/boundary=([^\s;]+)/);
+    if (!boundaryMatch) return sendError(res, 400, "INVALID_REQUEST", "Expected multipart/form-data");
+    let body: Buffer;
+    try {
+      body = await readRawBody(req, ONBOARDING_MAX_BYTES);
+    } catch {
+      return sendError(res, 413, "FILE_TOO_LARGE", "Files exceed 10 MB limit");
+    }
+    const parts = parseMultipart(body, boundaryMatch[1]);
+    const files = parts
+      .filter((p) => p.filename && p.name === "file")
+      .map((p) => ({ fileName: p.filename as string, text: p.data.toString("utf8") }));
+    if (files.length === 0) return sendError(res, 400, "MISSING_FILE", "No files found");
+
+    try {
+      sendJson(res, 200, { data: analyzePackageForNewBuilding(files) });
+    } catch (e) {
+      console.error("[ONBOARDING] new-building package analyze error:", e);
+      sendError(res, 500, "INTERNAL_ERROR", "Failed to analyze package", errDetail(e));
     }
   });
 

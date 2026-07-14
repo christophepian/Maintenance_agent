@@ -133,7 +133,7 @@ export async function findBuildingByIdDeep(
 export async function createBuilding(
   prisma: PrismaClient,
   orgId: string,
-  data: { name: string; address: string; managerId?: string | null },
+  data: { name: string; address: string; managerId?: string | null; city?: string | null; postalCode?: string | null },
 ) {
   return prisma.building.create({
     data: {
@@ -141,6 +141,8 @@ export async function createBuilding(
       name: data.name,
       address: data.address,
       ...(data.managerId ? { managerId: data.managerId } : {}),
+      ...(data.city ? { city: data.city } : {}),
+      ...(data.postalCode ? { postalCode: data.postalCode } : {}),
     },
   });
 }
