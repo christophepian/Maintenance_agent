@@ -698,8 +698,25 @@
         "noiMargin": "Marge d'exploitation",
         "opexRatio": "Ratio de charges",
         "occupancy": "Taux d'occupation",
-        "receivables": "Créances"
+        "receivables": "Créances",
+        "payables": "Dettes fournisseurs",
+        "accruedIncome": "Produits courus",
+        "netIncome": "Résultat net",
+        "rentalIncome": "Produits locatifs",
+        "serviceCharges": "Charges (acomptes)",
+        "maintenance": "Entretien",
+        "maintenanceRatio": "Ratio d'entretien",
+        "capex": "Investissements",
+        "costPerUnit": "Coût par lot"
       },
+      "kpiGroup": {
+        "performance": "Performance",
+        "income": "Produits",
+        "costs": "Charges",
+        "balances": "Soldes"
+      },
+      "generalLedger": "Grand livre",
+      "chartOfAccounts": "Plan comptable",
       "monthlyNoiTitle": "Résultat d'exploitation mensuel",
       "monthlyNoiSub": "Résultat d'exploitation net par mois · {{year}}",
       "bestMonth": "Meilleur mois",
@@ -757,7 +774,8 @@
         "quarter": "Trimestre",
         "year": "Année",
         "prev": "Période précédente",
-        "next": "Période suivante"
+        "next": "Période suivante",
+        "custom": "Personnalisé"
       },
       "kpiTab": "Indicateurs",
       "compare": {
@@ -776,6 +794,7 @@
         "sub": "Produits et charges pour cette période, et l'origine de chacun.",
         "income": "Produits · par lot",
         "byCostCenter": "Centre de coûts",
+        "byCategory": "Catégorie",
         "byVendor": "Fournisseur",
         "vacant": "vacant",
         "otherExpenses": "Autres (non classé)",

@@ -52,7 +52,6 @@ import Panel from "../../../components/layout/Panel";
 import UndoToast, { useUndoToast } from "../../../components/ui/UndoToast";
 import Badge from "../../../components/ui/Badge";
 import AssetInventoryPanel from "../../../components/AssetInventoryPanel";
-import BuildingFinancialsView from "../../../components/BuildingFinancialsView";
 import { authHeaders } from "../../../lib/api";
 import ScrollableTabs from "../../../components/mobile/ScrollableTabs";
 import PackageOnboardingPanel from "../../../components/PackageOnboardingPanel";
@@ -481,24 +480,61 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
           return rows.filter((x) => Math.abs(x.d) >= 20000).sort((x, y) => Math.abs(y.d) - Math.abs(x.d)).slice(0, 5);
         })() : [];
 
-        const normalKpis = (
-          <KpiTable
-            flush
-            isLoading={false}
-            left={[
-              { label: t("buildingsId.reporting.kpi.noi"),            value: rFmtChf(noi),   delta: prev ? buildingDelta(noi, prev.netOperatingIncomeCents) : null },
-              { label: t("buildingsId.reporting.kpi.cashReceived"),   value: rFmtChf(earned), delta: prev ? buildingDelta(earned, prev.collectedIncomeCents) : null },
-              { label: t("buildingsId.reporting.kpi.totalExpenses"),  value: rFmtChf(expenses), delta: prev ? buildingDelta(-expenses, -prev.expensesTotalCents) : null },
-              { label: t("buildingsId.reporting.kpi.onTimeCollection"), value: rFmtPct(coll),  delta: prev ? buildingDelta(coll, prev.collectionRate) : null },
-            ]}
-            right={[
-              { label: t("buildingsId.reporting.kpi.noiMargin"),   value: noiMargin  !== null ? rFmtPct(noiMargin)  : "—", delta: null },
-              { label: t("buildingsId.reporting.kpi.opexRatio"),   value: opexRatio  !== null ? rFmtPct(opexRatio)  : "—", delta: null },
-              { label: t("buildingsId.reporting.kpi.occupancy"),   value: occ        !== null ? rFmtPct(occ)        : "—", delta: null },
-              { label: t("buildingsId.reporting.kpi.rentRoll"),    value: rentRollCents != null ? rFmtChf(rentRollCents) : "—", delta: null },
+        // Grouped KPI sections — the full financial picture folded in from the
+        // (retired) Financials tab: performance · income · costs · balances.
+        const kpiGroups = [
+          { label: t("buildingsId.reporting.kpiGroup.performance"),
+            left: [
+              { label: t("buildingsId.reporting.kpi.noi"),       value: rFmtChf(noi),   delta: prev ? buildingDelta(noi, prev.netOperatingIncomeCents) : null },
+              { label: t("buildingsId.reporting.kpi.noiMargin"), value: noiMargin !== null ? rFmtPct(noiMargin) : "—", delta: null },
+              { label: t("buildingsId.reporting.kpi.opexRatio"), value: opexRatio !== null ? rFmtPct(opexRatio) : "—", delta: null },
+            ],
+            right: [
+              { label: t("buildingsId.reporting.kpi.onTimeCollection"), value: rFmtPct(coll), delta: prev ? buildingDelta(coll, prev.collectionRate) : null },
+              { label: t("buildingsId.reporting.kpi.occupancy"),        value: occ !== null ? rFmtPct(occ) : "—", delta: null },
+            ] },
+          { label: t("buildingsId.reporting.kpiGroup.income"),
+            left: [
+              { label: t("buildingsId.reporting.kpi.cashReceived"),  value: rFmtChf(earned), delta: prev ? buildingDelta(earned, prev.collectedIncomeCents) : null },
+              { label: t("buildingsId.reporting.kpi.accruedIncome"), value: rFmtChf(bf.accruedIncomeCents), delta: null },
+              { label: t("buildingsId.reporting.kpi.netIncome"),     value: rFmtChf(bf.netIncomeCents), delta: null },
+            ],
+            right: [
+              { label: t("buildingsId.reporting.kpi.rentalIncome"),   value: rFmtChf(bf.rentalIncomeCents), delta: null },
+              { label: t("buildingsId.reporting.kpi.serviceCharges"), value: rFmtChf(bf.serviceChargeIncomeCents), delta: null },
+            ] },
+          { label: t("buildingsId.reporting.kpiGroup.costs"),
+            left: [
+              { label: t("buildingsId.reporting.kpi.totalExpenses"),    value: rFmtChf(expenses), delta: prev ? buildingDelta(-expenses, -prev.expensesTotalCents) : null },
+              { label: t("buildingsId.reporting.kpi.maintenance"),      value: rFmtChf(bf.maintenanceTotalCents), delta: null },
+              { label: t("buildingsId.reporting.kpi.maintenanceRatio"), value: bf.maintenanceRatio != null ? rFmtPct(bf.maintenanceRatio) : "—", delta: null },
+            ],
+            right: [
+              { label: t("buildingsId.reporting.kpi.capex"),       value: rFmtChf(bf.capexTotalCents), delta: null },
+              { label: t("buildingsId.reporting.kpi.costPerUnit"), value: rFmtChf(bf.costPerUnitCents), delta: null },
+            ] },
+          { label: t("buildingsId.reporting.kpiGroup.balances"),
+            left: [
               { label: t("buildingsId.reporting.kpi.receivables"), value: bf.receivablesCents > 0 ? rFmtChf(bf.receivablesCents) : "—", delta: null },
-            ]}
-          />
+              { label: t("buildingsId.reporting.kpi.payables"),    value: bf.payablesCents > 0 ? rFmtChf(bf.payablesCents) : "—", delta: null },
+            ],
+            right: [
+              { label: t("buildingsId.reporting.kpi.rentRoll"), value: rentRollCents != null ? rFmtChf(rentRollCents) : "—", delta: null },
+            ] },
+        ];
+        const normalKpis = (
+          <div className="space-y-4">
+            {kpiGroups.map((g) => (
+              <div key={g.label}>
+                <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-foreground-dim">{g.label}</p>
+                <KpiTable flush isLoading={false} left={g.left} right={g.right} />
+              </div>
+            ))}
+            <div className="flex flex-wrap gap-x-4 gap-y-1 pt-1 text-xs">
+              <a href="/manager/finance/ledger" className="text-brand no-underline hover:underline">{t("buildingsId.reporting.generalLedger")} →</a>
+              <a href="/manager/finance/chart-of-accounts" className="text-brand no-underline hover:underline">{t("buildingsId.reporting.chartOfAccounts")} →</a>
+            </div>
+          </div>
         );
         const kpiSlide = (
           <div className="p-5">
@@ -633,7 +669,8 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
         const uncoveredCents = expenses - vendItemised;
         const incomeUnits = [...unitData].sort((a, b) => (b.collectedIncomeCents ?? 0) - (a.collectedIncomeCents ?? 0));
         const incMax = Math.max(1, ...incomeUnits.map((u) => u.collectedIncomeCents ?? 0));
-        const expRows = expView === "vend" ? vendors : periodAccounts;
+        const categoryRows = (bf.expensesByCategory ?? []).map((c) => ({ name: catLabel(c.category, t), totalCents: c.totalCents })).sort((a, b) => b.totalCents - a.totalCents);
+        const expRows = expView === "vend" ? vendors : expView === "cat" ? categoryRows : periodAccounts;
 
         const revexSlide = (
           <div className="p-5 space-y-4">
@@ -685,7 +722,7 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
                 <div className="mb-2 flex items-center justify-between gap-2 px-1">
                   <p className="text-[11px] font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.histogram.expenses")}</p>
                   <div className="inline-flex rounded-lg border border-surface-border bg-surface-hover p-0.5 gap-0.5">
-                    {[["acc", t("buildingsId.reporting.revex.byCostCenter")], ["vend", t("buildingsId.reporting.revex.byVendor")]].map(([k, l]) => (
+                    {[["acc", t("buildingsId.reporting.revex.byCostCenter")], ["cat", t("buildingsId.reporting.revex.byCategory")], ["vend", t("buildingsId.reporting.revex.byVendor")]].map(([k, l]) => (
                       <button key={k} onClick={() => setExpView(k)} aria-pressed={expView === k}
                         className={cn("rounded-md px-2 py-0.5 text-xs font-medium transition-colors", expView === k ? "bg-surface text-foreground shadow-sm" : "text-muted hover:text-muted-dark")}>{l}</button>
                     ))}
@@ -696,11 +733,12 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
                   : <div className="space-y-1">
                       {expRows.slice(0, 6).map((r, i) => {
                         const isVend = expView === "vend";
-                        const name = isVend ? r.vendorName : (r.accountName ?? t("buildingsId.reporting.expenseBreakdown.unclassified"));
-                        const drillable = isVend ? true : !!r.accountId; // the "Other" remainder isn't invoice-filterable
+                        const isCat = expView === "cat";
+                        const name = isVend ? r.vendorName : isCat ? r.name : (r.accountName ?? t("buildingsId.reporting.expenseBreakdown.unclassified"));
+                        const drillable = isVend ? true : isCat ? false : !!r.accountId; // category isn't an invoice filter; "Other" remainder isn't either
                         const inner = (
                           <>
-                            <span className="min-w-0 flex-1 truncate text-sm text-foreground">{!isVend && r.accountCode ? <span className="text-foreground-dim tabular-nums">{r.accountCode} </span> : null}{name}{isVend && r.invoiceCount ? <span className="text-xs text-foreground-dim"> · {r.invoiceCount}×</span> : null}</span>
+                            <span className="min-w-0 flex-1 truncate text-sm text-foreground">{!isVend && !isCat && r.accountCode ? <span className="text-foreground-dim tabular-nums">{r.accountCode} </span> : null}{name}{isVend && r.invoiceCount ? <span className="text-xs text-foreground-dim"> · {r.invoiceCount}×</span> : null}</span>
                             <span className="flex shrink-0 items-center gap-1.5 text-sm font-medium tabular-nums text-foreground">{rFmtChf(r.totalCents)}{drillable && <span className="text-foreground-dim opacity-0 group-hover:opacity-100 transition-opacity">→</span>}</span>
                           </>
                         );
@@ -811,6 +849,7 @@ const GRAN_RANGE = { month: "2Y", quarter: "5Y", year: "10Y" };
 function BuildingReportingView({ buildingId, etatLocatifNet }) {
   const { t } = useTranslation("manager");
   const [gran, setGran]   = useState("month");
+  const [customRange, setCustomRange] = useState(null); // { from, to } | null — arbitrary date range
   const [points, setPoints] = useState([]);
   const [focus, setFocus]   = useState({ s: 0, e: 0 });
   const [tsLoading, setTsLoading] = useState(false);
@@ -864,6 +903,10 @@ function BuildingReportingView({ buildingId, etatLocatifNet }) {
 
   // The focused window → [from,to] + label fed to the period detail + hero.
   const { from, to, periodLabel } = useMemo(() => {
+    // An explicit custom range overrides the bucket navigation.
+    if (customRange?.from && customRange?.to) {
+      return { from: customRange.from, to: customRange.to, periodLabel: `${customRange.from} → ${customRange.to}` };
+    }
     if (!points.length) {
       // Default to the current month so the detail loads immediately (without
       // waiting on the histogram) and matches the eventual last monthly bucket.
@@ -876,7 +919,7 @@ function BuildingReportingView({ buildingId, etatLocatifNet }) {
     const a = points[Math.min(s, points.length - 1)];
     const b = points[Math.min(e, points.length - 1)];
     return { from: a.periodStart, to: b.periodEnd, periodLabel: s === e ? a.label : `${a.label} – ${b.label}` };
-  }, [points, focus]);
+  }, [points, focus, customRange]);
 
   // Benchmark window for "Compare to…" — prior = same-length span just before the
   // focus; ly = the same window a year earlier. Computed from the current selection.
@@ -904,6 +947,7 @@ function BuildingReportingView({ buildingId, etatLocatifNet }) {
   }
   function jump(kind) {
     pendingJump.current = null;
+    setCustomRange(null);
     if (kind === "latest") { if (gran === "month") setFocus({ s: points.length - 1, e: points.length - 1 }); else setGran("month"); }
     else if (kind === "year") { if (gran === "year") setFocus({ s: points.length - 1, e: points.length - 1 }); else setGran("year"); }
     else { // ytd
@@ -931,6 +975,7 @@ function BuildingReportingView({ buildingId, etatLocatifNet }) {
     <div className="space-y-3">
       {/* ── Period selector — a quiet standalone bar above the report card ── */}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-surface-border bg-surface px-3 py-2 shadow-sm">
+        {!customRange && (<>
         <div className="flex items-center gap-2">
           <span className="text-[11px] font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.period.label")}</span>
           <div className="inline-flex rounded-lg border border-surface-border bg-surface p-0.5 gap-0.5">
@@ -970,10 +1015,22 @@ function BuildingReportingView({ buildingId, etatLocatifNet }) {
             </div>
           )}
         </div>
+        </>)}
+        {customRange && (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[11px] font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.period.custom")}</span>
+            <input type="date" value={customRange.from} onChange={(e) => setCustomRange((r) => ({ ...r, from: e.target.value }))} className="rounded-lg border border-surface-border bg-surface px-2 py-1 text-sm text-foreground" />
+            <span className="text-foreground-dim">→</span>
+            <input type="date" value={customRange.to} onChange={(e) => setCustomRange((r) => ({ ...r, to: e.target.value }))} className="rounded-lg border border-surface-border bg-surface px-2 py-1 text-sm text-foreground" />
+            <button onClick={() => setCustomRange(null)} aria-label={t("buildingsId.reporting.compare.clear")} className="rounded-lg border border-surface-border px-2 py-1 text-xs text-muted transition-colors hover:border-brand hover:text-brand">✕</button>
+          </div>
+        )}
         <div className="flex gap-1.5">
           {[["latest", t("buildingsId.reporting.histogram.jumpMonth")], ["ytd", t("buildingsId.reporting.histogram.jumpYtd")], ["year", t("buildingsId.reporting.histogram.jumpYear")]].map(([k, l]) => (
             <button key={k} onClick={() => { setPickerOpen(false); jump(k); }} className="rounded-lg border border-surface-border bg-surface px-2.5 py-1 text-xs text-muted transition-colors hover:border-brand hover:text-brand">{l}</button>
           ))}
+          <button onClick={() => setCustomRange((r) => (r ? null : { from, to }))} aria-pressed={!!customRange}
+            className={cn("rounded-lg border px-2.5 py-1 text-xs transition-colors", customRange ? "border-brand bg-brand-light text-brand-dark" : "border-surface-border bg-surface text-muted hover:border-brand hover:text-brand")}>{t("buildingsId.reporting.period.custom")}</button>
         </div>
         {/* Compare to… — deliberate period-vs-period comparison (progressive disclosure) */}
         <div className="relative ml-auto" ref={cmpRef}>
@@ -1078,7 +1135,7 @@ export default function BuildingDetail() {
   const { id, from, role } = router.query;
   const isOwner = role === "owner";
   const backHref = from || (isOwner ? "/owner/properties" : "/manager/inventory?tab=buildings");
-  const VALID_TABS = ["Building information", "Units", "Tenants", "Assets", "Documents", "Policies", "Financials", "Reporting", "Requests", "Correspondence"];
+  const VALID_TABS = ["Building information", "Units", "Tenants", "Assets", "Documents", "Policies", "Reporting", "Requests", "Correspondence"];
   const initialTab = typeof router.query.tab === "string" && VALID_TABS.includes(router.query.tab)
     ? router.query.tab
     : "Building information";
@@ -1928,7 +1985,7 @@ export default function BuildingDetail() {
 
           {/* Tabs Navigation */}
           {(() => {
-            const TAB_KEYS = ["Building information", "Units", "Tenants", "Assets", "Documents", "Policies", "Financials", "Reporting", "Requests", "Correspondence"];
+            const TAB_KEYS = ["Building information", "Units", "Tenants", "Assets", "Documents", "Policies", "Reporting", "Requests", "Correspondence"];
             const TAB_I18N = {
               "Building information": t("manager:buildingsId.tabs.buildingInformation"),
               "Units":                t("manager:buildingsId.tabs.units"),
@@ -1936,7 +1993,6 @@ export default function BuildingDetail() {
               "Assets":               t("manager:buildingsId.tabs.assets"),
               "Documents":            t("manager:buildingsId.tabs.documents"),
               "Policies":             t("manager:buildingsId.tabs.policies"),
-              "Financials":           t("manager:buildingsId.tabs.financials"),
               "Reporting":            "Reporting",
               "Requests":             t("manager:buildingsId.tabs.requests"),
               "Correspondence":       t("manager:buildingsId.tabs.correspondence"),
@@ -3378,12 +3434,7 @@ export default function BuildingDetail() {
             </Panel>
           )}
 
-          {/* Financials tab */}
-          {activeTab === "Financials" && id && (
-            <BuildingFinancialsView buildingId={id} variant="embedded" />
-          )}
-
-          {/* Reporting tab */}
+          {/* Reporting tab (the Financials tab was folded in here) */}
           {activeTab === "Reporting" && id && (
             <BuildingReportingView buildingId={id} etatLocatifNet={building?.etatLocatifNetChf} />
           )}
