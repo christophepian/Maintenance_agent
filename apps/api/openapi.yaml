@@ -511,11 +511,18 @@ components:
       required: [fileName, type, summary, detail]
       properties:
         fileName: { type: string }
-        type: { type: string, enum: [RENT_ROLL, GENERAL_LEDGER, BALANCE_SHEET, INCOME_STATEMENT, UNKNOWN] }
+        type: { type: string, enum: [RENT_ROLL, GENERAL_LEDGER, BALANCE_SHEET, INCOME_STATEMENT, GENERAL_INFO, UNKNOWN] }
         summary:
           type: object
           additionalProperties: { type: number }
         detail: { type: string }
+
+    PackageFileDTO:
+      type: object
+      required: [fileName, text]
+      properties:
+        fileName: { type: string }
+        text: { type: string }
 
     ReconciliationCheckDTO:
       type: object
@@ -544,6 +551,10 @@ components:
         warnings:
           type: array
           items: { type: string }
+        extractedFiles:
+          type: array
+          description: Present only when the upload was a PDF — the canonical CSVs extracted from it, re-submitted verbatim at commit.
+          items: { $ref: '#/components/schemas/PackageFileDTO' }
 
     PackageCommitResultDTO:
       type: object
@@ -7197,7 +7208,9 @@ paths:
         Like the building-scoped package analyze, but for a building that doesn't
         exist yet: detects each document (including a "general info" sheet) and
         extracts the building's address, reference and fiscal year from it so the
-        UI can pre-fill the create-building step. Read-only.
+        UI can pre-fill the create-building step. Accepts either CSVs or a single
+        régie PDF (OCR + Claude extraction into the same canonical CSVs, returned
+        as extractedFiles). Read-only.
       operationId: analyzePackageForNewBuilding
       security:
         - bearerAuth: []
@@ -7237,6 +7250,10 @@ paths:
                       documents: { type: array, items: { $ref: '#/components/schemas/PackageDocumentDTO' } }
                       reconciliation: { type: array, items: { type: object } }
                       warnings: { type: array, items: { type: string } }
+                      extractedFiles:
+                        type: array
+                        description: Present only when the upload was a PDF — the canonical CSVs extracted from it.
+                        items: { $ref: '#/components/schemas/PackageFileDTO' }
         '400': { description: No files or invalid request }
         '401':
           $ref: '#/components/responses/Unauthorized'

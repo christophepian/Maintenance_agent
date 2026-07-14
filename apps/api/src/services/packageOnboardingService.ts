@@ -50,6 +50,9 @@ export interface PackageAnalysisDTO {
   documents: PackageDocumentDTO[];
   reconciliation: ReconciliationCheckDTO[];
   warnings: string[];
+  /** Present only when the upload was a PDF: the canonical CSVs extracted from
+   *  it, which the client re-submits verbatim at commit (single extraction). */
+  extractedFiles?: PackageFile[];
 }
 
 export interface PackageCommitResultDTO {
@@ -67,6 +70,9 @@ export interface NewBuildingPackageAnalysisDTO {
   documents: PackageDocumentDTO[];
   reconciliation: ReconciliationCheckDTO[];
   warnings: string[];
+  /** Present only when the upload was a PDF: the canonical CSVs extracted from
+   *  it, which the client re-submits verbatim at commit (single extraction). */
+  extractedFiles?: PackageFile[];
 }
 
 const round2 = (n: number): number => Math.round(n * 100) / 100;

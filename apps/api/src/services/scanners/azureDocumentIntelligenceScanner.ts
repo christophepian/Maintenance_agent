@@ -23,6 +23,19 @@ import type {
 } from "../documentScanner";
 import { verifyDebtEnforcement } from "./debtEnforcementVerifier";
 import { getAnthropicClient } from "../aiClient";
+import {
+  emitRentRollCsv,
+  emitBuildingInfoCsv,
+  emitAccountBalancesCsv,
+  type ExtractedRentRollRow,
+  type ExtractedBuildingInfoFields,
+} from "./packageCsvEmitter";
+
+/** One synthetic canonical CSV produced from a régie PDF, ready for the package pipeline. */
+export interface PackageExtractionFile {
+  fileName: string;
+  text: string;
+}
 
 /* ══════════════════════════════════════════════════════════════
    Types from the Azure SDK — imported lazily to keep cold-start
@@ -1115,6 +1128,241 @@ async function extractInvoicesFromChunk(
   return [];
 }
 
+/* ══════════════════════════════════════════════════════════════
+   Régie-package extraction — rent roll + building identity.
+   These forced tool calls turn a régie's PDF into the same
+   structured rows the deterministic CSV mappers already consume
+   (see packageCsvEmitter). The LLM never writes records; it only
+   produces rows, which are serialized to canonical CSV and handed
+   to the existing detect → map → reconcile → commit pipeline.
+   ══════════════════════════════════════════════════════════════ */
+
+/** Claude tool for extracting the rent roll (état locatif) from a régie package. */
+const RENT_ROLL_TOOL = {
+  name: "extractRentRoll",
+  description:
+    "Extract the rent roll (état locatif / tenant schedule) from a Swiss property management document. " +
+    "One entry per rental object. Each object has a code (objet) like '531100.01.0001' — objects whose last " +
+    "segment starts with 9 (e.g. .9001) are parking/garages. Record the primary tenant, the object type as " +
+    "printed, entry/exit dates, and the NET monthly rent (loyer net mensuel — never the gross/brut figure). " +
+    "Mark empty objects as vacant. Skip any 'Total'/'Totaux' summary row.",
+  input_schema: {
+    type: "object",
+    required: ["objects"],
+    properties: {
+      objects: {
+        type: "array",
+        description: "Every rental object row in the état locatif.",
+        items: {
+          type: "object",
+          required: ["objet", "confidence"],
+          properties: {
+            objet: { type: "string", description: "Full object code exactly as printed, e.g. '531100.01.0001'." },
+            tenantName: { type: "string", description: "Primary tenant name. Omit, or use 'Vacant', if the object is empty." },
+            unitType: { type: "string", description: "Object type as printed, e.g. 'Appartement', 'Garage', 'Parking', 'Local'." },
+            floor: { type: "string", description: "Floor / étage as printed." },
+            rooms: { type: "number", description: "Number of rooms (pièces), e.g. 4.5." },
+            areaSqm: { type: "number", description: "Area in m²." },
+            entree: { type: "string", description: "Lease start date, DD.MM.YYYY." },
+            sortie: { type: "string", description: "Lease end date, DD.MM.YYYY. Omit if ongoing." },
+            netRentChf: { type: "number", description: "NET monthly rent in CHF (loyer net mensuel), a plain number. Never the gross/brut figure." },
+            chargesChf: { type: "number", description: "Monthly charges advance in CHF (charges/acompte), a plain number." },
+            confidence: { type: "number", description: "Your confidence (0.0–1.0) that this row is read correctly from the source." },
+          },
+        },
+      },
+    },
+  },
+} as const;
+
+/** Claude tool for extracting the building's identity from the general-info/cover page. */
+const BUILDING_INFO_TOOL = {
+  name: "extractBuildingInfo",
+  description:
+    "Extract the building/property identity from the general-info or cover page of a Swiss régie report. " +
+    "This is property identity, not financial data.",
+  input_schema: {
+    type: "object",
+    required: [],
+    properties: {
+      immeubleAdresse: {
+        type: "string",
+        description:
+          "Full building address including street, postal code and city, e.g. 'Rte Monts-de-Laval 314, 1090 La Croix (Lutry)'.",
+      },
+      immeubleReference: { type: "string", description: "Management reference number for the building, e.g. '78645'." },
+      periode: { type: "string", description: "Reporting period exactly as printed, e.g. '01.01.2025 - 31.12.2025'." },
+      gerance: { type: "string", description: "Property management company (régie / gérance)." },
+      proprietaire: { type: "string", description: "Owner name(s)." },
+    },
+  },
+} as const;
+
+/** Extract rent-roll object rows from one chunk of OCR text via a forced tool call. */
+async function extractRentRollFromChunk(
+  client: ReturnType<typeof getAnthropicClient>,
+  content: string,
+  chunkIndex: number,
+  totalChunks: number,
+): Promise<ExtractedRentRollRow[]> {
+  const chunkLabel = totalChunks > 1 ? ` (chunk ${chunkIndex + 1} of ${totalChunks})` : "";
+
+  const response = await client.messages.create({
+    model: "claude-haiku-4-5-20251001",
+    max_tokens: 8192,
+    temperature: 0,
+    system: EXTRACTION_SYSTEM_PROMPT,
+    tools: [RENT_ROLL_TOOL] as unknown as Parameters<typeof client.messages.create>[0]["tools"],
+    tool_choice: { type: "tool", name: "extractRentRoll" },
+    messages: [
+      {
+        role: "user",
+        content:
+          `Extract EVERY rental object from the état locatif in this section of a Swiss property management document${chunkLabel}. ` +
+          "Include every object row — apartments, garages, parking, commercial locals — no matter how many. " +
+          "Use the NET monthly rent (loyer net), not the gross. Skip 'Total' summary rows. " +
+          "Omit fields not clearly present in the text; do not guess.\n\n" +
+          `OCR text:\n${content}`,
+      },
+    ],
+  });
+
+  for (const block of response.content) {
+    if (block.type !== "tool_use" || block.name !== "extractRentRoll") continue;
+    const input = block.input as {
+      objects?: Array<{
+        objet?: string;
+        tenantName?: string;
+        unitType?: string;
+        floor?: string;
+        rooms?: number;
+        areaSqm?: number;
+        entree?: string;
+        sortie?: string;
+        netRentChf?: number;
+        chargesChf?: number;
+        confidence?: number;
+      }>;
+    };
+    return (input.objects ?? [])
+      .filter((o) => o.objet && o.objet.trim())
+      .map((o) => ({
+        objet: o.objet!.trim(),
+        tenantName: o.tenantName ?? null,
+        unitType: o.unitType ?? null,
+        floor: o.floor ?? null,
+        rooms: typeof o.rooms === "number" ? o.rooms : null,
+        areaSqm: typeof o.areaSqm === "number" ? o.areaSqm : null,
+        entree: o.entree ?? null,
+        sortie: o.sortie ?? null,
+        loyerNetChf: typeof o.netRentChf === "number" ? o.netRentChf : null,
+        chargesChf: typeof o.chargesChf === "number" ? o.chargesChf : null,
+        confidence: typeof o.confidence === "number" ? o.confidence : null,
+      }));
+  }
+  return [];
+}
+
+/** Extract the building's identity from OCR text via a forced tool call. */
+async function extractBuildingInfoFromText(
+  client: ReturnType<typeof getAnthropicClient>,
+  content: string,
+): Promise<ExtractedBuildingInfoFields | null> {
+  const response = await client.messages.create({
+    model: "claude-haiku-4-5-20251001",
+    max_tokens: 512,
+    temperature: 0,
+    system: EXTRACTION_SYSTEM_PROMPT,
+    tools: [BUILDING_INFO_TOOL] as unknown as Parameters<typeof client.messages.create>[0]["tools"],
+    tool_choice: { type: "tool", name: "extractBuildingInfo" },
+    messages: [
+      {
+        role: "user",
+        content:
+          "Extract the building/property identity from this Swiss régie report page. " +
+          "Omit any field not clearly present; do not guess.\n\n" +
+          `OCR text:\n${content}`,
+      },
+    ],
+  });
+
+  for (const block of response.content) {
+    if (block.type !== "tool_use" || block.name !== "extractBuildingInfo") continue;
+    const input = block.input as {
+      immeubleAdresse?: string;
+      immeubleReference?: string;
+      periode?: string;
+      gerance?: string;
+      proprietaire?: string;
+    };
+    if (!input.immeubleAdresse || !input.immeubleAdresse.trim()) return null;
+    return {
+      immeubleAdresse: input.immeubleAdresse.trim(),
+      immeubleReference: input.immeubleReference ?? null,
+      periode: input.periode ?? null,
+      gerance: input.gerance ?? null,
+      proprietaire: input.proprietaire ?? null,
+    };
+  }
+  return null;
+}
+
+const PACKAGE_CHUNK_CHARS = 10_000;
+
+/** Extract + dedupe rent-roll rows across a set of pages (chunked). */
+async function extractRentRollRows(
+  client: ReturnType<typeof getAnthropicClient>,
+  pages: string[],
+): Promise<ExtractedRentRollRow[]> {
+  const chunks = splitIntoPageChunks(pages.join("\n\n"), undefined, PACKAGE_CHUNK_CHARS);
+  const all: ExtractedRentRollRow[] = [];
+  const seen = new Set<string>();
+  for (let i = 0; i < chunks.length; i++) {
+    let rows: ExtractedRentRollRow[];
+    try {
+      rows = await extractRentRollFromChunk(client, chunks[i], i, chunks.length);
+    } catch (e) {
+      console.warn("[DOC-SCAN] rent-roll chunk failed:", e instanceof Error ? e.message : e);
+      continue;
+    }
+    for (const r of rows) {
+      const key = r.objet.trim().toLowerCase();
+      if (!seen.has(key)) {
+        seen.add(key);
+        all.push(r);
+      }
+    }
+  }
+  return all;
+}
+
+/** Extract + dedupe account balances across a set of pages (chunked, code|absAmount key). */
+async function extractBalancesForPackage(
+  client: ReturnType<typeof getAnthropicClient>,
+  pages: string[],
+): Promise<ExtractedAccountBalance[]> {
+  const chunks = splitIntoPageChunks(pages.join("\n\n"), undefined, PACKAGE_CHUNK_CHARS);
+  const all: ExtractedAccountBalance[] = [];
+  const seen = new Set<string>();
+  for (let i = 0; i < chunks.length; i++) {
+    let res: Awaited<ReturnType<typeof extractBalancesFromChunk>>;
+    try {
+      res = await extractBalancesFromChunk(client, chunks[i], i, chunks.length);
+    } catch (e) {
+      console.warn("[DOC-SCAN] balance chunk failed:", e instanceof Error ? e.message : e);
+      continue;
+    }
+    for (const b of res.accountBalances) {
+      const key = [normalizeSwissAccountCode(b.rawAccountCode), String(Math.abs(b.balanceChf))].join("|");
+      if (!seen.has(key)) {
+        seen.add(key);
+        all.push(b);
+      }
+    }
+  }
+  return all;
+}
+
 /**
  * Extract account balances (and optionally invoice lines) from one chunk of
  * OCR text. Keeps two separate tool calls so balance extraction is always
@@ -1219,7 +1467,14 @@ function splitIntoPageChunks(
    Page classification — one cheap Claude call to label each page
    ══════════════════════════════════════════════════════════════ */
 
-type PageClass = "COVER_LETTER" | "BALANCE_SHEET" | "INCOME_STATEMENT" | "INVOICE" | "OTHER";
+type PageClass =
+  | "COVER_LETTER"
+  | "BALANCE_SHEET"
+  | "INCOME_STATEMENT"
+  | "INVOICE"
+  | "RENT_ROLL"
+  | "GENERAL_INFO"
+  | "OTHER";
 
 /** A contiguous group of same-type pages forming one extractable section. */
 export interface DocumentSection {
@@ -1258,7 +1513,7 @@ async function classifyPages(
         {
           name: "classifyDocumentPages",
           description:
-            "Classify each page of a Swiss property management document into one of five categories.",
+            "Classify each page of a Swiss property management document into one of seven categories.",
           input_schema: {
             type: "object" as const,
             required: ["pages"],
@@ -1274,13 +1529,23 @@ async function classifyPages(
                     pageNumber: { type: "number" },
                     class: {
                       type: "string",
-                      enum: ["COVER_LETTER", "BALANCE_SHEET", "INCOME_STATEMENT", "INVOICE", "OTHER"],
+                      enum: [
+                        "COVER_LETTER",
+                        "BALANCE_SHEET",
+                        "INCOME_STATEMENT",
+                        "INVOICE",
+                        "RENT_ROLL",
+                        "GENERAL_INFO",
+                        "OTHER",
+                      ],
                       description:
                         "BALANCE_SHEET: Bilan or balance sheet — closing positions for assets (actifs/Aktiven, codes 1xxx) and liabilities/equity (passifs/Passiven, codes 2xxx). " +
                         "INCOME_STATEMENT: Compte de résultat, Betriebsrechnung, compte de gestion, P&L — revenue and expense rows for a period. Revenue codes 3xxx (Ertrag/recettes), expense codes 4xxx–8xxx (Aufwand/charges). " +
                         "INVOICE: a vendor invoice, receipt, or Facture with an invoice number, supplier name, and CHF total. " +
+                        "RENT_ROLL: état locatif / Mietspiegel / tenant schedule — a table of rental objects, one row per object (objet code like 531100.01.0001), with tenant name, object type, entry/exit dates, and monthly net rent. " +
+                        "GENERAL_INFO: a cover/identity page naming the building (immeuble / adresse), the régie (gérance), the owner (propriétaire), the management reference, and the reporting period — property identity, not financial tables. " +
                         "COVER_LETTER: introductory or transmittal letter with no financial data. " +
-                        "OTHER: table of contents, tenant list, état locatif, property description, annexes, or anything that does not fit above.",
+                        "OTHER: table of contents, property description, annexes, or anything that does not fit above.",
                     },
                   },
                 },
@@ -1295,7 +1560,8 @@ async function classifyPages(
           role: "user",
           content:
             `Classify each page of this Swiss property management PDF (${pageTexts.length} pages total). ` +
-            `Distinguish carefully between BALANCE_SHEET (closing positions) and INCOME_STATEMENT (period revenue/expenses). ` +
+            `Distinguish carefully between BALANCE_SHEET (closing positions), INCOME_STATEMENT (period revenue/expenses), ` +
+            `RENT_ROLL (état locatif — one row per rental object with tenant + rent), and GENERAL_INFO (building/owner identity page). ` +
             `Return exactly one entry per page.\n\nPage snippets:\n${snippets}`,
         },
       ],
@@ -1771,6 +2037,72 @@ export class AzureDocumentIntelligenceScanner implements DocumentScanner {
     const fullContent = pageContents.join("\n\n");
     console.log(`[DOC-SCAN] Per-page merge complete: ${pageBuffers.length} pages, contentLen=${fullContent.length}`);
     return { content: fullContent, kvPairs: allKvPairs, fields: firstFields, pageCount: pageBuffers.length, pageTexts: pageContents };
+  }
+
+  /**
+   * Régie-package extraction: OCR a whole year-end PDF, classify its pages, and
+   * emit the canonical CSVs the existing package pipeline consumes — rent roll,
+   * building info, balance sheet, income statement. The caller feeds these into
+   * `analyzePackageForNewBuilding` / `commitPackage` unchanged. Returns only the
+   * CSVs that had extractable content (so a PDF missing a section is fine).
+   */
+  async extractPackage(
+    buffer: Buffer,
+    fileName: string,
+    mimeType: string,
+  ): Promise<PackageExtractionFile[]> {
+    const contentType: AzureContentType = MIME_MAP[mimeType] || "application/pdf";
+    const azureResult: AzureAnalyzeResult =
+      mimeType === "application/pdf"
+        ? await this.analyzePdfPageByPage(buffer, contentType, this.modelId)
+        : await this.analyzeWithAzure(buffer, contentType, this.modelId);
+
+    const pageTexts = azureResult.pageTexts.length ? azureResult.pageTexts : [azureResult.content];
+    const client = getAnthropicClient();
+
+    // One cheap classification pass so each extractor only sees its own section.
+    // With a single page (or on failure) we fall back to running each extractor
+    // over everything — the forced tool calls simply return nothing for sections
+    // that aren't present.
+    const classes = pageTexts.length > 1 ? await classifyPages(client, pageTexts) : null;
+    const pagesOf = (...want: PageClass[]) =>
+      classes ? pageTexts.filter((_, i) => want.includes(classes[i])) : pageTexts;
+
+    const base = fileName.replace(/\.[^.]+$/, "").replace(/[^\w.-]+/g, "_") || "package";
+    const files: PackageExtractionFile[] = [];
+
+    // Rent roll → units/tenants/leases.
+    const rentRollPages = pagesOf("RENT_ROLL");
+    if (rentRollPages.length) {
+      const rows = await extractRentRollRows(client, rentRollPages);
+      const csv = emitRentRollCsv(rows);
+      if (csv) files.push({ fileName: `${base}__rentroll.csv`, text: csv });
+    }
+
+    // Building identity → creates/updates the building.
+    const infoPages = classes ? pagesOf("GENERAL_INFO") : pageTexts.slice(0, 1);
+    const infoText = (infoPages.length ? infoPages : pageTexts.slice(0, 1)).join("\n\n");
+    if (infoText.trim()) {
+      const info = await extractBuildingInfoFromText(client, infoText);
+      const csv = info ? emitBuildingInfoCsv(info) : null;
+      if (csv) files.push({ fileName: `${base}__infos.csv`, text: csv });
+    }
+
+    // Balance sheet + income statement → reuse the balance extractor, split by section.
+    const financialPages = pagesOf("BALANCE_SHEET", "INCOME_STATEMENT");
+    if (financialPages.length) {
+      const balances = await extractBalancesForPackage(client, financialPages);
+      const bilan = emitAccountBalancesCsv(balances, "balance");
+      if (bilan) files.push({ fileName: `${base}__bilan.csv`, text: bilan });
+      const resultat = emitAccountBalancesCsv(balances, "income");
+      if (resultat) files.push({ fileName: `${base}__resultat.csv`, text: resultat });
+    }
+
+    console.log(
+      `[DOC-SCAN] Package extraction produced ${files.length} CSV(s): ` +
+        files.map((f) => f.fileName).join(", "),
+    );
+    return files;
   }
 
   async scan(

@@ -3,15 +3,16 @@
   "established": "2026-06-22",
   "metrics": {
     "eslint_err": 0,
-    "eslint_warn": 2456,
+    "eslint_warn": 2461,
     "tsc": 0,
     "any": 723,
-    "console": 527,
+    "console": 532,
     "todo": 4,
-    "suppress": 36,
+    "suppress": 35,
     "bigfiles": 14
   },
   "notes": {
+    "rebaselined_2026-07-14c": "PDF → package onboarding Phase 1 (régie PDF → OCR + Claude → canonical CSVs → existing package pipeline). +5 console (527->532) + 5 matching no-console eslint_warn (2456->2461): 3 in the scanner's package extractor (extractPackage log + rent-roll/balance chunk-failure warns in azureDocumentIntelligenceScanner.ts) and 2 route PDF-extraction catches in routes/buildingOnboarding.ts. Same universal logging pattern; accepted as the new floor, NOT silenced. suppress 36->35 (-1): pre-existing decrease, ratchet tightened.",
     "rebaselined_2026-07-14b": "Import-from-package (extract building identity → create → hydrate). +1 console (526->527) + its matching no-console eslint_warn (2455->2456) from the new POST /onboarding/package/analyze route catch in routes/buildingOnboarding.ts — same universal route-error-logging pattern. Accepted as the new floor, NOT silenced.",
     "rebaselined_2026-07-14": "Import-flow refactor (inventory Add→Create/Import dropdown; single 'Import data' on the building page). +1 eslint_warn (2454->2455): the ?onboard=package deep-link consumer effect calls setShowPackageOnboard in the effect body — the same accepted deep-link 'setState in effect' pattern as ?invoiceId=. Accepted as the new floor, NOT silenced.",
     "rebaselined_2026-07-13": "Reporting 'Compare to…' — +1 eslint_warn (2453->2454): the compare-activation effect calls setTab('kpi') synchronously in the effect body (the same accepted 'setState in effect' pattern already present in this file for the SWR/deep-link effects). Accepted as the new floor, NOT silenced.",

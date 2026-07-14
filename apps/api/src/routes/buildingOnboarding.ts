@@ -13,11 +13,38 @@ import { readRawBody, parseMultipart } from "../storage/attachments";
 import { previewOnboarding, commitOnboarding, OnboardingError } from "../services/buildingOnboardingService";
 import { previewInvoiceOnboarding, commitInvoiceOnboarding } from "../services/invoiceOnboardingService";
 import { analyzePackage, analyzePackageForNewBuilding, commitPackage } from "../services/packageOnboardingService";
+import { extractPackageFromPdf } from "../services/documentScan";
 
 /** 10 MB limit — a rent roll is small even for a large portfolio. */
 const ONBOARDING_MAX_BYTES = 10 * 1024 * 1024;
 
 const errDetail = (e: unknown): string => (e instanceof Error ? e.message : String(e));
+
+/**
+ * Turn multipart file parts into package CSV files. A CSV part is decoded as-is;
+ * a PDF part is OCR'd + extracted into the canonical CSVs the package pipeline
+ * consumes (rent roll, building info, balance sheet, income statement). Returns
+ * `fromPdf` so the analyze routes can echo the extracted CSVs back for commit.
+ */
+async function expandPackageFiles(
+  parts: ReturnType<typeof parseMultipart>,
+): Promise<{ files: { fileName: string; text: string }[]; fromPdf: boolean }> {
+  const fileParts = parts.filter((p) => p.filename && p.name === "file");
+  const files: { fileName: string; text: string }[] = [];
+  let fromPdf = false;
+  for (const p of fileParts) {
+    const isPdf =
+      (p.contentType ?? "").toLowerCase().includes("pdf") || /\.pdf$/i.test(p.filename ?? "");
+    if (isPdf) {
+      fromPdf = true;
+      const csvs = await extractPackageFromPdf(p.data, p.filename as string, p.contentType || "application/pdf");
+      files.push(...csvs);
+    } else {
+      files.push({ fileName: p.filename as string, text: p.data.toString("utf8") });
+    }
+  }
+  return { files, fromPdf };
+}
 
 export function registerBuildingOnboardingRoutes(router: Router) {
   router.post("/buildings/:id/onboarding/preview", async ({ req, res, orgId, prisma, params }) => {
@@ -179,6 +206,8 @@ export function registerBuildingOnboardingRoutes(router: Router) {
     const user = requireAnyRole(req, res, ["MANAGER"]);
     if (!user) return;
 
+    req.socket?.setTimeout(180_000); // OCR + extraction on a PDF can be slow
+
     const contentType = req.headers["content-type"] ?? "";
     const boundaryMatch = contentType.match(/boundary=([^\s;]+)/);
     if (!boundaryMatch) return sendError(res, 400, "INVALID_REQUEST", "Expected multipart/form-data");
@@ -189,13 +218,20 @@ export function registerBuildingOnboardingRoutes(router: Router) {
       return sendError(res, 413, "FILE_TOO_LARGE", "Files exceed 10 MB limit");
     }
     const parts = parseMultipart(body, boundaryMatch[1]);
-    const files = parts
-      .filter((p) => p.filename && p.name === "file")
-      .map((p) => ({ fileName: p.filename as string, text: p.data.toString("utf8") }));
+    let files: { fileName: string; text: string }[];
+    let fromPdf: boolean;
+    try {
+      ({ files, fromPdf } = await expandPackageFiles(parts));
+    } catch (e) {
+      console.error("[ONBOARDING] new-building package PDF extraction error:", e);
+      return sendError(res, 502, "PDF_EXTRACTION_FAILED", "Failed to extract the PDF", errDetail(e));
+    }
     if (files.length === 0) return sendError(res, 400, "MISSING_FILE", "No files found");
 
     try {
-      sendJson(res, 200, { data: analyzePackageForNewBuilding(files) });
+      const dto = analyzePackageForNewBuilding(files);
+      if (fromPdf) dto.extractedFiles = files;
+      sendJson(res, 200, { data: dto });
     } catch (e) {
       console.error("[ONBOARDING] new-building package analyze error:", e);
       sendError(res, 500, "INTERNAL_ERROR", "Failed to analyze package", errDetail(e));
@@ -208,6 +244,8 @@ export function registerBuildingOnboardingRoutes(router: Router) {
     const user = requireAnyRole(req, res, ["MANAGER"]);
     if (!user) return;
 
+    req.socket?.setTimeout(180_000); // OCR + extraction on a PDF can be slow
+
     const contentType = req.headers["content-type"] ?? "";
     const boundaryMatch = contentType.match(/boundary=([^\s;]+)/);
     if (!boundaryMatch) return sendError(res, 400, "INVALID_REQUEST", "Expected multipart/form-data");
@@ -218,13 +256,19 @@ export function registerBuildingOnboardingRoutes(router: Router) {
       return sendError(res, 413, "FILE_TOO_LARGE", "Files exceed 10 MB limit");
     }
     const parts = parseMultipart(body, boundaryMatch[1]);
-    const files = parts
-      .filter((p) => p.filename && p.name === "file")
-      .map((p) => ({ fileName: p.filename as string, text: p.data.toString("utf8") }));
+    let files: { fileName: string; text: string }[];
+    let fromPdf: boolean;
+    try {
+      ({ files, fromPdf } = await expandPackageFiles(parts));
+    } catch (e) {
+      console.error("[ONBOARDING] package PDF extraction error:", e);
+      return sendError(res, 502, "PDF_EXTRACTION_FAILED", "Failed to extract the PDF", errDetail(e));
+    }
     if (files.length === 0) return sendError(res, 400, "MISSING_FILE", "No files found");
 
     try {
       const analysis = await analyzePackage(prisma, orgId, params.id, files);
+      if (fromPdf) analysis.extractedFiles = files;
       sendJson(res, 200, { data: analysis });
     } catch (e) {
       if (e instanceof OnboardingError) {
