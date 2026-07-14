@@ -101,7 +101,15 @@ export default function PackageOnboardingPanel({ buildingId, onClose, onCommitte
         targetId = cJson.data.id;
       }
       const form = new FormData();
-      files.forEach((f) => form.append("file", f));
+      // If the package came in as a PDF, analyze already extracted it into
+      // canonical CSVs — commit those verbatim (single, deterministic extraction)
+      // rather than re-OCRing the PDF. Otherwise submit the original CSVs.
+      const extracted = analysis?.extractedFiles;
+      if (extracted?.length) {
+        extracted.forEach((ef) => form.append("file", new Blob([ef.text], { type: "text/csv" }), ef.fileName));
+      } else {
+        files.forEach((f) => form.append("file", f));
+      }
       form.append("billingMode", billingMode);
       form.append("fiscalYear", fiscalYear);
       const res = await fetch(`/api/buildings/${targetId}/onboarding/package/commit`, { method: "POST", headers: authHeaders(), body: form });
@@ -137,15 +145,15 @@ export default function PackageOnboardingPanel({ buildingId, onClose, onCommitte
             ref={fileRef}
             type="file"
             multiple
-            accept=".csv,text/csv,.tsv,text/tab-separated-values"
+            accept=".csv,text/csv,.tsv,text/tab-separated-values,.pdf,application/pdf"
             className="hidden"
             onChange={(e) => addFiles(e.target.files)}
-            aria-label="Package CSVs"
+            aria-label="Package files"
           />
           {files.length ? (
             <p className="text-sm text-brand-dark font-medium">{files.length} file(s) selected</p>
           ) : (
-            <p className="text-sm text-muted">Drop the whole year-end package here (balance sheet, income statement, rent roll, general ledger)</p>
+            <p className="text-sm text-muted">Drop the whole year-end package here — a régie PDF, or the CSVs (balance sheet, income statement, rent roll, general ledger)</p>
           )}
         </div>
 
@@ -190,6 +198,23 @@ export default function PackageOnboardingPanel({ buildingId, onClose, onCommitte
               </tbody>
             </table>
           </div>
+
+          {/* Extracted-from-PDF intermediate — the canonical CSVs are reviewable before commit */}
+          {analysis.extractedFiles?.length > 0 && (
+            <details className="rounded-lg border border-surface-border p-3 text-sm">
+              <summary className="cursor-pointer font-medium text-foreground">
+                Extracted {analysis.extractedFiles.length} CSV{analysis.extractedFiles.length === 1 ? "" : "s"} from the PDF — review before commit
+              </summary>
+              <div className="mt-3 space-y-3">
+                {analysis.extractedFiles.map((ef, i) => (
+                  <div key={`${ef.fileName}-${i}`}>
+                    <p className="font-mono text-xs text-muted">{ef.fileName}</p>
+                    <pre className="mt-1 max-h-48 overflow-auto rounded-md border border-surface-border bg-surface-subtle p-2 text-xs">{ef.text}</pre>
+                  </div>
+                ))}
+              </div>
+            </details>
+          )}
 
           {/* Reconciliation */}
           {analysis.reconciliation.length > 0 && (
