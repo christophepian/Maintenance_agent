@@ -12,6 +12,7 @@ export type PackageDocType =
   | "GENERAL_LEDGER"
   | "BALANCE_SHEET"
   | "INCOME_STATEMENT"
+  | "GENERAL_INFO"
   | "UNKNOWN";
 
 function normHeader(h: string): string {
@@ -36,6 +37,8 @@ const DATE_VALEUR = ["datevaleur", "datepiece", "datecompta", "buchungsdatum", "
 const COMPTE = ["compte", "konto", "kontonr", "nocompte", "accountcode", "code"];
 const MONTANT = ["montantchf", "montant", "betrag", "solde", "saldo", "balancechf", "balance", "amount"];
 const SECTION = ["section", "classe", "rubrique", "kategorie"];
+const INFO_KEY = ["champ", "field", "cle", "clé", "key", "attribut", "rubrique"];
+const INFO_VAL = ["valeur", "value", "wert", "contenu"];
 
 const ACTIF_RE = /actif|aktiv|asset/;
 const PASSIF_RE = /passif|passiv|liabilit|fremdkapital|eigenkapital/;
@@ -54,6 +57,18 @@ export function detectDocumentType(fileName: string, text: string): PackageDocTy
     return "UNKNOWN";
   }
   const norms = new Set(headers.map(normHeader).filter(Boolean));
+
+  // General info — a key/value sheet (champ/valeur) carrying the building's
+  // address, reference and period. Detected before the financial docs.
+  if (hasHeader(norms, INFO_KEY) && hasHeader(norms, INFO_VAL)) {
+    const keyCol = headers.find((h) => INFO_KEY.includes(normHeader(h)));
+    if (keyCol) {
+      const keys = rows.map((r) => normHeader(r[keyCol] ?? ""));
+      if (keys.some((k) => k.includes("immeuble") || k.includes("adresse") || k.includes("building") || k.includes("address"))) {
+        return "GENERAL_INFO";
+      }
+    }
+  }
 
   // Rent roll — one row per object with a tenant/rent.
   if (hasHeader(norms, OBJET) && (hasHeader(norms, LOCATAIRE) || hasHeader(norms, LOYER))) {
@@ -98,4 +113,64 @@ export function detectDocumentType(fileName: string, text: string): PackageDocTy
   }
 
   return "UNKNOWN";
+}
+
+export interface ExtractedBuildingInfo {
+  name: string;
+  address: string;
+  city: string | null;
+  postalCode: string | null;
+  reference: string | null;
+  fiscalYear: number | null;
+}
+
+/**
+ * Extract a building's identity from a régie "general info" CSV (champ/valeur):
+ * the address (split into street/postal/city), an optional reference and the
+ * reporting fiscal year (from a `periode` like "01.01.2025 - 31.12.2025").
+ * Returns null when there's no usable address.
+ */
+export function parseBuildingInfo(text: string): ExtractedBuildingInfo | null {
+  let headers: string[];
+  let rows: Record<string, string>[];
+  try {
+    ({ headers, rows } = parseCsv(text));
+  } catch {
+    return null;
+  }
+  const keyCol = headers.find((h) => INFO_KEY.includes(normHeader(h)));
+  const valCol = headers.find((h) => INFO_VAL.includes(normHeader(h)));
+  if (!keyCol || !valCol) return null;
+
+  const kv = new Map<string, string>();
+  for (const r of rows) {
+    const k = normHeader(r[keyCol] ?? "");
+    const v = (r[valCol] ?? "").trim();
+    if (k) kv.set(k, v);
+  }
+
+  const addressRaw = (kv.get("immeubleadresse") ?? kv.get("adresse") ?? kv.get("address") ?? kv.get("buildingaddress") ?? "").trim();
+  if (!addressRaw) return null;
+
+  // "Rte Monts-de-Laval 314, 1090 La Croix (Lutry)" → street + "1090 La Croix (Lutry)"
+  const parts = addressRaw.split(",").map((s) => s.trim()).filter(Boolean);
+  const street = parts[0] || addressRaw;
+  const tail = parts.slice(1).join(", ").trim();
+  let city: string | null = null;
+  let postalCode: string | null = null;
+  const m = tail.match(/^(\d{4,5})\s+(.+)$/);
+  if (m) {
+    postalCode = m[1];
+    city = m[2].trim();
+  } else if (tail) {
+    city = tail;
+  }
+
+  const reference = (kv.get("immeublereference") ?? kv.get("reference") ?? "").trim() || null;
+
+  let fiscalYear: number | null = null;
+  const years = (kv.get("periode") ?? "").match(/\d{4}/g);
+  if (years && years.length) fiscalYear = parseInt(years[years.length - 1], 10); // end-of-period year
+
+  return { name: street, address: addressRaw, city, postalCode, reference, fiscalYear };
 }

@@ -7189,6 +7189,58 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404': { description: Building not found }
 
+  /onboarding/package/analyze:
+    post:
+      tags: [Inventory]
+      summary: Analyze a package for a NEW building — detect docs + extract its identity (no writes)
+      description: >
+        Like the building-scoped package analyze, but for a building that doesn't
+        exist yet: detects each document (including a "general info" sheet) and
+        extracts the building's address, reference and fiscal year from it so the
+        UI can pre-fill the create-building step. Read-only.
+      operationId: analyzePackageForNewBuilding
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: array
+                  items: { type: string, format: binary }
+      responses:
+        '200':
+          description: Package analysis with extracted building identity
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      extractedBuilding:
+                        type: object
+                        nullable: true
+                        properties:
+                          name: { type: string }
+                          address: { type: string }
+                          city: { type: string, nullable: true }
+                          postalCode: { type: string, nullable: true }
+                          reference: { type: string, nullable: true }
+                          fiscalYear: { type: integer, nullable: true }
+                      fiscalYear: { type: integer }
+                      documents: { type: array, items: { $ref: '#/components/schemas/PackageDocumentDTO' } }
+                      reconciliation: { type: array, items: { type: object } }
+                      warnings: { type: array, items: { type: string } }
+        '400': { description: No files or invalid request }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
   /buildings/{id}/onboarding/package/analyze:
     post:
       tags: [Inventory]

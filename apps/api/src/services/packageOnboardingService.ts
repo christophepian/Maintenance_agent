@@ -14,7 +14,7 @@
 
 import { PrismaClient } from "@prisma/client";
 import * as inventoryRepo from "../repositories/inventoryRepository";
-import { detectDocumentType, PackageDocType } from "./packageDetector";
+import { detectDocumentType, PackageDocType, parseBuildingInfo, ExtractedBuildingInfo } from "./packageDetector";
 import { mapRentRoll } from "./rentRollMapper";
 import { mapRegieLedger } from "./regieLedgerMapper";
 import { mapCsvToAccountBalances } from "./csvAccountingMapper";
@@ -56,6 +56,16 @@ export interface PackageCommitResultDTO {
   buildingId: string;
   fiscalYear: number;
   results: { fileName: string; type: PackageDocType; outcome: string; detail: string }[];
+  warnings: string[];
+}
+
+/** Analysis for the "import into a new building" flow — no building yet, so it
+ *  carries the building identity extracted from the package's general-info doc. */
+export interface NewBuildingPackageAnalysisDTO {
+  extractedBuilding: ExtractedBuildingInfo | null;
+  fiscalYear: number;
+  documents: PackageDocumentDTO[];
+  reconciliation: ReconciliationCheckDTO[];
   warnings: string[];
 }
 
@@ -202,15 +212,15 @@ function detectFiscalYear(files: { type: PackageDocType; text: string }[]): numb
 
 /* ── analyze ──────────────────────────────────────────────────────────────── */
 
-export async function analyzePackage(
-  prisma: PrismaClient,
-  orgId: string,
-  buildingId: string,
-  files: PackageFile[],
-): Promise<PackageAnalysisDTO> {
-  const building = await inventoryRepo.findBuildingByIdAndOrg(prisma, buildingId, orgId);
-  if (!building) throw new OnboardingError("BUILDING_NOT_FOUND", "Building not found");
-
+/** Detect + summarise each file and collect cross-document warnings. Shared by
+ *  the existing-building and new-building analyze paths. */
+function detectAndSummarize(files: PackageFile[]): {
+  documents: PackageDocumentDTO[];
+  parsed: Parsed;
+  warnings: string[];
+  typed: { type: PackageDocType; text: string }[];
+  seenTypes: Map<PackageDocType, number>;
+} {
   const parsed: Parsed = {};
   const warnings: string[] = [];
   const typed: { type: PackageDocType; text: string }[] = [];
@@ -221,8 +231,12 @@ export async function analyzePackage(
     typed.push({ type, text: f.text });
     seenTypes.set(type, (seenTypes.get(type) ?? 0) + 1);
     if (type === "UNKNOWN") {
-      warnings.push(`Could not classify "${f.fileName}" — skipped. Expected a balance sheet, income statement, rent roll or general ledger.`);
+      warnings.push(`Could not classify "${f.fileName}" — detected but not imported.`);
       return { fileName: f.fileName, type, summary: {}, detail: "Unrecognised — not included in the package." };
+    }
+    if (type === "GENERAL_INFO") {
+      const info = parseBuildingInfo(f.text);
+      return { fileName: f.fileName, type, summary: {}, detail: info ? `Building info — ${info.address}` : "Building info (no readable address)." };
     }
     try {
       return analyzeDocument(f, type, parsed);
@@ -233,19 +247,47 @@ export async function analyzePackage(
   });
 
   for (const [type, n] of seenTypes) {
-    if (n > 1 && type !== "UNKNOWN") warnings.push(`${n} files were classified as ${type} — only expected one.`);
+    if (n > 1 && type !== "UNKNOWN" && type !== "GENERAL_INFO") warnings.push(`${n} files were classified as ${type} — only expected one.`);
   }
   if (!seenTypes.has("RENT_ROLL")) warnings.push("No rent roll detected — units, tenants and leases won't be created.");
   if (!seenTypes.has("INCOME_STATEMENT") && !seenTypes.has("BALANCE_SHEET")) {
     warnings.push("No balance sheet or income statement detected — reporting won't be populated for this year.");
   }
 
-  const detectedYear = detectFiscalYear(typed);
+  return { documents, parsed, warnings, typed, seenTypes };
+}
 
+export async function analyzePackage(
+  prisma: PrismaClient,
+  orgId: string,
+  buildingId: string,
+  files: PackageFile[],
+): Promise<PackageAnalysisDTO> {
+  const building = await inventoryRepo.findBuildingByIdAndOrg(prisma, buildingId, orgId);
+  if (!building) throw new OnboardingError("BUILDING_NOT_FOUND", "Building not found");
+
+  const { documents, parsed, warnings, typed } = detectAndSummarize(files);
   return {
     buildingId,
     buildingName: building.name,
-    fiscalYear: detectedYear,
+    fiscalYear: detectFiscalYear(typed),
+    documents,
+    reconciliation: reconcile(parsed),
+    warnings,
+  };
+}
+
+/** Analyze a package for a building that doesn't exist yet: detect the docs and
+ *  extract the building's identity (address, fiscal year) from the general-info
+ *  doc so the UI can pre-fill the create-building step. No writes. */
+export function analyzePackageForNewBuilding(files: PackageFile[]): NewBuildingPackageAnalysisDTO {
+  const { documents, parsed, warnings, typed } = detectAndSummarize(files);
+  const infoFile = files.find((f) => detectDocumentType(f.fileName, f.text) === "GENERAL_INFO");
+  const extractedBuilding = infoFile ? parseBuildingInfo(infoFile.text) : null;
+  if (!extractedBuilding) warnings.push("No general-info document detected — enter the building's address manually.");
+  return {
+    extractedBuilding,
+    fiscalYear: extractedBuilding?.fiscalYear ?? detectFiscalYear(typed),
     documents,
     reconciliation: reconcile(parsed),
     warnings,
@@ -259,6 +301,7 @@ const COMMIT_ORDER: Record<PackageDocType, number> = {
   GENERAL_LEDGER: 1,
   BALANCE_SHEET: 2,
   INCOME_STATEMENT: 2,
+  GENERAL_INFO: 9,
   UNKNOWN: 9,
 };
 
@@ -274,7 +317,7 @@ export async function commitPackage(
 
   const typedFiles = files
     .map((f) => ({ ...f, type: detectDocumentType(f.fileName, f.text) }))
-    .filter((f) => f.type !== "UNKNOWN")
+    .filter((f) => f.type !== "UNKNOWN" && f.type !== "GENERAL_INFO")
     .sort((a, b) => COMMIT_ORDER[a.type] - COMMIT_ORDER[b.type]);
 
   const results: PackageCommitResultDTO["results"] = [];

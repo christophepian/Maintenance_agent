@@ -5,6 +5,8 @@ const currentYear = new Date().getFullYear();
 export const CreateBuildingSchema = z.object({
   name: z.string().min(1, "name is required"),
   address: z.string().optional(),
+  city: z.string().optional(),
+  postalCode: z.string().optional(),
 });
 
 export const UpdateBuildingSchema = z.object({

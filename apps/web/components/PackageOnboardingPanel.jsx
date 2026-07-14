@@ -21,6 +21,7 @@ const TYPE_LABEL = {
   GENERAL_LEDGER: "General ledger",
   BALANCE_SHEET: "Balance sheet",
   INCOME_STATEMENT: "Income statement",
+  GENERAL_INFO: "General info",
   UNKNOWN: "Unrecognised",
 };
 const TYPE_VARIANT = {
@@ -28,10 +29,14 @@ const TYPE_VARIANT = {
   GENERAL_LEDGER: "info",
   BALANCE_SHEET: "default",
   INCOME_STATEMENT: "default",
+  GENERAL_INFO: "brand",
   UNKNOWN: "warning",
 };
 
-export default function PackageOnboardingPanel({ buildingId, onClose, onCommitted }) {
+// buildingId present → hydrate that building. Absent → "new building" mode:
+// extract the building's identity from the package and create it on commit.
+export default function PackageOnboardingPanel({ buildingId, onClose, onCommitted, onCreated }) {
+  const newMode = !buildingId;
   const [files, setFiles] = useState([]);
   const [analysis, setAnalysis] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -40,6 +45,7 @@ export default function PackageOnboardingPanel({ buildingId, onClose, onCommitte
   const [fiscalYear, setFiscalYear] = useState("");
   const [committing, setCommitting] = useState(false);
   const [result, setResult] = useState(null);
+  const [b, setB] = useState({ name: "", address: "", city: "", postalCode: "" }); // new-mode building fields
   const fileRef = useRef(null);
 
   function addFiles(list) {
@@ -57,15 +63,14 @@ export default function PackageOnboardingPanel({ buildingId, onClose, onCommitte
     try {
       const form = new FormData();
       files.forEach((f) => form.append("file", f));
-      const res = await fetch(`/api/buildings/${buildingId}/onboarding/package/analyze`, {
-        method: "POST",
-        headers: authHeaders(),
-        body: form,
-      });
+      const url = newMode ? `/api/onboarding/package/analyze` : `/api/buildings/${buildingId}/onboarding/package/analyze`;
+      const res = await fetch(url, { method: "POST", headers: authHeaders(), body: form });
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error?.message || "Analysis failed");
       setAnalysis(json.data);
       setFiscalYear(String(json.data.fiscalYear || ""));
+      const eb = json.data.extractedBuilding;
+      if (newMode && eb) setB({ name: eb.name || "", address: eb.address || "", city: eb.city || "", postalCode: eb.postalCode || "" });
     } catch (e) {
       setError(String(e?.message || e));
     } finally {
@@ -75,23 +80,35 @@ export default function PackageOnboardingPanel({ buildingId, onClose, onCommitte
 
   async function handleCommit() {
     if (!files.length) return;
-    if (!window.confirm(`Commit this package to the building for fiscal year ${fiscalYear}? Units, tenants, leases and invoices are created; the balance sheet and income statement are sent to review.`)) return;
+    if (newMode && !(b.name.trim() || b.address.trim())) { setError("Enter the building's address before importing."); return; }
+    const confirmMsg = newMode
+      ? `Create "${b.name || b.address}" and import this package for fiscal year ${fiscalYear}?`
+      : `Commit this package to the building for fiscal year ${fiscalYear}? Units, tenants, leases and invoices are created; the balance sheet and income statement are sent to review.`;
+    if (!window.confirm(confirmMsg)) return;
     setCommitting(true);
     setError("");
     try {
+      // New mode: create the building from the (confirmed) extracted fields first.
+      let targetId = buildingId;
+      if (newMode) {
+        const cRes = await fetch("/api/buildings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...authHeaders() },
+          body: JSON.stringify({ name: b.name.trim() || b.address.trim(), address: b.address.trim() || b.name.trim(), city: b.city.trim() || undefined, postalCode: b.postalCode.trim() || undefined }),
+        });
+        const cJson = await cRes.json();
+        if (!cRes.ok) throw new Error(cJson?.error?.message || "Failed to create building");
+        targetId = cJson.data.id;
+      }
       const form = new FormData();
       files.forEach((f) => form.append("file", f));
       form.append("billingMode", billingMode);
       form.append("fiscalYear", fiscalYear);
-      const res = await fetch(`/api/buildings/${buildingId}/onboarding/package/commit`, {
-        method: "POST",
-        headers: authHeaders(),
-        body: form,
-      });
+      const res = await fetch(`/api/buildings/${targetId}/onboarding/package/commit`, { method: "POST", headers: authHeaders(), body: form });
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error?.message || "Commit failed");
       setResult(json.data);
-      onCommitted?.();
+      if (newMode) onCreated?.(targetId); else onCommitted?.();
     } catch (e) {
       setError(String(e?.message || e));
     } finally {
@@ -103,7 +120,7 @@ export default function PackageOnboardingPanel({ buildingId, onClose, onCommitte
 
   return (
     <Panel
-      title="Onboard from régie package"
+      title={newMode ? "Import a new building from a régie package" : "Import data from a régie package"}
       actions={onClose ? <button className="button-secondary text-sm" onClick={onClose}>Close</button> : null}
     >
       <form onSubmit={handleAnalyze} className="space-y-3">
@@ -201,6 +218,16 @@ export default function PackageOnboardingPanel({ buildingId, onClose, onCommitte
           {/* Commit */}
           {!result && usable > 0 && (
             <div className="rounded-lg border border-surface-border p-4 space-y-3">
+              {newMode && (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-foreground">Building {analysis.extractedBuilding ? <span className="font-normal text-muted">— detected from the package, edit if needed</span> : <span className="font-normal text-muted">— not detected, enter it</span>}</p>
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-4">
+                    <input className="filter-input sm:col-span-2" placeholder="Address" value={b.address} onChange={(e) => setB((s) => ({ ...s, address: e.target.value }))} />
+                    <input className="filter-input" placeholder="Postal code" value={b.postalCode} onChange={(e) => setB((s) => ({ ...s, postalCode: e.target.value }))} />
+                    <input className="filter-input" placeholder="City" value={b.city} onChange={(e) => setB((s) => ({ ...s, city: e.target.value }))} />
+                  </div>
+                </div>
+              )}
               <div className="flex flex-wrap items-center gap-3">
                 <label className="text-sm text-foreground">Fiscal year
                   <input type="number" value={fiscalYear} onChange={(e) => setFiscalYear(e.target.value)} className="ml-2 w-24 rounded-md border border-surface-border bg-surface px-2 py-1 text-sm" min="2000" max="2100" />
@@ -216,8 +243,8 @@ export default function PackageOnboardingPanel({ buildingId, onClose, onCommitte
                   <span><b>Activate for ongoing management</b> — leases become active and start recurring billing from the current period.</span>
                 </label>
               </div>
-              <button className="button-primary text-sm" onClick={handleCommit} disabled={committing || !fiscalYear}>
-                {committing ? "Committing…" : `Commit package — ${usable} document(s)`}
+              <button className="button-primary text-sm" onClick={handleCommit} disabled={committing || !fiscalYear || (newMode && !(b.name.trim() || b.address.trim()))}>
+                {committing ? (newMode ? "Creating…" : "Committing…") : newMode ? `Create building & import — ${usable} document(s)` : `Commit package — ${usable} document(s)`}
               </button>
               <p className="text-xs text-muted">Rent roll → units/tenants/leases · general ledger → contractor invoices · balance sheet + income statement → sent to Finance → Imports for review.</p>
               {error && <div className="notice notice-err text-sm">{error}</div>}

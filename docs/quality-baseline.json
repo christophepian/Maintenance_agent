@@ -3,15 +3,16 @@
   "established": "2026-06-22",
   "metrics": {
     "eslint_err": 0,
-    "eslint_warn": 2455,
+    "eslint_warn": 2456,
     "tsc": 0,
     "any": 723,
-    "console": 526,
+    "console": 527,
     "todo": 4,
     "suppress": 36,
     "bigfiles": 14
   },
   "notes": {
+    "rebaselined_2026-07-14b": "Import-from-package (extract building identity → create → hydrate). +1 console (526->527) + its matching no-console eslint_warn (2455->2456) from the new POST /onboarding/package/analyze route catch in routes/buildingOnboarding.ts — same universal route-error-logging pattern. Accepted as the new floor, NOT silenced.",
     "rebaselined_2026-07-14": "Import-flow refactor (inventory Add→Create/Import dropdown; single 'Import data' on the building page). +1 eslint_warn (2454->2455): the ?onboard=package deep-link consumer effect calls setShowPackageOnboard in the effect body — the same accepted deep-link 'setState in effect' pattern as ?invoiceId=. Accepted as the new floor, NOT silenced.",
     "rebaselined_2026-07-13": "Reporting 'Compare to…' — +1 eslint_warn (2453->2454): the compare-activation effect calls setTab('kpi') synchronously in the effect body (the same accepted 'setState in effect' pattern already present in this file for the SWR/deep-link effects). Accepted as the new floor, NOT silenced.",
     "rebaselined_2026-07-12": "Reporting expense-breakdown drill-down (GET /buildings/:id/expense-breakdown + reporting 'Expenses by month' slide + invoices context-filter). +1 console (525->526) + its matching no-console eslint_warn from the expense-breakdown route catch in routes/financials.ts (same route-error-logging pattern). +2 more eslint_warn (2450->2453 total): the URL-param context-filter consumer effect in invoices.js calls setCtx/setDirection synchronously in the effect body — the identical 'setState in effect' pattern already accepted for the sibling ?invoiceId= deep-link effect. Accepted as the new floor, NOT silenced.",
