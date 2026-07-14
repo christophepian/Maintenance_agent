@@ -335,6 +335,17 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
     ? Math.round(etatLocatifNet * 100 * periodMonths / 12)
     : null;
 
+  // No P&L for the period: not an approved imported statement, and no posted
+  // ledger actuals (revenue / expense / accrual all zero). Occupancy + rent roll
+  // still render from lease/unit data, so the financial cards would sit silently
+  // blank — surface a CTA to import/approve an income statement instead.
+  const noPnlData = !!bf
+    && bf.source !== "imported"
+    && earned === 0
+    && expenses === 0
+    && (bf.accruedIncomeCents ?? 0) === 0
+    && noi === 0;
+
   const headline  = buildingHeadline(bf, t);
   const drivers   = buildBuildingDrivers(bf, prev, t);
   const watchItems = buildBuildingWatchItems(bf, arrears, unitData, moveIns, moveOuts, t);
@@ -418,6 +429,23 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
                     </div>
                   </>
                 )}
+              </div>
+            )}
+
+            {/* No P&L data for the period — occupancy/rent roll show (lease-derived)
+                but income/expenses need an approved imported statement or ledger
+                actuals. Point the user at Finance to approve/import one. */}
+            {noPnlData && (
+              <div className="mt-3 rounded-xl border border-info-ring bg-info-light p-2.5">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <span className="shrink-0 text-sm text-info-text">ℹ</span>
+                  <span className="text-sm font-medium text-foreground">
+                    {t("buildingsId.reporting.noPnl.message", { year })}
+                  </span>
+                  <a href="/manager/finance" className="ml-auto shrink-0 rounded-lg border border-info-ring px-2.5 py-1 text-xs font-semibold text-info-text transition-colors hover:bg-info hover:text-white no-underline">
+                    {t("buildingsId.reporting.noPnl.cta")} →
+                  </a>
+                </div>
               </div>
             )}
           </header>

@@ -902,7 +902,11 @@
       "orAmount": "Montant",
       "orAdd": "Ajouter",
       "importedActuals": "Chiffres importés · Ex. {{year}}",
-      "importedActualsTooltip": "Ces chiffres proviennent d'un compte de résultat importé et approuvé pour cet exercice, et non de transactions saisies dans l'outil."
+      "importedActualsTooltip": "Ces chiffres proviennent d'un compte de résultat importé et approuvé pour cet exercice, et non de transactions saisies dans l'outil.",
+      "noPnl": {
+        "message": "Aucune donnée de compte de résultat pour {{year}}. Le taux d'occupation et l'état locatif proviennent des baux ; les produits et charges nécessitent un compte de résultat importé et approuvé ou des écritures comptabilisées.",
+        "cta": "Approuver dans Finances"
+      }
     },
     "strategyEditor": {
       "intro": "Définissez la gestion de ce bâtiment — le moteur de recommandation de trésorerie l'utilise pour adapter ses conseils à ce bien.",

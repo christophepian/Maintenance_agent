@@ -902,7 +902,11 @@
       "orAmount": "Amount",
       "orAdd": "Add",
       "importedActuals": "Imported actuals · FY {{year}}",
-      "importedActualsTooltip": "These figures come from an approved imported income statement for this fiscal year, not from live transactions in the tool."
+      "importedActualsTooltip": "These figures come from an approved imported income statement for this fiscal year, not from live transactions in the tool.",
+      "noPnl": {
+        "message": "No profit & loss data for {{year}} yet. Occupancy and rent roll come from leases; income and expenses need an approved imported income statement or posted ledger entries.",
+        "cta": "Approve in Finance"
+      }
     },
     "strategyEditor": {
       "intro": "Set how this building should be managed — the cashflow recommendation engine uses it to tailor advice for this property.",
