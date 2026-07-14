@@ -55,8 +55,6 @@ import AssetInventoryPanel from "../../../components/AssetInventoryPanel";
 import BuildingFinancialsView from "../../../components/BuildingFinancialsView";
 import { authHeaders } from "../../../lib/api";
 import ScrollableTabs from "../../../components/mobile/ScrollableTabs";
-import RentRollOnboardingPanel from "../../../components/RentRollOnboardingPanel";
-import LedgerInvoiceOnboardingPanel from "../../../components/LedgerInvoiceOnboardingPanel";
 import PackageOnboardingPanel from "../../../components/PackageOnboardingPanel";
 import SortableHeader from "../../../components/SortableHeader";
 import { useLocalSort, clientSort } from "../../../lib/tableUtils";
@@ -1085,9 +1083,17 @@ export default function BuildingDetail() {
     ? router.query.tab
     : "Building information";
   const [activeTab, setActiveTab] = useState(initialTab);
-  const [showOnboard, setShowOnboard] = useState(false);
-  const [showInvoiceOnboard, setShowInvoiceOnboard] = useState(false);
   const [showPackageOnboard, setShowPackageOnboard] = useState(false);
+
+  // Auto-open the importer when arriving from the inventory "Import" flow.
+  useEffect(() => {
+    if (!router.isReady) return;
+    if (router.query.onboard === "package") {
+      setShowPackageOnboard(true);
+      const rest = { ...router.query }; delete rest.onboard;
+      router.replace({ pathname: router.pathname, query: rest }, undefined, { shallow: true });
+    }
+  }, [router.isReady, router.query.onboard]);
   // Tracks tabs whose (tab-specific) data has been loaded, so config/rules/lease
   // templates are fetched once on first tab open rather than on every mount.
   const loadedTabsRef = useRef(new Set());
@@ -1899,17 +1905,9 @@ export default function BuildingDetail() {
           }
           actions={
             !isOwner ? (
-              <div className="flex items-center gap-2">
-                <button className="button-secondary text-sm" onClick={() => { setShowPackageOnboard((v) => !v); setShowOnboard(false); setShowInvoiceOnboard(false); }}>
-                  {showPackageOnboard ? "Hide package" : "Onboard package"}
-                </button>
-                <button className="button-secondary text-sm" onClick={() => { setShowOnboard((v) => !v); setShowInvoiceOnboard(false); setShowPackageOnboard(false); }}>
-                  {showOnboard ? "Hide onboarding" : "Rent roll"}
-                </button>
-                <button className="button-secondary text-sm" onClick={() => { setShowInvoiceOnboard((v) => !v); setShowOnboard(false); setShowPackageOnboard(false); }}>
-                  {showInvoiceOnboard ? "Hide invoices" : "Invoices"}
-                </button>
-              </div>
+              <button className="button-secondary text-sm" onClick={() => setShowPackageOnboard((v) => !v)}>
+                {showPackageOnboard ? t("buildingsId.hideImport") : t("buildingsId.importData")}
+              </button>
             ) : null
           }
         />
@@ -1925,18 +1923,6 @@ export default function BuildingDetail() {
           {showPackageOnboard && !isOwner && (
             <div className="mb-4">
               <PackageOnboardingPanel buildingId={id} onClose={() => setShowPackageOnboard(false)} onCommitted={loadUnits} />
-            </div>
-          )}
-
-          {showOnboard && !isOwner && (
-            <div className="mb-4">
-              <RentRollOnboardingPanel buildingId={id} onClose={() => setShowOnboard(false)} onCommitted={loadUnits} />
-            </div>
-          )}
-
-          {showInvoiceOnboard && !isOwner && (
-            <div className="mb-4">
-              <LedgerInvoiceOnboardingPanel buildingId={id} onClose={() => setShowInvoiceOnboard(false)} onCommitted={loadBuildingInvoices} />
             </div>
           )}
 

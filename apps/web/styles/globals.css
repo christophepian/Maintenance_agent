@@ -1,5 +1,7 @@
-@import "tailwindcss";
+/* External @import must precede Tailwind's — `@import "tailwindcss"` inlines the
+   generated CSS, so a following url() import would land mid-bundle (illegal). */
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&display=swap');
+@import "tailwindcss";
 @source "../pages/**/*.{js,jsx,ts,tsx}";
 @source "../components/**/*.{js,jsx,ts,tsx}";
 

@@ -452,6 +452,8 @@
     }
   },
   "buildingsId": {
+    "importData": "Importer des données",
+    "hideImport": "Masquer l'import",
     "heading": {
       "ownershipManagement": "Propriété & Gestion",
       "cadastralValuation": "Cadastre & estimations",
@@ -1745,6 +1747,13 @@
     }
   },
   "inventory": {
+    "add": {
+      "button": "Ajouter",
+      "createNew": "Créer",
+      "import": "Importer",
+      "createAndImport": "Créer et importer",
+      "importHint": "Saisissez l'adresse de l'immeuble, puis téléversez son dossier régie (état locatif, grand livre, états) à l'écran suivant."
+    },
     "placeholder": {
       "eGBahnhofstrasse12": "ex. Bahnhofstrasse 12",
       "eG8001": "ex. 8001",
