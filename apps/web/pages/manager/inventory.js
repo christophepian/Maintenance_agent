@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/router";
 import AppShell from "../../components/AppShell";
 import PageShell from "../../components/layout/PageShell";
@@ -308,6 +308,9 @@ export default function ManagerInventoryPage() {
   const [buildingCantonFilter, setBuildingCantonFilter] = useState("");
   const [buildingFilterOpen, setBuildingFilterOpen] = useState(false);
   const [buildingFormVisible, setBuildingFormVisible] = useState(false);
+  const [formMode, setFormMode] = useState("create"); // "create" | "import"
+  const [addMenuOpen, setAddMenuOpen] = useState(false);
+  const addMenuRef = useRef(null);
   const [buildingAddress, setBuildingAddress] = useState("");
   const [buildingCityCode, setBuildingCityCode] = useState("");
   const [buildingCity, setBuildingCity] = useState("");
@@ -339,12 +342,30 @@ export default function ManagerInventoryPage() {
       setBuildingCity("");
       setBuildingCountry("");
       setBuildingFormVisible(false);
+      // "Import" flow: hand off to the package importer on the new building.
+      if (formMode === "import" && json?.data?.id) {
+        router.push(`/admin-inventory/buildings/${json.data.id}?from=/manager/inventory&onboard=package`);
+        return;
+      }
       await loadData();
     } catch (e) {
       setError(String(e?.message || e));
     } finally {
       setLoading(false);
     }
+  }
+
+  useEffect(() => {
+    if (!addMenuOpen) return;
+    const onDown = (e) => { if (addMenuRef.current && !addMenuRef.current.contains(e.target)) setAddMenuOpen(false); };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [addMenuOpen]);
+
+  function openForm(mode) {
+    setFormMode(mode);
+    setBuildingFormVisible(true);
+    setAddMenuOpen(false);
   }
 
   const [sortField, setSortField] = useState("name");
@@ -416,6 +437,9 @@ export default function ManagerInventoryPage() {
             <div className="pt-1 pb-2 flex flex-col gap-4">
               {buildingFormVisible && (
                 <form onSubmit={onCreateBuilding} className="rounded-xl border border-brand bg-brand-light/30 p-4 grid gap-4">
+                {formMode === "import" && (
+                  <p className="text-sm text-muted">{t("manager:inventory.add.importHint")}</p>
+                )}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="col-span-full">
                     <label className="filter-label">{t("manager:inventory.text.address")}</label>
@@ -436,19 +460,28 @@ export default function ManagerInventoryPage() {
                 </div>
                 <div className="flex justify-end gap-2">
                   <button type="button" className="button-secondary" onClick={() => setBuildingFormVisible(false)}>{t("manager:inventory.text.cancel")}</button>
-                  <button type="submit" className="button-primary" disabled={loading}>{t("manager:inventory.text.saveBuilding")}</button>
+                  <button type="submit" className="button-primary" disabled={loading}>{formMode === "import" ? t("manager:inventory.add.createAndImport") : t("manager:inventory.text.saveBuilding")}</button>
                 </div>
               </form>
               )}
               <div className="flex items-center justify-end">
-                {/* Add building button */}
-                <button
-                  type="button"
-                  className="flex shrink-0 items-center gap-1.5 rounded-lg border border-brand bg-brand px-3 py-2 text-sm font-medium text-white hover:bg-brand-dark transition-colors"
-                  onClick={() => setBuildingFormVisible((v) => !v)}
-                >
-                  {buildingFormVisible ? "Cancel" : "+ Add"}
-                </button>
+                {/* Add / Import dropdown */}
+                <div className="relative" ref={addMenuRef}>
+                  <button
+                    type="button"
+                    className="flex shrink-0 items-center gap-1.5 rounded-lg border border-brand bg-brand px-3 py-2 text-sm font-medium text-white hover:bg-brand-dark transition-colors"
+                    onClick={() => { if (buildingFormVisible) { setBuildingFormVisible(false); } else { setAddMenuOpen((v) => !v); } }}
+                    aria-expanded={addMenuOpen}
+                  >
+                    {buildingFormVisible ? t("manager:inventory.text.cancel") : `+ ${t("manager:inventory.add.button")} ▾`}
+                  </button>
+                  {addMenuOpen && !buildingFormVisible && (
+                    <div className="absolute right-0 top-full z-30 mt-1.5 w-48 overflow-hidden rounded-lg border border-surface-border bg-surface shadow-lg">
+                      <button type="button" className="block w-full px-3 py-2.5 text-left text-sm text-foreground hover:bg-surface-hover" onClick={() => openForm("create")}>{t("manager:inventory.add.createNew")}</button>
+                      <button type="button" className="block w-full border-t border-surface-border px-3 py-2.5 text-left text-sm text-foreground hover:bg-surface-hover" onClick={() => openForm("import")}>{t("manager:inventory.add.import")}</button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
             {loading ? (

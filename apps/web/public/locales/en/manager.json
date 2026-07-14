@@ -452,6 +452,8 @@
     }
   },
   "buildingsId": {
+    "importData": "Import data",
+    "hideImport": "Hide import",
     "heading": {
       "ownershipManagement": "Ownership & Management",
       "cadastralValuation": "Cadastral & Valuation",
@@ -1745,6 +1747,13 @@
     }
   },
   "inventory": {
+    "add": {
+      "button": "Add",
+      "createNew": "Create New",
+      "import": "Import",
+      "createAndImport": "Create & import",
+      "importHint": "Enter the building's address, then upload its régie package (rent roll, ledger, statements) on the next screen."
+    },
     "placeholder": {
       "eGBahnhofstrasse12": "e.g. Bahnhofstrasse 12",
       "eG8001": "e.g. 8001",
