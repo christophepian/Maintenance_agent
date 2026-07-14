@@ -698,8 +698,25 @@
         "noiMargin": "NOI Margin",
         "opexRatio": "OpEx Ratio",
         "occupancy": "Occupancy",
-        "receivables": "Receivables"
+        "receivables": "Receivables",
+        "payables": "Payables",
+        "accruedIncome": "Accrued income",
+        "netIncome": "Net income",
+        "rentalIncome": "Rental income",
+        "serviceCharges": "Service charges",
+        "maintenance": "Maintenance",
+        "maintenanceRatio": "Maintenance ratio",
+        "capex": "CapEx",
+        "costPerUnit": "Cost per unit"
       },
+      "kpiGroup": {
+        "performance": "Performance",
+        "income": "Income",
+        "costs": "Costs",
+        "balances": "Balances"
+      },
+      "generalLedger": "General ledger",
+      "chartOfAccounts": "Chart of accounts",
       "monthlyNoiTitle": "Monthly NOI",
       "monthlyNoiSub": "Net operating income per month · {{year}}",
       "bestMonth": "Best month",
@@ -757,7 +774,8 @@
         "quarter": "Quarter",
         "year": "Year",
         "prev": "Previous period",
-        "next": "Next period"
+        "next": "Next period",
+        "custom": "Custom"
       },
       "kpiTab": "KPIs",
       "compare": {
@@ -776,6 +794,7 @@
         "sub": "Income vs expenses for this period, and where each side came from.",
         "income": "Income · by unit",
         "byCostCenter": "Cost-center",
+        "byCategory": "Category",
         "byVendor": "Vendor",
         "vacant": "vacant",
         "otherExpenses": "Other (unclassified)",
