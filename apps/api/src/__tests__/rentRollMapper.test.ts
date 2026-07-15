@@ -1,4 +1,4 @@
-import { mapRentRoll, parseSwissDate } from "../services/rentRollMapper";
+import { mapRentRoll, parseSwissDate, parseRooms } from "../services/rentRollMapper";
 
 // The real régie rent-roll sample (tab-separated).
 const RENT_ROLL =
@@ -63,5 +63,64 @@ describe("mapRentRoll", () => {
     const { rows, skipped } = mapRentRoll("foo;bar\n1;2");
     expect(rows).toEqual([]);
     expect(skipped[0]).toMatch(/No object column/);
+  });
+});
+
+describe("parseRooms", () => {
+  it("parses decimals, fraction glyphs and n/2 notation, ignoring annotations", () => {
+    expect(parseRooms("4.5")).toBe(4.5);
+    expect(parseRooms("2½")).toBe(2.5);
+    expect(parseRooms("5½ (duplex")).toBe(5.5);
+    expect(parseRooms("3 1/2")).toBe(3.5);
+    expect(parseRooms("2")).toBe(2);
+    expect(parseRooms("Gar.")).toBeNull();
+    expect(parseRooms("")).toBeNull();
+  });
+});
+
+// A second régie (GALLAND) whose état locatif splits each object's rent across
+// component lines and uses a different code scheme. The engine must still land
+// one clean unit per object regardless of layout.
+describe("mapRentRoll — cross-format robustness (component-split rent roll)", () => {
+  it("merges component lines (Loyer + Acompte) into one object with net + charges", () => {
+    const csv =
+      "objet;locataire;type;etage;pieces;m2;entree;sortie;loyer_net;charges_acompte\n" +
+      "410 010.16;Natalia HENDRIX MORRISSON;Appartement;1e;2;0;15.04.2024;;1350;\n" +
+      "410 010.16;;;;;;;;140;\n";
+    const { rows } = mapRentRoll(csv);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      objet: "410 010.16",
+      tenantName: "Natalia HENDRIX MORRISSON",
+      isVacant: false,
+      unitType: "RESIDENTIAL",
+      rooms: 2,
+      netRentChf: 1350,
+      chargesChf: 140,
+    });
+  });
+
+  it("keeps a single-row object's net/charges columns exactly as given", () => {
+    const csv =
+      "objet;locataire;type;loyer_net;charges_acompte\n" +
+      "410 020.14;Gael CASANOVA;Appartement;1850;250\n";
+    const { rows } = mapRentRoll(csv);
+    expect(rows[0]).toMatchObject({ netRentChf: 1850, chargesChf: 250 });
+  });
+
+  it("detects a garage from a 9-leading code group and 'Loyer garage' type", () => {
+    const csv =
+      "objet;locataire;type;pieces;loyer_net\n" +
+      "980 010.12;Raphaël FAUVE;Loyer garage;;130\n";
+    const { rows } = mapRentRoll(csv);
+    expect(rows[0]).toMatchObject({ unitType: "PARKING", parkingKind: "GARAGE", netRentChf: 130 });
+  });
+
+  it("does not mis-type a commercial local as parking", () => {
+    const csv =
+      "objet;locataire;type;m2;loyer_net\n" +
+      "400 010.09;Vacant;Loc.commer;107;1700\n";
+    const { rows } = mapRentRoll(csv);
+    expect(rows[0]).toMatchObject({ unitType: "RESIDENTIAL", parkingKind: null, isVacant: true });
   });
 });

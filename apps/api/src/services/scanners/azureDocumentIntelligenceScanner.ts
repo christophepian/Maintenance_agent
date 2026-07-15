@@ -756,7 +756,9 @@ const FINANCIAL_STATEMENT_BALANCE_TOOL = {
     "Example: '1295 Acomptes -24'900' is the subtotal of '1295 Frais chauffage -4'980' + '1295 Frais exploitation -19'920'. " +
     "Extract the DETAIL rows only (the leaves). Skip any row whose amount equals the exact sum of other rows you are already extracting with the same code. " +
     "If there are no detail sub-rows, extract the parent row. " +
-    "IMPORTANT — account codes: Swiss chart uses 3- or 4-digit codes (e.g. '1020', '4200', '630'). Extract from the leftmost column ONLY. " +
+    "IMPORTANT — multi-column layouts (Montant / Débit / Crédit): use each account's own line amount from the 'Montant' column on the leaf row. A parent's Débit or Crédit column shows only its subtotal — do NOT emit that subtotal as if it were a separate account. " +
+    "IMPORTANT — carry-forward rows: running page-break totals labelled 'A reporter', 'Report', 'Report/Report' or 'Übertrag' are NOT accounts — never emit them. (A coded equity account such as 'Report bénéfices-pertes' with its own account code IS a real account — keep it.) " +
+    "IMPORTANT — account codes: Swiss chart uses 3- to 5-digit codes, sometimes with a sub-suffix (e.g. '1020', '4200', '3000-00', '4050-10'). Extract the code from the leftmost column ONLY. " +
     "IMPORTANT — amounts: Swiss format: apostrophe=thousands, period=decimal: 62'405.24 → 62405.24. European format: period=thousands, comma=decimal: 62.405,24 → 62405.24. " +
     "Return balanceChf as a plain signed JSON number, never a formatted string.",
   input_schema: {
@@ -1142,10 +1144,19 @@ const RENT_ROLL_TOOL = {
   name: "extractRentRoll",
   description:
     "Extract the rent roll (état locatif / tenant schedule) from a Swiss property management document. " +
-    "One entry per rental object. Each object has a code (objet) like '531100.01.0001' — objects whose last " +
-    "segment starts with 9 (e.g. .9001) are parking/garages. Record the primary tenant, the object type as " +
-    "printed, entry/exit dates, and the NET monthly rent (loyer net mensuel — never the gross/brut figure). " +
-    "Mark empty objects as vacant. Skip any 'Total'/'Totaux' summary row.",
+    "Return exactly ONE entry per rental object. Record the primary tenant, the object type, entry/exit dates, " +
+    "and the NET monthly rent (loyer net mensuel — never the gross/brut figure). Mark empty objects as vacant. " +
+    "Skip any 'Total'/'Totaux'/'Totaux mensuels'/'Totaux annuels' summary row. " +
+    "IMPORTANT — rent split across component rows: some état-locatifs list one object's rent on several lines " +
+    "(e.g. 'Loyer', 'Acompte chauffage et eau', 'Forfait chauffage & EC', 'Loyer garage'). Merge them into the " +
+    "SINGLE object entry: netRentChf = the 'Loyer' (base rent) component; chargesChf = the SUM of the " +
+    "acompte/forfait heating & charges components. Never emit a separate entry per component line. " +
+    "IMPORTANT — object type: infer it from any available cue — a type column, the floor label ('Gar.' = garage), " +
+    "or the rent-component label: 'Loyer garage' → parking/garage, 'Loyer commercial' / 'Loc.commer' → commercial " +
+    "local, plain 'Loyer' → residential. Object codes may use spaces and dots (e.g. '980 010.12', '531100.01.9001'); " +
+    "a 9-leading group (9xx / 900 / 980 / 990) indicates parking. " +
+    "IMPORTANT — dates: entree = lease start (Début location / entrée). sortie = move-out date ONLY. If the row " +
+    "shows a contractual term end (Echéance / échéance) but the tenant has not left, leave sortie empty.",
   input_schema: {
     type: "object",
     required: ["objects"],
@@ -1159,7 +1170,7 @@ const RENT_ROLL_TOOL = {
           properties: {
             objet: { type: "string", description: "Full object code exactly as printed, e.g. '531100.01.0001'." },
             tenantName: { type: "string", description: "Primary tenant name. Omit, or use 'Vacant', if the object is empty." },
-            unitType: { type: "string", description: "Object type as printed, e.g. 'Appartement', 'Garage', 'Parking', 'Local'." },
+            unitType: { type: "string", description: "Object type: 'Appartement'/residential, 'Garage'/'Parking' (incl. rows labelled 'Loyer garage' or floor 'Gar.'), or 'Commercial' (rows labelled 'Loyer commercial' / 'Loc.commer')." },
             floor: { type: "string", description: "Floor / étage as printed." },
             rooms: { type: "number", description: "Number of rooms (pièces), e.g. 4.5." },
             areaSqm: { type: "number", description: "Area in m²." },
@@ -1219,8 +1230,10 @@ async function extractRentRollFromChunk(
         role: "user",
         content:
           `Extract EVERY rental object from the état locatif in this section of a Swiss property management document${chunkLabel}. ` +
-          "Include every object row — apartments, garages, parking, commercial locals — no matter how many. " +
-          "Use the NET monthly rent (loyer net), not the gross. Skip 'Total' summary rows. " +
+          "Include every object — apartments, garages, parking, commercial locals — no matter how many. " +
+          "Return ONE merged entry per object: if the rent is split across component lines (Loyer, Acompte chauffage, " +
+          "Forfait), set netRentChf = the Loyer line and chargesChf = the sum of the acompte/forfait lines. " +
+          "Use the NET monthly rent (loyer net), not the gross. Skip 'Total'/'Totaux' summary rows. " +
           "Omit fields not clearly present in the text; do not guess.\n\n" +
           `OCR text:\n${content}`,
       },
@@ -1542,10 +1555,10 @@ async function classifyPages(
                         "BALANCE_SHEET: Bilan or balance sheet — closing positions for assets (actifs/Aktiven, codes 1xxx) and liabilities/equity (passifs/Passiven, codes 2xxx). " +
                         "INCOME_STATEMENT: Compte de résultat, Betriebsrechnung, compte de gestion, P&L — revenue and expense rows for a period. Revenue codes 3xxx (Ertrag/recettes), expense codes 4xxx–8xxx (Aufwand/charges). " +
                         "INVOICE: a vendor invoice, receipt, or Facture with an invoice number, supplier name, and CHF total. " +
-                        "RENT_ROLL: état locatif / Mietspiegel / tenant schedule — a table of rental objects, one row per object (objet code like 531100.01.0001), with tenant name, object type, entry/exit dates, and monthly net rent. " +
+                        "RENT_ROLL: état locatif / Mietspiegel / tenant schedule — a table of rental objects, one row per object (objet code like 531100.01.0001 or 400 010.09), with tenant name, object type, entry/exit dates, and monthly net rent. " +
                         "GENERAL_INFO: a cover/identity page naming the building (immeuble / adresse), the régie (gérance), the owner (propriétaire), the management reference, and the reporting period — property identity, not financial tables. " +
                         "COVER_LETTER: introductory or transmittal letter with no financial data. " +
-                        "OTHER: table of contents, property description, annexes, or anything that does not fit above.",
+                        "OTHER: table of contents, property description, annexes, a rent-collection/receipts list (état des encaissements), a tenant-balance list (situation des soldes), OR an owner current-account statement (compte / décompte propriétaire — solde reporté, versements/prélèvements propriétaires, amortissements hypothécaires): that is an equity-movement statement, NOT a BALANCE_SHEET, even though it shows 1xxx/2xxx codes and Débit/Crédit columns. Also anything that does not fit above.",
                     },
                   },
                 },
