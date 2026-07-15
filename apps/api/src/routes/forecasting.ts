@@ -9,6 +9,7 @@
  *   GET /forecasting/renovation-catalog          — Swiss renovation classification catalog
  *   GET /buildings/:id/capex-schedule            — per-building forward capex schedule
  *   GET /buildings/:id/npv-scenarios             — 3-scenario NPV (Invest / Defer / Neglect)
+ *   GET /buildings/:id/value-creation-agenda     — renovation opportunities ranked for the owner mandate + verdict
  */
 
 import { Router } from "../http/router";
@@ -18,7 +19,11 @@ import { maybeRequireManager } from "../authz";
 import { withAuthRequired } from "../http/routeProtection";
 import { getAssetHealthForecast } from "../services/assetHealthService";
 import { getCapExProjection, estimateReplacementYear } from "../services/capexProjectionService";
-import { getAssetInventoryForBuilding } from "../services/assetInventory";
+import { getAssetInventoryForBuilding, getBuildingRenovationOpportunities } from "../services/assetInventory";
+import { getOwnerStrategyProfilesForBuilding } from "../repositories/strategyProfileRepository";
+import { resolveBuildingStrategy } from "../services/strategy/buildingStrategyResolver";
+import { rankOpportunitiesForMandate } from "../services/strategy/opportunityRanking";
+import { STRATEGY_ARCHETYPES } from "../services/strategy/archetypes";
 import { estimateReplacementCost } from "../services/replacementCostService";
 import { findBuildingByIdAndOrg } from "../repositories/inventoryRepository";
 import { computeNPVScenarios } from "../services/npvService";
@@ -56,6 +61,14 @@ export function computeRecommendation(
 ): { scenario: "invest" | "defer" | "neglect"; rationale: string } {
   const capexTolerance = dims?.capexTolerance ?? 50;
   const saleReadiness = dims?.saleReadiness ?? 50;
+  // Additional dimensions consulted by the enriched fallback (P1 archetype bridge).
+  // All default to the neutral midpoint so absent dims never trigger a new rule —
+  // this keeps the pre-enrichment verdicts pinned by the characterization test intact.
+  const modernizationPreference = dims?.modernizationPreference ?? 50;
+  const appreciationPriority = dims?.appreciationPriority ?? 50;
+  const horizon = dims?.horizon ?? 50;
+  const incomePriority = dims?.incomePriority ?? 50;
+  const liquiditySensitivity = dims?.liquiditySensitivity ?? 50;
 
   // Critical FCI — recommend invest regardless of profile
   if (fciCurrentPct >= 30) {
@@ -94,6 +107,18 @@ export function computeRecommendation(
     };
   }
 
+  // Reposition profile — modernisation-led capital deployment. Previously fell through
+  // to the dimension/NPV logic with no dedicated rule; the P1 bridge resolves it.
+  if (archetype === "opportunistic_repositioner") {
+    if (modernizationPreference >= 60 || capexTolerance >= 60 || fciCurrentPct >= 10) {
+      return {
+        scenario: "invest",
+        rationale: "Repositioning profile — modernisation-led investment lifts grade, rent and long-term value; deferral forfeits the repositioning upside.",
+      };
+    }
+    // else fall through to the dimension/NPV logic below
+  }
+
   // Dimension-based fallback
   if (saleReadiness >= 70 && capexTolerance < 40) {
     return {
@@ -105,6 +130,33 @@ export function computeRecommendation(
     return {
       scenario: "invest",
       rationale: "Strong capex tolerance and fair facility condition — investing now avoids compounding deferred-maintenance costs.",
+    };
+  }
+
+  // Enriched dimension signals (P1 archetype bridge) — each requires a clearly
+  // non-neutral dimension (≥ 70 / < 40) so neutral inputs still reach the NPV tie-breaker.
+  if (liquiditySensitivity >= 70 && capexTolerance < 40) {
+    return {
+      scenario: "defer",
+      rationale: "High liquidity sensitivity with limited capex appetite — deferral keeps capital available and flexible.",
+    };
+  }
+  if (appreciationPriority >= 70 && horizon >= 70 && capexTolerance >= 50) {
+    return {
+      scenario: "invest",
+      rationale: "Long horizon with a strong appreciation priority — investing compounds long-term equity and value.",
+    };
+  }
+  if (modernizationPreference >= 70 && capexTolerance >= 50) {
+    return {
+      scenario: "invest",
+      rationale: "Strong modernisation appetite — upgrading now captures grade, rent and repositioning upside.",
+    };
+  }
+  if (incomePriority >= 70 && fciCurrentPct >= 10) {
+    return {
+      scenario: "invest",
+      rationale: "Income-priority profile with fair facility condition — timely capex protects rental income and NOI.",
     };
   }
 
@@ -346,6 +398,74 @@ export function registerForecastingRoutes(router: Router) {
         return sendError(res, 404, "NOT_FOUND", e.message);
       }
       sendError(res, 500, "NPV_ERROR", "Failed to compute NPV scenarios", String(e));
+    }
+  }));
+
+  // ── GET /buildings/:id/value-creation-agenda ─────────────────
+  // P1 archetype bridge: the building's renovation opportunities ranked for the owner's
+  // mandate, plus the Invest/Defer/Neglect verdict. `?mandate=<archetype>` re-ranks for a
+  // what-if archetype (defaults to the building's resolved mandate). No per-item NPV / energy
+  // model yet — the card's "Simulate" opens the existing simulator where the full NPV lives.
+  router.get("/buildings/:id/value-creation-agenda", withAuthRequired(async ({ req, res, params, orgId, prisma }) => {
+    if (!maybeRequireManager(req, res)) return;
+    try {
+      const url = new URL(req.url || "", `http://${req.headers.host}`);
+      const mandateParam = url.searchParams.get("mandate");
+      const validMandate = mandateParam && (STRATEGY_ARCHETYPES as readonly string[]).includes(mandateParam)
+        ? mandateParam : null;
+
+      const items = await getBuildingRenovationOpportunities(prisma, orgId, params.id);
+
+      // Resolve the building's real mandate (building profile → owner portfolio → none).
+      const buildingProfile = await getBuildingProfileByBuildingId(prisma, params.id, orgId);
+      const ownerProfiles = await getOwnerStrategyProfilesForBuilding(prisma, params.id, orgId);
+      const resolved = resolveBuildingStrategy(
+        buildingProfile
+          ? { primaryArchetype: buildingProfile.primaryArchetype, roleIntent: buildingProfile.roleIntent, effectiveDimensionsJson: buildingProfile.effectiveDimensionsJson }
+          : null,
+        ownerProfiles.map((p) => ({ primaryArchetype: p.primaryArchetype, dimensionsJson: p.dimensionsJson, userFacingGoalLabel: p.userFacingGoalLabel })),
+      );
+
+      // Effective mandate: a what-if override uses the archetype base weights (no profile dims).
+      const isWhatIf = !!validMandate && validMandate !== resolved.archetype;
+      const effectiveArchetype = validMandate ?? resolved.archetype;
+      const effectiveDims = isWhatIf ? null : resolved.dims;
+
+      const opportunities = rankOpportunitiesForMandate(items, effectiveDims, effectiveArchetype);
+
+      // Verdict banner — only when there is a mandate to reason about (real or what-if),
+      // mirroring the NPV panel's "set a strategy profile" hint when there is none.
+      let recommendedScenario: "invest" | "defer" | "neglect" | undefined;
+      let rationale: string | undefined;
+      if (resolved.hasProfile || validMandate) {
+        const npv = await computeNPVScenarios(prisma, orgId, params.id, {});
+        const rec = computeRecommendation(effectiveArchetype, effectiveDims, npv.fciCurrentPct, npv.scenarios, npv.deferYears);
+        recommendedScenario = rec.scenario;
+        rationale = rec.rationale;
+      }
+
+      sendJson(res, 200, {
+        data: {
+          strategyContext: {
+            hasProfile: resolved.hasProfile,
+            source: resolved.source,
+            archetype: effectiveArchetype,
+            resolvedArchetype: resolved.archetype,
+            roleIntent: resolved.roleIntent,
+            isWhatIf,
+            ownerProfileCount: resolved.ownerProfileCount,
+            recommendedScenario,
+            rationale,
+          },
+          opportunities,
+        },
+      });
+    } catch (e) {
+      const err = e as { message?: string; statusCode?: number };
+      if (String(err?.message).includes("not found") || err?.statusCode === 404) {
+        return sendError(res, 404, "NOT_FOUND", String(err?.message ?? "Building not found"));
+      }
+      sendError(res, 500, "AGENDA_ERROR", "Failed to build value-creation agenda", String(e));
     }
   }));
 

@@ -778,6 +778,11 @@
         "custom": "Personnalisé"
       },
       "kpiTab": "Indicateurs",
+      "valueCreationTab": "Création de valeur",
+      "valueCreation": {
+        "bridgeTitle": "Ces chiffres montrent la performance passée de l'actif.",
+        "bridgeSub": "Découvrez comment l'améliorer la période prochaine — selon le mandat du propriétaire."
+      },
       "compare": {
         "button": "Comparer à",
         "comparing": "vs {{period}}",
