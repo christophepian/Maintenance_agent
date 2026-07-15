@@ -13,10 +13,9 @@
 export type { DetectedDocType, ScanResult } from "./documentScanner";
 
 import { scanner } from "./scanners";
-import {
-  AzureDocumentIntelligenceScanner,
-  type PackageExtractionFile,
-} from "./scanners/azureDocumentIntelligenceScanner";
+import { AzureDocumentIntelligenceScanner } from "./scanners/azureDocumentIntelligenceScanner";
+import { ClaudeVisionScanner } from "./scanners/claudeVisionScanner";
+import type { PackageExtractionFile } from "./scanners/packageExtraction";
 
 /* ──────────────────────────────────────────────────────────
    Main entry point — delegates to the configured provider
@@ -35,28 +34,31 @@ export async function scanDocument(
 export type { PackageExtractionFile };
 
 /* ──────────────────────────────────────────────────────────
-   Régie-package extraction — OCR a whole year-end PDF and emit
+   Régie-package extraction — read a whole year-end PDF and emit
    the canonical CSVs the package onboarding pipeline consumes.
-   Requires the Azure provider (Azure OCR + Claude); the local
-   OCR provider has no LLM, so this throws there rather than
-   silently producing nothing.
+
+   Provider (PACKAGE_EXTRACTION_PROVIDER):
+     "claude" (default) — Claude reads the PDF pages directly
+       (vision). Preserves table structure and needs only
+       ANTHROPIC_API_KEY, so it runs anywhere the app runs.
+     "azure" — Azure Document Intelligence OCR → Claude on text.
+       A fallback for degraded/scanned PDFs; needs Azure creds.
    ────────────────────────────────────────────────────────── */
 
-let _packageScanner: AzureDocumentIntelligenceScanner | null = null;
+let _visionScanner: ClaudeVisionScanner | null = null;
+let _azurePackageScanner: AzureDocumentIntelligenceScanner | null = null;
 
 export async function extractPackageFromPdf(
   buffer: Buffer,
   fileName: string,
   mimeType: string,
 ): Promise<PackageExtractionFile[]> {
-  const provider = process.env.DOCUMENT_SCAN_PROVIDER || "local";
-  if (provider !== "azure") {
-    throw new Error(
-      "PDF package extraction requires DOCUMENT_SCAN_PROVIDER=azure (Azure OCR + Claude). " +
-        `Current provider is "${provider}". Upload CSVs instead, or configure the azure provider.`,
-    );
+  const provider = process.env.PACKAGE_EXTRACTION_PROVIDER || "claude";
+  if (provider === "azure") {
+    if (!_azurePackageScanner) _azurePackageScanner = new AzureDocumentIntelligenceScanner();
+    return _azurePackageScanner.extractPackage(buffer, fileName, mimeType);
   }
-  if (!_packageScanner) _packageScanner = new AzureDocumentIntelligenceScanner();
-  return _packageScanner.extractPackage(buffer, fileName, mimeType);
+  if (!_visionScanner) _visionScanner = new ClaudeVisionScanner();
+  return _visionScanner.extractPackage(buffer, fileName, mimeType);
 }
 
