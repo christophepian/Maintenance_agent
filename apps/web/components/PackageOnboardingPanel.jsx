@@ -63,7 +63,13 @@ export default function PackageOnboardingPanel({ buildingId, onClose, onCommitte
     try {
       const form = new FormData();
       files.forEach((f) => form.append("file", f));
-      const url = newMode ? `/api/onboarding/package/analyze` : `/api/buildings/${buildingId}/onboarding/package/analyze`;
+      // PDF extraction is slow (OCR/vision + several model calls) and PDFs can be
+      // large — both exceed Vercel's serverless proxy (≤60s, ≤4.5 MB). When
+      // NEXT_PUBLIC_BACKEND_URL is set (production) upload straight to the backend
+      // (180s socket timeout); in dev fall back to the Next.js proxy.
+      const backendBase = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const path = newMode ? `/onboarding/package/analyze` : `/buildings/${buildingId}/onboarding/package/analyze`;
+      const url = backendBase ? `${backendBase}${path}` : `/api${path}`;
       const res = await fetch(url, { method: "POST", headers: authHeaders(), body: form });
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error?.message || "Analysis failed");
@@ -112,7 +118,11 @@ export default function PackageOnboardingPanel({ buildingId, onClose, onCommitte
       }
       form.append("billingMode", billingMode);
       form.append("fiscalYear", fiscalYear);
-      const res = await fetch(`/api/buildings/${targetId}/onboarding/package/commit`, { method: "POST", headers: authHeaders(), body: form });
+      // Same as analyze: commit re-runs mappers over the (already-extracted) CSVs
+      // and can be slow — go direct to the backend when configured.
+      const backendBase = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const commitPath = `/buildings/${targetId}/onboarding/package/commit`;
+      const res = await fetch(backendBase ? `${backendBase}${commitPath}` : `/api${commitPath}`, { method: "POST", headers: authHeaders(), body: form });
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error?.message || "Commit failed");
       setResult(json.data);

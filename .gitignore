@@ -69,3 +69,6 @@ backups/*.sql
 .env.local
 .env.*.local
 *.tsbuildinfo
+
+# Local-only PDF samples for régie-package extraction testing (never commit — real tenant data)
+apps/api/tmp/
