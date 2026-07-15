@@ -55,6 +55,7 @@ import AssetInventoryPanel from "../../../components/AssetInventoryPanel";
 import { authHeaders } from "../../../lib/api";
 import ScrollableTabs from "../../../components/mobile/ScrollableTabs";
 import PackageOnboardingPanel from "../../../components/PackageOnboardingPanel";
+import ValueCreationAgenda from "../../../components/cashflow/ValueCreationAgenda";
 import SortableHeader from "../../../components/SortableHeader";
 import { useLocalSort, clientSort } from "../../../lib/tableUtils";
 import { formatDate, formatChfCents, formatPercent, formatChf, formatNumber } from "../../../lib/format";
@@ -255,6 +256,7 @@ function buildExecutiveSummary({ bf, prev, unitData, vendors, benchmark, leaseEx
 // histogram and let a bar click/brush re-drive the period.
 function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLabel, compareWith, compareFrom, compareTo, compareLabel, onChangeCompare, onClearCompare }) {
   const { t } = useTranslation("manager");
+  const router = useRouter();
   const [unitsExpanded, setUnitsExpanded] = useState(false);
   const [insExpanded, setInsExpanded]     = useState(false);
   const [outsExpanded, setOutsExpanded]   = useState(false);
@@ -763,7 +765,18 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
           </div>
         );
 
-        const activePanel = tab === "kpi" ? kpiSlide : tab === "drivers" ? driversSlide : tab === "byunit" ? byUnitSlide : revexSlide;
+        const valueCreationSlide = (
+          <ValueCreationAgenda
+            buildingId={buildingId}
+            onPlanned={(planId) => router.push(`/manager/cashflow/${planId}`)}
+          />
+        );
+
+        const activePanel = tab === "kpi" ? kpiSlide
+          : tab === "drivers" ? driversSlide
+          : tab === "byunit" ? byUnitSlide
+          : tab === "valuecreation" ? valueCreationSlide
+          : revexSlide;
         // Uncollected rent + arrears aging now live in the hero highlight; only the
         // opening-balance carry-in banner remains in the alerts strip.
         const hasAlerts = bf.openingReceivablesCents > 0 || bf.openingPayablesCents > 0;
@@ -795,12 +808,31 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
             {/* ── Detail: tab strip + sliding panel (default: Revenue & expenses) ── */}
             <div className="border-t border-surface-border">
               <div className="flex gap-1 px-4 pt-2 overflow-x-auto">
-                {[["kpi", t("buildingsId.reporting.kpiTab")], ["drivers", t("buildingsId.reporting.whatDrove")], ["revex", t("buildingsId.reporting.revex.title")], ["byunit", t("buildingsId.reporting.byUnit")]].map(([k, l]) => (
+                {[["kpi", t("buildingsId.reporting.kpiTab")], ["drivers", t("buildingsId.reporting.whatDrove")], ["revex", t("buildingsId.reporting.revex.title")], ["byunit", t("buildingsId.reporting.byUnit")], ["valuecreation", t("buildingsId.reporting.valueCreationTab")]].map(([k, l]) => (
                   <button key={k} onClick={() => setTab(k)} aria-pressed={tab === k}
-                    className={cn("-mb-px shrink-0 border-b-2 px-3 py-2 text-sm font-medium transition-colors", tab === k ? "border-brand text-brand" : "border-transparent text-muted hover:text-foreground")}>{l}</button>
+                    className={cn("-mb-px shrink-0 inline-flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-medium transition-colors", tab === k ? "border-brand text-brand" : "border-transparent text-muted hover:text-foreground")}>
+                    {l}
+                    {k === "valuecreation" && <span className="h-1.5 w-1.5 rounded-full bg-success" aria-hidden="true" />}
+                  </button>
                 ))}
               </div>
               <div className={cn("border-t border-surface-border", loading && "opacity-60 transition-opacity")}>{activePanel}</div>
+              {tab === "kpi" && (
+                <div className="border-t border-surface-border p-4">
+                  <div className="flex flex-wrap items-center gap-3 rounded-xl border border-brand/25 bg-brand-light px-4 py-3">
+                    <div className="min-w-[240px] flex-1">
+                      <p className="text-sm font-semibold text-foreground">{t("buildingsId.reporting.valueCreation.bridgeTitle")}</p>
+                      <p className="text-xs text-foreground-dim">{t("buildingsId.reporting.valueCreation.bridgeSub")}</p>
+                    </div>
+                    <button
+                      onClick={() => setTab("valuecreation")}
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+                    >
+                      {t("buildingsId.reporting.valueCreationTab")} →
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* ── Occupancy movements (folded into the card, below the panel) ── */}

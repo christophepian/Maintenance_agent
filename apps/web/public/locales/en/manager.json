@@ -778,6 +778,11 @@
         "custom": "Custom"
       },
       "kpiTab": "KPIs",
+      "valueCreationTab": "Value creation",
+      "valueCreation": {
+        "bridgeTitle": "These figures tell you how the asset performed.",
+        "bridgeSub": "See how it can perform better next period — ranked for this owner's mandate."
+      },
       "compare": {
         "button": "Compare to",
         "comparing": "vs {{period}}",
