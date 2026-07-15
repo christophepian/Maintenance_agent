@@ -30,12 +30,16 @@ import {
   type ExtractedRentRollRow,
   type ExtractedBuildingInfoFields,
 } from "./packageCsvEmitter";
-
-/** One synthetic canonical CSV produced from a régie PDF, ready for the package pipeline. */
-export interface PackageExtractionFile {
-  fileName: string;
-  text: string;
-}
+import {
+  RENT_ROLL_TOOL,
+  BUILDING_INFO_TOOL,
+  STATEMENT_BALANCE_TOOL,
+  parseRentRollToolInput,
+  parseBuildingInfoToolInput,
+  parseBalancesToolInput,
+  normalizeSwissAccountCode,
+  type PackageExtractionFile,
+} from "./packageExtraction";
 
 /* ══════════════════════════════════════════════════════════════
    Types from the Azure SDK — imported lazily to keep cold-start
@@ -722,79 +726,6 @@ function parseNumberFromKv(
    Claude enrichment — fills null fields from raw OCR text
    ══════════════════════════════════════════════════════════════ */
 
-/**
- * Derive the double-entry ledger direction from a document section and the sign of the amount.
- * - ACTIF (asset):  positive = DEBIT (normal),  negative = CREDIT (contra-asset)
- * - PASSIF (liab/equity): positive = CREDIT (normal), negative = DEBIT (e.g. owner drawings)
- * - REVENUE: positive = CREDIT, negative = DEBIT
- * - EXPENSE: positive = DEBIT,  negative = CREDIT
- */
-function deriveLedgerDirection(
-  section: "ACTIF" | "PASSIF" | "REVENUE" | "EXPENSE" | "OTHER",
-  amount: number,
-): "DEBIT" | "CREDIT" {
-  const positive = amount >= 0;
-  switch (section) {
-    case "ACTIF":   return positive ? "DEBIT" : "CREDIT";
-    case "PASSIF":  return positive ? "CREDIT" : "DEBIT";
-    case "REVENUE": return positive ? "CREDIT" : "DEBIT";
-    case "EXPENSE": return positive ? "DEBIT" : "CREDIT";
-    default:        return positive ? "DEBIT" : "CREDIT";
-  }
-}
-
-/** Claude tool for extracting account balance rows from a financial statement. */
-const FINANCIAL_STATEMENT_BALANCE_TOOL = {
-  name: "extractAccountBalances",
-  description:
-    "Extract account balance rows from a Swiss property management financial statement. " +
-    "For each row record the documentSection from the nearest printed section header: " +
-    "ACTIF (Actifs/Aktiven), PASSIF (Passifs/Passiven), REVENUE (Produits/Ertrag), EXPENSE (Charges/Aufwand), OTHER when unclear. " +
-    "IMPORTANT — equity and result accounts: 'Bénéfice de l'exercice', 'Résultat net', 'Report bénéfices-pertes' are PASSIF equity rows even if they appear after income data. " +
-    "IMPORTANT — signed amounts: preserve negative signs exactly as printed. A negative under ACTIF is a contra-asset — keep it negative, keep documentSection=ACTIF. Never flip the section due to a negative sign. " +
-    "IMPORTANT — no hierarchy double-counting: Swiss balance sheets often show a parent subtotal AND the detail rows that make it up, all under the same account code. " +
-    "Example: '1295 Acomptes -24'900' is the subtotal of '1295 Frais chauffage -4'980' + '1295 Frais exploitation -19'920'. " +
-    "Extract the DETAIL rows only (the leaves). Skip any row whose amount equals the exact sum of other rows you are already extracting with the same code. " +
-    "If there are no detail sub-rows, extract the parent row. " +
-    "IMPORTANT — multi-column layouts (Montant / Débit / Crédit): use each account's own line amount from the 'Montant' column on the leaf row. A parent's Débit or Crédit column shows only its subtotal — do NOT emit that subtotal as if it were a separate account. " +
-    "IMPORTANT — carry-forward rows: running page-break totals labelled 'A reporter', 'Report', 'Report/Report' or 'Übertrag' are NOT accounts — never emit them. (A coded equity account such as 'Report bénéfices-pertes' with its own account code IS a real account — keep it.) " +
-    "IMPORTANT — account codes: Swiss chart uses 3- to 5-digit codes, sometimes with a sub-suffix (e.g. '1020', '4200', '3000-00', '4050-10'). Extract the code from the leftmost column ONLY. " +
-    "IMPORTANT — amounts: Swiss format: apostrophe=thousands, period=decimal: 62'405.24 → 62405.24. European format: period=thousands, comma=decimal: 62.405,24 → 62405.24. " +
-    "Return balanceChf as a plain signed JSON number, never a formatted string.",
-  input_schema: {
-    type: "object",
-    required: ["balances"],
-    properties: {
-      fiscalYear: {
-        type: "integer",
-        description: "Fiscal year of the statement, e.g. 2024",
-      },
-      periodLabel: {
-        type: "string",
-        description: "Human-readable period label as it appears in the document, e.g. '01.01.2024 – 31.12.2024'",
-      },
-      buildingAddress: {
-        type: "string",
-        description: "Property address if mentioned in the document",
-      },
-      balances: {
-        type: "array",
-        description: "All account balance rows found in the document",
-        items: {
-          type: "object",
-          required: ["rawAccountCode", "rawAccountName", "balanceChf", "documentSection"],
-          properties: {
-            rawAccountCode: { type: "string", description: "Account code from the leftmost column only — 3 or 4 digits, e.g. '1020' or '4200'. Never more than 4 digits." },
-            rawAccountName: { type: "string", description: "Account name as printed, e.g. 'Compte courant propriétaires'" },
-            balanceChf: { type: "number", description: "Signed closing balance in CHF as a plain decimal number. Negative values are valid (e.g. -16736.80 for a deduction within the Actifs section)." },
-            documentSection: { type: "string", enum: ["ACTIF", "PASSIF", "REVENUE", "EXPENSE", "OTHER"], description: "Section header from the document this row falls under. ACTIF=assets, PASSIF=liabilities/equity, REVENUE=income, EXPENSE=charges. Never change the section because the amount is negative." },
-          },
-        },
-      },
-    },
-  },
-} as const;
-
 /** Claude tool for extracting invoice lines from a financial statement that also contains invoices. */
 const FINANCIAL_STATEMENT_INVOICE_TOOL = {
   name: "extractInvoiceLines",
@@ -962,15 +893,6 @@ async function enrichFieldsWithClaude(
  * digits, we truncate to the first 4 characters — the trailing digits are
  * almost certainly bleed-over from the next column.
  */
-function normalizeSwissAccountCode(code: string): string {
-  const trimmed = code.trim();
-  // If it's purely numeric and longer than 4 digits, truncate to 4
-  if (/^\d{5,}$/.test(trimmed)) {
-    return trimmed.substring(0, 4);
-  }
-  return trimmed;
-}
-
 const EXTRACTION_SYSTEM_PROMPT =
   "You are a financial document extraction assistant for Swiss property management statements. " +
   "Extract ONLY information that is explicitly present in the OCR text provided. " +
@@ -998,7 +920,7 @@ async function extractBalancesFromChunk(
     max_tokens: 8192,
     temperature: 0,
     system: EXTRACTION_SYSTEM_PROMPT,
-    tools: [FINANCIAL_STATEMENT_BALANCE_TOOL] as unknown as Parameters<typeof client.messages.create>[0]["tools"],
+    tools: [STATEMENT_BALANCE_TOOL] as unknown as Parameters<typeof client.messages.create>[0]["tools"],
     tool_choice: { type: "tool", name: "extractAccountBalances" },
     messages: [
       {
@@ -1013,42 +935,12 @@ async function extractBalancesFromChunk(
     ],
   });
 
-  const fields: Record<string, string | number | boolean | null> = {};
-  let accountBalances: ExtractedAccountBalance[] = [];
-
   for (const block of response.content) {
-    if (block.type !== "tool_use" || block.name !== "extractAccountBalances") continue;
-    const input = block.input as {
-      fiscalYear?: number;
-      periodLabel?: string;
-      buildingAddress?: string;
-      balances?: Array<{
-        rawAccountCode: string;
-        rawAccountName: string;
-        balanceChf: number;
-        documentSection?: string;
-      }>;
-    };
-    if (input.fiscalYear) fields.fiscalYear = input.fiscalYear;
-    if (input.periodLabel) fields.periodLabel = input.periodLabel;
-    if (input.buildingAddress) fields.buildingAddress = input.buildingAddress;
-    accountBalances = (input.balances ?? [])
-      .filter((b) => b.rawAccountCode && b.rawAccountName && typeof b.balanceChf === "number")
-      .map((b) => {
-        const section = (["ACTIF","PASSIF","REVENUE","EXPENSE","OTHER"].includes(b.documentSection ?? "")
-          ? b.documentSection!
-          : "OTHER") as "ACTIF" | "PASSIF" | "REVENUE" | "EXPENSE" | "OTHER";
-        return {
-          rawAccountCode: normalizeSwissAccountCode(b.rawAccountCode),
-          rawAccountName: b.rawAccountName,
-          balanceChf: b.balanceChf, // preserve sign — negative = contra/deduction
-          documentSection: section,
-          balanceType: deriveLedgerDirection(section, b.balanceChf),
-        };
-      });
+    if (block.type === "tool_use" && block.name === "extractAccountBalances") {
+      return parseBalancesToolInput(block.input);
+    }
   }
-
-  return { fields, accountBalances };
+  return { fields: {}, accountBalances: [] };
 }
 
 /**
@@ -1139,76 +1031,6 @@ async function extractInvoicesFromChunk(
    to the existing detect → map → reconcile → commit pipeline.
    ══════════════════════════════════════════════════════════════ */
 
-/** Claude tool for extracting the rent roll (état locatif) from a régie package. */
-const RENT_ROLL_TOOL = {
-  name: "extractRentRoll",
-  description:
-    "Extract the rent roll (état locatif / tenant schedule) from a Swiss property management document. " +
-    "Return exactly ONE entry per rental object. Record the primary tenant, the object type, entry/exit dates, " +
-    "and the NET monthly rent (loyer net mensuel — never the gross/brut figure). Mark empty objects as vacant. " +
-    "Skip any 'Total'/'Totaux'/'Totaux mensuels'/'Totaux annuels' summary row. " +
-    "IMPORTANT — rent split across component rows: some état-locatifs list one object's rent on several lines " +
-    "(e.g. 'Loyer', 'Acompte chauffage et eau', 'Forfait chauffage & EC', 'Loyer garage'). Merge them into the " +
-    "SINGLE object entry: netRentChf = the 'Loyer' (base rent) component; chargesChf = the SUM of the " +
-    "acompte/forfait heating & charges components. Never emit a separate entry per component line. " +
-    "IMPORTANT — object type: infer it from any available cue — a type column, the floor label ('Gar.' = garage), " +
-    "or the rent-component label: 'Loyer garage' → parking/garage, 'Loyer commercial' / 'Loc.commer' → commercial " +
-    "local, plain 'Loyer' → residential. Object codes may use spaces and dots (e.g. '980 010.12', '531100.01.9001'); " +
-    "a 9-leading group (9xx / 900 / 980 / 990) indicates parking. " +
-    "IMPORTANT — dates: entree = lease start (Début location / entrée). sortie = move-out date ONLY. If the row " +
-    "shows a contractual term end (Echéance / échéance) but the tenant has not left, leave sortie empty.",
-  input_schema: {
-    type: "object",
-    required: ["objects"],
-    properties: {
-      objects: {
-        type: "array",
-        description: "Every rental object row in the état locatif.",
-        items: {
-          type: "object",
-          required: ["objet", "confidence"],
-          properties: {
-            objet: { type: "string", description: "Full object code exactly as printed, e.g. '531100.01.0001'." },
-            tenantName: { type: "string", description: "Primary tenant name. Omit, or use 'Vacant', if the object is empty." },
-            unitType: { type: "string", description: "Object type: 'Appartement'/residential, 'Garage'/'Parking' (incl. rows labelled 'Loyer garage' or floor 'Gar.'), or 'Commercial' (rows labelled 'Loyer commercial' / 'Loc.commer')." },
-            floor: { type: "string", description: "Floor / étage as printed." },
-            rooms: { type: "number", description: "Number of rooms (pièces), e.g. 4.5." },
-            areaSqm: { type: "number", description: "Area in m²." },
-            entree: { type: "string", description: "Lease start date, DD.MM.YYYY." },
-            sortie: { type: "string", description: "Lease end date, DD.MM.YYYY. Omit if ongoing." },
-            netRentChf: { type: "number", description: "NET monthly rent in CHF (loyer net mensuel), a plain number. Never the gross/brut figure." },
-            chargesChf: { type: "number", description: "Monthly charges advance in CHF (charges/acompte), a plain number." },
-            confidence: { type: "number", description: "Your confidence (0.0–1.0) that this row is read correctly from the source." },
-          },
-        },
-      },
-    },
-  },
-} as const;
-
-/** Claude tool for extracting the building's identity from the general-info/cover page. */
-const BUILDING_INFO_TOOL = {
-  name: "extractBuildingInfo",
-  description:
-    "Extract the building/property identity from the general-info or cover page of a Swiss régie report. " +
-    "This is property identity, not financial data.",
-  input_schema: {
-    type: "object",
-    required: [],
-    properties: {
-      immeubleAdresse: {
-        type: "string",
-        description:
-          "Full building address including street, postal code and city, e.g. 'Rte Monts-de-Laval 314, 1090 La Croix (Lutry)'.",
-      },
-      immeubleReference: { type: "string", description: "Management reference number for the building, e.g. '78645'." },
-      periode: { type: "string", description: "Reporting period exactly as printed, e.g. '01.01.2025 - 31.12.2025'." },
-      gerance: { type: "string", description: "Property management company (régie / gérance)." },
-      proprietaire: { type: "string", description: "Owner name(s)." },
-    },
-  },
-} as const;
-
 /** Extract rent-roll object rows from one chunk of OCR text via a forced tool call. */
 async function extractRentRollFromChunk(
   client: ReturnType<typeof getAnthropicClient>,
@@ -1241,37 +1063,9 @@ async function extractRentRollFromChunk(
   });
 
   for (const block of response.content) {
-    if (block.type !== "tool_use" || block.name !== "extractRentRoll") continue;
-    const input = block.input as {
-      objects?: Array<{
-        objet?: string;
-        tenantName?: string;
-        unitType?: string;
-        floor?: string;
-        rooms?: number;
-        areaSqm?: number;
-        entree?: string;
-        sortie?: string;
-        netRentChf?: number;
-        chargesChf?: number;
-        confidence?: number;
-      }>;
-    };
-    return (input.objects ?? [])
-      .filter((o) => o.objet && o.objet.trim())
-      .map((o) => ({
-        objet: o.objet!.trim(),
-        tenantName: o.tenantName ?? null,
-        unitType: o.unitType ?? null,
-        floor: o.floor ?? null,
-        rooms: typeof o.rooms === "number" ? o.rooms : null,
-        areaSqm: typeof o.areaSqm === "number" ? o.areaSqm : null,
-        entree: o.entree ?? null,
-        sortie: o.sortie ?? null,
-        loyerNetChf: typeof o.netRentChf === "number" ? o.netRentChf : null,
-        chargesChf: typeof o.chargesChf === "number" ? o.chargesChf : null,
-        confidence: typeof o.confidence === "number" ? o.confidence : null,
-      }));
+    if (block.type === "tool_use" && block.name === "extractRentRoll") {
+      return parseRentRollToolInput(block.input);
+    }
   }
   return [];
 }
@@ -1300,22 +1094,9 @@ async function extractBuildingInfoFromText(
   });
 
   for (const block of response.content) {
-    if (block.type !== "tool_use" || block.name !== "extractBuildingInfo") continue;
-    const input = block.input as {
-      immeubleAdresse?: string;
-      immeubleReference?: string;
-      periode?: string;
-      gerance?: string;
-      proprietaire?: string;
-    };
-    if (!input.immeubleAdresse || !input.immeubleAdresse.trim()) return null;
-    return {
-      immeubleAdresse: input.immeubleAdresse.trim(),
-      immeubleReference: input.immeubleReference ?? null,
-      periode: input.periode ?? null,
-      gerance: input.gerance ?? null,
-      proprietaire: input.proprietaire ?? null,
-    };
+    if (block.type === "tool_use" && block.name === "extractBuildingInfo") {
+      return parseBuildingInfoToolInput(block.input);
+    }
   }
   return null;
 }
