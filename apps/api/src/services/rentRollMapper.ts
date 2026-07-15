@@ -107,6 +107,25 @@ function unitNumberFromObjet(objet: string): string {
   return (parts[parts.length - 1] || objet).trim();
 }
 
+/**
+ * Parse a room count that may use fraction glyphs or "n 1/2" notation and carry
+ * trailing annotations, e.g. "4.5", "2½", "5½ (duplex", "3 1/2". Returns the
+ * leading numeric value or null.
+ */
+export function parseRooms(raw: string | undefined | null): number | null {
+  const t = (raw ?? "").trim();
+  if (!t) return null;
+  const s = t
+    .replace(/\s*½/g, ".5")
+    .replace(/\s*¼/g, ".25")
+    .replace(/\s*¾/g, ".75")
+    .replace(/\s*1\/2\b/g, ".5")
+    .replace(/\s*1\/4\b/g, ".25")
+    .replace(/\s*3\/4\b/g, ".75");
+  const m = s.match(/\d+(?:\.\d+)?/);
+  return m ? parseFloat(m[0]) : null;
+}
+
 const VACANT_RE = /^(vacant|vacthan|leer|libre|inoccup|frei|empty|-)/i;
 const TOTAL_RE = /^(total|totaux|somme|summe)/i;
 
@@ -115,9 +134,68 @@ function isGarage(unitTypeRaw: string, objet: string): boolean {
   if (["garage", "parking", "parc", "box", "placeparc", "placedeparc", "stellplatz", "pkw"].some((k) => t.includes(k))) {
     return true;
   }
-  // Fallback: régie 9xxx object codes are parking (e.g. 531100.01.9001).
+  // Fallback: régie parking object codes. Two common schemes:
+  //   • last dotted segment 9xxx (e.g. 531100.01.9001)
+  //   • a 9-leading group anywhere in the code (e.g. "980 010.12", "980.01")
   const unit = unitNumberFromObjet(objet);
-  return /^9\d{3}$/.test(unit);
+  if (/^9\d{3}$/.test(unit)) return true;
+  return /(^|[^0-9])9\d{2}(?=[^0-9]|$)/.test(objet);
+}
+
+/**
+ * Merge rows that share an `objet`. Some régie état-locatifs list one object's
+ * rent across several component rows (Loyer / Acompte chauffage / Forfait), so
+ * the same object appears more than once. When that happens we treat the largest
+ * component amount as the net rent and the remaining components as charges;
+ * other fields take the first non-null value. Single-row objects pass through
+ * unchanged so the normal net/charges columns are preserved exactly.
+ */
+function mergeByObjet(rows: RentRollRow[]): RentRollRow[] {
+  const groups = new Map<string, RentRollRow[]>();
+  const order: string[] = [];
+  for (const r of rows) {
+    const g = groups.get(r.objet);
+    if (g) g.push(r);
+    else {
+      groups.set(r.objet, [r]);
+      order.push(r.objet);
+    }
+  }
+
+  return order.map((objet) => {
+    const g = groups.get(objet)!;
+    if (g.length === 1) return g[0];
+
+    const base: RentRollRow = { ...g[0] };
+    for (const r of g.slice(1)) {
+      base.tenantName = base.tenantName ?? r.tenantName;
+      base.floor = base.floor ?? r.floor;
+      base.rooms = base.rooms ?? r.rooms;
+      base.areaSqm = base.areaSqm ?? r.areaSqm;
+      base.startDate = base.startDate ?? r.startDate;
+      base.endDate = base.endDate ?? r.endDate;
+      if (r.parkingKind === "GARAGE") {
+        base.unitType = "PARKING";
+        base.parkingKind = "GARAGE";
+      }
+    }
+    base.isVacant = !base.tenantName;
+
+    // Redistribute the component amounts: largest = net rent, rest = charges.
+    const amounts = g
+      .flatMap((r) => [r.netRentChf, r.chargesChf])
+      .filter((n): n is number => n != null);
+    if (amounts.length === 0) {
+      base.netRentChf = null;
+      base.chargesChf = null;
+    } else {
+      const net = Math.max(...amounts);
+      const charges = amounts.reduce((s, n) => s + n, 0) - net;
+      base.netRentChf = net;
+      base.chargesChf = charges > 0 ? charges : null;
+    }
+    return base;
+  });
 }
 
 /* ── main ─────────────────────────────────────────────────────────────────── */
@@ -157,7 +235,7 @@ export function mapRentRoll(text: string): RentRollResult {
       unitType: garage ? "PARKING" : "RESIDENTIAL",
       parkingKind: garage ? "GARAGE" : null,
       floor: h.floor ? (row[h.floor] ?? "").trim() || null : null,
-      rooms: h.rooms ? parseChf(row[h.rooms]) : null,
+      rooms: h.rooms ? parseRooms(row[h.rooms]) : null,
       areaSqm: h.areaSqm ? parseChf(row[h.areaSqm]) : null,
       startDate: h.startDate ? parseSwissDate(row[h.startDate]) : null,
       endDate: h.endDate ? parseSwissDate(row[h.endDate]) : null,
@@ -167,5 +245,5 @@ export function mapRentRoll(text: string): RentRollResult {
     });
   });
 
-  return { rows: out, skipped };
+  return { rows: mergeByObjet(out), skipped };
 }

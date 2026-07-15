@@ -148,6 +148,14 @@ export function emitAccountBalancesCsv(
       : new Set(["REVENUE", "EXPENSE"]);
   const rows = balances.filter((b) => wanted.has(b.documentSection));
   if (rows.length === 0) return null;
+  // A real balance sheet has both sides. An owner current-account statement
+  // ("compte propriétaire": solde reporté, versements propriétaires) can yield
+  // only equity-ish rows — don't emit a one-sided bilan that can never balance.
+  if (kind === "balance") {
+    const hasActif = rows.some((b) => b.documentSection === "ACTIF");
+    const hasPassif = rows.some((b) => b.documentSection === "PASSIF");
+    if (!hasActif || !hasPassif) return null;
+  }
   const body = rows.map((b) => [
     cell(b.rawAccountCode),
     cell(b.rawAccountName),

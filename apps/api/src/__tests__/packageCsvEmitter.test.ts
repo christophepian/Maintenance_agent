@@ -134,4 +134,14 @@ describe("emitAccountBalancesCsv → detect + mapCsvToAccountBalances round-trip
     const onlyActif: ExtractedAccountBalance[] = [balances[0]];
     expect(emitAccountBalancesCsv(onlyActif, "income")).toBeNull();
   });
+
+  it("does not emit a one-sided bilan (owner-account page → no ACTIF+PASSIF pair)", () => {
+    // An owner current-account statement can yield only equity-ish (PASSIF) rows;
+    // a balance sheet needs both sides, so no junk bilan should be produced.
+    const passifOnly: ExtractedAccountBalance[] = [
+      { rawAccountCode: "2850", rawAccountName: "Versements propriétaires", balanceChf: 104528.4, balanceType: "CREDIT", documentSection: "PASSIF" },
+      { rawAccountCode: "2240", rawAccountName: "Amortissements hypothécaires", balanceChf: 10400, balanceType: "CREDIT", documentSection: "PASSIF" },
+    ];
+    expect(emitAccountBalancesCsv(passifOnly, "balance")).toBeNull();
+  });
 });
