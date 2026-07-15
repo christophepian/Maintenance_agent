@@ -244,6 +244,47 @@ components:
               capitalizedChf: { type: number }
               assetCount: { type: integer }
 
+    ValueCreationAgendaDTO:
+      type: object
+      required: [strategyContext, opportunities]
+      properties:
+        strategyContext:
+          type: object
+          required: [hasProfile, source]
+          properties:
+            hasProfile: { type: boolean }
+            source: { type: string, enum: [building, owner-portfolio, none] }
+            archetype: { type: string, nullable: true, description: Effective mandate used to rank/frame (what-if override or resolved) }
+            resolvedArchetype: { type: string, nullable: true, description: The building's real resolved mandate }
+            roleIntent: { type: string, nullable: true }
+            isWhatIf: { type: boolean }
+            ownerProfileCount: { type: integer, nullable: true }
+            recommendedScenario: { type: string, enum: [invest, defer, neglect], nullable: true }
+            rationale: { type: string, nullable: true }
+        opportunities:
+          type: array
+          description: Renovation opportunities ranked for the effective mandate (superset of RepairReplaceItem)
+          items:
+            type: object
+            required: [assetId, assetName, recommendation, score, fitReason, oblfUpliftPreviewChfPerYear]
+            properties:
+              assetId: { type: string }
+              assetName: { type: string }
+              unitId: { type: string }
+              unitNumber: { type: string }
+              assetType: { type: string }
+              topic: { type: string }
+              recommendation: { type: string, enum: [REPAIR, MONITOR, PLAN_REPLACEMENT, REPLACE] }
+              recommendationReason: { type: string }
+              depreciationPct: { type: number, nullable: true }
+              remainingLifeMonths: { type: integer, nullable: true }
+              usefulLifeMonths: { type: integer, nullable: true }
+              estimatedReplacementCostChf: { type: number, nullable: true }
+              lastConditionStatus: { type: string, nullable: true, enum: [GOOD, FAIR, POOR, DAMAGED] }
+              score: { type: number }
+              fitReason: { type: string }
+              oblfUpliftPreviewChfPerYear: { type: number }
+
     TimeSeriesPoint:
       type: object
       required: [periodStart, periodEnd, label, noiCents, collectedIncomeCents, expensesCents, collectionRate]
@@ -9882,6 +9923,30 @@ paths:
                 type: object
                 properties:
                   data: { $ref: '#/components/schemas/BuildingCapexScheduleDTO' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /buildings/{id}/value-creation-agenda:
+    get:
+      tags: [Forecasting]
+      summary: Renovation opportunities ranked for the owner's mandate, with an Invest/Defer/Neglect verdict
+      operationId: getBuildingValueCreationAgenda
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+        - name: mandate
+          in: query
+          required: false
+          schema: { type: string, enum: [exit_optimizer, yield_maximizer, value_builder, capital_preserver, opportunistic_repositioner] }
+          description: What-if archetype to re-rank for; defaults to the building's resolved mandate
+      responses:
+        '200':
+          description: Ranked value-creation agenda for the building
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/ValueCreationAgendaDTO' }
         '404':
           $ref: '#/components/responses/NotFound'
 
