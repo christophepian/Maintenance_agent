@@ -53,20 +53,21 @@ export class ClaudeVisionScanner {
     const client = getAnthropicClient();
     const base = fileName.replace(/\.[^.]+$/, "").replace(/[^\w.-]+/g, "_") || "package";
 
-    // The whole PDF, sent once and cached so the three section calls each reuse it.
     const documentBlock = {
       type: "document",
       source: { type: "base64", media_type: "application/pdf", data: buffer.toString("base64") },
-      cache_control: { type: "ephemeral" },
     } as unknown as Anthropic.Messages.ContentBlockParam;
-    const tools = [RENT_ROLL_TOOL, BUILDING_INFO_TOOL, STATEMENT_BALANCE_TOOL];
 
-    const call = (instruction: string, toolName: string, maxTokens: number) =>
+    // One tool per call. Passing all three tools at once made the model
+    // double-encode its output (wrapping the result as a JSON string), so each
+    // section gets its own single-tool call — reliable, at the cost of re-sending
+    // the PDF per section (fine for a one-time, human-gated onboarding).
+    const call = (tool: unknown, instruction: string, toolName: string, maxTokens: number) =>
       runForcedTool(client, {
         model: VISION_MODEL,
         system: VISION_SYSTEM_PROMPT,
         content: [documentBlock, { type: "text", text: instruction }],
-        tools,
+        tools: [tool],
         toolName,
         maxTokens,
       });
@@ -75,6 +76,7 @@ export class ClaudeVisionScanner {
 
     // Building identity.
     const infoInput = await call(
+      BUILDING_INFO_TOOL,
       "This is a Swiss régie property report. Find the cover / general-info page and extract the building identity: " +
         "address (with postal code and city if shown), management reference, reporting period, régie and owner.",
       "extractBuildingInfo",
@@ -88,6 +90,7 @@ export class ClaudeVisionScanner {
 
     // Rent roll → units/tenants/leases.
     const rentRollInput = await call(
+      RENT_ROLL_TOOL,
       "Find the état locatif (the schedule of monthly rents, one row per object) and extract EVERY object. " +
         "Merge each object's component lines (Loyer + Acompte/Forfait) into one entry. " +
         "Ignore the rent-collection (encaissements) and tenant-balance (situation des soldes) tables.",
@@ -99,6 +102,7 @@ export class ClaudeVisionScanner {
 
     // Balance sheet + income statement → split by section.
     const balancesInput = await call(
+      STATEMENT_BALANCE_TOOL,
       "Extract the account balances from the balance sheet (bilan: Actifs / Passifs) and the income statement " +
         "(compte de résultat / compte de gestion: Produits / Charges). Ignore the owner current-account statement " +
         "(compte propriétaire). In multi-column layouts read each account's own Montant, not a parent Débit/Crédit subtotal.",
