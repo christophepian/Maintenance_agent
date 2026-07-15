@@ -173,8 +173,31 @@ export const BUILDING_INFO_TOOL = {
 
 /* ── tool-output parsers (schema → typed rows) ────────────────────────────── */
 
+/**
+ * Some models double-encode a forced tool's output — returning the whole result
+ * as a JSON string, or nesting it as a string inside its array field. Unwrap both
+ * so the parsers always see a plain object. `arrayKey` (e.g. "balances",
+ * "objects") is the field expected to hold the array.
+ */
+function unwrapDoubleEncoded(input: unknown, arrayKey?: string): Record<string, unknown> {
+  let v: unknown = input;
+  if (typeof v === "string") {
+    try { v = JSON.parse(v); } catch { return {}; }
+  }
+  if (!v || typeof v !== "object") return {};
+  const obj = v as Record<string, unknown>;
+  if (arrayKey && typeof obj[arrayKey] === "string") {
+    try {
+      const inner = JSON.parse(obj[arrayKey] as string);
+      if (Array.isArray(inner)) return { ...obj, [arrayKey]: inner };
+      if (inner && typeof inner === "object") return { ...obj, ...(inner as Record<string, unknown>) };
+    } catch { /* leave as-is */ }
+  }
+  return obj;
+}
+
 export function parseRentRollToolInput(input: unknown): ExtractedRentRollRow[] {
-  const objects = (input as { objects?: Array<Record<string, unknown>> } | null)?.objects;
+  const objects = unwrapDoubleEncoded(input, "objects").objects;
   if (!Array.isArray(objects)) return [];
   return objects
     .filter((o) => typeof o.objet === "string" && o.objet.trim())
@@ -194,7 +217,7 @@ export function parseRentRollToolInput(input: unknown): ExtractedRentRollRow[] {
 }
 
 export function parseBuildingInfoToolInput(input: unknown): ExtractedBuildingInfoFields | null {
-  const i = input as Record<string, unknown> | null;
+  const i = unwrapDoubleEncoded(input);
   const address = typeof i?.immeubleAdresse === "string" ? i.immeubleAdresse.trim() : "";
   if (!address) return null;
   return {
@@ -210,7 +233,7 @@ export function parseBalancesToolInput(input: unknown): {
   fields: Record<string, string | number | boolean | null>;
   accountBalances: ExtractedAccountBalance[];
 } {
-  const i = input as {
+  const i = unwrapDoubleEncoded(input, "balances") as {
     fiscalYear?: number;
     periodLabel?: string;
     buildingAddress?: string;
@@ -221,7 +244,8 @@ export function parseBalancesToolInput(input: unknown): {
   if (i?.periodLabel) fields.periodLabel = i.periodLabel;
   if (i?.buildingAddress) fields.buildingAddress = i.buildingAddress;
 
-  const accountBalances = (i?.balances ?? [])
+  const rawBalances = Array.isArray(i?.balances) ? i.balances : [];
+  const accountBalances = rawBalances
     .filter((b) => b.rawAccountCode && b.rawAccountName && typeof b.balanceChf === "number")
     .map((b) => {
       const section = (["ACTIF", "PASSIF", "REVENUE", "EXPENSE", "OTHER"].includes(b.documentSection ?? "")
@@ -259,7 +283,8 @@ export async function runForcedTool(
   const response = await client.messages.create({
     model: opts.model,
     max_tokens: opts.maxTokens,
-    temperature: 0,
+    // NB: newer models (e.g. claude-sonnet-5) deprecate `temperature` — omit it.
+    // Determinism for extraction comes from the forced tool_choice, not sampling.
     system: opts.system,
     tools: opts.tools as unknown as Anthropic.Messages.Tool[],
     tool_choice: { type: "tool", name: opts.toolName },
