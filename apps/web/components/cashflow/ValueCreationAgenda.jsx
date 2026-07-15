@@ -28,7 +28,6 @@ const MANDATES = [
   { key: "exit_optimizer", label: "Prepare for sale" },
   { key: "opportunistic_repositioner", label: "Upgrade & reposition" },
 ];
-const MANDATE_LABEL = Object.fromEntries(MANDATES.map((m) => [m.key, m.label]));
 
 const VERDICT = {
   invest: { label: "Invest", border: "border-brand", bg: "bg-brand-light", tag: "text-brand" },

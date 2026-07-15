@@ -460,9 +460,10 @@ export function registerForecastingRoutes(router: Router) {
           opportunities,
         },
       });
-    } catch (e: any) {
-      if (String(e?.message).includes("not found") || e?.statusCode === 404) {
-        return sendError(res, 404, "NOT_FOUND", String(e?.message ?? "Building not found"));
+    } catch (e) {
+      const err = e as { message?: string; statusCode?: number };
+      if (String(err?.message).includes("not found") || err?.statusCode === 404) {
+        return sendError(res, 404, "NOT_FOUND", String(err?.message ?? "Building not found"));
       }
       sendError(res, 500, "AGENDA_ERROR", "Failed to build value-creation agenda", String(e));
     }
