@@ -56,6 +56,7 @@ import { authHeaders } from "../../../lib/api";
 import ScrollableTabs from "../../../components/mobile/ScrollableTabs";
 import PackageOnboardingPanel from "../../../components/PackageOnboardingPanel";
 import ValueCreationAgenda from "../../../components/cashflow/ValueCreationAgenda";
+import UnitProfitabilityPanel from "../../../components/reporting/UnitProfitabilityPanel";
 import SortableHeader from "../../../components/SortableHeader";
 import { useLocalSort, clientSort } from "../../../lib/tableUtils";
 import { formatDate, formatChfCents, formatPercent, formatChf, formatNumber } from "../../../lib/format";
@@ -772,9 +773,14 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
           />
         );
 
+        const unitProfitSlide = (
+          <UnitProfitabilityPanel buildingId={buildingId} from={from} to={to} />
+        );
+
         const activePanel = tab === "kpi" ? kpiSlide
           : tab === "drivers" ? driversSlide
           : tab === "byunit" ? byUnitSlide
+          : tab === "unitprofit" ? unitProfitSlide
           : tab === "valuecreation" ? valueCreationSlide
           : revexSlide;
         // Uncollected rent + arrears aging now live in the hero highlight; only the
@@ -808,7 +814,7 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
             {/* ── Detail: tab strip + sliding panel (default: Revenue & expenses) ── */}
             <div className="border-t border-surface-border">
               <div className="flex gap-1 px-4 pt-2 overflow-x-auto">
-                {[["kpi", t("buildingsId.reporting.kpiTab")], ["drivers", t("buildingsId.reporting.whatDrove")], ["revex", t("buildingsId.reporting.revex.title")], ["byunit", t("buildingsId.reporting.byUnit")], ["valuecreation", t("buildingsId.reporting.valueCreationTab")]].map(([k, l]) => (
+                {[["kpi", t("buildingsId.reporting.kpiTab")], ["drivers", t("buildingsId.reporting.whatDrove")], ["revex", t("buildingsId.reporting.revex.title")], ["byunit", t("buildingsId.reporting.byUnit")], ["unitprofit", t("buildingsId.reporting.unitProfitTab")], ["valuecreation", t("buildingsId.reporting.valueCreationTab")]].map(([k, l]) => (
                   <button key={k} onClick={() => setTab(k)} aria-pressed={tab === k}
                     className={cn("-mb-px shrink-0 inline-flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-medium transition-colors", tab === k ? "border-brand text-brand" : "border-transparent text-muted hover:text-foreground")}>
                     {l}

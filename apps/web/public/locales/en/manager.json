@@ -778,6 +778,27 @@
         "custom": "Custom"
       },
       "kpiTab": "KPIs",
+      "unitProfitTab": "Unit profitability",
+      "unitProfit": {
+        "title": "Which units are most profitable",
+        "subtitle": "Fully-loaded, annualised NOI vs. value — ranked by market yield. Low yield on a high value is a sell / PPE candidate.",
+        "avgYield": "Avg market yield",
+        "overheadPool": "Overhead allocated",
+        "noMarketPrice": "No market price is set for this postal code, so market values and yields are blank. Set one in the building's cadastral fields.",
+        "empty": "No active units to report on.",
+        "error": "Could not load unit profitability.",
+        "unit": "Unit",
+        "tenant": "Tenant",
+        "vacant": "Vacant",
+        "annualNoi": "Annual NOI",
+        "noiShare": "NOI share",
+        "intrinsicValue": "Intrinsic",
+        "marketValue": "Market est.",
+        "yieldIntrinsic": "Yield (i)",
+        "yieldMarket": "Yield (m)",
+        "sellCandidate": "Sell candidate",
+        "footnote": "NOI is accrual-basis, fully loaded with pro-rata building overhead, annualised to the period. Market value = living area × per-zip price; intrinsic = the valuation worksheet."
+      },
       "valueCreationTab": "Value creation",
       "valueCreation": {
         "bridgeTitle": "These figures tell you how the asset performed.",

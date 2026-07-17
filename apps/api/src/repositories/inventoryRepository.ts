@@ -421,6 +421,31 @@ export async function countActiveUnits(
   });
 }
 
+/**
+ * Per-unit valuation-worksheet inputs + living area for the active units of a
+ * building. Used by the unit-profitability report to value units and allocate
+ * building overhead pro-rata by area.
+ */
+export async function findUnitsWithValuationForBuilding(
+  prisma: PrismaClient,
+  orgId: string,
+  buildingId: string,
+) {
+  return prisma.unit.findMany({
+    where: { orgId, buildingId, isActive: true },
+    select: {
+      id: true,
+      livingAreaSqm: true,
+      intrinsicPricePerSqmChf: true,
+      vetustePct: true,
+      gardenAreaSqm: true,
+      gardenWeightPct: true,
+      extParkingValueChf: true,
+      garageValueChf: true,
+    },
+  });
+}
+
 // ─── Market price per zip ──────────────────────────────────────
 
 export async function findMarketPriceByZip(
