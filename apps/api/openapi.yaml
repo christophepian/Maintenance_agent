@@ -285,6 +285,42 @@ components:
               fitReason: { type: string }
               oblfUpliftPreviewChfPerYear: { type: number }
 
+    UnitProfitabilityDTO:
+      type: object
+      required: [buildingId, from, to, periodDays, rows, allocationKey]
+      properties:
+        buildingId: { type: string }
+        buildingName: { type: string }
+        from: { type: string, format: date }
+        to: { type: string, format: date }
+        periodDays: { type: integer }
+        totalAnnualNoiCents: { type: integer }
+        avgNetYieldOnMarketPct: { type: number, nullable: true }
+        allocatedOverheadPoolCents: { type: integer }
+        allocationKey: { type: string, enum: [livingAreaSqm, equal] }
+        marketPricePerSqmChf: { type: number, nullable: true }
+        rows:
+          type: array
+          description: Per-unit rows ranked by net yield on market value (descending; unpriced units last)
+          items:
+            type: object
+            required: [unitId, unitNumber, annualNoiCents, sellCandidate]
+            properties:
+              unitId: { type: string }
+              unitNumber: { type: string }
+              floor: { type: string, nullable: true }
+              tenantName: { type: string, nullable: true }
+              occupancyRate: { type: number }
+              monthlyRentChf: { type: integer, nullable: true }
+              allocatedOverheadCents: { type: integer, description: Pro-rata building overhead subtracted this period }
+              annualNoiCents: { type: integer, description: Fully-loaded, annualised, accrual-basis NOI }
+              noiContributionPct: { type: number, nullable: true }
+              intrinsicValueChf: { type: number, nullable: true }
+              marketValueChf: { type: number, nullable: true }
+              netYieldOnIntrinsicPct: { type: number, nullable: true }
+              netYieldOnMarketPct: { type: number, nullable: true }
+              sellCandidate: { type: boolean, description: Market yield materially below the building average }
+
     TimeSeriesPoint:
       type: object
       required: [periodStart, periodEnd, label, noiCents, collectedIncomeCents, expensesCents, collectionRate]
@@ -9947,6 +9983,33 @@ paths:
                 type: object
                 properties:
                   data: { $ref: '#/components/schemas/ValueCreationAgendaDTO' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /buildings/{id}/unit-profitability:
+    get:
+      tags: [Financials]
+      summary: Per-unit profitability — fully-loaded annualised NOI and yield on intrinsic + market value
+      operationId: getBuildingUnitProfitability
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+        - name: from
+          in: query
+          required: true
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          required: true
+          schema: { type: string, format: date }
+      responses:
+        '200':
+          description: Per-unit profitability ranked by market yield
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/UnitProfitabilityDTO' }
         '404':
           $ref: '#/components/responses/NotFound'
 

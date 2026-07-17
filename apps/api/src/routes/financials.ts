@@ -11,6 +11,7 @@ import {
   getPortfolioTimeSeries,
   getBuildingTimeSeries,
   getUnitFinancialSummaries,
+  getUnitProfitability,
   getBuildingVendorSpend,
   getBuildingExpenseBreakdown,
   getBuildingPeriodReport,
@@ -419,6 +420,31 @@ export function registerFinancialRoutes(router: Router) {
         if (e instanceof NotFoundError) return sendError(res, 404, "NOT_FOUND", e.message);
         console.error("[GET /buildings/:id/unit-financials]", e);
         sendError(res, 500, "INTERNAL_ERROR", "Failed to load unit financials");
+      }
+    },
+  );
+
+  // ── GET /buildings/:id/unit-profitability ──────────────────
+  router.get(
+    "/buildings/:id/unit-profitability",
+    async ({ req, res, params, query, orgId }) => {
+      if (!requireAuth(req, res)) return;
+      if (!requireOrgViewer(req, res)) return;
+
+      const from = first(query, "from");
+      const to   = first(query, "to");
+      if (!from || !to) return sendError(res, 400, "VALIDATION_ERROR", "from and to are required");
+
+      try {
+        const data = await getUnitProfitability(orgId, params.id, from, to);
+        sendJson(res, 200, { data });
+      } catch (e) {
+        const err = e as { message?: string };
+        if (e instanceof NotFoundError || String(err?.message).includes("not found")) {
+          return sendError(res, 404, "NOT_FOUND", String(err?.message ?? "Building not found"));
+        }
+        console.error("[GET /buildings/:id/unit-profitability]", e);
+        sendError(res, 500, "INTERNAL_ERROR", "Failed to load unit profitability");
       }
     },
   );

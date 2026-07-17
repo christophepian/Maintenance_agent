@@ -10,6 +10,7 @@ import * as billingPeriodRepo from "../repositories/billingPeriodRepository";
 import * as importedStatementRepo from "../repositories/importedStatementRepository";
 import type { ExpenseLedgerRow, ArrearsAgingDTO } from "../repositories/financialsRepository";
 import { mapWithConcurrency } from "../utils/concurrency";
+import { computeUnitProfitability, type UnitProfitabilityInput, type UnitProfitabilityResult } from "./unitProfitability";
 
 // ==========================================
 // DTOs
@@ -1935,6 +1936,75 @@ export async function getUnitFinancialSummaries(
       monthlyRentChf:       u.monthlyRentChf ?? null,
     };
   });
+}
+
+// ==========================================
+// Unit profitability (disposition decision support)
+// ==========================================
+
+export interface UnitProfitabilityReportDTO extends UnitProfitabilityResult {
+  buildingId: string;
+  buildingName: string;
+  from: string;
+  to: string;
+  periodDays: number;
+}
+
+function dayCountInclusive(fromStr: string, toStr: string): number {
+  const from = new Date(fromStr + "T00:00:00.000Z").getTime();
+  const to = new Date(toStr + "T00:00:00.000Z").getTime();
+  return Math.max(1, Math.round((to - from) / 86_400_000) + 1);
+}
+
+/**
+ * Per-unit profitability for the building Reporting → "Unit profitability" sub-tab.
+ * Fully-loaded (overhead pro-rata by area), annualised, accrual-basis NOI, with
+ * yield-on-value against both the intrinsic worksheet and the per-zip market estimate.
+ */
+export async function getUnitProfitability(
+  orgId: string,
+  buildingId: string,
+  fromStr: string,
+  toStr: string,
+): Promise<UnitProfitabilityReportDTO> {
+  const building = await inventoryRepo.findBuildingByIdAndOrg(prisma, buildingId, orgId);
+  if (!building) throw new Error(`Building ${buildingId} not found`);
+
+  const [summaries, buildingFin, valUnits] = await Promise.all([
+    getUnitFinancialSummaries(orgId, buildingId, fromStr, toStr),
+    getBuildingFinancials(orgId, buildingId, { from: fromStr, to: toStr }),
+    inventoryRepo.findUnitsWithValuationForBuilding(prisma, orgId, buildingId),
+  ]);
+  const marketPrice = building.postalCode
+    ? await inventoryRepo.findMarketPriceByZip(prisma, orgId, building.postalCode)
+    : null;
+
+  const valById = new Map(valUnits.map((v) => [v.id, v]));
+  const inputs: UnitProfitabilityInput[] = summaries.map((s) => ({
+    fin: {
+      unitId: s.unitId,
+      unitNumber: s.unitNumber,
+      floor: s.floor,
+      tenantName: s.tenantName,
+      // Accrual (economic) direct net income: accrued income − attributed expenses.
+      netIncomeCents: s.accruedIncomeCents - s.expensesCents,
+      expensesCents: s.expensesCents,
+      apportionedChargesCents: s.apportionedChargesCents,
+      occupancyRate: s.occupancyRate,
+      monthlyRentChf: s.monthlyRentChf,
+    },
+    val: valById.get(s.unitId) ?? null,
+  }));
+
+  const periodDays = dayCountInclusive(fromStr, toStr);
+  const result = computeUnitProfitability(
+    inputs,
+    { operatingTotalCents: buildingFin.operatingTotalCents, recoverableAncillaryCents: buildingFin.recoverableAncillaryCents },
+    marketPrice?.pricePerSqmChf ?? null,
+    periodDays,
+  );
+
+  return { buildingId, buildingName: building.name, from: fromStr, to: toStr, periodDays, ...result };
 }
 
 // ==========================================
