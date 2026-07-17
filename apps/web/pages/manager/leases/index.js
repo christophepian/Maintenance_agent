@@ -8,6 +8,8 @@ import PageContent from "../../../components/layout/PageContent";
 import Section from "../../../components/layout/Section";
 import { authHeaders } from "../../../lib/api";
 import UndoToast, { useUndoToast } from "../../../components/ui/UndoToast";
+import { Modal, ModalFooter } from "../../../components/ui/Modal";
+import Button from "../../../components/ui/Button";
 import ConfigurableTable from "../../../components/ConfigurableTable";
 import { clientSort, useLocalSort } from "../../../lib/tableUtils";
 import SortableHeader from "../../../components/SortableHeader";
@@ -209,6 +211,14 @@ export default function LeasesPage() {
   const [leaseSearch, setLeaseSearch] = useState("");
   const [expiryLoading, setExpiryLoading] = useState({});
   const [expiryResult, setExpiryResult] = useState({});
+
+  // Bulk-terminate (Active tab) — checkbox selection + shared-reason dialog
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [showTerminateModal, setShowTerminateModal] = useState(false);
+  const [terminateReason, setTerminateReason] = useState("LANDLORD_NOTICE");
+  const [terminateNote, setTerminateNote] = useState("");
+  const [terminating, setTerminating] = useState(false);
+  const [bulkResult, setBulkResult] = useState(null);
 
   const fetchLeases = useCallback(async () => {
     setLoading(true);
@@ -462,6 +472,73 @@ export default function LeasesPage() {
   const sortedArchived  = useMemo(() => clientSort(archived, lsSF, lsSD, leaseExtractor), [archived, lsSF, lsSD]);
 
   const tabCounts = [activeLease.length, draftLeases.length, submitted.length, templates.length, archived.length];
+
+  // ─── Bulk terminate: only ACTIVE leases are terminable server-side ─────────
+  const activeTerminable = useMemo(
+    () => sortedActive.filter((l) => l.status === "ACTIVE"),
+    [sortedActive]
+  );
+  const allTerminableSelected =
+    activeTerminable.length > 0 && activeTerminable.every((l) => selectedIds.has(l.id));
+
+  // Clear selection when switching away from the Active tab (checkboxes only live there)
+  useEffect(() => {
+    if (activeTab !== 0) setSelectedIds(new Set());
+  }, [activeTab]);
+
+  function toggleSelect(id) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    setSelectedIds((prev) => {
+      if (activeTerminable.every((l) => prev.has(l.id))) return new Set();
+      return new Set(activeTerminable.map((l) => l.id));
+    });
+  }
+
+  async function handleBulkTerminate() {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    setTerminating(true);
+    const byId = new Map(leases.map((l) => [l.id, l]));
+    const results = await Promise.all(
+      ids.map(async (id) => {
+        try {
+          const res = await fetch(`/api/leases/${id}/terminate`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", ...authHeaders() },
+            body: JSON.stringify({
+              reason: terminateReason,
+              notice: terminateNote.trim() || undefined,
+            }),
+          });
+          if (!res.ok) {
+            const json = await res.json().catch(() => ({}));
+            return { id, ok: false, error: json.error?.message || `HTTP ${res.status}` };
+          }
+          return { id, ok: true };
+        } catch (err) {
+          return { id, ok: false, error: err.message };
+        }
+      })
+    );
+    setTerminating(false);
+    const okCount = results.filter((r) => r.ok).length;
+    const failures = results
+      .filter((r) => !r.ok)
+      .map((r) => ({ name: byId.get(r.id)?.tenantName || r.id, error: r.error }));
+    setShowTerminateModal(false);
+    setSelectedIds(new Set());
+    setTerminateNote("");
+    setBulkResult({ okCount, failures });
+    await fetchLeases();
+  }
 
   return (
     <AppShell role="MANAGER">
@@ -895,6 +972,44 @@ export default function LeasesPage() {
               const sortedFiltered = [sortedActive, sortedDraft, null, null, sortedArchived][tabIndex];
               return (
                 <div key={tabIndex} className={activeTab === tabIndex ? "tab-panel-active" : "tab-panel"}>
+                  {tabIndex === 0 && bulkResult && (
+                    <div className={cn(
+                      "mx-4 mt-4 flex items-start justify-between gap-3 rounded-lg border px-4 py-3 text-sm",
+                      bulkResult.failures.length === 0
+                        ? "border-green-200 bg-green-50 text-green-800"
+                        : "border-amber-200 bg-amber-50 text-amber-800"
+                    )}>
+                      <div>
+                        <p className="font-medium">
+                          {bulkResult.okCount} lease{bulkResult.okCount !== 1 ? "s" : ""} terminated
+                          {bulkResult.failures.length > 0 && `, ${bulkResult.failures.length} failed`}
+                        </p>
+                        {bulkResult.failures.length > 0 && (
+                          <ul className="mt-1 list-disc pl-5 text-xs">
+                            {bulkResult.failures.map((f, i) => (
+                              <li key={i}>{f.name}: {f.error}</li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                      <button onClick={() => setBulkResult(null)} className="text-lg leading-none opacity-60 hover:opacity-100" aria-label="Dismiss">✕</button>
+                    </div>
+                  )}
+                  {tabIndex === 0 && selectedIds.size > 0 && (
+                    <div className="mx-4 mt-4 flex items-center justify-between gap-3 rounded-lg border border-brand/30 bg-brand/5 px-4 py-2.5">
+                      <span className="text-sm font-medium text-muted-dark">
+                        {selectedIds.size} lease{selectedIds.size !== 1 ? "s" : ""} selected
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <Button variant="secondary" size="sm" onClick={() => setSelectedIds(new Set())}>
+                          Clear
+                        </Button>
+                        <Button variant="destructive" size="sm" onClick={() => setShowTerminateModal(true)}>
+                          Terminate selected
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                   {loading ? (
                     <p className="loading-text">{t("manager:leasesIndex.text.loadingLeases")}</p>
                   ) : error ? (
@@ -919,7 +1034,19 @@ export default function LeasesPage() {
                               onClick={() => router.push(`/manager/leases/${lease.id}`)}
                             >
                               <div className="flex items-start justify-between gap-2">
-                                <span className="table-card-head">{lease.tenantName}</span>
+                                <span className="flex items-center gap-2">
+                                  {tabIndex === 0 && lease.status === "ACTIVE" && (
+                                    <input
+                                      type="checkbox"
+                                      className="rounded cursor-pointer"
+                                      checked={selectedIds.has(lease.id)}
+                                      onClick={(e) => e.stopPropagation()}
+                                      onChange={() => toggleSelect(lease.id)}
+                                      aria-label={`Select lease for ${lease.tenantName}`}
+                                    />
+                                  )}
+                                  <span className="table-card-head">{lease.tenantName}</span>
+                                </span>
                                 <Badge variant={leaseVariant(lease.status)} size="sm">
                                   {lease.status.replace(/_/g, " ")}
                                 </Badge>
@@ -942,6 +1069,18 @@ export default function LeasesPage() {
                         <table className="data-table">
                           <thead>
                             <tr>
+                              {tabIndex === 0 && (
+                                <th className="w-10 text-center">
+                                  <input
+                                    type="checkbox"
+                                    className="rounded cursor-pointer"
+                                    checked={allTerminableSelected}
+                                    disabled={activeTerminable.length === 0}
+                                    onChange={toggleSelectAll}
+                                    aria-label="Select all terminable leases"
+                                  />
+                                </th>
+                              )}
                               <SortableHeader label={t("manager:leasesIndex.prop.tenant")} field="tenantName" sortField={lsSF} sortDir={lsSD} onSort={handleLsSort} />
                               <SortableHeader label={t("manager:leasesIndex.prop.unit")} field="unit" sortField={lsSF} sortDir={lsSD} onSort={handleLsSort} />
                               <SortableHeader label={t("manager:leasesIndex.prop.building")} field="building" sortField={lsSF} sortDir={lsSD} onSort={handleLsSort} />
@@ -960,7 +1099,20 @@ export default function LeasesPage() {
                               const charges = lease.chargesTotalChf ?? 0;
                               const totalMo = netRent + charges;
                               return (
-                              <tr key={lease.id} onClick={() => router.push(`/manager/leases/${lease.id}`)} className="cursor-pointer hover:bg-surface-subtle">
+                              <tr key={lease.id} onClick={() => router.push(`/manager/leases/${lease.id}`)} className={cn("cursor-pointer hover:bg-surface-subtle", selectedIds.has(lease.id) ? "bg-brand/5" : "")}>
+                                {tabIndex === 0 && (
+                                  <td className="text-center" onClick={(e) => e.stopPropagation()}>
+                                    {lease.status === "ACTIVE" ? (
+                                      <input
+                                        type="checkbox"
+                                        className="rounded cursor-pointer"
+                                        checked={selectedIds.has(lease.id)}
+                                        onChange={() => toggleSelect(lease.id)}
+                                        aria-label={`Select lease for ${lease.tenantName}`}
+                                      />
+                                    ) : null}
+                                  </td>
+                                )}
                                 <td className="cell-bold">{lease.tenantName}</td>
                                 <td>{lease.unit?.unitNumber || "—"}</td>
                                 <td>{lease.unit?.building?.name || "—"}</td>
@@ -1002,6 +1154,50 @@ export default function LeasesPage() {
               );
             })}
         </PageContent>
+        {showTerminateModal && (
+          <Modal
+            title={`Terminate ${selectedIds.size} lease${selectedIds.size !== 1 ? "s" : ""}`}
+            description="The same reason and note are applied to every selected lease. Only ACTIVE leases can be terminated."
+            onClose={() => !terminating && setShowTerminateModal(false)}
+          >
+            <div className="space-y-4 mb-6">
+              <div>
+                <label className="block text-sm font-medium text-muted-dark mb-1">Reason</label>
+                <select
+                  value={terminateReason}
+                  onChange={(e) => setTerminateReason(e.target.value)}
+                  className="w-full border rounded-lg px-3 py-2 text-sm"
+                  disabled={terminating}
+                >
+                  <option value="LANDLORD_NOTICE">Landlord notice</option>
+                  <option value="TENANT_NOTICE">Tenant notice</option>
+                  <option value="MUTUAL">Mutual agreement</option>
+                  <option value="END_OF_TERM">End of term</option>
+                  <option value="OTHER">Other</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-muted-dark mb-1">Note (optional)</label>
+                <textarea
+                  value={terminateNote}
+                  onChange={(e) => setTerminateNote(e.target.value)}
+                  rows={3}
+                  className="w-full border rounded-lg px-3 py-2 text-sm"
+                  placeholder="Added to every terminated lease"
+                  disabled={terminating}
+                />
+              </div>
+            </div>
+            <ModalFooter>
+              <Button variant="secondary" onClick={() => setShowTerminateModal(false)} disabled={terminating}>
+                Cancel
+              </Button>
+              <Button variant="destructive" onClick={handleBulkTerminate} disabled={terminating}>
+                {terminating ? "Terminating…" : `Terminate ${selectedIds.size}`}
+              </Button>
+            </ModalFooter>
+          </Modal>
+        )}
         <UndoToast {...toast} />
       </PageShell>
     </AppShell>
