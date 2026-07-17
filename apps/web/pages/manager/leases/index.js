@@ -1162,8 +1162,9 @@ export default function LeasesPage() {
           >
             <div className="space-y-4 mb-6">
               <div>
-                <label className="block text-sm font-medium text-muted-dark mb-1">Reason</label>
+                <label htmlFor="bulk-terminate-reason" className="block text-sm font-medium text-muted-dark mb-1">Reason</label>
                 <select
+                  id="bulk-terminate-reason"
                   value={terminateReason}
                   onChange={(e) => setTerminateReason(e.target.value)}
                   className="w-full border rounded-lg px-3 py-2 text-sm"
@@ -1177,8 +1178,9 @@ export default function LeasesPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-muted-dark mb-1">Note (optional)</label>
+                <label htmlFor="bulk-terminate-note" className="block text-sm font-medium text-muted-dark mb-1">Note (optional)</label>
                 <textarea
+                  id="bulk-terminate-note"
                   value={terminateNote}
                   onChange={(e) => setTerminateNote(e.target.value)}
                   rows={3}
