@@ -801,6 +801,8 @@
         "intrinsicValue": "Intrinsic",
         "yieldIntrinsic": "Yield",
         "sellCandidate": "Sell candidate",
+        "total": "Total",
+        "reconcileWarn": "Per-unit income sums to {{sum}} but the building income is {{building}} (Δ {{delta}}). Some income isn't attributed to a unit, so the breakdown below is incomplete.",
         "footnote": "NOI is accrual-basis, fully loaded with pro-rata building overhead, annualised to the period. Building value is the sum of the units' valeur intrinsèque; PPE estimate and market value are the stored appraisals, shown for reconciliation."
       },
       "valueCreationTab": "Value creation",

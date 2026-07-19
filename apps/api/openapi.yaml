@@ -303,6 +303,15 @@ components:
         navChf: { type: number, nullable: true, description: Bottom-up value − debt }
         allocatedOverheadPoolCents: { type: integer }
         allocationKey: { type: string, enum: [livingAreaSqm, equal] }
+        reconciliation:
+          type: object
+          description: Footing check of per-unit income vs the building income
+          properties:
+            sumUnitIncomeCents: { type: integer }
+            buildingIncomeCents: { type: integer }
+            buildingNoiCents: { type: integer }
+            incomeDeltaCents: { type: integer }
+            reconciled: { type: boolean }
         rows:
           type: array
           description: Per-unit rows ranked by net yield on intrinsic value (descending; unpriced units last)

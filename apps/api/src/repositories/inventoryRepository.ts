@@ -893,9 +893,13 @@ export async function countTotalUnitsByBuilding(
 }
 
 /**
- * Count units that had an active lease during the given period.
+ * Count DISTINCT active units that had a lease overlapping the given period.
  * Includes TERMINATED leases whose tenure overlapped the period so that
  * historical reports reflect true occupancy rather than current-state leases.
+ *
+ * Counts units (not lease rows): a unit with a mid-period tenant turnover has two
+ * overlapping leases but is still one occupied unit, so occupancy can never exceed
+ * the total unit count. (Counting leases here caused >100% occupancy — 2026-07-19.)
  */
 export async function countLeasedUnitsByBuilding(
   prisma: PrismaClient,
@@ -904,13 +908,18 @@ export async function countLeasedUnitsByBuilding(
   from: Date,
   to: Date,
 ): Promise<number> {
-  return prisma.lease.count({
+  return prisma.unit.count({
     where: {
       orgId,
-      status: { in: ["ACTIVE", "SIGNED", "TERMINATED"] },
-      unit: { buildingId },
-      startDate: { lt: to },
-      OR: [{ endDate: null }, { endDate: { gte: from } }],
+      buildingId,
+      isActive: true,
+      leases: {
+        some: {
+          status: { in: ["ACTIVE", "SIGNED", "TERMINATED"] },
+          startDate: { lt: to },
+          OR: [{ endDate: null }, { endDate: { gte: from } }],
+        },
+      },
     },
   });
 }

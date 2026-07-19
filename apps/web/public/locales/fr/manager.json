@@ -801,6 +801,8 @@
         "intrinsicValue": "Intrinsèque",
         "yieldIntrinsic": "Rendement",
         "sellCandidate": "Candidat vente",
+        "total": "Total",
+        "reconcileWarn": "La somme des revenus par lot est {{sum}} alors que le revenu de l'immeuble est {{building}} (Δ {{delta}}). Une partie des revenus n'est pas attribuée à un lot ; la répartition ci-dessous est incomplète.",
         "footnote": "Le RNE est en comptabilité d'engagement, pleinement chargé des charges d'immeuble au prorata, annualisé sur la période. La valeur de l'immeuble est la somme des valeurs intrinsèques des lots ; l'estimation PPE et la valeur vénale sont les expertises stockées, affichées pour rapprochement."
       },
       "valueCreationTab": "Création de valeur",

@@ -1099,6 +1099,17 @@ function safePct(num: number, den: number): number | null {
   return Math.round((num / den) * 10000) / 10000;
 }
 
+/**
+ * Occupancy ratio (occupied units / total units), rounded to 4 dp and CLAMPED to
+ * [0,1] as a guardrail — occupancy can never exceed 100%, even if an upstream count
+ * is momentarily inconsistent. (Root cause of a 131% reading was fixed separately by
+ * counting distinct leased units, not lease rows.)
+ */
+export function occupancyRatio(active: number, total: number): number {
+  if (total <= 0) return 0;
+  return Math.min(1, Math.round((active / total) * 10000) / 10000);
+}
+
 function summaryToPoint(
   summary: Awaited<ReturnType<typeof getPortfolioSummary>>,
   periodStart: string,
@@ -1120,7 +1131,7 @@ function summaryToPoint(
     opexRatioPct:      safePct(expenses, earned),
     occupancyRate:
       summary.totalUnits > 0
-        ? Math.round((summary.totalActiveUnits / summary.totalUnits) * 10000) / 10000
+        ? occupancyRatio(summary.totalActiveUnits, summary.totalUnits)
         : null,
   };
 }
@@ -1250,7 +1261,7 @@ async function getDailyPoints(
         noiMarginPct:      safePct(noi, earned),
         opexRatioPct:      safePct(expenses, earned),
         occupancyRate:     summary.totalUnits > 0
-          ? Math.round((summary.totalActiveUnits / summary.totalUnits) * 10000) / 10000
+          ? occupancyRatio(summary.totalActiveUnits, summary.totalUnits)
           : null,
         activeUnitsCount: summary.totalActiveUnits,
       });
@@ -1368,7 +1379,7 @@ export async function computeAndStoreDailyPortfolioSnapshot(
     opexRatioPct:      safePct(expenses, earned),
     occupancyRate:
       summary.totalUnits > 0
-        ? Math.round((summary.totalActiveUnits / summary.totalUnits) * 10000) / 10000
+        ? occupancyRatio(summary.totalActiveUnits, summary.totalUnits)
         : null,
     activeUnitsCount: summary.totalActiveUnits,
   });
@@ -1425,7 +1436,7 @@ function buildingSummaryToPoint(
     opexRatioPct:      safePct(expenses, earned),
     occupancyRate:
       dto.totalUnitsCount > 0
-        ? Math.round((dto.activeUnitsCount / dto.totalUnitsCount) * 10000) / 10000
+        ? occupancyRatio(dto.activeUnitsCount, dto.totalUnitsCount)
         : null,
   };
 }
@@ -1525,7 +1536,7 @@ async function getBuildingMonthlyPoints(
           collectionRate: d.collectionRate,
           noiMarginPct: safePct(noi, md.incomeCents),
           opexRatioPct: safePct(md.expensesCents, md.incomeCents),
-          occupancyRate: d.totalUnitsCount > 0 ? Math.round((d.activeUnitsCount / d.totalUnitsCount) * 10000) / 10000 : null,
+          occupancyRate: d.totalUnitsCount > 0 ? occupancyRatio(d.activeUnitsCount, d.totalUnitsCount) : null,
         };
       }
       const dto = await getBuildingFinancials(orgId, buildingId, { from: p.from, to: p.to });
@@ -1627,7 +1638,7 @@ async function getBuildingDailyPoints(
         opexRatioPct:      safePct(expenses, earned),
         occupancyRate:
           dto.totalUnitsCount > 0
-            ? Math.round((dto.activeUnitsCount / dto.totalUnitsCount) * 10000) / 10000
+            ? occupancyRatio(dto.activeUnitsCount, dto.totalUnitsCount)
             : null,
         activeUnitsCount: dto.activeUnitsCount,
       });
@@ -1732,7 +1743,7 @@ export async function computeAndStoreDailyBuildingSnapshot(
       opexRatioPct:      safePct(expenses, earned),
       occupancyRate:
         dto.totalUnitsCount > 0
-          ? Math.round((dto.activeUnitsCount / dto.totalUnitsCount) * 10000) / 10000
+          ? occupancyRatio(dto.activeUnitsCount, dto.totalUnitsCount)
           : null,
       activeUnitsCount: dto.activeUnitsCount,
     });
@@ -1949,6 +1960,18 @@ export interface UnitProfitabilityReportDTO extends UnitProfitabilityResult {
   from: string;
   to: string;
   periodDays: number;
+  /**
+   * Footing check: the per-unit income breakdown vs the building's income (the
+   * "KPIs" figure). A mismatch means income is booked to a lease with no unit, or
+   * at building level — the per-unit table won't foot to the building total.
+   */
+  reconciliation: {
+    sumUnitIncomeCents: number;
+    buildingIncomeCents: number;
+    buildingNoiCents: number;
+    incomeDeltaCents: number; // building − Σ unit
+    reconciled: boolean;
+  };
 }
 
 function dayCountInclusive(fromStr: string, toStr: string): number {
@@ -2010,7 +2033,21 @@ export async function getUnitProfitability(
     periodDays,
   );
 
-  return { buildingId, buildingName: building.name, from: fromStr, to: toStr, periodDays, ...result };
+  // Footing check: per-unit income should sum to the building's income (same source
+  // — OUTGOING lease invoices). A gap means income is unattributed to any unit.
+  const sumUnitIncomeCents = summaries.reduce((s, u) => s + u.accruedIncomeCents, 0);
+  const buildingIncomeCents = buildingFin.accruedIncomeCents;
+  const incomeDeltaCents = buildingIncomeCents - sumUnitIncomeCents;
+  const tolerance = Math.max(100, Math.round(Math.abs(buildingIncomeCents) * 0.005));
+  const reconciliation = {
+    sumUnitIncomeCents,
+    buildingIncomeCents,
+    buildingNoiCents: buildingFin.netOperatingIncomeCents,
+    incomeDeltaCents,
+    reconciled: Math.abs(incomeDeltaCents) <= tolerance,
+  };
+
+  return { buildingId, buildingName: building.name, from: fromStr, to: toStr, periodDays, ...result, reconciliation };
 }
 
 // ==========================================
