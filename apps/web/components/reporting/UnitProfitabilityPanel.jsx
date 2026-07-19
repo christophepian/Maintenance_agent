@@ -90,6 +90,17 @@ export default function UnitProfitabilityPanel({ buildingId, from, to }) {
         )}
       </div>
 
+      {data?.reconciliation && !data.reconciliation.reconciled && (
+        <div className="mb-3 flex items-start gap-2 rounded-lg bg-warning-light px-3 py-2 text-xs text-warning-text" role="alert">
+          <span aria-hidden="true">⚠</span>
+          <span>{t("buildingsId.reporting.unitProfit.reconcileWarn", {
+            sum: formatChfCents(data.reconciliation.sumUnitIncomeCents),
+            building: formatChfCents(data.reconciliation.buildingIncomeCents),
+            delta: formatChfCents(Math.abs(data.reconciliation.incomeDeltaCents)),
+          })}</span>
+        </div>
+      )}
+
       {rows.length === 0 ? (
         <p className="rounded-xl border border-dashed border-surface-border p-6 text-center text-sm text-foreground-dim">
           {t("buildingsId.reporting.unitProfit.empty")}
@@ -146,7 +157,23 @@ export default function UnitProfitabilityPanel({ buildingId, from, to }) {
                   </tr>
                 ))}
               </tbody>
+              <tfoot>
+                <tr className="border-t-2 border-surface-border font-semibold">
+                  <td className="py-2 pr-3" colSpan={2}>{t("buildingsId.reporting.unitProfit.total")}</td>
+                  <td className="py-2 pr-3 text-right tabular-nums">{formatChfCents(data.totalAnnualNoiCents)}</td>
+                  <td className="py-2 pr-3 text-right tabular-nums text-foreground-dim">100%</td>
+                  <td className="py-2 pr-3 text-right tabular-nums">{chf(buildingValue)}</td>
+                  <td className="py-2 pr-3 text-right tabular-nums text-foreground-dim">{buildingValue ? "100%" : "—"}</td>
+                  <td className="py-2 pr-3 text-right tabular-nums">{pct(data?.buildingNetYieldPct)}</td>
+                  <td />
+                </tr>
+              </tfoot>
             </table>
+          </div>
+          {/* Mobile total */}
+          <div className="mt-2 flex items-center justify-between rounded-xl border-2 border-surface-border px-3 py-2 text-sm font-semibold sm:hidden">
+            <span>{t("buildingsId.reporting.unitProfit.total")}</span>
+            <span className="tabular-nums">{formatChfCents(data.totalAnnualNoiCents)} · {pct(data?.buildingNetYieldPct)}</span>
           </div>
           <p className="mt-3 text-xs text-foreground-dim">{t("buildingsId.reporting.unitProfit.footnote")}</p>
         </>
