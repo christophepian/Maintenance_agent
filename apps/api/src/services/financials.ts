@@ -8,6 +8,7 @@ import * as financialsRepo from "../repositories/financialsRepository";
 import * as dailySnapshotRepo from "../repositories/portfolioDailySnapshotRepository";
 import * as billingPeriodRepo from "../repositories/billingPeriodRepository";
 import * as importedStatementRepo from "../repositories/importedStatementRepository";
+import * as mortgageRepo from "../repositories/mortgageRepository";
 import type { ExpenseLedgerRow, ArrearsAgingDTO } from "../repositories/financialsRepository";
 import { mapWithConcurrency } from "../utils/concurrency";
 import { computeUnitProfitability, type UnitProfitabilityInput, type UnitProfitabilityResult } from "./unitProfitability";
@@ -1970,14 +1971,14 @@ export async function getUnitProfitability(
   const building = await inventoryRepo.findBuildingByIdAndOrg(prisma, buildingId, orgId);
   if (!building) throw new Error(`Building ${buildingId} not found`);
 
-  const [summaries, buildingFin, valUnits] = await Promise.all([
+  const [summaries, buildingFin, valUnits, mortgages] = await Promise.all([
     getUnitFinancialSummaries(orgId, buildingId, fromStr, toStr),
     getBuildingFinancials(orgId, buildingId, { from: fromStr, to: toStr }),
     inventoryRepo.findUnitsWithValuationForBuilding(prisma, orgId, buildingId),
+    mortgageRepo.listMortgagesByBuilding(prisma, orgId, buildingId),
   ]);
-  const marketPrice = building.postalCode
-    ? await inventoryRepo.findMarketPriceByZip(prisma, orgId, building.postalCode)
-    : null;
+  // Total mortgage balance for NAV (0 when the building has no mortgages = unlevered).
+  const totalDebtChf = Math.round(mortgages.reduce((s, m) => s + (m.currentBalanceChf ?? 0), 0));
 
   const valById = new Map(valUnits.map((v) => [v.id, v]));
   const inputs: UnitProfitabilityInput[] = summaries.map((s) => ({
@@ -1999,8 +2000,13 @@ export async function getUnitProfitability(
   const periodDays = dayCountInclusive(fromStr, toStr);
   const result = computeUnitProfitability(
     inputs,
-    { operatingTotalCents: buildingFin.operatingTotalCents, recoverableAncillaryCents: buildingFin.recoverableAncillaryCents },
-    marketPrice?.pricePerSqmChf ?? null,
+    {
+      operatingTotalCents: buildingFin.operatingTotalCents,
+      recoverableAncillaryCents: buildingFin.recoverableAncillaryCents,
+      ppeEstimateChf: building.ppeEstimateChf ?? null,
+      marketValueChf: building.marketValueChf ?? null,
+      totalDebtChf,
+    },
     periodDays,
   );
 

@@ -295,13 +295,17 @@ components:
         to: { type: string, format: date }
         periodDays: { type: integer }
         totalAnnualNoiCents: { type: integer }
-        avgNetYieldOnMarketPct: { type: number, nullable: true }
+        buildingIntrinsicValueChf: { type: number, nullable: true, description: Bottom-up building value = Σ unit intrinsic value }
+        buildingNetYieldPct: { type: number, nullable: true, description: Annual NOI / bottom-up building value }
+        ppeEstimateChf: { type: number, nullable: true, description: Stored PPE appraisal (reconciliation) }
+        marketValueChf: { type: number, nullable: true, description: Stored market appraisal (reconciliation) }
+        totalDebtChf: { type: number, nullable: true }
+        navChf: { type: number, nullable: true, description: Bottom-up value − debt }
         allocatedOverheadPoolCents: { type: integer }
         allocationKey: { type: string, enum: [livingAreaSqm, equal] }
-        marketPricePerSqmChf: { type: number, nullable: true }
         rows:
           type: array
-          description: Per-unit rows ranked by net yield on market value (descending; unpriced units last)
+          description: Per-unit rows ranked by net yield on intrinsic value (descending; unpriced units last)
           items:
             type: object
             required: [unitId, unitNumber, annualNoiCents, sellCandidate]
@@ -316,10 +320,9 @@ components:
               annualNoiCents: { type: integer, description: Fully-loaded, annualised, accrual-basis NOI }
               noiContributionPct: { type: number, nullable: true }
               intrinsicValueChf: { type: number, nullable: true }
-              marketValueChf: { type: number, nullable: true }
+              valueSharePct: { type: number, nullable: true, description: Unit share of the building's intrinsic value }
               netYieldOnIntrinsicPct: { type: number, nullable: true }
-              netYieldOnMarketPct: { type: number, nullable: true }
-              sellCandidate: { type: boolean, description: Market yield materially below the building average }
+              sellCandidate: { type: boolean, description: Intrinsic yield materially below the building yield }
 
     TimeSeriesPoint:
       type: object

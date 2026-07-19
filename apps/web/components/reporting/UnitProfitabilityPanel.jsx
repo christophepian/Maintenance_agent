@@ -1,12 +1,12 @@
 /**
- * UnitProfitabilityPanel — the "which units are most profitable" table for the
- * building Reporting → Unit profitability sub-tab.
+ * UnitProfitabilityPanel — building profitability, broken down by unit
+ * (Reporting → "Profitability" sub-tab).
  *
- * Fully-loaded (overhead pro-rata by area), annualised, accrual-basis NOI, with
- * yield-on-value against BOTH the intrinsic worksheet and the per-zip market
- * estimate. Ranked by market yield descending; low-yield / high-value units are
- * flagged as sell / PPE candidates (the disposition signal). Dual render (mobile
- * cards + desktop table) so it never scrolls the page horizontally.
+ * Header: building value computed bottom-up (Σ unit intrinsic), reconciled against
+ * the stored PPE / market appraisals, plus building net yield and NAV. Table:
+ * per-unit fully-loaded annualised NOI, intrinsic value, % of building value, and
+ * yield-on-intrinsic — ranked by yield, low-yield/high-value units flagged as
+ * sell / PPE candidates. Dual render so it never scrolls the page horizontally.
  */
 import { useTranslation } from "next-i18next";
 import { cn } from "../../lib/utils";
@@ -20,15 +20,21 @@ function chf(v) {
   return v == null ? "—" : formatChf(v);
 }
 
-function YieldCell({ value }) {
-  return <span className="tabular-nums">{pct(value)}</span>;
-}
-
 function SellFlag({ t }) {
   return (
     <span className="rounded-full bg-orange-light px-2 py-0.5 text-xs font-semibold text-orange-text">
       {t("buildingsId.reporting.unitProfit.sellCandidate")}
     </span>
+  );
+}
+
+function Stat({ label, value, sub }) {
+  return (
+    <div>
+      <p className="text-[10px] font-bold uppercase tracking-wide text-foreground-dim">{label}</p>
+      <p className="text-lg font-bold tabular-nums text-foreground">{value}</p>
+      {sub && <p className="text-[11px] text-foreground-dim">{sub}</p>}
+    </div>
   );
 }
 
@@ -43,38 +49,46 @@ export default function UnitProfitabilityPanel({ buildingId, from, to }) {
   if (error) return <p className="p-5 text-sm text-destructive-text" role="alert">{t("buildingsId.reporting.unitProfit.error")}</p>;
 
   const rows = data?.rows ?? [];
-  const avg = data?.avgNetYieldOnMarketPct;
-  const noMarket = data?.marketPricePerSqmChf == null;
+  const buildingValue = data?.buildingIntrinsicValueChf;
+
+  // Reconciliation deltas vs the bottom-up value.
+  const recon = (appraisal) =>
+    buildingValue && appraisal != null
+      ? `${appraisal >= buildingValue ? "+" : ""}${(((appraisal - buildingValue) / buildingValue) * 100).toFixed(1)}%`
+      : null;
 
   return (
     <div className="p-4 sm:p-5">
-      {/* Header strip */}
-      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h3 className="text-sm font-semibold text-foreground">{t("buildingsId.reporting.unitProfit.title")}</h3>
-          <p className="text-xs text-foreground-dim">{t("buildingsId.reporting.unitProfit.subtitle")}</p>
-        </div>
-        <div className="flex flex-wrap gap-4 text-right">
-          {avg != null && (
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.unitProfit.avgYield")}</p>
-              <p className="text-lg font-bold tabular-nums text-foreground">{pct(avg)}</p>
-            </div>
-          )}
-          {data?.allocatedOverheadPoolCents != null && (
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.unitProfit.overheadPool")}</p>
-              <p className="text-lg font-bold tabular-nums text-foreground">{formatChfCents(data.allocatedOverheadPoolCents)}</p>
-            </div>
-          )}
-        </div>
+      {/* Building header */}
+      <div className="mb-2">
+        <h3 className="text-sm font-semibold text-foreground">{t("buildingsId.reporting.unitProfit.title")}</h3>
+        <p className="text-xs text-foreground-dim">{t("buildingsId.reporting.unitProfit.subtitle")}</p>
       </div>
-
-      {noMarket && (
-        <p className="mb-3 rounded-lg bg-warning-light px-3 py-2 text-xs text-warning-text">
-          {t("buildingsId.reporting.unitProfit.noMarketPrice")}
-        </p>
-      )}
+      <div className="mb-4 flex flex-wrap gap-x-8 gap-y-3 rounded-xl border border-surface-border bg-surface-subtle p-4">
+        <Stat
+          label={t("buildingsId.reporting.unitProfit.buildingValue")}
+          value={chf(buildingValue)}
+          sub={t("buildingsId.reporting.unitProfit.buildingValueSub")}
+        />
+        <Stat label={t("buildingsId.reporting.unitProfit.buildingYield")} value={pct(data?.buildingNetYieldPct)} />
+        <Stat
+          label={t("buildingsId.reporting.unitProfit.ppeEstimate")}
+          value={chf(data?.ppeEstimateChf)}
+          sub={recon(data?.ppeEstimateChf) ? t("buildingsId.reporting.unitProfit.vsBottomUp", { delta: recon(data?.ppeEstimateChf) }) : undefined}
+        />
+        <Stat
+          label={t("buildingsId.reporting.unitProfit.marketValue")}
+          value={chf(data?.marketValueChf)}
+          sub={recon(data?.marketValueChf) ? t("buildingsId.reporting.unitProfit.vsBottomUp", { delta: recon(data?.marketValueChf) }) : undefined}
+        />
+        {data?.navChf != null && (
+          <Stat
+            label={t("buildingsId.reporting.unitProfit.nav")}
+            value={chf(data.navChf)}
+            sub={t("buildingsId.reporting.unitProfit.navSub")}
+          />
+        )}
+      </div>
 
       {rows.length === 0 ? (
         <p className="rounded-xl border border-dashed border-surface-border p-6 text-center text-sm text-foreground-dim">
@@ -95,9 +109,9 @@ export default function UnitProfitabilityPanel({ buildingId, from, to }) {
                 </div>
                 <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
                   <div><span className="text-foreground-dim">{t("buildingsId.reporting.unitProfit.annualNoi")}: </span><span className="font-semibold tabular-nums">{formatChfCents(r.annualNoiCents)}</span></div>
-                  <div><span className="text-foreground-dim">{t("buildingsId.reporting.unitProfit.yieldMarket")}: </span><span className="font-semibold tabular-nums">{pct(r.netYieldOnMarketPct)}</span></div>
-                  <div><span className="text-foreground-dim">{t("buildingsId.reporting.unitProfit.marketValue")}: </span><span className="tabular-nums">{chf(r.marketValueChf)}</span></div>
-                  <div><span className="text-foreground-dim">{t("buildingsId.reporting.unitProfit.yieldIntrinsic")}: </span><span className="tabular-nums">{pct(r.netYieldOnIntrinsicPct)}</span></div>
+                  <div><span className="text-foreground-dim">{t("buildingsId.reporting.unitProfit.yieldIntrinsic")}: </span><span className="font-semibold tabular-nums">{pct(r.netYieldOnIntrinsicPct)}</span></div>
+                  <div><span className="text-foreground-dim">{t("buildingsId.reporting.unitProfit.intrinsicValue")}: </span><span className="tabular-nums">{chf(r.intrinsicValueChf)}</span></div>
+                  <div><span className="text-foreground-dim">{t("buildingsId.reporting.unitProfit.valueShare")}: </span><span className="tabular-nums">{pct(r.valueSharePct)}</span></div>
                 </div>
               </div>
             ))}
@@ -105,7 +119,7 @@ export default function UnitProfitabilityPanel({ buildingId, from, to }) {
 
           {/* Desktop table */}
           <div className="hidden overflow-x-auto sm:block">
-            <table className="w-full min-w-[720px] text-sm">
+            <table className="w-full min-w-[680px] text-sm">
               <thead>
                 <tr className="border-b border-surface-border text-left text-xs uppercase tracking-wide text-foreground-dim">
                   <th className="py-2 pr-3 font-semibold">{t("buildingsId.reporting.unitProfit.unit")}</th>
@@ -113,9 +127,8 @@ export default function UnitProfitabilityPanel({ buildingId, from, to }) {
                   <th className="py-2 pr-3 text-right font-semibold">{t("buildingsId.reporting.unitProfit.annualNoi")}</th>
                   <th className="py-2 pr-3 text-right font-semibold">{t("buildingsId.reporting.unitProfit.noiShare")}</th>
                   <th className="py-2 pr-3 text-right font-semibold">{t("buildingsId.reporting.unitProfit.intrinsicValue")}</th>
+                  <th className="py-2 pr-3 text-right font-semibold">{t("buildingsId.reporting.unitProfit.valueShare")}</th>
                   <th className="py-2 pr-3 text-right font-semibold">{t("buildingsId.reporting.unitProfit.yieldIntrinsic")}</th>
-                  <th className="py-2 pr-3 text-right font-semibold">{t("buildingsId.reporting.unitProfit.marketValue")}</th>
-                  <th className="py-2 pr-3 text-right font-semibold">{t("buildingsId.reporting.unitProfit.yieldMarket")}</th>
                   <th className="py-2 font-semibold" />
                 </tr>
               </thead>
@@ -127,9 +140,8 @@ export default function UnitProfitabilityPanel({ buildingId, from, to }) {
                     <td className="py-2 pr-3 text-right font-semibold tabular-nums">{formatChfCents(r.annualNoiCents)}</td>
                     <td className="py-2 pr-3 text-right tabular-nums text-foreground-dim">{pct(r.noiContributionPct)}</td>
                     <td className="py-2 pr-3 text-right tabular-nums">{chf(r.intrinsicValueChf)}</td>
-                    <td className="py-2 pr-3 text-right"><YieldCell value={r.netYieldOnIntrinsicPct} /></td>
-                    <td className="py-2 pr-3 text-right tabular-nums">{chf(r.marketValueChf)}</td>
-                    <td className="py-2 pr-3 text-right font-semibold"><YieldCell value={r.netYieldOnMarketPct} /></td>
+                    <td className="py-2 pr-3 text-right tabular-nums text-foreground-dim">{pct(r.valueSharePct)}</td>
+                    <td className="py-2 pr-3 text-right font-semibold tabular-nums">{pct(r.netYieldOnIntrinsicPct)}</td>
                     <td className="py-2 text-right">{r.sellCandidate && <SellFlag t={t} />}</td>
                   </tr>
                 ))}
