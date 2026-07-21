@@ -199,10 +199,15 @@ export async function generateInvoiceForPeriod(
 
   const fraction = isProRata ? proRataFraction(periodStart) : 1;
 
-  // Compute amounts
+  // Compute amounts. Base rent is a single line so it foots exactly.
   const baseRentCents = Math.round(schedule.baseRentCents * fraction);
-  const chargesCents = Math.round(schedule.totalChargesCents * fraction);
-  const totalCents = baseRentCents + chargesCents;
+  // Charges are accumulated from the actual line items built below rather than
+  // re-rounded from the schedule aggregate, so the invoice total always equals
+  // the sum of its visible charge lines. Re-rounding the aggregate here
+  // (Math.round of totalChargesCents * fraction) diverged from the per-item
+  // rounding by up to ±1 cent per item once a lease had ≥2 itemised charges —
+  // an invoice-footing mismatch between totalAmount and the line items.
+  let chargesCents = 0;
 
   // Compute dates
   const dueDate = computeDueDate(periodStart, isProRata);
@@ -240,6 +245,7 @@ export async function generateInvoiceForPeriod(
   if (lease.expenseItems.length > 0) {
     for (const item of lease.expenseItems) {
       const itemCents = Math.round(item.amountChf * 100 * fraction);
+      chargesCents += itemCents;
       const modeLabel = item.mode === "ACOMPTE" ? "acompte" : "forfait";
       lineItems.push({
         description: isProRata
@@ -254,16 +260,17 @@ export async function generateInvoiceForPeriod(
       });
     }
   } else if (((lease as any).chargesTotalChf ?? 0) > 0) {
-    const chargesCents = Math.round((lease as any).chargesTotalChf * 100 * fraction);
+    const fallbackChargesCents = Math.round((lease as any).chargesTotalChf * 100 * fraction);
+    chargesCents += fallbackChargesCents;
     const chargesMonth = periodStart.toLocaleString("fr-CH", { month: "long", year: "numeric" });
     lineItems.push({
       description: isProRata
         ? `Charges (acompte, pro rata) — ${chargesMonth}`
         : `Charges (acompte) — ${chargesMonth}`,
       quantity: 1,
-      unitPrice: chargesCents,
+      unitPrice: fallbackChargesCents,
       vatRate: 0,
-      lineTotal: chargesCents,
+      lineTotal: fallbackChargesCents,
       isChargeAdvance: true,
     });
   }
@@ -300,8 +307,10 @@ export async function generateInvoiceForPeriod(
     }
   }
 
-  // Grand total includes the co-billed parking rent.
-  const grandTotalCents = totalCents + parkingCents;
+  // Grand total = base rent + charges (summed from the emitted line items) +
+  // co-billed parking rent. Every component is the exact sum of the line items,
+  // so subtotalAmount/totalAmount always foot to the visible lines.
+  const grandTotalCents = baseRentCents + chargesCents + parkingCents;
 
   // Resolve issuer billing entity (same logic as createLeaseInvoice)
   let issuerBillingEntityId: string | undefined;
