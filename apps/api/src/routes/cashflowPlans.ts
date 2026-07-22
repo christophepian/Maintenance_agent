@@ -130,8 +130,11 @@ async function resolveStrategyContext(
   }
 
   // 2. Fall back to the building owners' portfolio profiles.
+  // BuildingOwner has no orgId column — scope through the building relation so a
+  // stray buildingId can't read another tenant's owners (defense-in-depth; the
+  // buildingId already comes from an org-scoped plan lookup) (CR-012).
   const owners = await prisma.buildingOwner.findMany({
-    where: { buildingId },
+    where: { buildingId, building: { orgId } },
     include: { user: { include: { strategyProfile: true } } },
   });
   const ownerProfiles = owners
