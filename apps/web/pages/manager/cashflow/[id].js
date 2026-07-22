@@ -20,6 +20,7 @@ import NPVScenariosPanel from "../../../components/NPVScenariosPanel";
 import AssumptionsPanel from "../../../components/cashflow/AssumptionsPanel";
 import RfpCandidatesPanel from "../../../components/cashflow/RfpCandidatesPanel";
 import CapexEventTable from "../../../components/cashflow/CapexEventTable";
+import { isPlanStale } from "../../../lib/planStale";
 
 // ─── Strategy alignment helpers ──────────────────────────────────────────────
 
@@ -35,8 +36,6 @@ const STATUS_BADGE = {
   SUBMITTED: "bg-info-light text-info-text",
   APPROVED: "bg-success-light text-success-text",
 };
-
-const STALE_THRESHOLD_MS = 7 * 24 * 60 * 60 * 1000;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -573,7 +572,7 @@ export default function CashflowPlanDetailPage() {
   const isReadOnly = plan.status !== "DRAFT";
 
   const stats = statCards(buckets, hasOpeningBalance);
-  const isStale = plan.lastComputedAt && (Date.now() - new Date(plan.lastComputedAt).getTime()) > STALE_THRESHOLD_MS;
+  const isStale = isPlanStale(plan);
 
   return (
     <AppShell role="MANAGER">

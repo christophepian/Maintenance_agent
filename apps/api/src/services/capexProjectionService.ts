@@ -23,6 +23,7 @@ import {
 } from "./swissTaxBrackets";
 import { findSnapshotsByBuildingAndPeriod } from "../repositories/buildingFinancialSnapshotRepository";
 import { findActiveLeasesByBuilding } from "../repositories/leaseRepository";
+import { DEFAULT_MARGINAL_TAX_RATE_PCT } from "./taxConstants";
 
 // ─── Types ─────────────────────────────────────────────────────
 
@@ -159,9 +160,6 @@ export interface TimingRecommendation {
 // ─── Constants ─────────────────────────────────────────────────
 
 const PROJECTION_HORIZON_YEARS = 5;
-
-/** Default Swiss marginal tax rate used when owner hasn't configured one */
-const DEFAULT_MARGINAL_TAX_RATE_PCT = 25;
 
 /** Minimum deductible cost to generate a timing recommendation (CHF) */
 const TIMING_MIN_COST_CHF = 1000;
