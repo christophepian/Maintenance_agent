@@ -243,8 +243,13 @@ export function registerCashflowPlanRoutes(router: Router) {
         return;
       }
       const cashflow = await computeMonthlyCashflow(prisma, plan, orgId);
-      // Stamp lastComputedAt
-      await updateCashflowPlan(prisma, plan.id, orgId, { lastComputedAt: new Date() });
+      // Stamp lastComputedAt off the response critical path: this GET recomputes
+      // the cashflow, and the timestamp only drives the staleness badge, so the
+      // write must not add latency or hold a lock on the read path (CR-010).
+      // (A full move to an explicit recompute action is deferred to avoid
+      // changing the staleness UX / client contract.)
+      updateCashflowPlan(prisma, plan.id, orgId, { lastComputedAt: new Date() })
+        .catch((e) => console.error("[cashflowPlans] failed to stamp lastComputedAt", e));
 
       // Strategy overlay: if building has a strategy profile, compute alignment tags
       let strategyOverlay = null;
