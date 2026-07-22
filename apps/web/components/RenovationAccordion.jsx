@@ -14,6 +14,7 @@
  */
 
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { useTranslation } from "next-i18next";
 import { ChevronRight, ChevronDown } from "lucide-react";
 import { cn } from "../lib/utils";
 import { authHeaders } from "../lib/api";
@@ -79,6 +80,7 @@ function dueYear(item) {
 // ─── Asset row ────────────────────────────────────────────────────────────────
 
 function AssetRow({ item, checked, onToggle, onSimulate }) {
+  const { t } = useTranslation("manager");
   const rec  = REC_STYLE[item.recommendation] ?? REC_STYLE.REPAIR;
   const cond = item.lastConditionStatus ? COND_STYLE[item.lastConditionStatus] : null;
   const due  = dueYear(item);
@@ -107,7 +109,9 @@ function AssetRow({ item, checked, onToggle, onSimulate }) {
       {/* Badges */}
       <div className="flex items-center gap-1 shrink-0">
         <HoverTip content={item.recommendationReason}>
-          <span className={cn("rounded-full px-2 py-0.5 text-xs font-semibold", rec.badge)}>{rec.label}</span>
+          <span className={cn("rounded-full px-2 py-0.5 text-xs font-semibold", rec.badge)}>
+            {t(`renovationAccordion.rec.${item.recommendation}`, { defaultValue: rec.label })}
+          </span>
         </HoverTip>
         {cond && (
           <HoverTip content={conditionTip(item)} className="hidden sm:inline-flex">
@@ -126,7 +130,7 @@ function AssetRow({ item, checked, onToggle, onSimulate }) {
         onClick={(e) => { e.stopPropagation(); onSimulate([item]); }}
         className="shrink-0 rounded-lg border border-surface-border px-2 py-0.5 text-xs font-medium text-foreground-dim hover:bg-surface-hover hover:text-foreground transition-colors"
       >
-        Simulate →
+        {t("renovationAccordion.simulate", { defaultValue: "Simulate →" })}
       </button>
     </div>
   );
@@ -135,6 +139,7 @@ function AssetRow({ item, checked, onToggle, onSimulate }) {
 // ─── Unit row ─────────────────────────────────────────────────────────────────
 
 function UnitRow({ unitNumber, items, selectedIds, onToggleAsset, onSimulate, buildingId }) {
+  const { t } = useTranslation("manager");
   const [open, setOpen] = useState(false);
   const unitSelected = items.filter((i) => selectedIds.has(i.assetId));
   const allChecked   = items.length > 0 && unitSelected.length === items.length;
@@ -163,14 +168,14 @@ function UnitRow({ unitNumber, items, selectedIds, onToggleAsset, onSimulate, bu
           className="h-3.5 w-3.5 shrink-0 rounded border-surface-border accent-brand cursor-pointer"
         />
         {open ? <ChevronDown className="h-3.5 w-3.5 text-foreground-dim shrink-0" /> : <ChevronRight className="h-3.5 w-3.5 text-foreground-dim shrink-0" />}
-        <span className="text-xs font-medium text-foreground">Unit {unitNumber}</span>
-        <span className="text-xs text-foreground-dim">{items.length} asset{items.length !== 1 ? "s" : ""}</span>
+        <span className="text-xs font-medium text-foreground">{t("renovationAccordion.unit", { number: unitNumber, defaultValue: "Unit {{number}}" })}</span>
+        <span className="text-xs text-foreground-dim">{t("renovationAccordion.assetCount", { count: items.length, defaultValue: `${items.length} asset${items.length !== 1 ? "s" : ""}` })}</span>
         {unitSelected.length > 0 && (
           <button
             onClick={(e) => { e.stopPropagation(); onSimulate(unitSelected); }}
             className="ml-auto text-xs font-medium text-muted hover:text-foreground transition-colors"
           >
-            Simulate {unitSelected.length} →
+            {t("renovationAccordion.simulateN", { count: unitSelected.length, defaultValue: `Simulate ${unitSelected.length} →` })}
           </button>
         )}
       </div>
@@ -194,6 +199,7 @@ function UnitRow({ unitNumber, items, selectedIds, onToggleAsset, onSimulate, bu
 // ─── Building section ─────────────────────────────────────────────────────────
 
 function BuildingSection({ buildingId, buildingName, selectedIds, onToggleAsset, onSimulate, autoExpand }) {
+  const { t } = useTranslation("manager");
   // Inject this section's buildingId into every simulate call (opportunity items
   // don't carry buildingId, and the workspace needs it to schedule into a plan).
   const handleSim = useCallback((items) => onSimulate(items, buildingId), [onSimulate, buildingId]);
@@ -265,7 +271,13 @@ function BuildingSection({ buildingId, buildingName, selectedIds, onToggleAsset,
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-foreground">{buildingName}</p>
           <p className="text-xs text-foreground-dim">
-            {loading ? "Loading…" : err ? "Error" : !loaded ? "Expand to load" : `${items.length} at-risk asset${items.length !== 1 ? "s" : ""}${nextDue < 9999 ? ` · next due ${nextDue}` : ""}`}
+            {loading
+              ? t("renovationAccordion.loading", { defaultValue: "Loading…" })
+              : err
+                ? t("renovationAccordion.error", { defaultValue: "Error" })
+                : !loaded
+                  ? t("renovationAccordion.expandToLoad", { defaultValue: "Expand to load" })
+                  : `${t("renovationAccordion.atRiskCount", { count: items.length, defaultValue: `${items.length} at-risk asset${items.length !== 1 ? "s" : ""}` })}${nextDue < 9999 ? ` · ${t("renovationAccordion.nextDue", { year: nextDue, defaultValue: "next due {{year}}" })}` : ""}`}
           </p>
         </div>
         {totalAtRiskChf > 0 && (
@@ -278,7 +290,7 @@ function BuildingSection({ buildingId, buildingName, selectedIds, onToggleAsset,
             onClick={(e) => { e.stopPropagation(); handleSim(items.filter((i) => selectedIds.has(i.assetId))); }}
             className="text-xs font-semibold bg-brand text-white rounded-lg px-3 py-1 hover:opacity-90 transition-colors shrink-0"
           >
-            Simulate {selectedInBldg.length} →
+            {t("renovationAccordion.simulateN", { count: selectedInBldg.length, defaultValue: `Simulate ${selectedInBldg.length} →` })}
           </button>
         )}
       </div>
@@ -287,7 +299,7 @@ function BuildingSection({ buildingId, buildingName, selectedIds, onToggleAsset,
       {open && !loading && !err && (
         <div className="border-t border-surface-divider">
           {byUnit.length === 0 ? (
-            <p className="px-4 py-3 text-xs text-foreground-dim">No at-risk assets for this building.</p>
+            <p className="px-4 py-3 text-xs text-foreground-dim">{t("renovationAccordion.noAtRisk", { defaultValue: "No at-risk assets for this building." })}</p>
           ) : byUnit.map(([unitId, { unitNumber, items: unitItems }]) => (
             <UnitRow
               key={unitId}
@@ -311,6 +323,7 @@ function BuildingSection({ buildingId, buildingName, selectedIds, onToggleAsset,
 // ─── Main export ──────────────────────────────────────────────────────────────
 
 export default function RenovationAccordion({ buildings, onSimulate: externalOnSimulate }) {
+  const { t } = useTranslation("manager");
   // buildings: [{ id, name }]
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [simItems,    setSimItems]    = useState(null);
@@ -334,7 +347,7 @@ export default function RenovationAccordion({ buildings, onSimulate: externalOnS
   if (!buildings || buildings.length === 0) {
     return (
       <div className="rounded-2xl border border-surface-border bg-surface p-6 text-center">
-        <p className="text-sm text-foreground-dim">Select one or more buildings above to see renovation opportunities.</p>
+        <p className="text-sm text-foreground-dim">{t("renovationAccordion.selectBuildings", { defaultValue: "Select one or more buildings above to see renovation opportunities." })}</p>
       </div>
     );
   }

@@ -3452,5 +3452,43 @@
       "LINEAR": "Linear",
       "ANNUITY": "Annuity"
     }
+  },
+  "renovationAccordion": {
+    "rec": {
+      "REPLACE": "Replace",
+      "PLAN_REPLACEMENT": "Plan",
+      "MONITOR": "Monitor",
+      "REPAIR": "Repair"
+    },
+    "simulate": "Simulate →",
+    "simulateN": "Simulate {{count}} →",
+    "unit": "Unit {{number}}",
+    "assetCount_one": "{{count}} asset",
+    "assetCount_other": "{{count}} assets",
+    "atRiskCount_one": "{{count}} at-risk asset",
+    "atRiskCount_other": "{{count}} at-risk assets",
+    "nextDue": "next due {{year}}",
+    "loading": "Loading…",
+    "error": "Error",
+    "expandToLoad": "Expand to load",
+    "noAtRisk": "No at-risk assets for this building.",
+    "selectBuildings": "Select one or more buildings above to see renovation opportunities."
+  },
+  "renovationSimulator": {
+    "verdict": {
+      "now": "Act Now",
+      "turnover": "At Turnover",
+      "nothing": "Do Nothing",
+      "waitTurnover": "Wait for Turnover"
+    },
+    "recommendation": "Recommendation: {{verdict}}",
+    "recommendationHold": "Recommendation: Hold",
+    "scheduling": "Scheduling…",
+    "planThisWork_one": "Plan this work — {{label}} ({{count}} asset)",
+    "planThisWork_other": "Plan this work — {{label}} ({{count}} assets)",
+    "holdingBest": "Holding is best — nothing to schedule. Pick Act Now or At Turnover to plan work anyway.",
+    "scheduledOk": "✓ Scheduled in cashflow plan",
+    "scheduledPartial": "⚠ Scheduled {{done}} of {{total}} — {{failed}} failed; re-run to retry",
+    "planError": "Error: {{message}}"
   }
 }

@@ -14,6 +14,7 @@
  */
 
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import { useTranslation } from "next-i18next";
 import { createPortal } from "react-dom";
 import { X, Check, ArrowRight } from "lucide-react";
 import { cn } from "../lib/utils";
@@ -388,6 +389,7 @@ function SummaryStat({ label, value, tone, hint }) {
 // ── Main component ─────────────────────────────────────────────────────────────
 
 export default function RenovationSimulatorDrawer({ items, onClose, buildingId, embedded = false, onPlanned }) {
+  const { t } = useTranslation("manager");
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
 
@@ -499,7 +501,11 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId, 
   const isSchedulable = selectedPath === "now" || selectedPath === "turnover";
   const isSuboptimal  = selectedPath !== bestKey; // selected a worse-than-best scenario
   const holdIsBest    = bestKey === "nothing";
-  const selectedLabel = selectedPath === "now" ? "Act Now" : selectedPath === "turnover" ? "At Turnover" : "Do Nothing";
+  const selectedLabel = selectedPath === "now"
+    ? t("renovationSimulator.verdict.now", { defaultValue: "Act Now" })
+    : selectedPath === "turnover"
+      ? t("renovationSimulator.verdict.turnover", { defaultValue: "At Turnover" })
+      : t("renovationSimulator.verdict.nothing", { defaultValue: "Do Nothing" });
 
   // Recommendation text
   const verdict = useMemo(() => {
@@ -583,13 +589,18 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId, 
       if (!aliveRef.current) return;
       setPlanId(planId);
       if (failed === 0) {
-        setPlanMsg(`✓ Scheduled in cashflow plan`);
+        setPlanMsg(t("renovationSimulator.scheduledOk", { defaultValue: "✓ Scheduled in cashflow plan" }));
       } else {
-        setPlanMsg(`⚠ Scheduled ${assetRows.length - failed} of ${assetRows.length} — ${failed} failed; re-run to retry`);
+        setPlanMsg(t("renovationSimulator.scheduledPartial", {
+          done: assetRows.length - failed,
+          total: assetRows.length,
+          failed,
+          defaultValue: `⚠ Scheduled ${assetRows.length - failed} of ${assetRows.length} — ${failed} failed; re-run to retry`,
+        }));
       }
       onPlanned?.(planId);
     } catch (e) {
-      if (aliveRef.current) setPlanMsg(`Error: ${e.message}`);
+      if (aliveRef.current) setPlanMsg(t("renovationSimulator.planError", { message: e.message, defaultValue: `Error: ${e.message}` }));
     } finally {
       if (aliveRef.current) setPlanAdding(false);
     }
@@ -779,7 +790,14 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId, 
           {/* Recommendation strip */}
           <div className={cn("rounded-xl border px-4 py-3", delta > 0 && bestKey !== "nothing" ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50")}>
             <p className={cn("text-xs font-semibold uppercase tracking-wide mb-1", delta > 0 && bestKey !== "nothing" ? "text-emerald-700" : "text-amber-700")}>
-              {delta > 0 && bestKey !== "nothing" ? `Recommendation: ${bestKey === "now" ? "Act Now" : "Wait for Turnover"}` : "Recommendation: Hold"}
+              {delta > 0 && bestKey !== "nothing"
+                ? t("renovationSimulator.recommendation", {
+                    verdict: bestKey === "now"
+                      ? t("renovationSimulator.verdict.now", { defaultValue: "Act Now" })
+                      : t("renovationSimulator.verdict.waitTurnover", { defaultValue: "Wait for Turnover" }),
+                    defaultValue: `Recommendation: ${bestKey === "now" ? "Act Now" : "Wait for Turnover"}`,
+                  })
+                : t("renovationSimulator.recommendationHold", { defaultValue: "Recommendation: Hold" })}
             </p>
             <p className={cn("text-sm leading-relaxed", delta > 0 && bestKey !== "nothing" ? "text-emerald-900" : "text-amber-900")}>
               {verdict}
@@ -904,11 +922,17 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId, 
                   className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors bg-slate-800 text-white hover:bg-slate-700 disabled:opacity-50"
                 >
                   <ArrowRight className="h-4 w-4" />
-                  {planAdding ? "Scheduling…" : `Plan this work — ${selectedLabel} (${assetRows.length} asset${assetRows.length !== 1 ? "s" : ""})`}
+                  {planAdding
+                    ? t("renovationSimulator.scheduling", { defaultValue: "Scheduling…" })
+                    : t("renovationSimulator.planThisWork", {
+                        label: selectedLabel,
+                        count: assetRows.length,
+                        defaultValue: `Plan this work — ${selectedLabel} (${assetRows.length} asset${assetRows.length !== 1 ? "s" : ""})`,
+                      })}
                 </button>
               ) : (
                 <p className="text-sm text-foreground-dim">
-                  Holding is best — nothing to schedule. Pick <strong className="text-foreground">Act Now</strong> or <strong className="text-foreground">At Turnover</strong> to plan work anyway.
+                  {t("renovationSimulator.holdingBest", { defaultValue: "Holding is best — nothing to schedule. Pick Act Now or At Turnover to plan work anyway." })}
                 </p>
               )
             )}
