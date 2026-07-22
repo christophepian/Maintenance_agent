@@ -70,6 +70,18 @@ export interface PlanResult {
   plan: CashflowPlanWithRelations;
 }
 
+// ─── Helpers ───────────────────────────────────────────────────
+
+/**
+ * Assert a just-written/reloaded plan is present. Guards the TOCTOU window where
+ * a concurrent delete between the guarded write and the reload could make the
+ * result null — surfaces a clean NOT_FOUND instead of a `!`-hidden crash (CR-028).
+ */
+function ensureFound(plan: CashflowPlanWithRelations | null): CashflowPlanWithRelations {
+  if (!plan) throw Object.assign(new Error("CashflowPlan not found"), { code: "NOT_FOUND" });
+  return plan;
+}
+
 // ─── Workflow functions ────────────────────────────────────────
 
 export async function createPlanWorkflow(
@@ -168,7 +180,7 @@ export async function addOverrideWorkflow(
   }
 
   const reloaded = await findCashflowPlanById(prisma, input.planId, orgId);
-  return { plan: reloaded! };
+  return { plan: ensureFound(reloaded) };
 }
 
 export async function removeOverrideWorkflow(
@@ -191,7 +203,7 @@ export async function removeOverrideWorkflow(
   await removeCashflowOverride(prisma, input.overrideId, input.planId, orgId);
 
   const reloaded = await findCashflowPlanById(prisma, input.planId, orgId);
-  return { plan: reloaded! };
+  return { plan: ensureFound(reloaded) };
 }
 
 export async function submitPlanWorkflow(
@@ -218,7 +230,7 @@ export async function submitPlanWorkflow(
     payload: { planId: input.planId } satisfies CashflowPlanSubmittedPayload,
   }).catch((err) => console.error("[EVENT] Failed to emit CASHFLOW_PLAN_SUBMITTED", err));
 
-  return { plan: updated! };
+  return { plan: ensureFound(updated) };
 }
 
 export async function approvePlanWorkflow(
@@ -245,5 +257,5 @@ export async function approvePlanWorkflow(
     payload: { planId: input.planId } satisfies CashflowPlanApprovedPayload,
   }).catch((err) => console.error("[EVENT] Failed to emit CASHFLOW_PLAN_APPROVED", err));
 
-  return { plan: updated! };
+  return { plan: ensureFound(updated) };
 }
