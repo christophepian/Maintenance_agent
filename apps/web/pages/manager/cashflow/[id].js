@@ -323,21 +323,29 @@ function IncomeGrowthRateEditor({ planId, currentRate, onUpdated }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const inputRef = useRef(null);
+  // Enter → save() sets editing=false, which blurs the input and fires onBlur →
+  // save() again (double PUT). Escape → editing=false likewise fires onBlur.
+  // doneRef makes save() idempotent for the session: the first commit (or a
+  // cancel) claims it, so the follow-on onBlur is a no-op (CR-015).
+  const doneRef = useRef(false);
 
   function startEdit() {
     setValue(String(currentRate ?? 0));
     setEditing(true);
     setError("");
+    doneRef.current = false;
     // Focus on next tick after render
     setTimeout(() => inputRef.current?.select(), 0);
   }
 
   async function save() {
+    if (doneRef.current) return; // already committed/cancelled this session
     const rate = parseFloat(value);
     if (isNaN(rate) || rate < 0 || rate > 20) {
       setError("Enter a rate between 0 and 20.");
       return;
     }
+    doneRef.current = true;
     setSaving(true);
     setError("");
     try {
@@ -351,15 +359,22 @@ function IncomeGrowthRateEditor({ planId, currentRate, onUpdated }) {
       setEditing(false);
       onUpdated();
     } catch (e) {
+      doneRef.current = false; // allow a retry after a failed save
       setError(String(e?.message || e));
     } finally {
       setSaving(false);
     }
   }
 
+  function cancel() {
+    doneRef.current = true; // suppress the onBlur that the unmount will trigger
+    setEditing(false);
+    setError("");
+  }
+
   function handleKeyDown(e) {
     if (e.key === "Enter") save();
-    if (e.key === "Escape") { setEditing(false); setError(""); }
+    if (e.key === "Escape") cancel();
   }
 
   if (!editing) {
@@ -497,6 +512,14 @@ export default function CashflowPlanDetailPage() {
   }, [id]);
 
   useEffect(() => { loadPlan(); }, [loadPlan]);
+
+  // Reload the plan AND remount the plan-mode NPV panel (via its key) so the
+  // verdict reflects edited assumptions/overrides — the panel only fetches on
+  // mount, so without the key bump the NPV would go stale (CR-014).
+  const refreshPlanAndNpv = useCallback(() => {
+    loadPlan();
+    setNpvRefreshKey((k) => k + 1);
+  }, [loadPlan]);
 
   async function handleAction(endpoint) {
     setActionLoading(true);
@@ -687,13 +710,13 @@ export default function CashflowPlanDetailPage() {
               timingRecommendations={timingRecommendations}
               planId={plan.id}
               isDraft={isDraft}
-              onRefresh={loadPlan}
+              onRefresh={refreshPlanAndNpv}
               alignmentMap={plan.strategyOverlay?.items?.reduce((m, it) => { m[it.assetId] = it; return m; }, {}) || {}}
             />
           </Panel>
 
           {/* NPV Assumptions — read-only here; edited in the planning workspace (step 1) */}
-          <AssumptionsPanel plan={plan} isDraft={false} onUpdated={loadPlan} />
+          <AssumptionsPanel plan={plan} isDraft={false} onUpdated={refreshPlanAndNpv} />
 
           {/* NPV Verdict */}
           <NPVScenariosPanel
