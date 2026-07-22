@@ -11,7 +11,25 @@ workflow, repository), supporting services (`assetInventory`, `replacementCostSe
 **Overall: Good — Ready with remediation.** 0 Critical, 7 High, 13 Medium, 8 Low/Info.
 
 This document is the tracking artifact for the remediation sweep on branch
-`fix/planning-review-remediation`. It is archived to `_archive/` once all items are closed.
+`fix/planning-review-remediation`. Archived to `_archive/` — all items closed.
+
+## ✅ Status: COMPLETE (2026-07-22)
+
+All 28 findings remediated, one commit per finding on `fix/planning-review-remediation`
+(pushed). Each change was typechecked and/or unit/integration-tested before commit.
+
+**Documented follow-ups (not regressions — deliberate scope boundaries):**
+- **CR-017**: Swiss-French translations for the new `renovationAccordion.*` /
+  `renovationSimulator.*` keys, and the simulator's remaining nested-config /
+  HINTS / table-header labels. Code is i18n-ready (English preserved via
+  `defaultValue`), so this is additive translation work.
+- **CR-024**: add a `danger` semantic design token, then migrate the renovation
+  simulator's verdict palette (green=Act-Now / amber=Caution / red=Do-Nothing).
+  Left raw for now because no `danger` token exists and a partial migration would
+  break the meaning-carrying data-viz colours.
+- **CR-010 / CR-019**: partial by design — GET-time write moved off the response
+  path (full recompute-action redesign deferred); event emit now awaited (a
+  transactional outbox for true at-least-once delivery remains future work).
 
 ---
 
