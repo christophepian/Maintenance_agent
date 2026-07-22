@@ -175,6 +175,11 @@ export interface NPVOptions {
    *  - Neglect: no capex/uplift; the avoided risk is borne every year
    */
   renovations?: RenovationInput[];
+  /**
+   * Injectable clock — the projection anchors its horizon on the current year.
+   * Defaults to `new Date()`; pass a fixed date for deterministic tests (CR-025).
+   */
+  now?: Date;
 }
 
 /** A planned renovation carried from the simulator via a CashflowOverride. */
@@ -425,7 +430,8 @@ export async function computeNPVScenarios(
   const deferYears = Math.min(10, Math.max(1, options.deferYears ?? 3));
   const neglectNoiErosionRatePct = options.neglectNoiErosionRatePct ?? 1;
 
-  const currentYear = new Date().getFullYear();
+  const now = options.now ?? new Date();
+  const currentYear = now.getFullYear();
   const fromYear = currentYear;
   const toYear = currentYear + horizonYears - 1;
 
@@ -481,8 +487,7 @@ export async function computeNPVScenarios(
     baseAnnualNoiChf = Math.round(Number(latest.netOperatingIncomeCents) / 100);
   } else if (snapshots.length > 0) {
     // Fallback A: annualize whatever snapshot history exists (any period length)
-    const today = new Date();
-    const relevant = snapshots.filter((s) => new Date(s.periodEnd) <= today);
+    const relevant = snapshots.filter((s) => new Date(s.periodEnd) <= now);
     if (relevant.length > 0) {
       const totalNoiCents = relevant.reduce(
         (s, snap) => s + Number(snap.netOperatingIncomeCents), 0,
