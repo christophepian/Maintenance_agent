@@ -159,22 +159,7 @@ async function resolveStrategyContext(
     return { archetype: p.primaryArchetype, goalLabel: p.userFacingGoalLabel, scenario: rec.scenario, rationale: rec.rationale };
   });
 
-  const distinct = Array.from(new Set(perOwner.map((r) => r.scenario)));
-  const divergent = distinct.length > 1;
-
-  let recommendedScenario: ScenarioKey;
-  let rationale: string;
-  if (!divergent) {
-    recommendedScenario = perOwner[0].scenario;
-    rationale = perOwner.length === 1
-      ? `Based on the owner's portfolio strategy (no building-specific strategy set): ${perOwner[0].rationale}`
-      : `All owners' strategies agree (no building-specific strategy set): ${perOwner[0].rationale}`;
-  } else {
-    // Owners genuinely diverge → cautious middle ground rather than picking a winner.
-    recommendedScenario = "defer";
-    const labels = perOwner.map((r) => r.goalLabel || r.archetype).filter(Boolean);
-    rationale = `Owners follow differing strategies (${labels.join(" vs. ")}). Showing the cautious default — defer — until a building-specific strategy is set.`;
-  }
+  const { recommendedScenario, rationale, divergent } = reconcileOwnerRecommendations(perOwner);
 
   return {
     hasProfile: true,
@@ -182,6 +167,44 @@ async function resolveStrategyContext(
     recommendedScenario,
     rationale,
     ownerProfileCount: ownerProfiles.length,
+    divergent,
+  };
+}
+
+/** One owner's computed recommendation, as fed into the portfolio reconciliation. */
+export interface OwnerRecommendation {
+  scenario: ScenarioKey;
+  rationale: string;
+  goalLabel?: string | null;
+  archetype?: string | null;
+}
+
+/**
+ * Reconcile per-owner recommendations into a single building verdict (pure).
+ *
+ * Unanimous owners → the shared scenario (with a consensus rationale). When
+ * owners genuinely diverge we deliberately do NOT pick a winner or average —
+ * we return the cautious middle ground "defer" until a building-specific
+ * strategy is set. Extracted from resolveStrategyContext so this subtle,
+ * asymmetric-risk rule is unit-testable (CR-020).
+ */
+export function reconcileOwnerRecommendations(
+  perOwner: OwnerRecommendation[],
+): { recommendedScenario: ScenarioKey; rationale: string; divergent: boolean } {
+  const divergent = new Set(perOwner.map((r) => r.scenario)).size > 1;
+  if (!divergent) {
+    return {
+      recommendedScenario: perOwner[0].scenario,
+      rationale: perOwner.length === 1
+        ? `Based on the owner's portfolio strategy (no building-specific strategy set): ${perOwner[0].rationale}`
+        : `All owners' strategies agree (no building-specific strategy set): ${perOwner[0].rationale}`,
+      divergent,
+    };
+  }
+  const labels = perOwner.map((r) => r.goalLabel || r.archetype).filter(Boolean);
+  return {
+    recommendedScenario: "defer",
+    rationale: `Owners follow differing strategies (${labels.join(" vs. ")}). Showing the cautious default — defer — until a building-specific strategy is set.`,
     divergent,
   };
 }
