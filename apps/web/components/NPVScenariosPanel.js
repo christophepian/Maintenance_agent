@@ -261,7 +261,7 @@ export default function NPVScenariosPanel({ buildingId, fetchUrl, mode = "intera
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const fetchScenarios = useCallback(async (id, discount, growth, horizon, deferYrs, propertyValue) => {
+  const fetchScenarios = useCallback(async (id, discount, growth, horizon, deferYrs, propertyValue, signal) => {
     if (!id && !fetchUrl) return;
     setLoading(true);
     setError("");
@@ -279,14 +279,15 @@ export default function NPVScenariosPanel({ buildingId, fetchUrl, mode = "intera
         }).toString();
         url = `/api/buildings/${id}/npv-scenarios?${qs}`;
       }
-      const res = await fetch(url, { headers: authHeaders() });
+      const res = await fetch(url, { headers: authHeaders(), signal });
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error?.message || "Failed to load NPV scenarios");
       setData(json.data);
     } catch (e) {
+      if (e?.name === "AbortError") return; // superseded by a newer request
       setError(String(e?.message || e));
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
   }, [isPlanMode, fetchUrl]);
 
@@ -295,15 +296,24 @@ export default function NPVScenariosPanel({ buildingId, fetchUrl, mode = "intera
   // dependency array is safe: only buildingId/fetchUrl/fetchScenarios actually
   // move. Keeping the array length constant across renders avoids React's
   // "dependency array changed size" hazard (CR-006).
+  //
+  // Slider drags fire many changes; debounce the refetch and abort the previous
+  // in-flight request so out-of-order responses can't overwrite the newest
+  // result (last-write-wins race) (CR-013).
   useEffect(() => {
-    if (isPlanMode && fetchUrl) {
-      setData(null);
-      fetchScenarios(null, discountRatePct, incomeGrowthRatePct, horizonYears, deferYears, 0);
-    } else if (!isPlanMode && buildingId) {
-      setData(null);
-      const parsed = Number(propertyValueChf);
-      fetchScenarios(buildingId, discountRatePct, incomeGrowthRatePct, horizonYears, deferYears, Number.isFinite(parsed) ? parsed : 0);
-    }
+    const ctrl = new AbortController();
+    const DEBOUNCE_MS = 250;
+    const timer = setTimeout(() => {
+      if (isPlanMode && fetchUrl) {
+        setData(null);
+        fetchScenarios(null, discountRatePct, incomeGrowthRatePct, horizonYears, deferYears, 0, ctrl.signal);
+      } else if (!isPlanMode && buildingId) {
+        setData(null);
+        const parsed = Number(propertyValueChf);
+        fetchScenarios(buildingId, discountRatePct, incomeGrowthRatePct, horizonYears, deferYears, Number.isFinite(parsed) ? parsed : 0, ctrl.signal);
+      }
+    }, DEBOUNCE_MS);
+    return () => { clearTimeout(timer); ctrl.abort(); };
   }, [
     isPlanMode, buildingId, fetchUrl, fetchScenarios,
     discountRatePct, incomeGrowthRatePct, horizonYears, deferYears, propertyValueChf,
