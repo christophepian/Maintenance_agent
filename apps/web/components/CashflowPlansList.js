@@ -54,6 +54,13 @@ function CreatePlanModal({ buildings, onClose, onCreate }) {
     setForm((f) => ({ ...f, [key]: val }));
   }
 
+  // Dialog a11y (CR-016): Escape closes the modal.
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
   async function handleSubmit(e) {
     e.preventDefault();
     if (!form.name.trim()) { setError(t("cashflowPlan.nameRequired")); return; }
@@ -86,8 +93,17 @@ function CreatePlanModal({ buildings, onClose, onCreate }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-start justify-center pt-20 px-4">
-      <div className="bg-surface rounded-xl shadow-xl p-6 w-full max-w-lg">
+    <div
+      className="fixed inset-0 bg-black/40 z-50 flex items-start justify-center pt-20 px-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-surface rounded-xl shadow-xl p-6 w-full max-w-lg"
+        role="dialog"
+        aria-modal="true"
+        aria-label={t("cashflowPlan.newPlan", { defaultValue: "New cashflow plan" })}
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-base font-semibold text-foreground">New cashflow plan</h2>
           <button onClick={onClose} className="text-foreground-dim hover:text-muted-text text-lg leading-none" aria-label="Close">×</button>
