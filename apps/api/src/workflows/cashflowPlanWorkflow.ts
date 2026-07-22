@@ -91,7 +91,11 @@ export async function createPlanWorkflow(
     propertyValueChf: input.propertyValueChf,
   });
 
-  emit<"CASHFLOW_PLAN_CREATED">({
+  // Await so the synchronous handlers (incl. the audit/persist wildcard) complete
+  // before we return success, rather than racing the response — a crash between
+  // the DB write and handler completion would otherwise drop the event with no
+  // replay. Kept non-fatal: emit swallows handler errors internally (CR-019).
+  await emit<"CASHFLOW_PLAN_CREATED">({
     type: "CASHFLOW_PLAN_CREATED",
     orgId,
     actorUserId: ctx.actorUserId,
@@ -207,7 +211,7 @@ export async function submitPlanWorkflow(
     status: CashflowPlanStatus.SUBMITTED,
   });
 
-  emit<"CASHFLOW_PLAN_SUBMITTED">({
+  await emit<"CASHFLOW_PLAN_SUBMITTED">({
     type: "CASHFLOW_PLAN_SUBMITTED",
     orgId,
     actorUserId: ctx.actorUserId,
@@ -234,7 +238,7 @@ export async function approvePlanWorkflow(
     status: CashflowPlanStatus.APPROVED,
   });
 
-  emit<"CASHFLOW_PLAN_APPROVED">({
+  await emit<"CASHFLOW_PLAN_APPROVED">({
     type: "CASHFLOW_PLAN_APPROVED",
     orgId,
     actorUserId: ctx.actorUserId,
