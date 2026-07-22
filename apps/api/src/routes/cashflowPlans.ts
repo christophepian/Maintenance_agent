@@ -62,6 +62,17 @@ import {
 
 type ScenarioKey = "invest" | "defer" | "neglect";
 
+/**
+ * Log a 500 server-side (so failures are observable in production, where the
+ * client-facing detail is suppressed by sendError) and return a safe error.
+ * The raw error text is only echoed to the client in non-production — sendError
+ * already drops `details` when NODE_ENV === "production" (CR-011).
+ */
+function fail500(res: Parameters<typeof sendError>[0], code: string, message: string, e: unknown): void {
+  console.error(`[cashflowPlans] ${code}: ${message}`, e);
+  sendError(res, 500, code, message, String(e));
+}
+
 interface NpvStrategyContext {
   hasProfile: boolean;
   /** Where the recommendation is derived from. "owner-portfolio" is a fallback default, not authoritative. */
@@ -182,7 +193,7 @@ export function registerCashflowPlanRoutes(router: Router) {
       const plans = await listCashflowPlans(prisma, orgId, buildingId);
       sendJson(res, 200, { data: plans.map(serializePlan) });
     } catch (e) {
-      sendError(res, 500, "DB_ERROR", "Failed to list cashflow plans", String(e));
+      fail500(res, "DB_ERROR", "Failed to list cashflow plans", e);
     }
   }));
 
@@ -215,7 +226,7 @@ export function registerCashflowPlanRoutes(router: Router) {
       );
       sendJson(res, 201, { data: serializePlan(plan) });
     } catch (e) {
-      sendError(res, 500, "DB_ERROR", "Failed to create cashflow plan", String(e));
+      fail500(res, "DB_ERROR", "Failed to create cashflow plan", e);
     }
   }));
 
@@ -271,7 +282,7 @@ export function registerCashflowPlanRoutes(router: Router) {
         },
       });
     } catch (e) {
-      sendError(res, 500, "DB_ERROR", "Failed to fetch cashflow plan", String(e));
+      fail500(res, "DB_ERROR", "Failed to fetch cashflow plan", e);
     }
   }));
 
@@ -308,7 +319,7 @@ export function registerCashflowPlanRoutes(router: Router) {
       } else if (e.code === "INVALID_STATE") {
         sendError(res, 400, "INVALID_STATE", e.message);
       } else {
-        sendError(res, 500, "DB_ERROR", "Failed to update cashflow plan", String(e));
+        fail500(res, "DB_ERROR", "Failed to update cashflow plan", e);
       }
     }
   }));
@@ -335,7 +346,7 @@ export function registerCashflowPlanRoutes(router: Router) {
       } else if (e.code === "INVALID_STATE") {
         sendError(res, 400, "INVALID_STATE", e.message);
       } else {
-        sendError(res, 500, "DB_ERROR", "Failed to add override", String(e));
+        fail500(res, "DB_ERROR", "Failed to add override", e);
       }
     }
   }));
@@ -356,7 +367,7 @@ export function registerCashflowPlanRoutes(router: Router) {
       } else if (e.code === "INVALID_STATE") {
         sendError(res, 400, "INVALID_STATE", e.message);
       } else {
-        sendError(res, 500, "DB_ERROR", "Failed to remove override", String(e));
+        fail500(res, "DB_ERROR", "Failed to remove override", e);
       }
     }
   }));
@@ -377,7 +388,7 @@ export function registerCashflowPlanRoutes(router: Router) {
       } else if (e instanceof InvalidTransitionError) {
         sendError(res, 400, "INVALID_TRANSITION", e.message);
       } else {
-        sendError(res, 500, "DB_ERROR", "Failed to submit cashflow plan", String(e));
+        fail500(res, "DB_ERROR", "Failed to submit cashflow plan", e);
       }
     }
   }));
@@ -398,7 +409,7 @@ export function registerCashflowPlanRoutes(router: Router) {
       } else if (e instanceof InvalidTransitionError) {
         sendError(res, 400, "INVALID_TRANSITION", e.message);
       } else {
-        sendError(res, 500, "DB_ERROR", "Failed to approve cashflow plan", String(e));
+        fail500(res, "DB_ERROR", "Failed to approve cashflow plan", e);
       }
     }
   }));
@@ -488,7 +499,7 @@ export function registerCashflowPlanRoutes(router: Router) {
       if (e.statusCode === 404) {
         sendError(res, 404, "NOT_FOUND", String(e.message));
       } else {
-        sendError(res, 500, "COMPUTATION_ERROR", "Failed to compute NPV scenarios", String(e));
+        fail500(res, "COMPUTATION_ERROR", "Failed to compute NPV scenarios", e);
       }
     }
   }));
@@ -514,7 +525,7 @@ export function registerCashflowPlanRoutes(router: Router) {
       const candidates = await computeRfpCandidates(prisma, plan, orgId);
       sendJson(res, 200, { data: candidates });
     } catch (e) {
-      sendError(res, 500, "DB_ERROR", "Failed to compute RFP candidates", String(e));
+      fail500(res, "DB_ERROR", "Failed to compute RFP candidates", e);
     }
   }));
 
@@ -597,7 +608,7 @@ export function registerCashflowPlanRoutes(router: Router) {
 
         sendJson(res, 201, { data: { rfpId: rfp.id, title, scopeDescription, alreadyExisted: false } });
       } catch (e) {
-        sendError(res, 500, "DB_ERROR", "Failed to create RFP from cashflow plan", String(e));
+        fail500(res, "DB_ERROR", "Failed to create RFP from cashflow plan", e);
       }
     }),
   );
