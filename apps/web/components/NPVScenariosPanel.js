@@ -290,8 +290,11 @@ export default function NPVScenariosPanel({ buildingId, fetchUrl, mode = "intera
     }
   }, [isPlanMode, fetchUrl]);
 
-  // Re-fetch whenever building or any control changes (interactive mode)
-  // In plan mode, only auto-fetch once on mount; manual recalculate thereafter
+  // Re-fetch whenever building or any control changes (interactive mode).
+  // In plan mode the sliders are hidden and never change, so a fixed-shape
+  // dependency array is safe: only buildingId/fetchUrl/fetchScenarios actually
+  // move. Keeping the array length constant across renders avoids React's
+  // "dependency array changed size" hazard (CR-006).
   useEffect(() => {
     if (isPlanMode && fetchUrl) {
       setData(null);
@@ -299,10 +302,12 @@ export default function NPVScenariosPanel({ buildingId, fetchUrl, mode = "intera
     } else if (!isPlanMode && buildingId) {
       setData(null);
       const parsed = Number(propertyValueChf);
-      fetchScenarios(buildingId, discountRatePct, incomeGrowthRatePct, horizonYears, deferYears, isFinite(parsed) ? parsed : 0);
+      fetchScenarios(buildingId, discountRatePct, incomeGrowthRatePct, horizonYears, deferYears, Number.isFinite(parsed) ? parsed : 0);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [buildingId, fetchUrl, ...(!isPlanMode ? [discountRatePct, incomeGrowthRatePct, horizonYears, deferYears, propertyValueChf] : [])]);
+  }, [
+    isPlanMode, buildingId, fetchUrl, fetchScenarios,
+    discountRatePct, incomeGrowthRatePct, horizonYears, deferYears, propertyValueChf,
+  ]);
 
   // ── Derived values ────────────────────────────────────────────
 
