@@ -6,6 +6,11 @@ import "../styles/globals.css";
 const preview = {
   parameters: {
     layout: "centered",
+    options: {
+      storySort: {
+        order: ["Guide", ["Introduction", "Architecture", "Status Conventions"], "Foundations", "UI"],
+      },
+    },
     controls: {
       matchers: { color: /(background|color)$/i, date: /Date$/i },
     },
