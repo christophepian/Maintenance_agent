@@ -302,9 +302,9 @@ const CashflowPlansList = forwardRef(function CashflowPlansList({ ownerMode = fa
           {p.lastVerdictScenario && (
             <span className={cn(
               "rounded-full px-2 py-0.5 text-xs font-semibold",
-              p.lastVerdictScenario === "invest"  && "bg-green-100 text-green-700",
-              p.lastVerdictScenario === "defer"   && "bg-amber-100 text-amber-700",
-              p.lastVerdictScenario === "neglect" && "bg-slate-100 text-slate-600",
+              p.lastVerdictScenario === "invest"  && "bg-success-light text-success-text",
+              p.lastVerdictScenario === "defer"   && "bg-warning-light text-warning-text",
+              p.lastVerdictScenario === "neglect" && "bg-muted-light text-muted-text",
             )}>
               {p.lastVerdictScenario.charAt(0).toUpperCase() + p.lastVerdictScenario.slice(1)}
             </span>
@@ -345,7 +345,7 @@ const CashflowPlansList = forwardRef(function CashflowPlansList({ ownerMode = fa
       render: (p) => {
         const stale = isPlanStale(p);
         return p.lastComputedAt ? (
-          <span className={stale ? "text-amber-600 font-medium" : "text-muted-text"}>
+          <span className={stale ? "text-warning-text font-medium" : "text-muted-text"}>
             {formatDate(p.lastComputedAt)}
             {stale && " (stale)"}
           </span>
@@ -386,7 +386,7 @@ const CashflowPlansList = forwardRef(function CashflowPlansList({ ownerMode = fa
           type="button"
           disabled={approving === p.id}
           onClick={(e) => { e.stopPropagation(); handleApprove(p.id); }}
-          className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-green-700 disabled:opacity-50 transition"
+          className="rounded-lg bg-success px-3 py-1.5 text-xs font-semibold text-white hover:bg-success-dark disabled:opacity-50 transition"
         >
           {approving === p.id ? "Approving…" : "Approve"}
         </button>
@@ -402,13 +402,13 @@ const CashflowPlansList = forwardRef(function CashflowPlansList({ ownerMode = fa
 
       {/* Pending approval banner — owner mode only */}
       {ownerMode && submittedPlans.length > 0 && (
-        <div className="mb-4 flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+        <div className="mb-4 flex items-center gap-3 rounded-lg border border-warning-ring bg-warning-light px-4 py-3">
           <span className="text-lg">📋</span>
           <div className="flex-1">
-            <p className="text-sm font-semibold text-amber-700">
+            <p className="text-sm font-semibold text-warning-text">
               {submittedPlans.length} plan{submittedPlans.length !== 1 ? "s" : ""} awaiting your approval
             </p>
-            <p className="text-xs text-amber-600">Review and approve submitted cashflow plans</p>
+            <p className="text-xs text-warning-text">Review and approve submitted cashflow plans</p>
           </div>
         </div>
       )}
@@ -460,9 +460,9 @@ const CashflowPlansList = forwardRef(function CashflowPlansList({ ownerMode = fa
                       {p.lastVerdictScenario && (
                         <span className={cn(
                           "rounded-full px-2 py-0.5 text-xs font-semibold",
-                          p.lastVerdictScenario === "invest"  && "bg-green-100 text-green-700",
-                          p.lastVerdictScenario === "defer"   && "bg-amber-100 text-amber-700",
-                          p.lastVerdictScenario === "neglect" && "bg-slate-100 text-slate-600",
+                          p.lastVerdictScenario === "invest"  && "bg-success-light text-success-text",
+                          p.lastVerdictScenario === "defer"   && "bg-warning-light text-warning-text",
+                          p.lastVerdictScenario === "neglect" && "bg-muted-light text-muted-text",
                         )}>
                           {p.lastVerdictScenario.charAt(0).toUpperCase() + p.lastVerdictScenario.slice(1)}
                         </span>
@@ -476,7 +476,7 @@ const CashflowPlansList = forwardRef(function CashflowPlansList({ ownerMode = fa
                     {p.incomeGrowthRatePct != null && ` · ${p.incomeGrowthRatePct}% growth`}
                   </p>
                   {p.lastComputedAt && (
-                    <p className={cn("text-xs mt-0.5", stale ? "text-amber-600 font-medium" : "text-foreground-dim")}>
+                    <p className={cn("text-xs mt-0.5", stale ? "text-warning-text font-medium" : "text-foreground-dim")}>
                       Computed {formatDate(p.lastComputedAt)}{stale ? " (stale)" : ""}
                     </p>
                   )}
