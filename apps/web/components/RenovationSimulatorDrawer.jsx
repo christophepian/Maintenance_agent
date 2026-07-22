@@ -391,6 +391,14 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId, 
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
 
+  // Tracks whether the full-screen tool is still mounted, so the multi-step
+  // "Plan this work" flow never calls setState after the user closes it (CR-007).
+  const aliveRef = useRef(true);
+  useEffect(() => {
+    aliveRef.current = true;
+    return () => { aliveRef.current = false; };
+  }, []);
+
   // ── Controls ────────────────────────────────────────────────────────────────
   const [action,        setAction]        = useState("replace");
   const [horizon,       setHorizon]       = useState(10);
@@ -532,14 +540,17 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId, 
         planId = createData.data.id;
       }
 
-      // Add an override for each asset: shift its projected replacement to the planned year
+      // Add an override for each asset: shift its projected replacement to the planned year.
+      // There is no batch/transactional endpoint, so attempt every override and report
+      // partial success honestly rather than surfacing a generic error that hides the
+      // fact that some overrides did land (CR-007).
       const currentYear = new Date().getFullYear();
-      await Promise.all(assetRows.map((row) => {
+      const settled = await Promise.allSettled(assetRows.map(async (row) => {
         const remainingYears = row.remainingLifeMonths != null
           ? Math.ceil(row.remainingLifeMonths / 12)
           : 0;
         const originalYear = Math.max(currentYear, currentYear + remainingYears);
-        return fetch(`/api/cashflow-plans/${planId}/overrides`, {
+        const res = await fetch(`/api/cashflow-plans/${planId}/overrides`, {
           method: "POST",
           headers: { "Content-Type": "application/json", ...authHeaders() },
           body: JSON.stringify({
@@ -554,15 +565,22 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId, 
             oblfPassthroughPct: passthroughPct, // audit / reproduction
           }),
         });
+        if (!res.ok) throw new Error(`override for ${row.assetId} failed (${res.status})`);
       }));
 
+      const failed = settled.filter((s) => s.status === "rejected").length;
+      if (!aliveRef.current) return;
       setPlanId(planId);
-      setPlanMsg(`✓ Scheduled in cashflow plan`);
+      if (failed === 0) {
+        setPlanMsg(`✓ Scheduled in cashflow plan`);
+      } else {
+        setPlanMsg(`⚠ Scheduled ${assetRows.length - failed} of ${assetRows.length} — ${failed} failed; re-run to retry`);
+      }
       onPlanned?.(planId);
     } catch (e) {
-      setPlanMsg(`Error: ${e.message}`);
+      if (aliveRef.current) setPlanMsg(`Error: ${e.message}`);
     } finally {
-      setPlanAdding(false);
+      if (aliveRef.current) setPlanAdding(false);
     }
   }, [buildingId, assetRows, selectedPath, minLeaseRemaining, discountRate, capRate, vacancyDays, passthroughPct, onPlanned]);
 
