@@ -200,16 +200,24 @@ function BuildingSection({ buildingId, buildingName, selectedIds, onToggleAsset,
   const [open,    setOpen]    = useState(autoExpand);
   const [items,   setItems]   = useState([]);
   const [loading, setLoading] = useState(false);
+  const [loaded,  setLoaded]  = useState(false);
   const [err,     setErr]     = useState("");
 
+  // Lazy-load on first expand (CR-005): fetching every building's opportunities
+  // on mount fans out one request per selected building at once. Only the
+  // auto-expanded section fetches initially; the rest load when opened, once,
+  // with an AbortController so a fast collapse/unmount cancels the request.
   useEffect(() => {
+    if (!open || loaded) return;
+    const ctrl = new AbortController();
     setLoading(true); setErr("");
-    fetch(`/api/buildings/${buildingId}/renovation-opportunities`, { headers: authHeaders() })
+    fetch(`/api/buildings/${buildingId}/renovation-opportunities`, { headers: authHeaders(), signal: ctrl.signal })
       .then((r) => r.json())
-      .then((d) => { if (d?.data) setItems(d.data); else throw new Error(d?.error?.message || "Failed"); })
-      .catch((e) => setErr(e.message))
-      .finally(() => setLoading(false));
-  }, [buildingId]);
+      .then((d) => { if (d?.data) { setItems(d.data); setLoaded(true); } else throw new Error(d?.error?.message || "Failed"); })
+      .catch((e) => { if (e.name !== "AbortError") setErr(e.message); })
+      .finally(() => { if (!ctrl.signal.aborted) setLoading(false); });
+    return () => ctrl.abort();
+  }, [open, loaded, buildingId]);
 
   // Group items by unit
   const byUnit = useMemo(() => {
@@ -257,7 +265,7 @@ function BuildingSection({ buildingId, buildingName, selectedIds, onToggleAsset,
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-foreground">{buildingName}</p>
           <p className="text-xs text-foreground-dim">
-            {loading ? "Loading…" : err ? "Error" : `${items.length} at-risk asset${items.length !== 1 ? "s" : ""}${nextDue < 9999 ? ` · next due ${nextDue}` : ""}`}
+            {loading ? "Loading…" : err ? "Error" : !loaded ? "Expand to load" : `${items.length} at-risk asset${items.length !== 1 ? "s" : ""}${nextDue < 9999 ? ` · next due ${nextDue}` : ""}`}
           </p>
         </div>
         {totalAtRiskChf > 0 && (
