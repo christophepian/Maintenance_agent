@@ -90,8 +90,11 @@ export interface InterventionDTO {
 
 function monthsBetween(start: Date, end: Date): number {
   const years = end.getFullYear() - start.getFullYear();
-  const months = end.getMonth() - start.getMonth();
-  return years * 12 + months;
+  let months = years * 12 + (end.getMonth() - start.getMonth());
+  // Day-aware: only count a month once its day-of-month has been reached, so an
+  // asset installed on the 31st isn't counted a month older on the 1st (CR-027).
+  if (end.getDate() < start.getDate()) months -= 1;
+  return months;
 }
 
 export function computeDepreciation(
