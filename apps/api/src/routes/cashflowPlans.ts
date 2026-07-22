@@ -46,7 +46,7 @@ import {
 } from "../services/cashflowPlanningService";
 import { computeStrategyOverlay } from "../services/strategyAlignmentService";
 import { getBuildingProfileByBuildingId } from "../repositories/strategyProfileRepository";
-import { computeNPVScenariosForBuildings } from "../services/npvService";
+import { computeNPVScenariosForBuildings, type NPVScenarioResult } from "../services/npvService";
 import { computeRecommendation } from "./forecasting";
 import {
   findRfpByCashflowGroup,
@@ -105,7 +105,7 @@ async function resolveStrategyContext(
   prisma: PrismaClient,
   orgId: string,
   buildingId: string,
-  result: { fciCurrentPct: number; scenarios: { invest: any; defer: any; neglect: any }; deferYears: number },
+  result: { fciCurrentPct: number; scenarios: { invest: NPVScenarioResult; defer: NPVScenarioResult; neglect: NPVScenarioResult }; deferYears: number },
 ): Promise<NpvStrategyContext> {
   // 1. Explicit building profile wins.
   const buildingProfile = await getBuildingProfileByBuildingId(prisma, buildingId, orgId);

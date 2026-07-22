@@ -12,11 +12,7 @@
 
 import { PrismaClient, AssetType, TaxClassification } from "@prisma/client";
 import { listBuildings, findBuildingOwnersWithTaxRate } from "../repositories/inventoryRepository";
-import {
-  getAssetInventoryForBuilding,
-  AssetInventoryItem,
-  computeDepreciation,
-} from "./assetInventory";
+import { getAssetInventoryForBuilding } from "./assetInventory";
 import { classifyAsset, TaxClassificationResult } from "./taxClassificationService";
 import {
   estimateReplacementCost,
@@ -163,7 +159,6 @@ export interface TimingRecommendation {
 // ─── Constants ─────────────────────────────────────────────────
 
 const PROJECTION_HORIZON_YEARS = 5;
-const BUNDLING_WINDOW_YEARS = 2;
 
 /** Default Swiss marginal tax rate used when owner hasn't configured one */
 const DEFAULT_MARGINAL_TAX_RATE_PCT = 25;
