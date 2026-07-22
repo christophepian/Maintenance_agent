@@ -106,6 +106,11 @@ export function computeDepreciation(
   const now = new Date();
   const ageMonths = Math.max(0, monthsBetween(clockStart, now));
   const usefulLifeMonths = resolved.usefulLifeMonths;
+  // Guard against a non-positive useful life (bad override/model data): dividing
+  // by 0 yields NaN/Infinity which would poison depreciationPct → residualPct and
+  // flow silently into the capex schedule and NPV. No usable life = no computable
+  // depreciation, so return null (treated as "no depreciation data" downstream).
+  if (!(usefulLifeMonths > 0)) return null;
   const depreciationPct = Math.min(100, Math.round((ageMonths / usefulLifeMonths) * 100));
   const residualPct = 100 - depreciationPct;
 
@@ -217,13 +222,15 @@ async function resolveUsefulLife(
   overrideMonths?: number | null,
   assetModelDefaultMonths?: number | null,
 ): Promise<ResolvedUsefulLife | null> {
-  // Tier 1: per-asset override (Asset.usefulLifeOverrideMonths)
-  if (overrideMonths != null) {
+  // Tier 1: per-asset override (Asset.usefulLifeOverrideMonths).
+  // Only a positive value is usable; a stored 0/negative falls through so the
+  // standards/static tiers can supply a real life instead of a divide-by-zero.
+  if (overrideMonths != null && overrideMonths > 0) {
     return { usefulLifeMonths: overrideMonths, standardId: null, source: "ASSET_OVERRIDE" };
   }
 
   // Tier 2: asset model default (AssetModel.defaultUsefulLifeMonths)
-  if (assetModelDefaultMonths != null) {
+  if (assetModelDefaultMonths != null && assetModelDefaultMonths > 0) {
     return { usefulLifeMonths: assetModelDefaultMonths, standardId: null, source: "ASSET_MODEL" };
   }
 
