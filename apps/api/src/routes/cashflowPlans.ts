@@ -554,7 +554,7 @@ export function registerCashflowPlanRoutes(router: Router) {
         // Determine buildingId — required for RFP
         const buildingId = plan.buildingId ?? (
           candidate.assets.length > 0
-            ? await findBuildingIdForAsset(prisma, candidate.assets[0].assetId)
+            ? await findBuildingIdForAsset(prisma, candidate.assets[0].assetId, orgId)
             : null
         );
         if (!buildingId) {
