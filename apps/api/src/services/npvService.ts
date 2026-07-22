@@ -37,11 +37,8 @@ import {
 } from "./debtService";
 import { npvAtRate, irr } from "./financeMath";
 import { mapWithConcurrency } from "../utils/concurrency";
+import { DEFAULT_MARGINAL_TAX_RATE_PCT } from "./taxConstants";
 
-// ─── Constants ────────────────────────────────────────────────────
-
-/** Fallback marginal tax rate when the owner hasn't configured one (Swiss average) */
-const DEFAULT_MARGINAL_TAX_RATE_PCT = 25;
 
 // ─── Public types ──────────────────────────────────────────────
 

@@ -17,17 +17,7 @@ import { authHeaders, ownerAuthHeaders } from "../lib/api";
 import { formatDate } from "../lib/format";
 import { planVariant } from "../lib/statusVariants";
 import { cn } from "../lib/utils";
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const STALE_THRESHOLD_MS = 7 * 24 * 60 * 60 * 1000;
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function isPlanStale(plan) {
-  if (!plan.lastComputedAt) return false;
-  return Date.now() - new Date(plan.lastComputedAt).getTime() > STALE_THRESHOLD_MS;
-}
+import { isPlanStale } from "../lib/planStale";
 
 // ─── Sorting ──────────────────────────────────────────────────────────────────
 
