@@ -36,6 +36,7 @@ import {
   type DebtYearFlow,
 } from "./debtService";
 import { npvAtRate, irr } from "./financeMath";
+import { mapWithConcurrency } from "../utils/concurrency";
 
 // ─── Constants ────────────────────────────────────────────────────
 
@@ -792,9 +793,15 @@ export async function computeNPVScenariosForBuildings(
     return computeNPVScenarios(prisma, orgId, buildingIds[0], options);
   }
 
-  // Portfolio: run per-building, then aggregate
-  const results = await Promise.all(
-    buildingIds.map((id) => computeNPVScenarios(prisma, orgId, id, options)),
+  // Portfolio: run per-building, then aggregate. Bound concurrency — each
+  // computeNPVScenarios itself issues many queries (asset inventory, per-topic
+  // cost/tax lookups, snapshots, mortgages), so a naive Promise.all over a large
+  // portfolio would saturate the Prisma connection pool.
+  const PORTFOLIO_NPV_CONCURRENCY = 4;
+  const results = await mapWithConcurrency(
+    buildingIds,
+    PORTFOLIO_NPV_CONCURRENCY,
+    (id) => computeNPVScenarios(prisma, orgId, id, options),
   );
 
   function sumScenario(key: "invest" | "defer" | "neglect"): NPVScenarioResult {
