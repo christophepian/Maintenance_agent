@@ -46,7 +46,7 @@ import {
 } from "../services/cashflowPlanningService";
 import { computeStrategyOverlay } from "../services/strategyAlignmentService";
 import { getBuildingProfileByBuildingId } from "../repositories/strategyProfileRepository";
-import { computeNPVScenariosForBuildings } from "../services/npvService";
+import { computeNPVScenariosForBuildings, type NPVScenarioResult } from "../services/npvService";
 import { computeRecommendation } from "./forecasting";
 import {
   findRfpByCashflowGroup,
@@ -61,6 +61,17 @@ import {
 } from "../validation/cashflowPlans";
 
 type ScenarioKey = "invest" | "defer" | "neglect";
+
+/**
+ * Log a 500 server-side (so failures are observable in production, where the
+ * client-facing detail is suppressed by sendError) and return a safe error.
+ * The raw error text is only echoed to the client in non-production — sendError
+ * already drops `details` when NODE_ENV === "production" (CR-011).
+ */
+function fail500(res: Parameters<typeof sendError>[0], code: string, message: string, e: unknown): void {
+  console.error(`[cashflowPlans] ${code}: ${message}`, e);
+  sendError(res, 500, code, message, String(e));
+}
 
 interface NpvStrategyContext {
   hasProfile: boolean;
@@ -94,7 +105,7 @@ async function resolveStrategyContext(
   prisma: PrismaClient,
   orgId: string,
   buildingId: string,
-  result: { fciCurrentPct: number; scenarios: { invest: any; defer: any; neglect: any }; deferYears: number },
+  result: { fciCurrentPct: number; scenarios: { invest: NPVScenarioResult; defer: NPVScenarioResult; neglect: NPVScenarioResult }; deferYears: number },
 ): Promise<NpvStrategyContext> {
   // 1. Explicit building profile wins.
   const buildingProfile = await getBuildingProfileByBuildingId(prisma, buildingId, orgId);
@@ -119,8 +130,11 @@ async function resolveStrategyContext(
   }
 
   // 2. Fall back to the building owners' portfolio profiles.
+  // BuildingOwner has no orgId column — scope through the building relation so a
+  // stray buildingId can't read another tenant's owners (defense-in-depth; the
+  // buildingId already comes from an org-scoped plan lookup) (CR-012).
   const owners = await prisma.buildingOwner.findMany({
-    where: { buildingId },
+    where: { buildingId, building: { orgId } },
     include: { user: { include: { strategyProfile: true } } },
   });
   const ownerProfiles = owners
@@ -145,22 +159,7 @@ async function resolveStrategyContext(
     return { archetype: p.primaryArchetype, goalLabel: p.userFacingGoalLabel, scenario: rec.scenario, rationale: rec.rationale };
   });
 
-  const distinct = Array.from(new Set(perOwner.map((r) => r.scenario)));
-  const divergent = distinct.length > 1;
-
-  let recommendedScenario: ScenarioKey;
-  let rationale: string;
-  if (!divergent) {
-    recommendedScenario = perOwner[0].scenario;
-    rationale = perOwner.length === 1
-      ? `Based on the owner's portfolio strategy (no building-specific strategy set): ${perOwner[0].rationale}`
-      : `All owners' strategies agree (no building-specific strategy set): ${perOwner[0].rationale}`;
-  } else {
-    // Owners genuinely diverge → cautious middle ground rather than picking a winner.
-    recommendedScenario = "defer";
-    const labels = perOwner.map((r) => r.goalLabel || r.archetype).filter(Boolean);
-    rationale = `Owners follow differing strategies (${labels.join(" vs. ")}). Showing the cautious default — defer — until a building-specific strategy is set.`;
-  }
+  const { recommendedScenario, rationale, divergent } = reconcileOwnerRecommendations(perOwner);
 
   return {
     hasProfile: true,
@@ -168,6 +167,44 @@ async function resolveStrategyContext(
     recommendedScenario,
     rationale,
     ownerProfileCount: ownerProfiles.length,
+    divergent,
+  };
+}
+
+/** One owner's computed recommendation, as fed into the portfolio reconciliation. */
+export interface OwnerRecommendation {
+  scenario: ScenarioKey;
+  rationale: string;
+  goalLabel?: string | null;
+  archetype?: string | null;
+}
+
+/**
+ * Reconcile per-owner recommendations into a single building verdict (pure).
+ *
+ * Unanimous owners → the shared scenario (with a consensus rationale). When
+ * owners genuinely diverge we deliberately do NOT pick a winner or average —
+ * we return the cautious middle ground "defer" until a building-specific
+ * strategy is set. Extracted from resolveStrategyContext so this subtle,
+ * asymmetric-risk rule is unit-testable (CR-020).
+ */
+export function reconcileOwnerRecommendations(
+  perOwner: OwnerRecommendation[],
+): { recommendedScenario: ScenarioKey; rationale: string; divergent: boolean } {
+  const divergent = new Set(perOwner.map((r) => r.scenario)).size > 1;
+  if (!divergent) {
+    return {
+      recommendedScenario: perOwner[0].scenario,
+      rationale: perOwner.length === 1
+        ? `Based on the owner's portfolio strategy (no building-specific strategy set): ${perOwner[0].rationale}`
+        : `All owners' strategies agree (no building-specific strategy set): ${perOwner[0].rationale}`,
+      divergent,
+    };
+  }
+  const labels = perOwner.map((r) => r.goalLabel || r.archetype).filter(Boolean);
+  return {
+    recommendedScenario: "defer",
+    rationale: `Owners follow differing strategies (${labels.join(" vs. ")}). Showing the cautious default — defer — until a building-specific strategy is set.`,
     divergent,
   };
 }
@@ -182,7 +219,7 @@ export function registerCashflowPlanRoutes(router: Router) {
       const plans = await listCashflowPlans(prisma, orgId, buildingId);
       sendJson(res, 200, { data: plans.map(serializePlan) });
     } catch (e) {
-      sendError(res, 500, "DB_ERROR", "Failed to list cashflow plans", String(e));
+      fail500(res, "DB_ERROR", "Failed to list cashflow plans", e);
     }
   }));
 
@@ -215,7 +252,7 @@ export function registerCashflowPlanRoutes(router: Router) {
       );
       sendJson(res, 201, { data: serializePlan(plan) });
     } catch (e) {
-      sendError(res, 500, "DB_ERROR", "Failed to create cashflow plan", String(e));
+      fail500(res, "DB_ERROR", "Failed to create cashflow plan", e);
     }
   }));
 
@@ -229,8 +266,13 @@ export function registerCashflowPlanRoutes(router: Router) {
         return;
       }
       const cashflow = await computeMonthlyCashflow(prisma, plan, orgId);
-      // Stamp lastComputedAt
-      await updateCashflowPlan(prisma, plan.id, orgId, { lastComputedAt: new Date() });
+      // Stamp lastComputedAt off the response critical path: this GET recomputes
+      // the cashflow, and the timestamp only drives the staleness badge, so the
+      // write must not add latency or hold a lock on the read path (CR-010).
+      // (A full move to an explicit recompute action is deferred to avoid
+      // changing the staleness UX / client contract.)
+      updateCashflowPlan(prisma, plan.id, orgId, { lastComputedAt: new Date() })
+        .catch((e) => console.error("[cashflowPlans] failed to stamp lastComputedAt", e));
 
       // Strategy overlay: if building has a strategy profile, compute alignment tags
       let strategyOverlay = null;
@@ -271,7 +313,7 @@ export function registerCashflowPlanRoutes(router: Router) {
         },
       });
     } catch (e) {
-      sendError(res, 500, "DB_ERROR", "Failed to fetch cashflow plan", String(e));
+      fail500(res, "DB_ERROR", "Failed to fetch cashflow plan", e);
     }
   }));
 
@@ -308,7 +350,7 @@ export function registerCashflowPlanRoutes(router: Router) {
       } else if (e.code === "INVALID_STATE") {
         sendError(res, 400, "INVALID_STATE", e.message);
       } else {
-        sendError(res, 500, "DB_ERROR", "Failed to update cashflow plan", String(e));
+        fail500(res, "DB_ERROR", "Failed to update cashflow plan", e);
       }
     }
   }));
@@ -335,7 +377,7 @@ export function registerCashflowPlanRoutes(router: Router) {
       } else if (e.code === "INVALID_STATE") {
         sendError(res, 400, "INVALID_STATE", e.message);
       } else {
-        sendError(res, 500, "DB_ERROR", "Failed to add override", String(e));
+        fail500(res, "DB_ERROR", "Failed to add override", e);
       }
     }
   }));
@@ -356,7 +398,7 @@ export function registerCashflowPlanRoutes(router: Router) {
       } else if (e.code === "INVALID_STATE") {
         sendError(res, 400, "INVALID_STATE", e.message);
       } else {
-        sendError(res, 500, "DB_ERROR", "Failed to remove override", String(e));
+        fail500(res, "DB_ERROR", "Failed to remove override", e);
       }
     }
   }));
@@ -377,7 +419,7 @@ export function registerCashflowPlanRoutes(router: Router) {
       } else if (e instanceof InvalidTransitionError) {
         sendError(res, 400, "INVALID_TRANSITION", e.message);
       } else {
-        sendError(res, 500, "DB_ERROR", "Failed to submit cashflow plan", String(e));
+        fail500(res, "DB_ERROR", "Failed to submit cashflow plan", e);
       }
     }
   }));
@@ -398,7 +440,7 @@ export function registerCashflowPlanRoutes(router: Router) {
       } else if (e instanceof InvalidTransitionError) {
         sendError(res, 400, "INVALID_TRANSITION", e.message);
       } else {
-        sendError(res, 500, "DB_ERROR", "Failed to approve cashflow plan", String(e));
+        fail500(res, "DB_ERROR", "Failed to approve cashflow plan", e);
       }
     }
   }));
@@ -488,7 +530,7 @@ export function registerCashflowPlanRoutes(router: Router) {
       if (e.statusCode === 404) {
         sendError(res, 404, "NOT_FOUND", String(e.message));
       } else {
-        sendError(res, 500, "COMPUTATION_ERROR", "Failed to compute NPV scenarios", String(e));
+        fail500(res, "COMPUTATION_ERROR", "Failed to compute NPV scenarios", e);
       }
     }
   }));
@@ -514,7 +556,7 @@ export function registerCashflowPlanRoutes(router: Router) {
       const candidates = await computeRfpCandidates(prisma, plan, orgId);
       sendJson(res, 200, { data: candidates });
     } catch (e) {
-      sendError(res, 500, "DB_ERROR", "Failed to compute RFP candidates", String(e));
+      fail500(res, "DB_ERROR", "Failed to compute RFP candidates", e);
     }
   }));
 
@@ -554,7 +596,7 @@ export function registerCashflowPlanRoutes(router: Router) {
         // Determine buildingId — required for RFP
         const buildingId = plan.buildingId ?? (
           candidate.assets.length > 0
-            ? await findBuildingIdForAsset(prisma, candidate.assets[0].assetId)
+            ? await findBuildingIdForAsset(prisma, candidate.assets[0].assetId, orgId)
             : null
         );
         if (!buildingId) {
@@ -597,7 +639,7 @@ export function registerCashflowPlanRoutes(router: Router) {
 
         sendJson(res, 201, { data: { rfpId: rfp.id, title, scopeDescription, alreadyExisted: false } });
       } catch (e) {
-        sendError(res, 500, "DB_ERROR", "Failed to create RFP from cashflow plan", String(e));
+        fail500(res, "DB_ERROR", "Failed to create RFP from cashflow plan", e);
       }
     }),
   );

@@ -14,6 +14,7 @@
  */
 
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import { useTranslation } from "next-i18next";
 import { createPortal } from "react-dom";
 import { X, Check, ArrowRight } from "lucide-react";
 import { cn } from "../lib/utils";
@@ -388,8 +389,28 @@ function SummaryStat({ label, value, tone, hint }) {
 // ── Main component ─────────────────────────────────────────────────────────────
 
 export default function RenovationSimulatorDrawer({ items, onClose, buildingId, embedded = false, onPlanned }) {
+  const { t } = useTranslation("manager");
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
+
+  // Tracks whether the full-screen tool is still mounted, so the multi-step
+  // "Plan this work" flow never calls setState after the user closes it (CR-007).
+  const aliveRef = useRef(true);
+  useEffect(() => {
+    aliveRef.current = true;
+    return () => { aliveRef.current = false; };
+  }, []);
+
+  // Dialog a11y (CR-016): Escape closes the full-screen overlay and the close
+  // button takes initial focus so keyboard users aren't stranded behind it.
+  const closeBtnRef = useRef(null);
+  useEffect(() => {
+    if (embedded || !onClose) return;
+    const onKey = (e) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", onKey);
+    const focusTimer = setTimeout(() => closeBtnRef.current?.focus(), 0);
+    return () => { document.removeEventListener("keydown", onKey); clearTimeout(focusTimer); };
+  }, [embedded, onClose]);
 
   // ── Controls ────────────────────────────────────────────────────────────────
   const [action,        setAction]        = useState("replace");
@@ -480,7 +501,11 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId, 
   const isSchedulable = selectedPath === "now" || selectedPath === "turnover";
   const isSuboptimal  = selectedPath !== bestKey; // selected a worse-than-best scenario
   const holdIsBest    = bestKey === "nothing";
-  const selectedLabel = selectedPath === "now" ? "Act Now" : selectedPath === "turnover" ? "At Turnover" : "Do Nothing";
+  const selectedLabel = selectedPath === "now"
+    ? t("renovationSimulator.verdict.now", { defaultValue: "Act Now" })
+    : selectedPath === "turnover"
+      ? t("renovationSimulator.verdict.turnover", { defaultValue: "At Turnover" })
+      : t("renovationSimulator.verdict.nothing", { defaultValue: "Do Nothing" });
 
   // Recommendation text
   const verdict = useMemo(() => {
@@ -532,14 +557,17 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId, 
         planId = createData.data.id;
       }
 
-      // Add an override for each asset: shift its projected replacement to the planned year
+      // Add an override for each asset: shift its projected replacement to the planned year.
+      // There is no batch/transactional endpoint, so attempt every override and report
+      // partial success honestly rather than surfacing a generic error that hides the
+      // fact that some overrides did land (CR-007).
       const currentYear = new Date().getFullYear();
-      await Promise.all(assetRows.map((row) => {
+      const settled = await Promise.allSettled(assetRows.map(async (row) => {
         const remainingYears = row.remainingLifeMonths != null
           ? Math.ceil(row.remainingLifeMonths / 12)
           : 0;
         const originalYear = Math.max(currentYear, currentYear + remainingYears);
-        return fetch(`/api/cashflow-plans/${planId}/overrides`, {
+        const res = await fetch(`/api/cashflow-plans/${planId}/overrides`, {
           method: "POST",
           headers: { "Content-Type": "application/json", ...authHeaders() },
           body: JSON.stringify({
@@ -554,15 +582,27 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId, 
             oblfPassthroughPct: passthroughPct, // audit / reproduction
           }),
         });
+        if (!res.ok) throw new Error(`override for ${row.assetId} failed (${res.status})`);
       }));
 
+      const failed = settled.filter((s) => s.status === "rejected").length;
+      if (!aliveRef.current) return;
       setPlanId(planId);
-      setPlanMsg(`✓ Scheduled in cashflow plan`);
+      if (failed === 0) {
+        setPlanMsg(t("renovationSimulator.scheduledOk", { defaultValue: "✓ Scheduled in cashflow plan" }));
+      } else {
+        setPlanMsg(t("renovationSimulator.scheduledPartial", {
+          done: assetRows.length - failed,
+          total: assetRows.length,
+          failed,
+          defaultValue: `⚠ Scheduled ${assetRows.length - failed} of ${assetRows.length} — ${failed} failed; re-run to retry`,
+        }));
+      }
       onPlanned?.(planId);
     } catch (e) {
-      setPlanMsg(`Error: ${e.message}`);
+      if (aliveRef.current) setPlanMsg(t("renovationSimulator.planError", { message: e.message, defaultValue: `Error: ${e.message}` }));
     } finally {
-      setPlanAdding(false);
+      if (aliveRef.current) setPlanAdding(false);
     }
   }, [buildingId, assetRows, selectedPath, minLeaseRemaining, discountRate, capRate, vacancyDays, passthroughPct, onPlanned]);
 
@@ -573,7 +613,11 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId, 
   if (!mounted || safeItems.length === 0) return null;
 
   const body = (
-    <div className={cn("flex flex-col bg-surface", embedded ? "" : "fixed inset-0 z-50")} style={{ isolation: "isolate" }}>
+    <div
+      className={cn("flex flex-col bg-surface", embedded ? "" : "fixed inset-0 z-50")}
+      style={{ isolation: "isolate" }}
+      {...(!embedded ? { role: "dialog", "aria-modal": true, "aria-label": title } : {})}
+    >
 
       {/* ── Sticky title bar ── */}
       <div className="shrink-0 flex items-center justify-between gap-4 px-5 py-3 border-b border-surface-border bg-surface-subtle">
@@ -584,7 +628,7 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId, 
           </p>
         </div>
         {onClose && (
-          <button onClick={onClose} className="rounded-lg p-1.5 text-foreground-dim hover:bg-surface-hover transition-colors shrink-0">
+          <button ref={closeBtnRef} onClick={onClose} aria-label="Close simulator" className="rounded-lg p-1.5 text-foreground-dim hover:bg-surface-hover transition-colors shrink-0">
             <X className="h-4 w-4" />
           </button>
         )}
@@ -746,7 +790,14 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId, 
           {/* Recommendation strip */}
           <div className={cn("rounded-xl border px-4 py-3", delta > 0 && bestKey !== "nothing" ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50")}>
             <p className={cn("text-xs font-semibold uppercase tracking-wide mb-1", delta > 0 && bestKey !== "nothing" ? "text-emerald-700" : "text-amber-700")}>
-              {delta > 0 && bestKey !== "nothing" ? `Recommendation: ${bestKey === "now" ? "Act Now" : "Wait for Turnover"}` : "Recommendation: Hold"}
+              {delta > 0 && bestKey !== "nothing"
+                ? t("renovationSimulator.recommendation", {
+                    verdict: bestKey === "now"
+                      ? t("renovationSimulator.verdict.now", { defaultValue: "Act Now" })
+                      : t("renovationSimulator.verdict.waitTurnover", { defaultValue: "Wait for Turnover" }),
+                    defaultValue: `Recommendation: ${bestKey === "now" ? "Act Now" : "Wait for Turnover"}`,
+                  })
+                : t("renovationSimulator.recommendationHold", { defaultValue: "Recommendation: Hold" })}
             </p>
             <p className={cn("text-sm leading-relaxed", delta > 0 && bestKey !== "nothing" ? "text-emerald-900" : "text-amber-900")}>
               {verdict}
@@ -871,11 +922,17 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId, 
                   className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors bg-slate-800 text-white hover:bg-slate-700 disabled:opacity-50"
                 >
                   <ArrowRight className="h-4 w-4" />
-                  {planAdding ? "Scheduling…" : `Plan this work — ${selectedLabel} (${assetRows.length} asset${assetRows.length !== 1 ? "s" : ""})`}
+                  {planAdding
+                    ? t("renovationSimulator.scheduling", { defaultValue: "Scheduling…" })
+                    : t("renovationSimulator.planThisWork", {
+                        label: selectedLabel,
+                        count: assetRows.length,
+                        defaultValue: `Plan this work — ${selectedLabel} (${assetRows.length} asset${assetRows.length !== 1 ? "s" : ""})`,
+                      })}
                 </button>
               ) : (
                 <p className="text-sm text-foreground-dim">
-                  Holding is best — nothing to schedule. Pick <strong className="text-foreground">Act Now</strong> or <strong className="text-foreground">At Turnover</strong> to plan work anyway.
+                  {t("renovationSimulator.holdingBest", { defaultValue: "Holding is best — nothing to schedule. Pick Act Now or At Turnover to plan work anyway." })}
                 </p>
               )
             )}

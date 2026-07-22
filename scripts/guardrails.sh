@@ -114,7 +114,7 @@ if [ "$G23_CUR_RAW" -gt "$G23_BASELINE_RAW" ] || [ "$G23_CUR_INLINE" -gt "$G23_B
   echo "    slate-*/bg-white, and Tailwind classes instead of style={{}}. Genuine exceptions: add a"
   echo "    /* no-token: <reason> */ marker on the line. If you REMOVED debt, lower the G23 baselines."
 elif [ "$G23_CUR_RAW" -lt "$G23_BASELINE_RAW" ] || [ "$G23_CUR_INLINE" -lt "$G23_BASELINE_INLINE" ]; then
-  warn "G23: styling debt decreased (raw $G23_CUR_RAW≤$G23_BASELINE_RAW, inline $G23_CUR_INLINE≤$G23_BASELINE_INLINE) — lower the baselines in scripts/guardrails.sh to lock in the win."
+  warn "G23: styling debt decreased (raw ${G23_CUR_RAW:-0}<=${G23_BASELINE_RAW}, inline ${G23_CUR_INLINE:-0}<=${G23_BASELINE_INLINE}) -- lower the baselines in scripts/guardrails.sh to lock in the win."
 else
   pass "G23: no new raw tokens / inline styles (baseline $G23_BASELINE_RAW raw / $G23_BASELINE_INLINE inline held)"
 fi

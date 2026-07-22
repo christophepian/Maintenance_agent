@@ -146,4 +146,14 @@ describe("financeMath", () => {
     expect(irr([100, 200, 300])).toBeNull();
     expect(irr([-100, -200])).toBeNull();
   });
+
+  it("returns null for multi-sign-change (non-unique IRR) series (CR-021)", () => {
+    // -,+,-,+ → two sign changes → ambiguous IRR
+    expect(irr([-1000, 3000, -3000, 1500])).toBeNull();
+  });
+
+  it("still resolves a single-sign-change series with an interim zero", () => {
+    // -,0,+,+ is a single sign change → unique IRR
+    expect(irr([-1000, 0, 600, 700])).not.toBeNull();
+  });
 });
