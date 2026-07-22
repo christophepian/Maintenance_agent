@@ -539,6 +539,18 @@ export default function NPVScenariosPanel({ buildingId, fetchUrl, mode = "intera
           </div>
         )}
 
+        {/* NOI estimated from gross rent (no snapshot history) — flag the overstatement */}
+        {!loading && !data?.noIncomeData && data?.noiEstimatedFromRent && (
+          <div className="flex items-start gap-2 rounded-md border border-warning-ring bg-warning-light px-3 py-2 text-xs text-warning-text">
+            <span className="mt-0.5 shrink-0">ⓘ</span>
+            <span>
+              NOI is estimated from <strong>gross lease rent</strong> (no operating costs deducted),
+              as no financial-snapshot history exists yet — treat it as an upper bound.
+              Compute a snapshot in the <strong>Historical NOI</strong> panel for accurate figures.
+            </span>
+          </div>
+        )}
+
         {/* Loading */}
         {loading && <p className="loading-text">{t("manager:npvScenarios.text.loading")}</p>}
 

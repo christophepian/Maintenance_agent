@@ -116,6 +116,12 @@ export interface NPVScenariosResult {
   baseAnnualNoiChf: number;
   /** True when no income history was found (NOI estimated from leases or defaulted to 0) */
   noIncomeData: boolean;
+  /**
+   * True when baseAnnualNoiChf was proxied from gross lease rent (no operating
+   * costs deducted) because no snapshot NOI history exists — the NOI is therefore
+   * an upper bound and the UI should flag it as an estimate.
+   */
+  noiEstimatedFromRent: boolean;
   fromYear: number;
   toYear: number;
   scenarios: {
@@ -468,6 +474,9 @@ export async function computeNPVScenarios(
 
   let baseAnnualNoiChf = 0;
   let noIncomeData = false;
+  // True when NOI is proxied from gross lease rent (no operating-cost deduction),
+  // which overstates true NOI. Surfaced so the UI can flag the estimate (CR-009).
+  let noiEstimatedFromRent = false;
 
   if (annualSnapshots.length > 0) {
     // Best case: a full Jan 1–Dec 31 snapshot from a prior year
@@ -497,6 +506,7 @@ export async function computeNPVScenarios(
       leases.reduce((s, l) => s + (l.rentTotalChf ?? 0), 0) * 12,
     );
     noIncomeData = baseAnnualNoiChf === 0;
+    noiEstimatedFromRent = baseAnnualNoiChf > 0; // gross rent, no opex deducted
   }
 
   // ── 4. Asset inventory → capex items + FCI accumulators ───────
@@ -758,6 +768,7 @@ export async function computeNPVScenarios(
     deferYears,
     baseAnnualNoiChf,
     noIncomeData,
+    noiEstimatedFromRent,
     fromYear,
     toYear,
     scenarios: { invest, defer, neglect },
@@ -887,6 +898,20 @@ export async function computeNPVScenariosForBuildings(
     };
   }
 
+  // FCI is a ratio (deferred maintenance / replacement value), so it must be
+  // value-weighted across the portfolio — a simple mean of per-building ratios
+  // lets a tiny 100%-FCI building and a large 1%-FCI building average to a
+  // meaningless ~50% (CR-008). Reconstruct each numerator from ratio × its own
+  // replacement value, then divide by the summed denominator.
+  const portfolioReplacementValueChf = results.reduce((s, r) => s + r.totalReplacementValueChf, 0);
+  const valueWeightedFci = (selectPct: (r: NPVScenariosResult) => number): number =>
+    portfolioReplacementValueChf > 0
+      ? Math.round(
+          (results.reduce((s, r) => s + (selectPct(r) / 100) * r.totalReplacementValueChf, 0)
+            / portfolioReplacementValueChf) * 1000,
+        ) / 10
+      : 0;
+
   const first = results[0];
   return {
     buildingId:   "",
@@ -897,6 +922,7 @@ export async function computeNPVScenariosForBuildings(
     deferYears:              first.deferYears,
     baseAnnualNoiChf:        results.reduce((s, r) => s + r.baseAnnualNoiChf, 0),
     noIncomeData:            results.every((r) => r.noIncomeData),
+    noiEstimatedFromRent:    results.some((r) => r.noiEstimatedFromRent),
     fromYear:                first.fromYear,
     toYear:                  first.toYear,
     scenarios: {
@@ -909,9 +935,9 @@ export async function computeNPVScenariosForBuildings(
     neglectNoiErosionRatePct: first.neglectNoiErosionRatePct,
     ownerMarginalTaxRatePct: first.ownerMarginalTaxRatePct,
     ownerTaxRateIsDefault:   results.some((r) => r.ownerTaxRateIsDefault),
-    fciCurrentPct:  results.reduce((s, r) => s + r.fciCurrentPct, 0) / results.length,
-    fciNeglectHorizonPct: results.reduce((s, r) => s + r.fciNeglectHorizonPct, 0) / results.length,
-    totalReplacementValueChf: results.reduce((s, r) => s + r.totalReplacementValueChf, 0),
+    fciCurrentPct:  valueWeightedFci((r) => r.fciCurrentPct),
+    fciNeglectHorizonPct: valueWeightedFci((r) => r.fciNeglectHorizonPct),
+    totalReplacementValueChf: portfolioReplacementValueChf,
     debt: portfolioDebt,
   };
 }
