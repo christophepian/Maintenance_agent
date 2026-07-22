@@ -110,7 +110,8 @@ function CashflowChart({ buckets, hasOpeningBalance }) {
 
   return (
     <div className="relative">
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-[260px]">
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-[260px]" role="img" aria-label={t("manager:cashflowId.chart.ariaLabel", { defaultValue: "Monthly projected cashflow — net flow per month and cumulative balance" })}>
+        <title>{t("manager:cashflowId.chart.ariaLabel", { defaultValue: "Monthly projected cashflow — net flow per month and cumulative balance" })}</title>
         {/* Y-axis gridlines */}
         {[0.25, 0.5, 0.75, 1].map((frac) => (
           <g key={frac}>

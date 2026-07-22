@@ -399,6 +399,17 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId, 
     return () => { aliveRef.current = false; };
   }, []);
 
+  // Dialog a11y (CR-016): Escape closes the full-screen overlay and the close
+  // button takes initial focus so keyboard users aren't stranded behind it.
+  const closeBtnRef = useRef(null);
+  useEffect(() => {
+    if (embedded || !onClose) return;
+    const onKey = (e) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", onKey);
+    const focusTimer = setTimeout(() => closeBtnRef.current?.focus(), 0);
+    return () => { document.removeEventListener("keydown", onKey); clearTimeout(focusTimer); };
+  }, [embedded, onClose]);
+
   // ── Controls ────────────────────────────────────────────────────────────────
   const [action,        setAction]        = useState("replace");
   const [horizon,       setHorizon]       = useState(10);
@@ -591,7 +602,11 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId, 
   if (!mounted || safeItems.length === 0) return null;
 
   const body = (
-    <div className={cn("flex flex-col bg-surface", embedded ? "" : "fixed inset-0 z-50")} style={{ isolation: "isolate" }}>
+    <div
+      className={cn("flex flex-col bg-surface", embedded ? "" : "fixed inset-0 z-50")}
+      style={{ isolation: "isolate" }}
+      {...(!embedded ? { role: "dialog", "aria-modal": true, "aria-label": title } : {})}
+    >
 
       {/* ── Sticky title bar ── */}
       <div className="shrink-0 flex items-center justify-between gap-4 px-5 py-3 border-b border-surface-border bg-surface-subtle">
@@ -602,7 +617,7 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId, 
           </p>
         </div>
         {onClose && (
-          <button onClick={onClose} className="rounded-lg p-1.5 text-foreground-dim hover:bg-surface-hover transition-colors shrink-0">
+          <button ref={closeBtnRef} onClick={onClose} aria-label="Close simulator" className="rounded-lg p-1.5 text-foreground-dim hover:bg-surface-hover transition-colors shrink-0">
             <X className="h-4 w-4" />
           </button>
         )}
