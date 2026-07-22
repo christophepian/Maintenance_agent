@@ -214,6 +214,14 @@ export interface ResolvedUsefulLife {
  * assetType is used only as part of the DepreciationStandard compound key
  * (the standard table is keyed by assetType+topic), NOT as a standalone fallback.
  */
+/**
+ * Optional request-scoped memo for the DB-resolution tiers (3–6), keyed by
+ * `assetType::topicKey::canton`. Those tiers depend only on that triple, so
+ * sharing one cache across a building's assets/units collapses the per-asset
+ * N+1 of up to 3 `depreciationStandard` queries each (CR-004).
+ */
+export type UsefulLifeDbCache = Map<string, ResolvedUsefulLife | null>;
+
 async function resolveUsefulLife(
   prisma: PrismaClient,
   assetType: AssetType,
@@ -221,10 +229,12 @@ async function resolveUsefulLife(
   canton?: string | null,
   overrideMonths?: number | null,
   assetModelDefaultMonths?: number | null,
+  dbCache?: UsefulLifeDbCache,
 ): Promise<ResolvedUsefulLife | null> {
   // Tier 1: per-asset override (Asset.usefulLifeOverrideMonths).
   // Only a positive value is usable; a stored 0/negative falls through so the
   // standards/static tiers can supply a real life instead of a divide-by-zero.
+  // (Not cacheable — override/model are per-asset, resolved before any DB call.)
   if (overrideMonths != null && overrideMonths > 0) {
     return { usefulLifeMonths: overrideMonths, standardId: null, source: "ASSET_OVERRIDE" };
   }
@@ -239,6 +249,21 @@ async function resolveUsefulLife(
   // All topic queries use mode:"insensitive" so they match regardless of stored case.
   const topicKey = normalizeTopicKey(topic);
 
+  // Tiers 3–6 depend only on (assetType, topicKey, canton) — memoize them.
+  const cacheKey = `${assetType}::${topicKey}::${canton ?? ""}`;
+  if (dbCache?.has(cacheKey)) return dbCache.get(cacheKey)!;
+  const resolved = await resolveUsefulLifeFromStandards(prisma, assetType, topicKey, canton);
+  dbCache?.set(cacheKey, resolved);
+  return resolved;
+}
+
+/** DB/static resolution tiers (3–6) — pure of per-asset override/model inputs. */
+async function resolveUsefulLifeFromStandards(
+  prisma: PrismaClient,
+  assetType: AssetType,
+  topicKey: string,
+  canton?: string | null,
+): Promise<ResolvedUsefulLife | null> {
   // Tier 3: DepreciationStandard by topic + canton (case-insensitive)
   if (canton) {
     const standard = await prisma.depreciationStandard.findFirst({
@@ -346,6 +371,7 @@ export async function getAssetInventoryForUnit(
   orgId: string,
   unitId: string,
   canton?: string | null,
+  dbCache?: UsefulLifeDbCache,
 ): Promise<AssetInventoryItem[]> {
   const assets = await assetRepo.findAssetsByUnit(prisma, orgId, unitId);
 
@@ -359,6 +385,7 @@ export async function getAssetInventoryForUnit(
       prisma, asset.type, asset.topic, canton,
       asset.usefulLifeOverrideMonths,
       asset.assetModel?.defaultUsefulLifeMonths,
+      dbCache,
     );
     const depreciation = computeDepreciation(asset, resolved);
     result.push(mapAssetToDTO(asset, depreciation, conditionMap.get(asset.id) ?? null));
@@ -466,8 +493,12 @@ export async function getRepairReplaceAnalysis(
   orgId: string,
   unitId: string,
   canton?: string | null,
+  caches?: { usefulLife?: UsefulLifeDbCache; replacementCost?: Map<string, ReplacementCostEstimate | null> },
 ): Promise<RepairReplaceItem[]> {
-  const assets = await getAssetInventoryForUnit(prisma, orgId, unitId, canton);
+  const assets = await getAssetInventoryForUnit(prisma, orgId, unitId, canton, caches?.usefulLife);
+  // Replacement-cost estimates depend only on (assetType, topic); memoize across
+  // assets/units so the building-wide analysis isn't an O(assets) query fan-out (CR-004).
+  const costCache = caches?.replacementCost ?? new Map<string, ReplacementCostEstimate | null>();
 
   // Pre-fetch: active lease for this unit (shared across all assets)
   const today = new Date();
@@ -515,16 +546,22 @@ export async function getRepairReplaceAnalysis(
 
     const dep = asset.depreciation;
 
-    // Get replacement cost estimate
+    // Get replacement cost estimate (memoized by assetType::topic across the call)
+    const costKey = `${asset.type}::${asset.topic}`;
     let replacementEstimate: ReplacementCostEstimate | null = null;
-    try {
-      replacementEstimate = await estimateReplacementCost(
-        prisma, orgId, asset.type, asset.topic,
-      );
-      // If confidence is 0 (no data at all), treat as null
-      if (replacementEstimate.confidence === 0) replacementEstimate = null;
-    } catch {
-      // Non-fatal — continue without cost estimate
+    if (costCache.has(costKey)) {
+      replacementEstimate = costCache.get(costKey) ?? null;
+    } else {
+      try {
+        const est = await estimateReplacementCost(prisma, orgId, asset.type, asset.topic);
+        // If confidence is 0 (no data at all), treat as null
+        replacementEstimate = est.confidence === 0 ? null : est;
+      } catch (e) {
+        // Non-fatal — continue without cost estimate, but don't hide real failures.
+        console.warn(`[assetInventory] estimateReplacementCost failed for ${costKey}:`, e);
+        replacementEstimate = null;
+      }
+      costCache.set(costKey, replacementEstimate);
     }
 
     const estimatedReplacementCostChf = replacementEstimate?.bestEstimate.medianChf ?? null;
@@ -655,16 +692,27 @@ export async function getBuildingRenovationOpportunities(
     orderBy: { unitNumber: "asc" },
   });
 
+  // Building-wide memo caches shared across every unit's analysis so the
+  // useful-life + replacement-cost lookups resolve once per (type, topic), not
+  // once per asset per unit (CR-004).
+  const caches = {
+    usefulLife: new Map() as UsefulLifeDbCache,
+    replacementCost: new Map<string, ReplacementCostEstimate | null>(),
+  };
+
   const opportunities: RenovationOpportunity[] = [];
   for (const unit of units) {
     try {
-      const items = await getRepairReplaceAnalysis(prisma, orgId, unit.id, building.canton);
+      const items = await getRepairReplaceAnalysis(prisma, orgId, unit.id, building.canton, caches);
       for (const item of items) {
         if (item.recommendation !== "REPAIR" || item.lastConditionStatus === "POOR" || item.lastConditionStatus === "DAMAGED") {
           opportunities.push({ ...item, unitId: unit.id, unitNumber: unit.unitNumber });
         }
       }
-    } catch { /* skip units where analysis fails */ }
+    } catch (e) {
+      // Skip units where analysis fails, but surface the failure for diagnosis.
+      console.warn(`[assetInventory] renovation analysis failed for unit ${unit.id}:`, e);
+    }
   }
 
   const order: Record<string, number> = { REPLACE: 0, PLAN_REPLACEMENT: 1, MONITOR: 2, REPAIR: 3 };
@@ -690,12 +738,15 @@ export async function getAssetInventoryForBuilding(
     buildingLevelOnly,
   });
 
+  // Memoize the useful-life DB tiers across this building's assets (CR-004).
+  const dbCache: UsefulLifeDbCache = new Map();
   const result: AssetInventoryItem[] = [];
   for (const asset of assets) {
     const resolved = await resolveUsefulLife(
       prisma, asset.type, asset.topic, canton,
       asset.usefulLifeOverrideMonths,
       asset.assetModel?.defaultUsefulLifeMonths,
+      dbCache,
     );
     const depreciation = computeDepreciation(asset, resolved);
     result.push(mapAssetToDTO(asset, depreciation));
