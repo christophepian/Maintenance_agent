@@ -37,6 +37,21 @@ export function irr(cashFlows: number[], loPct = -99, hiPct = 1000): number | nu
   const hasNeg = cashFlows.some((c) => c < 0);
   if (!hasPos || !hasNeg) return null; // need at least one inflow and one outflow
 
+  // Multiple sign changes → potentially multiple real IRRs (Descartes' rule);
+  // bisection would return an arbitrary one, which is misleading. Only a single
+  // sign change guarantees a unique IRR, so bail out otherwise and let callers
+  // fall back to NPV (CR-021).
+  let signChanges = 0;
+  let prevSign = 0;
+  for (const c of cashFlows) {
+    const s = Math.sign(c);
+    if (s !== 0) {
+      if (prevSign !== 0 && s !== prevSign) signChanges++;
+      prevSign = s;
+    }
+  }
+  if (signChanges > 1) return null;
+
   let lo = loPct;
   let hi = hiPct;
   let fLo = npvAtRate(cashFlows, lo);
