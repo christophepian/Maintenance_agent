@@ -27,10 +27,11 @@ const surfaces = [
   ["table-header", "#f1f5f9"], ["table-border", "#e2e8f0"], ["table-divider", "#e2e8f0"],
 ];
 
-const cell = { display: "flex", flexDirection: "column", gap: 6, width: 128 };
+const cell = { display: "flex", flexDirection: "column", gap: 5, width: 132 };
 const box = { height: 52, borderRadius: 8, border: "1px solid #e2e8f0" };
 const label = { fontSize: 12, color: "#334155", fontWeight: 500 };
 const val = { fontSize: 11, color: "#94a3b8", fontFamily: "monospace" };
+const cssVarStyle = { fontSize: 10, color: "#6366f1", fontFamily: "monospace" };
 
 function Row({ name, roles }) {
   return (
@@ -39,13 +40,17 @@ function Row({ name, roles }) {
         {name}
       </div>
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-        {roles.map(([role, hex]) => (
-          <div key={role} style={cell}>
-            <div style={{ ...box, background: hex }} />
-            <div style={label}>{role}</div>
-            <div style={val}>{hex}</div>
-          </div>
-        ))}
+        {roles.map(([role, hex]) => {
+          const varName = role === "base" ? `--color-${name}` : `--color-${name}-${role}`;
+          return (
+            <div key={role} style={cell}>
+              <div style={{ ...box, background: hex }} />
+              <div style={label}>{role}</div>
+              <div style={val}>{hex}</div>
+              <div style={cssVarStyle}>{varName}</div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -77,6 +82,7 @@ export const Surfaces = {
             <div style={{ ...box, background: hex }} />
             <div style={label}>{role}</div>
             <div style={val}>{hex}</div>
+            <div style={cssVarStyle}>{`--color-${role}`}</div>
           </div>
         ))}
       </div>
