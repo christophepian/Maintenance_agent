@@ -31,8 +31,11 @@ import ContractorSidebar from "./ContractorSidebar";
 import TenantSidebar from "./TenantSidebar";
 import BottomNav from "./mobile/BottomNav";
 import HubBar from "./HubBar";
+import OnboardingTour from "./OnboardingTour";
 import { createClient } from "../lib/supabase/client";
 import { setAuthToken } from "../lib/api";
+
+const ROLE_OPTION_LABELS = ["MANAGER", "OWNER", "CONTRACTOR", "TENANT"];
 
 // Role switcher is only shown when explicitly enabled (dev / staging preview).
 const ROLE_SWITCH_ENABLED =
@@ -48,6 +51,8 @@ export default function AppShell({ role: roleProp, children }) {
   const { t } = useTranslation("common");
   const [role, setRole] = useState(roleProp || null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [capabilities, setCapabilities] = useState([]);
+  const [showTour, setShowTour] = useState(false);
 
   // ── On mount: resolve role + wire Supabase session listener ───────────────
   useEffect(() => {
@@ -66,7 +71,18 @@ export default function AppShell({ role: roleProp, children }) {
       if (session) {
         setAuthToken(session.access_token);
         const meta = session.user?.app_metadata ?? {};
+        const userMeta = session.user?.user_metadata ?? {};
         setIsAdmin(meta.accessLevel === "ADMIN");
+        setCapabilities(Array.isArray(meta.capabilities) ? meta.capabilities : []);
+        // First-run product tour: show once, after onboarding, before they've
+        // seen it. Never in sandbox (multi-persona preview).
+        if (
+          process.env.NEXT_PUBLIC_SANDBOX !== "true" &&
+          userMeta.hasCompletedOnboarding &&
+          !userMeta.hasSeenTour
+        ) {
+          setShowTour(true);
+        }
         // Only use appRole as the default when nothing is stored locally.
         // Once the user has switched roles via the switcher, localStorage wins.
         if (!getStoredRole() && meta.appRole) {
@@ -148,6 +164,17 @@ export default function AppShell({ role: roleProp, children }) {
     }
   }
 
+  // ── First-run tour dismissal — persist so it never shows again ─────────────
+  async function dismissTour() {
+    setShowTour(false);
+    try {
+      const supabase = createClient();
+      await supabase.auth.updateUser({ data: { hasSeenTour: true } });
+    } catch {
+      /* non-fatal — worst case the tour shows once more next load */
+    }
+  }
+
   // ── Sign-out ───────────────────────────────────────────────────────────────
   async function signOut() {
     const supabase = createClient();
@@ -159,6 +186,13 @@ export default function AppShell({ role: roleProp, children }) {
   }
 
   const showHubBar = process.env.NEXT_PUBLIC_SANDBOX !== "true" && (isAdmin || role === "MANAGER");
+
+  // Role switcher: dev/staging flag, admins (all roles), or self-managing users
+  // who hold more than one capability (e.g. Owner+Manager) — limited to theirs.
+  const isMultiCapability = capabilities.length > 1;
+  const showRoleSwitcher = ROLE_SWITCH_ENABLED || isAdmin || isMultiCapability;
+  const switcherRoles =
+    ROLE_SWITCH_ENABLED || isAdmin ? ROLE_OPTION_LABELS : capabilities;
 
   return (
     <>
@@ -186,20 +220,23 @@ export default function AppShell({ role: roleProp, children }) {
           )}
         </div>
 
-        {/* Role switcher — admin users and dev/staging environments */}
-        {(ROLE_SWITCH_ENABLED || isAdmin) && (
+        {/* Role/view switcher — admins, dev/staging, and multi-capability users */}
+        {showRoleSwitcher && (
           <div className="mb-5">
-            <div className="text-sm text-muted mb-2">{t("appShell.roleSwitcher")}</div>
+            <div className="text-sm text-muted mb-2">
+              {isMultiCapability && !isAdmin
+                ? t("appShell.viewAs", { defaultValue: "View as" })
+                : t("appShell.roleSwitcher")}
+            </div>
             <select
-              value={role || "MANAGER"}
+              value={role || switcherRoles[0] || "MANAGER"}
               onChange={(e) => setRoleAndRoute(e.target.value)}
               aria-label={t("appShell.switchRole")}
               className="w-full px-2.5 py-2 rounded-lg border border-muted-ring bg-surface-subtle text-foreground cursor-pointer"
             >
-              <option value="MANAGER">{t("role.MANAGER")}</option>
-              <option value="OWNER">{t("role.OWNER")}</option>
-              <option value="CONTRACTOR">{t("role.CONTRACTOR")}</option>
-              <option value="TENANT">{t("role.TENANT")}</option>
+              {switcherRoles.map((r) => (
+                <option key={r} value={r}>{t(`role.${r}`)}</option>
+              ))}
             </select>
           </div>
         )}
@@ -245,7 +282,9 @@ export default function AppShell({ role: roleProp, children }) {
           role === "CONTRACTOR") && (
           <div className="flex justify-end items-center gap-3 mb-4 pr-2">
             <LocaleSwitcher />
-            <NotificationBell role={role} />
+            <span data-tour="notifications">
+              <NotificationBell role={role} />
+            </span>
           </div>
         )}
         {children}
@@ -254,6 +293,8 @@ export default function AppShell({ role: roleProp, children }) {
       {/* Mobile bottom navigation */}
       <BottomNav role={role} />
     </div>
+
+    {showTour && role && <OnboardingTour role={role} onClose={dismissTour} />}
     </>
   );
 }
