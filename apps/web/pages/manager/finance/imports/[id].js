@@ -594,7 +594,7 @@ function ApproveModal({ preview, onConfirm, onClose, loading }) {
             )}
           </div>
 
-          <div className="overflow-hidden rounded-lg border border-table-border">
+          <div className="overflow-hidden rounded-lg border border-surface-border">
             <div className="overflow-x-auto">
               <table className="data-table text-sm">
                 <thead>
@@ -1223,7 +1223,7 @@ export default function ImportedStatementReviewPage() {
               {/* ── Linked Invoices ── */}
               {s.linkedInvoices?.length > 0 && (
                 <Section title={t("manager:financeImports.title.linkedInvoices")}>
-                  <div className="overflow-hidden rounded-lg border border-table-border">
+                  <div className="overflow-hidden rounded-lg border border-surface-border">
                     <div className="overflow-x-auto">
                       <table className="data-table">
                         <thead>
@@ -1262,7 +1262,7 @@ export default function ImportedStatementReviewPage() {
               {s.accountBalances?.length > 0 && (
                 <Section title={t("manager:financeImports.title.accountBalances")}>
                   {/* ── Mobile ── */}
-                  <div className="md:hidden overflow-hidden rounded-lg border border-table-border divide-y divide-table-divider">
+                  <div className="md:hidden overflow-hidden rounded-lg border border-surface-border divide-y divide-surface-divider">
                     {s.accountBalances.map((ab) => (
                       <Fragment key={ab.id}>
                         <div className="table-card">
@@ -1333,7 +1333,7 @@ export default function ImportedStatementReviewPage() {
                   </div>
 
                   {/* ── Desktop ── */}
-                  <div className="hidden md:block overflow-hidden rounded-lg border border-table-border">
+                  <div className="hidden md:block overflow-hidden rounded-lg border border-surface-border">
                     <div className="overflow-x-auto">
                       <table className="data-table">
                         <thead>

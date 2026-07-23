@@ -161,7 +161,7 @@ export default function NotificationBell({ role }) {
       case "QUOTE_SUBMITTED": return "bg-orange-light text-orange-text";
       case "QUOTE_AWARDED": return "bg-success-light text-success-text";
       case "QUOTE_REJECTED": return "bg-destructive-light text-destructive-text";
-      case "SLOT_PROPOSED": return "bg-cyan-light text-cyan-text";
+      case "SLOT_PROPOSED": return "bg-teal-light text-teal-text";
       case "SLOT_ACCEPTED": return "bg-success-light text-success-text";
       case "SLOT_DECLINED": return "bg-destructive-light text-destructive-text";
       case "SCHEDULING_ESCALATED": return "bg-warning-light text-warning-text";

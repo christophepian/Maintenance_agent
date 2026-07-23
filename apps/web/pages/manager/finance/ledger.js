@@ -411,7 +411,7 @@ export default function LedgerPage() {
               ) : (
                 <>
                   {/* Mobile card list — sm:hidden */}
-                  <div className="sm:hidden overflow-hidden rounded-lg border border-table-border divide-y divide-table-divider mb-4">
+                  <div className="sm:hidden overflow-hidden rounded-lg border border-surface-border divide-y divide-surface-divider mb-4">
                     {entries.map((e) => (
                       <div key={e.id} className="table-card">
                         <div className="flex items-start justify-between gap-2">

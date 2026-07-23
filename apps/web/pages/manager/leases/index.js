@@ -866,7 +866,7 @@ export default function LeasesPage() {
                 ) : (
                   <>
                     {/* Mobile card list — sm:hidden */}
-                    <div className="sm:hidden overflow-hidden rounded-lg border border-table-border divide-y divide-table-divider">
+                    <div className="sm:hidden overflow-hidden rounded-lg border border-surface-border divide-y divide-surface-divider">
                       {sortedSubmitted.map(lease => {
                         const expired = isExpired(lease.sentForSignatureAt);
                         const result = expiryResult[lease.id];
@@ -904,7 +904,7 @@ export default function LeasesPage() {
                     </div>
 
                     {/* Wide table — hidden sm:block */}
-                    <div className="hidden sm:block overflow-x-auto rounded-lg border border-table-border">
+                    <div className="hidden sm:block overflow-x-auto rounded-lg border border-surface-border">
                       <table className="data-table">
                         <thead>
                           <tr>
@@ -1022,7 +1022,7 @@ export default function LeasesPage() {
                   ) : (
                     <>
                       {/* Mobile card list — sm:hidden */}
-                      <div className="sm:hidden overflow-hidden rounded-lg border border-table-border divide-y divide-table-divider">
+                      <div className="sm:hidden overflow-hidden rounded-lg border border-surface-border divide-y divide-surface-divider">
                         {sortedFiltered.slice(0, 200).map(lease => {
                           const netRent = lease.netRentChf ?? 0;
                           const charges = lease.chargesTotalChf ?? 0;
@@ -1065,7 +1065,7 @@ export default function LeasesPage() {
                       </div>
 
                       {/* Wide table — hidden sm:block */}
-                      <div className="hidden sm:block overflow-x-auto rounded-lg border border-table-border">
+                      <div className="hidden sm:block overflow-x-auto rounded-lg border border-surface-border">
                         <table className="data-table">
                           <thead>
                             <tr>

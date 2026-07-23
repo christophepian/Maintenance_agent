@@ -1098,7 +1098,7 @@ export function InvoicesContent() {
       ) : (
         <>
           {/* Mobile: clean card list (no Panel wrapper) */}
-          <div className="sm:hidden overflow-hidden rounded-lg border border-table-border divide-y divide-table-divider">
+          <div className="sm:hidden overflow-hidden rounded-lg border border-surface-border divide-y divide-surface-divider">
             {invoices.map((inv) => (
               <div
                 key={inv.id}

@@ -240,7 +240,7 @@ function BatchRow({ batch, onDeleted, deletingId, onDelete, onDeleteBatch, delet
   const hasApproved = batch.statements?.some((s) => s.status === "APPROVED");
 
   return (
-    <div className="border border-table-border rounded-lg overflow-hidden">
+    <div className="border border-surface-border rounded-lg overflow-hidden">
       {/* Batch header */}
       <div
         className="flex items-center gap-2 px-4 py-3 bg-surface-subtle cursor-pointer hover:bg-surface-hover transition-colors"
@@ -293,7 +293,7 @@ function BatchRow({ batch, onDeleted, deletingId, onDelete, onDeleteBatch, delet
 
       {/* Nested section statements */}
       {expanded && (
-        <div className="divide-y divide-table-divider">
+        <div className="divide-y divide-surface-divider">
           {batch.statements?.map((s) => (
             <div
               key={s.id}
@@ -355,7 +355,7 @@ function BatchCard({ batch, onDelete, deletingId, onDeleteBatch, deletingBatchId
   const buildingName = batch.statements?.[0]?.buildingName ?? null;
 
   return (
-    <div className="border-b border-table-divider last:border-b-0">
+    <div className="border-b border-surface-divider last:border-b-0">
       {/* Batch header */}
       <div
         className="table-card cursor-pointer"
@@ -388,7 +388,7 @@ function BatchCard({ batch, onDelete, deletingId, onDeleteBatch, deletingBatchId
       {expanded && batch.statements?.map((s) => (
         <div
           key={s.id}
-          className="flex items-center gap-2 px-4 py-2.5 pl-8 bg-surface-subtle/60 border-t border-table-divider cursor-pointer hover:bg-surface-hover/60 transition-colors"
+          className="flex items-center gap-2 px-4 py-2.5 pl-8 bg-surface-subtle/60 border-t border-surface-divider cursor-pointer hover:bg-surface-hover/60 transition-colors"
           onClick={() => router.push(`/manager/finance/imports/${s.id}`)}
         >
           <span className="flex-1 text-xs font-medium text-muted-text">
@@ -572,7 +572,7 @@ export default function ImportedStatementsPanel() {
         {!loading && batches.length > 0 && (
           <>
             {/* Mobile card list */}
-            <div className="md:hidden overflow-hidden rounded-lg border border-table-border divide-y divide-table-divider">
+            <div className="md:hidden overflow-hidden rounded-lg border border-surface-border divide-y divide-surface-divider">
               {batches.map((batch) => (
                 <BatchCard
                   key={batch.id}
