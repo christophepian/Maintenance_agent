@@ -1,0 +1,50 @@
+import { Meta } from "@storybook/addon-docs/blocks";
+
+<Meta title="Guide/Introduction" />
+
+# Maintenance Agent — Design System
+
+The live component reference for the property-management web app (`apps/web`).
+Everything you see here is rendered from the **real components** using the app's
+**real Tailwind v4 tokens** — so this is never a mockup that drifts from
+production. It is the running successor to the old static `docs/design-system.html`.
+
+## Single source of truth
+
+Every visual decision flows through one chain:
+
+```
+globals.css @theme {}      ← semantic tokens defined once
+        ↓
+Tailwind v4 utilities       ← bg-brand, text-destructive, border-success …
+        ↓
+@layer components (@apply)  ← reusable classes: .data-table, .tab-strip, .card …
+        ↓
+components/ui/ (CVA)         ← variant-aware primitives: Button, Badge, Card …
+        ↓
+lib/statusVariants.js       ← domain status string → Badge variant
+        ↓
+pages/ & components/         ← consume primitives only, no design decisions
+```
+
+Change a color in `globals.css` and it updates the app **and** this Storybook at
+once — there is no second copy to maintain.
+
+## How to navigate
+
+- **Guide** — this intro, the [Architecture](?path=/docs/guide-architecture--docs)
+  layer-by-layer breakdown, and [Status Conventions](?path=/docs/guide-status-conventions--docs).
+- **Foundations** — Colors, Typography, and Spacing / Radius / Elevation tokens.
+- **UI** — every component primitive, with a live **Playground** (edit props in
+  the Controls panel) and an auto-generated **Docs** tab.
+
+Use the background switcher in the toolbar (Light / Surface / Dark) to check
+components on the dark surface.
+
+## Stack
+
+- **Tailwind CSS v4.1** with the CSS-first `@theme` directive (no `theme.extend`)
+- **class-variance-authority (CVA)** for variant components, composed with
+  `cn()` (`clsx` + `tailwind-merge`) from `lib/utils.js`
+- **Storybook 9** on the Vite framework (not the Next.js framework — a
+  deliberate choice to avoid Next 16 compatibility friction)

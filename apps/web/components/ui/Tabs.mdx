@@ -1,0 +1,58 @@
+import { Meta, Title, Canvas } from "@storybook/addon-docs/blocks";
+import * as TabsStories from "./Tabs.stories";
+
+<Meta of={TabsStories} />
+
+<Title />
+
+In-page tabs for switching between sections of the same object (a building's
+Overview / Financials / Documents). Built on **Radix** (`@radix-ui/react-tabs`) —
+keyboard roving, `aria` wiring, and controlled/uncontrolled modes.
+
+```jsx
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/Tabs";
+
+<Tabs defaultValue="overview">
+  <TabsList>
+    <TabsTrigger value="overview">Overview</TabsTrigger>
+    <TabsTrigger value="financials">Financials</TabsTrigger>
+  </TabsList>
+  <TabsContent value="overview">…</TabsContent>
+  <TabsContent value="financials">…</TabsContent>
+</Tabs>
+```
+
+## Anatomy
+
+| Part | Role |
+|---|---|
+| `Tabs` | Root — `value`/`onValueChange` (controlled) or `defaultValue` (uncontrolled) |
+| `TabsList` | The strip (`.tab-strip`) — scrolls horizontally, never wraps |
+| `TabsTrigger` | A tab. Active: `text-brand` + `border-brand` underline; inactive: `text-muted` |
+| `TabsContent` | Panel for a `value` |
+
+Both `TabsList` and `TabsTrigger` accept `unstyled` to opt out of the default
+styling when you need a bespoke strip.
+
+## Default
+
+<Canvas of={TabsStories.Default} />
+
+## Many tabs
+
+The strip scrolls rather than wrapping — safe for objects with many sections.
+
+<Canvas of={TabsStories.ManyTabs} />
+
+## When to use
+
+- ✅ **Use Tabs** to page between views of **one** entity without navigating away.
+- ⛔ **Don't** use tabs for steps in a sequence (use a stepper/wizard) or for
+  top-level app navigation (use the sidebar).
+- Keep labels to one or two words; the strip scrolls but shorter is scannable.
+
+## Accessibility
+
+- Radix handles arrow-key navigation, `role="tab"`/`tabpanel`, and focus — don't
+  reimplement.
+- The active tab is signalled by color **and** the underline, not color alone.

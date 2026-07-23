@@ -1,0 +1,46 @@
+import { Meta, Title, Canvas, Controls } from "@storybook/addon-docs/blocks";
+import * as StatusPillStories from "./StatusPill.stories";
+
+<Meta of={StatusPillStories} />
+
+<Title />
+
+A small rounded status chip. Functionally overlaps with
+[Badge](?path=/docs/ui-badge--docs) — **prefer `Badge`** for new work, which is
+fully token-driven. `StatusPill` predates it and is kept for existing call-sites.
+
+```jsx
+import StatusPill from "@/components/ui/StatusPill";
+
+<StatusPill variant="success">Active</StatusPill>
+```
+
+<Canvas of={StatusPillStories.Variants} />
+
+## ⚠️ Known inconsistency
+
+`StatusPill`'s `warning`, `info`, and `orange` variants **hardcode raw Tailwind
+palette** (`bg-amber-50 text-amber-800`, `bg-sky-50`, `bg-orange-50`) instead of the
+semantic tokens the rest of the system uses. Consequences:
+
+- They **won't adapt in dark mode** (raw palette isn't theme-aware).
+- They render slightly differently from the same-named `Badge` variants.
+- The `orange` variant pairs an orange background with an **amber border** — likely
+  a copy-paste slip.
+
+**Recommendation:** migrate call-sites to `Badge` (token-based), or update these
+three variants to use `-light` / `-dark` / `-ring` tokens like the others.
+
+## Sizes
+
+<Canvas of={StatusPillStories.Sizes} />
+
+## Do / Don't
+
+- ✅ **Do** prefer `Badge` for anything new.
+- ✅ **Do** drive the variant from `statusVariants.js`, never a per-page map.
+- ⛔ **Don't** add more raw-palette variants here — fix them toward tokens instead.
+
+## Props
+
+<Controls of={StatusPillStories.Playground} />

@@ -1,0 +1,56 @@
+import { Meta, Title, Canvas } from "@storybook/addon-docs/blocks";
+import * as ModalStories from "./Modal.stories";
+
+<Meta of={ModalStories} />
+
+<Title />
+
+A lightweight, dependency-free overlay: backdrop + centered panel with a title,
+optional description, body, and footer. You mount it conditionally and close via
+`onClose`.
+
+> **Prefer [Dialog](?path=/docs/ui-dialog--docs) for new work.** `Modal` is the
+> earlier plain-React pattern and lacks a focus trap and `Esc`-to-close (it only
+> closes on backdrop click). `Dialog` (Radix) handles all of that. `Modal` remains
+> for existing call-sites and very simple cases.
+
+```jsx
+import { Modal, ModalFooter } from "@/components/ui/Modal";
+
+{open && (
+  <Modal title="Add contractor" description="Invite a contractor." onClose={close}>
+    …body…
+    <ModalFooter>
+      <Button variant="secondary" onClick={close}>Cancel</Button>
+      <Button onClick={submit}>Send invite</Button>
+    </ModalFooter>
+  </Modal>
+)}
+```
+
+## Anatomy
+
+| Prop / part | Role |
+|---|---|
+| `title` | Heading (required) |
+| `description` | Optional subtext under the title |
+| `maxWidth` | Tailwind max-width class (default `max-w-md`) |
+| `onClose` | Called on backdrop click |
+| `ModalFooter` | Right-aligned action row |
+
+## Live
+
+<Canvas of={ModalStories.Default} />
+
+## Do / Don't
+
+- ✅ **Do** put actions in a `ModalFooter`, primary last (right).
+- ⛔ **Don't** reach for `Modal` when you need focus management or keyboard
+  dismissal — use `Dialog`.
+- ⛔ **Don't** stack modals.
+
+## Accessibility
+
+- ⚠️ No focus trap, no `Esc` handling, and no `aria-modal` — this is the main reason
+  to prefer `Dialog`. If you must use `Modal`, at minimum move focus into it on open
+  and restore it on close, and add `Esc` handling.

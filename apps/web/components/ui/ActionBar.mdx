@@ -1,0 +1,36 @@
+import { Meta, Title, Canvas } from "@storybook/addon-docs/blocks";
+import * as ActionBarStories from "./ActionBar.stories";
+
+<Meta of={ActionBarStories} />
+
+<Title />
+
+A horizontal wrapper for a cluster of action buttons — `mt-6 flex flex-wrap
+gap-3`. Keeps button spacing and wrapping consistent across form footers and page
+actions.
+
+```jsx
+import ActionBar from "@/components/ui/ActionBar";
+
+<ActionBar>
+  <Button variant="primary">Save changes</Button>
+  <Button variant="secondary">Cancel</Button>
+  <Button variant="destructiveGhost">Delete</Button>
+</ActionBar>
+```
+
+<Canvas of={ActionBarStories.Default} />
+
+## When to use
+
+- ✅ **Use ActionBar** to group the actions at the end of a form or section.
+- Order by emphasis; keep a single primary. See
+  [Button → In context](?path=/docs/ui-button--docs) for ordering guidance.
+- For actions inside a card header, use the header's `actions` slot instead
+  ([Card](?path=/docs/ui-card--docs)).
+
+## Do / Don't
+
+- ✅ **Do** rely on the built-in `gap-3` rather than adding margins between buttons.
+- ✅ **Do** keep it to a handful of actions; overflow wraps automatically.
+- ⛔ **Don't** stack multiple primary buttons.

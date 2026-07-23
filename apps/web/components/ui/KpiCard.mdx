@@ -1,0 +1,76 @@
+import { Meta, Title, Canvas, Controls } from "@storybook/addon-docs/blocks";
+import * as KpiCardStories from "./KpiCard.stories";
+
+<Meta of={KpiCardStories} />
+
+<Title />
+
+A single headline metric — a big number with a label, optional subtitle, and an
+accent that signals its status. The canonical KPI tile, replacing the three
+competing KPI patterns that existed across the app.
+
+```jsx
+import KpiCard from "@/components/ui/KpiCard";
+import { formatChf } from "@/lib/format";
+
+<KpiCard label="Net operating income" value={formatChf(noiCents)} subtitle="YTD" accent="success" />
+```
+
+## Anatomy
+
+| Prop | Role |
+|---|---|
+| `label` | Uppercase metric name (`text-xs`, tracked, muted) |
+| `value` | The headline number (`text-2xl`, semibold, tracking-tight) |
+| `subtitle` | Optional context under the label (delta, period, count) |
+| `accent` | Colors the **value** to signal status |
+| `icon` | Optional glyph before the label |
+| `href` | Optional — makes the whole card a link |
+
+> **Format the value before passing it in.** `KpiCard` renders `value` verbatim —
+> use `lib/format.js` (`formatChf`, `formatDate`) so currency/number formatting
+> stays consistent. Never inline `new Intl.NumberFormat()`.
+
+## Accents
+
+The accent colors the value only, so the tile stays calm while still signaling
+status. Choose by meaning.
+
+<Canvas of={KpiCardStories.Accents} />
+
+## With an icon
+
+<Canvas of={KpiCardStories.WithIcon} />
+
+## KPI row
+
+The dashboard-header pattern: a responsive grid of tiles, each a different metric.
+Keep accents meaningful — don't rainbow every tile.
+
+<Canvas of={KpiCardStories.KpiRow} />
+
+## As a link
+
+Pass `href` to make the whole card clickable (renders an `<a class="link-card">`).
+
+<Canvas of={KpiCardStories.AsLink} />
+
+## Do / Don't
+
+- ✅ **Do** pre-format `value` with `lib/format.js`.
+- ✅ **Do** use accent to signal status (overdue → `destructive`, on-target →
+  `success`), not decoration.
+- ✅ **Do** keep `label` short and scannable.
+- ⛔ **Don't** put a paragraph in `value` — it's one number.
+- ⛔ **Don't** give every tile a different accent just for variety.
+
+## Accessibility
+
+- When `href` is set the card is a single large link — keep `subtitle` describing
+  the destination ("View all →") so the link text is meaningful.
+- Accent color reinforces status; the `label`/`subtitle` text carries the meaning
+  for colorblind users.
+
+## Props
+
+<Controls of={KpiCardStories.Playground} />

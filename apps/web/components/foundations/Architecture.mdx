@@ -1,0 +1,95 @@
+import { Meta } from "@storybook/addon-docs/blocks";
+
+<Meta title="Guide/Architecture" />
+
+# Architecture
+
+The design system is a layered pipeline. Each layer has exactly one job, and
+lower layers never reach around higher ones.
+
+## Layer 1 — Semantic tokens (`globals.css @theme {}`)
+
+The single source of truth for every design value. Tailwind v4 reads these CSS
+custom properties natively.
+
+- **11 color families** — `brand` (indigo), `destructive` (red), `success`
+  (green), `warning` (amber), `info` (sky), `muted` (slate), plus the
+  categorical accents `orange`, `purple`, `violet`, `cyan`, `teal`.
+- Each family has **`base` / `-light` / `-dark` / `-ring` / `-text`** variants.
+- Plus surface tokens (`surface`, `surface-raised`, `surface-subtle`,
+  `surface-border`, `surface-hover`, `surface-divider`, `track`), `foreground`
+  (+`-dim`), and `table-*`.
+- Dark mode overrides live under `html.dark { … }` (toggled by `_app.js`).
+
+> **Rule:** `tailwind.config.js` has **no** `theme.extend`. Never add color
+> extensions to the config — new tokens go in `globals.css` only.
+
+## Layer 2 — Tailwind v4 utilities
+
+Reads the `@theme` custom properties and generates token-aware utilities:
+`bg-brand`, `text-destructive`, `border-success`, `ring-brand-ring`, and so on.
+
+Composition of conditional classes always goes through **`cn()`**
+(`twMerge(clsx(...))`) from `lib/utils.js`.
+
+## Layer 3 — `@layer components` (`@apply` aliases)
+
+Reusable CSS classes built with `@apply`, kept in `globals.css` (one file, no new
+`.css` files ever). Examples: `.data-table`, `.kpi-grid`, `.tab-strip`,
+`.status-pill`, `.card`, `.filter-input`, `.empty-state`, `.error-banner`.
+
+## Layer 4 — CVA primitives (`components/ui/`)
+
+Variant-aware React components built with `class-variance-authority`. Any
+component with 2+ visual states is a CVA definition here — never ad-hoc
+conditional class strings. Every one accepts a `className` override via `cn()`:
+
+```jsx
+export default function Button({ variant = "primary", size, className, ...props }) {
+  return <button className={cn(button({ variant, size }), className)} {...props} />;
+}
+```
+
+See the **UI** section for all of them (Button — 10 variants, Badge — 7, Card,
+Input, Select, Modal, Dialog, Popover, Tabs, DataTable, KpiCard, …).
+
+## Layer 5 — `lib/statusVariants.js`
+
+Canonical mappers from domain status strings to Badge variant names — one
+function per domain entity. See [Status Conventions](?path=/docs/guide-status-conventions--docs).
+
+## Layer 6 — Pages (`pages/` & `components/`)
+
+Consume primitives from `components/ui/` and helpers from `lib/`. **No design
+decisions at this layer.** Formatting comes from `lib/format.js`
+(`formatChf`, `formatDate`), sorting from `lib/tableUtils`, and all visible
+strings go through `t()` (next-i18next; EN/FR).
+
+---
+
+## Golden Rules
+
+1. **One token file.** All colors, surfaces, and borders live in
+   `globals.css @theme {}`. Zero theme extensions in the Tailwind config.
+2. **`cn()` always.** Use `cn()` from `lib/utils.js` for every conditional or
+   composed `className`.
+3. **CVA for variants.** Any component with 2+ visual states gets a CVA
+   definition in `components/ui/`.
+4. **`statusVariants` for domain status.** Never define per-file color maps —
+   import the relevant mapper and pass it to `<Badge>`.
+5. **`format.js` for all formatting.** `formatChf`, `formatDate`,
+   `formatDateTime` — never inline `new Intl.NumberFormat()`.
+6. **No new `.css` files.** Shared styles go in `globals.css @layer components`
+   via `@apply`.
+
+## Banned patterns (enforced by guardrails)
+
+- ⛔ **Inline `style={{}}`** for anything achievable with Tailwind — bypasses the
+  token system. *(guardrail G23)*
+- ⛔ **Hardcoded hex/rgb** in JSX (`style={{ color: "#dc2626" }}`) — breaks
+  theming. Use `text-destructive` / `text-red-600`.
+- ⛔ **Template-literal `className`** (`` `bg-${color}-100` ``) — invisible to
+  Tailwind's scanner, so the class never ships. Use `cn()` with full class
+  names. *(guardrail F-UI4)*
+- ⛔ **Per-file `STATUS_COLORS` / `URGENCY_COLORS` maps** — use
+  `statusVariants.js`. *(guardrail F-UI4a)*

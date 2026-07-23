@@ -1,0 +1,41 @@
+import { Meta, Title, Canvas } from "@storybook/addon-docs/blocks";
+import * as DetailListStories from "./DetailList.stories";
+
+<Meta of={DetailListStories} />
+
+<Title />
+
+A vertical key/value list (`<dl>`) — label on the left, value on the right. The
+narrow-column counterpart to [DetailGrid](?path=/docs/ui-detailgrid--docs).
+
+```jsx
+import { DetailList, DetailRow } from "@/components/ui/DetailList";
+
+<DetailList>
+  <DetailRow label="Status"><Badge variant="warning">Pending</Badge></DetailRow>
+  <DetailRow label="Amount" ddClassName="font-semibold">CHF 1,240</DetailRow>
+  <DetailRow label="Due date">31 Jul 2026</DetailRow>
+</DetailList>
+```
+
+<Canvas of={DetailListStories.Default} />
+
+## Anatomy
+
+| Part | Role |
+|---|---|
+| `DetailList` | `<dl>` wrapper, `space-y-2 text-sm` |
+| `DetailRow` | `label` (muted, left) + value (right) via `flex justify-between`; `ddClassName` for emphasis |
+
+## DetailGrid vs DetailList
+
+| Use… | When |
+|---|---|
+| **DetailGrid** | Wide detail pages — a responsive multi-column grid of attributes |
+| **DetailList** | Narrow columns — cards, sidebars, summary panels |
+
+## Do / Don't
+
+- ✅ **Do** keep labels short so the right-aligned values line up cleanly.
+- ⛔ **Don't** use it for long free-text values — the two-column layout suits short
+  values (amounts, dates, badges).
