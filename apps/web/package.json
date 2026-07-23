@@ -3,9 +3,9 @@
   "private": true,
   "scripts": {
     "dev": "NODE_ENV=development next dev -p 3000 -H 0.0.0.0",
-    "build": "next build",
+    "build": "npm run build-storybook && next build",
     "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build"
+    "build-storybook": "storybook build -o public/storybook"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.15",
