@@ -11,14 +11,19 @@ const pill = { Active: "success", Late: "destructive", Vacant: "muted" };
 export default {
   title: "UI/DataTable",
   component: DataTable,
-  tags: ["autodocs"],
   parameters: { layout: "padded" },
 };
 
+/**
+ * Styled with the `.data-table` class (see the Known-issue note in Docs — the
+ * component currently emits `inline-table` by default). Rows hover to
+ * `surface-subtle`; the table self-borders — never wrap it in a Card.
+ */
 export const Default = {
   render: () => (
     <div style={{ width: 620 }}>
       <DataTable
+        className="data-table"
         columns={["Unit", "Tenant", "Rent", "Status"]}
         rows={rows}
         renderRow={(r) => (
@@ -36,10 +41,12 @@ export const Default = {
   ),
 };
 
+/** Empty — renders the `empty` message instead of an empty table. */
 export const Empty = {
   render: () => (
     <div style={{ width: 620 }}>
       <DataTable
+        className="data-table"
         columns={["Unit", "Tenant"]}
         rows={[]}
         renderRow={() => null}
