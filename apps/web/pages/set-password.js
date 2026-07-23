@@ -17,13 +17,7 @@ import { useRouter } from "next/router";
 import { createClient } from "../lib/supabase/client";
 import { setAuthToken } from "../lib/api";
 import { withTranslations } from "../lib/i18n";
-
-const ROLE_HOME = {
-  MANAGER: "/manager",
-  CONTRACTOR: "/contractor",
-  OWNER: "/owner",
-  TENANT: "/tenant/inbox",
-};
+import { resolveLandingPath } from "../lib/roleRouting";
 
 function Spinner() {
   return (
@@ -45,6 +39,7 @@ export default function SetPasswordPage() {
   const [done, setDone]           = useState(false);
   const [userEmail, setUserEmail] = useState("");
   const [appMeta, setAppMeta]     = useState({});
+  const [userMeta, setUserMeta]   = useState({});
 
   useEffect(() => {
     const supabase = createClient();
@@ -57,6 +52,7 @@ export default function SetPasswordPage() {
       setAuthToken(session.access_token);
       setUserEmail(session.user?.email ?? "");
       setAppMeta(session.user?.app_metadata ?? {});
+      setUserMeta(session.user?.user_metadata ?? {});
     });
   }, [router]);
 
@@ -95,12 +91,7 @@ export default function SetPasswordPage() {
       }
 
       setTimeout(() => {
-        const target =
-          (typeof next === "string" && next.startsWith("/") ? next : null) ||
-          (appMeta.accessLevel === "DOCS_INVESTOR" ? "/docs/pitchdeck.html" : null) ||
-          (appMeta.appRole ? ROLE_HOME[appMeta.appRole] : null) ||
-          "/manager";
-        router.push(target);
+        router.push(resolveLandingPath({ appMeta, userMeta, next }));
       }, 1800);
     } catch {
       setNotice({ type: "err", msg: "Something went wrong. Please try again." });
@@ -113,12 +104,7 @@ export default function SetPasswordPage() {
     if (process.env.NEXT_PUBLIC_SANDBOX === "true") {
       fetch("/api/sandbox/setup", { method: "POST" }).catch(() => {});
     }
-    const target =
-      (typeof next === "string" && next.startsWith("/") ? next : null) ||
-      (appMeta.accessLevel === "DOCS_INVESTOR" ? "/docs/pitchdeck.html" : null) ||
-      (appMeta.appRole ? ROLE_HOME[appMeta.appRole] : null) ||
-      "/manager";
-    router.push(target);
+    router.push(resolveLandingPath({ appMeta, userMeta, next }));
   }
 
   return (

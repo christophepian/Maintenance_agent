@@ -34,19 +34,13 @@ import { setAuthToken } from "../lib/api";
 import { withTranslations } from "../lib/i18n";
 import { useTranslation } from "next-i18next";
 import { cn } from "../lib/utils";
+import { resolveLandingPath } from "../lib/roleRouting";
 
 /* Shared input + primary-button styling for the fixed-light card */
 const INPUT_CLASS =
   "w-full px-3.5 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition";
 const PRIMARY_BTN_CLASS =
   "w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-semibold text-white bg-gradient-to-br from-indigo-600 to-violet-600 shadow-sm shadow-indigo-600/25 hover:opacity-95 active:translate-y-px disabled:opacity-60 transition";
-
-const ROLE_HOME = {
-  MANAGER: "/manager",
-  CONTRACTOR: "/contractor",
-  OWNER: "/owner",
-  TENANT: "/tenant/leases",
-};
 
 /* ── Small shared components ──────────────────────────────────── */
 
@@ -381,12 +375,7 @@ export default function LoginPage() {
       return;
     }
 
-    const target =
-      (typeof next === "string" && next.startsWith("/") ? next : null) ||
-      (meta.accessLevel === "DOCS_INVESTOR" ? "/docs/pitchdeck.html" : null) ||
-      (meta.appRole ? ROLE_HOME[meta.appRole] : null) ||
-      "/manager";
-    router.push(target);
+    router.push(resolveLandingPath({ appMeta: meta, userMeta, next }));
   }
 
   /* ── Magic link ─────────────────────────────────────────────── */
