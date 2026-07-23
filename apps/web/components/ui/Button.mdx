@@ -60,8 +60,10 @@ buttons must have an `aria-label`.**
 
 ## States
 
-`disabled` is the native attribute — it dims the button to 50% and blocks pointer
-events. Focus shows a 2px `brand-ring` (visible in the live stories).
+The full interaction model — **Default / Hover / Focus / Disabled** — per variant.
+Hover darkens to the variant's `-dark` token, Focus shows a 2px ring in the
+variant's `-ring` token, and Disabled dims to 50% and blocks pointer events. (Hover
+and Focus are forced in this matrix so they're visible without interacting.)
 
 <Canvas of={ButtonStories.States} />
 

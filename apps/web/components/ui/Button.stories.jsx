@@ -1,5 +1,16 @@
+import { Fragment } from "react";
 import { Plus, Check, Trash2, Download, ArrowRight } from "lucide-react";
 import Button from "./Button";
+
+// Forced-state overrides mirror each variant's real cva hover:/focus: classes
+// (no pseudo-states addon needed). Full class strings — never template-literal
+// className (guardrail F-UI4 scans story files too).
+const stateVariants = [
+  { variant: "primary", hover: "!bg-brand-dark", focus: "ring-2 ring-offset-1 ring-brand-ring" },
+  { variant: "secondary", hover: "!bg-surface-hover", focus: "ring-2 ring-offset-1 ring-muted-ring" },
+  { variant: "destructive", hover: "!bg-destructive-dark", focus: "ring-2 ring-offset-1 ring-destructive-ring" },
+  { variant: "ghost", hover: "!bg-surface-hover", focus: "ring-2 ring-offset-1 ring-muted-ring" },
+];
 
 const variants = [
   ["primary", "Main action — one per view"],
@@ -116,26 +127,41 @@ export const WithIcons = {
   ),
 };
 
-/** Default vs disabled — every variant dims to 50% and blocks pointer events. */
+/**
+ * Interaction states. Hover and Focus are *forced* here (via className overrides
+ * that match the variant's real `hover:`/`focus:` token classes) so the full
+ * state model is visible without hovering. In the app they apply on real
+ * interaction. Disabled is the native attribute (opacity-50 + no pointer events).
+ */
 export const States = {
-  render: () => (
-    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      <Field title="default">
-        <Row>
-          <Button>Primary</Button>
-          <Button variant="secondary">Secondary</Button>
-          <Button variant="destructive">Destructive</Button>
-        </Row>
-      </Field>
-      <Field title="disabled">
-        <Row>
-          <Button disabled>Primary</Button>
-          <Button variant="secondary" disabled>Secondary</Button>
-          <Button variant="destructive" disabled>Destructive</Button>
-        </Row>
-      </Field>
-    </div>
-  ),
+  parameters: { layout: "padded" },
+  render: () => {
+    const cols = ["Default", "Hover", "Focus", "Disabled"];
+    return (
+      <div>
+        <div style={{ display: "grid", gridTemplateColumns: "110px repeat(4, 1fr)", gap: 16, alignItems: "center", maxWidth: 660 }}>
+          <div />
+          {cols.map((c) => (
+            <div key={c} style={label}>{c}</div>
+          ))}
+          {stateVariants.map((row) => (
+            <Fragment key={row.variant}>
+              <div style={{ fontSize: 13, color: "#334155", fontWeight: 500 }}>{row.variant}</div>
+              <Button variant={row.variant}>Button</Button>
+              <Button variant={row.variant} className={row.hover}>Button</Button>
+              <Button variant={row.variant} className={row.focus}>Button</Button>
+              <Button variant={row.variant} disabled>Button</Button>
+            </Fragment>
+          ))}
+        </div>
+        <p style={{ fontSize: 12, color: "#94a3b8", marginTop: 16, maxWidth: 560 }}>
+          Hover &amp; Focus are forced to show the token styles
+          (<code>hover:bg-*-dark</code>, <code>focus:ring-*-ring</code>); in the app
+          they trigger on real interaction.
+        </p>
+      </div>
+    );
+  },
 };
 
 /** Real usage — a form action bar. Primary leads; destructive is low-emphasis, pushed left. */
