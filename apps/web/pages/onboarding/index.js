@@ -17,11 +17,12 @@
  * answers are mirrored to localStorage so a refresh mid-wizard resumes.
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/router";
 import Head from "next/head";
+import { useTranslation } from "next-i18next";
 import { createClient } from "../../lib/supabase/client";
-import { setAuthToken } from "../../lib/api";
+import { setAuthToken, authHeaders } from "../../lib/api";
 import { withTranslations } from "../../lib/i18n";
 import { resolveLandingPath } from "../../lib/roleRouting";
 
@@ -30,9 +31,22 @@ const PROGRESS_KEY = "onboarding_progress_v1";
 const STEPS = [
   { key: "role", label: "Your role" },
   { key: "profile", label: "Your details" },
-  { key: "property", label: "Your first property" },
+  { key: "property", label: "Your property" },
+  { key: "risk", label: "Your strategy" },
   { key: "done", label: "All set" },
 ];
+
+/* Archetype → per-building roleIntent (mirrors owner/strategy.js). */
+function archetypeToRoleIntent(archetype) {
+  switch (archetype) {
+    case "exit_optimizer": return "sell";
+    case "yield_maximizer": return "income";
+    case "value_builder": return "long_term_quality";
+    case "capital_preserver": return "stable_hold";
+    case "opportunistic_repositioner": return "reposition";
+    default: return "stable_hold";
+  }
+}
 
 /* Map an existing appRole + capabilities back to a primaryRole for preselect. */
 function inferPrimaryRole(appMeta) {
@@ -318,23 +332,129 @@ function ProfileStep({ profile, onChange, onNext, onBack }) {
   );
 }
 
-/* ── Property step (scaffold — real create/import + risk profile next) ── */
-function PropertyStep({ onNext, onBack }) {
+/* ── Property step — create manually OR import a régie package ────
+ *
+ * Choosing "import" and continuing fires the (slow) package analysis in the
+ * background while the user answers the risk questionnaire — so the building is
+ * staged and ready to commit by the time they finish. This is the "seamless"
+ * mechanic: they never sit and wait for OCR/extraction.
+ */
+function PropertyStep({ prop, onChange, onImportFiles, importStatus, onNext, onBack }) {
+  const set = (k, v) => onChange({ ...prop, [k]: v });
+  const canContinue =
+    prop.mode === "create"
+      ? prop.name.trim() || prop.address.trim()
+      : prop.mode === "import"
+        ? prop.files.length > 0
+        : false;
+
   return (
     <div>
       <h2 className="text-lg font-semibold text-foreground mb-1">Add your first property</h2>
       <p className="text-sm text-muted mb-6">
-        In the next step you&apos;ll create a building or import one from a régie package — and
-        answer a few quick questions to build your investor profile while it processes.
+        Start with one building — you can add the rest anytime. Import lets us hydrate units,
+        tenants and finances from your régie&apos;s year-end package.
       </p>
-      <div className="rounded-xl border border-dashed border-surface-border bg-surface-subtle px-4 py-6 text-center text-sm text-muted mb-6">
-        Property setup is being wired up here.
+
+      {/* Mode choice */}
+      <div className="grid grid-cols-2 gap-3 mb-5">
+        {[
+          { v: "create", t: "Create manually", d: "Enter the basics now" },
+          { v: "import", t: "Import a package", d: "Régie PDF or CSVs" },
+        ].map((o) => (
+          <button
+            key={o.v}
+            type="button"
+            onClick={() => set("mode", o.v)}
+            className={
+              "text-left px-4 py-3 rounded-xl border transition " +
+              (prop.mode === o.v
+                ? "border-brand bg-brand-light ring-1 ring-brand"
+                : "border-surface-border hover:border-muted-ring")
+            }
+          >
+            <p className="text-sm font-semibold text-foreground">{o.t}</p>
+            <p className="text-xs text-muted mt-0.5">{o.d}</p>
+          </button>
+        ))}
       </div>
+
+      {prop.mode === "create" && (
+        <div className="space-y-4 mb-6">
+          <div>
+            <label className="block text-sm font-medium text-muted-dark mb-1.5">Building name</label>
+            <input
+              className="input mb-0"
+              value={prop.name}
+              onChange={(e) => set("name", e.target.value)}
+              placeholder="e.g. Rue du Lac 12"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-muted-dark mb-1.5">Address</label>
+            <input
+              className="input mb-0"
+              value={prop.address}
+              onChange={(e) => set("address", e.target.value)}
+              placeholder="e.g. 1003 Lausanne"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-muted-dark mb-1.5">
+              Approx. units <span className="text-foreground-dim">(optional)</span>
+            </label>
+            <input
+              type="number"
+              min="1"
+              className="input mb-0 max-w-[140px]"
+              value={prop.approxUnits}
+              onChange={(e) => set("approxUnits", e.target.value)}
+              placeholder="12"
+            />
+          </div>
+        </div>
+      )}
+
+      {prop.mode === "import" && (
+        <div className="mb-6">
+          <label
+            className="block border-2 border-dashed border-muted-ring rounded-xl px-4 py-6 text-center cursor-pointer hover:border-brand-ring transition"
+          >
+            <input
+              type="file"
+              multiple
+              accept=".csv,text/csv,.tsv,.pdf,application/pdf"
+              className="hidden"
+              onChange={(e) => onImportFiles(Array.from(e.target.files || []))}
+            />
+            {prop.files.length ? (
+              <p className="text-sm text-brand-dark font-medium">{prop.files.length} file(s) selected</p>
+            ) : (
+              <p className="text-sm text-muted">
+                Drop the year-end package — a régie PDF, or CSVs (balance sheet, income statement,
+                rent roll, general ledger)
+              </p>
+            )}
+          </label>
+          {importStatus && (
+            <p className="text-xs text-muted mt-2">{importStatus}</p>
+          )}
+          <p className="text-xs text-foreground-dim mt-2">
+            Nothing is created yet. We&apos;ll analyze it while you answer a few quick questions next.
+          </p>
+        </div>
+      )}
+
       <div className="flex gap-3">
         <button type="button" onClick={onBack} className="button-secondary flex-1 text-sm">
           Back
         </button>
-        <button type="button" onClick={onNext} className="button-primary flex-[2] text-sm">
+        <button
+          type="button"
+          onClick={onNext}
+          disabled={!canContinue}
+          className="button-primary flex-[2] text-sm"
+        >
           Continue
         </button>
       </div>
@@ -342,8 +462,99 @@ function PropertyStep({ onNext, onBack }) {
   );
 }
 
+/* ── Risk-profile step — the 5 strategy questions (reused from owner wizard),
+ * with a live indicator of the background import. ──────────────── */
+function RiskStep({ questions, answers, onAnswer, importState, busy, onSubmit, onBack }) {
+  const answeredAll = questions.length > 0 && questions.every((q) => answers[q.key]);
+
+  return (
+    <div>
+      <h2 className="text-lg font-semibold text-foreground mb-1">A few questions about your goals</h2>
+      <p className="text-sm text-muted mb-4">
+        This builds your investor profile so recommendations fit how you actually think about your
+        property.
+      </p>
+
+      {/* Background import indicator */}
+      {importState && importState.active && (
+        <div
+          className={
+            "flex items-center gap-2 rounded-lg px-3 py-2 mb-5 text-xs border " +
+            (importState.ready
+              ? "border-success-ring bg-success-light text-success"
+              : importState.error
+                ? "border-warning-ring bg-warning-light text-warning-text"
+                : "border-surface-border bg-surface-subtle text-muted")
+          }
+        >
+          {importState.ready ? (
+            <>✓ Your building is ready to import</>
+          ) : importState.error ? (
+            <>⚠ We couldn&apos;t analyze the package — you can retry later from Properties</>
+          ) : (
+            <>
+              <Spinner /> Analyzing your building in the background…
+            </>
+          )}
+        </div>
+      )}
+
+      <div className="space-y-6 mb-6">
+        {questions.map((q, qi) => (
+          <fieldset key={q.key}>
+            <legend className="text-sm font-semibold text-foreground mb-2">
+              {qi + 1}. {q.title}
+            </legend>
+            <div className="space-y-2">
+              {q.options.map((opt, idx) => {
+                const val = idx + 1;
+                const active = answers[q.key] === val;
+                return (
+                  <label
+                    key={val}
+                    className={
+                      "flex items-center gap-3 rounded-lg border px-3.5 py-2.5 cursor-pointer transition " +
+                      (active
+                        ? "border-brand bg-brand-light"
+                        : "border-surface-border hover:bg-surface-subtle")
+                    }
+                  >
+                    <input
+                      type="radio"
+                      name={q.key}
+                      checked={active}
+                      onChange={() => onAnswer(q.key, val)}
+                      className="accent-brand"
+                    />
+                    <span className="text-sm text-foreground">{opt}</span>
+                  </label>
+                );
+              })}
+            </div>
+          </fieldset>
+        ))}
+      </div>
+
+      <div className="flex gap-3">
+        <button type="button" onClick={onBack} className="button-secondary flex-1 text-sm">
+          Back
+        </button>
+        <button
+          type="button"
+          onClick={onSubmit}
+          disabled={!answeredAll || busy}
+          className="button-primary flex-[2] text-sm flex items-center justify-center gap-2"
+        >
+          {busy && <Spinner />}
+          {busy ? "Setting up…" : "See my strategy & finish"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /* ── Done step ────────────────────────────────────────────────── */
-function DoneStep({ finishing, onFinish }) {
+function DoneStep({ summary, finishing, onFinish }) {
   return (
     <div className="text-center py-2">
       <div className="w-14 h-14 bg-success-light rounded-full flex items-center justify-center mx-auto mb-5">
@@ -352,9 +563,25 @@ function DoneStep({ finishing, onFinish }) {
         </svg>
       </div>
       <h2 className="text-xl font-semibold text-foreground mb-2">You&apos;re all set!</h2>
-      <p className="text-sm text-muted mb-6">
-        We&apos;ll take you to your dashboard and show you around.
-      </p>
+
+      {summary ? (
+        <div className="text-sm text-muted mb-6 space-y-1.5">
+          {summary.buildingName && (
+            <p>
+              <span className="text-foreground font-medium">{summary.buildingName}</span> is set up
+              {summary.imported ? " and your package is importing." : "."}
+            </p>
+          )}
+          {summary.archetypeLabel && (
+            <p>
+              Your investor profile: <span className="text-foreground font-medium">{summary.archetypeLabel}</span>.
+            </p>
+          )}
+        </div>
+      ) : (
+        <p className="text-sm text-muted mb-6">We&apos;ll take you to your dashboard and show you around.</p>
+      )}
+
       <button
         type="button"
         onClick={onFinish}
@@ -372,6 +599,9 @@ function DoneStep({ finishing, onFinish }) {
 export default function OnboardingPage() {
   const router = useRouter();
   const { next } = router.query;
+  const { t: tOwner } = useTranslation("owner");
+  const rawQuestions = tOwner("strategy.questions", { returnObjects: true });
+  const questions = Array.isArray(rawQuestions) ? rawQuestions : [];
 
   const [ready, setReady] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
@@ -379,6 +609,7 @@ export default function OnboardingPage() {
   const [primaryRole, setPrimaryRole] = useState(null);
   const [savingRole, setSavingRole] = useState(false);
   const [finishing, setFinishing] = useState(false);
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const [profile, setProfile] = useState({
     entityType: "individual",
@@ -390,6 +621,12 @@ export default function OnboardingPage() {
     postalCode: "",
     acceptedTos: false,
   });
+
+  // Property + import + risk-profile state
+  const [prop, setProp] = useState({ mode: "create", name: "", address: "", approxUnits: "", files: [] });
+  const [importState, setImportState] = useState(null); // { active, ready, error, analysis }
+  const [answers, setAnswers] = useState({});
+  const [summary, setSummary] = useState(null); // { buildingName, archetypeLabel, imported }
 
   // Guard + hydrate
   useEffect(() => {
@@ -410,12 +647,16 @@ export default function OnboardingPage() {
       setAppMeta(meta);
       setPrimaryRole(inferPrimaryRole(meta));
 
-      // Resume in-progress answers (role step is re-confirmed from the JWT).
+      // Resume in-progress answers (role step is re-confirmed from the JWT;
+      // uploaded files can't be serialized so the import step re-prompts).
       try {
         const saved = JSON.parse(localStorage.getItem(PROGRESS_KEY) || "null");
         if (saved) {
           if (saved.profile) setProfile((p) => ({ ...p, ...saved.profile }));
-          if (typeof saved.stepIndex === "number") setStepIndex(saved.stepIndex);
+          if (saved.prop) setProp((p) => ({ ...p, ...saved.prop, files: [] }));
+          if (saved.answers) setAnswers(saved.answers);
+          // Don't resume onto the import/risk steps — files are gone; clamp to profile.
+          if (typeof saved.stepIndex === "number") setStepIndex(Math.min(saved.stepIndex, 2));
         }
       } catch {
         /* ignore malformed progress */
@@ -425,18 +666,176 @@ export default function OnboardingPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Persist progress
+  // Persist progress (files are intentionally excluded — not serializable)
   useEffect(() => {
     if (!ready) return;
     try {
-      localStorage.setItem(PROGRESS_KEY, JSON.stringify({ stepIndex, profile }));
+      const { files, ...propRest } = prop;
+      localStorage.setItem(
+        PROGRESS_KEY,
+        JSON.stringify({ stepIndex, profile, prop: propRest, answers }),
+      );
     } catch {
       /* storage may be unavailable — non-fatal */
     }
-  }, [ready, stepIndex, profile]);
+  }, [ready, stepIndex, profile, prop, answers]);
 
   const goNext = useCallback(() => setStepIndex((i) => Math.min(i + 1, STEPS.length - 1)), []);
   const goBack = useCallback(() => setStepIndex((i) => Math.max(i - 1, 0)), []);
+
+  // Holds the in-flight package analysis so the finish step can await it even
+  // if it started while the user was answering the questionnaire.
+  const analyzeRef = useRef(null);
+
+  function beginImportAnalysis(files) {
+    setImportState({ active: true, ready: false, error: false, analysis: null });
+    const backendBase = process.env.NEXT_PUBLIC_BACKEND_URL;
+    const url = backendBase
+      ? `${backendBase}/onboarding/package/analyze`
+      : `/api/onboarding/package/analyze`;
+    const p = (async () => {
+      const form = new FormData();
+      files.forEach((f) => form.append("file", f));
+      const res = await fetch(url, { method: "POST", headers: authHeaders(), body: form });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error?.message || "Analysis failed");
+      return json.data;
+    })();
+    analyzeRef.current = p;
+    p.then((data) => setImportState({ active: true, ready: true, error: false, analysis: data })).catch(
+      () => setImportState({ active: true, ready: false, error: true, analysis: null }),
+    );
+  }
+
+  // Property "Continue": kick off the (slow) import analysis in the background so
+  // it overlaps the questionnaire, then advance.
+  function handlePropertyContinue() {
+    if (prop.mode === "import" && prop.files.length) beginImportAnalysis(prop.files);
+    goNext();
+  }
+
+  async function commitAnalyzedPackage(analysis) {
+    const eb = analysis?.extractedBuilding || {};
+    const name = (eb.name || prop.name || eb.address || prop.address || "My building").trim();
+    const address = (eb.address || prop.address || eb.name || name).trim();
+    const cRes = await fetch("/api/buildings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...authHeaders() },
+      body: JSON.stringify({
+        name,
+        address: address || name,
+        city: eb.city || undefined,
+        postalCode: eb.postalCode || undefined,
+      }),
+    });
+    const cJson = await cRes.json();
+    if (!cRes.ok) throw new Error(cJson?.error?.message || "Failed to create building");
+    const buildingId = cJson.data.id;
+
+    // Commit the package — snapshot / reference-only during onboarding (safe: no
+    // billing side-effects; they can activate ongoing management later).
+    const form = new FormData();
+    const extracted = analysis?.extractedFiles;
+    if (extracted?.length) {
+      extracted.forEach((ef) =>
+        form.append("file", new Blob([ef.text], { type: "text/csv" }), ef.fileName),
+      );
+    } else {
+      prop.files.forEach((f) => form.append("file", f));
+    }
+    form.append("billingMode", "snapshot");
+    form.append("fiscalYear", String(analysis?.fiscalYear || ""));
+    const backendBase = process.env.NEXT_PUBLIC_BACKEND_URL;
+    const commitPath = `/buildings/${buildingId}/onboarding/package/commit`;
+    await fetch(backendBase ? `${backendBase}${commitPath}` : `/api${commitPath}`, {
+      method: "POST",
+      headers: authHeaders(),
+      body: form,
+    });
+    return { buildingId, buildingName: name };
+  }
+
+  async function attachBuildingStrategy({ buildingId, ownerProfileId, roleIntent }) {
+    try {
+      await fetch("/api/strategy/building-profile", {
+        method: "POST",
+        headers: { "content-type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ buildingId, ownerProfileId, roleIntent }),
+      });
+    } catch {
+      /* non-fatal — strategy can be set later on the building page */
+    }
+  }
+
+  async function submitRiskAndFinish() {
+    setError(null);
+    setBusy(true);
+    try {
+      // 1. Owner strategy profile from the questionnaire answers.
+      const opRes = await fetch("/api/strategy/owner-profile", {
+        method: "POST",
+        headers: { "content-type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ answers }),
+      });
+      const opJson = await opRes.json();
+      if (!opRes.ok) throw new Error(opJson.error?.message || opJson.error || "Failed to save strategy");
+      const ownerProfile = opJson.profile;
+      const roleIntent = archetypeToRoleIntent(ownerProfile.primaryArchetype);
+      const archetypeLabel =
+        tOwner(`strategy.archetype.${ownerProfile.primaryArchetype}`) || ownerProfile.primaryArchetype;
+
+      let buildingName = (prop.name || prop.address || "").trim();
+      let imported = false;
+
+      if (prop.mode === "import") {
+        try {
+          const analysis = analyzeRef.current
+            ? await analyzeRef.current
+            : importState?.analysis || null;
+          if (analysis) {
+            const res = await commitAnalyzedPackage(analysis);
+            buildingName = res.buildingName;
+            imported = true;
+            await attachBuildingStrategy({
+              buildingId: res.buildingId,
+              ownerProfileId: ownerProfile.id,
+              roleIntent,
+            });
+          }
+        } catch {
+          // Non-fatal: don't trap the user in onboarding over an import hiccup.
+          setError(
+            "Your strategy was saved, but the package import didn't finish — you can retry it from Properties.",
+          );
+        }
+      } else {
+        // Create-manual: building-profile endpoint creates the building + strategy.
+        const bpRes = await fetch("/api/strategy/building-profile", {
+          method: "POST",
+          headers: { "content-type": "application/json", ...authHeaders() },
+          body: JSON.stringify({
+            building: {
+              name: (prop.name || prop.address).trim(),
+              address: (prop.address || prop.name).trim(),
+            },
+            ownerProfileId: ownerProfile.id,
+            roleIntent,
+            approxUnits: prop.approxUnits ? parseInt(prop.approxUnits, 10) : undefined,
+          }),
+        });
+        const bpJson = await bpRes.json();
+        if (!bpRes.ok) throw new Error(bpJson.error?.message || bpJson.error || "Failed to save building");
+        buildingName = (prop.name || prop.address).trim();
+      }
+
+      setSummary({ buildingName, archetypeLabel, imported });
+      goNext();
+    } catch (e) {
+      setError(String(e?.message || e));
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function saveRoleAndContinue() {
     setError(null);
@@ -549,12 +948,42 @@ export default function OnboardingPage() {
           {stepKey === "profile" && (
             <ProfileStep profile={profile} onChange={setProfile} onNext={goNext} onBack={goBack} />
           )}
-          {stepKey === "property" && <PropertyStep onNext={goNext} onBack={goBack} />}
-          {stepKey === "done" && <DoneStep finishing={finishing} onFinish={finish} />}
+          {stepKey === "property" && (
+            <PropertyStep
+              prop={prop}
+              onChange={setProp}
+              onImportFiles={(files) => setProp((p) => ({ ...p, files }))}
+              importStatus={
+                importState?.active
+                  ? importState.ready
+                    ? "Analysis complete."
+                    : importState.error
+                      ? "Analysis will be retried at the next step."
+                      : "Analyzing…"
+                  : null
+              }
+              onNext={handlePropertyContinue}
+              onBack={goBack}
+            />
+          )}
+          {stepKey === "risk" && (
+            <RiskStep
+              questions={questions}
+              answers={answers}
+              onAnswer={(key, val) => setAnswers((a) => ({ ...a, [key]: val }))}
+              importState={prop.mode === "import" ? importState : null}
+              busy={busy}
+              onSubmit={submitRiskAndFinish}
+              onBack={goBack}
+            />
+          )}
+          {stepKey === "done" && (
+            <DoneStep summary={summary} finishing={finishing} onFinish={finish} />
+          )}
         </div>
       </div>
     </div>
   );
 }
 
-export const getStaticProps = withTranslations(["common"]);
+export const getStaticProps = withTranslations(["common", "owner"]);
