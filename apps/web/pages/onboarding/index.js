@@ -33,6 +33,7 @@ const STEPS = [
   { key: "profile", label: "Your details" },
   { key: "property", label: "Your property" },
   { key: "risk", label: "Your strategy" },
+  { key: "connections", label: "Connections" },
   { key: "done", label: "All set" },
 ];
 
@@ -553,6 +554,92 @@ function RiskStep({ questions, answers, onAnswer, importState, busy, onSubmit, o
   );
 }
 
+/* ── Connections step — invite the manager (régie) and, for imported
+ * buildings, the tenants. Tenant invites are added with the SMS backend. ── */
+function ConnectionsStep({ summary, onNext, onBack }) {
+  const [email, setEmail] = useState("");
+  const [inviting, setInviting] = useState(false);
+  const [invited, setInvited] = useState(null);
+  const [err, setErr] = useState(null);
+
+  async function inviteManager() {
+    setErr(null);
+    setInviting(true);
+    try {
+      const res = await fetch("/api/onboarding/invite-manager", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim() }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setErr(body.error || "Could not send the invite.");
+        return;
+      }
+      setInvited(email.trim());
+      setEmail("");
+    } catch {
+      setErr("Something went wrong. Please try again.");
+    } finally {
+      setInviting(false);
+    }
+  }
+
+  return (
+    <div>
+      <h2 className="text-lg font-semibold text-foreground mb-1">Bring in your team</h2>
+      <p className="text-sm text-muted mb-6">
+        Invite the manager or régie who handles day-to-day operations. They&apos;ll get access to
+        your buildings.
+      </p>
+
+      <div className="rounded-xl border border-surface-border p-4 mb-4">
+        <label className="block text-sm font-medium text-muted-dark mb-1.5">Manager email</label>
+        <div className="flex gap-2">
+          <input
+            type="email"
+            className="input mb-0 flex-1"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="manager@regie.ch"
+          />
+          <button
+            type="button"
+            onClick={inviteManager}
+            disabled={!email.trim() || inviting}
+            className="button-secondary text-sm whitespace-nowrap"
+          >
+            {inviting ? "Sending…" : "Send invite"}
+          </button>
+        </div>
+        {invited && (
+          <p className="text-xs text-success mt-2">✓ Invite sent to {invited}</p>
+        )}
+        {err && <p className="text-xs text-destructive-text mt-2">{err}</p>}
+      </div>
+
+      {summary?.imported && (
+        <div className="rounded-xl border border-surface-border bg-surface-subtle p-4 mb-6 text-sm text-muted">
+          <p className="font-medium text-foreground mb-0.5">Your tenants are imported</p>
+          <p className="text-xs">
+            You&apos;ll be able to invite them to the tenant app (to see leases, invoices and send
+            requests) from the building&apos;s Tenants tab.
+          </p>
+        </div>
+      )}
+
+      <div className="flex gap-3">
+        <button type="button" onClick={onBack} className="button-secondary flex-1 text-sm">
+          Back
+        </button>
+        <button type="button" onClick={onNext} className="button-primary flex-[2] text-sm">
+          {invited ? "Continue" : "Skip for now"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /* ── Done step ────────────────────────────────────────────────── */
 function DoneStep({ summary, finishing, onFinish }) {
   return (
@@ -785,6 +872,7 @@ export default function OnboardingPage() {
         tOwner(`strategy.archetype.${ownerProfile.primaryArchetype}`) || ownerProfile.primaryArchetype;
 
       let buildingName = (prop.name || prop.address || "").trim();
+      let buildingId = null;
       let imported = false;
 
       if (prop.mode === "import") {
@@ -795,6 +883,7 @@ export default function OnboardingPage() {
           if (analysis) {
             const res = await commitAnalyzedPackage(analysis);
             buildingName = res.buildingName;
+            buildingId = res.buildingId;
             imported = true;
             await attachBuildingStrategy({
               buildingId: res.buildingId,
@@ -826,9 +915,10 @@ export default function OnboardingPage() {
         const bpJson = await bpRes.json();
         if (!bpRes.ok) throw new Error(bpJson.error?.message || bpJson.error || "Failed to save building");
         buildingName = (prop.name || prop.address).trim();
+        buildingId = bpJson.profile?.buildingId || bpJson.building?.id || null;
       }
 
-      setSummary({ buildingName, archetypeLabel, imported });
+      setSummary({ buildingName, buildingId, archetypeLabel, imported });
       goNext();
     } catch (e) {
       setError(String(e?.message || e));
@@ -976,6 +1066,9 @@ export default function OnboardingPage() {
               onSubmit={submitRiskAndFinish}
               onBack={goBack}
             />
+          )}
+          {stepKey === "connections" && (
+            <ConnectionsStep summary={summary} onNext={goNext} onBack={goBack} />
           )}
           {stepKey === "done" && (
             <DoneStep summary={summary} finishing={finishing} onFinish={finish} />
