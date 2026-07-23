@@ -37,13 +37,34 @@ const SECURITY_HEADERS = [
   { key: 'Content-Security-Policy-Report-Only', value: CSP_REPORT_ONLY },
 ];
 
+// Storybook (served under /storybook) renders each story inside a same-origin
+// preview iframe, so it needs SAMEORIGIN framing — the global DENY breaks it
+// (infinite loading spinner). Same headers otherwise, with frame-ancestors 'self'.
+const STORYBOOK_HEADERS = [
+  { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+  { key: 'X-Content-Type-Options', value: 'nosniff' },
+  { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+  { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+  {
+    key: 'Content-Security-Policy-Report-Only',
+    value: CSP_REPORT_ONLY.replace("frame-ancestors 'none'", "frame-ancestors 'self'"),
+  },
+];
+
 const nextConfig = {
   i18n,
   async headers() {
     return [
       {
-        // Apply to every route, including API proxies and static assets
-        source: '/(.*)',
+        // Storybook needs same-origin framing (must come before the global rule,
+        // and the global rule below excludes /storybook to avoid a duplicate,
+        // conflicting X-Frame-Options).
+        source: '/storybook/:path*',
+        headers: STORYBOOK_HEADERS,
+      },
+      {
+        // Apply to every route except /storybook (API proxies, static assets, …)
+        source: '/((?!storybook).*)',
         headers: SECURITY_HEADERS,
       },
     ];
