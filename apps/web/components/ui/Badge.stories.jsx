@@ -87,7 +87,7 @@ export const StatusMapping = {
         {requestStatuses.map(([status, variant]) => (
           <div key={status} style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <Badge variant={variant}>{status}</Badge>
-            <code style={{ fontSize: 12, color: "#94a3b8" }}>requestVariant("{status}") → "{variant}"</code>
+            <code style={{ fontSize: 12, color: "#94a3b8" }}>{`requestVariant("${status}") → "${variant}"`}</code>
           </div>
         ))}
       </div>
