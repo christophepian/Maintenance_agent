@@ -1,0 +1,96 @@
+import { Meta, Title, Canvas, Controls } from "@storybook/addon-docs/blocks";
+import * as ButtonStories from "./Button.stories";
+
+<Meta of={ButtonStories} />
+
+<Title />
+
+The primary way users trigger actions. Built with `class-variance-authority`
+(10 variants × 4 sizes), styled entirely from semantic tokens — no raw colors —
+and every instance accepts a `className` override merged via `cn()`.
+
+```jsx
+import Button from "@/components/ui/Button";
+
+<Button variant="primary" size="md" onClick={save}>Save changes</Button>
+```
+
+## When to use
+
+- **Use a Button** for an action the user takes *on this page* — submit, approve,
+  delete, open a dialog.
+- **Use the `link` variant** (or a real `<a>` / `next/link`) for **navigation** to
+  another page. Don't style a navigation link as a solid button.
+- **One `primary` per view.** If everything is primary, nothing is. Pair a single
+  primary with `secondary` / `ghost` supporting actions.
+
+<Canvas of={ButtonStories.Variants} />
+
+## Variants
+
+Each variant is a semantic intent, mapped to a token set (`bg-brand`,
+`bg-destructive`, …) so it themes automatically in light and dark.
+
+| Variant | Intent | Use for |
+|---|---|---|
+| `primary` | Main action | The one key action per view |
+| `secondary` | Neutral action | Sits beside primary (Cancel-adjacent) |
+| `destructive` | Danger, high-emphasis | Delete, terminate — irreversible |
+| `destructiveGhost` | Danger, low-emphasis | Destructive action that shouldn't shout |
+| `success` | Positive confirm | Approve, mark paid |
+| `warning` | Caution | Actions needing care |
+| `warningGhost` | Caution, low-emphasis | Soft caution |
+| `neutral` | Muted solid | Non-semantic filled button |
+| `ghost` | Minimal | Toolbars, dense tables, tertiary actions |
+| `link` | Inline text | Navigation / inline actions inside prose |
+
+## Sizes
+
+Four tiers with consistent height per tier across all variants.
+
+<Canvas of={ButtonStories.Sizes} />
+
+## Icons
+
+Icons live inside the label and inherit the built-in `gap`. Use
+[lucide-react](https://lucide.dev) at **16px** (18px for icon-only). **Icon-only
+buttons must have an `aria-label`.**
+
+<Canvas of={ButtonStories.WithIcons} />
+
+## States
+
+`disabled` is the native attribute — it dims the button to 50% and blocks pointer
+events. Focus shows a 2px `brand-ring` (visible in the live stories).
+
+<Canvas of={ButtonStories.States} />
+
+## In context
+
+Order actions by emphasis and reading direction: destructive/low-priority pushed
+away from the primary, primary last (right-most) so it's the natural end-point.
+
+<Canvas of={ButtonStories.InContext} />
+
+## Do / Don't
+
+- ✅ **Do** keep one `primary` per view; use `secondary`/`ghost` for the rest.
+- ✅ **Do** give icon-only buttons an `aria-label`.
+- ✅ **Do** use `destructive` for irreversible actions, `destructiveGhost` when it
+  shouldn't dominate.
+- ⛔ **Don't** use a solid button for navigation — use `link` or a real link.
+- ⛔ **Don't** hardcode colors via `className` / `style`; pick the variant whose
+  token set already matches.
+- ⛔ **Don't** stack multiple `primary` buttons together.
+
+## Accessibility
+
+- Renders a real `<button>` — keyboard and screen-reader accessible by default.
+- Visible focus ring (`focus:ring-2 focus:ring-brand-ring`) — never remove it.
+- Icon-only → `aria-label`. Decorative icons beside text need no label.
+- `disabled` blocks interaction; for "not yet valid" prefer keeping it enabled and
+  surfacing validation, so the reason stays discoverable.
+
+## Props
+
+<Controls of={ButtonStories.Playground} />

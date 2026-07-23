@@ -1,0 +1,81 @@
+import { Meta, Title, Canvas, Controls } from "@storybook/addon-docs/blocks";
+import * as BadgeStories from "./Badge.stories";
+
+<Meta of={BadgeStories} />
+
+<Title />
+
+A small, rounded label that communicates **status or category** at a glance.
+Seven semantic variants, each mapped to a token band so it themes automatically.
+
+```jsx
+import Badge from "@/components/ui/Badge";
+
+<Badge variant="success">Paid</Badge>
+```
+
+## When to use
+
+- **Badge vs [StatusPill](?path=/docs/ui-statuspill--docs):** both are rounded
+  status chips. `Badge` is the token-driven canonical component — prefer it.
+  `StatusPill` predates it and hardcodes a couple of raw palette values; it exists
+  for legacy call-sites.
+- **Don't** put actions in a Badge — it's a label, not a button.
+- Pick the variant by **meaning**, never by the color you happen to want.
+
+<Canvas of={BadgeStories.Variants} />
+
+## Semantic bands
+
+| Variant | Meaning | Example statuses |
+|---|---|---|
+| `default` | Neutral | Draft, new, inactive |
+| `info` | Active / in progress | In progress, issued, open |
+| `warning` | Awaiting action | Pending, review needed |
+| `success` | Positive terminal | Completed, approved, paid |
+| `destructive` | Negative terminal | Rejected, cancelled |
+| `brand` | Featured / highlighted | Promoted, selected |
+| `muted` | Low-emphasis neutral | Secondary tags |
+
+## Sizes
+
+<Canvas of={BadgeStories.Sizes} />
+
+## Driving from domain status
+
+Never write status→color logic in a page. Map the domain status string to a
+variant with a mapper from `lib/statusVariants.js`, then pass it to `Badge`. See
+[Status Conventions](?path=/docs/guide-status-conventions--docs) for the full list
+of mappers.
+
+```jsx
+import Badge from "@/components/ui/Badge";
+import { requestVariant } from "@/lib/statusVariants";
+
+<Badge variant={requestVariant(request.status)}>{request.status}</Badge>
+```
+
+<Canvas of={BadgeStories.StatusMapping} />
+
+## In context
+
+<Canvas of={BadgeStories.InContext} />
+
+## Do / Don't
+
+- ✅ **Do** choose the variant by semantic meaning.
+- ✅ **Do** keep labels to a word or two, uppercase for enum-like statuses.
+- ⛔ **Don't** rely on color alone — the text label carries the meaning (see
+  Accessibility).
+- ⛔ **Don't** define per-page `STATUS_COLORS` maps — use `statusVariants.js`
+  (enforced by guardrail F-UI4a).
+
+## Accessibility
+
+- The **text label is the source of truth**, so the status is legible to
+  colorblind users and screen readers — color is reinforcement, not the signal.
+- All variants meet AA contrast for their `-dark` text on the `-light` fill.
+
+## Props
+
+<Controls of={BadgeStories.Playground} />

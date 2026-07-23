@@ -1,6 +1,7 @@
 // Loads the real Tailwind v4 tokens (@theme) + global component classes
 // (.filter-input, .empty-state, .error-banner, body font stack, etc.)
 import "../styles/globals.css";
+import theme from "./theme";
 
 /** @type {import('@storybook/react-vite').Preview} */
 const preview = {
@@ -10,6 +11,9 @@ const preview = {
       storySort: {
         order: ["Guide", ["Introduction", "Architecture", "Status Conventions"], "Foundations", "UI"],
       },
+    },
+    docs: {
+      theme,
     },
     controls: {
       matchers: { color: /(background|color)$/i, date: /Date$/i },

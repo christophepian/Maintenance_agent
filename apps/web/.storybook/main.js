@@ -1,5 +1,6 @@
 import { mergeConfig } from "vite";
 import tailwindcss from "@tailwindcss/vite";
+import remarkGfm from "remark-gfm";
 
 /** @type {import('@storybook/react-vite').StorybookConfig} */
 const config = {
@@ -7,7 +8,18 @@ const config = {
     "../components/**/*.mdx",
     "../components/**/*.stories.@(js|jsx|mjs|ts|tsx)",
   ],
-  addons: ["@storybook/addon-docs"],
+  addons: [
+    {
+      // remark-gfm enables GitHub-flavored markdown (tables, strikethrough,
+      // task lists) inside the MDX docs pages.
+      name: "@storybook/addon-docs",
+      options: {
+        mdxPluginOptions: {
+          mdxCompileOptions: { remarkPlugins: [remarkGfm] },
+        },
+      },
+    },
+  ],
   framework: {
     name: "@storybook/react-vite",
     options: {},
