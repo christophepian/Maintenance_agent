@@ -4,7 +4,6 @@ import Button from "./Button";
 export default {
   title: "UI/ActionBar",
   component: ActionBar,
-  tags: ["autodocs"],
   parameters: { layout: "padded" },
 };
 

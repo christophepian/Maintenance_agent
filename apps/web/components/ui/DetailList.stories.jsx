@@ -5,7 +5,6 @@ export default {
   title: "UI/DetailList",
   component: DetailList,
   subcomponents: { DetailRow },
-  tags: ["autodocs"],
   parameters: { layout: "padded" },
 };
 

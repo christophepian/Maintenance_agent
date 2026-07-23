@@ -4,7 +4,6 @@ import Button from "./Button";
 export default {
   title: "UI/EmptyState",
   component: EmptyState,
-  tags: ["autodocs"],
   parameters: { layout: "padded" },
   args: {
     icon: "📭",

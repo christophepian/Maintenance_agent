@@ -3,7 +3,6 @@ import ErrorBanner from "./ErrorBanner";
 export default {
   title: "UI/ErrorBanner",
   component: ErrorBanner,
-  tags: ["autodocs"],
   parameters: { layout: "padded" },
   argTypes: { error: { control: "text" } },
   args: { error: "Could not save the lease. Please try again." },

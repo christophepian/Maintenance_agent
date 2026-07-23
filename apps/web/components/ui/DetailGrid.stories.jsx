@@ -5,7 +5,6 @@ export default {
   title: "UI/DetailGrid",
   component: DetailGrid,
   subcomponents: { DetailItem },
-  tags: ["autodocs"],
   parameters: { layout: "padded" },
 };
 
