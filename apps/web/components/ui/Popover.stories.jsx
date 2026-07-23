@@ -4,7 +4,6 @@ import Button from "./Button";
 export default {
   title: "UI/Popover",
   component: Popover,
-  tags: ["autodocs"],
   parameters: { layout: "centered" },
 };
 

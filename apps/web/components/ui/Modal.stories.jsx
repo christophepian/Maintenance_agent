@@ -5,7 +5,6 @@ import Button from "./Button";
 export default {
   title: "UI/Modal",
   component: Modal,
-  tags: ["autodocs"],
   parameters: { layout: "centered" },
 };
 

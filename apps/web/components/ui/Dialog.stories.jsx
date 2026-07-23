@@ -6,7 +6,6 @@ import { ModalFooter } from "./Modal";
 export default {
   title: "UI/Dialog",
   component: Dialog,
-  tags: ["autodocs"],
   parameters: { layout: "centered" },
 };
 
