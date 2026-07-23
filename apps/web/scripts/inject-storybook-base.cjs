@@ -7,19 +7,18 @@
  * so those relative paths resolve against `/` and 404. A <base href> makes every
  * relative URL resolve against `/storybook/` regardless of the address-bar slash.
  *
- * Kept silent (no console.*) so it doesn't trip the code-quality gate's
- * no-console metric.
+ * Runs from apps/web (the build cwd); paths are cwd-relative to avoid Node
+ * globals the lint config doesn't provide (__dirname) and console.* — both trip
+ * the code-quality gate.
  */
 const fs = require("fs");
-const path = require("path");
 
-const dir = path.join(__dirname, "..", "public", "storybook");
 const BASE_TAG = '<base href="/storybook/">';
+const files = ["public/storybook/index.html", "public/storybook/iframe.html"];
 
-for (const file of ["index.html", "iframe.html"]) {
-  const f = path.join(dir, file);
-  if (!fs.existsSync(f)) continue;
-  const html = fs.readFileSync(f, "utf8");
+for (const file of files) {
+  if (!fs.existsSync(file)) continue;
+  const html = fs.readFileSync(file, "utf8");
   if (html.includes(BASE_TAG)) continue;
-  fs.writeFileSync(f, html.replace("<head>", `<head>${BASE_TAG}`));
+  fs.writeFileSync(file, html.replace("<head>", `<head>${BASE_TAG}`));
 }
