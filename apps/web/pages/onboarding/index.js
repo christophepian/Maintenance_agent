@@ -25,6 +25,7 @@ import { createClient } from "../../lib/supabase/client";
 import { setAuthToken, authHeaders } from "../../lib/api";
 import { withTranslations } from "../../lib/i18n";
 import { resolveLandingPath } from "../../lib/roleRouting";
+import { useTheme } from "../../hooks/useTheme";
 
 const PROGRESS_KEY = "onboarding_progress_v1";
 
@@ -34,6 +35,7 @@ const STEPS = [
   { key: "property", label: "Your property" },
   { key: "risk", label: "Your strategy" },
   { key: "connections", label: "Connections" },
+  { key: "preferences", label: "Preferences" },
   { key: "done", label: "All set" },
 ];
 
@@ -640,6 +642,93 @@ function ConnectionsStep({ summary, onNext, onBack }) {
   );
 }
 
+/* ── Preferences step — real theme + automation defaults ──────── */
+function Toggle({ checked, onChange }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      onClick={() => onChange(!checked)}
+      className={
+        "relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors " +
+        (checked ? "bg-brand" : "bg-surface-border")
+      }
+    >
+      <span
+        className={
+          "inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform " +
+          (checked ? "translate-x-5" : "translate-x-0.5")
+        }
+      />
+    </button>
+  );
+}
+
+function PreferencesStep({ theme, onTheme, prefs, onPrefs, onNext, onBack }) {
+  const rows = [
+    { key: "overdueReminders", title: "Overdue-rent reminders", desc: "Automatically remind tenants when rent is late." },
+    { key: "ownerReport", title: "Monthly owner report", desc: "Email a portfolio summary at the start of each month." },
+    { key: "autoRouteMaintenance", title: "Auto-route maintenance", desc: "Send new maintenance requests to your preferred contractors." },
+  ];
+  return (
+    <div>
+      <h2 className="text-lg font-semibold text-foreground mb-1">Make it yours</h2>
+      <p className="text-sm text-muted mb-6">
+        Set your defaults — you can fine-tune everything (including per building) later in settings.
+      </p>
+
+      {/* Theme */}
+      <div className="mb-6">
+        <p className="text-sm font-medium text-muted-dark mb-2">Appearance</p>
+        <div className="flex gap-2">
+          {[
+            { v: "light", l: "Light" },
+            { v: "dark", l: "Dark" },
+          ].map((o) => (
+            <button
+              key={o.v}
+              type="button"
+              onClick={() => onTheme(o.v)}
+              className={
+                "flex-1 py-2.5 text-sm font-medium rounded-lg border transition " +
+                (theme === o.v
+                  ? "border-brand bg-brand-light text-brand"
+                  : "border-surface-border text-muted hover:border-muted-ring")
+              }
+            >
+              {o.l}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Automation defaults */}
+      <div className="space-y-3 mb-6">
+        <p className="text-sm font-medium text-muted-dark">Automations</p>
+        {rows.map((r) => (
+          <div key={r.key} className="flex items-start justify-between gap-4 rounded-xl border border-surface-border px-4 py-3">
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-foreground">{r.title}</p>
+              <p className="text-xs text-muted mt-0.5">{r.desc}</p>
+            </div>
+            <Toggle checked={!!prefs[r.key]} onChange={(v) => onPrefs({ ...prefs, [r.key]: v })} />
+          </div>
+        ))}
+      </div>
+
+      <div className="flex gap-3">
+        <button type="button" onClick={onBack} className="button-secondary flex-1 text-sm">
+          Back
+        </button>
+        <button type="button" onClick={onNext} className="button-primary flex-[2] text-sm">
+          Continue
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /* ── Done step ────────────────────────────────────────────────── */
 function DoneStep({ summary, finishing, onFinish }) {
   return (
@@ -687,6 +776,7 @@ export default function OnboardingPage() {
   const router = useRouter();
   const { next } = router.query;
   const { t: tOwner } = useTranslation("owner");
+  const { theme, setTheme } = useTheme();
   const rawQuestions = tOwner("strategy.questions", { returnObjects: true });
   const questions = Array.isArray(rawQuestions) ? rawQuestions : [];
 
@@ -714,6 +804,7 @@ export default function OnboardingPage() {
   const [importState, setImportState] = useState(null); // { active, ready, error, analysis }
   const [answers, setAnswers] = useState({});
   const [summary, setSummary] = useState(null); // { buildingName, archetypeLabel, imported }
+  const [prefs, setPrefs] = useState({ overdueReminders: true, ownerReport: true, autoRouteMaintenance: false });
 
   // Guard + hydrate
   useEffect(() => {
@@ -742,6 +833,7 @@ export default function OnboardingPage() {
           if (saved.profile) setProfile((p) => ({ ...p, ...saved.profile }));
           if (saved.prop) setProp((p) => ({ ...p, ...saved.prop, files: [] }));
           if (saved.answers) setAnswers(saved.answers);
+          if (saved.prefs) setPrefs((p) => ({ ...p, ...saved.prefs }));
           // Don't resume onto the import/risk steps — files are gone; clamp to profile.
           if (typeof saved.stepIndex === "number") setStepIndex(Math.min(saved.stepIndex, 2));
         }
@@ -760,12 +852,12 @@ export default function OnboardingPage() {
       const { files, ...propRest } = prop;
       localStorage.setItem(
         PROGRESS_KEY,
-        JSON.stringify({ stepIndex, profile, prop: propRest, answers }),
+        JSON.stringify({ stepIndex, profile, prop: propRest, answers, prefs }),
       );
     } catch {
       /* storage may be unavailable — non-fatal */
     }
-  }, [ready, stepIndex, profile, prop, answers]);
+  }, [ready, stepIndex, profile, prop, answers, prefs]);
 
   const goNext = useCallback(() => setStepIndex((i) => Math.min(i + 1, STEPS.length - 1)), []);
   const goBack = useCallback(() => setStepIndex((i) => Math.max(i - 1, 0)), []);
@@ -965,6 +1057,8 @@ export default function OnboardingPage() {
       await supabase.auth.updateUser({
         data: {
           hasCompletedOnboarding: true,
+          theme,
+          preferences: prefs,
           profile: {
             entityType: profile.entityType,
             legalName: profile.legalName.trim(),
@@ -1069,6 +1163,16 @@ export default function OnboardingPage() {
           )}
           {stepKey === "connections" && (
             <ConnectionsStep summary={summary} onNext={goNext} onBack={goBack} />
+          )}
+          {stepKey === "preferences" && (
+            <PreferencesStep
+              theme={theme}
+              onTheme={setTheme}
+              prefs={prefs}
+              onPrefs={setPrefs}
+              onNext={goNext}
+              onBack={goBack}
+            />
           )}
           {stepKey === "done" && (
             <DoneStep summary={summary} finishing={finishing} onFinish={finish} />
