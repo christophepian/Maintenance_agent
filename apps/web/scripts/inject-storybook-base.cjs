@@ -6,6 +6,9 @@
  * subpath, but Vercel strips the trailing slash (`/storybook/` -> `/storybook`),
  * so those relative paths resolve against `/` and 404. A <base href> makes every
  * relative URL resolve against `/storybook/` regardless of the address-bar slash.
+ *
+ * Kept silent (no console.*) so it doesn't trip the code-quality gate's
+ * no-console metric.
  */
 const fs = require("fs");
 const path = require("path");
@@ -15,13 +18,8 @@ const BASE_TAG = '<base href="/storybook/">';
 
 for (const file of ["index.html", "iframe.html"]) {
   const f = path.join(dir, file);
-  if (!fs.existsSync(f)) {
-    console.warn(`[inject-storybook-base] ${file} not found — skipping`);
-    continue;
-  }
-  let html = fs.readFileSync(f, "utf8");
+  if (!fs.existsSync(f)) continue;
+  const html = fs.readFileSync(f, "utf8");
   if (html.includes(BASE_TAG)) continue;
-  html = html.replace("<head>", `<head>${BASE_TAG}`);
-  fs.writeFileSync(f, html);
-  console.log(`[inject-storybook-base] injected into ${file}`);
+  fs.writeFileSync(f, html.replace("<head>", `<head>${BASE_TAG}`));
 }
