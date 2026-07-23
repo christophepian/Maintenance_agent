@@ -412,7 +412,7 @@ export default function OwnerSettingsPage() {
                   </div>
                 ) : (
                   <>
-                    <div className="sm:hidden overflow-hidden rounded-lg border border-table-border divide-y divide-table-divider">
+                    <div className="sm:hidden overflow-hidden rounded-lg border border-surface-border divide-y divide-surface-divider">
                       {legalSources
                         .filter((s) => scopeFilter === "ALL" || s.scope === scopeFilter)
                         .map((s) => (
@@ -512,7 +512,7 @@ export default function OwnerSettingsPage() {
                         </tbody>
                       </table>
                     </div>
-                    <div className="sm:hidden overflow-hidden rounded-lg border border-table-border divide-y divide-table-divider">
+                    <div className="sm:hidden overflow-hidden rounded-lg border border-surface-border divide-y divide-surface-divider">
                       {legalVariables.map((v) => (
                         <div key={v.id} className="table-card">
                           <span className="font-mono text-xs text-muted-dark">{v.key}</span>

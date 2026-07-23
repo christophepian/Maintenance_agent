@@ -279,7 +279,7 @@ function OverviewTab() {
             ) : (
               <>
                 {/* Mobile */}
-                <div className="md:hidden overflow-hidden rounded-lg border border-table-border divide-y divide-table-divider">
+                <div className="md:hidden overflow-hidden rounded-lg border border-surface-border divide-y divide-surface-divider">
                   {(buildingsExpanded ? sortedBuildings : sortedBuildings.slice(0, 5)).map((b) => (
                     <div key={b.buildingId} className="table-card">
                       <div className="flex items-center gap-2">
@@ -297,7 +297,7 @@ function OverviewTab() {
                   ))}
                 </div>
                 {/* Desktop */}
-                <div className="hidden md:block overflow-hidden rounded-lg border border-table-border">
+                <div className="hidden md:block overflow-hidden rounded-lg border border-surface-border">
                   <div className="overflow-x-auto">
                     <table className="data-table">
                       <thead>
@@ -587,7 +587,7 @@ function InvoicesTab() {
       ) : (
         <>
           {/* Mobile card list */}
-          <div className="sm:hidden overflow-hidden rounded-lg border border-table-border divide-y divide-table-divider">
+          <div className="sm:hidden overflow-hidden rounded-lg border border-surface-border divide-y divide-surface-divider">
             {visibleInvoices.map((inv) => (
               <div
                 key={inv.id}

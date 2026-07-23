@@ -221,7 +221,7 @@ export default function InventoryImportPanel({ onCommitted }) {
           {/* Mobile cards */}
           <div className="sm:hidden space-y-2">
             {batch.rows.map((r) => (
-              <div key={r.id} className="border border-table-border rounded-lg p-3">
+              <div key={r.id} className="border border-surface-border rounded-lg p-3">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-xs text-muted">Row {r.rowIndex}</span>
                   <Badge variant={rowStatusVariant(r.status)}>{r.status}</Badge>
@@ -262,7 +262,7 @@ export default function InventoryImportPanel({ onCommitted }) {
       {recent.length > 0 && (
         <div className="mt-6">
           <h3 className="text-xs font-semibold text-foreground-dim uppercase tracking-wide mb-2">Recent imports</h3>
-          <ul className="divide-y divide-table-divider">
+          <ul className="divide-y divide-surface-divider">
             {recent.map((b) => (
               <li key={b.id} className="flex items-center gap-3 py-2 text-sm">
                 <span className="text-foreground truncate">{b.fileName}</span>

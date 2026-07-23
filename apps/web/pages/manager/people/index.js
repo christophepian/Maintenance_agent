@@ -203,7 +203,7 @@ function OwnersTab({ showAddForm, onAddFormClose }) {
       ) : (
         <>
           {/* Mobile card list */}
-          <div className="sm:hidden overflow-hidden rounded-lg border border-table-border divide-y divide-table-divider">
+          <div className="sm:hidden overflow-hidden rounded-lg border border-surface-border divide-y divide-surface-divider">
             {sortedOwners.map((owner) => (
               <div key={owner.id}>
                 <div
@@ -299,7 +299,7 @@ function OwnersTab({ showAddForm, onAddFormClose }) {
           </div>
 
           {/* Wide table */}
-          <div className="hidden sm:block overflow-x-auto rounded-lg border border-table-border">
+          <div className="hidden sm:block overflow-x-auto rounded-lg border border-surface-border">
             <table className="data-table w-full">
               <thead>
                 <tr>
@@ -541,7 +541,7 @@ export default function ManagerPeoplePage() {
             ) : (
               <>
                 {/* Mobile card list */}
-                <div className="sm:hidden overflow-hidden rounded-lg border border-table-border divide-y divide-table-divider">
+                <div className="sm:hidden overflow-hidden rounded-lg border border-surface-border divide-y divide-surface-divider">
                   {tenants.slice(0, 200).map((tenant) => (
                     <div
                       key={tenant.id}
@@ -562,7 +562,7 @@ export default function ManagerPeoplePage() {
                   ))}
                 </div>
                 {/* Wide table */}
-                <div className="hidden sm:block overflow-hidden rounded-lg border border-table-border">
+                <div className="hidden sm:block overflow-hidden rounded-lg border border-surface-border">
                 <div className="overflow-x-auto">
                   <table className="data-table">
                     <thead>
@@ -615,7 +615,7 @@ export default function ManagerPeoplePage() {
             ) : (
               <>
                 {/* Mobile card list */}
-                <div className="sm:hidden overflow-hidden rounded-lg border border-table-border divide-y divide-table-divider">
+                <div className="sm:hidden overflow-hidden rounded-lg border border-surface-border divide-y divide-surface-divider">
                   {contractors.slice(0, 200).map((c) => (
                     <div
                       key={c.id}
@@ -634,7 +634,7 @@ export default function ManagerPeoplePage() {
                   ))}
                 </div>
                 {/* Wide table */}
-                <div className="hidden sm:block overflow-hidden rounded-lg border border-table-border">
+                <div className="hidden sm:block overflow-hidden rounded-lg border border-surface-border">
                 <div className="overflow-x-auto">
                   <table className="data-table">
                     <thead>

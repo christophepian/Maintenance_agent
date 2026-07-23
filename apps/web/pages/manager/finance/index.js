@@ -248,7 +248,7 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
                       ) : (
                         <>
                           {/* Mobile card list — md:hidden (financial table needs more width) */}
-                          <div className="md:hidden overflow-hidden rounded-lg border border-table-border divide-y divide-table-divider">
+                          <div className="md:hidden overflow-hidden rounded-lg border border-surface-border divide-y divide-surface-divider">
                             {(buildingsExpanded ? sortedBuildings : sortedBuildings.slice(0, 5)).map((b) => (
                               <div
                                 key={b.buildingId}
@@ -273,7 +273,7 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
                           </div>
 
                           {/* Wide table — hidden md:block */}
-                          <div className="hidden md:block overflow-hidden rounded-lg border border-table-border">
+                          <div className="hidden md:block overflow-hidden rounded-lg border border-surface-border">
                           <div className="overflow-x-auto">
                             <table className="data-table">
                               <thead>

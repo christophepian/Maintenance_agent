@@ -243,7 +243,7 @@ export default function ConfigurableTable({
 
       {/* Mobile card list — rendered on narrow when mobileCard prop is provided */}
       {mobileCard && (
-        <div className="sm:hidden overflow-hidden rounded-lg border border-table-border divide-y divide-table-divider">
+        <div className="sm:hidden overflow-hidden rounded-lg border border-surface-border divide-y divide-surface-divider">
           {data.length === 0 && emptyState ? (
             <div className="px-6 py-8 text-center">{emptyState}</div>
           ) : (
@@ -267,10 +267,10 @@ export default function ConfigurableTable({
       )}
 
       {/* Table — hidden on narrow when mobileCard is active */}
-      <div className={cn("overflow-x-auto rounded-lg border border-table-border", mobileCard && "hidden sm:block")}>
+      <div className={cn("overflow-x-auto rounded-lg border border-surface-border", mobileCard && "hidden sm:block")}>
         <table className={cn("w-full text-sm", ds.text)}>
           <thead>
-            <tr className="border-b-2 border-table-border bg-transparent text-left text-xs font-medium uppercase tracking-wider text-foreground-dim">
+            <tr className="border-b-2 border-surface-border bg-transparent text-left text-xs font-medium uppercase tracking-wider text-foreground-dim">
               {leadingHeader}
               {visibleColumns.map((col) =>
                 col.sortable ? (
@@ -292,7 +292,7 @@ export default function ConfigurableTable({
               {trailingHeader}
             </tr>
           </thead>
-          <tbody className="divide-y divide-table-divider">
+          <tbody className="divide-y divide-surface-divider">
             {data.length === 0 && emptyState ? (
               <tr>
                 <td colSpan={colSpan} className="px-6 py-8 text-center">

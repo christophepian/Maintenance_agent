@@ -16,7 +16,6 @@ const families = [
   { name: "orange", roles: [["base", "#ea580c"], ["light", "#fff7ed"], ["dark", "#9a3412"], ["ring", "#fdba74"], ["text", "#c2410c"]] },
   { name: "purple", roles: [["base", "#9333ea"], ["light", "#faf5ff"], ["dark", "#6b21a8"], ["ring", "#d8b4fe"], ["text", "#7e22ce"]] },
   { name: "violet", roles: [["base", "#7c3aed"], ["light", "#f5f3ff"], ["dark", "#5b21b6"], ["ring", "#c4b5fd"], ["text", "#6d28d9"]] },
-  { name: "cyan", roles: [["base", "#0891b2"], ["light", "#ecfeff"], ["dark", "#155e75"], ["ring", "#67e8f9"], ["text", "#0e7490"]] },
   { name: "teal", roles: [["base", "#0d9488"], ["light", "#f0fdfa"], ["dark", "#115e59"], ["ring", "#5eead4"], ["text", "#0f766e"]] },
 ];
 
@@ -24,7 +23,6 @@ const surfaces = [
   ["surface", "#ffffff"], ["surface-raised", "#ffffff"], ["surface-subtle", "#f8fafc"],
   ["surface-border", "#e2e8f0"], ["surface-hover", "#f1f5f9"], ["surface-divider", "#f1f5f9"],
   ["track", "#e2e8f0"], ["foreground", "#0f172a"], ["foreground-dim", "#94a3b8"],
-  ["table-header", "#f1f5f9"], ["table-border", "#e2e8f0"], ["table-divider", "#e2e8f0"],
 ];
 
 const cell = { display: "flex", flexDirection: "column", gap: 5, width: 132 };
