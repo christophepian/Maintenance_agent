@@ -57,6 +57,9 @@ export interface PackageAnalysisDTO {
   /** Rent-roll objects that match no existing unit and would be created as NEW
    *  units. 0 when there's no rent roll or every object merges. */
   rentRollNewUnits: number;
+  /** Multi-building guardrail — set when the upload appears to mix more than one
+   *  building's reports (see BuildingSplitDTO). Commit is blocked when multiple. */
+  buildingSplit: BuildingSplitDTO;
   /** Present only when the upload was a PDF: the canonical CSVs extracted from
    *  it, which the client re-submits verbatim at commit (single extraction). */
   extractedFiles?: PackageFile[];
@@ -77,6 +80,8 @@ export interface NewBuildingPackageAnalysisDTO {
   documents: PackageDocumentDTO[];
   reconciliation: ReconciliationCheckDTO[];
   warnings: string[];
+  /** Multi-building guardrail (see BuildingSplitDTO). */
+  buildingSplit: BuildingSplitDTO;
   /** Present only when the upload was a PDF: the canonical CSVs extracted from
    *  it, which the client re-submits verbatim at commit (single extraction). */
   extractedFiles?: PackageFile[];
@@ -206,6 +211,103 @@ function reconcile(p: Parsed): ReconciliationCheckDTO[] {
   return checks;
 }
 
+/* ── multi-building guardrail ─────────────────────────────────────────────── */
+
+/**
+ * A package is meant to describe ONE building. When a user drops several
+ * buildings' reports together (e.g. two rent rolls + two income statements),
+ * silently merging them into a single building corrupts the inventory. This
+ * detects that case so the caller can block it.
+ *
+ * - `multiple` + `!ambiguous`: two or more DISTINCT building identities were
+ *   found (different rent-roll object-code prefixes, or different general-info
+ *   addresses) — a hard error; import one at a time.
+ * - `multiple` + `ambiguous`: a singular document (rent roll / income statement
+ *   / balance sheet / ledger) appears more than once but we can't tell whether
+ *   they're different buildings or different years of the same one — ask.
+ */
+export interface BuildingSplitDTO {
+  multiple: boolean;
+  ambiguous: boolean;
+  buildings: string[];
+  message: string;
+}
+
+const SINGULAR_TYPES: PackageDocType[] = ["RENT_ROLL", "GENERAL_LEDGER", "BALANCE_SHEET", "INCOME_STATEMENT"];
+
+const TYPE_PLURAL: Partial<Record<PackageDocType, string>> = {
+  RENT_ROLL: "rent rolls",
+  GENERAL_LEDGER: "general ledgers",
+  BALANCE_SHEET: "balance sheets",
+  INCOME_STATEMENT: "income statements",
+};
+
+/** Building portion of a régie object code: "531100.01.0001" → "531100". Null
+ *  for bare unit numbers (no building prefix, e.g. "0001") — carries no identity. */
+function objetBuildingKey(objet: string): string | null {
+  const t = (objet ?? "").trim();
+  const dot = t.indexOf(".");
+  return dot > 0 ? t.slice(0, dot).trim() : null;
+}
+
+/** The single building key a rent-roll file is about, or null when its objects
+ *  don't share one prefix (bare-numbered rent rolls carry no building code). */
+function rentRollBuildingKey(text: string): string | null {
+  try {
+    const keys = new Set<string>();
+    for (const r of mapRentRoll(text).rows) {
+      const k = objetBuildingKey(r.objet);
+      if (k) keys.add(k);
+    }
+    return keys.size === 1 ? [...keys][0] : null;
+  } catch {
+    return null;
+  }
+}
+
+function normalizeAddress(addr: string): string {
+  return addr.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+export function detectBuildingSplit(files: { text: string; type: PackageDocType }[]): BuildingSplitDTO {
+  const typeCounts = new Map<PackageDocType, number>();
+  const rentKeys = new Set<string>();
+  const addressByNorm = new Map<string, string>();
+  for (const f of files) {
+    typeCounts.set(f.type, (typeCounts.get(f.type) ?? 0) + 1);
+    if (f.type === "RENT_ROLL") {
+      const k = rentRollBuildingKey(f.text);
+      if (k) rentKeys.add(k);
+    } else if (f.type === "GENERAL_INFO") {
+      const info = parseBuildingInfo(f.text);
+      if (info?.address) addressByNorm.set(normalizeAddress(info.address), info.address);
+    }
+  }
+  const maxDupSingular = Math.max(0, ...SINGULAR_TYPES.map((t) => typeCounts.get(t) ?? 0));
+
+  // Confirmed: two or more distinct identities (prefer the human-readable address).
+  if (addressByNorm.size >= 2 || rentKeys.size >= 2) {
+    const buildings = addressByNorm.size >= 2 ? [...addressByNorm.values()] : [...rentKeys].map((k) => `object group ${k}`);
+    return {
+      multiple: true,
+      ambiguous: false,
+      buildings,
+      message: `These files describe ${buildings.length} different buildings (${buildings.join("; ")}). A package must cover one building — import each building's report separately.`,
+    };
+  }
+  // Ambiguous: duplicate singular docs, but no distinguishing identity.
+  if (maxDupSingular >= 2) {
+    const dup = SINGULAR_TYPES.filter((t) => (typeCounts.get(t) ?? 0) >= 2).map((t) => TYPE_PLURAL[t] ?? t);
+    return {
+      multiple: true,
+      ambiguous: true,
+      buildings: [],
+      message: `Found ${dup.join(" and ")} more than once. This usually means two different buildings — but it could be two years of the same one. Import one at a time, or confirm they're the same building.`,
+    };
+  }
+  return { multiple: false, ambiguous: false, buildings: [], message: "" };
+}
+
 /* ── fiscal-year detection ────────────────────────────────────────────────── */
 
 function detectFiscalYear(files: { type: PackageDocType; text: string }[]): number {
@@ -302,6 +404,8 @@ export async function analyzePackage(
     buildingAlreadyPopulated = existing.some((u) => u.isActive !== false);
   }
 
+  const buildingSplit = detectBuildingSplit(typed);
+
   return {
     buildingId,
     buildingName: building.name,
@@ -311,6 +415,7 @@ export async function analyzePackage(
     warnings,
     buildingAlreadyPopulated,
     rentRollNewUnits,
+    buildingSplit,
   };
 }
 
@@ -322,12 +427,14 @@ export function analyzePackageForNewBuilding(files: PackageFile[]): NewBuildingP
   const infoFile = files.find((f) => detectDocumentType(f.fileName, f.text) === "GENERAL_INFO");
   const extractedBuilding = infoFile ? parseBuildingInfo(infoFile.text) : null;
   if (!extractedBuilding) warnings.push("No general-info document detected — enter the building's address manually.");
+  const buildingSplit = detectBuildingSplit(typed);
   return {
     extractedBuilding,
     fiscalYear: extractedBuilding?.fiscalYear ?? detectFiscalYear(typed),
     documents,
     reconciliation: reconcile(parsed),
     warnings,
+    buildingSplit,
   };
 }
 
@@ -347,13 +454,23 @@ export async function commitPackage(
   orgId: string,
   buildingId: string,
   files: PackageFile[],
-  opts: { billingMode: OnboardingBillingMode; fiscalYear: number; actorUserId?: string; allowNewUnits?: boolean },
+  opts: { billingMode: OnboardingBillingMode; fiscalYear: number; actorUserId?: string; allowNewUnits?: boolean; allowMultiBuilding?: boolean },
 ): Promise<PackageCommitResultDTO> {
   const building = await inventoryRepo.findBuildingByIdAndOrg(prisma, buildingId, orgId);
   if (!building) throw new OnboardingError("BUILDING_NOT_FOUND", "Building not found");
 
-  const typedFiles = files
-    .map((f) => ({ ...f, type: detectDocumentType(f.fileName, f.text) }))
+  const allTyped = files.map((f) => ({ ...f, type: detectDocumentType(f.fileName, f.text) }));
+
+  // Multi-building guardrail: never merge more than one building's reports into a
+  // single building. A confirmed split (distinct identities) is always blocked;
+  // an ambiguous one (duplicate docs, no distinguishing identity) can be
+  // overridden by the manager confirming it's a single building.
+  const split = detectBuildingSplit(allTyped);
+  if (split.multiple && !(split.ambiguous && opts.allowMultiBuilding)) {
+    throw new OnboardingError("MULTIPLE_BUILDINGS", split.message);
+  }
+
+  const typedFiles = allTyped
     .filter((f) => f.type !== "UNKNOWN" && f.type !== "GENERAL_INFO")
     .sort((a, b) => COMMIT_ORDER[a.type] - COMMIT_ORDER[b.type]);
 

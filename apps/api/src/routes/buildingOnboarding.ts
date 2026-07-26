@@ -312,6 +312,7 @@ export function registerBuildingOnboardingRoutes(router: Router) {
       return sendError(res, 400, "INVALID_FISCAL_YEAR", "fiscalYear must be a valid year (2000–2100)");
     }
     const allowNewUnits = parts.find((p) => p.name === "confirmNewUnits")?.data.toString("utf8").trim() === "true";
+    const allowMultiBuilding = parts.find((p) => p.name === "confirmSingleBuilding")?.data.toString("utf8").trim() === "true";
 
     try {
       const result = await commitPackage(prisma, orgId, params.id, files, {
@@ -319,6 +320,7 @@ export function registerBuildingOnboardingRoutes(router: Router) {
         fiscalYear,
         actorUserId: user.userId,
         allowNewUnits,
+        allowMultiBuilding,
       });
       sendJson(res, 201, { data: result });
     } catch (e) {

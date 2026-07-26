@@ -43,6 +43,7 @@ export default function PackageOnboardingPanel({ buildingId, onClose, onCommitte
   const [error, setError] = useState("");
   const [billingMode, setBillingMode] = useState("snapshot");
   const [confirmNewUnits, setConfirmNewUnits] = useState(false);
+  const [confirmSingleBuilding, setConfirmSingleBuilding] = useState(false);
   const [fiscalYear, setFiscalYear] = useState("");
   const [committing, setCommitting] = useState(false);
   const [result, setResult] = useState(null);
@@ -76,6 +77,7 @@ export default function PackageOnboardingPanel({ buildingId, onClose, onCommitte
       if (!res.ok) throw new Error(json?.error?.message || "Analysis failed");
       setAnalysis(json.data);
       setConfirmNewUnits(false);
+      setConfirmSingleBuilding(false);
       setFiscalYear(String(json.data.fiscalYear || ""));
       const eb = json.data.extractedBuilding;
       if (newMode && eb) setB({ name: eb.name || "", address: eb.address || "", city: eb.city || "", postalCode: eb.postalCode || "" });
@@ -88,6 +90,11 @@ export default function PackageOnboardingPanel({ buildingId, onClose, onCommitte
 
   async function handleCommit() {
     if (!files.length) return;
+    const sp = analysis?.buildingSplit;
+    if (sp?.multiple && !(sp.ambiguous && confirmSingleBuilding)) {
+      setError(sp.message);
+      return;
+    }
     if (newMode && !(b.name.trim() || b.address.trim())) { setError("Enter the building's address before importing."); return; }
     const gateNote = analysis?.buildingAlreadyPopulated && analysis?.rentRollNewUnits > 0 && !confirmNewUnits
       ? ` Matching units will be updated; ${analysis.rentRollNewUnits} unmatched object(s) will be skipped (not confirmed).`
@@ -128,6 +135,9 @@ export default function PackageOnboardingPanel({ buildingId, onClose, onCommitte
       // matching units and skips the rest, so a different year's report can't
       // duplicate the inventory.
       form.append("confirmNewUnits", String(confirmNewUnits));
+      // Multi-building guardrail: only allowed through for an AMBIGUOUS split the
+      // manager confirmed is really one building; a confirmed split is blocked.
+      form.append("confirmSingleBuilding", String(confirmSingleBuilding));
       // Same as analyze: commit re-runs mappers over the (already-extracted) CSVs
       // and can be slow — go direct to the backend when configured.
       const backendBase = process.env.NEXT_PUBLIC_BACKEND_URL;
@@ -145,6 +155,10 @@ export default function PackageOnboardingPanel({ buildingId, onClose, onCommitte
   }
 
   const usable = analysis?.documents?.filter((d) => d.type !== "UNKNOWN").length ?? 0;
+  const split = analysis?.buildingSplit;
+  // A confirmed split (distinct buildings) is always blocked; an ambiguous one is
+  // blocked until the manager confirms it's really a single building.
+  const commitBlocked = !!split?.multiple && !(split.ambiguous && confirmSingleBuilding);
 
   return (
     <Panel
@@ -252,6 +266,25 @@ export default function PackageOnboardingPanel({ buildingId, onClose, onCommitte
             </div>
           )}
 
+          {/* Multi-building guardrail — a package must cover ONE building */}
+          {split?.multiple && (
+            <div className="rounded-lg border border-destructive-ring bg-destructive-light p-3 text-sm text-destructive-text">
+              <p className="font-medium mb-1">⛔ This looks like more than one building</p>
+              <p className="mb-2">{split.message}</p>
+              {split.buildings?.length > 0 && (
+                <ul className="list-disc pl-5 space-y-0.5 mb-2">{split.buildings.map((bl, i) => <li key={i}>{bl}</li>)}</ul>
+              )}
+              {split.ambiguous ? (
+                <label className="flex items-start gap-2 cursor-pointer">
+                  <input type="checkbox" checked={confirmSingleBuilding} onChange={(e) => setConfirmSingleBuilding(e.target.checked)} className="mt-0.5" />
+                  <span>These are all the <b>same building</b> (e.g. one building split across files) — import anyway.</span>
+                </label>
+              ) : (
+                <p className="text-xs">Import each building&apos;s report on its own building. Nothing was committed.</p>
+              )}
+            </div>
+          )}
+
           {/* Warnings */}
           {analysis.warnings.length > 0 && (
             <div className="rounded-lg border border-warning-ring bg-warning-light p-3 text-sm text-warning-text">
@@ -261,7 +294,7 @@ export default function PackageOnboardingPanel({ buildingId, onClose, onCommitte
           )}
 
           {/* Commit */}
-          {!result && usable > 0 && (
+          {!result && usable > 0 && !commitBlocked && (
             <div className="rounded-lg border border-surface-border p-4 space-y-3">
               {newMode && (
                 <div className="space-y-2">

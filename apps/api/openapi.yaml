@@ -633,6 +633,15 @@ components:
         ok: { type: boolean }
         note: { type: string }
 
+    BuildingSplitDTO:
+      type: object
+      required: [multiple, ambiguous, buildings, message]
+      properties:
+        multiple: { type: boolean, description: The upload appears to mix more than one building's reports }
+        ambiguous: { type: boolean, description: Duplicate documents found but distinct building identity couldn't be confirmed — overridable }
+        buildings: { type: array, items: { type: string }, description: Labels of the detected buildings (addresses or object-code groups) }
+        message: { type: string }
+
     PackageAnalysisDTO:
       type: object
       required: [buildingId, buildingName, fiscalYear, documents, reconciliation, warnings]
@@ -655,6 +664,7 @@ components:
         rentRollNewUnits:
           type: integer
           description: Rent-roll objects that match no existing unit and would be created as new units
+        buildingSplit: { $ref: '#/components/schemas/BuildingSplitDTO' }
         extractedFiles:
           type: array
           description: Present only when the upload was a PDF — the canonical CSVs extracted from it, re-submitted verbatim at commit.
