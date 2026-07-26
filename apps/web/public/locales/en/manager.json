@@ -964,6 +964,10 @@
       "noPnl": {
         "message": "No profit & loss data for {{year}} yet. Occupancy and rent roll come from leases; income and expenses need an approved imported income statement or posted ledger entries.",
         "cta": "Approve in Finance"
+      },
+      "why": {
+        "show": "Why?",
+        "hide": "Why? ▾"
       }
     },
     "strategyEditor": {

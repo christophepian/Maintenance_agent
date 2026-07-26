@@ -1,7 +1,6 @@
 import { useRouter } from "next/router";
 import { useEffect, useState, useMemo, useRef } from "react";
 import {
-  MONTH_HERO_GRADIENTS,
   fmtChf as rFmtChf,
   fmtPct as rFmtPct,
   KpiTable,
@@ -120,6 +119,23 @@ function buildingDelta(curr, prev) {
   const diff = curr - prev;
   const tone = diff > 0 ? "text-green-600" : "text-red-500";
   return { tone };
+}
+
+// KPI-strip deltas vs the prior period. `better` (+1/−1) says which direction is
+// good, so the colour reflects meaning (lower expenses = green). Null when there's
+// no prior value or no change.
+function kpiDeltaChf(cur, prev, better) {
+  if (!Number.isFinite(cur) || !Number.isFinite(prev) || cur === prev) return null;
+  const d = cur - prev;
+  const good = better > 0 ? d > 0 : d < 0;
+  return { txt: `${d > 0 ? "▲ " : "▼ "}${rFmtChf(Math.abs(d))}`, cls: good ? "text-success-text" : "text-destructive-text" };
+}
+function kpiDeltaPp(cur, prev, better) {
+  if (!Number.isFinite(cur) || !Number.isFinite(prev)) return null;
+  const pp = Math.round((cur - prev) * 100);
+  if (pp === 0) return null;
+  const good = better > 0 ? pp > 0 : pp < 0;
+  return { txt: `${pp > 0 ? "▲ +" : "▼ "}${Math.abs(pp)}pp`, cls: good ? "text-success-text" : "text-destructive-text" };
 }
 
 function buildingHeadline(bf, t) {
@@ -261,6 +277,7 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
   const [unitsExpanded, setUnitsExpanded] = useState(false);
   const [insExpanded, setInsExpanded]     = useState(false);
   const [outsExpanded, setOutsExpanded]   = useState(false);
+  const [whyOpen, setWhyOpen]             = useState(false); // exec-summary narrative disclosure
   const [report, setReport]   = useState(null);
   const [unitData, setUnitData] = useState([]);
   const [vendors, setVendors] = useState([]);
@@ -351,8 +368,6 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
   const watchItems = buildBuildingWatchItems(bf, arrears, unitData, moveIns, moveOuts, t);
   const summaryParas = buildExecutiveSummary({ bf, prev, unitData, vendors, benchmark, leaseExpiries: report?.leaseExpiries ?? [], t });
 
-  const heroGradient = MONTH_HERO_GRADIENTS[month] ?? MONTH_HERO_GRADIENTS[0];
-
   const visibleUnits = unitsExpanded ? unitData : unitData.slice(0, PREVIEW_UNITS);
 
   return (
@@ -363,92 +378,102 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
       {!bf && loading && <div className="space-y-3">{[1,2,3].map((i) => <div key={i} className="h-24 rounded-3xl animate-pulse bg-surface-hover" />)}</div>}
 
       {bf && (() => {
-        // ── Slide 1: Hero + KPIs (always shown; no expand toggle) ──
-        // Rent-arrears aging buckets — folded into the hero highlight below.
-        const agingBuckets = arrears ? [
-          { key: "current", label: t("buildingsId.reporting.arrears.current"),    cents: arrears.currentCents,       bar: "bg-success" },
-          { key: "d1",      label: t("buildingsId.reporting.arrears.days1to30"),  cents: arrears.overdue1to30Cents,  bar: "bg-warning" },
-          { key: "d2",      label: t("buildingsId.reporting.arrears.days31to60"), cents: arrears.overdue31to60Cents, bar: "bg-orange" },
-          { key: "d3",      label: t("buildingsId.reporting.arrears.days61plus"), cents: arrears.overdue61plusCents, bar: "bg-destructive" },
-        ].filter((b) => b.cents > 0) : [];
-        const agingTotal = agingBuckets.reduce((s, b) => s + b.cents, 0);
-
-        // Hero band — narrative only; the KPI table moved into its own tab.
-        const heroSlide = (
-          <header className={cn(
-            "bg-gradient-to-br p-6",
-            // Dark-aware override: the light month gradient is unreadable behind
-            // text-foreground (white) in dark mode — swap to brand/info tokens.
-            "dark:from-brand-light dark:via-info-light dark:to-transparent",
-            heroGradient,
-          )}>
-            <div className="inline-flex items-center rounded-full border border-black/20 dark:border-white/20 bg-black/5 dark:bg-white/10 px-3 py-1 text-xs font-medium text-foreground/70 mb-3">
-              {periodLabel} · {t("buildingsId.reporting.monthlyReport")}
+        // ── Result — a calm header (verdict + Why?), an always-visible KPI strip,
+        //    and a single consolidated flags row (arrears · opening balances). The
+        //    gradient hero and the three separate alert blocks are retired here. ──
+        const topSection = (
+          <header className="p-5 sm:p-6 border-b border-surface-border">
+            <div className="flex flex-wrap items-center gap-2 mb-2.5">
+              <span className="inline-flex items-center rounded-full border border-surface-border bg-surface-subtle px-3 py-1 text-xs font-medium text-muted">
+                {periodLabel} · {t("buildingsId.reporting.monthlyReport")}
+              </span>
+              {bf.source === "imported" && (
+                <span className="inline-flex items-center rounded-full border border-brand-ring bg-brand-light px-3 py-1 text-xs font-medium text-brand-dark" title={t("buildingsId.reporting.importedActualsTooltip")}>
+                  {t("buildingsId.reporting.importedActuals", { year })}
+                </span>
+              )}
             </div>
-            {bf.source === "imported" && (
-              <div
-                className="inline-flex items-center rounded-full border border-brand-ring bg-brand-light px-3 py-1 text-xs font-medium text-brand-dark mb-3 ml-2"
-                title={t("buildingsId.reporting.importedActualsTooltip")}
-              >
-                {t("buildingsId.reporting.importedActuals", { year })}
-              </div>
-            )}
-            <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground">{headline}</h1>
-            {/* Executive summary — a deterministic narrative (result · why · benchmark · outlook). */}
-            <div className="mt-2 space-y-1.5 max-w-2xl">
-              {summaryParas.map((para, i) => (
-                <p key={i} className="text-sm leading-6 text-muted-text">{para}</p>
-              ))}
+            <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
+              <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-foreground">{headline}</h1>
+              {summaryParas.length > 0 && (
+                <button onClick={() => setWhyOpen((v) => !v)} aria-expanded={whyOpen} className="text-sm font-semibold text-brand hover:underline">
+                  {whyOpen ? t("buildingsId.reporting.why.hide") : t("buildingsId.reporting.why.show")}
+                </button>
+              )}
             </div>
-
-            {/* Rent-arrears highlight — folds the old uncollected-rent banner + aging
-                panel into one compact block (warning tint · icon · CTA · aging bar). */}
-            {bf.receivablesCents > 0 && (
-              <div className="mt-3 rounded-xl border border-warning-ring bg-warning-light p-2.5">
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                  <span className="shrink-0 text-sm text-warning-text">⚠</span>
-                  <span className="text-sm font-semibold text-foreground">
-                    {t("buildingsId.reporting.arrears.uncollectedShort", { amount: rFmtChf(bf.receivablesCents) })}
-                    {arrears && arrears.totalOverdueCents > 0 && <span className="font-normal text-muted"> · {t("buildingsId.reporting.arrears.overdueShort", { amount: rFmtChf(arrears.totalOverdueCents) })}</span>}
-                  </span>
-                  <a href="/manager/finance/invoices" className="ml-auto shrink-0 rounded-lg border border-warning-ring px-2.5 py-1 text-xs font-semibold text-warning-text transition-colors hover:bg-warning hover:text-white no-underline">{t("buildingsId.reporting.viewInvoices")} →</a>
-                </div>
-                {agingTotal > 0 && (
-                  <>
-                    <div className="mt-2 flex h-2 gap-px overflow-hidden rounded-full">
-                      {agingBuckets.map((b) => (
-                        <div key={b.key} className={b.bar} style={{ width: `${Math.max(3, Math.round((b.cents / agingTotal) * 100))}%` /* no-token: dynamic aging-segment width */ }} title={`${b.label} · ${rFmtChf(b.cents)}`} />
-                      ))}
-                    </div>
-                    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
-                      {agingBuckets.map((b) => (
-                        <span key={b.key} className="inline-flex items-center gap-1.5 text-[11.5px] text-muted">
-                          <span className={cn("h-2.5 w-2.5 rounded-sm", b.bar)} />{b.label} <b className="font-semibold text-foreground">{rFmtChf(b.cents)}</b>
-                        </span>
-                      ))}
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
-
-            {/* No P&L data for the period — occupancy/rent roll show (lease-derived)
-                but income/expenses need an approved imported statement or ledger
-                actuals. Point the user at Finance to approve/import one. */}
-            {noPnlData && (
-              <div className="mt-3 rounded-xl border border-info-ring bg-info-light p-2.5">
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                  <span className="shrink-0 text-sm text-info-text">ℹ</span>
-                  <span className="text-sm font-medium text-foreground">
-                    {t("buildingsId.reporting.noPnl.message", { year })}
-                  </span>
-                  <a href="/manager/finance" className="ml-auto shrink-0 rounded-lg border border-info-ring px-2.5 py-1 text-xs font-semibold text-info-text transition-colors hover:bg-info hover:text-white no-underline">
-                    {t("buildingsId.reporting.noPnl.cta")} →
-                  </a>
-                </div>
+            {whyOpen && summaryParas.length > 0 && (
+              <div className="mt-2.5 max-w-2xl space-y-1.5 rounded-xl bg-surface-subtle p-3.5">
+                {summaryParas.map((para, i) => (
+                  <p key={i} className="text-sm leading-6 text-muted-text">{para}</p>
+                ))}
               </div>
             )}
           </header>
+        );
+
+        // 8 headline KPIs, always visible — the summary the tab now opens on.
+        const kpiStripItems = [
+          { k: t("buildingsId.reporting.kpi.noi"),              v: rFmtChf(noi),                            d: prev ? kpiDeltaChf(noi, prev.netOperatingIncomeCents, 1) : null },
+          { k: t("buildingsId.reporting.kpi.noiMargin"),        v: noiMargin != null ? rFmtPct(noiMargin) : "—", d: prev && prev.collectedIncomeCents > 0 ? kpiDeltaPp(noiMargin, prev.netOperatingIncomeCents / prev.collectedIncomeCents, 1) : null },
+          { k: t("buildingsId.reporting.kpi.cashReceived"),     v: rFmtChf(earned),                         d: prev ? kpiDeltaChf(earned, prev.collectedIncomeCents, 1) : null },
+          { k: t("buildingsId.reporting.kpi.totalExpenses"),    v: rFmtChf(expenses),                       d: prev ? kpiDeltaChf(expenses, prev.expensesTotalCents, -1) : null },
+          { k: t("buildingsId.reporting.kpi.opexRatio"),        v: opexRatio != null ? rFmtPct(opexRatio) : "—", d: prev && prev.collectedIncomeCents > 0 ? kpiDeltaPp(opexRatio, prev.expensesTotalCents / prev.collectedIncomeCents, -1) : null },
+          { k: t("buildingsId.reporting.kpi.onTimeCollection"), v: rFmtPct(coll),                           d: prev ? kpiDeltaPp(coll, prev.collectionRate, 1) : null },
+          { k: t("buildingsId.reporting.kpi.occupancy"),        v: occ != null ? rFmtPct(occ) : "—",        d: prev && prev.totalUnitsCount > 0 ? kpiDeltaPp(occ, prev.activeUnitsCount / prev.totalUnitsCount, 1) : null },
+          { k: t("buildingsId.reporting.kpi.receivables"),      v: bf.receivablesCents > 0 ? rFmtChf(bf.receivablesCents) : "—", d: null, flag: bf.receivablesCents > 0 },
+        ];
+        const kpiStripEl = (
+          <div className="grid grid-cols-2 gap-px border-b border-surface-border bg-surface-border sm:grid-cols-4 lg:grid-cols-8">
+            {kpiStripItems.map((x, i) => (
+              <div key={i} className="bg-surface p-3">
+                <div className="text-[10.5px] font-medium uppercase tracking-wide text-foreground-dim">{x.k}</div>
+                <div className={cn("mt-1 text-lg font-semibold tabular-nums tracking-tight", x.flag ? "text-warning-text" : "text-foreground")}>{x.v}</div>
+                {x.d
+                  ? <div className={cn("mt-0.5 text-[11px] font-medium tabular-nums", x.d.cls)}>{x.d.txt}</div>
+                  : <div className="mt-0.5 text-[11px] text-foreground-dim">—</div>}
+              </div>
+            ))}
+          </div>
+        );
+
+        // Consolidated flags — arrears + opening-balance carry-in, one quiet row.
+        const flags = [];
+        if (bf.receivablesCents > 0) flags.push({
+          tone: "warn",
+          text: t("buildingsId.reporting.arrears.uncollectedShort", { amount: rFmtChf(bf.receivablesCents) })
+            + (arrears && arrears.totalOverdueCents > 0 ? " · " + t("buildingsId.reporting.arrears.overdueShort", { amount: rFmtChf(arrears.totalOverdueCents) }) : ""),
+        });
+        if (bf.openingReceivablesCents > 0 || bf.openingPayablesCents > 0) flags.push({
+          tone: "info",
+          text: [
+            bf.openingReceivablesCents > 0 ? t("buildingsId.reporting.openingReceivable", { amount: rFmtChf(bf.openingReceivablesCents) }) : null,
+            bf.openingPayablesCents > 0 ? t("buildingsId.reporting.openingPayable", { amount: rFmtChf(bf.openingPayablesCents) }) : null,
+          ].filter(Boolean).join(" · "),
+        });
+        const flagsRow = flags.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 border-b border-surface-border bg-surface-subtle px-5 py-3">
+            {flags.map((f, i) => (
+              <span key={i} className={cn("inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold",
+                f.tone === "warn" ? "border-warning-ring bg-warning-light text-warning-text" : "border-info-ring bg-info-light text-info-text")}>
+                {f.tone === "warn" ? "⚠" : "↪"} {f.text}
+              </span>
+            ))}
+            {bf.receivablesCents > 0 && (
+              <a href="/manager/finance/invoices" className="ml-auto text-xs font-semibold text-brand no-underline hover:underline">{t("buildingsId.reporting.viewInvoices")} →</a>
+            )}
+          </div>
+        );
+
+        // No P&L for the period — occupancy/rent roll are lease-derived, but income
+        // & expenses need an approved statement or ledger actuals. Calm empty state.
+        const noPnlBlock = (
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-surface-border bg-info-light px-5 py-4">
+            <span className="shrink-0 text-info-text">ℹ</span>
+            <span className="text-sm font-medium text-foreground">{t("buildingsId.reporting.noPnl.message", { year })}</span>
+            <a href="/manager/finance" className="ml-auto shrink-0 rounded-lg border border-info-ring px-3 py-1.5 text-xs font-semibold text-info-text transition-colors hover:bg-info hover:text-white no-underline">
+              {t("buildingsId.reporting.noPnl.cta")} →
+            </a>
+          </div>
         );
 
         // ── Tab: KPIs (with optional "Compare to…" side-by-side) ──
@@ -783,33 +808,11 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
           : tab === "unitprofit" ? unitProfitSlide
           : tab === "valuecreation" ? valueCreationSlide
           : revexSlide;
-        // Uncollected rent + arrears aging now live in the hero highlight; only the
-        // opening-balance carry-in banner remains in the alerts strip.
-        const hasAlerts = bf.openingReceivablesCents > 0 || bf.openingPayablesCents > 0;
-
         return (
           <>
-            {/* ── Hero band — the always-visible main attraction ── */}
-            {heroSlide}
-
-            {/* ── Alerts, folded into the card below the hero ── */}
-            {hasAlerts && (
-            <div className="space-y-3 border-t border-surface-border p-4">
-            {(bf.openingReceivablesCents > 0 || bf.openingPayablesCents > 0) && (
-              <div className="flex items-start gap-3 rounded-2xl border border-info-ring bg-info-light px-5 py-4">
-                <span className="mt-0.5 text-info-text text-lg shrink-0">↪</span>
-                <div className="flex-1">
-                  <p className="text-sm font-semibold text-info-text mb-0.5">
-                    {bf.openingReceivablesCents > 0 && t("buildingsId.reporting.openingReceivable", { amount: rFmtChf(bf.openingReceivablesCents) })}
-                    {bf.openingReceivablesCents > 0 && bf.openingPayablesCents > 0 && " · "}
-                    {bf.openingPayablesCents > 0 && t("buildingsId.reporting.openingPayable", { amount: rFmtChf(bf.openingPayablesCents) })}
-                  </p>
-                  <p className="text-xs text-info-text/80">{t("buildingsId.reporting.openingHint")}</p>
-                </div>
-              </div>
-            )}
-            </div>
-            )}
+            {/* ── Result: calm header + always-visible KPI strip + one flags row ── */}
+            {topSection}
+            {noPnlData ? noPnlBlock : (<>{kpiStripEl}{flagsRow}</>)}
 
             {/* ── Detail: tab strip + sliding panel (default: Revenue & expenses) ── */}
             <div className="border-t border-surface-border">

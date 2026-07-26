@@ -964,6 +964,10 @@
       "noPnl": {
         "message": "Aucune donnée de compte de résultat pour {{year}}. Le taux d'occupation et l'état locatif proviennent des baux ; les produits et charges nécessitent un compte de résultat importé et approuvé ou des écritures comptabilisées.",
         "cta": "Approuver dans Finances"
+      },
+      "why": {
+        "show": "Pourquoi ?",
+        "hide": "Pourquoi ? ▾"
       }
     },
     "strategyEditor": {
