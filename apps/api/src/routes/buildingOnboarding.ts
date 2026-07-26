@@ -109,11 +109,13 @@ export function registerBuildingOnboardingRoutes(router: Router) {
     if (billingMode !== "activate" && billingMode !== "snapshot") {
       return sendError(res, 400, "INVALID_BILLING_MODE", "billingMode must be 'activate' or 'snapshot'");
     }
+    const allowNewUnits = parts.find((p) => p.name === "confirmNewUnits")?.data.toString("utf8").trim() === "true";
 
     try {
       const result = await commitOnboarding(prisma, orgId, params.id, filePart.data.toString("utf8"), {
         billingMode,
         actorUserId: user.userId,
+        allowNewUnits,
       });
       sendJson(res, 201, { data: result });
     } catch (e) {
@@ -309,12 +311,14 @@ export function registerBuildingOnboardingRoutes(router: Router) {
     if (!Number.isFinite(fiscalYear) || fiscalYear < 2000 || fiscalYear > 2100) {
       return sendError(res, 400, "INVALID_FISCAL_YEAR", "fiscalYear must be a valid year (2000–2100)");
     }
+    const allowNewUnits = parts.find((p) => p.name === "confirmNewUnits")?.data.toString("utf8").trim() === "true";
 
     try {
       const result = await commitPackage(prisma, orgId, params.id, files, {
         billingMode,
         fiscalYear,
         actorUserId: user.userId,
+        allowNewUnits,
       });
       sendJson(res, 201, { data: result });
     } catch (e) {

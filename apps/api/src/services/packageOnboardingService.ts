@@ -19,7 +19,7 @@ import { mapRentRoll } from "./rentRollMapper";
 import { mapRegieLedger } from "./regieLedgerMapper";
 import { mapCsvToAccountBalances } from "./csvAccountingMapper";
 import { computeBalanceImbalanceCents, ingestStatement, approveStatement } from "./importedStatementService";
-import { commitOnboarding, OnboardingError, OnboardingBillingMode } from "./buildingOnboardingService";
+import { commitOnboarding, assessRentRollHydration, OnboardingError, OnboardingBillingMode } from "./buildingOnboardingService";
 import { commitInvoiceOnboarding } from "./invoiceOnboardingService";
 
 export interface PackageFile {
@@ -50,6 +50,13 @@ export interface PackageAnalysisDTO {
   documents: PackageDocumentDTO[];
   reconciliation: ReconciliationCheckDTO[];
   warnings: string[];
+  /** True when the building already has ≥1 active unit. When the package carries
+   *  a rent roll with unmatched objects, the client must confirm new-unit
+   *  creation before commit (the duplication guard). */
+  buildingAlreadyPopulated: boolean;
+  /** Rent-roll objects that match no existing unit and would be created as NEW
+   *  units. 0 when there's no rent roll or every object merges. */
+  rentRollNewUnits: number;
   /** Present only when the upload was a PDF: the canonical CSVs extracted from
    *  it, which the client re-submits verbatim at commit (single extraction). */
   extractedFiles?: PackageFile[];
@@ -273,6 +280,28 @@ export async function analyzePackage(
   if (!building) throw new OnboardingError("BUILDING_NOT_FOUND", "Building not found");
 
   const { documents, parsed, warnings, typed } = detectAndSummarize(files);
+
+  // Assess whether the rent roll (if any) would create new units into an
+  // already-populated building — the panel surfaces a confirm gate when so.
+  let buildingAlreadyPopulated = false;
+  let rentRollNewUnits = 0;
+  const rentRollFile = files.find((f) => detectDocumentType(f.fileName, f.text) === "RENT_ROLL");
+  if (rentRollFile) {
+    try {
+      const assess = await assessRentRollHydration(prisma, orgId, buildingId, rentRollFile.text);
+      buildingAlreadyPopulated = assess.buildingAlreadyPopulated;
+      rentRollNewUnits = assess.newUnits;
+      if (buildingAlreadyPopulated && rentRollNewUnits > 0) {
+        warnings.push(`This building already has units — ${rentRollNewUnits} rent-roll object(s) match none of them. Confirm "create new units" at commit, or they'll be skipped (merges/updates still apply).`);
+      }
+    } catch {
+      /* assessment is advisory — never block analyze on it */
+    }
+  } else {
+    const existing = await inventoryRepo.listUnits(prisma, orgId, buildingId, true);
+    buildingAlreadyPopulated = existing.some((u) => u.isActive !== false);
+  }
+
   return {
     buildingId,
     buildingName: building.name,
@@ -280,6 +309,8 @@ export async function analyzePackage(
     documents,
     reconciliation: reconcile(parsed),
     warnings,
+    buildingAlreadyPopulated,
+    rentRollNewUnits,
   };
 }
 
@@ -316,7 +347,7 @@ export async function commitPackage(
   orgId: string,
   buildingId: string,
   files: PackageFile[],
-  opts: { billingMode: OnboardingBillingMode; fiscalYear: number; actorUserId?: string },
+  opts: { billingMode: OnboardingBillingMode; fiscalYear: number; actorUserId?: string; allowNewUnits?: boolean },
 ): Promise<PackageCommitResultDTO> {
   const building = await inventoryRepo.findBuildingByIdAndOrg(prisma, buildingId, orgId);
   if (!building) throw new OnboardingError("BUILDING_NOT_FOUND", "Building not found");
@@ -335,11 +366,16 @@ export async function commitPackage(
         const r = await commitOnboarding(prisma, orgId, buildingId, f.text, {
           billingMode: opts.billingMode,
           actorUserId: opts.actorUserId,
+          allowNewUnits: opts.allowNewUnits,
         });
+        const skipNote = r.skippedNewUnits > 0 ? `, ${r.skippedNewUnits} new unit(s) skipped (not confirmed)` : "";
+        if (r.skippedNewUnits > 0) {
+          warnings.push(`${f.fileName}: ${r.skippedNewUnits} object(s) matched no existing unit and were skipped — re-import with "create new units" confirmed to add them.`);
+        }
         results.push({
           fileName: f.fileName,
           type: f.type,
-          outcome: `${r.created.units} unit(s), ${r.created.tenants} tenant(s), ${r.created.leases} lease(s)`,
+          outcome: `${r.created.units} unit(s), ${r.created.tenants} tenant(s), ${r.created.leases} lease(s)${skipNote}`,
           detail: r.errors.length ? `${r.errors.length} issue(s)` : "ok",
         });
       } else if (f.type === "GENERAL_LEDGER") {

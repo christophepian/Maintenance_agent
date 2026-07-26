@@ -64,7 +64,12 @@ export interface OnboardingPreviewDTO {
     annualNetRentChf: number;
     /** Objects that match an existing unit (by number or floor+rent) and will be merged. */
     matchedExistingUnits: number;
+    /** Objects that match no existing unit and would be created as NEW units. */
+    newUnits: number;
   };
+  /** True when the building already has ≥1 active unit — a commit that creates
+   *  new units then needs explicit confirmation (see `commitOnboarding` gate). */
+  buildingAlreadyPopulated: boolean;
   units: OnboardingUnitPreview[];
   warnings: string[];
 }
@@ -108,6 +113,11 @@ export function normalizeFloor(floor: string | null | undefined): string {
  * A match key for pairing a rent-roll object with an existing unit that uses a
  * different numbering: unit type + normalized floor + net rent. Empty when the
  * floor or rent is missing (then only an exact unit-number match applies).
+ *
+ * NOTE: rent is NOT stable across fiscal years (it changes with indexation /
+ * turnover), so this key only merges when re-importing the *same* year. For a
+ * different year, prefer `unitStableKey`. Kept as a secondary signal for units
+ * that carry no rooms/area (e.g. a rent roll with only floor + rent columns).
  */
 export function unitMatchKey(unitType: string, floor: string | null | undefined, netRentChf: number | null): string {
   const f = normalizeFloor(floor);
@@ -115,10 +125,37 @@ export function unitMatchKey(unitType: string, floor: string | null | undefined,
   return `${unitType}|${f}|${netRentChf}`;
 }
 
+/**
+ * A rent-INDEPENDENT match key: unit type + normalized floor + rooms. The
+ * physical identity of a flat (which floor, how many rooms) is stable across
+ * fiscal years and across report formats, whereas its rent — and, in practice,
+ * even its reported m² (gross vs net/weighted surface differs between a régie's
+ * documents) — are NOT. So this is what lets a 2023 report merge into the unit a
+ * 2025 report created instead of duplicating it. Area is deliberately excluded:
+ * two reads of the same flat routinely disagree on m² by >10% (verified on real
+ * data: RdC 110 m² vs 0001 96 m² for the same flat). Empty when too sparse to
+ * identify confidently (needs floor + rooms), then matching falls back to
+ * rent/number, and finally the populated-building gate catches anything unmatched.
+ */
+export function unitStableKey(
+  unitType: string,
+  floor: string | null | undefined,
+  rooms: number | null | undefined,
+  area?: number | null | undefined, // accepted for call-site symmetry; not part of the key
+): string {
+  void area;
+  const f = normalizeFloor(floor);
+  const r = rooms != null && Number.isFinite(rooms) ? String(rooms) : "";
+  if (!f || !r) return "";
+  return `${unitType}|${f}|${r}`;
+}
+
 interface ExistingUnitRef { id: string; unitNumber: string; isActive: boolean; }
 interface ExistingLookup {
-  byNumber: Map<string, ExistingUnitRef>;      // all units (incl. deactivated) — numbers stay unique
-  byKey: Map<string, ExistingUnitRef | null>;  // ACTIVE units only; null = ambiguous
+  byNumber: Map<string, ExistingUnitRef>;         // all units (incl. deactivated) — numbers stay unique
+  byStableKey: Map<string, ExistingUnitRef | null>; // ACTIVE units only, rent-independent; null = ambiguous
+  byKey: Map<string, ExistingUnitRef | null>;     // ACTIVE units only, floor+rent; null = ambiguous
+  activeCount: number;                            // populated-building gate
 }
 
 interface ExistingUnitRow {
@@ -127,31 +164,43 @@ interface ExistingUnitRow {
   type: string;
   floor: string | null;
   monthlyRentChf: number | null;
+  rooms?: number | null;
+  livingAreaSqm?: number | null;
   isActive?: boolean;
 }
 
 function buildExistingLookup(units: ExistingUnitRow[]): ExistingLookup {
   const byNumber = new Map<string, ExistingUnitRef>();
+  const byStableKey = new Map<string, ExistingUnitRef | null>();
   const byKey = new Map<string, ExistingUnitRef | null>();
+  let activeCount = 0;
   for (const u of units) {
     const isActive = u.isActive !== false;
     const ref = { id: u.id, unitNumber: u.unitNumber, isActive };
     byNumber.set(u.unitNumber, ref); // numbers are unique per building regardless of active
     if (isActive) {
+      activeCount += 1;
+      const sKey = unitStableKey(u.type, u.floor, u.rooms, u.livingAreaSqm);
+      if (sKey) byStableKey.set(sKey, byStableKey.has(sKey) ? null : ref); // second active hit → ambiguous
       const key = unitMatchKey(u.type, u.floor, u.monthlyRentChf);
-      if (key) byKey.set(key, byKey.has(key) ? null : ref); // second active hit → ambiguous
+      if (key) byKey.set(key, byKey.has(key) ? null : ref);
     }
   }
-  return { byNumber, byKey };
+  return { byNumber, byStableKey, byKey, activeCount };
 }
 
 /**
- * Find the existing unit a rent-roll object maps to. Floor+rent against ACTIVE
- * units first (so an object merges into the live unit rather than a leftover
- * same-numbered shell), then an exact number match against ANY unit (incl.
- * deactivated — their number is still reserved by the unique constraint).
+ * Find the existing unit a rent-roll object maps to. Tries, in order of
+ * reliability: the rent-independent stable key (floor+rooms+area — bridges two
+ * fiscal years), then floor+rent (same-year re-import), then an exact number
+ * match against ANY unit (incl. deactivated — their number stays reserved).
+ * A key that resolved to `null` (ambiguous — two active units share it) is
+ * skipped so we never merge into the wrong unit.
  */
 function matchExistingUnit(r: RentRollRow, lookup: ExistingLookup): ExistingUnitRef | null {
+  const sKey = unitStableKey(r.unitType, r.floor, r.rooms, r.areaSqm);
+  const byStable = sKey ? lookup.byStableKey.get(sKey) : undefined;
+  if (byStable) return byStable;
   const key = unitMatchKey(r.unitType, r.floor, r.netRentChf);
   const byKey = key ? lookup.byKey.get(key) : undefined;
   if (byKey) return byKey;
@@ -218,11 +267,16 @@ export async function previewOnboarding(
     };
   });
 
+  const newUnits = rows.length - matchedCount;
+  const buildingAlreadyPopulated = lookup.activeCount > 0;
   if (matchedCount > 0) {
-    warnings.push(`${matchedCount} object(s) match an existing unit (by number or floor + rent) — those will be merged, not duplicated.`);
+    warnings.push(`${matchedCount} object(s) match an existing unit (by floor + rooms + area, or number) — those will be merged, not duplicated.`);
+  }
+  if (buildingAlreadyPopulated && newUnits > 0) {
+    warnings.push(`${newUnits} object(s) match no existing unit — importing into an already-populated building will only create them if you confirm new units at commit.`);
   }
 
-  const distinctTenants = new Set(rows.filter((r) => r.tenantName).map((r) => r.tenantName!));
+  const distinctTenants = new Set(rows.filter((r) => r.tenantName).map((r) => normalizeTenantName(r.tenantName!)));
   const annualNetRentChf = rows.reduce((sum, r) => sum + (willCreateLease(r) ? (r.netRentChf ?? 0) * 12 : 0), 0);
 
   return {
@@ -237,9 +291,34 @@ export async function previewOnboarding(
       leases: rows.filter(willCreateLease).length,
       annualNetRentChf,
       matchedExistingUnits: matchedCount,
+      newUnits,
     },
+    buildingAlreadyPopulated,
     units,
     warnings,
+  };
+}
+
+/**
+ * Lightweight assessment of what a rent roll would do to a building's inventory,
+ * without producing the full preview. Used by the package analyze step to decide
+ * whether to surface a "confirm new units" gate. Read-only.
+ */
+export async function assessRentRollHydration(
+  prisma: PrismaClient,
+  orgId: string,
+  buildingId: string,
+  csvText: string,
+): Promise<{ buildingAlreadyPopulated: boolean; matchedUnits: number; newUnits: number }> {
+  const existing = await inventoryRepo.listUnits(prisma, orgId, buildingId, true);
+  const lookup = buildExistingLookup(existing);
+  const { rows } = mapRentRoll(csvText);
+  let matched = 0;
+  for (const r of rows) if (matchExistingUnit(r, lookup)) matched += 1;
+  return {
+    buildingAlreadyPopulated: lookup.activeCount > 0,
+    matchedUnits: matched,
+    newUnits: rows.length - matched,
   };
 }
 
@@ -253,19 +332,42 @@ export interface OnboardingCommitResult {
   created: { units: number; tenants: number; leases: number; activated: number };
   /** Objects whose unit already existed and were skipped (merge — no duplicates). */
   skippedExistingUnits: number;
+  /** Objects with no existing match that were NOT created because the building is
+   *  already populated and new-unit creation wasn't confirmed (the duplication
+   *  guard). Re-run with `allowNewUnits` to create them. */
+  skippedNewUnits: number;
   errors: string[];
 }
 
 const errMsg = (e: unknown): string => (e instanceof Error ? e.message : String(e));
 
 /**
+ * Canonicalize a tenant name so formatting variance between two extractions of
+ * the same document (accents, civilité titles, punctuation, case, spacing,
+ * token order) collapses to one identity. This is a FORMATTING normalizer, not
+ * a fuzzy/partial matcher — "JACCARD Jacques-Henri" and "Jaccard, jacques henri"
+ * collapse, but two genuinely different names never do. Used as the dedup key so
+ * re-importing the same tenant across report layouts doesn't triple the record.
+ */
+export function normalizeTenantName(name: string): string {
+  const cleaned = name
+    .normalize("NFD").replace(/[̀-ͯ]/g, "") // strip accents
+    .toUpperCase()
+    .replace(/\b(M|MR|MME|MLLE|MRS|MS|DR|PROF)\.?\b/g, " ") // drop civilité titles
+    .replace(/[^A-Z0-9]+/g, " ") // punctuation/hyphens → space
+    .trim();
+  return cleaned.split(/\s+/).filter(Boolean).sort().join(" ");
+}
+
+/**
  * Deterministic non-dialable placeholder phone for an imported tenant (the rent
  * roll carries no phone, but Tenant.phone is required + unique). Same building +
- * name → same phone, so a tenant occupying several objects dedups to one record.
- * Flag/edit later. `+41` + 9 digits satisfies E.164 normalization.
+ * normalized name → same phone, so a tenant occupying several objects — or
+ * re-imported from another year's report with different name formatting — dedups
+ * to one record. Flag/edit later. `+41` + 9 digits satisfies E.164 normalization.
  */
 export function synthTenantPhone(buildingId: string, name: string): string {
-  const key = `${buildingId}|${name}`;
+  const key = `${buildingId}|${normalizeTenantName(name)}`;
   let h = 0;
   for (let i = 0; i < key.length; i += 1) h = (Math.imul(h, 31) + key.charCodeAt(i)) >>> 0;
   return `+41${String(h % 1_000_000_000).padStart(9, "0")}`;
@@ -293,7 +395,7 @@ export async function commitOnboarding(
   orgId: string,
   buildingId: string,
   csvText: string,
-  opts: { billingMode: OnboardingBillingMode; actorUserId?: string },
+  opts: { billingMode: OnboardingBillingMode; actorUserId?: string; allowNewUnits?: boolean },
 ): Promise<OnboardingCommitResult> {
   const building = await inventoryRepo.findBuildingByIdAndOrg(prisma, buildingId, orgId);
   if (!building) throw new OnboardingError("BUILDING_NOT_FOUND", "Building not found");
@@ -301,17 +403,25 @@ export async function commitOnboarding(
   const { rows } = mapRentRoll(csvText);
   if (rows.length === 0) throw new OnboardingError("EMPTY_RENT_ROLL", "No rent-roll rows found in the CSV");
 
-  // Merge, don't block: an object matching an existing unit (by floor+rent on an
-  // active unit, or exact number incl. a deactivated unit whose number is still
-  // reserved) is reused, not duplicated. A matched deactivated unit is reactivated.
+  // Merge, don't block: an object matching an existing unit (by stable
+  // floor+rooms+area, floor+rent on an active unit, or exact number incl. a
+  // deactivated unit whose number is still reserved) is reused, not duplicated.
+  // A matched deactivated unit is reactivated.
   const existing = await inventoryRepo.listUnits(prisma, orgId, buildingId, true);
   const lookup = buildExistingLookup(existing);
+
+  // Duplication guard: into an ALREADY-POPULATED building, an object that matches
+  // no existing unit is NOT auto-created unless the caller explicitly confirmed
+  // new units. This is what stops a different year's / different-format report
+  // from spawning parallel units. An empty building (first import) creates freely.
+  const gateNewUnits = lookup.activeCount > 0 && !opts.allowNewUnits;
 
   const links = resolveGarageLinks(rows);
   const errors: string[] = [];
   const unitIdByObjet = new Map<string, string>();
   let unitsCreated = 0;
   let skippedExistingUnits = 0;
+  let skippedNewUnits = 0;
   const apartments = rows.filter((r) => r.unitType === "RESIDENTIAL");
   const garages = rows.filter((r) => r.unitType === "PARKING");
 
@@ -332,6 +442,7 @@ export async function commitOnboarding(
       try { await reviveIfInactive(match, r); } catch (e) { errors.push(`Unit ${r.objet}: ${errMsg(e)}`); }
       continue;
     }
+    if (gateNewUnits) { skippedNewUnits += 1; continue; } // populated building, new unit not confirmed
     try {
       const unit = await createUnit(orgId, buildingId, { unitNumber: r.unitNumber, type: "RESIDENTIAL", floor: r.floor ?? undefined });
       unitIdByObjet.set(r.objet, unit.id);
@@ -359,6 +470,7 @@ export async function commitOnboarding(
       }
       continue;
     }
+    if (gateNewUnits) { skippedNewUnits += 1; continue; } // populated building, new garage not confirmed
     try {
       const unit = await createUnit(orgId, buildingId, {
         unitNumber: r.unitNumber, type: "PARKING", parkingKind: "GARAGE", floor: r.floor ?? undefined, linkedFlatId,
@@ -457,7 +569,7 @@ export async function commitOnboarding(
     actorUserId: opts.actorUserId,
     entityType: "Building",
     entityId: buildingId,
-    metadata: { billingMode: opts.billingMode, unitsCreated, skippedExistingUnits, tenants: tenantNames.size, leases: leaseCount, activated },
+    metadata: { billingMode: opts.billingMode, unitsCreated, skippedExistingUnits, skippedNewUnits, tenants: tenantNames.size, leases: leaseCount, activated },
   });
 
   return {
@@ -465,6 +577,7 @@ export async function commitOnboarding(
     billingMode: opts.billingMode,
     created: { units: unitsCreated, tenants: tenantNames.size, leases: leaseCount, activated },
     skippedExistingUnits,
+    skippedNewUnits,
     errors,
   };
 }

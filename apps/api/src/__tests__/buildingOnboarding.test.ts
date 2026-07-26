@@ -1,4 +1,4 @@
-import { resolveGarageLinks, willCreateLease, normalizeFloor, unitMatchKey } from "../services/buildingOnboardingService";
+import { resolveGarageLinks, willCreateLease, normalizeFloor, unitMatchKey, unitStableKey, normalizeTenantName, synthTenantPhone } from "../services/buildingOnboardingService";
 import { mapRentRoll } from "../services/rentRollMapper";
 
 const RENT_ROLL =
@@ -65,5 +65,41 @@ describe("unitMatchKey", () => {
   it("is empty when floor or rent is missing", () => {
     expect(unitMatchKey("RESIDENTIAL", null, 2920)).toBe("");
     expect(unitMatchKey("RESIDENTIAL", "1er", null)).toBe("");
+  });
+});
+
+describe("unitStableKey", () => {
+  it("matches the same flat across fiscal years/formats despite rent AND area disagreement", () => {
+    // Real case: same 3rd-floor flat read as (133 m², rent 3800) and (100 m², rent 3580)
+    expect(unitStableKey("RESIDENTIAL", "3eme", 4.5, 133)).toBe(unitStableKey("RESIDENTIAL", "3ème étage", 4.5, 100));
+    // Ground floor: 110 m² vs 96 m², same flat
+    expect(unitStableKey("RESIDENTIAL", "Rez de Chaussée", 4.5, 110)).toBe(unitStableKey("RESIDENTIAL", "rez-de-chaussée", 4.5, 96));
+  });
+  it("does not match different flats on the same floor (different rooms)", () => {
+    expect(unitStableKey("RESIDENTIAL", "2", 2.5, 55)).not.toBe(unitStableKey("RESIDENTIAL", "2", 4.5, 95));
+  });
+  it("does not match across floors", () => {
+    expect(unitStableKey("RESIDENTIAL", "1er", 4.5)).not.toBe(unitStableKey("RESIDENTIAL", "2eme", 4.5));
+  });
+  it("is empty when too sparse to identify (no floor, or no rooms — e.g. parking)", () => {
+    expect(unitStableKey("RESIDENTIAL", null, 3.5, 80)).toBe("");
+    expect(unitStableKey("PARKING", "0", null, null)).toBe("");
+  });
+});
+
+describe("normalizeTenantName", () => {
+  it("collapses formatting variance (accents, titles, punctuation, case, order) to one identity", () => {
+    const a = normalizeTenantName("JACCARD Jacques-Henri");
+    expect(normalizeTenantName("Jaccard, jacques henri")).toBe(a);
+    expect(normalizeTenantName("M. Jaccard Jacques-Henri")).toBe(a);
+    expect(normalizeTenantName("jacques-henri  JACCARD")).toBe(a);
+  });
+  it("keeps genuinely different names distinct", () => {
+    expect(normalizeTenantName("MARTIN Paul")).not.toBe(normalizeTenantName("MARTIN Pierre"));
+  });
+  it("makes synthTenantPhone stable across name formatting for the same building", () => {
+    const b = "b-123";
+    expect(synthTenantPhone(b, "FROISSE Marcel")).toBe(synthTenantPhone(b, "Froisse, marcel"));
+    expect(synthTenantPhone(b, "FROISSE Marcel")).not.toBe(synthTenantPhone(b, "FROISSE Marceline"));
   });
 });

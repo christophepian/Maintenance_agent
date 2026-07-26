@@ -462,6 +462,12 @@ components:
             leases: { type: integer }
             annualNetRentChf: { type: integer }
             matchedExistingUnits: { type: integer }
+            newUnits:
+              type: integer
+              description: Objects matching no existing unit — created only into an empty building, or when new units are confirmed
+        buildingAlreadyPopulated:
+          type: boolean
+          description: True when the building already has ≥1 active unit; new (unmatched) units then require explicit confirmation at commit
         units:
           type: array
           items: { $ref: '#/components/schemas/OnboardingUnitPreviewDTO' }
@@ -486,6 +492,9 @@ components:
         skippedExistingUnits:
           type: integer
           description: Objects whose unit already existed and were merged (not duplicated)
+        skippedNewUnits:
+          type: integer
+          description: Unmatched objects NOT created because the building is already populated and new units weren't confirmed
         errors:
           type: array
           items: { type: string }
@@ -640,6 +649,12 @@ components:
         warnings:
           type: array
           items: { type: string }
+        buildingAlreadyPopulated:
+          type: boolean
+          description: True when the building already has ≥1 active unit; unmatched rent-roll objects then require confirmation at commit
+        rentRollNewUnits:
+          type: integer
+          description: Rent-roll objects that match no existing unit and would be created as new units
         extractedFiles:
           type: array
           description: Present only when the upload was a PDF — the canonical CSVs extracted from it, re-submitted verbatim at commit.

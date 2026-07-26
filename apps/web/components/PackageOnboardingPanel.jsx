@@ -42,6 +42,7 @@ export default function PackageOnboardingPanel({ buildingId, onClose, onCommitte
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [billingMode, setBillingMode] = useState("snapshot");
+  const [confirmNewUnits, setConfirmNewUnits] = useState(false);
   const [fiscalYear, setFiscalYear] = useState("");
   const [committing, setCommitting] = useState(false);
   const [result, setResult] = useState(null);
@@ -74,6 +75,7 @@ export default function PackageOnboardingPanel({ buildingId, onClose, onCommitte
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error?.message || "Analysis failed");
       setAnalysis(json.data);
+      setConfirmNewUnits(false);
       setFiscalYear(String(json.data.fiscalYear || ""));
       const eb = json.data.extractedBuilding;
       if (newMode && eb) setB({ name: eb.name || "", address: eb.address || "", city: eb.city || "", postalCode: eb.postalCode || "" });
@@ -87,9 +89,12 @@ export default function PackageOnboardingPanel({ buildingId, onClose, onCommitte
   async function handleCommit() {
     if (!files.length) return;
     if (newMode && !(b.name.trim() || b.address.trim())) { setError("Enter the building's address before importing."); return; }
+    const gateNote = analysis?.buildingAlreadyPopulated && analysis?.rentRollNewUnits > 0 && !confirmNewUnits
+      ? ` Matching units will be updated; ${analysis.rentRollNewUnits} unmatched object(s) will be skipped (not confirmed).`
+      : "";
     const confirmMsg = newMode
       ? `Create "${b.name || b.address}" and import this package for fiscal year ${fiscalYear}?`
-      : `Commit this package to the building for fiscal year ${fiscalYear}? Units, tenants, leases and invoices are created; the balance sheet and income statement are sent to review.`;
+      : `Commit this package to the building for fiscal year ${fiscalYear}? The balance sheet and income statement are sent to review.${gateNote}`;
     if (!window.confirm(confirmMsg)) return;
     setCommitting(true);
     setError("");
@@ -118,6 +123,11 @@ export default function PackageOnboardingPanel({ buildingId, onClose, onCommitte
       }
       form.append("billingMode", billingMode);
       form.append("fiscalYear", fiscalYear);
+      // Into an already-populated building, new (unmatched) units are only created
+      // when the manager explicitly confirms — otherwise the commit merges/updates
+      // matching units and skips the rest, so a different year's report can't
+      // duplicate the inventory.
+      form.append("confirmNewUnits", String(confirmNewUnits));
       // Same as analyze: commit re-runs mappers over the (already-extracted) CSVs
       // and can be slow — go direct to the backend when configured.
       const backendBase = process.env.NEXT_PUBLIC_BACKEND_URL;
@@ -278,6 +288,15 @@ export default function PackageOnboardingPanel({ buildingId, onClose, onCommitte
                   <span><b>Activate for ongoing management</b> — leases become active and start recurring billing from the current period.</span>
                 </label>
               </div>
+              {analysis.buildingAlreadyPopulated && analysis.rentRollNewUnits > 0 && (
+                <div className="rounded-lg border border-warning-ring bg-warning-light p-3 text-sm text-warning-text space-y-2">
+                  <p><b>This building already has units.</b> {analysis.rentRollNewUnits} rent-roll object(s) match no existing unit. Matching units are always merged/updated — but creating the unmatched ones needs your confirmation, so a different year's or differently-formatted report can't duplicate your inventory.</p>
+                  <label className="flex items-start gap-2 cursor-pointer">
+                    <input type="checkbox" checked={confirmNewUnits} onChange={(e) => setConfirmNewUnits(e.target.checked)} className="mt-0.5" />
+                    <span>Create {analysis.rentRollNewUnits} new unit(s) too. Leave unchecked to only update the units that match (recommended when importing a prior year).</span>
+                  </label>
+                </div>
+              )}
               <button className="button-primary text-sm" onClick={handleCommit} disabled={committing || !fiscalYear || (newMode && !(b.name.trim() || b.address.trim()))}>
                 {committing ? (newMode ? "Creating…" : "Committing…") : newMode ? `Create building & import — ${usable} document(s)` : `Commit package — ${usable} document(s)`}
               </button>
