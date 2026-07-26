@@ -72,7 +72,7 @@ export async function createAccount(
 export async function updateAccount(
   prisma: PrismaClient,
   id: string,
-  data: Partial<Pick<CreateAccountData, "name" | "code" | "accountType">> & { isActive?: boolean },
+  data: Partial<Pick<CreateAccountData, "name" | "code" | "accountType">> & { isActive?: boolean; costCategory?: string | null },
 ) {
   return prisma.account.update({
     where: { id },

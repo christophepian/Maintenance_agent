@@ -2254,6 +2254,9 @@ model Account {
   name        String
   code        String? /// e.g. "4000"
   accountType String   @default("EXPENSE") /// EXPENSE | REVENUE | ASSET | LIABILITY — standard double-entry account classes
+  /// Reporting cost taxonomy override for imported régie P&Ls: OWNER_OPEX |
+  /// RECOVERABLE | CAPEX | FINANCING. Null = fall back to the name heuristic.
+  costCategory String?
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

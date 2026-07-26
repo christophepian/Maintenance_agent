@@ -12,7 +12,7 @@ import { ImportedStatementStatus, MatchConfidence, StatementSectionType, PrismaC
 const STATEMENT_INCLUDE = {
   building: { select: { id: true, name: true } },
   accountBalances: {
-    include: { account: { select: { id: true, code: true, name: true } } },
+    include: { account: { select: { id: true, code: true, name: true, costCategory: true } } },
     orderBy: { rawAccountCode: "asc" as const },
   },
 } as const;

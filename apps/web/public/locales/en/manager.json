@@ -842,7 +842,11 @@
         "belowNoi": "Below NOI",
         "financing": "Financing",
         "netResult": "Net result",
-        "recoverableNote": "Operating includes {{amount}} of recoverable charges (heating, water…) that tenants reimburse via their provisions — shown here pending reconciliation."
+        "recoverableNote": "Operating includes {{amount}} of recoverable charges (heating, water…) that tenants reimburse via their provisions — shown here pending reconciliation.",
+        "catOwner": "Owner",
+        "catRecoverable": "Recoverable",
+        "reclassify": "Reclassify",
+        "reclassifyDone": "Done"
       },
       "histogram": {
         "horizon": "Horizon",

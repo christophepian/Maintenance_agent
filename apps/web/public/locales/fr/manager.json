@@ -842,7 +842,11 @@
         "belowNoi": "Hors exploitation",
         "financing": "Financement",
         "netResult": "Résultat net",
-        "recoverableNote": "L'exploitation inclut {{amount}} de charges récupérables (chauffage, eau…) que les locataires remboursent via leurs acomptes — affiché ici en attendant le décompte."
+        "recoverableNote": "L'exploitation inclut {{amount}} de charges récupérables (chauffage, eau…) que les locataires remboursent via leurs acomptes — affiché ici en attendant le décompte.",
+        "catOwner": "Propriétaire",
+        "catRecoverable": "Récupérable",
+        "reclassify": "Reclasser",
+        "reclassifyDone": "Terminé"
       },
       "histogram": {
         "horizon": "Horizon",

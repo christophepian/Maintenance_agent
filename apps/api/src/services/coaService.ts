@@ -72,6 +72,7 @@ export interface AccountDTO {
   name: string;
   code: string | null;
   accountType: string;
+  costCategory: string | null;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -112,6 +113,7 @@ function mapAccount(a: any): AccountDTO {
     name: a.name,
     code: a.code,
     accountType: a.accountType,
+    costCategory: a.costCategory ?? null,
     isActive: a.isActive,
     createdAt: a.createdAt.toISOString(),
     updatedAt: a.updatedAt.toISOString(),
@@ -231,7 +233,7 @@ export async function updateAccount(
   prisma: PrismaClient,
   id: string,
   orgId: string,
-  data: { name?: string; code?: string; accountType?: string; isActive?: boolean },
+  data: { name?: string; code?: string; accountType?: string; isActive?: boolean; costCategory?: string | null },
 ): Promise<AccountDTO> {
   const existing = await findAccountById(prisma, id);
   if (!existing || existing.orgId !== orgId) {

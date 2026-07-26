@@ -49,6 +49,9 @@ export const UpdateAccountSchema = z.object({
   code: z.string().max(50).optional(),
   accountType: z.enum(["EXPENSE", "REVENUE", "ASSET"]).optional(),
   isActive: z.boolean().optional(),
+  // Reporting cost taxonomy override (imported régie P&Ls). Null clears it → the
+  // name heuristic applies again.
+  costCategory: z.enum(["OWNER_OPEX", "RECOVERABLE", "CAPEX", "FINANCING"]).nullable().optional(),
 });
 
 // ─── ExpenseMapping ────────────────────────────────────────────

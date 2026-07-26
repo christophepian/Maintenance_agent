@@ -287,6 +287,8 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
   const [insExpanded, setInsExpanded]     = useState(false);
   const [outsExpanded, setOutsExpanded]   = useState(false);
   const [whyOpen, setWhyOpen]             = useState(false); // exec-summary narrative disclosure
+  const [reclassMode, setReclassMode]     = useState(false); // reclassify cost-centre categories
+  const [refreshKey, setRefreshKey]       = useState(0);     // bumps to refetch after a reclassify
   const [report, setReport]   = useState(null);
   const [unitData, setUnitData] = useState([]);
   const [vendors, setVendors] = useState([]);
@@ -327,7 +329,20 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
       })
       .catch(() => setError(t("buildingsId.reporting.failedToLoad")))
       .finally(() => setLoading(false));
-  }, [buildingId, from, to, t]);
+  }, [buildingId, from, to, t, refreshKey]);
+
+  // Persist a manager's cost-category override on the account, then refetch.
+  async function reclassifyAccount(accountId, category) {
+    if (!accountId) return;
+    try {
+      await fetch(`/api/coa/accounts/${accountId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ costCategory: category }),
+      });
+      setRefreshKey((k) => k + 1);
+    } catch { /* leave numbers as-is on failure */ }
+  }
 
   // The prior/last-year benchmark window, derived from the focused [from,to].
   const cmpWin = useMemo(() => {
@@ -743,9 +758,9 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
         // expenses are ledger-only. Any gap to the total lands in an "Other" row.
         // Capital works + financing are excluded here (they're shown below NOI), so
         // the cost-centre list sums to OPERATING, matching the bridge above.
-        const acctRows = (bf.expensesByAccount ?? [])
-          .filter((a) => a.category !== "CAPEX" && a.category !== "FINANCING")
+        const allAcctRows = (bf.expensesByAccount ?? [])
           .map((a) => ({ accountId: a.accountId, accountCode: a.accountCode, accountName: a.accountName, totalCents: a.totalCents, category: a.category }));
+        const acctRows = allAcctRows.filter((a) => a.category !== "CAPEX" && a.category !== "FINANCING");
         const acctSum = acctRows.reduce((s, a) => s + a.totalCents, 0);
         const otherCents = operatingCents - acctSum;
         const periodAccounts = otherCents > 5000
@@ -757,7 +772,14 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
         const incomeUnits = [...unitData].sort((a, b) => (b.collectedIncomeCents ?? 0) - (a.collectedIncomeCents ?? 0));
         const incMax = Math.max(1, ...incomeUnits.map((u) => u.collectedIncomeCents ?? 0));
         const categoryRows = (bf.expensesByCategory ?? []).map((c) => ({ name: catLabel(c.category, t), totalCents: c.totalCents })).sort((a, b) => b.totalCents - a.totalCents);
-        const expRows = expView === "vend" ? vendors : expView === "cat" ? categoryRows : periodAccounts;
+        // In reclassify mode the cost-centre view shows EVERY account (incl. the
+        // capex/financing ones filtered out above) so any can be re-categorised.
+        const expRows = expView === "vend" ? vendors : expView === "cat" ? categoryRows : (reclassMode && expView === "acc" ? allAcctRows : periodAccounts);
+        const catShort = (c) => c === "RECOVERABLE" ? t("buildingsId.reporting.revex.catRecoverable")
+          : c === "CAPEX" ? t("buildingsId.reporting.kpi.capex")
+          : c === "FINANCING" ? t("buildingsId.reporting.revex.financing")
+          : t("buildingsId.reporting.revex.catOwner");
+        const CAT_CHIP = { OWNER_OPEX: "bg-surface-hover text-muted", RECOVERABLE: "bg-warning-light text-warning-text", CAPEX: "bg-brand-light text-brand-dark", FINANCING: "bg-info-light text-info-text" };
 
         const revexSlide = (
           <div className="p-5 space-y-4">
@@ -824,24 +846,48 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
               <div>
                 <div className="mb-2 flex items-center justify-between gap-2 px-1">
                   <p className="text-[11px] font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.histogram.expenses")}</p>
-                  <div className="inline-flex rounded-lg border border-surface-border bg-surface-hover p-0.5 gap-0.5">
-                    {[["acc", t("buildingsId.reporting.revex.byCostCenter")], ["cat", t("buildingsId.reporting.revex.byCategory")], ["vend", t("buildingsId.reporting.revex.byVendor")]].map(([k, l]) => (
-                      <button key={k} onClick={() => setExpView(k)} aria-pressed={expView === k}
-                        className={cn("rounded-md px-2 py-0.5 text-xs font-medium transition-colors", expView === k ? "bg-surface text-foreground shadow-sm" : "text-muted hover:text-muted-dark")}>{l}</button>
-                    ))}
+                  <div className="flex items-center gap-2">
+                    {bf.source === "imported" && expView === "acc" && (
+                      <button onClick={() => setReclassMode((v) => !v)} aria-pressed={reclassMode}
+                        className={cn("rounded-md border px-2 py-0.5 text-xs font-medium transition-colors", reclassMode ? "border-brand bg-brand-light text-brand-dark" : "border-surface-border text-muted hover:border-brand hover:text-brand")}>
+                        {reclassMode ? `✓ ${t("buildingsId.reporting.revex.reclassifyDone")}` : t("buildingsId.reporting.revex.reclassify")}
+                      </button>
+                    )}
+                    <div className="inline-flex rounded-lg border border-surface-border bg-surface-hover p-0.5 gap-0.5">
+                      {[["acc", t("buildingsId.reporting.revex.byCostCenter")], ["cat", t("buildingsId.reporting.revex.byCategory")], ["vend", t("buildingsId.reporting.revex.byVendor")]].map(([k, l]) => (
+                        <button key={k} onClick={() => setExpView(k)} aria-pressed={expView === k}
+                          className={cn("rounded-md px-2 py-0.5 text-xs font-medium transition-colors", expView === k ? "bg-surface text-foreground shadow-sm" : "text-muted hover:text-muted-dark")}>{l}</button>
+                      ))}
+                    </div>
                   </div>
                 </div>
                 {expRows.length === 0
                   ? <p className="text-sm text-muted italic px-1">{t("buildingsId.reporting.revex.noExpenses")}</p>
                   : <div className="space-y-1">
-                      {expRows.slice(0, 6).map((r, i) => {
+                      {expRows.slice(0, reclassMode && expView === "acc" ? 40 : 6).map((r, i) => {
                         const isVend = expView === "vend";
                         const isCat = expView === "cat";
+                        const isAcc = !isVend && !isCat;
                         const name = isVend ? r.vendorName : isCat ? r.name : (r.accountName ?? t("buildingsId.reporting.expenseBreakdown.unclassified"));
                         const drillable = isVend ? true : isCat ? false : !!r.accountId; // category isn't an invoice filter; "Other" remainder isn't either
+                        // Reclassify mode: a category picker instead of a drill link.
+                        if (isAcc && reclassMode && r.accountId) {
+                          return (
+                            <div key={r.accountId} className="flex items-center gap-2 px-2 py-1">
+                              <span className="min-w-0 flex-1 truncate text-sm text-foreground">{r.accountCode ? <span className="text-foreground-dim tabular-nums">{r.accountCode} </span> : null}{name}</span>
+                              <select value={r.category ?? "OWNER_OPEX"} onChange={(e) => reclassifyAccount(r.accountId, e.target.value)}
+                                className="rounded-md border border-surface-border bg-surface px-1.5 py-0.5 text-xs text-foreground">
+                                {["OWNER_OPEX", "RECOVERABLE", "CAPEX", "FINANCING"].map((c) => <option key={c} value={c}>{catShort(c)}</option>)}
+                              </select>
+                              <span className="w-20 shrink-0 text-right text-sm font-medium tabular-nums text-foreground">{rFmtChf(r.totalCents)}</span>
+                            </div>
+                          );
+                        }
+                        const catTag = isAcc && r.category ? <span className={cn("shrink-0 rounded px-1.5 py-0.5 text-[9.5px] font-semibold uppercase tracking-wide", CAT_CHIP[r.category] ?? CAT_CHIP.OWNER_OPEX)}>{catShort(r.category)}</span> : null;
                         const inner = (
                           <>
-                            <span className="min-w-0 flex-1 truncate text-sm text-foreground">{!isVend && !isCat && r.accountCode ? <span className="text-foreground-dim tabular-nums">{r.accountCode} </span> : null}{name}{isVend && r.invoiceCount ? <span className="text-xs text-foreground-dim"> · {r.invoiceCount}×</span> : null}</span>
+                            <span className="min-w-0 flex-1 truncate text-sm text-foreground">{isAcc && r.accountCode ? <span className="text-foreground-dim tabular-nums">{r.accountCode} </span> : null}{name}{isVend && r.invoiceCount ? <span className="text-xs text-foreground-dim"> · {r.invoiceCount}×</span> : null}</span>
+                            {catTag}
                             <span className="flex shrink-0 items-center gap-1.5 text-sm font-medium tabular-nums text-foreground">{rFmtChf(r.totalCents)}{drillable && <span className="text-foreground-dim opacity-0 group-hover:opacity-100 transition-opacity">→</span>}</span>
                           </>
                         );

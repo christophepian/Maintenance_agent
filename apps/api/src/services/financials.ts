@@ -279,7 +279,7 @@ export interface ImportedPnlBalanceRow {
   rawAccountName: string;
   rawAccountCode: string | null;
   accountId?: string | null;
-  account?: { id: string; code: string | null; name: string } | null;
+  account?: { id: string; code: string | null; name: string; costCategory?: string | null } | null;
 }
 
 /**
@@ -311,7 +311,12 @@ export function aggregateImportedPnl(balances: ImportedPnlBalanceRow[]): {
     } else if (ab.documentSection === "EXPENSE") {
       expenseSigned += ab.balanceCents;
       const amt = Math.abs(ab.balanceCents);
-      const category = classifyRegieExpenseAccount(ab.account?.code ?? ab.rawAccountCode, ab.account?.name ?? ab.rawAccountName);
+      // Manager override on the account wins over the name heuristic.
+      const ov = ab.account?.costCategory;
+      const category: RegieCostCategory =
+        ov === "OWNER_OPEX" || ov === "RECOVERABLE" || ov === "CAPEX" || ov === "FINANCING"
+          ? ov
+          : classifyRegieExpenseAccount(ab.account?.code ?? ab.rawAccountCode, ab.account?.name ?? ab.rawAccountName);
       if (category === "CAPEX") capexCents += amt;
       else if (category === "FINANCING") financingCents += amt;
       else if (category === "RECOVERABLE") recoverableCents += amt;
