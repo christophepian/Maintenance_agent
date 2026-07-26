@@ -359,8 +359,14 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
   const expenses = bf?.expensesTotalCents       ?? 0;
   const coll     = bf?.collectionRate           ?? 0;
   const occ      = bf && bf.totalUnitsCount > 0 ? bf.activeUnitsCount / bf.totalUnitsCount : null;
+  // Operating basis: NOI excludes capex + financing (régie P&Ls bundle them in).
+  const operatingCents  = bf?.operatingTotalCents ?? expenses;
+  const capexCents      = bf?.capexTotalCents ?? 0;
+  const financingCents  = bf?.financingTotalCents ?? 0;
+  const recoverableCents = bf?.recoverableAncillaryCents ?? 0;
+  const netResultCents  = bf?.netIncomeCents ?? noi; // after capex + financing
   const noiMargin = earned > 0 ? noi / earned : null;
-  const opexRatio = earned > 0 ? expenses / earned : null;
+  const opexRatio = earned > 0 ? operatingCents / earned : null;
 
   // Net rent roll (contractual potential income), scaled to the selected period so
   // it's comparable to the period's actuals. etatLocatifNet is the ANNUAL figure (CHF).
@@ -435,7 +441,7 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
           { k: t("buildingsId.reporting.kpi.noi"),              v: rFmtChf(noi),                            d: prev ? kpiDeltaChf(noi, prev.netOperatingIncomeCents, 1) : null },
           { k: t("buildingsId.reporting.kpi.noiMargin"),        v: noiMargin != null ? rFmtPct(noiMargin) : "—", d: prev && prev.collectedIncomeCents > 0 ? kpiDeltaPp(noiMargin, prev.netOperatingIncomeCents / prev.collectedIncomeCents, 1) : null },
           { k: t("buildingsId.reporting.kpi.cashReceived"),     v: rFmtChf(earned),                         d: prev ? kpiDeltaChf(earned, prev.collectedIncomeCents, 1) : null },
-          { k: t("buildingsId.reporting.kpi.totalExpenses"),    v: rFmtChf(expenses),                       d: prev ? kpiDeltaChf(expenses, prev.expensesTotalCents, -1) : null },
+          { k: t("buildingsId.reporting.revex.operating"),      v: rFmtChf(operatingCents),                 d: prev ? kpiDeltaChf(operatingCents, prev.operatingTotalCents ?? prev.expensesTotalCents, -1) : null },
           { k: t("buildingsId.reporting.kpi.opexRatio"),        v: opexRatio != null ? rFmtPct(opexRatio) : "—", d: prev && prev.collectedIncomeCents > 0 ? kpiDeltaPp(opexRatio, prev.expensesTotalCents / prev.collectedIncomeCents, -1) : null },
           { k: t("buildingsId.reporting.kpi.onTimeCollection"), v: rFmtPct(coll),                           d: prev ? kpiDeltaPp(coll, prev.collectionRate, 1) : null },
           { k: t("buildingsId.reporting.kpi.occupancy"),        v: occ != null ? rFmtPct(occ) : "—",        d: prev && prev.totalUnitsCount > 0 ? kpiDeltaPp(occ, prev.activeUnitsCount / prev.totalUnitsCount, 1) : null },
@@ -727,9 +733,13 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
         // Cost-centers come from the financials' ledger decomposition (reconciles to
         // the expense total), NOT invoices — so they're populated even when a period's
         // expenses are ledger-only. Any gap to the total lands in an "Other" row.
-        const acctRows = (bf.expensesByAccount ?? []).map((a) => ({ accountId: a.accountId, accountCode: a.accountCode, accountName: a.accountName, totalCents: a.totalCents }));
+        // Capital works + financing are excluded here (they're shown below NOI), so
+        // the cost-centre list sums to OPERATING, matching the bridge above.
+        const acctRows = (bf.expensesByAccount ?? [])
+          .filter((a) => a.category !== "CAPEX" && a.category !== "FINANCING")
+          .map((a) => ({ accountId: a.accountId, accountCode: a.accountCode, accountName: a.accountName, totalCents: a.totalCents, category: a.category }));
         const acctSum = acctRows.reduce((s, a) => s + a.totalCents, 0);
-        const otherCents = expenses - acctSum;
+        const otherCents = operatingCents - acctSum;
         const periodAccounts = otherCents > 5000
           ? [...acctRows, { accountId: null, accountCode: null, accountName: t("buildingsId.reporting.revex.otherExpenses"), totalCents: otherCents }]
           : acctRows;
@@ -748,7 +758,7 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
               <p className="text-xs text-foreground-dim">{t("buildingsId.reporting.revex.sub")}</p>
             </div>
 
-            {/* Income − Expenses = NOI */}
+            {/* Income − Operating = NOI (capex + financing are pulled out, below) */}
             <div className="flex items-stretch overflow-hidden rounded-2xl border border-surface-border text-center">
               <div className="flex-1 px-3 py-2.5">
                 <div className="text-[10px] font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.histogram.income")}</div>
@@ -756,8 +766,8 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
               </div>
               <div className="grid w-7 place-items-center bg-surface-hover text-foreground-dim">−</div>
               <div className="flex-1 px-3 py-2.5">
-                <div className="text-[10px] font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.histogram.expenses")}</div>
-                <div className="text-base font-bold tabular-nums text-foreground">{rFmtChf(expenses)}</div>
+                <div className="text-[10px] font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.revex.operating")}</div>
+                <div className="text-base font-bold tabular-nums text-foreground">{rFmtChf(operatingCents)}</div>
               </div>
               <div className="grid w-7 place-items-center bg-surface-hover text-foreground-dim">=</div>
               <div className="flex-1 bg-surface-hover px-3 py-2.5">
@@ -765,6 +775,22 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
                 <div className={cn("text-base font-bold tabular-nums", noi >= 0 ? "text-success-text" : "text-destructive-text")}>{rFmtChf(noi)}</div>
               </div>
             </div>
+
+            {/* Below operating NOI: capital works + financing, and the net result */}
+            {(capexCents > 0 || financingCents > 0) && (
+              <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 rounded-xl border border-surface-border bg-surface-subtle px-4 py-2.5 text-sm">
+                <span className="text-[10px] font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.revex.belowNoi")}</span>
+                {capexCents > 0 && <span className="text-muted">{t("buildingsId.reporting.kpi.capex")} <b className="tabular-nums text-foreground">{rFmtChf(capexCents)}</b></span>}
+                {financingCents > 0 && <span className="text-muted">{t("buildingsId.reporting.revex.financing")} <b className="tabular-nums text-foreground">{rFmtChf(financingCents)}</b></span>}
+                <span className="ml-auto text-muted">{t("buildingsId.reporting.revex.netResult")} <b className={cn("tabular-nums", netResultCents >= 0 ? "text-success-text" : "text-destructive-text")}>{rFmtChf(netResultCents)}</b></span>
+              </div>
+            )}
+            {recoverableCents > 0 && (
+              <p className="flex items-start gap-1.5 text-xs text-foreground-dim">
+                <span aria-hidden>ℹ</span>
+                <span>{t("buildingsId.reporting.revex.recoverableNote", { amount: rFmtChf(recoverableCents) })}</span>
+              </p>
+            )}
 
             {/* Income sources (units) | Expense sinks (vendors / cost centers) */}
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">

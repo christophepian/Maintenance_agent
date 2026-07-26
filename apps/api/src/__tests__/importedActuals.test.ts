@@ -1,4 +1,48 @@
-import { aggregateImportedPnl } from "../services/financials";
+import { aggregateImportedPnl, classifyRegieExpenseAccount } from "../services/financials";
+
+describe("classifyRegieExpenseAccount", () => {
+  const cases: [string, string][] = [
+    ["Rénovation immeuble", "CAPEX"],
+    ["Rénovation objets", "CAPEX"],
+    ["Transformation cuisine", "CAPEX"],
+    ["Intérêts hypothécaires", "FINANCING"],
+    ["Frais chauffage", "RECOVERABLE"],
+    ["Eau", "RECOVERABLE"],
+    ["Electricité", "RECOVERABLE"],
+    ["Salaires concierges", "RECOVERABLE"],
+    ["Conciergeries externes", "RECOVERABLE"],
+    ["Entretien des appartements", "OWNER_OPEX"], // upkeep, NOT capex
+    ["Entretien immeuble", "OWNER_OPEX"],
+    ["Assurances", "OWNER_OPEX"],
+    ["Honoraires de gérance", "OWNER_OPEX"],
+    ["Impôts et taxes", "OWNER_OPEX"],
+    ["Frais bancaires ou postaux", "OWNER_OPEX"], // bank fees are not financing
+  ];
+  it.each(cases)("classifies %s as %s", (name, expected) => {
+    expect(classifyRegieExpenseAccount(null, name)).toBe(expected);
+  });
+
+  it("does not mistake 'niveau' or 'bureau' for eau", () => {
+    expect(classifyRegieExpenseAccount(null, "Frais de bureau")).toBe("OWNER_OPEX");
+  });
+
+  it("buckets an income statement, excluding capex + financing from operating", () => {
+    const r = aggregateImportedPnl([
+      { documentSection: "REVENUE", balanceCents: 10_000_00, rawAccountName: "Loyers", rawAccountCode: "3000", account: null },
+      { documentSection: "EXPENSE", balanceCents: 5_000_00, rawAccountName: "Rénovation immeuble", rawAccountCode: "6010", account: null },
+      { documentSection: "EXPENSE", balanceCents: 800_00, rawAccountName: "Intérêts hypothécaires", rawAccountCode: "6800", account: null },
+      { documentSection: "EXPENSE", balanceCents: 600_00, rawAccountName: "Frais chauffage", rawAccountCode: "4030", account: null },
+      { documentSection: "EXPENSE", balanceCents: 400_00, rawAccountName: "Entretien immeuble", rawAccountCode: "4000", account: null },
+    ]);
+    expect(r.capexCents).toBe(5_000_00);
+    expect(r.financingCents).toBe(800_00);
+    expect(r.recoverableCents).toBe(600_00);
+    expect(r.ownerOpexCents).toBe(400_00);
+    expect(r.expenseCents).toBe(6_800_00); // all four
+    // operating (owner opex + recoverable) = expenses − capex − financing
+    expect(r.expenseCents - r.capexCents - r.financingCents).toBe(1_000_00);
+  });
+});
 
 describe("aggregateImportedPnl", () => {
   it("sums REVENUE and EXPENSE balances and lists expenses by account (desc)", () => {

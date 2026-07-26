@@ -27,11 +27,36 @@ export interface ContractorSpendDTO {
   totalCents: number;
 }
 
+/** How a régie P&L expense account maps to the reporting cost taxonomy. Owner
+ *  opex reduces NOI; recoverable (Nebenkosten) is tenant-paid; capex and
+ *  financing sit below operating NOI. */
+export type RegieCostCategory = "OWNER_OPEX" | "RECOVERABLE" | "CAPEX" | "FINANCING";
+
 export interface AccountTotalDTO {
   accountId: string;
   accountName: string;
   accountCode: string | null;
   totalCents: number;
+  /** Cost taxonomy (imported income statements only). */
+  category?: RegieCostCategory;
+}
+
+/**
+ * Classify a régie income-statement EXPENSE account by name (portable across
+ * chart-of-account schemes; codes differ per régie). Régie P&Ls routinely bundle
+ * capital works, mortgage interest and recoverable Nebenkosten in with owner
+ * opex — this pulls them apart so NOI reflects owner operating costs only.
+ * A heuristic default; a per-account override lands in a follow-up.
+ */
+export function classifyRegieExpenseAccount(_code: string | null | undefined, name: string | null | undefined): RegieCostCategory {
+  const n = (name ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  // Capital works — NOT routine "entretien" (upkeep), which is owner opex.
+  if (/renovation|transformation|refection|amelioration|agrandissement|construction/.test(n)) return "CAPEX";
+  // Financing — mortgage interest (not ordinary "frais bancaires").
+  if (/interet|hypothec|hypothek|emprunt|mortgage/.test(n)) return "FINANCING";
+  // Recoverable ancillary (Nebenkosten) — tenant-borne operating charges.
+  if (/chauffage|heating|\beau\b|\bwater\b|electric|concierge|nettoyage|ascenseur|elevator|ordure|dechet|\bgaz\b/.test(n)) return "RECOVERABLE";
+  return "OWNER_OPEX";
 }
 
 export interface BuildingFinancialsDTO {
@@ -49,6 +74,12 @@ export interface BuildingFinancialsDTO {
   operatingTotalCents: number;
   netIncomeCents: number;
   netOperatingIncomeCents: number;
+  /**
+   * Financing costs (mortgage interest) classified out of operating expense —
+   * they sit BELOW operating NOI. Imported income statements only; 0/undefined
+   * on the operational path (interest isn't in the operating ledger).
+   */
+  financingTotalCents?: number;
   /**
    * Recoverable ancillary charges (Nebenkosten) booked to the building cost pool
    * for the period, de-duped against ledger entries by source invoice. Included
@@ -260,6 +291,11 @@ export function aggregateImportedPnl(balances: ImportedPnlBalanceRow[]): {
   revenueCents: number;
   expenseCents: number;
   expensesByAccount: AccountTotalDTO[];
+  /** Expense split by cost taxonomy (capex/financing excluded from operating NOI). */
+  capexCents: number;
+  financingCents: number;
+  recoverableCents: number;
+  ownerOpexCents: number;
 } {
   // Régie exports differ in sign convention: some store revenue as a positive
   // amount, others credit-negative (like the general ledger's −13556). A P&L
@@ -267,22 +303,35 @@ export function aggregateImportedPnl(balances: ImportedPnlBalanceRow[]): {
   // contra line still nets correctly) and take the absolute value of the total.
   let revenueSigned = 0;
   let expenseSigned = 0;
+  let capexCents = 0, financingCents = 0, recoverableCents = 0, ownerOpexCents = 0;
   const expensesByAccount: AccountTotalDTO[] = [];
   for (const ab of balances) {
     if (ab.documentSection === "REVENUE") {
       revenueSigned += ab.balanceCents;
     } else if (ab.documentSection === "EXPENSE") {
       expenseSigned += ab.balanceCents;
+      const amt = Math.abs(ab.balanceCents);
+      const category = classifyRegieExpenseAccount(ab.account?.code ?? ab.rawAccountCode, ab.account?.name ?? ab.rawAccountName);
+      if (category === "CAPEX") capexCents += amt;
+      else if (category === "FINANCING") financingCents += amt;
+      else if (category === "RECOVERABLE") recoverableCents += amt;
+      else ownerOpexCents += amt;
       expensesByAccount.push({
         accountId: ab.account?.id ?? ab.accountId ?? "",
         accountName: ab.account?.name ?? ab.rawAccountName,
         accountCode: ab.account?.code ?? ab.rawAccountCode ?? null,
-        totalCents: Math.abs(ab.balanceCents),
+        totalCents: amt,
+        category,
       });
     }
   }
   expensesByAccount.sort((a, b) => b.totalCents - a.totalCents);
-  return { revenueCents: Math.abs(revenueSigned), expenseCents: Math.abs(expenseSigned), expensesByAccount };
+  return {
+    revenueCents: Math.abs(revenueSigned),
+    expenseCents: Math.abs(expenseSigned),
+    expensesByAccount,
+    capexCents, financingCents, recoverableCents, ownerOpexCents,
+  };
 }
 
 /**
@@ -311,7 +360,18 @@ async function buildImportedFinancialsDTO(
   const revenueCents = Math.round(raw.revenueCents * f);
   const expenseCents = Math.round(raw.expenseCents * f);
   const expensesByAccount = raw.expensesByAccount.map((a) => ({ ...a, totalCents: Math.round(a.totalCents * f) }));
-  const netCents = revenueCents - expenseCents;
+  const netCents = revenueCents - expenseCents; // régie bottom line (after capex + interest)
+
+  // Pull capital works + mortgage interest OUT of operating NOI (régie P&Ls bundle
+  // them in). Recoverable Nebenkosten stays in operating for now (surfaced, but the
+  // provision-netting lands with the ancillary reconciliation). So:
+  //   operating = owner opex + recoverable = expenses − capex − financing
+  //   NOI       = income − operating
+  const capexCents = Math.round(raw.capexCents * f);
+  const financingCents = Math.round(raw.financingCents * f);
+  const recoverableCents = Math.round(raw.recoverableCents * f);
+  const operatingCents = Math.max(0, expenseCents - capexCents - financingCents);
+  const noiCents = revenueCents - operatingCents;
 
   const [totalUnitsCount, activeUnitsCount] = await Promise.all([
     inventoryRepo.countTotalUnitsByBuilding(prisma, orgId, building.id),
@@ -327,11 +387,12 @@ async function buildImportedFinancialsDTO(
     accruedIncomeCents: revenueCents,
     expensesTotalCents: expenseCents,
     maintenanceTotalCents: 0,
-    capexTotalCents: 0,
-    operatingTotalCents: expenseCents,
+    capexTotalCents: capexCents,
+    operatingTotalCents: operatingCents,
     netIncomeCents: netCents,
-    netOperatingIncomeCents: netCents,
-    recoverableAncillaryCents: 0,
+    netOperatingIncomeCents: noiCents,
+    financingTotalCents: financingCents,
+    recoverableAncillaryCents: recoverableCents,
     rentalIncomeCents: revenueCents,
     serviceChargeIncomeCents: 0,
     receivablesCents: 0,
@@ -339,7 +400,7 @@ async function buildImportedFinancialsDTO(
     openingReceivablesCents,
     openingPayablesCents,
     maintenanceRatio: 0,
-    costPerUnitCents: totalUnitsCount > 0 ? Math.round(expenseCents / totalUnitsCount) : 0,
+    costPerUnitCents: totalUnitsCount > 0 ? Math.round(operatingCents / totalUnitsCount) : 0,
     collectionRate: 1,
     invoicedForPeriodCents: revenueCents,
     paidForPeriodCents: revenueCents,

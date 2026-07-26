@@ -837,7 +837,12 @@
         "vacant": "vacant",
         "otherExpenses": "Other (unclassified)",
         "itemisedNote": "{{itemised}} itemised of {{total}} — the rest was posted directly to the ledger (no supplier invoice).",
-        "noExpenses": "No expenses recorded for this period."
+        "noExpenses": "No expenses recorded for this period.",
+        "operating": "Operating",
+        "belowNoi": "Below NOI",
+        "financing": "Financing",
+        "netResult": "Net result",
+        "recoverableNote": "Operating includes {{amount}} of recoverable charges (heating, water…) that tenants reimburse via their provisions — shown here pending reconciliation."
       },
       "histogram": {
         "horizon": "Horizon",

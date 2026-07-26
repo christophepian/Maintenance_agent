@@ -837,7 +837,12 @@
         "vacant": "vacant",
         "otherExpenses": "Autres (non classé)",
         "itemisedNote": "{{itemised}} détaillés sur {{total}} — le reste a été comptabilisé directement au grand livre (sans facture fournisseur).",
-        "noExpenses": "Aucune charge enregistrée pour cette période."
+        "noExpenses": "Aucune charge enregistrée pour cette période.",
+        "operating": "Exploitation",
+        "belowNoi": "Hors exploitation",
+        "financing": "Financement",
+        "netResult": "Résultat net",
+        "recoverableNote": "L'exploitation inclut {{amount}} de charges récupérables (chauffage, eau…) que les locataires remboursent via leurs acomptes — affiché ici en attendant le décompte."
       },
       "histogram": {
         "horizon": "Horizon",
