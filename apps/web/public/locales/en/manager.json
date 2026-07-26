@@ -981,7 +981,8 @@
         "comparison": "Comparison"
       },
       "allMetrics": "All financial metrics",
-      "planImprovements": "Plan improvements"
+      "planImprovements": "Plan improvements",
+      "byUnitOverheadNote": "Each unit's expenses include its share of building overhead (insurance, management, taxes, shared maintenance) apportioned by area — so per-unit net reconciles to the building's operating NOI."
     },
     "strategyEditor": {
       "intro": "Set how this building should be managed — the cashflow recommendation engine uses it to tailor advice for this property.",

@@ -1828,6 +1828,11 @@ export interface UnitFinancialSummaryDTO {
   expensesCents:        number;
   /** Apportioned recoverable-charge share from the cost pool, included in expensesCents. */
   apportionedChargesCents: number;
+  /** Fully-loaded only: this unit's area-share of building operating opex that
+   *  wasn't directly attributed to it (insurance, management, taxes, shared
+   *  maintenance). Included in expensesCents so per-unit net reconciles to the
+   *  building's operating NOI. 0 unless requested with { fullyLoaded: true }. */
+  apportionedOverheadCents?: number;
   netIncomeCents:       number;
   collectionRate:       number;
   occupancyRate:        number; // 0 or 1 per unit (vacant / occupied)
@@ -1839,6 +1844,13 @@ export async function getUnitFinancialSummaries(
   buildingId: string,
   fromStr: string,
   toStr: string,
+  opts?: {
+    /** Apportion the building's un-attributed operating opex across units (by
+     *  living area) so per-unit net is fully loaded and reconciles to building
+     *  NOI. Used by the "By unit" reporting view. NOT for the unit-profitability
+     *  input (that applies its own overhead allocation — would double-count). */
+    fullyLoaded?: boolean;
+  },
 ): Promise<UnitFinancialSummaryDTO[]> {
   const from = new Date(fromStr + "T00:00:00.000Z");
   const to   = new Date(toStr   + "T23:59:59.999Z");
@@ -1847,7 +1859,7 @@ export async function getUnitFinancialSummaries(
   const units = await prisma.unit.findMany({
     where: { orgId, buildingId, isActive: true },
     orderBy: [{ unitNumber: "asc" }],
-    select: { id: true, unitNumber: true, floor: true, monthlyRentChf: true },
+    select: { id: true, unitNumber: true, floor: true, monthlyRentChf: true, livingAreaSqm: true },
   });
 
   if (units.length === 0) return [];
@@ -1979,7 +1991,7 @@ export async function getUnitFinancialSummaries(
     (to.getUTCFullYear() - from.getUTCFullYear()) * 12 + (to.getUTCMonth() - from.getUTCMonth()) + 1,
   );
 
-  return units.map((u) => {
+  const summaries: UnitFinancialSummaryDTO[] = units.map((u) => {
     const occupied  = !!leaseByUnit[u.id];
     const invoicedIncome = projectedByUnit[u.id] ?? 0;
     // Fallback for imported/snapshot years with no rent invoices: show the unit's
@@ -2003,12 +2015,39 @@ export async function getUnitFinancialSummaries(
       collectedIncomeCents:    earned,
       expensesCents:        expenses,
       apportionedChargesCents: charges,
+      apportionedOverheadCents: 0,
       netIncomeCents:       earned - expenses,
       collectionRate:       projected > 0 ? Math.min(1, earned / projected) : 0,
       occupancyRate:        occupied ? 1 : 0,
       monthlyRentChf:       u.monthlyRentChf ?? null,
     };
   });
+
+  // Fully-loaded: apportion the building's operating opex that wasn't directly
+  // attributed to a unit (insurance, management, taxes, shared maintenance) across
+  // units by living area, so per-unit net reconciles to the building's operating
+  // NOI instead of over-stating each unit by omitting its share of overhead.
+  if (opts?.fullyLoaded && summaries.length > 0) {
+    const bf = await getBuildingFinancials(orgId, buildingId, { from: fromStr, to: toStr });
+    const attributed = summaries.reduce((s, r) => s + r.expensesCents, 0);
+    const pool = Math.max(0, bf.operatingTotalCents - attributed);
+    if (pool > 0) {
+      const areaOf = (id: string) => units.find((u) => u.id === id)?.livingAreaSqm ?? 0;
+      const totalArea = units.reduce((s, u) => s + (u.livingAreaSqm ?? 0), 0);
+      let running = 0;
+      summaries.forEach((r, idx) => {
+        const last = idx === summaries.length - 1;
+        const share = totalArea > 0 ? areaOf(r.unitId) / totalArea : 1 / summaries.length;
+        const overhead = last ? pool - running : Math.round(pool * share); // last absorbs remainder → conserves total
+        if (!last) running += overhead;
+        r.apportionedOverheadCents = overhead;
+        r.expensesCents += overhead;
+        r.netIncomeCents = r.collectedIncomeCents - r.expensesCents;
+      });
+    }
+  }
+
+  return summaries;
 }
 
 // ==========================================

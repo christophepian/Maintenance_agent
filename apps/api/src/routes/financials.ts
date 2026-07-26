@@ -414,7 +414,9 @@ export function registerFinancialRoutes(router: Router) {
       if (!from || !to) return sendError(res, 400, "VALIDATION_ERROR", "from and to are required");
 
       try {
-        const data = await getUnitFinancialSummaries(orgId, params.id, from, to);
+        // Fully loaded: per-unit net includes each unit's share of building overhead
+        // so it reconciles to the building's operating NOI (the "By unit" view).
+        const data = await getUnitFinancialSummaries(orgId, params.id, from, to, { fullyLoaded: true });
         sendJson(res, 200, { data });
       } catch (e: any) {
         if (e instanceof NotFoundError) return sendError(res, 404, "NOT_FOUND", e.message);

@@ -981,7 +981,8 @@
         "comparison": "Comparaison"
       },
       "allMetrics": "Tous les indicateurs financiers",
-      "planImprovements": "Planifier des travaux"
+      "planImprovements": "Planifier des travaux",
+      "byUnitOverheadNote": "Les charges de chaque objet incluent sa part des frais généraux de l'immeuble (assurances, gérance, impôts, entretien commun) répartie selon la surface — le net par objet correspond ainsi au RNE de l'immeuble."
     },
     "strategyEditor": {
       "intro": "Définissez la gestion de ce bâtiment — le moteur de recommandation de trésorerie l'utilise pour adapter ses conseils à ce bien.",

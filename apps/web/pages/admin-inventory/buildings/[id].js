@@ -716,7 +716,15 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
             </div>
             {unitData.length === 0
               ? <p className="text-sm text-muted italic">{t("buildingsId.reporting.noUnits")}</p>
-              : <div className="space-y-2">{visibleUnits.map((u) => <UnitRow key={u.unitId} unitNumber={u.unitNumber} floor={u.floor} tenantName={u.tenantName} earned={u.collectedIncomeCents} expenses={u.expensesCents} charges={u.apportionedChargesCents} net={u.netIncomeCents} collectionRate={u.collectionRate} occupancyRate={u.occupancyRate} />)}</div>}
+              : <>
+                <div className="space-y-2">{visibleUnits.map((u) => <UnitRow key={u.unitId} unitNumber={u.unitNumber} floor={u.floor} tenantName={u.tenantName} earned={u.collectedIncomeCents} expenses={u.expensesCents} charges={u.apportionedChargesCents} net={u.netIncomeCents} collectionRate={u.collectionRate} occupancyRate={u.occupancyRate} />)}</div>
+                {unitData.some((u) => (u.apportionedOverheadCents ?? 0) > 0) && (
+                  <p className="mt-3 flex items-start gap-1.5 text-xs text-foreground-dim">
+                    <span aria-hidden>ℹ</span>
+                    <span>{t("buildingsId.reporting.byUnitOverheadNote")}</span>
+                  </p>
+                )}
+              </>}
           </div>
         );
 
