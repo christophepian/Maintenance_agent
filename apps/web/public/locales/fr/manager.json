@@ -775,7 +775,8 @@
         "year": "Année",
         "prev": "Période précédente",
         "next": "Période suivante",
-        "custom": "Personnalisé"
+        "custom": "Personnalisé",
+        "half": "Semestre"
       },
       "kpiTab": "Indicateurs",
       "unitProfitTab": "Rentabilité",
@@ -819,7 +820,11 @@
         "vs": "Comparaison avec",
         "metric": "Indicateur",
         "whatChanged": "Ce qui a changé — principaux mouvements par centre de coûts",
-        "loading": "Chargement de la comparaison…"
+        "loading": "Chargement de la comparaison…",
+        "periods": "Comparer des périodes…",
+        "multiTitle": "Comparaison de périodes",
+        "pickPeriods": "Sélectionnez jusqu'à 5 périodes ci-dessus.",
+        "selected": "{{n}}/5 sélectionnées"
       },
       "revex": {
         "title": "Produits & charges",

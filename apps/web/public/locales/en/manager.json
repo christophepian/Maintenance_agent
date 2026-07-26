@@ -775,7 +775,8 @@
         "year": "Year",
         "prev": "Previous period",
         "next": "Next period",
-        "custom": "Custom"
+        "custom": "Custom",
+        "half": "Half-year"
       },
       "kpiTab": "KPIs",
       "unitProfitTab": "Profitability",
@@ -819,7 +820,11 @@
         "vs": "Comparing to",
         "metric": "Metric",
         "whatChanged": "What changed — biggest cost-centre moves",
-        "loading": "Loading comparison…"
+        "loading": "Loading comparison…",
+        "periods": "Compare periods…",
+        "multiTitle": "Period comparison",
+        "pickPeriods": "Pick up to 5 periods above to compare.",
+        "selected": "{{n}}/5 selected"
       },
       "revex": {
         "title": "Revenue & expenses",

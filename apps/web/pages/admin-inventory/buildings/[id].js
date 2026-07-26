@@ -880,6 +880,163 @@ const REPORTING_GRANS = ["month", "quarter", "year"];
 // Period type → the backend time-series range that yields that granularity.
 const GRAN_RANGE = { month: "2Y", quarter: "5Y", year: "10Y" };
 
+/* ── Multi-period comparison (up to 5 periods · quarter / half-year / year) ──
+ * Reuses GET /buildings/:id/period-report per selected period — the same
+ * arbitrary-window KPI engine as the single "Compare to…". Half-years are
+ * calendar H1 (Jan–Jun) / H2 (Jul–Dec). */
+const MULTI_GRANS = ["quarter", "half", "year"];
+const MULTI_MAX = 5;
+const dd2 = (n) => String(n).padStart(2, "0");
+const lastDayIso = (y, m) => `${y}-${dd2(m)}-${new Date(y, m, 0).getDate()}`; // m = 1..12
+
+/** Candidate comparison periods grouped by year (current year + 4 prior). A
+ *  period whose start is in the future is disabled. */
+function multiPeriodCandidates(gran, now) {
+  const cy = now.getFullYear();
+  const mk = (from, to, label, short, key) => ({ from, to, label, short, key, disabled: new Date(from) > now });
+  const years = [];
+  for (let y = cy; y >= cy - 4; y -= 1) years.push(y);
+  return years.map((y) => {
+    let subs;
+    if (gran === "year") subs = [mk(`${y}-01-01`, `${y}-12-31`, String(y), String(y), `Y${y}`)];
+    else if (gran === "half") subs = [
+      mk(`${y}-01-01`, `${y}-06-30`, `H1 ${y}`, "H1", `H1${y}`),
+      mk(`${y}-07-01`, `${y}-12-31`, `H2 ${y}`, "H2", `H2${y}`),
+    ];
+    else subs = [1, 2, 3, 4].map((q) => mk(`${y}-${dd2((q - 1) * 3 + 1)}-01`, lastDayIso(y, (q - 1) * 3 + 3), `Q${q} ${String(y).slice(2)}`, `Q${q}`, `Q${q}Y${y}`));
+    return { year: y, subs };
+  });
+}
+
+const multiKpis = (t) => [
+  { label: t("buildingsId.reporting.kpi.noi"),              type: "chf", better: 1,  get: (f) => f.netOperatingIncomeCents },
+  { label: t("buildingsId.reporting.kpi.cashReceived"),     type: "chf", better: 1,  get: (f) => f.collectedIncomeCents },
+  { label: t("buildingsId.reporting.kpi.totalExpenses"),    type: "chf", better: -1, get: (f) => f.expensesTotalCents },
+  { label: t("buildingsId.reporting.kpi.onTimeCollection"), type: "pct", better: 1,  get: (f) => f.collectionRate },
+  { label: t("buildingsId.reporting.kpi.noiMargin"),        type: "pct", better: 1,  get: (f) => (f.collectedIncomeCents > 0 ? f.netOperatingIncomeCents / f.collectedIncomeCents : null) },
+  { label: t("buildingsId.reporting.kpi.opexRatio"),        type: "pct", better: -1, get: (f) => (f.collectedIncomeCents > 0 ? f.expensesTotalCents / f.collectedIncomeCents : null) },
+  { label: t("buildingsId.reporting.kpi.occupancy"),        type: "pct", better: 1,  get: (f) => (f.totalUnitsCount > 0 ? f.activeUnitsCount / f.totalUnitsCount : null) },
+  { label: t("buildingsId.reporting.kpi.receivables"),      type: "chf", better: -1, get: (f) => f.receivablesCents },
+];
+
+function MultiPeriodCompareCard({ buildingId, onClose }) {
+  const { t } = useTranslation("manager");
+  const [gran, setGran] = useState("year");
+  const [keys, setKeys] = useState([]); // selected candidate keys, ≤ MULTI_MAX
+  const [data, setData] = useState({ key: "", cols: [] }); // fetched reports, keyed by selection
+
+  const candidates = useMemo(() => multiPeriodCandidates(gran, new Date()), [gran]);
+  const byKey = useMemo(() => { const m = {}; candidates.forEach((g) => g.subs.forEach((s) => { m[s.key] = s; })); return m; }, [candidates]);
+  const periods = useMemo(() => keys.map((k) => byKey[k]).filter(Boolean).sort((a, b) => (a.from < b.from ? -1 : 1)), [keys, byKey]);
+  const periodsKey = periods.map((p) => `${p.from}_${p.to}`).join("|");
+
+  // Fetch one period-report per selected period; store keyed by the selection so
+  // `loaded`/`loading` are DERIVED (no synchronous setState in the effect body).
+  useEffect(() => {
+    if (periods.length === 0) return undefined;
+    let cancelled = false;
+    Promise.all(periods.map((p) =>
+      fetch(`/api/buildings/${buildingId}/period-report?from=${p.from}&to=${p.to}`, { headers: authHeaders() })
+        .then((r) => r.json())
+        .then((d) => ({ from: p.from, financials: d?.data?.financials ?? null }))
+        .catch(() => ({ from: p.from, financials: null })),
+    )).then((res) => { if (!cancelled) setData({ key: periodsKey, cols: res }); });
+    return () => { cancelled = true; };
+  }, [buildingId, periodsKey, periods]);
+
+  const loaded = data.key === periodsKey;
+  const loading = periods.length > 0 && !loaded;
+  const financialsAt = (i) => (loaded ? data.cols[i]?.financials ?? null : null);
+
+  const toggle = (key) => setKeys((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : prev.length >= MULTI_MAX ? prev : [...prev, key]));
+  const chipCls = (sel) => cn("rounded-md border px-2.5 py-1 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-30",
+    sel ? "border-brand bg-brand text-white" : "border-surface-border text-foreground hover:border-brand hover:text-brand");
+  const disabledChip = (s) => s.disabled || (!keys.includes(s.key) && keys.length >= MULTI_MAX);
+  const kpis = multiKpis(t);
+  const fmt = (type, v) => (v == null ? "—" : type === "pct" ? rFmtPct(v) : rFmtChf(v));
+
+  return (
+    <div className="rounded-2xl border border-surface-border bg-surface p-4 shadow-sm space-y-3">
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="font-semibold text-foreground">{t("buildingsId.reporting.compare.multiTitle")}</h3>
+        <button onClick={onClose} className="rounded-lg border border-surface-border px-2 py-1 text-xs text-muted transition-colors hover:border-brand hover:text-brand">✕ {t("buildingsId.reporting.compare.clear")}</button>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-[11px] font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.period.label")}</span>
+        <div className="inline-flex rounded-lg border border-surface-border bg-surface p-0.5 gap-0.5">
+          {MULTI_GRANS.map((g) => (
+            <button key={g} onClick={() => { setGran(g); setKeys([]); }} aria-pressed={gran === g}
+              className={cn("rounded-md px-3 py-1 text-sm font-medium transition-colors", gran === g ? "bg-brand text-white" : "text-muted hover:text-muted-dark")}>
+              {t(`buildingsId.reporting.period.${g}`)}
+            </button>
+          ))}
+        </div>
+        <span className="text-xs text-foreground-dim">{t("buildingsId.reporting.compare.selected", { n: keys.length })}</span>
+      </div>
+
+      <div className="space-y-1.5">
+        {gran === "year" ? (
+          <div className="flex flex-wrap gap-1.5">
+            {candidates.flatMap((grp) => grp.subs).map((s) => (
+              <button key={s.key} disabled={disabledChip(s)} aria-pressed={keys.includes(s.key)} onClick={() => toggle(s.key)} className={chipCls(keys.includes(s.key))}>{s.short}</button>
+            ))}
+          </div>
+        ) : (
+          candidates.map((grp) => (
+            <div key={grp.year} className="flex items-center gap-2">
+              <span className="w-10 shrink-0 text-xs tabular-nums text-foreground-dim">{grp.year}</span>
+              <div className="flex flex-wrap gap-1.5">
+                {grp.subs.map((s) => (
+                  <button key={s.key} disabled={disabledChip(s)} aria-pressed={keys.includes(s.key)} onClick={() => toggle(s.key)} className={chipCls(keys.includes(s.key))}>{s.short}</button>
+                ))}
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {periods.length === 0 ? (
+        <p className="text-sm text-muted">{t("buildingsId.reporting.compare.pickPeriods")}</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-surface-border">
+                <th className="py-2 pr-3 text-left text-xs font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.compare.metric")}</th>
+                {periods.map((p) => (
+                  <th key={p.key} className="px-3 py-2 text-right text-xs font-semibold text-foreground whitespace-nowrap">{p.label}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {kpis.map((k) => {
+                const vals = periods.map((_, i) => { const f = financialsAt(i); return f ? k.get(f) : null; });
+                const nums = vals.filter((v) => v != null);
+                const best = nums.length >= 2 ? (k.better >= 0 ? Math.max(...nums) : Math.min(...nums)) : null;
+                const worst = nums.length >= 2 ? (k.better >= 0 ? Math.min(...nums) : Math.max(...nums)) : null;
+                return (
+                  <tr key={k.label} className="border-b border-surface-border/60">
+                    <td className="py-2 pr-3 text-left text-muted-dark">{k.label}</td>
+                    {vals.map((v, ci) => (
+                      <td key={`${k.label}-${periods[ci].key}`} className={cn("px-3 py-2 text-right tabular-nums whitespace-nowrap",
+                        !loaded ? "text-foreground-dim"
+                          : v != null && best !== worst && v === best ? "font-semibold text-success-text"
+                            : v != null && best !== worst && v === worst ? "text-destructive-text"
+                              : "text-foreground")}>{!loaded ? "…" : fmt(k.type, v)}</td>
+                    ))}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          {loading && <p className="mt-2 text-xs text-muted">{t("buildingsId.reporting.compare.loading")}</p>}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // The building reporting surface. A period bar (Month/Quarter/Year + scrubber +
 // presets) chooses the period the HERO reports on; the time-series drives both
 // the scrubber and the histogram (which now lives in the Revenue & expenses
@@ -899,6 +1056,7 @@ function BuildingReportingView({ buildingId, etatLocatifNet }) {
 
   const [compareWith, setCompareWith] = useState(null); // null | "prior" | "ly"
   const [cmpMenuOpen, setCmpMenuOpen] = useState(false);
+  const [multiOpen, setMultiOpen] = useState(false); // multi-period comparison card
   const cmpRef = useRef(null);
 
   useEffect(() => {
@@ -1082,6 +1240,8 @@ function BuildingReportingView({ buildingId, etatLocatifNet }) {
                 <button key={k} disabled={!ok} onClick={() => { setCompareWith(k); setCmpMenuOpen(false); }}
                   className="block w-full rounded-lg px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-surface-hover disabled:opacity-40 disabled:cursor-not-allowed">{l}</button>
               ))}
+              <button onClick={() => { setMultiOpen(true); setCmpMenuOpen(false); }}
+                className="mt-1 block w-full rounded-lg border-t border-surface-border px-3 py-2 text-left text-sm font-medium text-brand transition-colors hover:bg-surface-hover">{t("buildingsId.reporting.compare.periods")}</button>
               {compareWith && (
                 <button onClick={() => { setCompareWith(null); setCmpMenuOpen(false); }}
                   className="mt-1 block w-full rounded-lg border-t border-surface-border px-3 py-2 text-left text-sm text-muted transition-colors hover:bg-surface-hover">✕ {t("buildingsId.reporting.compare.clear")}</button>
@@ -1092,6 +1252,9 @@ function BuildingReportingView({ buildingId, etatLocatifNet }) {
       </div>
 
       {tsError && <p className="text-sm text-destructive-text">{tsError}</p>}
+
+      {/* ── Multi-period comparison (up to 5 periods, opened from "Compare periods…") ── */}
+      {multiOpen && <MultiPeriodCompareCard buildingId={buildingId} onClose={() => setMultiOpen(false)} />}
 
       {/* ── Report card: hero + tabs + panel ── */}
       <div className="overflow-hidden rounded-2xl border border-surface-border bg-surface shadow-sm">
