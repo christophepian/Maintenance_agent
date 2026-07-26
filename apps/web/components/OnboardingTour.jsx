@@ -58,10 +58,14 @@ export default function OnboardingTour({ role, onClose }) {
   }, [idx, steps]);
 
   useEffect(() => {
-    measure();
+    // Measure on the next frame (after layout) rather than synchronously in the
+    // effect body — avoids a cascading re-render and is more reliable for reading
+    // the spotlight target's rect.
+    const raf = requestAnimationFrame(measure);
     window.addEventListener("resize", measure);
     window.addEventListener("scroll", measure, true);
     return () => {
+      cancelAnimationFrame(raf);
       window.removeEventListener("resize", measure);
       window.removeEventListener("scroll", measure, true);
     };

@@ -290,7 +290,7 @@ export default function PackageOnboardingPanel({ buildingId, onClose, onCommitte
               </div>
               {analysis.buildingAlreadyPopulated && analysis.rentRollNewUnits > 0 && (
                 <div className="rounded-lg border border-warning-ring bg-warning-light p-3 text-sm text-warning-text space-y-2">
-                  <p><b>This building already has units.</b> {analysis.rentRollNewUnits} rent-roll object(s) match no existing unit. Matching units are always merged/updated — but creating the unmatched ones needs your confirmation, so a different year's or differently-formatted report can't duplicate your inventory.</p>
+                  <p><b>This building already has units.</b> {analysis.rentRollNewUnits} rent-roll object(s) match no existing unit. Matching units are always merged/updated — but creating the unmatched ones needs your confirmation, so a different year&apos;s or differently-formatted report can&apos;t duplicate your inventory.</p>
                   <label className="flex items-start gap-2 cursor-pointer">
                     <input type="checkbox" checked={confirmNewUnits} onChange={(e) => setConfirmNewUnits(e.target.checked)} className="mt-0.5" />
                     <span>Create {analysis.rentRollNewUnits} new unit(s) too. Leave unchecked to only update the units that match (recommended when importing a prior year).</span>

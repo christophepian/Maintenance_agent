@@ -215,7 +215,7 @@ function ProfileStep({ profile, onChange, onNext, onBack }) {
 
       {/* Entity type */}
       <div className="mb-4">
-        <label className="block text-sm font-medium text-muted-dark mb-1.5">I&apos;m onboarding as</label>
+        <span className="block text-sm font-medium text-muted-dark mb-1.5">I&apos;m onboarding as</span>
         <div className="flex gap-2">
           {[
             { v: "individual", l: "An individual" },
@@ -252,8 +252,9 @@ function ProfileStep({ profile, onChange, onNext, onBack }) {
 
       {isCompany && (
         <div className="mb-4">
-          <label className="block text-sm font-medium text-muted-dark mb-1.5">Company name</label>
+          <label htmlFor="onb-company" className="block text-sm font-medium text-muted-dark mb-1.5">Company name</label>
           <input
+            id="onb-company"
             className="input mb-0"
             value={profile.companyName}
             onChange={(e) => set("companyName", e.target.value)}
@@ -263,8 +264,9 @@ function ProfileStep({ profile, onChange, onNext, onBack }) {
       )}
 
       <div className="mb-4">
-        <label className="block text-sm font-medium text-muted-dark mb-1.5">Phone</label>
+        <label htmlFor="onb-phone" className="block text-sm font-medium text-muted-dark mb-1.5">Phone</label>
         <input
+          id="onb-phone"
           className="input mb-0"
           value={profile.phone}
           onChange={(e) => set("phone", e.target.value)}
@@ -274,8 +276,9 @@ function ProfileStep({ profile, onChange, onNext, onBack }) {
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
         <div className="sm:col-span-3">
-          <label className="block text-sm font-medium text-muted-dark mb-1.5">Address</label>
+          <label htmlFor="onb-address" className="block text-sm font-medium text-muted-dark mb-1.5">Address</label>
           <input
+            id="onb-address"
             className="input mb-0"
             value={profile.address}
             onChange={(e) => set("address", e.target.value)}
@@ -283,8 +286,9 @@ function ProfileStep({ profile, onChange, onNext, onBack }) {
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-muted-dark mb-1.5">Postal code</label>
+          <label htmlFor="onb-postal" className="block text-sm font-medium text-muted-dark mb-1.5">Postal code</label>
           <input
+            id="onb-postal"
             className="input mb-0"
             value={profile.postalCode}
             onChange={(e) => set("postalCode", e.target.value)}
@@ -292,8 +296,9 @@ function ProfileStep({ profile, onChange, onNext, onBack }) {
           />
         </div>
         <div className="sm:col-span-2">
-          <label className="block text-sm font-medium text-muted-dark mb-1.5">City</label>
+          <label htmlFor="onb-city" className="block text-sm font-medium text-muted-dark mb-1.5">City</label>
           <input
+            id="onb-city"
             className="input mb-0"
             value={profile.city}
             onChange={(e) => set("city", e.target.value)}
@@ -385,8 +390,9 @@ function PropertyStep({ prop, onChange, onImportFiles, importStatus, onNext, onB
       {prop.mode === "create" && (
         <div className="space-y-4 mb-6">
           <div>
-            <label className="block text-sm font-medium text-muted-dark mb-1.5">Building name</label>
+            <label htmlFor="onb-bname" className="block text-sm font-medium text-muted-dark mb-1.5">Building name</label>
             <input
+              id="onb-bname"
               className="input mb-0"
               value={prop.name}
               onChange={(e) => set("name", e.target.value)}
@@ -394,8 +400,9 @@ function PropertyStep({ prop, onChange, onImportFiles, importStatus, onNext, onB
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-muted-dark mb-1.5">Address</label>
+            <label htmlFor="onb-baddress" className="block text-sm font-medium text-muted-dark mb-1.5">Address</label>
             <input
+              id="onb-baddress"
               className="input mb-0"
               value={prop.address}
               onChange={(e) => set("address", e.target.value)}
@@ -403,10 +410,11 @@ function PropertyStep({ prop, onChange, onImportFiles, importStatus, onNext, onB
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-muted-dark mb-1.5">
+            <label htmlFor="onb-approx" className="block text-sm font-medium text-muted-dark mb-1.5">
               Approx. units <span className="text-foreground-dim">(optional)</span>
             </label>
             <input
+              id="onb-approx"
               type="number"
               min="1"
               className="input mb-0 max-w-[140px]"
@@ -596,9 +604,10 @@ function ConnectionsStep({ summary, onNext, onBack }) {
       </p>
 
       <div className="rounded-xl border border-surface-border p-4 mb-4">
-        <label className="block text-sm font-medium text-muted-dark mb-1.5">Manager email</label>
+        <label htmlFor="onb-mgr-email" className="block text-sm font-medium text-muted-dark mb-1.5">Manager email</label>
         <div className="flex gap-2">
           <input
+            id="onb-mgr-email"
             type="email"
             className="input mb-0 flex-1"
             value={email}
@@ -806,8 +815,13 @@ export default function OnboardingPage() {
   const [summary, setSummary] = useState(null); // { buildingName, archetypeLabel, imported }
   const [prefs, setPrefs] = useState({ overdueReminders: true, ownerReport: true, autoRouteMaintenance: false });
 
-  // Guard + hydrate
+  // Guard + hydrate — runs once (bootRef), listing its real reactive deps so no
+  // exhaustive-deps suppression is needed. router/next are the only reactive
+  // refs; setAuthToken/resolveLandingPath/inferPrimaryRole are stable imports.
+  const bootRef = useRef(false);
   useEffect(() => {
+    if (bootRef.current) return;
+    bootRef.current = true;
     const supabase = createClient();
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) {
@@ -842,17 +856,17 @@ export default function OnboardingPage() {
       }
       setReady(true);
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [router, next]);
 
   // Persist progress (files are intentionally excluded — not serializable)
   useEffect(() => {
     if (!ready) return;
     try {
-      const { files, ...propRest } = prop;
       localStorage.setItem(
         PROGRESS_KEY,
-        JSON.stringify({ stepIndex, profile, prop: propRest, answers, prefs }),
+        // `files` is intentionally excluded — File objects aren't serializable;
+        // JSON.stringify drops the undefined-valued key.
+        JSON.stringify({ stepIndex, profile, prop: { ...prop, files: undefined }, answers, prefs }),
       );
     } catch {
       /* storage may be unavailable — non-fatal */
