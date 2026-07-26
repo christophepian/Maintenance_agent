@@ -414,9 +414,9 @@ export function registerFinancialRoutes(router: Router) {
       if (!from || !to) return sendError(res, 400, "VALIDATION_ERROR", "from and to are required");
 
       try {
-        // Fully loaded: per-unit net includes each unit's share of building overhead
-        // so it reconciles to the building's operating NOI (the "By unit" view).
-        const data = await getUnitFinancialSummaries(orgId, params.id, from, to, { fullyLoaded: true });
+        // Direct costing: per-unit expenses are only those booked to the unit;
+        // shared building costs are surfaced separately by the reporting view.
+        const data = await getUnitFinancialSummaries(orgId, params.id, from, to);
         sendJson(res, 200, { data });
       } catch (e: any) {
         if (e instanceof NotFoundError) return sendError(res, 404, "NOT_FOUND", e.message);

@@ -87,7 +87,7 @@ function UnitRow({ unitNumber, floor, tenantName, earned, expenses, charges, net
           <div className="text-sm font-medium text-muted-dark">{rFmtChf(earned)}</div>
         </div>
         <div className="hidden sm:block">
-          <div className="text-xs text-foreground-dim">{t("buildingsId.reporting.expenses")}</div>
+          <div className="text-xs text-foreground-dim">{t("buildingsId.reporting.directCosts")}</div>
           <div className="text-sm font-medium text-muted-dark">{rFmtChf(expenses)}</div>
         </div>
         {charges > 0 && (
@@ -97,7 +97,7 @@ function UnitRow({ unitNumber, floor, tenantName, earned, expenses, charges, net
           </div>
         )}
         <div>
-          <div className="text-xs text-foreground-dim">{t("buildingsId.reporting.net")}</div>
+          <div className="text-xs text-foreground-dim">{t("buildingsId.reporting.contribution")}</div>
           <div className={cn("text-sm font-semibold", netPositive ? "text-success-text" : "text-destructive-text")}>{rFmtChf(net)}</div>
         </div>
         <div className="hidden md:block">
@@ -733,12 +733,10 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
               ? <p className="text-sm text-muted italic">{t("buildingsId.reporting.noUnits")}</p>
               : <>
                 <div className="space-y-2">{visibleUnits.map((u) => <UnitRow key={u.unitId} unitNumber={u.unitNumber} floor={u.floor} tenantName={u.tenantName} earned={u.collectedIncomeCents} expenses={u.expensesCents} charges={u.apportionedChargesCents} net={u.netIncomeCents} collectionRate={u.collectionRate} occupancyRate={u.occupancyRate} />)}</div>
-                {unitData.some((u) => (u.apportionedOverheadCents ?? 0) > 0) && (
-                  <p className="mt-3 flex items-start gap-1.5 text-xs text-foreground-dim">
-                    <span aria-hidden>ℹ</span>
-                    <span>{t("buildingsId.reporting.byUnitOverheadNote")}</span>
-                  </p>
-                )}
+                <p className="mt-3 flex items-start gap-1.5 text-xs text-foreground-dim">
+                  <span aria-hidden>ℹ</span>
+                  <span>{t("buildingsId.reporting.byUnitDirectNote")}</span>
+                </p>
               </>}
           </div>
         );

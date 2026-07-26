@@ -90,6 +90,31 @@ export default function UnitProfitabilityPanel({ buildingId, from, to }) {
         )}
       </div>
 
+      {/* NOI breakdown — direct costing: units' direct NOI, shared building-level
+          costs shown separately, reconciling to the building operating NOI. */}
+      {data && data.buildingOperatingNoiCents != null && (
+        <div className="mb-4 rounded-xl border border-surface-border p-4">
+          <p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.unitProfit.noiBreakdown")}</p>
+          <div className="flex flex-wrap items-end gap-x-3 gap-y-2">
+            <div>
+              <p className="text-[11px] text-foreground-dim">{t("buildingsId.reporting.unitProfit.unitsDirectNoi")}</p>
+              <p className="text-base font-semibold tabular-nums text-foreground">{formatChfCents(data.totalAnnualNoiCents)}</p>
+            </div>
+            <span className="pb-1 text-lg text-foreground-dim" aria-hidden="true">−</span>
+            <div>
+              <p className="text-[11px] text-foreground-dim">{t("buildingsId.reporting.unitProfit.buildingLevelCosts")}</p>
+              <p className="text-base font-semibold tabular-nums text-foreground">{formatChfCents(data.buildingLevelCostsCents)}</p>
+            </div>
+            <span className="pb-1 text-lg text-foreground-dim" aria-hidden="true">=</span>
+            <div>
+              <p className="text-[11px] text-foreground-dim">{t("buildingsId.reporting.unitProfit.buildingNoi")}</p>
+              <p className="text-base font-bold tabular-nums text-foreground">{formatChfCents(data.buildingOperatingNoiCents)}</p>
+            </div>
+          </div>
+          <p className="mt-2 text-[11px] text-foreground-dim">{t("buildingsId.reporting.unitProfit.noiBreakdownNote")}</p>
+        </div>
+      )}
+
       {data?.reconciliation && !data.reconciliation.reconciled && (
         <div className="mb-3 flex items-start gap-2 rounded-lg bg-warning-light px-3 py-2 text-xs text-warning-text" role="alert">
           <span aria-hidden="true">⚠</span>

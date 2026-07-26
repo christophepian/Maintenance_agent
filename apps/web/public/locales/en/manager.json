@@ -743,7 +743,7 @@
       "whatToWatchSub": "Flags and action items for this building",
       "noFlags": "No flags — building is performing well.",
       "byUnit": "By unit",
-      "byUnitSub": "Net result per unit for {{period}}",
+      "byUnitSub": "Direct result per unit for {{period}}",
       "showAll": "Show all {{count}}",
       "collapse": "Collapse",
       "noUnits": "No units found.",
@@ -782,7 +782,7 @@
       "unitProfitTab": "Profitability",
       "unitProfit": {
         "title": "Building profitability, by unit",
-        "subtitle": "Fully-loaded, annualised NOI vs. valeur intrinsèque — ranked by yield. Low yield on a high value is a sell / PPE candidate.",
+        "subtitle": "Direct-costing NOI (unit-specific costs only), annualised, vs. valeur intrinsèque — ranked by yield. Low yield on a high value is a sell / PPE candidate.",
         "buildingValue": "Building value",
         "buildingValueSub": "Σ unit intrinsic (bottom-up)",
         "buildingYield": "Building net yield",
@@ -804,7 +804,12 @@
         "sellCandidate": "Sell candidate",
         "total": "Total",
         "reconcileWarn": "Per-unit income sums to {{sum}} but the building income is {{building}} (Δ {{delta}}). Some income isn't attributed to a unit, so the breakdown below is incomplete.",
-        "footnote": "NOI is accrual-basis, fully loaded with pro-rata building overhead, annualised to the period. Building value is the sum of the units' valeur intrinsèque; PPE estimate and market value are the stored appraisals, shown for reconciliation."
+        "footnote": "NOI is accrual-basis and direct-costed — each unit carries only its own booked expenses, annualised to the period. Shared building-level costs are reported separately above. Building value is the sum of the units’ valeur intrinsèque; PPE estimate and market value are the stored appraisals, shown for reconciliation.",
+        "noiBreakdown": "NOI breakdown",
+        "unitsDirectNoi": "Units’ direct NOI",
+        "buildingLevelCosts": "Building-level costs",
+        "buildingNoi": "Building operating NOI",
+        "noiBreakdownNote": "Direct costing: only costs booked to a specific unit reduce that unit’s NOI. Shared building-level costs (insurance, management, taxes, exterior/shared maintenance) are shown separately here, never spread across units."
       },
       "valueCreationTab": "Value creation",
       "valueCreation": {
@@ -986,7 +991,10 @@
       },
       "allMetrics": "All financial metrics",
       "planImprovements": "Plan improvements",
-      "byUnitOverheadNote": "Each unit's expenses include its share of building overhead (insurance, management, taxes, shared maintenance) apportioned by area — so per-unit net reconciles to the building's operating NOI."
+      "byUnitOverheadNote": "Each unit's expenses include its share of building overhead (insurance, management, taxes, shared maintenance) apportioned by area — so per-unit net reconciles to the building's operating NOI.",
+      "directCosts": "Direct costs",
+      "contribution": "Contribution",
+      "byUnitDirectNote": "Direct costing: only costs booked to a specific unit are shown here, so \"Contribution\" is that unit's share of the building result. Shared building-level costs (insurance, management, taxes, exterior/shared maintenance) are not spread across units — see Profitability for the full breakdown."
     },
     "strategyEditor": {
       "intro": "Set how this building should be managed — the cashflow recommendation engine uses it to tailor advice for this property.",

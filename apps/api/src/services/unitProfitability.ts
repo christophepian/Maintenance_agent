@@ -1,11 +1,15 @@
 /**
  * Profitability — pure allocation + yield math (no Prisma).
  *
- * Building profitability, broken down by unit, for the disposition decision:
+ * Building profitability, broken down by unit, for the disposition decision.
+ * DIRECT COSTING — a unit's profitability reflects only costs traceable to it:
  *
- *   1. Start from each unit's directly-attributed net income (accrual basis).
- *   2. Allocate the building's NON-recoverable, non-unit-attributed operating
- *      overhead across units pro-rata by living area (conserving the pool exactly).
+ *   1. Each unit's NOI = accrued income − expenses booked TO that unit (accrual
+ *      basis). No building-level overhead is spread across units.
+ *   2. Shared owner opex not booked to any unit (insurance, management, taxes,
+ *      shared/exterior maintenance) is surfaced separately as buildingLevelCosts,
+ *      never allocated. Reconciliation: Σ unit direct NOI − building-level costs
+ *      = building operating NOI.
  *   3. Annualise to the reporting period.
  *   4. Yield-on-value against the unit's valeur intrinsèque (the maintained
  *      worksheet value — always available, no market-price dependency). Rank by
@@ -58,6 +62,9 @@ export interface UnitProfitabilityRow {
 export interface BuildingValuationInput {
   operatingTotalCents: number;
   recoverableAncillaryCents: number;
+  /** Building operating NOI (income − all operating opex). Shown alongside the sum
+   *  of per-unit direct NOIs so the shared building-level costs are explicit. */
+  netOperatingIncomeCents: number;
   ppeEstimateChf: number | null;
   marketValueChf: number | null;
   totalDebtChf: number | null;
@@ -76,8 +83,12 @@ export interface UnitProfitabilityResult {
   /** Total mortgage balance (CHF) and NAV = bottom-up value − debt. */
   totalDebtChf: number | null;
   navChf: number | null;
-  /** The non-recoverable overhead pool allocated across units this period, cents. */
-  allocatedOverheadPoolCents: number;
+  /** Building-level owner opex NOT booked to any unit (insurance, management,
+   *  taxes, shared/exterior maintenance), annualised — shown separately, never
+   *  spread across units. Units' direct NOI − this = building NOI. */
+  buildingLevelCostsCents: number;
+  /** Building operating NOI (annualised) — income − all operating opex. */
+  buildingOperatingNoiCents: number;
   allocationKey: "livingAreaSqm" | "equal";
 }
 
@@ -101,35 +112,15 @@ export function computeUnitProfitability(
 ): UnitProfitabilityResult {
   const annualFactor = periodDays > 0 ? 365 / periodDays : 1;
 
-  // Non-recoverable overhead already attributed to units (exclude recoverable charges).
-  const attributedNonRecoverable = inputs.reduce(
-    (s, i) => s + (i.fin.expensesCents - i.fin.apportionedChargesCents),
-    0,
-  );
-  const buildingOwnerOpex = building.operatingTotalCents - building.recoverableAncillaryCents;
-  const pool = Math.max(0, buildingOwnerOpex - attributedNonRecoverable);
-
+  // DIRECT COSTING: a unit's NOI reflects only the expenses booked TO that unit —
+  // no building-level overhead is spread across units. The shared owner opex that
+  // wasn't booked to any unit is surfaced separately (buildingLevelCostsCents) so
+  // there's a clean reconciliation: Σ unit direct NOI − building-level = building NOI.
   const totalArea = inputs.reduce((s, i) => s + (i.val?.livingAreaSqm ?? 0), 0);
   const allocationKey: "livingAreaSqm" | "equal" = totalArea > 0 ? "livingAreaSqm" : "equal";
-  const shares = inputs.map((i) =>
-    allocationKey === "livingAreaSqm" ? (i.val?.livingAreaSqm ?? 0) / totalArea : 1 / (inputs.length || 1),
-  );
 
-  // Allocate the pool, conserving the total exactly (last row absorbs the remainder).
-  const allocated: number[] = [];
-  let running = 0;
-  inputs.forEach((_, idx) => {
-    if (idx === inputs.length - 1) allocated.push(pool - running);
-    else {
-      const a = Math.round(pool * shares[idx]);
-      allocated.push(a);
-      running += a;
-    }
-  });
-
-  const rows: UnitProfitabilityRow[] = inputs.map((i, idx) => {
-    const allocatedOverheadCents = inputs.length ? allocated[idx] : 0;
-    const annualNoiCents = Math.round((i.fin.netIncomeCents - allocatedOverheadCents) * annualFactor);
+  const rows: UnitProfitabilityRow[] = inputs.map((i) => {
+    const annualNoiCents = Math.round(i.fin.netIncomeCents * annualFactor); // direct: accrued income − unit-booked expenses
     const intrinsicValueChf = intrinsicOf(i.val);
     const annualNoiChf = annualNoiCents / 100;
     return {
@@ -139,7 +130,7 @@ export function computeUnitProfitability(
       tenantName: i.fin.tenantName,
       occupancyRate: i.fin.occupancyRate,
       monthlyRentChf: i.fin.monthlyRentChf,
-      allocatedOverheadCents,
+      allocatedOverheadCents: 0, // direct costing — no per-unit overhead allocation
       annualNoiCents,
       noiContributionPct: null,
       intrinsicValueChf,
@@ -183,6 +174,10 @@ export function computeUnitProfitability(
     return b.netYieldOnIntrinsicPct - a.netYieldOnIntrinsicPct;
   });
 
+  const buildingOperatingNoiCents = Math.round(building.netOperatingIncomeCents * annualFactor);
+  // Shared owner opex not booked to any unit = Σ unit direct NOI − building NOI.
+  const buildingLevelCostsCents = Math.max(0, totalAnnualNoiCents - buildingOperatingNoiCents);
+
   return {
     rows,
     totalAnnualNoiCents,
@@ -192,7 +187,8 @@ export function computeUnitProfitability(
     marketValueChf: building.marketValueChf,
     totalDebtChf: building.totalDebtChf,
     navChf,
-    allocatedOverheadPoolCents: pool,
+    buildingLevelCostsCents,
+    buildingOperatingNoiCents,
     allocationKey,
   };
 }

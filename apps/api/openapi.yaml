@@ -301,7 +301,8 @@ components:
         marketValueChf: { type: number, nullable: true, description: Stored market appraisal (reconciliation) }
         totalDebtChf: { type: number, nullable: true }
         navChf: { type: number, nullable: true, description: Bottom-up value − debt }
-        allocatedOverheadPoolCents: { type: integer }
+        buildingLevelCostsCents: { type: integer, description: Shared owner opex not booked to any unit (annualised), shown separately — never spread across units }
+        buildingOperatingNoiCents: { type: integer, description: Building operating NOI (annualised) — income − all operating opex }
         allocationKey: { type: string, enum: [livingAreaSqm, equal] }
         reconciliation:
           type: object
@@ -325,8 +326,8 @@ components:
               tenantName: { type: string, nullable: true }
               occupancyRate: { type: number }
               monthlyRentChf: { type: integer, nullable: true }
-              allocatedOverheadCents: { type: integer, description: Pro-rata building overhead subtracted this period }
-              annualNoiCents: { type: integer, description: Fully-loaded, annualised, accrual-basis NOI }
+              allocatedOverheadCents: { type: integer, description: Deprecated — always 0 under direct costing (no per-unit overhead allocation) }
+              annualNoiCents: { type: integer, description: Direct-costing annualised NOI — accrued income − expenses booked to this unit only }
               noiContributionPct: { type: number, nullable: true }
               intrinsicValueChf: { type: number, nullable: true }
               valueSharePct: { type: number, nullable: true, description: Unit share of the building's intrinsic value }
