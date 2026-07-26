@@ -231,6 +231,15 @@ export async function listUnits(
         where: { status: "ACTIVE", deletedAt: null },
         select: { id: true, tenantName: true, startDate: true },
       },
+      // Occupancy also flows from the join table (a co-billed garage may carry an
+      // occupancy without its own lease) and, for parking, from the linked flat.
+      occupancies: { select: { tenant: { select: { name: true } } } },
+      linkedFlat: {
+        select: {
+          leases: { where: { status: "ACTIVE", deletedAt: null }, select: { id: true } },
+          occupancies: { select: { id: true } },
+        },
+      },
     },
     orderBy: { unitNumber: "asc" },
   });
@@ -299,9 +308,20 @@ export async function findUnitByIdAndOrg(
           chargesTotalChf: true,
         },
       },
+      // Occupancy join (a co-billed garage may be occupied without its own lease).
+      occupancies: { select: { tenant: { select: { name: true } } } },
       // The flat this parking spot is assigned to (if any), and — for a flat —
-      // the parking spots linked to it. Summaries only.
-      linkedFlat: { select: { id: true, unitNumber: true, type: true } },
+      // the parking spots linked to it. Summaries + occupancy of the flat so a
+      // parking spot linked to an occupied flat reads OCCUPIED.
+      linkedFlat: {
+        select: {
+          id: true,
+          unitNumber: true,
+          type: true,
+          leases: { where: { status: "ACTIVE", deletedAt: null }, select: { id: true } },
+          occupancies: { select: { id: true } },
+        },
+      },
       parkingSpots: {
         where: { isActive: true },
         select: { id: true, unitNumber: true, parkingKind: true, monthlyRentChf: true, type: true },

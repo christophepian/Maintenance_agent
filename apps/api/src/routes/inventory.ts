@@ -46,7 +46,7 @@ import * as legalSourceRepo from "../repositories/legalSourceRepository";
 import { findDepreciationTopicSuggestions, findAssetTopicSuggestions, findOrgOwnerByIdFull, updateOwnerUser, syncAllBuildingsForOwner } from "../repositories/inventoryRepository";
 import { findUnlinkedJobsByUnit } from "../repositories/jobRepository";
 import { mapBuildingToDetailDTO } from "../dto/buildingDetail";
-import { mapUnitToListDTO } from "../dto/unitList";
+import { mapUnitToListDTO, computeOccupancy } from "../dto/unitList";
 import { computeUnitIntrinsicValue } from "../services/unitValuation";
 import { createBillingEntity } from "../services/billingEntities";
 import { CreateBillingEntitySchema } from "../validation/billingEntities";
@@ -502,6 +502,21 @@ export function registerInventoryRoutes(router: Router) {
     try {
       const unit = await getUnitById(orgId, params.id);
       if (!unit) return sendError(res, 404, "NOT_FOUND", "Unit not found");
+      // Two-axis occupancy, computed server-side so the detail page doesn't
+      // re-derive it (and mis-read a rent-0 co-billed parking as vacant).
+      const u = unit as unknown as {
+        isVacant: boolean;
+        leases?: { tenantName?: string | null; startDate: Date; status: string }[];
+        occupancies?: { tenant?: { name: string | null } }[];
+        linkedFlat?: { leases?: unknown[]; occupancies?: unknown[] } | null;
+      };
+      const activeLease = (u.leases ?? []).find((l) => l.status === "ACTIVE") ?? null;
+      const occupancy = computeOccupancy({
+        isVacant: u.isVacant,
+        activeLease: activeLease ? { tenantName: activeLease.tenantName ?? null, startDate: activeLease.startDate } : null,
+        occupancyTenantName: u.occupancies?.[0]?.tenant?.name ?? null,
+        linkedFlatOccupied: !!u.linkedFlat && (((u.linkedFlat.leases?.length ?? 0) > 0) || ((u.linkedFlat.occupancies?.length ?? 0) > 0)),
+      });
       const intrinsicValuation = computeUnitIntrinsicValue(unit);
       // Market estimate (reference only) — zip price × living area, kept distinct
       // from the intrinsic valuation. Null when no price is on file for the zip.
@@ -515,7 +530,7 @@ export function registerInventoryRoutes(router: Router) {
             estimateChf: unit.livingAreaSqm != null ? unit.livingAreaSqm * marketPrice.pricePerSqmChf : null,
           }
         : null;
-      sendJson(res, 200, { data: { ...unit, intrinsicValuation, marketEstimate } });
+      sendJson(res, 200, { data: { ...unit, ...occupancy, intrinsicValuation, marketEstimate } });
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to fetch unit", String(e));
     }

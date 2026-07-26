@@ -1971,17 +1971,16 @@ export default function BuildingDetail() {
   const flatLabelById = Object.fromEntries(units.map((u) => [u.id, u.unitNumber || u.name || "Unit"]));
 
   // ─── Occupancy counts (always across ALL units) ───
+  // Occupancy (OCCUPIED/VACANT) and "listed" are independent axes — a vacant
+  // unit may also be listed, so listedCount is not part of the occupied/vacant split.
   const occupiedCount = units.filter((u) => u.occupancyStatus === "OCCUPIED").length;
   const vacantCount = units.filter((u) => u.occupancyStatus === "VACANT").length;
-  const listedCount = units.filter((u) => u.occupancyStatus === "LISTED").length;
+  const listedCount = units.filter((u) => u.listed).length;
 
-  // ─── Filter units by occupancy status ───
-  const filteredResidential = unitFilter === "ALL"
-    ? residentialUnits
-    : residentialUnits.filter((u) => u.occupancyStatus === unitFilter);
-  const filteredCommon = unitFilter === "ALL"
-    ? commonUnits
-    : commonUnits.filter((u) => u.occupancyStatus === unitFilter);
+  // ─── Filter units by occupancy status (LISTED filters the marketing tag) ───
+  const matchUnitFilter = (u) => unitFilter === "ALL" || (unitFilter === "LISTED" ? u.listed : u.occupancyStatus === unitFilter);
+  const filteredResidential = residentialUnits.filter(matchUnitFilter);
+  const filteredCommon = commonUnits.filter(matchUnitFilter);
 
   return (
     <AppShell role={isOwner ? "OWNER" : "MANAGER"}>
@@ -2729,7 +2728,7 @@ export default function BuildingDetail() {
                               {u.occupancyStatus === "VACANT" && (
                                 <Badge variant="destructive" size="sm">{t("manager:buildingsId.text.vacant")}</Badge>
                               )}
-                              {u.occupancyStatus === "LISTED" && (
+                              {u.listed && (
                                 <Badge variant="warning" size="sm">{t("manager:buildingsId.text.listed")}</Badge>
                               )}
                             </div>
@@ -2745,7 +2744,7 @@ export default function BuildingDetail() {
                               </div>
                             )}
                             {/* ─── Listed note ─── */}
-                            {u.occupancyStatus === "LISTED" && (
+                            {u.listed && u.occupancyStatus === "VACANT" && (
                               <div className="text-xs text-yellow-600 mt-1">{t("manager:buildingsId.text.acceptingApplications")}</div>
                             )}
                             {(u.monthlyRentChf != null || u.monthlyChargesChf != null) && (
@@ -2785,7 +2784,7 @@ export default function BuildingDetail() {
                               {u.occupancyStatus === "VACANT" && (
                                 <Badge variant="destructive" size="sm">{t("manager:buildingsId.text.vacant")}</Badge>
                               )}
-                              {u.occupancyStatus === "LISTED" && (
+                              {u.listed && (
                                 <Badge variant="warning" size="sm">{t("manager:buildingsId.text.listed")}</Badge>
                               )}
                             </div>
@@ -2798,11 +2797,11 @@ export default function BuildingDetail() {
                 </>
               )}
 
-              {(unitFilter === "ALL" ? parkingUnits : parkingUnits.filter((u) => u.occupancyStatus === unitFilter)).length > 0 && (
+              {parkingUnits.filter(matchUnitFilter).length > 0 && (
                 <>
                   <h3 className="font-semibold text-foreground mt-4 mb-3">{t("manager:buildingsId.heading.parking")}</h3>
                   <div className="space-y-2 mb-4">
-                    {(unitFilter === "ALL" ? parkingUnits : parkingUnits.filter((u) => u.occupancyStatus === unitFilter)).map((u) => (
+                    {parkingUnits.filter(matchUnitFilter).map((u) => (
                       <Link key={u.id} href={`/admin-inventory/units/${u.id}${isOwner ? "?role=owner" : ""}`} className="block border border-surface-border rounded-lg p-3 hover:bg-surface-subtle transition">
                         <div className="flex justify-between items-center">
                           <div className="min-w-0 flex-1">
@@ -2814,7 +2813,7 @@ export default function BuildingDetail() {
                               )}
                               {u.occupancyStatus === "OCCUPIED" && <Badge variant="success" size="sm">{t("manager:buildingsId.text.occupied")}</Badge>}
                               {u.occupancyStatus === "VACANT" && <Badge variant="destructive" size="sm">{t("manager:buildingsId.text.vacant")}</Badge>}
-                              {u.occupancyStatus === "LISTED" && <Badge variant="warning" size="sm">{t("manager:buildingsId.text.listed")}</Badge>}
+                              {u.listed && <Badge variant="warning" size="sm">{t("manager:buildingsId.text.listed")}</Badge>}
                             </div>
                             {(u.monthlyRentChf != null || u.monthlyChargesChf != null) && (
                               <div className="text-xs text-muted mt-1">

@@ -868,9 +868,13 @@ export default function UnitDetail() {
   const rentLease = bindingLeases.length === 1 ? bindingLeases[0] : null;
   const displayRentChf = rentLease ? rentLease.netRentChf : unit?.monthlyRentChf;
   const displayChargesChf = rentLease ? rentLease.chargesTotalChf : unit?.monthlyChargesChf;
-  const occupancyStatus = hasActiveLease ? "OCCUPIED" : unit?.isVacant ? "LISTED" : "VACANT";
-  const occupancyLabel = occupancyStatus === "OCCUPIED" ? "Occupied" : occupancyStatus === "LISTED" ? "Listed" : "Vacant";
-  const occupancyVariant = occupancyStatus === "OCCUPIED" ? "success" : occupancyStatus === "LISTED" ? "info" : "destructive";
+  // Two independent axes, computed server-side (occupancy considers the linked
+  // flat + occupancy records, so a rent-0 co-billed parking isn't mislabeled
+  // vacant). Fall back to a lease-based guess for older payloads.
+  const occupancyStatus = unit?.occupancyStatus ?? (hasActiveLease ? "OCCUPIED" : "VACANT");
+  const isListed = unit?.listed ?? (occupancyStatus === "VACANT" && !!unit?.isVacant);
+  const occupancyLabel = occupancyStatus === "OCCUPIED" ? "Occupied" : "Vacant";
+  const occupancyVariant = occupancyStatus === "OCCUPIED" ? "success" : "destructive";
   const orgModels = assetModels.filter((m) => m.orgId);
 
   // Valeur intrinsèque: live (from edit inputs) while editing, saved (from unit) otherwise.
@@ -1233,7 +1237,7 @@ export default function UnitDetail() {
               </>)}
               <div>
                 <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Status</div>
-                <div className="text-sm text-muted-dark mt-1"><Badge variant={occupancyVariant} size="sm">{occupancyLabel}</Badge></div>
+                <div className="text-sm text-muted-dark mt-1 flex items-center gap-1"><Badge variant={occupancyVariant} size="sm">{occupancyLabel}</Badge>{isListed && <Badge variant="warning" size="sm">Listed</Badge>}</div>
               </div>
               {!isParking && (
               <div className="col-span-full">
