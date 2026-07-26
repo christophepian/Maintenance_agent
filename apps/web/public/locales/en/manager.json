@@ -824,7 +824,8 @@
         "periods": "Compare periods…",
         "multiTitle": "Period comparison",
         "pickPeriods": "Pick up to 5 periods above to compare.",
-        "selected": "{{n}}/5 selected"
+        "selected": "{{n}}/5 selected",
+        "pickPrompt": "Choose a comparison to see periods side by side."
       },
       "revex": {
         "title": "Revenue & expenses",
@@ -968,7 +969,14 @@
       "why": {
         "show": "Why?",
         "hide": "Why? ▾"
-      }
+      },
+      "tab": {
+        "breakdown": "Breakdown",
+        "drivers": "Drivers",
+        "comparison": "Comparison"
+      },
+      "allMetrics": "All financial metrics",
+      "planImprovements": "Plan improvements"
     },
     "strategyEditor": {
       "intro": "Set how this building should be managed — the cashflow recommendation engine uses it to tailor advice for this property.",

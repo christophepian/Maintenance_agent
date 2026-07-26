@@ -824,7 +824,8 @@
         "periods": "Comparer des périodes…",
         "multiTitle": "Comparaison de périodes",
         "pickPeriods": "Sélectionnez jusqu'à 5 périodes ci-dessus.",
-        "selected": "{{n}}/5 sélectionnées"
+        "selected": "{{n}}/5 sélectionnées",
+        "pickPrompt": "Choisissez une comparaison pour voir les périodes côte à côte."
       },
       "revex": {
         "title": "Produits & charges",
@@ -968,7 +969,14 @@
       "why": {
         "show": "Pourquoi ?",
         "hide": "Pourquoi ? ▾"
-      }
+      },
+      "tab": {
+        "breakdown": "Ventilation",
+        "drivers": "Facteurs",
+        "comparison": "Comparaison"
+      },
+      "allMetrics": "Tous les indicateurs financiers",
+      "planImprovements": "Planifier des travaux"
     },
     "strategyEditor": {
       "intro": "Définissez la gestion de ce bâtiment — le moteur de recommandation de trésorerie l'utilise pour adapter ses conseils à ce bien.",
