@@ -908,6 +908,9 @@
         "stable": {
           "title": "Pas de mouvement significatif",
           "body": "Revenus et charges stables, sans changement notable cette période."
+        },
+        "benchmark": {
+          "title": "Au-dessus du portefeuille"
         }
       },
       "watch": {

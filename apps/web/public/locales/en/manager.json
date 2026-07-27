@@ -908,6 +908,9 @@
         "stable": {
           "title": "No significant movements",
           "body": "Income and expenses were stable with no material changes this period."
+        },
+        "benchmark": {
+          "title": "Ahead of the portfolio"
         }
       },
       "watch": {

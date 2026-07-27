@@ -237,7 +237,7 @@ function buildingHeadline(bf, t) {
   return t("buildingsId.reporting.headline.closed");
 }
 
-function buildBuildingDrivers(bf, prevBf, t) {
+function buildBuildingDrivers(bf, prevBf, benchmark, t) {
   const drivers = [];
   if (!bf) return drivers;
   if (prevBf) {
@@ -248,6 +248,14 @@ function buildBuildingDrivers(bf, prevBf, t) {
     if (expDiff > 0) drivers.push({ title: t("buildingsId.reporting.driver.costsUp.title"), body: t("buildingsId.reporting.driver.costsUp.body", { amount: rFmtChf(expDiff) }), impact: `-${rFmtChf(expDiff)}`, positive: false });
     else if (expDiff < 0) drivers.push({ title: t("buildingsId.reporting.driver.costsDown.title"), body: t("buildingsId.reporting.driver.costsDown.body", { amount: rFmtChf(Math.abs(expDiff)) }), impact: `+${rFmtChf(Math.abs(expDiff))}`, positive: true });
   }
+  // Portfolio position — outperformance reads as a positive driver (folded in
+  // from the retired executive summary's benchmark clause).
+  if (benchmark && benchmark.count >= 2 && bf.collectedIncomeCents > 0) {
+    const margin = bf.netOperatingIncomeCents / bf.collectedIncomeCents;
+    if (margin > benchmark.noiMarginMedian + 0.03) {
+      drivers.push({ title: t("buildingsId.reporting.driver.benchmark.title"), body: t("buildingsId.reporting.summary.benchmark.above", { margin: rFmtPct(margin), median: rFmtPct(benchmark.noiMarginMedian) }), impact: "", positive: true });
+    }
+  }
   if (bf.expensesTotalCents > 0 && drivers.length < 3) {
     drivers.push({ title: t("buildingsId.reporting.driver.spend.title"), body: t("buildingsId.reporting.driver.spend.body", { amount: rFmtChf(bf.expensesTotalCents) }), impact: rFmtChf(bf.expensesTotalCents) });
   }
@@ -255,7 +263,7 @@ function buildBuildingDrivers(bf, prevBf, t) {
   return drivers;
 }
 
-function buildBuildingWatchItems(bf, arrears, unitData, moveIns, moveOuts, t) {
+function buildBuildingWatchItems(bf, arrears, unitData, moveIns, moveOuts, benchmark, leaseExpiries, t) {
   const items = [];
   if (!bf) return items;
   const viewInvoices = { label: t("buildingsId.reporting.viewInvoices"), href: "/manager/finance/invoices" };
@@ -273,85 +281,20 @@ function buildBuildingWatchItems(bf, arrears, unitData, moveIns, moveOuts, t) {
   const vacantUnits = (unitData ?? []).filter((u) => u.occupancyRate === 0);
   if (vacantUnits.length > 0) items.push({ text: t("buildingsId.reporting.watch.vacant", { count: vacantUnits.length, units: vacantUnits.map((u) => t("buildingsId.reporting.unitLabel", { number: u.unitNumber })).join(", ") }), severity: "amber" });
   if (moveOuts?.length > 0) items.push({ text: t("buildingsId.reporting.watch.movedOut", { count: moveOuts.length }), severity: "violet" });
+  // Folded in from the retired executive summary: below-median position + the
+  // forward outlook's lease-expiry signal.
+  if (benchmark && benchmark.count >= 2 && bf.collectedIncomeCents > 0) {
+    const margin = bf.netOperatingIncomeCents / bf.collectedIncomeCents;
+    if (margin < benchmark.noiMarginMedian - 0.03) {
+      items.push({ text: t("buildingsId.reporting.summary.benchmark.below", { margin: rFmtPct(margin), median: rFmtPct(benchmark.noiMarginMedian) }), severity: "amber" });
+    }
+  }
+  if (leaseExpiries?.length > 0) items.push({ text: t("buildingsId.reporting.summary.expiries", { count: leaseExpiries.length, units: leaseExpiries.map((e) => e.unitNumber).join(", ") }), severity: "amber" });
   if (!items.length) items.push({ text: t("buildingsId.reporting.watch.allClear"), severity: "violet" });
   return items;
 }
 
 const catLabel = (cat, t) => t(`buildingFinancials.category.${cat}`, { defaultValue: cat.charAt(0) + cat.slice(1).toLowerCase() });
-
-// Deterministic executive summary for the hero: a result line, a NOI "bridge"
-// (why it moved — YoY driver, or the biggest cost line for an imported year), a
-// portfolio benchmark, and a forward outlook (vacancy cost, lease expiries).
-// Returns an array of plain-language paragraphs; each clause is omitted when its
-// signal is absent. All numbers come straight from the DTOs (never invented).
-function dominantDriver(bf, prev, t) {
-  const incomeDelta = bf.collectedIncomeCents - prev.collectedIncomeCents;
-  const prevByCat = {};
-  (prev.expensesByCategory ?? []).forEach((c) => { prevByCat[c.category] = c.totalCents; });
-  const catDeltas = (bf.expensesByCategory ?? []).map((c) => ({ category: c.category, delta: c.totalCents - (prevByCat[c.category] ?? 0) }));
-  Object.keys(prevByCat).forEach((cat) => { if (!(bf.expensesByCategory ?? []).some((c) => c.category === cat)) catDeltas.push({ category: cat, delta: -prevByCat[cat] }); });
-  const topCat = catDeltas.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta))[0];
-  const candidates = [{ kind: "income", mag: Math.abs(incomeDelta), val: incomeDelta }];
-  if (topCat) candidates.push({ kind: "cost", mag: Math.abs(topCat.delta), val: topCat.delta, category: topCat.category });
-  candidates.sort((a, b) => b.mag - a.mag);
-  const top = candidates[0];
-  if (!top || top.mag < 20000) return "";
-  if (top.kind === "income") return t(`buildingsId.reporting.summary.driver.income${top.val >= 0 ? "Up" : "Down"}`, { amount: rFmtChf(Math.abs(top.val)) });
-  return t(`buildingsId.reporting.summary.driver.costs${top.val >= 0 ? "Up" : "Down"}`, { amount: rFmtChf(Math.abs(top.val)), category: catLabel(top.category, t) });
-}
-
-function buildExecutiveSummary({ bf, prev, unitData, vendors, benchmark, leaseExpiries, t }) {
-  if (!bf) return [];
-  const paras = [];
-  const noi = bf.netOperatingIncomeCents;
-  const earned = bf.collectedIncomeCents;
-
-  // 1) Result line.
-  paras.push(t("buildingsId.reporting.summary.result", { income: rFmtChf(earned), expenses: rFmtChf(bf.expensesTotalCents), noi: rFmtChf(noi) }));
-
-  // 2) Why it moved.
-  if (prev) {
-    const delta = noi - prev.netOperatingIncomeCents;
-    const prevNoi = prev.netOperatingIncomeCents;
-    if (Math.abs(delta) < Math.max(20000, Math.abs(prevNoi) * 0.02)) {
-      paras.push(t("buildingsId.reporting.summary.noiFlat"));
-    } else {
-      const pctStr = prevNoi !== 0 ? ` (${Math.abs(Math.round((delta / Math.abs(prevNoi)) * 100))}%)` : "";
-      let s = t(`buildingsId.reporting.summary.noi${delta > 0 ? "Up" : "Down"}`, { amount: rFmtChf(Math.abs(delta)), pct: pctStr });
-      const driver = dominantDriver(bf, prev, t);
-      if (driver) s += " " + driver;
-      paras.push(s);
-    }
-  } else {
-    const topAccount = (bf.expensesByAccount ?? []).slice().sort((a, b) => b.totalCents - a.totalCents)[0];
-    if (topAccount) {
-      let s = t("buildingsId.reporting.summary.topCost", { amount: rFmtChf(topAccount.totalCents), line: topAccount.accountName });
-      if (vendors?.[0]) s += " " + t("buildingsId.reporting.summary.topVendor", { vendor: vendors[0].vendorName });
-      paras.push(s);
-    }
-  }
-
-  // 3) Benchmark vs the portfolio.
-  if (benchmark && benchmark.count >= 2 && earned > 0) {
-    const margin = noi / earned;
-    const cmp = margin > benchmark.noiMarginMedian + 0.03 ? "above" : margin < benchmark.noiMarginMedian - 0.03 ? "below" : "inLine";
-    paras.push(t(`buildingsId.reporting.summary.benchmark.${cmp}`, { margin: rFmtPct(margin), median: rFmtPct(benchmark.noiMarginMedian) }));
-  }
-
-  // 4) Forward outlook.
-  const bits = [];
-  const vacant = (unitData ?? []).filter((u) => u.occupancyRate === 0);
-  if (vacant.length > 0) {
-    const foregoneCents = vacant.reduce((sum, u) => sum + (u.monthlyRentChf ?? 0), 0) * 100;
-    bits.push(t("buildingsId.reporting.summary.vacancy", { count: vacant.length, amount: rFmtChf(foregoneCents) }));
-  }
-  if (leaseExpiries?.length > 0) {
-    bits.push(t("buildingsId.reporting.summary.expiries", { count: leaseExpiries.length, units: leaseExpiries.map((e) => e.unitNumber).join(", ") }));
-  }
-  if (bits.length) paras.push(bits.join(" "));
-
-  return paras;
-}
 
 // The reporting detail for one period. The period ([from,to] + its label) is
 // chosen by the period navigator above (BuildingReportingView); the time-series
@@ -498,9 +441,11 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
     && noi === 0;
 
   const headline  = buildingHeadline(bf, t);
-  const drivers   = buildBuildingDrivers(bf, prev, t);
-  const watchItems = buildBuildingWatchItems(bf, arrears, unitData, moveIns, moveOuts, t);
-  const summaryParas = buildExecutiveSummary({ bf, prev, unitData, vendors, benchmark, leaseExpiries: report?.leaseExpiries ?? [], t });
+  // "What drove it" + "What to watch" — the merged panel that the header's Why?
+  // disclosure now expands (the separate executive-summary prose + Drivers tab
+  // were consolidated here: benchmark → driver/watch, lease expiries → watch).
+  const drivers   = buildBuildingDrivers(bf, prev, benchmark, t);
+  const watchItems = buildBuildingWatchItems(bf, arrears, unitData, moveIns, moveOuts, benchmark, report?.leaseExpiries ?? [], t);
 
   const visibleUnits = unitsExpanded ? unitData : unitData.slice(0, PREVIEW_UNITS);
 
@@ -529,19 +474,10 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
             </div>
             <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
               <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-foreground">{headline}</h1>
-              {summaryParas.length > 0 && (
-                <button onClick={() => setWhyOpen((v) => !v)} aria-expanded={whyOpen} className="text-sm font-semibold text-brand hover:underline">
-                  {whyOpen ? t("buildingsId.reporting.why.hide") : t("buildingsId.reporting.why.show")}
-                </button>
-              )}
+              <button onClick={() => setWhyOpen((v) => !v)} aria-expanded={whyOpen} className="text-sm font-semibold text-brand hover:underline">
+                {whyOpen ? t("buildingsId.reporting.why.hide") : t("buildingsId.reporting.why.show")}
+              </button>
             </div>
-            {whyOpen && summaryParas.length > 0 && (
-              <div className="mt-2.5 max-w-2xl space-y-1.5">
-                {summaryParas.map((para, i) => (
-                  <p key={i} className="text-sm leading-6 text-muted-text">{para}</p>
-                ))}
-              </div>
-            )}
           </header>
         );
 
@@ -1024,19 +960,18 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
         const breakdownPanel = breakdownView === "unit" ? byUnitSlide
           : breakdownView === "prof" ? unitProfitSlide
           : revexSlide;
-        const activePanel = tab === "drivers" ? driversSlide
-          : tab === "comparison" ? comparisonSlide
-          : breakdownPanel;
+        const activePanel = tab === "comparison" ? comparisonSlide : breakdownPanel;
         return (
           <>
-            {/* ── Result: calm header + KPI strip + flags + all-metrics disclosure ── */}
+            {/* ── Result: calm header + (Why? → drivers/watch) + KPI strip + flags ── */}
             {topSection}
+            {whyOpen && <div className="border-b border-surface-border">{driversSlide}</div>}
             {noPnlData ? noPnlBlock : (<>{kpiStripEl}{flagsRow}{metricsCollapsible}</>)}
 
-            {/* ── Detail: three grouped tabs (Breakdown · Drivers · Comparison) ── */}
+            {/* ── Detail: grouped tabs (Breakdown · Comparison) ── */}
             <div className="border-t border-surface-border">
               <div className="flex gap-1 px-4 pt-2 overflow-x-auto">
-                {[["breakdown", t("buildingsId.reporting.tab.breakdown")], ["drivers", t("buildingsId.reporting.tab.drivers")], ["comparison", t("buildingsId.reporting.tab.comparison")]].map(([k, l]) => (
+                {[["breakdown", t("buildingsId.reporting.tab.breakdown")], ["comparison", t("buildingsId.reporting.tab.comparison")]].map(([k, l]) => (
                   <button key={k} onClick={() => setTab(k)} aria-pressed={tab === k}
                     className={cn("-mb-px shrink-0 border-b-2 px-3 py-2 text-sm font-medium transition-colors", tab === k ? "border-brand text-brand" : "border-transparent text-muted hover:text-foreground")}>
                     {l}
