@@ -6,12 +6,13 @@
     "eslint_warn": 2463,
     "tsc": 0,
     "any": 723,
-    "console": 534,
+    "console": 537,
     "todo": 4,
     "suppress": 35,
     "bigfiles": 14
   },
   "notes": {
+    "rebaselined_2026-07-27": "Régie grand-livre extraction (per-unit supplier invoices) + tiled-PDF normalizer. +3 console (534->537), all the standard [DOC-SCAN] logging idiom in the scanners/ dir (which is exempt from no-console, so eslint_warn is unchanged): 1 chunk-failure warn in extractLedgerRows (azureDocumentIntelligenceScanner.ts) + a split-summary log and a skip warn in scanners/pdfNormalizer.ts. Accepted as the new floor, NOT silenced. New logic is covered by pure unit tests (packageCsvEmitter/pdfNormalizer round-trips); no new `any`.",
     "rebaselined_2026-07-17": "Unit-profitability report (GET /buildings/:id/unit-profitability → per-unit fully-loaded yield-on-value for the disposition decision). +1 console (533->534) + its matching no-console eslint_warn (2462->2463) from the route catch in routes/financials.ts — the same universal route-error-logging pattern as the sibling /buildings/:id/unit-financials route; no logger abstraction. Accepted as the new floor, NOT silenced. The profitability math is a pure, unit-tested module (services/unitProfitability.ts) using no `any`.",
     "rebaselined_2026-07-15b": "Claude-native (vision) package extraction — reads the régie PDF pages directly instead of Azure OCR, default provider PACKAGE_EXTRACTION_PROVIDER=claude. +1 console (532->533) + 1 matching no-console eslint_warn (2461->2462) for the [PKG-VISION] extraction-summary log in scanners/claudeVisionScanner.ts. Same logging pattern; accepted floor, NOT silenced. (Tools + parsers single-sourced into scanners/packageExtraction.ts; azure scanner refactored to import them — net-zero warnings there.)",
     "rebaselined_2026-07-14c": "PDF → package onboarding Phase 1 (régie PDF → OCR + Claude → canonical CSVs → existing package pipeline). +5 console (527->532) + 5 matching no-console eslint_warn (2456->2461): 3 in the scanner's package extractor (extractPackage log + rent-roll/balance chunk-failure warns in azureDocumentIntelligenceScanner.ts) and 2 route PDF-extraction catches in routes/buildingOnboarding.ts. Same universal logging pattern; accepted as the new floor, NOT silenced. suppress 36->35 (-1): pre-existing decrease, ratchet tightened.",

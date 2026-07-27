@@ -16,6 +16,7 @@ import { scanner } from "./scanners";
 import { AzureDocumentIntelligenceScanner } from "./scanners/azureDocumentIntelligenceScanner";
 import { ClaudeVisionScanner } from "./scanners/claudeVisionScanner";
 import type { PackageExtractionFile } from "./scanners/packageExtraction";
+import { normalizeTiledPdf } from "./scanners/pdfNormalizer";
 
 /* ──────────────────────────────────────────────────────────
    Main entry point — delegates to the configured provider
@@ -53,12 +54,16 @@ export async function extractPackageFromPdf(
   fileName: string,
   mimeType: string,
 ): Promise<PackageExtractionFile[]> {
+  // Some régie exports tile the whole report onto one giant page; split it back
+  // into readable pages first, else vision/OCR only sees an illegible downscale.
+  const normalized = mimeType === "application/pdf" ? await normalizeTiledPdf(buffer) : buffer;
+
   const provider = process.env.PACKAGE_EXTRACTION_PROVIDER || "claude";
   if (provider === "azure") {
     if (!_azurePackageScanner) _azurePackageScanner = new AzureDocumentIntelligenceScanner();
-    return _azurePackageScanner.extractPackage(buffer, fileName, mimeType);
+    return _azurePackageScanner.extractPackage(normalized, fileName, mimeType);
   }
   if (!_visionScanner) _visionScanner = new ClaudeVisionScanner();
-  return _visionScanner.extractPackage(buffer, fileName, mimeType);
+  return _visionScanner.extractPackage(normalized, fileName, mimeType);
 }
 
