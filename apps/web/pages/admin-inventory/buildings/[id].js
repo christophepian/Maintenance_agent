@@ -67,48 +67,124 @@ import { useTranslation } from "next-i18next";
 /* ── Building reporting helpers ─────────────────────────── */
 
 const PREVIEW_UNITS = 5;
+const INCOME_PREVIEW = 5; // revex income column: units shown before "Show all"
+const EXPENSE_PREVIEW = 6; // revex expense column: rows shown before "Show all"
 
-function UnitRow({ unitNumber, floor, tenantName, earned, expenses, charges, net, collectionRate, occupancyRate }) {
+// The invoices / entries behind a unit's "Direct costs" figure — lazily fetched
+// when the row is expanded, so a manager can verify the number line by line.
+function UnitCostDetail({ detail, expenses, t, buildingId, from, to }) {
+  if (!detail || detail.loading) return <p className="px-4 py-3 text-xs text-foreground-dim">{t("buildingsId.reporting.unitCosts.loading")}</p>;
+  if (detail.error || !detail.data) return <p className="px-4 py-3 text-xs text-destructive-text">{t("buildingsId.reporting.unitCosts.error")}</p>;
+  const { lines = [], totalCents = 0 } = detail.data;
+  if (lines.length === 0) return <p className="px-4 py-3 text-xs text-foreground-dim">{t("buildingsId.reporting.unitCosts.none")}</p>;
+  const reconciles = Math.abs(totalCents - (expenses ?? 0)) <= 1; // cents rounding tolerance
+  const kindLabel = (k) => k === "charges" ? t("buildingsId.reporting.unitCosts.kindCharges")
+    : k === "invoice" ? t("buildingsId.reporting.unitCosts.kindInvoice")
+    : t("buildingsId.reporting.unitCosts.kindLedger");
+  return (
+    <div className="border-t border-surface-border px-4 py-3">
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="text-[10px] uppercase tracking-wide text-foreground-dim">
+              <th className="py-1 pr-2 text-left font-semibold">{t("buildingsId.reporting.unitCosts.date")}</th>
+              <th className="py-1 px-2 text-left font-semibold">{t("buildingsId.reporting.unitCosts.item")}</th>
+              <th className="py-1 px-2 text-left font-semibold">{t("buildingsId.reporting.unitCosts.account")}</th>
+              <th className="py-1 pl-2 text-right font-semibold">{t("buildingsId.reporting.unitCosts.amount")}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {lines.map((l) => {
+              const name = l.vendor || l.description || kindLabel(l.kind);
+              // Drill to the incoming-invoices list filtered to this vendor + window
+              // (same params the Revenue & expenses vendor lens uses).
+              const invHref = l.invoiceId && l.vendor
+                ? `/manager/finance?${new URLSearchParams({ tab: "invoices", direction: "incoming", buildingId, issueDateFrom: from, issueDateTo: to, issuerName: l.vendor }).toString()}`
+                : null;
+              return (
+                <tr key={l.id} className="border-t border-surface-divider align-top">
+                  <td className="py-1.5 pr-2 whitespace-nowrap text-foreground-dim tabular-nums">{l.date ?? "—"}</td>
+                  <td className="py-1.5 px-2">
+                    <span className="text-foreground">{invHref ? <a href={invHref} className="text-brand no-underline hover:underline">{name}</a> : name}</span>
+                    {l.reference ? <span className="text-foreground-dim"> · {l.reference}</span> : null}
+                    {l.vendor && l.description && l.description !== l.vendor
+                      ? <div className="truncate text-foreground-dim">{l.description}</div> : null}
+                    {l.kind !== "ledger" && <span className="ml-1 rounded bg-surface-hover px-1 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-muted">{kindLabel(l.kind)}</span>}
+                  </td>
+                  <td className="py-1.5 px-2 text-foreground-dim">{l.accountCode ? <span className="tabular-nums">{l.accountCode} </span> : null}{l.accountName ?? (l.accountCode ? "" : "—")}</td>
+                  <td className="py-1.5 pl-2 text-right font-medium tabular-nums text-foreground">{rFmtChf(l.amountCents)}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+          <tfoot>
+            <tr className="border-t-2 border-surface-border">
+              <td colSpan={3} className="py-1.5 pr-2 text-right font-semibold text-foreground">{t("buildingsId.reporting.unitCosts.total")}</td>
+              <td className="py-1.5 pl-2 text-right font-bold tabular-nums text-foreground">{rFmtChf(totalCents)}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      <p className={cn("mt-2 flex items-center gap-1.5 text-[11px]", reconciles ? "text-success-text" : "text-warning-text")}>
+        <span aria-hidden>{reconciles ? "✓" : "⚠"}</span>
+        <span>{reconciles
+          ? t("buildingsId.reporting.unitCosts.reconciles")
+          : t("buildingsId.reporting.unitCosts.mismatch", { total: rFmtChf(totalCents), figure: rFmtChf(expenses ?? 0) })}</span>
+      </p>
+    </div>
+  );
+}
+
+function UnitRow({ unitNumber, floor, tenantName, earned, expenses, charges, net, collectionRate, occupancyRate, expandable, expanded, onToggle, detail, buildingId, from, to }) {
   const { t } = useTranslation("manager");
   const netPositive = net >= 0;
   const label = floor
     ? t("buildingsId.reporting.unitLabelFloor", { number: unitNumber, floor })
     : t("buildingsId.reporting.unitLabel", { number: unitNumber });
   const sub   = tenantName || (occupancyRate === 1 ? t("buildingsId.reporting.occupied") : t("buildingsId.reporting.vacant"));
+  const RowTag = expandable ? "button" : "div";
   return (
-    <div className="flex items-center justify-between rounded-2xl border border-surface-border bg-surface-subtle px-4 py-3">
-      <div className="mr-4 min-w-0">
-        <div className="text-sm font-medium text-foreground truncate">{label}</div>
-        <div className="text-xs text-foreground-dim truncate">{sub}</div>
-      </div>
-      <div className="flex items-center gap-4 shrink-0 text-right">
-        <div className="hidden sm:block">
-          <div className="text-xs text-foreground-dim">{t("buildingsId.reporting.income")}</div>
-          <div className="text-sm font-medium text-muted-dark">{rFmtChf(earned)}</div>
-        </div>
-        <div className="hidden sm:block">
-          <div className="text-xs text-foreground-dim">{t("buildingsId.reporting.directCosts")}</div>
-          <div className="text-sm font-medium text-muted-dark">{rFmtChf(expenses)}</div>
-        </div>
-        {charges > 0 && (
-          <div className="hidden md:block">
-            <div className="text-xs text-foreground-dim">{t("buildingsId.reporting.charges")}</div>
-            <div className="text-sm font-medium text-muted-dark" title={t("buildingsId.reporting.chargesTooltip")}>{rFmtChf(charges)}</div>
+    <div className="overflow-hidden rounded-2xl border border-surface-border bg-surface-subtle">
+      <RowTag
+        {...(expandable ? { type: "button", onClick: onToggle, "aria-expanded": expanded } : {})}
+        className={cn("flex w-full items-center justify-between px-4 py-3 text-left", expandable && "transition-colors hover:bg-surface-hover")}>
+        <div className="mr-4 flex min-w-0 items-center gap-2">
+          {expandable && <span className={cn("shrink-0 text-foreground-dim transition-transform", expanded && "rotate-90")} aria-hidden>▸</span>}
+          <div className="min-w-0">
+            <div className="text-sm font-medium text-foreground truncate">{label}</div>
+            <div className="text-xs text-foreground-dim truncate">{sub}</div>
           </div>
-        )}
-        <div>
-          <div className="text-xs text-foreground-dim">{t("buildingsId.reporting.contribution")}</div>
-          <div className={cn("text-sm font-semibold", netPositive ? "text-success-text" : "text-destructive-text")}>{rFmtChf(net)}</div>
         </div>
-        <div className="hidden md:block">
-          <div className="text-xs text-foreground-dim">{t("buildingsId.reporting.collection")}</div>
-          <div className="text-sm text-muted-dark">{rFmtPct(collectionRate)}</div>
+        <div className="flex items-center gap-4 shrink-0 text-right">
+          <div className="hidden sm:block">
+            <div className="text-xs text-foreground-dim">{t("buildingsId.reporting.income")}</div>
+            <div className="text-sm font-medium text-muted-dark">{rFmtChf(earned)}</div>
+          </div>
+          <div className="hidden sm:block">
+            <div className="text-xs text-foreground-dim">{t("buildingsId.reporting.directCosts")}</div>
+            <div className="text-sm font-medium text-muted-dark">{rFmtChf(expenses)}</div>
+          </div>
+          {charges > 0 && (
+            <div className="hidden md:block">
+              <div className="text-xs text-foreground-dim">{t("buildingsId.reporting.charges")}</div>
+              <div className="text-sm font-medium text-muted-dark" title={t("buildingsId.reporting.chargesTooltip")}>{rFmtChf(charges)}</div>
+            </div>
+          )}
+          <div>
+            <div className="text-xs text-foreground-dim">{t("buildingsId.reporting.contribution")}</div>
+            <div className={cn("text-sm font-semibold", netPositive ? "text-success-text" : "text-destructive-text")}>{rFmtChf(net)}</div>
+          </div>
+          <div className="hidden md:block">
+            <div className="text-xs text-foreground-dim">{t("buildingsId.reporting.collection")}</div>
+            <div className="text-sm text-muted-dark">{rFmtPct(collectionRate)}</div>
+          </div>
+          <div className="hidden lg:block">
+            <div className="text-xs text-foreground-dim">{t("buildingsId.reporting.occupancy")}</div>
+            <div className={cn("text-sm font-medium", occupancyRate < 1 ? "text-amber-600" : "text-muted-dark")}>{rFmtPct(occupancyRate)}</div>
+          </div>
         </div>
-        <div className="hidden lg:block">
-          <div className="text-xs text-foreground-dim">{t("buildingsId.reporting.occupancy")}</div>
-          <div className={cn("text-sm font-medium", occupancyRate < 1 ? "text-amber-600" : "text-muted-dark")}>{rFmtPct(occupancyRate)}</div>
-        </div>
-      </div>
+      </RowTag>
+      {expandable && expanded && <UnitCostDetail detail={detail} expenses={expenses} t={t} buildingId={buildingId} from={from} to={to} />}
     </div>
   );
 }
@@ -293,6 +369,10 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
   const [unitData, setUnitData] = useState([]);
   const [vendors, setVendors] = useState([]);
   const [expView, setExpView] = useState("acc"); // Revenue & expenses: cost-center | vendor
+  const [incomeExpanded, setIncomeExpanded] = useState(false); // revex income column: show all units
+  const [expExpanded, setExpExpanded] = useState(false);       // revex expense column: show all rows
+  const [expandedUnitId, setExpandedUnitId] = useState(null);  // by-unit: which row's cost detail is open
+  const [unitLines, setUnitLines] = useState({});              // by-unit: unitId → { loading, error, data }
   const [tab, setTab] = useState("breakdown");   // detail tab: breakdown | drivers | comparison
   const [breakdownView, setBreakdownView] = useState("ie"); // breakdown sub-view: ie | unit | prof
   const [metricsOpen, setMetricsOpen] = useState(false);    // "All financial metrics" disclosure
@@ -311,6 +391,8 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
     if (!buildingId) return;
     setLoading(true);
     setError("");
+    setExpandedUnitId(null);   // per-unit drill-down cache is window-scoped
+    setUnitLines({});
     const q = new URLSearchParams({ from, to }).toString();
     Promise.all([
       fetch(`/api/buildings/${buildingId}/period-report?${q}`, { headers: authHeaders() }).then((r) => r.json()),
@@ -342,6 +424,18 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
       });
       setRefreshKey((k) => k + 1);
     } catch { /* leave numbers as-is on failure */ }
+  }
+
+  // Lazily load the invoices behind a unit's "Direct costs" figure (drill-down).
+  // Cached per unit for the focused window; the cache is cleared when from/to change.
+  function toggleUnitLines(unitId) {
+    setExpandedUnitId((cur) => (cur === unitId ? null : unitId));
+    if (unitLines[unitId]) return;
+    setUnitLines((m) => ({ ...m, [unitId]: { loading: true } }));
+    fetch(`/api/units/${unitId}/expense-lines?from=${from}&to=${to}`, { headers: authHeaders() })
+      .then((r) => r.json())
+      .then((d) => setUnitLines((m) => ({ ...m, [unitId]: { loading: false, data: d?.data ?? null } })))
+      .catch(() => setUnitLines((m) => ({ ...m, [unitId]: { loading: false, error: true } })));
   }
 
   // The prior/last-year benchmark window, derived from the focused [from,to].
@@ -732,7 +826,7 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
             {unitData.length === 0
               ? <p className="text-sm text-muted italic">{t("buildingsId.reporting.noUnits")}</p>
               : <>
-                <div className="space-y-2">{visibleUnits.map((u) => <UnitRow key={u.unitId} unitNumber={u.unitNumber} floor={u.floor} tenantName={u.tenantName} earned={u.collectedIncomeCents} expenses={u.expensesCents} charges={u.apportionedChargesCents} net={u.netIncomeCents} collectionRate={u.collectionRate} occupancyRate={u.occupancyRate} />)}</div>
+                <div className="space-y-2">{visibleUnits.map((u) => <UnitRow key={u.unitId} unitNumber={u.unitNumber} floor={u.floor} tenantName={u.tenantName} earned={u.collectedIncomeCents} expenses={u.expensesCents} charges={u.apportionedChargesCents} net={u.netIncomeCents} collectionRate={u.collectionRate} occupancyRate={u.occupancyRate} expandable={u.expensesCents > 0} expanded={expandedUnitId === u.unitId} onToggle={() => toggleUnitLines(u.unitId)} detail={unitLines[u.unitId]} buildingId={buildingId} from={from} to={to} />)}</div>
                 <p className="mt-3 flex items-start gap-1.5 text-xs text-foreground-dim">
                   <span aria-hidden>ℹ</span>
                   <span>{t("buildingsId.reporting.byUnitDirectNote")}</span>
@@ -823,11 +917,18 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
             {/* Income sources (units) | Expense sinks (vendors / cost centers) */}
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
               <div>
-                <p className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.revex.income")}</p>
+                <div className="mb-2 flex items-center justify-between gap-2 px-1">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.revex.income")}</p>
+                  {incomeUnits.length > INCOME_PREVIEW && (
+                    <button onClick={() => setIncomeExpanded((v) => !v)} className="text-xs font-medium text-muted-dark hover:text-foreground transition-colors">
+                      {incomeExpanded ? `${t("buildingsId.reporting.collapse")} ↑` : `${t("buildingsId.reporting.showAll", { count: incomeUnits.length })} ↓`}
+                    </button>
+                  )}
+                </div>
                 {incomeUnits.length === 0
                   ? <p className="text-sm text-muted italic px-1">{t("buildingsId.reporting.noUnits")}</p>
                   : <div className="space-y-1">
-                      {incomeUnits.slice(0, 5).map((u) => {
+                      {(incomeExpanded ? incomeUnits : incomeUnits.slice(0, INCOME_PREVIEW)).map((u) => {
                         const vacant = !u.collectedIncomeCents;
                         return (
                           <div key={u.unitId} className="min-w-0 px-2 py-1">
@@ -862,7 +963,7 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
                 {expRows.length === 0
                   ? <p className="text-sm text-muted italic px-1">{t("buildingsId.reporting.revex.noExpenses")}</p>
                   : <div className="space-y-1">
-                      {expRows.slice(0, reclassMode && expView === "acc" ? 40 : 6).map((r, i) => {
+                      {expRows.slice(0, reclassMode && expView === "acc" ? 40 : (expExpanded ? expRows.length : EXPENSE_PREVIEW)).map((r, i) => {
                         const isVend = expView === "vend";
                         const isCat = expView === "cat";
                         const isAcc = !isVend && !isCat;
@@ -898,6 +999,11 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
                         );
                       })}
                     </div>}
+                {!(reclassMode && expView === "acc") && expRows.length > EXPENSE_PREVIEW && (
+                  <button onClick={() => setExpExpanded((v) => !v)} className="mt-1.5 px-2 text-xs font-medium text-muted-dark hover:text-foreground transition-colors">
+                    {expExpanded ? `${t("buildingsId.reporting.collapse")} ↑` : `${t("buildingsId.reporting.showAll", { count: expRows.length })} ↓`}
+                  </button>
+                )}
                 {/* Vendor lens is invoice-based — flag when it covers only part of the ledger total. */}
                 {expView === "vend" && uncoveredCents > 5000 && (
                   <p className="mt-2 flex items-start gap-1.5 px-1 text-[11.5px] text-warning-text">

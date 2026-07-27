@@ -994,7 +994,22 @@
       "byUnitOverheadNote": "Each unit's expenses include its share of building overhead (insurance, management, taxes, shared maintenance) apportioned by area — so per-unit net reconciles to the building's operating NOI.",
       "directCosts": "Direct costs",
       "contribution": "Contribution",
-      "byUnitDirectNote": "Direct costing: only costs booked to a specific unit are shown here, so \"Contribution\" is that unit's share of the building result. Shared building-level costs (insurance, management, taxes, exterior/shared maintenance) are not spread across units — see Profitability for the full breakdown."
+      "byUnitDirectNote": "Direct costing: only costs booked to a specific unit are shown here, so \"Contribution\" is that unit's share of the building result. Shared building-level costs (insurance, management, taxes, exterior/shared maintenance) are not spread across units — see Profitability for the full breakdown.",
+      "unitCosts": {
+        "loading": "Loading cost detail…",
+        "error": "Couldn't load the cost detail for this unit.",
+        "none": "No itemised costs booked to this unit for this period.",
+        "date": "Date",
+        "item": "Vendor / item",
+        "account": "Account",
+        "amount": "Amount",
+        "total": "Total direct costs",
+        "reconciles": "Itemised costs reconcile to the unit's direct-cost figure.",
+        "mismatch": "Itemised costs ({{total}}) don't match the direct-cost figure ({{figure}}).",
+        "kindLedger": "Posted invoice",
+        "kindInvoice": "Régie invoice",
+        "kindCharges": "Apportioned charges"
+      }
     },
     "strategyEditor": {
       "intro": "Set how this building should be managed — the cashflow recommendation engine uses it to tailor advice for this property.",

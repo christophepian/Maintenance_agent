@@ -11,6 +11,7 @@ import {
   getPortfolioTimeSeries,
   getBuildingTimeSeries,
   getUnitFinancialSummaries,
+  getUnitExpenseLines,
   getUnitProfitability,
   getBuildingVendorSpend,
   getBuildingExpenseBreakdown,
@@ -398,6 +399,30 @@ export function registerFinancialRoutes(router: Router) {
         if (e instanceof NotFoundError) return sendError(res, 404, "NOT_FOUND", e.message);
         console.error("[GET /units/:id/period-report]", e);
         sendError(res, 500, "INTERNAL_ERROR", "Failed to load unit period report");
+      }
+    },
+  );
+
+  // ── GET /units/:id/expense-lines ───────────────────────────
+  // The individual costs that make up a unit's "Direct costs" figure for a window,
+  // so a manager can verify the number. Sums to the unit summary's expensesCents.
+  router.get(
+    "/units/:id/expense-lines",
+    async ({ req, res, params, query, orgId }) => {
+      if (!requireAuth(req, res)) return;
+      if (!requireOrgViewer(req, res)) return;
+
+      const from = first(query, "from");
+      const to   = first(query, "to");
+      if (!from || !to) return sendError(res, 400, "VALIDATION_ERROR", "from and to are required");
+
+      try {
+        const data = await getUnitExpenseLines(orgId, params.id, from, to);
+        sendJson(res, 200, { data });
+      } catch (e: any) {
+        if (e instanceof NotFoundError) return sendError(res, 404, "NOT_FOUND", e.message);
+        console.error("[GET /units/:id/expense-lines]", e);
+        sendError(res, 500, "INTERNAL_ERROR", "Failed to load unit expense lines");
       }
     },
   );

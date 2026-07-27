@@ -994,7 +994,22 @@
       "byUnitOverheadNote": "Les charges de chaque objet incluent sa part des frais généraux de l'immeuble (assurances, gérance, impôts, entretien commun) répartie selon la surface — le net par objet correspond ainsi au RNE de l'immeuble.",
       "directCosts": "Coûts directs",
       "contribution": "Contribution",
-      "byUnitDirectNote": "Coûts directs : seuls les coûts imputés à un lot précis sont affichés ici, donc la « Contribution » correspond à la part de ce lot dans le résultat de l'immeuble. Les coûts partagés au niveau de l'immeuble (assurance, gérance, impôts, entretien extérieur/commun) ne sont pas répartis sur les lots — voir Rentabilité pour la décomposition complète."
+      "byUnitDirectNote": "Coûts directs : seuls les coûts imputés à un lot précis sont affichés ici, donc la « Contribution » correspond à la part de ce lot dans le résultat de l'immeuble. Les coûts partagés au niveau de l'immeuble (assurance, gérance, impôts, entretien extérieur/commun) ne sont pas répartis sur les lots — voir Rentabilité pour la décomposition complète.",
+      "unitCosts": {
+        "loading": "Chargement du détail des coûts…",
+        "error": "Impossible de charger le détail des coûts pour ce lot.",
+        "none": "Aucun coût détaillé imputé à ce lot pour cette période.",
+        "date": "Date",
+        "item": "Fournisseur / poste",
+        "account": "Compte",
+        "amount": "Montant",
+        "total": "Total des coûts directs",
+        "reconciles": "Les coûts détaillés correspondent au montant des coûts directs du lot.",
+        "mismatch": "Les coûts détaillés ({{total}}) ne correspondent pas au montant des coûts directs ({{figure}}).",
+        "kindLedger": "Facture comptabilisée",
+        "kindInvoice": "Facture régie",
+        "kindCharges": "Charges réparties"
+      }
     },
     "strategyEditor": {
       "intro": "Définissez la gestion de ce bâtiment — le moteur de recommandation de trésorerie l'utilise pour adapter ses conseils à ce bien.",

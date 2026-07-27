@@ -2019,6 +2019,124 @@ export async function getUnitFinancialSummaries(
 }
 
 // ==========================================
+// Per-unit direct-cost line items (drill-down)
+// ==========================================
+
+export interface UnitExpenseLineDTO {
+  id:          string;
+  /** "ledger" = posted expense entry · "invoice" = reference-only régie invoice · "charges" = apportioned recoverable share */
+  kind:        "ledger" | "invoice" | "charges";
+  date:        string | null; // ISO yyyy-mm-dd
+  vendor:      string | null;
+  description: string;
+  accountCode: string | null;
+  accountName: string | null;
+  reference:   string | null; // invoice number
+  amountCents: number;
+  invoiceId:   string | null; // for drill-through to the invoice
+}
+
+export interface UnitExpenseDetailDTO {
+  unitId:     string;
+  /** Sum of all lines — reconciles to `expensesCents` on the unit summary for the same window. */
+  totalCents: number;
+  lines:      UnitExpenseLineDTO[];
+}
+
+/**
+ * The individual costs that make up a single unit's "Direct costs" figure for a
+ * window — the same three sources `getUnitFinancialSummaries` sums into
+ * `expensesCents`, itemised so a manager can verify the number:
+ *   1. Ledger-posted expense entries booked to the unit (operational invoices).
+ *   2. Reference-only INCOMING invoices attributed to the unit (régie grand-livre
+ *      onboarding), de-duped against posted ledger entries by invoice id.
+ *   3. The apportioned recoverable-charge share (single synthetic line).
+ * The returned `totalCents` reconciles to the unit summary's `expensesCents`.
+ */
+export async function getUnitExpenseLines(
+  orgId: string,
+  unitId: string,
+  fromStr: string,
+  toStr: string,
+): Promise<UnitExpenseDetailDTO> {
+  const from = new Date(fromStr + "T00:00:00.000Z");
+  const to   = new Date(toStr   + "T23:59:59.999Z");
+
+  const data = await financialsRepo.findUnitExpenseLineData(prisma, orgId, unitId, from, to);
+  if (!data.unit) throw new NotFoundError("Unit not found");
+  const { unit, ledgerEntries, incoming } = data;
+
+  // 1. Ledger-posted expense entries booked directly to the unit — same filter as
+  //    the `expensesByUnit` aggregate in getUnitFinancialSummaries.
+  // Vendor / invoice-number lookup for the originating invoices.
+  const invoiceMeta: Record<string, { issuerName: string | null; invoiceNumber: string | null }> = {};
+  for (const inv of data.ledgerInvoiceMeta) invoiceMeta[inv.id] = { issuerName: inv.issuerName, invoiceNumber: inv.invoiceNumber };
+
+  const lines: UnitExpenseLineDTO[] = ledgerEntries.map((e) => ({
+    id:          e.id,
+    kind:        "ledger",
+    date:        e.date.toISOString().slice(0, 10),
+    vendor:      (e.sourceId && invoiceMeta[e.sourceId]?.issuerName) || null,
+    description: e.description,
+    accountCode: e.account?.code ?? null,
+    accountName: e.account?.name ?? null,
+    reference:   (e.sourceId && invoiceMeta[e.sourceId]?.invoiceNumber) || e.reference || null,
+    amountCents: e.debitCents,
+    invoiceId:   e.sourceId ?? null,
+  }));
+
+  // 2. Reference-only INCOMING invoices attributed to the unit (régie grand-livre),
+  //    excluding any already posted to the ledger — identical de-dup to the summary.
+  const postedSet = new Set(data.postedInvoiceIds);
+  for (const inv of incoming) {
+    if (postedSet.has(inv.id)) continue;
+    lines.push({
+      id:          inv.id,
+      kind:        "invoice",
+      date:        inv.issueDate ? inv.issueDate.toISOString().slice(0, 10) : null,
+      vendor:      inv.issuerName,
+      description: inv.description,
+      accountCode: inv.classifiedAccount?.code ?? null,
+      accountName: inv.classifiedAccount?.name ?? null,
+      reference:   inv.invoiceNumber,
+      amountCents: inv.totalAmount,
+      invoiceId:   inv.id,
+    });
+  }
+
+  // 3. Apportioned recoverable-charge share — building-level, ventilated to the
+  //    unit's active lease. Same basis as the summary's apportionedChargesCents.
+  let apportionedCents = 0;
+  if (data.activeLeaseId && unit.buildingId) {
+    const chargePeriod = await billingPeriodRepo.findBillingPeriodOverlappingWindow(prisma, orgId, unit.buildingId, from, to);
+    if (chargePeriod) {
+      const { apportionForLease } = await import("./ancillaryReconciliationService");
+      try {
+        const a = await apportionForLease(orgId, chargePeriod.id, data.activeLeaseId);
+        apportionedCents = a.totalActualCostsCents;
+      } catch { /* no apportionable charges for this unit */ }
+    }
+  }
+  if (apportionedCents > 0) {
+    lines.push({
+      id:          `charges-${unitId}`,
+      kind:        "charges",
+      date:        null,
+      vendor:      null,
+      description: "Apportioned recoverable charges",
+      accountCode: null,
+      accountName: null,
+      reference:   null,
+      amountCents: apportionedCents,
+      invoiceId:   null,
+    });
+  }
+
+  const totalCents = lines.reduce((s, l) => s + l.amountCents, 0);
+  return { unitId, totalCents, lines };
+}
+
+// ==========================================
 // Unit profitability (disposition decision support)
 // ==========================================
 

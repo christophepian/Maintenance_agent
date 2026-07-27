@@ -345,6 +345,106 @@ export async function findUnitAttributedInvoices(
   };
 }
 
+/** Line-level data behind a single unit's direct-cost figure for a window. */
+export interface UnitExpenseLineData {
+  unit: { id: string; buildingId: string | null } | null;
+  ledgerEntries: {
+    id: string;
+    date: Date;
+    debitCents: number;
+    description: string;
+    reference: string | null;
+    sourceId: string | null;
+    account: { code: string | null; name: string } | null;
+  }[];
+  ledgerInvoiceMeta: { id: string; issuerName: string | null; invoiceNumber: string | null }[];
+  postedInvoiceIds: string[];
+  incoming: {
+    id: string;
+    issuerName: string | null;
+    invoiceNumber: string | null;
+    description: string;
+    issueDate: Date | null;
+    totalAmount: number;
+    classifiedAccount: { code: string | null; name: string } | null;
+  }[];
+  activeLeaseId: string | null;
+}
+
+/**
+ * All DB reads behind `getUnitExpenseLines` — the posted expense entries booked
+ * to the unit, the invoices they originate from, the reference-only INCOMING
+ * régie invoices attributed to the unit (with the posted-invoice ids for de-dup),
+ * and the unit's active lease (for the apportioned-charge share). The service
+ * composes these into the itemised line list.
+ */
+export async function findUnitExpenseLineData(
+  prisma: PrismaClient,
+  orgId: string,
+  unitId: string,
+  from: Date,
+  to: Date,
+): Promise<UnitExpenseLineData> {
+  const [unit, ledgerEntries, postedEntries, incoming, lease] = await Promise.all([
+    prisma.unit.findFirst({
+      where: { id: unitId, orgId },
+      select: { id: true, buildingId: true },
+    }),
+    prisma.ledgerEntry.findMany({
+      where: {
+        orgId, unitId,
+        sourceType: "INVOICE_ISSUED",
+        date: { gte: from, lte: to },
+        debitCents: { gt: 0 },
+        account: { accountType: "EXPENSE" },
+      },
+      orderBy: { date: "asc" },
+      select: {
+        id: true, date: true, debitCents: true, description: true, reference: true, sourceId: true,
+        account: { select: { code: true, name: true } },
+      },
+    }),
+    prisma.ledgerEntry.findMany({
+      where: { orgId, unitId, sourceType: "INVOICE_ISSUED", date: { gte: from, lte: to } },
+      select: { sourceId: true },
+    }),
+    prisma.invoice.findMany({
+      where: { orgId, direction: "INCOMING", unitId, issueDate: { gte: from, lte: to } },
+      orderBy: { issueDate: "asc" },
+      select: {
+        id: true, issuerName: true, invoiceNumber: true, description: true, issueDate: true, totalAmount: true,
+        classifiedAccount: { select: { code: true, name: true } },
+      },
+    }),
+    prisma.lease.findFirst({
+      where: {
+        unitId,
+        status: { in: ["ACTIVE", "SIGNED"] },
+        startDate: { lte: to },
+        OR: [{ endDate: null }, { endDate: { gte: from } }],
+      },
+      select: { id: true },
+    }),
+  ]);
+
+  const ledgerInvoiceIds = ledgerEntries.map((e) => e.sourceId).filter((s): s is string => !!s);
+  const ledgerInvoiceMeta = ledgerInvoiceIds.length > 0
+    ? await prisma.invoice.findMany({
+        where: { orgId, id: { in: ledgerInvoiceIds } },
+        select: { id: true, issuerName: true, invoiceNumber: true },
+      })
+    : [];
+
+  return {
+    unit,
+    ledgerEntries,
+    ledgerInvoiceMeta,
+    postedInvoiceIds: postedEntries.map((e) => e.sourceId).filter((s): s is string => !!s),
+    incoming,
+    activeLeaseId: lease?.id ?? null,
+  };
+}
+
 /**
  * Attributed INCOMING invoices for a building over a window (issueDate + amount
  * in cents), for distributing an imported year's expenses across the months when

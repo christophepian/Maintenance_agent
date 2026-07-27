@@ -6945,6 +6945,61 @@ paths:
 
   # ── Financial Performance ──────────────────────────────────
 
+  /units/{id}/expense-lines:
+    get:
+      tags: [Financials]
+      summary: Itemised direct-cost lines for a unit over a window
+      description: >
+        The individual costs that make up a unit's "Direct costs" figure for the
+        window — posted ledger expense entries, reference-only régie invoices, and
+        the apportioned recoverable-charge share. The sum of `lines` reconciles to
+        the unit summary's `expensesCents` for the same window.
+      operationId: getUnitExpenseLines
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+        - name: from
+          in: query
+          required: true
+          schema: { type: string, format: date, example: '2026-01-01' }
+          description: Period start (inclusive), YYYY-MM-DD
+        - name: to
+          in: query
+          required: true
+          schema: { type: string, format: date, example: '2026-12-31' }
+          description: Period end (inclusive), YYYY-MM-DD
+      responses:
+        '200':
+          description: Itemised per-unit direct-cost lines
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      unitId: { type: string, format: uuid }
+                      totalCents: { type: integer }
+                      lines:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id: { type: string }
+                            kind: { type: string, enum: [ledger, invoice, charges] }
+                            date: { type: string, format: date, nullable: true }
+                            vendor: { type: string, nullable: true }
+                            description: { type: string }
+                            accountCode: { type: string, nullable: true }
+                            accountName: { type: string, nullable: true }
+                            reference: { type: string, nullable: true }
+                            amountCents: { type: integer }
+                            invoiceId: { type: string, format: uuid, nullable: true }
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /financials/portfolio-timeseries:
     get:
       tags: [Financials]
