@@ -800,7 +800,7 @@
         "annualNoi": "Annual NOI",
         "noiShare": "NOI share",
         "intrinsicValue": "Intrinsic",
-        "yieldIntrinsic": "Yield",
+        "yieldIntrinsic": "Net yield",
         "sellCandidate": "Sell candidate",
         "total": "Total",
         "reconcileWarn": "Per-unit income sums to {{sum}} but the building income is {{building}} (Δ {{delta}}). Some income isn't attributed to a unit, so the breakdown below is incomplete.",
@@ -809,7 +809,17 @@
         "unitsDirectNoi": "Units’ direct NOI",
         "buildingLevelCosts": "Building-level costs",
         "buildingNoi": "Building operating NOI",
-        "noiBreakdownNote": "Direct costing: only costs booked to a specific unit reduce that unit’s NOI. Shared building-level costs (insurance, management, taxes, exterior/shared maintenance) are shown separately here, never spread across units."
+        "noiBreakdownNote": "Direct costing: only costs booked to a specific unit reduce that unit’s NOI. Shared building-level costs (insurance, management, taxes, exterior/shared maintenance) are shown separately here, never spread across units.",
+        "benchmark": {
+          "label": "vs Swiss residential net yield",
+          "typical": "typical {{low}}–{{high}}%",
+          "below": "{{yield}}% — below the typical {{low}}–{{high}}% band",
+          "inRange": "{{yield}}% — within the typical {{low}}–{{high}}% band",
+          "above": "{{yield}}% — above the typical {{low}}–{{high}}% band",
+          "methodology": "Benchmark basis & sources",
+          "basisNote": "Net yield = NOI ÷ value, before financing, tax and capex. The benchmark is measured on market/purchase price, whereas this yield is on intrinsic (worksheet) value — compare against the value reconciliation above before drawing conclusions. National typical band with a wider regional spread (lower in Geneva/Zurich, higher in peripheral/rural cantons).",
+          "sources": "Sources"
+        }
       },
       "valueCreationTab": "Value creation",
       "valueCreation": {

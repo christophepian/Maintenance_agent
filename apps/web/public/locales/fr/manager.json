@@ -800,7 +800,7 @@
         "annualNoi": "RNE annuel",
         "noiShare": "Part RNE",
         "intrinsicValue": "Intrinsèque",
-        "yieldIntrinsic": "Rendement",
+        "yieldIntrinsic": "Rendement net",
         "sellCandidate": "Candidat vente",
         "total": "Total",
         "reconcileWarn": "La somme des revenus par lot est {{sum}} alors que le revenu de l'immeuble est {{building}} (Δ {{delta}}). Une partie des revenus n'est pas attribuée à un lot ; la répartition ci-dessous est incomplète.",
@@ -809,7 +809,17 @@
         "unitsDirectNoi": "NOI direct des lots",
         "buildingLevelCosts": "Coûts au niveau de l’immeuble",
         "buildingNoi": "NOI d’exploitation de l’immeuble",
-        "noiBreakdownNote": "Coûts directs : seuls les coûts imputés à un lot précis réduisent le NOI de ce lot. Les coûts partagés au niveau de l’immeuble (assurance, gérance, impôts, entretien extérieur/commun) sont affichés séparément ici, jamais répartis sur les lots."
+        "noiBreakdownNote": "Coûts directs : seuls les coûts imputés à un lot précis réduisent le NOI de ce lot. Les coûts partagés au niveau de l’immeuble (assurance, gérance, impôts, entretien extérieur/commun) sont affichés séparément ici, jamais répartis sur les lots.",
+        "benchmark": {
+          "label": "vs rendement net résidentiel suisse",
+          "typical": "typique {{low}}–{{high}} %",
+          "below": "{{yield}} % — sous la fourchette typique {{low}}–{{high}} %",
+          "inRange": "{{yield}} % — dans la fourchette typique {{low}}–{{high}} %",
+          "above": "{{yield}} % — au-dessus de la fourchette typique {{low}}–{{high}} %",
+          "methodology": "Base & sources du benchmark",
+          "basisNote": "Rendement net = NOI ÷ valeur, avant financement, impôts et capex. Le benchmark se mesure sur le prix du marché/d’achat, alors que ce rendement porte sur la valeur intrinsèque (valeur de la fiche) — à comparer avec le rapprochement de valeur ci-dessus avant toute conclusion. Fourchette nationale typique, avec un écart régional plus large (plus bas à Genève/Zurich, plus élevé en périphérie/zones rurales).",
+          "sources": "Sources"
+        }
       },
       "valueCreationTab": "Création de valeur",
       "valueCreation": {

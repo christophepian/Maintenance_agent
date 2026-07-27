@@ -12,6 +12,7 @@ import { useTranslation } from "next-i18next";
 import { cn } from "../../lib/utils";
 import { formatChf, formatChfCents } from "../../lib/format";
 import { useDetailResource } from "../../lib/hooks/useDetailResource";
+import { SWISS_RESIDENTIAL_NET_YIELD, classifyNetYield, yieldTrackPosition } from "../../lib/benchmarks/swissRentalYield";
 
 function pct(v) {
   return v == null ? "—" : `${v.toFixed(1)}%`;
@@ -25,6 +26,52 @@ function SellFlag({ t }) {
     <span className="rounded-full bg-orange-light px-2 py-0.5 text-xs font-semibold text-orange-text">
       {t("buildingsId.reporting.unitProfit.sellCandidate")}
     </span>
+  );
+}
+
+// Contextualises the building's net yield against an aggregated Swiss residential
+// net-yield benchmark (see lib/benchmarks/swissRentalYield). A regional-spread
+// track with the national "typical" band shaded and a marker at this building.
+function YieldBenchmark({ yieldPct, t }) {
+  const b = SWISS_RESIDENTIAL_NET_YIELD;
+  const verdict = classifyNetYield(yieldPct); // below | inRange | above | null
+  if (verdict == null) return null;
+  const markerLeft = yieldTrackPosition(yieldPct) * 100;
+  const bandLeft = yieldTrackPosition(b.lowPct) * 100;
+  const bandRight = yieldTrackPosition(b.highPct) * 100;
+  const verdictCls = verdict === "below" ? "text-warning-text" : "text-success-text";
+  const args = { low: b.lowPct, high: b.highPct, yield: yieldPct.toFixed(1) };
+  return (
+    <div className="mb-4 rounded-xl border border-surface-border p-4">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+        <p className="text-[10px] font-bold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.unitProfit.benchmark.label")}</p>
+        <span className={cn("text-xs font-semibold tabular-nums", verdictCls)}>{t(`buildingsId.reporting.unitProfit.benchmark.${verdict}`, args)}</span>
+      </div>
+      <div className="relative h-2 rounded-full bg-surface-hover">
+        {/* national "typical" band */}
+        <div className="absolute inset-y-0 rounded-full bg-success-light" style={{ left: `${bandLeft}%`, width: `${Math.max(0, bandRight - bandLeft)}%` /* no-token: benchmark band extent */ }} />
+        {/* this building */}
+        <div className="absolute -top-1 h-4 w-0.5 -translate-x-1/2 rounded bg-foreground" style={{ left: `${markerLeft}%` /* no-token: dynamic marker position */ }} title={`${args.yield}%`} />
+      </div>
+      <div className="mt-1 flex justify-between text-[10px] tabular-nums text-foreground-dim">
+        <span>{b.regionalLowPct}%</span>
+        <span>{t("buildingsId.reporting.unitProfit.benchmark.typical", { low: b.lowPct, high: b.highPct })}</span>
+        <span>{b.regionalHighPct}%</span>
+      </div>
+      <details className="mt-2 text-[11px] text-foreground-dim">
+        <summary className="cursor-pointer select-none hover:text-foreground">{t("buildingsId.reporting.unitProfit.benchmark.methodology")}</summary>
+        <p className="mt-1">{t("buildingsId.reporting.unitProfit.benchmark.basisNote")}</p>
+        <p className="mt-1">
+          {t("buildingsId.reporting.unitProfit.benchmark.sources")}:{" "}
+          {b.sources.map((s, i) => (
+            <span key={s.url}>
+              {i > 0 ? " · " : ""}
+              <a href={s.url} target="_blank" rel="noopener noreferrer" className="text-brand no-underline hover:underline">{s.name}</a>
+            </span>
+          ))}
+        </p>
+      </details>
+    </div>
   );
 }
 
@@ -89,6 +136,9 @@ export default function UnitProfitabilityPanel({ buildingId, from, to }) {
           />
         )}
       </div>
+
+      {/* Building net yield contextualised against the Swiss residential benchmark */}
+      {data?.buildingNetYieldPct != null && <YieldBenchmark yieldPct={data.buildingNetYieldPct} t={t} />}
 
       {/* NOI breakdown — direct costing: units' direct NOI, shared building-level
           costs shown separately, reconciling to the building operating NOI. */}
