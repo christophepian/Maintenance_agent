@@ -19,14 +19,17 @@ import {
   emitRentRollCsv,
   emitBuildingInfoCsv,
   emitAccountBalancesCsv,
+  emitGrandLivreCsv,
 } from "./packageCsvEmitter";
 import {
   RENT_ROLL_TOOL,
   BUILDING_INFO_TOOL,
   STATEMENT_BALANCE_TOOL,
+  GENERAL_LEDGER_TOOL,
   parseRentRollToolInput,
   parseBuildingInfoToolInput,
   parseBalancesToolInput,
+  parseLedgerToolInput,
   runForcedTool,
   type PackageExtractionFile,
 } from "./packageExtraction";
@@ -114,6 +117,22 @@ export class ClaudeVisionScanner {
     if (bilan) files.push({ fileName: `${base}__bilan.csv`, text: bilan });
     const resultat = emitAccountBalancesCsv(accountBalances, "income");
     if (resultat) files.push({ fileName: `${base}__resultat.csv`, text: resultat });
+
+    // General-ledger detail → per-line supplier invoices (some unit-attributed).
+    // Separate from the account-total statements above: this is the transaction
+    // list (grand livre / compte de gestion détaillé), the only place the régie
+    // books an expense to a specific object (531100.01.0001:).
+    const ledgerInput = await call(
+      GENERAL_LEDGER_TOOL,
+      "Find the detailed general ledger (grand livre / compte de gestion détaillé / journal): the transaction list with " +
+        "a value date, a N° pièce column and a Texte d'écriture column — many rows per account. Extract EVERY individual " +
+        "entry row (never the account subtotals). Copy each Texte d'écriture verbatim, keeping any leading '531100.01.0001:' " +
+        "object prefix and the 'SUPPLIER / description' text. If the report has no such transaction-level ledger, return no rows.",
+      "extractGeneralLedger",
+      8192,
+    );
+    const grandLivre = emitGrandLivreCsv(parseLedgerToolInput(ledgerInput));
+    if (grandLivre) files.push({ fileName: `${base}__grandlivre.csv`, text: grandLivre });
 
     console.log(
       `[PKG-VISION] ${VISION_MODEL} extracted ${files.length} CSV(s) from ${fileName}: ` +

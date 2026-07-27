@@ -15,7 +15,7 @@
 
 import type Anthropic from "@anthropic-ai/sdk";
 import type { ExtractedAccountBalance } from "../documentScanner";
-import type { ExtractedRentRollRow, ExtractedBuildingInfoFields } from "./packageCsvEmitter";
+import type { ExtractedRentRollRow, ExtractedBuildingInfoFields, ExtractedLedgerRow } from "./packageCsvEmitter";
 
 /** One synthetic canonical CSV produced from a régie PDF, ready for the package pipeline. */
 export interface PackageExtractionFile {
@@ -148,6 +148,54 @@ export const RENT_ROLL_TOOL = {
   },
 } as const;
 
+/**
+ * Claude tool for extracting the general-ledger detail (grand livre / compte de
+ * gestion détaillé) — one row per accounting entry, NOT the account totals. This
+ * is the transaction list with a N° pièce and an entry-text column; each expense
+ * line is a discrete supplier invoice, some scoped to a unit by an objet prefix.
+ * The downstream mapper (regieLedgerMapper) turns these into per-unit invoices.
+ */
+export const GENERAL_LEDGER_TOOL = {
+  name: "extractGeneralLedger",
+  description:
+    "Extract the detailed general ledger (grand livre / compte de gestion détaillé / journal) of a Swiss régie report. " +
+    "This is the TRANSACTION-LEVEL table: many rows per account, each with a value date, a piece/voucher number (N° pièce / no pièce) and an entry text (Texte d'écriture). " +
+    "Do NOT extract the summarized income statement or balance sheet (one total per account) — only the per-entry detail. " +
+    "For EVERY entry row, record: " +
+    "compte = the FULL account code exactly as printed in the account column (e.g. '41200', '3000-00') — keep ALL digits, never truncate to 4; " +
+    "accountName = the account label/libellé; " +
+    "dateValeur = the value date DD.MM.YYYY; " +
+    "noPiece = the piece/voucher number as printed; " +
+    "texteEcriture = the entry text VERBATIM and COMPLETE, including any leading object/unit prefix such as '531100.01.0001:' and the 'SUPPLIER / description' that follows — copy it exactly, do not paraphrase, reorder, or drop the prefix; " +
+    "montantChf = the signed amount (expenses positive, revenue negative) as a plain number. " +
+    "IMPORTANT — amounts: Swiss format apostrophe=thousands, period=decimal: 1'950.00 → 1950.00. Preserve the sign as printed. " +
+    "IMPORTANT — do NOT emit account subtotal or group-total rows (a bold 'Total 41200' / running total line); only the individual dated entries. " +
+    "Skip rows that have no entry text (blank narration).",
+  input_schema: {
+    type: "object",
+    required: ["rows"],
+    properties: {
+      fiscalYear: { type: "integer", description: "Fiscal year, e.g. 2025" },
+      rows: {
+        type: "array",
+        description: "Every individual ledger entry row (not subtotals).",
+        items: {
+          type: "object",
+          required: ["compte", "texteEcriture", "montantChf"],
+          properties: {
+            compte: { type: "string", description: "Full account code from the account column, all digits kept, e.g. '41200' or '3000-00'. Never truncated." },
+            accountName: { type: "string", description: "Account label/libellé, e.g. 'Entretien des appartements'." },
+            dateValeur: { type: "string", description: "Value date, DD.MM.YYYY." },
+            noPiece: { type: "string", description: "Piece / voucher number (N° pièce), e.g. '1062728'." },
+            texteEcriture: { type: "string", description: "Entry text VERBATIM incl. any '531100.01.0001:' object prefix and the 'SUPPLIER / description' text. Copy exactly." },
+            montantChf: { type: "number", description: "Signed amount in CHF, plain number (expense positive, revenue negative)." },
+          },
+        },
+      },
+    },
+  },
+} as const;
+
 /** Claude tool for extracting the building's identity from the general-info/cover page. */
 export const BUILDING_INFO_TOOL = {
   name: "extractBuildingInfo",
@@ -213,6 +261,31 @@ export function parseRentRollToolInput(input: unknown): ExtractedRentRollRow[] {
       loyerNetChf: typeof o.netRentChf === "number" ? o.netRentChf : null,
       chargesChf: typeof o.chargesChf === "number" ? o.chargesChf : null,
       confidence: typeof o.confidence === "number" ? o.confidence : null,
+    }));
+}
+
+export function parseLedgerToolInput(input: unknown): ExtractedLedgerRow[] {
+  const rows = unwrapDoubleEncoded(input, "rows").rows;
+  if (!Array.isArray(rows)) return [];
+  return rows
+    .filter(
+      (r) =>
+        typeof r.compte === "string" &&
+        r.compte.trim() &&
+        typeof r.texteEcriture === "string" &&
+        r.texteEcriture.trim() &&
+        typeof r.montantChf === "number",
+    )
+    .map((r) => ({
+      // NB: keep the code verbatim — do NOT normalizeSwissAccountCode here; the
+      // ledger mapper needs the full ≥5-digit code to tell expenses from revenue.
+      compte: (r.compte as string).trim(),
+      accountName: typeof r.accountName === "string" ? r.accountName : null,
+      dateValeur: typeof r.dateValeur === "string" ? r.dateValeur : null,
+      noPiece: typeof r.noPiece === "string" ? r.noPiece : typeof r.noPiece === "number" ? String(r.noPiece) : null,
+      texteEcriture: (r.texteEcriture as string).trim(),
+      montantChf: r.montantChf as number,
+      confidence: typeof r.confidence === "number" ? r.confidence : null,
     }));
 }
 

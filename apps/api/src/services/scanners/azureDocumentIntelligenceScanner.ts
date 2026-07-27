@@ -27,16 +27,20 @@ import {
   emitRentRollCsv,
   emitBuildingInfoCsv,
   emitAccountBalancesCsv,
+  emitGrandLivreCsv,
   type ExtractedRentRollRow,
   type ExtractedBuildingInfoFields,
+  type ExtractedLedgerRow,
 } from "./packageCsvEmitter";
 import {
   RENT_ROLL_TOOL,
   BUILDING_INFO_TOOL,
   STATEMENT_BALANCE_TOOL,
+  GENERAL_LEDGER_TOOL,
   parseRentRollToolInput,
   parseBuildingInfoToolInput,
   parseBalancesToolInput,
+  parseLedgerToolInput,
   normalizeSwissAccountCode,
   type PackageExtractionFile,
 } from "./packageExtraction";
@@ -1157,6 +1161,69 @@ async function extractBalancesForPackage(
   return all;
 }
 
+/** Extract + dedupe general-ledger detail rows across pages (chunked, pièce|code|absAmount key). */
+async function extractLedgerRows(
+  client: ReturnType<typeof getAnthropicClient>,
+  pages: string[],
+): Promise<ExtractedLedgerRow[]> {
+  const chunks = splitIntoPageChunks(pages.join("\n\n"), undefined, PACKAGE_CHUNK_CHARS);
+  const all: ExtractedLedgerRow[] = [];
+  const seen = new Set<string>();
+  for (let i = 0; i < chunks.length; i++) {
+    let rows: ExtractedLedgerRow[];
+    try {
+      rows = await extractLedgerFromChunk(client, chunks[i], i, chunks.length);
+    } catch (e) {
+      console.warn("[DOC-SCAN] ledger chunk failed:", e instanceof Error ? e.message : e);
+      continue;
+    }
+    for (const r of rows) {
+      // A pièce can legitimately repeat across accounts (one bill split); key on
+      // pièce + code + amount so genuine splits survive but exact dupes collapse.
+      const key = [(r.noPiece ?? "").trim(), r.compte.trim(), String(Math.abs(r.montantChf))].join("|");
+      if (!seen.has(key)) {
+        seen.add(key);
+        all.push(r);
+      }
+    }
+  }
+  return all;
+}
+
+async function extractLedgerFromChunk(
+  client: ReturnType<typeof getAnthropicClient>,
+  content: string,
+  chunkIndex: number,
+  totalChunks: number,
+): Promise<ExtractedLedgerRow[]> {
+  const chunkLabel = totalChunks > 1 ? ` (chunk ${chunkIndex + 1} of ${totalChunks})` : "";
+  const response = await client.messages.create({
+    model: "claude-haiku-4-5-20251001",
+    max_tokens: 8192,
+    temperature: 0,
+    system: EXTRACTION_SYSTEM_PROMPT,
+    tools: [GENERAL_LEDGER_TOOL] as unknown as Parameters<typeof client.messages.create>[0]["tools"],
+    tool_choice: { type: "tool", name: "extractGeneralLedger" },
+    messages: [
+      {
+        role: "user",
+        content:
+          `Extract EVERY individual general-ledger entry row from this section of a Swiss régie report${chunkLabel}. ` +
+          "These are the transaction lines with a value date, a N° pièce and a Texte d'écriture — one row per entry, NOT account subtotals. " +
+          "Copy each Texte d'écriture verbatim, keeping any leading '531100.01.0001:' object prefix and the 'SUPPLIER / description'. " +
+          "Keep the full account code (all digits). If this text has no such transaction-level ledger, return no rows.\n\n" +
+          `OCR text:\n${content}`,
+      },
+    ],
+  });
+  for (const block of response.content) {
+    if (block.type === "tool_use" && block.name === "extractGeneralLedger") {
+      return parseLedgerToolInput(block.input);
+    }
+  }
+  return [];
+}
+
 /**
  * Extract account balances (and optionally invoice lines) from one chunk of
  * OCR text. Keeps two separate tool calls so balance extraction is always
@@ -1265,6 +1332,7 @@ type PageClass =
   | "COVER_LETTER"
   | "BALANCE_SHEET"
   | "INCOME_STATEMENT"
+  | "GENERAL_LEDGER"
   | "INVOICE"
   | "RENT_ROLL"
   | "GENERAL_INFO"
@@ -1327,6 +1395,7 @@ async function classifyPages(
                         "COVER_LETTER",
                         "BALANCE_SHEET",
                         "INCOME_STATEMENT",
+                        "GENERAL_LEDGER",
                         "INVOICE",
                         "RENT_ROLL",
                         "GENERAL_INFO",
@@ -1334,7 +1403,8 @@ async function classifyPages(
                       ],
                       description:
                         "BALANCE_SHEET: Bilan or balance sheet — closing positions for assets (actifs/Aktiven, codes 1xxx) and liabilities/equity (passifs/Passiven, codes 2xxx). " +
-                        "INCOME_STATEMENT: Compte de résultat, Betriebsrechnung, compte de gestion, P&L — revenue and expense rows for a period. Revenue codes 3xxx (Ertrag/recettes), expense codes 4xxx–8xxx (Aufwand/charges). " +
+                        "INCOME_STATEMENT: Compte de résultat / Betriebsrechnung / P&L SUMMARY — ONE total per account for the period (no per-transaction rows). Revenue codes 3xxx, expense codes 4xxx–8xxx. " +
+                        "GENERAL_LEDGER: the DETAILED ledger — grand livre, journal, or a 'compte de gestion' laid out as a TRANSACTION LIST: many rows per account, each row carrying a value date, a N° pièce (piece/voucher number) column AND a Texte d'écriture (entry text) column. If you see a per-entry table with dates + piece numbers + narration, it is GENERAL_LEDGER, not INCOME_STATEMENT (which shows only account totals). " +
                         "INVOICE: a vendor invoice, receipt, or Facture with an invoice number, supplier name, and CHF total. " +
                         "RENT_ROLL: état locatif / Mietspiegel / tenant schedule — a table of rental objects, one row per object (objet code like 531100.01.0001 or 400 010.09), with tenant name, object type, entry/exit dates, and monthly net rent. " +
                         "GENERAL_INFO: a cover/identity page naming the building (immeuble / adresse), the régie (gérance), the owner (propriétaire), the management reference, and the reporting period — property identity, not financial tables. " +
@@ -1890,6 +1960,17 @@ export class AzureDocumentIntelligenceScanner implements DocumentScanner {
       if (bilan) files.push({ fileName: `${base}__bilan.csv`, text: bilan });
       const resultat = emitAccountBalancesCsv(balances, "income");
       if (resultat) files.push({ fileName: `${base}__resultat.csv`, text: resultat });
+    }
+
+    // General-ledger detail → per-line supplier invoices (some unit-attributed).
+    // Kept separate from the account-total pages above so the transaction rows
+    // don't pollute the income statement; the objet prefix is the only place the
+    // régie attributes an expense to a specific unit.
+    const ledgerPages = pagesOf("GENERAL_LEDGER");
+    if (classes && ledgerPages.length) {
+      const rows = await extractLedgerRows(client, ledgerPages);
+      const csv = emitGrandLivreCsv(rows);
+      if (csv) files.push({ fileName: `${base}__grandlivre.csv`, text: csv });
     }
 
     console.log(

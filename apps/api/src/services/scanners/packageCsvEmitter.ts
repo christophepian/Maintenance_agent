@@ -40,6 +40,28 @@ export interface ExtractedRentRollRow {
   confidence?: number | null;
 }
 
+/** One general-ledger (grand livre / compte de gestion détaillé) transaction row. */
+export interface ExtractedLedgerRow {
+  /** Full account code exactly as printed — keep every digit (e.g. "41200",
+   *  "3000-00"). NEVER truncate: regieLedgerMapper filters on code ≥ 40000, so a
+   *  clipped "4120" would be misread as revenue and dropped. */
+  compte: string;
+  /** Account name / libellé (e.g. "Entretien des appartements"). */
+  accountName?: string | null;
+  /** Value date as printed, dd.mm.yyyy. */
+  dateValeur?: string | null;
+  /** Piece / voucher number (N° pièce) — required for a row to import. */
+  noPiece?: string | null;
+  /** Entry text VERBATIM, including any leading object prefix
+   *  ("531100.01.0001: ACE Electroménager / …") — the mapper parses the unit
+   *  code and the "VENDOR / description" split out of this string. */
+  texteEcriture: string;
+  /** Signed amount in CHF (expense positive, revenue negative), plain number. */
+  montantChf: number;
+  /** Extraction confidence 0–1, carried for review (not emitted to CSV). */
+  confidence?: number | null;
+}
+
 /** Building identity fields from the general-info section. */
 export interface ExtractedBuildingInfoFields {
   /** Full address, e.g. "Rte Monts-de-Laval 314, 1090 La Croix (Lutry)". */
@@ -163,4 +185,28 @@ export function emitAccountBalancesCsv(
     cell(b.documentSection),
   ]);
   return toCsv(["accountCode", "accountName", "balanceChf", "section"], body);
+}
+
+/**
+ * General-ledger detail → the CSV `regieLedgerMapper` consumes. Headers normalize
+ * onto its aliases (`compte`, `libellecompte`, `datevaleur`, `nopiece`,
+ * `texteecriture`, `montantchf`); the `no_piece` + `texte_ecriture` pair also makes
+ * `packageDetector.detectDocumentType` classify the file as GENERAL_LEDGER. The
+ * entry text is emitted VERBATIM so the mapper can still parse the `531100.01.0001:`
+ * unit prefix and the "VENDOR / description" split. A row without entry text carries
+ * no supplier invoice, so it's dropped here. Returns null when nothing survives.
+ */
+export function emitGrandLivreCsv(rows: ExtractedLedgerRow[]): string | null {
+  const clean = rows.filter((r) => r.compte && r.compte.trim() && r.texteEcriture && r.texteEcriture.trim());
+  if (clean.length === 0) return null;
+  const headers = ["compte", "libelle_compte", "date_valeur", "no_piece", "texte_ecriture", "montant_chf"];
+  const body = clean.map((r) => [
+    cell(r.compte.trim()),
+    cell(r.accountName ?? ""),
+    cell(r.dateValeur ?? ""),
+    cell(r.noPiece ?? ""),
+    cell(r.texteEcriture.trim()),
+    num(r.montantChf),
+  ]);
+  return toCsv(headers, body);
 }

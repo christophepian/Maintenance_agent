@@ -2,12 +2,16 @@ import {
   emitRentRollCsv,
   emitBuildingInfoCsv,
   emitAccountBalancesCsv,
+  emitGrandLivreCsv,
   type ExtractedRentRollRow,
   type ExtractedBuildingInfoFields,
+  type ExtractedLedgerRow,
 } from "../services/scanners/packageCsvEmitter";
 import type { ExtractedAccountBalance } from "../services/documentScanner";
 import { mapRentRoll } from "../services/rentRollMapper";
 import { mapCsvToAccountBalances } from "../services/csvAccountingMapper";
+import { mapRegieLedger } from "../services/regieLedgerMapper";
+import { parseLedgerToolInput } from "../services/scanners/packageExtraction";
 import { detectDocumentType, parseBuildingInfo } from "../services/packageDetector";
 
 // The point of these tests: a PDF-extracted structure, serialized by the emitter,
@@ -75,6 +79,81 @@ describe("emitRentRollCsv → detect + mapRentRoll round-trip", () => {
 
   it("returns null for an empty row set", () => {
     expect(emitRentRollCsv([])).toBeNull();
+  });
+});
+
+describe("emitGrandLivreCsv → detect + mapRegieLedger round-trip", () => {
+  // Real 'Entretien des appartements' (41200) detail transcribed from a régie
+  // annual report — each line carries the 531100.01.<unit> objet prefix, plus a
+  // couple of building-level lines (41100/41300) that must stay unit-less.
+  const rows: ExtractedLedgerRow[] = [
+    { compte: "41100", accountName: "Entretien de l'immeuble", dateValeur: "21.05.2025", noPiece: "1073348", texteEcriture: "G. BURGOS Sàrl / Recherche d'infiltration d'eau", montantChf: 2964.0 },
+    { compte: "41200", accountName: "Entretien des appartements", dateValeur: "08.01.2025", noPiece: "1062728", texteEcriture: "531100.01.0001: ACE Electroménager / Remplacement 2 ampoules hotte", montantChf: 36.75 },
+    { compte: "41200", accountName: "Entretien des appartements", dateValeur: "17.02.2025", noPiece: "1067046", texteEcriture: "531100.01.0001: TP MENUISERIE / Fourniture+pose aérateurs fenêtres", montantChf: 845.0 },
+    { compte: "41200", accountName: "Entretien des appartements", dateValeur: "28.05.2025", noPiece: "1073755", texteEcriture: "531100.01.0201: LIAUDET PIAL SA / Curage HP dérivations SDB", montantChf: 452.4 },
+    { compte: "41200", accountName: "Entretien des appartements", dateValeur: "10.10.2025", noPiece: "1083025", texteEcriture: "531100.01.0101: PLATEFORME SA / Destruction de 2 grosses pierres dans la cour", montantChf: 1335.05 },
+    { compte: "41200", accountName: "Entretien des appartements", dateValeur: "17.01.2025", noPiece: "1065720", texteEcriture: "531100.01.0301: DVM Carrelage / Fermeture du muret de la baignoire", montantChf: 451.0 },
+    // Building-level: no objet prefix → must NOT be attributed to a unit.
+    { compte: "41300", accountName: "Entretien des extérieurs", dateValeur: "06.01.2025", noPiece: "1063769", texteEcriture: "MILLE ET UN JARDINS Sàrl / Remise en place des graviers", montantChf: 965.0 },
+    // Internal recurring charge: must be skipped by the mapper.
+    { compte: "46000", accountName: "Honoraires de gestion", dateValeur: "31.01.2025", noPiece: "48700", texteEcriture: "RILSA SA / 4.000% Honoraires de gestion", montantChf: 609.95 },
+  ];
+  const csv = emitGrandLivreCsv(rows)!;
+
+  it("classifies as GENERAL_LEDGER", () => {
+    expect(detectDocumentType("grandlivre.csv", csv)).toBe("GENERAL_LEDGER");
+  });
+
+  it("keeps 5-digit account codes intact (not truncated to 4)", () => {
+    expect(csv).toContain("41200;");
+    expect(csv).not.toContain("4120;");
+  });
+
+  it("attributes unit-prefixed lines and leaves building-level lines unit-less", () => {
+    const { invoices } = mapRegieLedger(csv);
+    const byUnit: Record<string, number> = {};
+    for (const inv of invoices.filter((i) => i.compte === "41200")) {
+      byUnit[inv.unitNumber!] = Math.round(((byUnit[inv.unitNumber!] ?? 0) + inv.amountChf) * 100) / 100;
+    }
+    expect(byUnit).toEqual({ "0001": 881.75, "0101": 1335.05, "0201": 452.4, "0301": 451.0 });
+
+    const jardins = invoices.find((i) => i.vendorName.startsWith("MILLE ET UN JARDINS"))!;
+    expect(jardins.unitNumber).toBeNull();
+
+    // The management fee (46000) is an internal charge → not a supplier invoice.
+    expect(invoices.some((i) => i.compte === "46000")).toBe(false);
+  });
+
+  it("returns null when no row carries entry text", () => {
+    expect(emitGrandLivreCsv([{ compte: "41200", texteEcriture: "", montantChf: 10 }])).toBeNull();
+  });
+});
+
+describe("parseLedgerToolInput", () => {
+  it("keeps valid rows, coerces a numeric noPiece, drops rows missing code/text/amount", () => {
+    const rows = parseLedgerToolInput({
+      rows: [
+        { compte: "41200", accountName: "Entretien", dateValeur: "08.01.2025", noPiece: 1062728, texteEcriture: "531100.01.0001: ACE / ampoules", montantChf: 36.75 },
+        { compte: "", texteEcriture: "no code", montantChf: 5 }, // dropped: blank code
+        { compte: "41200", texteEcriture: "", montantChf: 5 }, // dropped: blank text
+        { compte: "41300", texteEcriture: "JARDINS / graviers" }, // dropped: no amount
+      ],
+    });
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ compte: "41200", noPiece: "1062728", montantChf: 36.75 });
+  });
+
+  it("unwraps a double-encoded tool payload (rows as a JSON string)", () => {
+    const rows = parseLedgerToolInput({
+      rows: JSON.stringify([{ compte: "41200", texteEcriture: "531100.01.0201: X / y", montantChf: 10 }]),
+    });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].compte).toBe("41200");
+  });
+
+  it("returns [] for malformed input", () => {
+    expect(parseLedgerToolInput(null)).toEqual([]);
+    expect(parseLedgerToolInput({ nope: 1 })).toEqual([]);
   });
 });
 
