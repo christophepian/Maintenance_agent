@@ -419,7 +419,7 @@ export function registerFinancialRoutes(router: Router) {
       try {
         const data = await getUnitExpenseLines(orgId, params.id, from, to);
         sendJson(res, 200, { data });
-      } catch (e: any) {
+      } catch (e) {
         if (e instanceof NotFoundError) return sendError(res, 404, "NOT_FOUND", e.message);
         console.error("[GET /units/:id/expense-lines]", e);
         sendError(res, 500, "INTERNAL_ERROR", "Failed to load unit expense lines");

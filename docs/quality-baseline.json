@@ -3,15 +3,16 @@
   "established": "2026-06-22",
   "metrics": {
     "eslint_err": 0,
-    "eslint_warn": 2466,
+    "eslint_warn": 2469,
     "tsc": 0,
     "any": 723,
-    "console": 537,
+    "console": 538,
     "todo": 4,
     "suppress": 35,
     "bigfiles": 14
   },
   "notes": {
+    "rebaselined_2026-07-27b": "Reporting UX pass — per-unit direct-cost drill-down (GET /units/:id/expense-lines) + full Breakdown coverage + Why?/Drivers merge + Profitability net-yield benchmark + Comparison net yield & narrative. +1 console (537->538) + its matching no-console eslint_warn from the expense-lines route catch in routes/financials.ts (same universal route-error-logging pattern; DB reads live in financialsRepository.findUnitExpenseLineData, so no service Prisma regression). +2 more eslint_warn (2467->2469 total = +3): the 'setState in effect' pattern already accepted throughout this file — (1) the by-unit drill-down cache reset (setExpandedUnitId/setUnitLines) in the period-analysis fetch effect, window-scoped, and (2) the guard reset in the Comparison building-net-yield fetch effect. Accepted as the new floor, NOT silenced. No new `any` (the route catch uses `unknown`); benchmark math is a pure module (lib/benchmarks/swissRentalYield.js) and the narrative is deterministic.",
     "rebaselined_2026-07-27": "Régie grand-livre extraction (per-unit supplier invoices) + tiled-PDF normalizer. +3 console (534->537) + 3 matching no-console eslint_warn (2463->2466), the standard [DOC-SCAN] logging idiom: 1 chunk-failure warn in extractLedgerRows (azureDocumentIntelligenceScanner.ts) + a split-summary log and a skip warn in scanners/pdfNormalizer.ts. Accepted as the new floor, NOT silenced. New logic is covered by pure unit tests (packageCsvEmitter/pdfNormalizer round-trips); no new `any`.",
     "rebaselined_2026-07-17": "Unit-profitability report (GET /buildings/:id/unit-profitability → per-unit fully-loaded yield-on-value for the disposition decision). +1 console (533->534) + its matching no-console eslint_warn (2462->2463) from the route catch in routes/financials.ts — the same universal route-error-logging pattern as the sibling /buildings/:id/unit-financials route; no logger abstraction. Accepted as the new floor, NOT silenced. The profitability math is a pure, unit-tested module (services/unitProfitability.ts) using no `any`.",
     "rebaselined_2026-07-15b": "Claude-native (vision) package extraction — reads the régie PDF pages directly instead of Azure OCR, default provider PACKAGE_EXTRACTION_PROVIDER=claude. +1 console (532->533) + 1 matching no-console eslint_warn (2461->2462) for the [PKG-VISION] extraction-summary log in scanners/claudeVisionScanner.ts. Same logging pattern; accepted floor, NOT silenced. (Tools + parsers single-sourced into scanners/packageExtraction.ts; azure scanner refactored to import them — net-zero warnings there.)",
