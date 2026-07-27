@@ -193,11 +193,16 @@ export function emitAccountBalancesCsv(
  * `texteecriture`, `montantchf`); the `no_piece` + `texte_ecriture` pair also makes
  * `packageDetector.detectDocumentType` classify the file as GENERAL_LEDGER. The
  * entry text is emitted VERBATIM so the mapper can still parse the `531100.01.0001:`
- * unit prefix and the "VENDOR / description" split. A row without entry text carries
- * no supplier invoice, so it's dropped here. Returns null when nothing survives.
+ * unit prefix and the "VENDOR / description" split. Revenue/rent postings carry a
+ * blank entry text but a value date — they're kept (the mapper counts them toward
+ * gross revenue for cross-document reconciliation, but never turns them into
+ * invoices). Only rows with neither text nor date (account subtotals) are dropped.
+ * Returns null when nothing survives.
  */
 export function emitGrandLivreCsv(rows: ExtractedLedgerRow[]): string | null {
-  const clean = rows.filter((r) => r.compte && r.compte.trim() && r.texteEcriture && r.texteEcriture.trim());
+  const clean = rows.filter(
+    (r) => r.compte && r.compte.trim() && ((r.texteEcriture && r.texteEcriture.trim()) || (r.dateValeur && r.dateValeur.trim())),
+  );
   if (clean.length === 0) return null;
   const headers = ["compte", "libelle_compte", "date_valeur", "no_piece", "texte_ecriture", "montant_chf"];
   const body = clean.map((r) => [
@@ -205,7 +210,7 @@ export function emitGrandLivreCsv(rows: ExtractedLedgerRow[]): string | null {
     cell(r.accountName ?? ""),
     cell(r.dateValeur ?? ""),
     cell(r.noPiece ?? ""),
-    cell(r.texteEcriture.trim()),
+    cell((r.texteEcriture ?? "").trim()),
     num(r.montantChf),
   ]);
   return toCsv(headers, body);

@@ -1179,8 +1179,10 @@ async function extractLedgerRows(
     }
     for (const r of rows) {
       // A pièce can legitimately repeat across accounts (one bill split); key on
-      // pièce + code + amount so genuine splits survive but exact dupes collapse.
-      const key = [(r.noPiece ?? "").trim(), r.compte.trim(), String(Math.abs(r.montantChf))].join("|");
+      // pièce + code + date + amount so genuine splits and the 12 identical monthly
+      // rent postings (blank pièce, same code+amount, different dates) all survive,
+      // while a row duplicated across overlapping chunks collapses.
+      const key = [(r.noPiece ?? "").trim(), r.compte.trim(), (r.dateValeur ?? "").trim(), String(Math.abs(r.montantChf))].join("|");
       if (!seen.has(key)) {
         seen.add(key);
         all.push(r);
@@ -1208,8 +1210,9 @@ async function extractLedgerFromChunk(
       {
         role: "user",
         content:
-          `Extract EVERY individual general-ledger entry row from this section of a Swiss régie report${chunkLabel}. ` +
-          "These are the transaction lines with a value date, a N° pièce and a Texte d'écriture — one row per entry, NOT account subtotals. " +
+          `Extract EVERY individual dated general-ledger posting row from this section of a Swiss régie report${chunkLabel}. ` +
+          "Include BOTH expense rows AND revenue rows (the monthly 'Loyer net' / rent postings, account 3xxx, which usually have a blank entry text — still emit them). " +
+          "The only rows to skip are account subtotal/total lines (no value date). " +
           "Copy each Texte d'écriture verbatim, keeping any leading '531100.01.0001:' object prefix and the 'SUPPLIER / description'. " +
           "Keep the full account code (all digits). If this text has no such transaction-level ledger, return no rows.\n\n" +
           `OCR text:\n${content}`,

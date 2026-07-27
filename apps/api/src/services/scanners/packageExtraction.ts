@@ -161,16 +161,16 @@ export const GENERAL_LEDGER_TOOL = {
     "Extract the detailed general ledger (grand livre / compte de gestion détaillé / journal) of a Swiss régie report. " +
     "This is the TRANSACTION-LEVEL table: many rows per account, each with a value date, a piece/voucher number (N° pièce / no pièce) and an entry text (Texte d'écriture). " +
     "Do NOT extract the summarized income statement or balance sheet (one total per account) — only the per-entry detail. " +
+    "Extract EVERY individual dated posting row — BOTH expense rows and revenue rows (e.g. the monthly 'Loyer net' postings, account 3xxx). " +
     "For EVERY entry row, record: " +
     "compte = the FULL account code exactly as printed in the account column (e.g. '41200', '3000-00') — keep ALL digits, never truncate to 4; " +
     "accountName = the account label/libellé; " +
-    "dateValeur = the value date DD.MM.YYYY; " +
-    "noPiece = the piece/voucher number as printed; " +
-    "texteEcriture = the entry text VERBATIM and COMPLETE, including any leading object/unit prefix such as '531100.01.0001:' and the 'SUPPLIER / description' that follows — copy it exactly, do not paraphrase, reorder, or drop the prefix; " +
+    "dateValeur = the value date DD.MM.YYYY (every real posting has one); " +
+    "noPiece = the piece/voucher number as printed (expense invoices have one; rent postings usually don't); " +
+    "texteEcriture = the entry text VERBATIM and COMPLETE, including any leading object/unit prefix such as '531100.01.0001:' and the 'SUPPLIER / description' that follows — copy it exactly, do not paraphrase, reorder, or drop the prefix. Revenue/rent postings often have a BLANK entry text — that is fine, leave it empty, but still emit the row (its date and amount matter for reconciliation). " +
     "montantChf = the signed amount (expenses positive, revenue negative) as a plain number. " +
     "IMPORTANT — amounts: Swiss format apostrophe=thousands, period=decimal: 1'950.00 → 1950.00. Preserve the sign as printed. " +
-    "IMPORTANT — do NOT emit account subtotal or group-total rows (a bold 'Total 41200' / running total line); only the individual dated entries. " +
-    "Skip rows that have no entry text (blank narration).",
+    "IMPORTANT — the ONLY rows to skip are account subtotal / group-total rollup lines (a bold 'Total 41200' or a bare account-code total with NO value date). Every row that has a value date is a real posting — emit it even when its entry text is blank.",
   input_schema: {
     type: "object",
     required: ["rows"],
@@ -178,16 +178,16 @@ export const GENERAL_LEDGER_TOOL = {
       fiscalYear: { type: "integer", description: "Fiscal year, e.g. 2025" },
       rows: {
         type: "array",
-        description: "Every individual ledger entry row (not subtotals).",
+        description: "Every individual dated posting row (revenue and expense), never account subtotals.",
         items: {
           type: "object",
-          required: ["compte", "texteEcriture", "montantChf"],
+          required: ["compte", "montantChf"],
           properties: {
             compte: { type: "string", description: "Full account code from the account column, all digits kept, e.g. '41200' or '3000-00'. Never truncated." },
             accountName: { type: "string", description: "Account label/libellé, e.g. 'Entretien des appartements'." },
-            dateValeur: { type: "string", description: "Value date, DD.MM.YYYY." },
-            noPiece: { type: "string", description: "Piece / voucher number (N° pièce), e.g. '1062728'." },
-            texteEcriture: { type: "string", description: "Entry text VERBATIM incl. any '531100.01.0001:' object prefix and the 'SUPPLIER / description' text. Copy exactly." },
+            dateValeur: { type: "string", description: "Value date, DD.MM.YYYY. Present on every real posting; its absence marks a subtotal (skip those)." },
+            noPiece: { type: "string", description: "Piece / voucher number (N° pièce), e.g. '1062728'. May be blank on rent postings." },
+            texteEcriture: { type: "string", description: "Entry text VERBATIM incl. any '531100.01.0001:' object prefix and the 'SUPPLIER / description' text. Copy exactly. May be blank for revenue/rent postings — leave it empty then." },
             montantChf: { type: "number", description: "Signed amount in CHF, plain number (expense positive, revenue negative)." },
           },
         },
@@ -268,25 +268,25 @@ export function parseLedgerToolInput(input: unknown): ExtractedLedgerRow[] {
   const rows = unwrapDoubleEncoded(input, "rows").rows;
   if (!Array.isArray(rows)) return [];
   return rows
-    .filter(
-      (r) =>
-        typeof r.compte === "string" &&
-        r.compte.trim() &&
-        typeof r.texteEcriture === "string" &&
-        r.texteEcriture.trim() &&
-        typeof r.montantChf === "number",
-    )
-    .map((r) => ({
-      // NB: keep the code verbatim — do NOT normalizeSwissAccountCode here; the
-      // ledger mapper needs the full ≥5-digit code to tell expenses from revenue.
-      compte: (r.compte as string).trim(),
-      accountName: typeof r.accountName === "string" ? r.accountName : null,
-      dateValeur: typeof r.dateValeur === "string" ? r.dateValeur : null,
-      noPiece: typeof r.noPiece === "string" ? r.noPiece : typeof r.noPiece === "number" ? String(r.noPiece) : null,
-      texteEcriture: (r.texteEcriture as string).trim(),
-      montantChf: r.montantChf as number,
-      confidence: typeof r.confidence === "number" ? r.confidence : null,
-    }));
+    .map((r) => {
+      const text = typeof r.texteEcriture === "string" ? r.texteEcriture.trim() : "";
+      const date = typeof r.dateValeur === "string" ? r.dateValeur.trim() : "";
+      return {
+        // NB: keep the code verbatim — do NOT normalizeSwissAccountCode here; the
+        // ledger mapper needs the full ≥5-digit code to tell expenses from revenue.
+        compte: typeof r.compte === "string" ? r.compte.trim() : "",
+        accountName: typeof r.accountName === "string" ? r.accountName : null,
+        dateValeur: date || null,
+        noPiece: typeof r.noPiece === "string" ? r.noPiece : typeof r.noPiece === "number" ? String(r.noPiece) : null,
+        texteEcriture: text,
+        montantChf: typeof r.montantChf === "number" ? r.montantChf : NaN,
+        confidence: typeof r.confidence === "number" ? r.confidence : null,
+      };
+    })
+    // Keep a row when it's a real posting: has a code + amount, and carries either
+    // entry text (expense invoice) OR a value date (revenue/rent posting). Rows with
+    // neither are account subtotals/rollups — drop them.
+    .filter((r) => r.compte && Number.isFinite(r.montantChf) && (r.texteEcriture || r.dateValeur));
 }
 
 export function parseBuildingInfoToolInput(input: unknown): ExtractedBuildingInfoFields | null {

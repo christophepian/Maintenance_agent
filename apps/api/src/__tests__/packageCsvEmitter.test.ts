@@ -97,11 +97,23 @@ describe("emitGrandLivreCsv → detect + mapRegieLedger round-trip", () => {
     { compte: "41300", accountName: "Entretien des extérieurs", dateValeur: "06.01.2025", noPiece: "1063769", texteEcriture: "MILLE ET UN JARDINS Sàrl / Remise en place des graviers", montantChf: 965.0 },
     // Internal recurring charge: must be skipped by the mapper.
     { compte: "46000", accountName: "Honoraires de gestion", dateValeur: "31.01.2025", noPiece: "48700", texteEcriture: "RILSA SA / 4.000% Honoraires de gestion", montantChf: 609.95 },
+    // Revenue posting: blank entry text, dated → kept for gross-revenue reconciliation, never an invoice.
+    { compte: "30000", accountName: "Loyer net", dateValeur: "01.01.2025", noPiece: null, texteEcriture: "", montantChf: -13556.0 },
+    // Account subtotal: no text, no date → dropped.
+    { compte: "30000", accountName: "Loyer net", dateValeur: null, noPiece: null, texteEcriture: "", montantChf: -162672.0 },
   ];
   const csv = emitGrandLivreCsv(rows)!;
 
   it("classifies as GENERAL_LEDGER", () => {
     expect(detectDocumentType("grandlivre.csv", csv)).toBe("GENERAL_LEDGER");
+  });
+
+  it("keeps the dated revenue posting but drops the undated subtotal", () => {
+    expect(csv).toContain("30000;Loyer net;01.01.2025");     // dated posting kept
+    expect(csv).not.toContain(";;-162672");                    // undated subtotal dropped
+    const { invoices, summary } = mapRegieLedger(csv);
+    expect(summary.grossRevenueChf).toBe(13556);               // -(-13556), subtotal excluded
+    expect(invoices.some((i) => i.compte === "30000")).toBe(false); // revenue never invoiced
   });
 
   it("keeps 5-digit account codes intact (not truncated to 4)", () => {
@@ -130,17 +142,19 @@ describe("emitGrandLivreCsv → detect + mapRegieLedger round-trip", () => {
 });
 
 describe("parseLedgerToolInput", () => {
-  it("keeps valid rows, coerces a numeric noPiece, drops rows missing code/text/amount", () => {
+  it("keeps postings (text OR date), coerces numeric noPiece, drops subtotals/incomplete rows", () => {
     const rows = parseLedgerToolInput({
       rows: [
         { compte: "41200", accountName: "Entretien", dateValeur: "08.01.2025", noPiece: 1062728, texteEcriture: "531100.01.0001: ACE / ampoules", montantChf: 36.75 },
+        { compte: "30000", dateValeur: "01.01.2025", texteEcriture: "", montantChf: -13556 }, // kept: revenue posting (blank text, dated)
+        { compte: "30000", texteEcriture: "", montantChf: -162672 }, // dropped: subtotal (no text, no date)
         { compte: "", texteEcriture: "no code", montantChf: 5 }, // dropped: blank code
-        { compte: "41200", texteEcriture: "", montantChf: 5 }, // dropped: blank text
         { compte: "41300", texteEcriture: "JARDINS / graviers" }, // dropped: no amount
       ],
     });
-    expect(rows).toHaveLength(1);
-    expect(rows[0]).toMatchObject({ compte: "41200", noPiece: "1062728", montantChf: 36.75 });
+    expect(rows).toHaveLength(2);
+    expect(rows.map((r) => r.compte).sort()).toEqual(["30000", "41200"]);
+    expect(rows.find((r) => r.compte === "41200")).toMatchObject({ noPiece: "1062728", montantChf: 36.75 });
   });
 
   it("unwraps a double-encoded tool payload (rows as a JSON string)", () => {

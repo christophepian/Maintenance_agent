@@ -126,8 +126,10 @@ export class ClaudeVisionScanner {
       GENERAL_LEDGER_TOOL,
       "Find the detailed general ledger (grand livre / compte de gestion détaillé / journal): the transaction list with " +
         "a value date, a N° pièce column and a Texte d'écriture column — many rows per account. Extract EVERY individual " +
-        "entry row (never the account subtotals). Copy each Texte d'écriture verbatim, keeping any leading '531100.01.0001:' " +
-        "object prefix and the 'SUPPLIER / description' text. If the report has no such transaction-level ledger, return no rows.",
+        "dated posting row — BOTH expense rows AND revenue rows (the monthly 'Loyer net' / rent postings, account 3xxx, " +
+        "which typically have a blank entry text — still emit them). The ONLY rows to skip are account subtotal/total lines " +
+        "(no value date). Copy each Texte d'écriture verbatim, keeping any leading '531100.01.0001:' object prefix and the " +
+        "'SUPPLIER / description' text. If the report has no such transaction-level ledger, return no rows.",
       "extractGeneralLedger",
       8192,
     );
