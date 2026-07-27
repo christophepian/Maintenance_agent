@@ -296,6 +296,18 @@ function buildBuildingWatchItems(bf, arrears, unitData, moveIns, moveOuts, bench
 
 const catLabel = (cat, t) => t(`buildingFinancials.category.${cat}`, { defaultValue: cat.charAt(0) + cat.slice(1).toLowerCase() });
 
+// Biggest expense-account moves between two periods (current vs benchmark),
+// signed (d>0 = cost rose), ≥ CHF 200, top 5 by magnitude. Shared by the
+// prior/last-year comparison and the multi-period card's narrative.
+function computeExpenseMovers(bf, benchBf) {
+  if (!bf || !benchBf) return [];
+  const beMap = new Map((benchBf.expensesByAccount ?? []).map((a) => [a.accountId ?? a.accountName, a]));
+  const seen = new Set();
+  const rows = (bf.expensesByAccount ?? []).map((a) => { const k = a.accountId ?? a.accountName; seen.add(k); return { name: a.accountName ?? a.accountCode ?? "—", d: a.totalCents - (beMap.get(k)?.totalCents ?? 0) }; });
+  for (const a of (benchBf.expensesByAccount ?? [])) { const k = a.accountId ?? a.accountName; if (!seen.has(k)) rows.push({ name: a.accountName ?? a.accountCode ?? "—", d: -a.totalCents }); }
+  return rows.filter((x) => Math.abs(x.d) >= 20000).sort((x, y) => Math.abs(y.d) - Math.abs(x.d)).slice(0, 5);
+}
+
 // Plain-language read of a period-over-period comparison: what happened to NOI,
 // what drove it (income vs costs, then the biggest cost movers), the effect on
 // the building's net yield, and what to monitor next. Deterministic — every
@@ -351,6 +363,21 @@ function buildComparisonNarrative({ curNoi, beNoi, curIncome, beIncome, curExp, 
   if (monitor.length) s.push(t(`${K}.monitor`, { items: monitor.join(", ") }));
 
   return s;
+}
+
+// The "What this means" read-out shown under every comparison table — a heading
+// (styled like "What changed") followed by the plain-language sentences, un-boxed
+// and un-striped.
+function ComparisonNarrative({ lines, t }) {
+  if (!lines?.length) return null;
+  return (
+    <div>
+      <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.compare.narrative.heading")}</p>
+      <div className="space-y-1.5">
+        {lines.map((line, i) => <p key={i} className="text-sm leading-6 text-muted-text">{line}</p>)}
+      </div>
+    </div>
+  );
 }
 
 // The reporting detail for one period. The period ([from,to] + its label) is
@@ -651,16 +678,11 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
           { label: t("buildingsId.reporting.kpi.noiMargin"),       cur: noiMargin, be: benchBf.collectedIncomeCents > 0 ? benchBf.netOperatingIncomeCents / benchBf.collectedIncomeCents : null, type: "pct", better: 1 },
           { label: t("buildingsId.reporting.kpi.opexRatio"),       cur: opexRatio, be: benchBf.collectedIncomeCents > 0 ? benchBf.expensesTotalCents / benchBf.collectedIncomeCents : null, type: "pct", better: -1 },
           { label: t("buildingsId.reporting.kpi.occupancy"),       cur: occ,       be: benchBf.totalUnitsCount > 0 ? benchBf.activeUnitsCount / benchBf.totalUnitsCount : null, type: "pct", better: 1 },
-          { label: t("buildingsId.reporting.unitProfit.buildingYield"), cur: cmpYield.cur, be: cmpYield.be, type: "yieldpct", better: 1 },
           { label: t("buildingsId.reporting.kpi.receivables"),     cur: bf.receivablesCents, be: benchBf.receivablesCents, type: "chf", better: -1 },
+          // Yield is always the last row (net yield on building value).
+          { label: t("buildingsId.reporting.unitProfit.buildingYield"), cur: cmpYield.cur, be: cmpYield.be, type: "yieldpct", better: 1 },
         ] : [];
-        const cmpMovers = benchBf ? (() => {
-          const beMap = new Map((benchBf.expensesByAccount ?? []).map((a) => [a.accountId ?? a.accountName, a]));
-          const seen = new Set();
-          const rows = (bf.expensesByAccount ?? []).map((a) => { const k = a.accountId ?? a.accountName; seen.add(k); return { name: a.accountName ?? a.accountCode ?? "—", d: a.totalCents - (beMap.get(k)?.totalCents ?? 0) }; });
-          for (const a of (benchBf.expensesByAccount ?? [])) { const k = a.accountId ?? a.accountName; if (!seen.has(k)) rows.push({ name: a.accountName ?? a.accountCode ?? "—", d: -a.totalCents }); }
-          return rows.filter((x) => Math.abs(x.d) >= 20000).sort((x, y) => Math.abs(y.d) - Math.abs(x.d)).slice(0, 5);
-        })() : [];
+        const cmpMovers = computeExpenseMovers(bf, benchBf);
         const cmpNarrative = benchBf ? buildComparisonNarrative({
           curNoi: noi, beNoi: benchBf.netOperatingIncomeCents,
           curIncome: earned, beIncome: benchBf.collectedIncomeCents,
@@ -781,16 +803,7 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
                     </tbody>
                   </table>
                 </div>
-                {cmpNarrative.length > 0 && (
-                  <div className="rounded-xl border border-surface-border bg-surface-subtle p-4">
-                    <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.compare.narrative.heading")}</p>
-                    <div className="space-y-1.5">
-                      {cmpNarrative.map((line, i) => (
-                        <p key={i} className="text-sm leading-6 text-muted-text">{line}</p>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                <ComparisonNarrative lines={cmpNarrative} t={t} />
                 {cmpMovers.length > 0 && (
                   <div>
                     <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.compare.whatChanged")}</p>
@@ -1221,6 +1234,24 @@ function MultiPeriodCompareCard({ buildingId, onClose, embedded }) {
   ];
   const fmt = (type, v) => (v == null ? "—" : type === "yieldpct" ? `${v.toFixed(1)}%` : type === "pct" ? rFmtPct(v) : rFmtChf(v));
 
+  // "What this means" — narrate the trend across the selection: earliest → latest.
+  const occOf = (f) => (f && f.totalUnitsCount > 0 ? f.activeUnitsCount / f.totalUnitsCount : null);
+  const multiNarrative = (() => {
+    if (!loaded || periods.length < 2) return [];
+    const be = data.cols[0]?.financials, cur = data.cols[periods.length - 1]?.financials;
+    if (!be || !cur) return [];
+    return buildComparisonNarrative({
+      curNoi: cur.netOperatingIncomeCents, beNoi: be.netOperatingIncomeCents,
+      curIncome: cur.collectedIncomeCents, beIncome: be.collectedIncomeCents,
+      curExp: cur.expensesTotalCents, beExp: be.expensesTotalCents,
+      curColl: cur.collectionRate, beColl: be.collectionRate,
+      curOcc: occOf(cur), beOcc: occOf(be),
+      movers: computeExpenseMovers(cur, be),
+      curYield: data.cols[periods.length - 1]?.yieldPct ?? null, beYield: data.cols[0]?.yieldPct ?? null,
+      periodLabel: periods[periods.length - 1].label, cmpPeriodLabel: periods[0].label, t,
+    });
+  })();
+
   return (
     <div className={embedded ? "space-y-3" : "rounded-2xl border border-surface-border bg-surface p-4 shadow-sm space-y-3"}>
       {!embedded && (
@@ -1267,6 +1298,7 @@ function MultiPeriodCompareCard({ buildingId, onClose, embedded }) {
       {periods.length === 0 ? (
         <p className="text-sm text-muted">{t("buildingsId.reporting.compare.pickPeriods")}</p>
       ) : (
+        <>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -1300,6 +1332,8 @@ function MultiPeriodCompareCard({ buildingId, onClose, embedded }) {
           </table>
           {loading && <p className="mt-2 text-xs text-muted">{t("buildingsId.reporting.compare.loading")}</p>}
         </div>
+        <ComparisonNarrative lines={multiNarrative} t={t} />
+        </>
       )}
     </div>
   );
