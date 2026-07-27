@@ -117,7 +117,10 @@ export default function UnitProfitabilityPanel({ buildingId, from, to }) {
           value={chf(buildingValue)}
           sub={t("buildingsId.reporting.unitProfit.buildingValueSub")}
         />
-        <Stat label={t("buildingsId.reporting.unitProfit.buildingYield")} value={pct(data?.buildingNetYieldPct)} />
+        <Stat label={t("buildingsId.reporting.unitProfit.buildingYield")} value={pct(data?.buildingNetYieldPct)}
+          sub={data?.buildingNetYieldBasis === "market" ? t("buildingsId.reporting.unitProfit.yieldBasis.market")
+            : data?.buildingNetYieldBasis === "ppe" ? t("buildingsId.reporting.unitProfit.yieldBasis.ppe")
+              : undefined} />
         <Stat
           label={t("buildingsId.reporting.unitProfit.ppeEstimate")}
           value={chf(data?.ppeEstimateChf)}

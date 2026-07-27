@@ -1195,10 +1195,12 @@ function MultiPeriodCompareCard({ buildingId, onClose, embedded }) {
     if (periods.length === 0) return undefined;
     let cancelled = false;
     Promise.all(periods.map((p) =>
-      fetch(`/api/buildings/${buildingId}/period-report?from=${p.from}&to=${p.to}`, { headers: authHeaders() })
-        .then((r) => r.json())
-        .then((d) => ({ from: p.from, financials: d?.data?.financials ?? null }))
-        .catch(() => ({ from: p.from, financials: null })),
+      Promise.all([
+        fetch(`/api/buildings/${buildingId}/period-report?from=${p.from}&to=${p.to}`, { headers: authHeaders() })
+          .then((r) => r.json()).then((d) => d?.data?.financials ?? null).catch(() => null),
+        fetch(`/api/buildings/${buildingId}/unit-profitability?from=${p.from}&to=${p.to}`, { headers: authHeaders() })
+          .then((r) => r.json()).then((d) => d?.data?.buildingNetYieldPct ?? null).catch(() => null),
+      ]).then(([financials, yieldPct]) => ({ from: p.from, financials, yieldPct })),
     )).then((res) => { if (!cancelled) setData({ key: periodsKey, cols: res }); });
     return () => { cancelled = true; };
   }, [buildingId, periodsKey, periods]);
@@ -1211,8 +1213,13 @@ function MultiPeriodCompareCard({ buildingId, onClose, embedded }) {
   const chipCls = (sel) => cn("rounded-md border px-2.5 py-1 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-30",
     sel ? "border-brand bg-brand text-white" : "border-surface-border text-foreground hover:border-brand hover:text-brand");
   const disabledChip = (s) => s.disabled || (!keys.includes(s.key) && keys.length >= MULTI_MAX);
-  const kpis = multiKpis(t);
-  const fmt = (type, v) => (v == null ? "—" : type === "pct" ? rFmtPct(v) : rFmtChf(v));
+  // KPI rows read from each period's financials; the building-net-yield row reads
+  // the separately-fetched yield per period (annual NOI ÷ building value).
+  const rows = [
+    ...multiKpis(t).map((k) => ({ label: k.label, type: k.type, better: k.better, valAt: (i) => { const f = financialsAt(i); return f ? k.get(f) : null; } })),
+    { label: t("buildingsId.reporting.unitProfit.buildingYield"), type: "yieldpct", better: 1, valAt: (i) => (loaded ? data.cols[i]?.yieldPct ?? null : null) },
+  ];
+  const fmt = (type, v) => (v == null ? "—" : type === "yieldpct" ? `${v.toFixed(1)}%` : type === "pct" ? rFmtPct(v) : rFmtChf(v));
 
   return (
     <div className={embedded ? "space-y-3" : "rounded-2xl border border-surface-border bg-surface p-4 shadow-sm space-y-3"}>
@@ -1271,8 +1278,8 @@ function MultiPeriodCompareCard({ buildingId, onClose, embedded }) {
               </tr>
             </thead>
             <tbody>
-              {kpis.map((k) => {
-                const vals = periods.map((_, i) => { const f = financialsAt(i); return f ? k.get(f) : null; });
+              {rows.map((k) => {
+                const vals = periods.map((_, i) => k.valAt(i));
                 const nums = vals.filter((v) => v != null);
                 const best = nums.length >= 2 ? (k.better >= 0 ? Math.max(...nums) : Math.min(...nums)) : null;
                 const worst = nums.length >= 2 ? (k.better >= 0 ? Math.min(...nums) : Math.max(...nums)) : null;

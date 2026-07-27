@@ -75,8 +75,11 @@ export interface UnitProfitabilityResult {
   totalAnnualNoiCents: number;
   /** Bottom-up building value = Σ unit intrinsic value (CHF), null if none priced. */
   buildingIntrinsicValueChf: number | null;
-  /** Building net yield = annual NOI / bottom-up building value, %. */
+  /** Building net yield = annual NOI / building value, %. */
   buildingNetYieldPct: number | null;
+  /** Which valuation the yield denominator used: intrinsic (bottom-up), else the
+   *  stored market value / PPE estimate fallback. Null when no valuation exists. */
+  buildingNetYieldBasis: "intrinsic" | "market" | "ppe" | null;
   /** Stored appraisals for reconciliation against the bottom-up value. */
   ppeEstimateChf: number | null;
   marketValueChf: number | null;
@@ -145,10 +148,24 @@ export function computeUnitProfitability(
     rows.some((r) => r.intrinsicValueChf != null)
       ? rows.reduce((s, r) => s + (r.intrinsicValueChf ?? 0), 0)
       : null;
+  // Yield denominator: the bottom-up intrinsic value when the units are priced,
+  // else fall back to the stored market value / PPE estimate so the building net
+  // yield still populates for buildings without a per-unit valuation worksheet.
+  // (Per-unit netYieldOnIntrinsicPct stays null when a unit isn't priced.)
+  const yieldValueBasisChf =
+    buildingIntrinsicValueChf && buildingIntrinsicValueChf > 0 ? buildingIntrinsicValueChf
+      : building.marketValueChf && building.marketValueChf > 0 ? building.marketValueChf
+        : building.ppeEstimateChf && building.ppeEstimateChf > 0 ? building.ppeEstimateChf
+          : null;
   const buildingNetYieldPct =
-    buildingIntrinsicValueChf && buildingIntrinsicValueChf > 0
-      ? round2((totalAnnualNoiCents / 100 / buildingIntrinsicValueChf) * 100)
+    yieldValueBasisChf
+      ? round2((totalAnnualNoiCents / 100 / yieldValueBasisChf) * 100)
       : null;
+  const buildingNetYieldBasis: "intrinsic" | "market" | "ppe" | null =
+    !yieldValueBasisChf ? null
+      : buildingIntrinsicValueChf && buildingIntrinsicValueChf > 0 ? "intrinsic"
+        : building.marketValueChf && building.marketValueChf > 0 ? "market"
+          : "ppe";
 
   for (const r of rows) {
     r.noiContributionPct = totalAnnualNoiCents !== 0 ? round2((r.annualNoiCents / totalAnnualNoiCents) * 100) : null;
@@ -183,6 +200,7 @@ export function computeUnitProfitability(
     totalAnnualNoiCents,
     buildingIntrinsicValueChf,
     buildingNetYieldPct,
+    buildingNetYieldBasis,
     ppeEstimateChf: building.ppeEstimateChf,
     marketValueChf: building.marketValueChf,
     totalDebtChf: building.totalDebtChf,
