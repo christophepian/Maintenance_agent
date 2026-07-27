@@ -63,7 +63,9 @@ export const STATEMENT_BALANCE_TOOL = {
     "For each row record the documentSection from the nearest printed section header: " +
     "ACTIF (Actifs/Aktiven), PASSIF (Passifs/Passiven), REVENUE (Produits/Ertrag), EXPENSE (Charges/Aufwand), OTHER when unclear. " +
     "IMPORTANT — equity and result accounts: 'Bénéfice de l'exercice', 'Résultat net', 'Report bénéfices-pertes' are PASSIF equity rows even if they appear after income data. " +
-    "IMPORTANT — ignore an owner current-account statement (compte / décompte propriétaire: solde reporté, résultat d'exploitation, versements/prélèvements propriétaires, amortissements hypothécaires) — those are equity movements, not bilan or P&L accounts; do not extract them. " +
+    "IMPORTANT — owner current account, two DIFFERENT things: " +
+    "(a) The bilan's Passifs normally include ONE closing-balance line 'Compte courant propriétaire(s)' / 'Compte courant' (account code ~2200/2210/22100), often a large NEGATIVE amount. ALWAYS extract this line as a PASSIF — it is the owner's equity account and the balance sheet CANNOT balance (Actif = Passif) without it. Do not confuse it with a small régie current account like 'c/c <régie name>'. " +
+    "(b) A SEPARATE standalone 'décompte / compte propriétaire' STATEMENT — a multi-row movement page (solde reporté, résultat d'exploitation, versements/prélèvements propriétaires, amortissements hypothécaires) — IS an equity-movement statement, not the bilan; ignore THAT page's rows. Rule of thumb: a single closing-balance line inside the bilan's Passifs = extract; a standalone page of owner movements = ignore. " +
     "IMPORTANT — signed amounts: preserve negative signs exactly as printed. A negative under ACTIF is a contra-asset — keep it negative, keep documentSection=ACTIF. Never flip the section due to a negative sign. " +
     "IMPORTANT — no hierarchy double-counting: Swiss balance sheets often show a parent subtotal AND the detail rows that make it up, all under the same account code. " +
     "Example: '1295 Acomptes -24'900' is the subtotal of '1295 Frais chauffage -4'980' + '1295 Frais exploitation -19'920'. " +
