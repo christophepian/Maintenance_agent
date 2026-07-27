@@ -840,7 +840,23 @@
         "multiTitle": "Period comparison",
         "pickPeriods": "Pick up to 5 periods above to compare.",
         "selected": "{{n}}/5 selected",
-        "pickPrompt": "Choose a comparison to see periods side by side."
+        "pickPrompt": "Choose a comparison to see periods side by side.",
+        "narrative": {
+          "heading": "What this means",
+          "noiRose": "Net operating income rose from {{from}} in {{prevPeriod}} to {{to}} in {{period}} (+{{delta}}, {{pct}}).",
+          "noiFell": "Net operating income fell from {{from}} in {{prevPeriod}} to {{to}} in {{period}} (−{{delta}}, {{pct}}).",
+          "noiFlat": "Net operating income held roughly flat between {{prevPeriod}} and {{period}}, at about {{to}}.",
+          "driverCostsUp": "The main driver was higher operating costs (+{{amount}}).",
+          "driverCostsDown": "The main lift came from lower operating costs (−{{amount}}).",
+          "driverIncomeUp": "The main driver was higher income (+{{amount}}).",
+          "driverIncomeDown": "The main driver was lower income (−{{amount}}).",
+          "movers": "The largest cost increases came from {{items}}.",
+          "yieldMoved": "As a result, the building's net yield moved from {{from}} to {{to}} ({{delta}} pp).",
+          "yieldStands": "The building's net yield stands at {{value}}.",
+          "monitor": "Going forward, keep an eye on {{items}}.",
+          "monitorCollection": "on-time collection",
+          "monitorVacancy": "vacancy"
+        }
       },
       "revex": {
         "title": "Revenue & expenses",

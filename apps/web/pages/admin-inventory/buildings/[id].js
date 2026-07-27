@@ -296,6 +296,63 @@ function buildBuildingWatchItems(bf, arrears, unitData, moveIns, moveOuts, bench
 
 const catLabel = (cat, t) => t(`buildingFinancials.category.${cat}`, { defaultValue: cat.charAt(0) + cat.slice(1).toLowerCase() });
 
+// Plain-language read of a period-over-period comparison: what happened to NOI,
+// what drove it (income vs costs, then the biggest cost movers), the effect on
+// the building's net yield, and what to monitor next. Deterministic — every
+// number comes straight from the compared DTOs; each sentence is a standalone
+// i18n string (no fragment concatenation). Empty until a benchmark is loaded.
+function buildComparisonNarrative({ curNoi, beNoi, curIncome, beIncome, curExp, beExp, curColl, beColl, curOcc, beOcc, movers, curYield, beYield, periodLabel, cmpPeriodLabel, t }) {
+  const s = [];
+  if (!Number.isFinite(curNoi) || !Number.isFinite(beNoi)) return s;
+  const K = "buildingsId.reporting.compare.narrative";
+  const noiDelta = curNoi - beNoi;
+  const noiPct = beNoi ? `${Math.abs(Math.round((noiDelta / Math.abs(beNoi)) * 100))}%` : "—";
+  const flatThreshold = Math.max(20000, Math.abs(beNoi) * 0.02);
+
+  if (Math.abs(noiDelta) < flatThreshold) {
+    s.push(t(`${K}.noiFlat`, { prevPeriod: cmpPeriodLabel, period: periodLabel, to: rFmtChf(curNoi) }));
+  } else {
+    s.push(t(`${K}.${noiDelta > 0 ? "noiRose" : "noiFell"}`, {
+      from: rFmtChf(beNoi), to: rFmtChf(curNoi), prevPeriod: cmpPeriodLabel, period: periodLabel,
+      delta: rFmtChf(Math.abs(noiDelta)), pct: noiPct,
+    }));
+    // Decompose the NOI move: income lifts NOI by +incomeΔ, expenses by −expΔ.
+    // Attribute to whichever contribution actually pushed NOI in the direction it
+    // moved (largest magnitude) — so the driver never contradicts the headline.
+    const incomeDelta = curIncome - beIncome;
+    const expDelta = curExp - beExp;
+    const aligned = (contrib) => (noiDelta > 0 ? contrib > 0 : contrib < 0);
+    const candidates = [];
+    if (aligned(incomeDelta)) candidates.push({ kind: "income", mag: Math.abs(incomeDelta), up: incomeDelta > 0 });
+    if (aligned(-expDelta)) candidates.push({ kind: "cost", mag: Math.abs(expDelta), up: expDelta > 0 });
+    candidates.sort((a, b) => b.mag - a.mag);
+    const drv = candidates[0];
+    if (drv?.kind === "cost") {
+      s.push(t(`${K}.driverCosts${drv.up ? "Up" : "Down"}`, { amount: rFmtChf(drv.mag) }));
+      const rising = (movers ?? []).filter((m) => m.d > 0).slice(0, 3).map((m) => m.name);
+      if (drv.up && rising.length) s.push(t(`${K}.movers`, { items: rising.join(", ") }));
+    } else if (drv?.kind === "income") {
+      s.push(t(`${K}.driverIncome${drv.up ? "Up" : "Down"}`, { amount: rFmtChf(drv.mag) }));
+    }
+  }
+
+  if (curYield != null && beYield != null) {
+    const yd = Math.round((curYield - beYield) * 10) / 10;
+    s.push(t(`${K}.yieldMoved`, { from: `${beYield.toFixed(1)}%`, to: `${curYield.toFixed(1)}%`, delta: `${yd > 0 ? "+" : ""}${yd.toFixed(1)}` }));
+  } else if (curYield != null) {
+    s.push(t(`${K}.yieldStands`, { value: `${curYield.toFixed(1)}%` }));
+  }
+
+  const monitor = [];
+  const rising = (movers ?? []).filter((m) => m.d > 0);
+  if (curExp - beExp > 0 && rising.length) monitor.push(rising[0].name);
+  if (curColl != null && beColl != null && curColl < beColl - 0.02) monitor.push(t(`${K}.monitorCollection`));
+  if (curOcc != null && beOcc != null && curOcc < beOcc - 0.001) monitor.push(t(`${K}.monitorVacancy`));
+  if (monitor.length) s.push(t(`${K}.monitor`, { items: monitor.join(", ") }));
+
+  return s;
+}
+
 // The reporting detail for one period. The period ([from,to] + its label) is
 // chosen by the period navigator above (BuildingReportingView); the time-series
 // points + focus are passed in so the Revenue & expenses slide can render the
@@ -321,6 +378,7 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
   const [metricsOpen, setMetricsOpen] = useState(false);    // "All financial metrics" disclosure
   const [cmpMode, setCmpMode] = useState(null);  // comparison: null | prior | ly | multi
   const [benchReport, setBenchReport] = useState(null); // benchmark period (prior/ly)
+  const [cmpYield, setCmpYield] = useState({ cur: null, be: null }); // building net yield, current vs benchmark period
   const [benchmark, setBenchmark] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState("");
@@ -399,6 +457,19 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
       .catch(() => { if (!cancelled) setBenchReport(null); });
     return () => { cancelled = true; };
   }, [buildingId, cmpFrom, cmpTo]);
+
+  // Building net yield for both windows (annual NOI ÷ intrinsic value), so the
+  // Comparison tab can show the yield delta. Same endpoint the Profitability tab
+  // uses, so the figure matches. Only while a prior/ly comparison is active.
+  useEffect(() => {
+    if (!cmpFrom || !cmpTo) { setCmpYield({ cur: null, be: null }); return undefined; }
+    let cancelled = false;
+    const yieldOf = (f, tt) => fetch(`/api/buildings/${buildingId}/unit-profitability?from=${f}&to=${tt}`, { headers: authHeaders() })
+      .then((r) => r.json()).then((d) => d?.data?.buildingNetYieldPct ?? null).catch(() => null);
+    Promise.all([yieldOf(from, to), yieldOf(cmpFrom, cmpTo)])
+      .then(([cur, be]) => { if (!cancelled) setCmpYield({ cur, be }); });
+    return () => { cancelled = true; };
+  }, [buildingId, from, to, cmpFrom, cmpTo]);
 
   const bf   = report?.financials ?? null;
   const prev = report?.prevFinancials ?? null;
@@ -553,9 +624,16 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
               ? cmpWin.from.slice(0, 4)
               : `${cmpWin.from} – ${cmpWin.to}`)
           : "";
-        const cmpFmt = (type, v) => (v == null ? "—" : type === "pct" ? rFmtPct(v) : rFmtChf(v));
+        // "yieldpct" carries an already-in-percent value (e.g. 3.1) — formatted to
+        // one decimal, with the delta in percentage points; "pct" carries a fraction.
+        const cmpFmt = (type, v) => (v == null ? "—" : type === "yieldpct" ? `${v.toFixed(1)}%` : type === "pct" ? rFmtPct(v) : rFmtChf(v));
         const cmpDelta = (cur, be, type, better) => {
           if (cur == null || be == null) return { txt: "—", cls: "text-foreground-dim" };
+          if (type === "yieldpct") {
+            const d = Math.round((cur - be) * 10) / 10;
+            const good = better === 0 ? null : (d > 0 ? better > 0 : better < 0);
+            return { txt: `${d > 0 ? "▲ +" : d < 0 ? "▼ " : "– "}${Math.abs(d).toFixed(1)}pp`, cls: d === 0 || good === null ? "text-foreground-dim" : good ? "text-success-text" : "text-destructive-text" };
+          }
           if (type === "pct") {
             const pp = Math.round((cur - be) * 100);
             const good = better === 0 ? null : (pp > 0 ? better > 0 : better < 0);
@@ -573,6 +651,7 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
           { label: t("buildingsId.reporting.kpi.noiMargin"),       cur: noiMargin, be: benchBf.collectedIncomeCents > 0 ? benchBf.netOperatingIncomeCents / benchBf.collectedIncomeCents : null, type: "pct", better: 1 },
           { label: t("buildingsId.reporting.kpi.opexRatio"),       cur: opexRatio, be: benchBf.collectedIncomeCents > 0 ? benchBf.expensesTotalCents / benchBf.collectedIncomeCents : null, type: "pct", better: -1 },
           { label: t("buildingsId.reporting.kpi.occupancy"),       cur: occ,       be: benchBf.totalUnitsCount > 0 ? benchBf.activeUnitsCount / benchBf.totalUnitsCount : null, type: "pct", better: 1 },
+          { label: t("buildingsId.reporting.unitProfit.buildingYield"), cur: cmpYield.cur, be: cmpYield.be, type: "yieldpct", better: 1 },
           { label: t("buildingsId.reporting.kpi.receivables"),     cur: bf.receivablesCents, be: benchBf.receivablesCents, type: "chf", better: -1 },
         ] : [];
         const cmpMovers = benchBf ? (() => {
@@ -582,6 +661,15 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
           for (const a of (benchBf.expensesByAccount ?? [])) { const k = a.accountId ?? a.accountName; if (!seen.has(k)) rows.push({ name: a.accountName ?? a.accountCode ?? "—", d: -a.totalCents }); }
           return rows.filter((x) => Math.abs(x.d) >= 20000).sort((x, y) => Math.abs(y.d) - Math.abs(x.d)).slice(0, 5);
         })() : [];
+        const cmpNarrative = benchBf ? buildComparisonNarrative({
+          curNoi: noi, beNoi: benchBf.netOperatingIncomeCents,
+          curIncome: earned, beIncome: benchBf.collectedIncomeCents,
+          curExp: expenses, beExp: benchBf.expensesTotalCents,
+          curColl: coll, beColl: benchBf.collectionRate,
+          curOcc: occ, beOcc: benchBf.totalUnitsCount > 0 ? benchBf.activeUnitsCount / benchBf.totalUnitsCount : null,
+          movers: cmpMovers, curYield: cmpYield.cur, beYield: cmpYield.be,
+          periodLabel, cmpPeriodLabel, t,
+        }) : [];
 
         // Grouped KPI sections — the full financial picture folded in from the
         // (retired) Financials tab: performance · income · costs · balances.
@@ -693,6 +781,16 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
                     </tbody>
                   </table>
                 </div>
+                {cmpNarrative.length > 0 && (
+                  <div className="rounded-xl border border-surface-border bg-surface-subtle p-4">
+                    <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.compare.narrative.heading")}</p>
+                    <div className="space-y-1.5">
+                      {cmpNarrative.map((line, i) => (
+                        <p key={i} className="text-sm leading-6 text-muted-text">{line}</p>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 {cmpMovers.length > 0 && (
                   <div>
                     <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.compare.whatChanged")}</p>

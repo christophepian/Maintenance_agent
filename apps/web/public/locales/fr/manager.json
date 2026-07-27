@@ -840,7 +840,23 @@
         "multiTitle": "Comparaison de périodes",
         "pickPeriods": "Sélectionnez jusqu'à 5 périodes ci-dessus.",
         "selected": "{{n}}/5 sélectionnées",
-        "pickPrompt": "Choisissez une comparaison pour voir les périodes côte à côte."
+        "pickPrompt": "Choisissez une comparaison pour voir les périodes côte à côte.",
+        "narrative": {
+          "heading": "Ce que cela signifie",
+          "noiRose": "Le résultat net d'exploitation a progressé de {{from}} en {{prevPeriod}} à {{to}} en {{period}} (+{{delta}}, {{pct}}).",
+          "noiFell": "Le résultat net d'exploitation a reculé de {{from}} en {{prevPeriod}} à {{to}} en {{period}} (−{{delta}}, {{pct}}).",
+          "noiFlat": "Le résultat net d'exploitation est resté globalement stable entre {{prevPeriod}} et {{period}}, autour de {{to}}.",
+          "driverCostsUp": "Le principal facteur a été la hausse des charges d'exploitation (+{{amount}}).",
+          "driverCostsDown": "Le principal gain provient de la baisse des charges d'exploitation (−{{amount}}).",
+          "driverIncomeUp": "Le principal facteur a été la hausse des revenus (+{{amount}}).",
+          "driverIncomeDown": "Le principal facteur a été la baisse des revenus (−{{amount}}).",
+          "movers": "Les plus fortes hausses de charges proviennent de {{items}}.",
+          "yieldMoved": "En conséquence, le rendement net de l'immeuble est passé de {{from}} à {{to}} ({{delta}} pp).",
+          "yieldStands": "Le rendement net de l'immeuble s'établit à {{value}}.",
+          "monitor": "À surveiller : {{items}}.",
+          "monitorCollection": "le recouvrement à temps",
+          "monitorVacancy": "la vacance"
+        }
       },
       "revex": {
         "title": "Produits & charges",
