@@ -87,6 +87,8 @@ export interface ImportedStatementDTO {
   reconciliation: { status: ReconciliationStatus; lines: ReconciliationLine[] } | null;
   /** Domain smell-tests (implausible ratios) — non-blocking warnings for review. */
   sanityFlags: SanityFlagDTO[];
+  /** One-click fixes derived when a section doesn't tie out (detail view only). */
+  suggestedCorrections: SuggestedCorrectionDTO[];
   /** Invoices created from this statement (matched by sourceFileUrl) */
   linkedInvoices: LinkedInvoiceDTO[];
   createdAt: string;
@@ -97,6 +99,14 @@ export interface SanityFlagDTO {
   code: string;
   severity: "warn" | "info";
   message: string;
+}
+
+export interface SuggestedCorrectionDTO {
+  balanceId: string;
+  accountName: string;
+  currentCents: number;
+  suggestedCents: number;
+  reason: string;
 }
 
 export interface LinkedInvoiceDTO {
@@ -1322,7 +1332,10 @@ export async function getStatement(
     const prior = await findApprovedIncomeStatementForYear(prisma, orgId, s.buildingId, s.fiscalYear - 1);
     if (prior) {
       const yoy = computeContinuityFlags(s.accountBalances, prior.accountBalances, s.fiscalYear - 1);
-      if (yoy.length > 0) return { ...dto, sanityFlags: [...dto.sanityFlags, ...yoy] };
+      const suggested = computeSuggestedCorrections(s.accountBalances, prior.accountBalances, (s.statedTotals ?? null) as StatedTotalsCents | null, s.fiscalYear - 1);
+      if (yoy.length > 0 || suggested.length > 0) {
+        return { ...dto, sanityFlags: [...dto.sanityFlags, ...yoy], suggestedCorrections: suggested };
+      }
     }
   }
   return dto;
@@ -1826,7 +1839,7 @@ export function computeStatementSanityFlags(
   return flags;
 }
 
-type ContinuityRow = { documentSection: string; balanceCents: number; rawAccountCode?: string | null; rawAccountName?: string | null; account?: { name?: string | null; code?: string | null } | null };
+type ContinuityRow = { id?: string; documentSection: string; balanceCents: number; rawAccountCode?: string | null; rawAccountName?: string | null; account?: { name?: string | null; code?: string | null } | null };
 
 /**
  * Year-over-year continuity on a P&L: flag account lines that swing materially,
@@ -1875,6 +1888,42 @@ export function computeContinuityFlags(current: ContinuityRow[], prior: Continui
   return flags.sort((a, b) => (a.severity === b.severity ? 0 : a.severity === "warn" ? -1 : 1)).slice(0, 8);
 }
 
+/**
+ * When a section doesn't tie out to its stated total, derive a one-click fix:
+ * a line whose replacement by its prior-year value RESTORES the section total.
+ * That's the reconciliation residual + YoY signal converging on a single line and
+ * value (e.g. gérance 9 → 7'134). The manager confirms; we never silently rewrite.
+ * Only proposes non-negative values (the balance-edit endpoint requires ≥0).
+ */
+export function computeSuggestedCorrections(current: ContinuityRow[], prior: ContinuityRow[], statedTotalsCents: StatedTotalsCents | null | undefined, priorYear: number): SuggestedCorrectionDTO[] {
+  const stated = statedTotalsCents ?? {};
+  if (Object.keys(stated).length === 0) return [];
+  const TOL = 100; // CHF 1
+  const codeOf = (b: ContinuityRow) => (b.account?.code ?? b.rawAccountCode ?? "").replace(/\D/g, "");
+  const nameOf = (b: ContinuityRow) => (b.account?.name ?? b.rawAccountName ?? "");
+  const secLabel: Record<string, string> = { EXPENSE: "Charges", REVENUE: "Produits", ACTIF: "Actifs", PASSIF: "Passifs" };
+  const priorByCode = new Map<string, number>();
+  for (const b of prior) { const c = codeOf(b); if (c) priorByCode.set(c, (priorByCode.get(c) ?? 0) + b.balanceCents); }
+
+  const out: SuggestedCorrectionDTO[] = [];
+  for (const sec of ["EXPENSE", "REVENUE", "ACTIF", "PASSIF"] as const) {
+    const target = stated[sec];
+    if (target == null) continue;
+    const secBal = current.filter((b) => b.documentSection === sec);
+    const sum = secBal.reduce((s, b) => s + b.balanceCents, 0);
+    if (Math.abs(sum - target) <= TOL) continue; // ties out — nothing to fix
+    for (const b of secBal) {
+      const c = codeOf(b); if (!c || !b.id) continue;
+      const p = priorByCode.get(c);
+      if (p == null || p < 0 || p === b.balanceCents) continue;
+      if (Math.abs((sum - b.balanceCents + p) - target) <= TOL) {
+        out.push({ balanceId: b.id, accountName: nameOf(b), currentCents: b.balanceCents, suggestedCents: p, reason: `matches ${priorYear} and makes the ${secLabel[sec] ?? sec} total tie out` });
+      }
+    }
+  }
+  return out.slice(0, 5);
+}
+
 function mapDTO(s: any, linkedInvoices: any[] = []): ImportedStatementDTO {
   const balances: any[] = s.accountBalances ?? [];
   const balanceImbalanceCents = computeBalanceImbalanceCents(balances);
@@ -1917,6 +1966,7 @@ function mapDTO(s: any, linkedInvoices: any[] = []): ImportedStatementDTO {
     balanceImbalanceCents,
     reconciliation,
     sanityFlags,
+    suggestedCorrections: [],
     linkedInvoices: linkedInvoices.map((inv: any) => ({
       id: inv.id,
       description: inv.description ?? null,

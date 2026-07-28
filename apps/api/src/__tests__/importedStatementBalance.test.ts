@@ -1,4 +1,29 @@
-import { computeBalanceImbalanceCents, computeStatementSanityFlags, computeContinuityFlags } from "../services/importedStatementService";
+import { computeBalanceImbalanceCents, computeStatementSanityFlags, computeContinuityFlags, computeSuggestedCorrections } from "../services/importedStatementService";
+
+describe("computeSuggestedCorrections", () => {
+  const exp = (id: string, code: string, name: string, cents: number) => ({ id, documentSection: "EXPENSE", balanceCents: cents, rawAccountCode: code, rawAccountName: name });
+
+  it("suggests restoring gérance to its prior value to make Charges tie out (9→7'134)", () => {
+    const current = [exp("b1", "6500", "Honoraires de gérance", 9_00), exp("b2", "6000", "Entretien", 40_000_00), exp("b3", "6200", "Assurances", 8_000_00)];
+    const prior = [exp("p1", "6500", "Honoraires de gérance", 7_134_00), exp("p2", "6000", "Entretien", 40_000_00)];
+    const statedExpenseCents = 7_134_00 + 40_000_00 + 8_000_00; // the document's own Total Charges
+    const s = computeSuggestedCorrections(current, prior, { EXPENSE: statedExpenseCents }, 2023);
+    expect(s).toHaveLength(1);
+    expect(s[0]).toMatchObject({ balanceId: "b1", currentCents: 9_00, suggestedCents: 7_134_00 });
+  });
+
+  it("suggests nothing when the section already ties out", () => {
+    const current = [exp("b1", "6500", "Gérance", 7_100_00), exp("b2", "6000", "Entretien", 40_000_00)];
+    const prior = [exp("p1", "6500", "Gérance", 7_000_00)];
+    expect(computeSuggestedCorrections(current, prior, { EXPENSE: 47_100_00 }, 2023)).toEqual([]);
+  });
+
+  it("suggests nothing without stated totals", () => {
+    const current = [exp("b1", "6500", "Gérance", 9_00)];
+    const prior = [exp("p1", "6500", "Gérance", 7_134_00)];
+    expect(computeSuggestedCorrections(current, prior, null, 2023)).toEqual([]);
+  });
+});
 
 describe("computeContinuityFlags (year-over-year)", () => {
   const exp = (code: string, name: string, cents: number) => ({ documentSection: "EXPENSE", balanceCents: cents, rawAccountCode: code, rawAccountName: name });

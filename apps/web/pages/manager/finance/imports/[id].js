@@ -843,6 +843,22 @@ export default function ImportedStatementReviewPage() {
     } catch { setActionError("Couldn't load the original source file."); }
   }
 
+  // One-click apply of a derived correction (reconciliation residual + prior-year
+  // value converge on a line/value). PATCHes the balance, then refetches so the
+  // reconciliation + flags recompute live.
+  async function applyCorrection(c) {
+    setActionError("");
+    try {
+      const res = await fetch(`/api/imported-statements/${id}/balances/${c.balanceId}`, {
+        method: "PATCH",
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ balanceCents: c.suggestedCents }),
+      });
+      if (!res.ok) throw new Error((await res.json().catch(() => null))?.error?.message || "Failed to apply fix");
+      await fetchStatement();
+    } catch (e) { setActionError(String(e?.message || e)); }
+  }
+
   async function handleReject() {
     const notes = window.prompt(t("manager:financeImports.text.rejectConfirm"));
     if (notes === null) return;
@@ -909,6 +925,8 @@ export default function ImportedStatementReviewPage() {
   const recon = s?.reconciliation ?? null;
   // Domain smell-tests (implausible ratios) — non-blocking review warnings.
   const sanityFlags = s?.sanityFlags ?? [];
+  // Derived one-click fixes for figures that don't tie out.
+  const suggestedCorrections = s?.suggestedCorrections ?? [];
 
   // Approve availability:
   // - INVOICES: building only
@@ -1195,6 +1213,26 @@ export default function ImportedStatementReviewPage() {
                   {recon.status === "UNVERIFIED" && (
                     <p className="mt-1">The extraction couldn’t be auto-verified against the source — double-check the figures before approving.</p>
                   )}
+                </div>
+              )}
+
+              {/* ── Suggested fixes — one-click corrections that restore the tie-out ── */}
+              {suggestedCorrections.length > 0 && (
+                <div className="rounded-lg border border-blue-300 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+                  <p className="font-semibold mb-1">💡 Suggested fix{suggestedCorrections.length > 1 ? "es" : ""} — verify against the source before applying</p>
+                  <ul className="space-y-1.5">
+                    {suggestedCorrections.map((c) => (
+                      <li key={c.balanceId} className="flex flex-wrap items-center justify-between gap-2">
+                        <span>
+                          Set <b>{c.accountName}</b> from CHF {(c.currentCents / 100).toLocaleString("de-CH")} → <b>CHF {(c.suggestedCents / 100).toLocaleString("de-CH")}</b> — {c.reason}.
+                        </span>
+                        <button onClick={() => applyCorrection(c)} disabled={actionLoading}
+                          className="shrink-0 rounded-md bg-blue-600 px-2.5 py-1 text-xs font-semibold text-white transition-colors hover:bg-blue-700 disabled:opacity-50">
+                          Apply
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               )}
 
