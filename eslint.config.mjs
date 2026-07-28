@@ -128,7 +128,7 @@ export default [
 
   // ── Node scripts (scripts/, *.config.js) ────────────────────────
   {
-    files: ['scripts/**/*.js', '*.config.{js,mjs,cjs}', 'apps/web/*.config.js'],
+    files: ['scripts/**/*.js', 'apps/*/scripts/**/*.js', '*.config.{js,mjs,cjs}', 'apps/web/*.config.js'],
     languageOptions: { globals: { ...globals.node } },
     rules: { 'no-console': 'off' },
   },
