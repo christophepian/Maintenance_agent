@@ -832,6 +832,17 @@ export default function ImportedStatementReviewPage() {
     }
   }
 
+  // Provenance: open the original uploaded PDF so figures can be verified against
+  // the source. Blob-fetched with auth (a plain link wouldn't send the token).
+  async function viewSource() {
+    setActionError("");
+    try {
+      const res = await fetch(`/api/imported-statements/${id}/source-file`, { headers: authHeaders() });
+      if (!res.ok) throw new Error("no source");
+      window.open(URL.createObjectURL(await res.blob()), "_blank", "noopener");
+    } catch { setActionError("Couldn't load the original source file."); }
+  }
+
   async function handleReject() {
     const notes = window.prompt(t("manager:financeImports.text.rejectConfirm"));
     if (notes === null) return;
@@ -1145,6 +1156,14 @@ export default function ImportedStatementReviewPage() {
                     {" "}The equation must reach exactly zero before entries can be posted.
                     Use the edit buttons below to correct amounts or add missing rows.
                   </p>
+                </div>
+              )}
+
+              {/* ── Provenance: verify figures against the original PDF ── */}
+              {s?.sourceFileUrl && (
+                <div className="flex items-center justify-between gap-2 rounded-lg border border-surface-border bg-surface-subtle px-4 py-2 text-sm">
+                  <span className="text-muted">Verify the extracted figures against the original document.</span>
+                  <button onClick={viewSource} className="shrink-0 rounded-md border border-surface-border px-2.5 py-1 text-xs font-medium text-brand hover:border-brand">View original ↗</button>
                 </div>
               )}
 

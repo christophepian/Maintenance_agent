@@ -6945,6 +6945,25 @@ paths:
 
   # ── Financial Performance ──────────────────────────────────
 
+  /imported-statements/{id}/source-file:
+    get:
+      tags: [Financials]
+      summary: Serve the original uploaded PDF/image for an imported statement
+      description: Provenance — lets a reviewer verify extracted figures against the source document before approving.
+      operationId: getImportedStatementSourceFile
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: The original file, streamed inline
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+            image/*:
+              schema: { type: string, format: binary }
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /units/{id}/expense-lines:
     get:
       tags: [Financials]

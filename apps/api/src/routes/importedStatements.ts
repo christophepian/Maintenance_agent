@@ -21,6 +21,7 @@ import { requireOrgViewer } from "./helpers";
 import {
   readRawBody,
   parseMultipart,
+  storage,
 } from "../storage/attachments";
 import {
   ingestStatement,
@@ -287,6 +288,33 @@ export function registerImportedStatementRoutes(router: Router) {
       }
       console.error("[IMPORT] reject error:", e);
       sendError(res, 500, "INTERNAL_ERROR", "Failed to reject statement", e.message);
+    }
+  });
+
+  // ── GET /imported-statements/:id/source-file ────────────────────────────────
+  // Serve the original uploaded PDF so a reviewer can verify extracted figures
+  // against the source (provenance) before approving.
+  router.get("/imported-statements/:id/source-file", async ({ req, res, orgId, prisma, params }) => {
+    if (!requireOrgViewer(req, res)) return;
+    try {
+      const statement = await getStatement(prisma, params.id, orgId);
+      if (!statement) return sendError(res, 404, "NOT_FOUND", "Statement not found");
+      const fileKey = statement.sourceFileUrl;
+      if (!fileKey || !(await storage.exists(fileKey))) return sendError(res, 404, "NOT_FOUND", "No source file for this statement");
+
+      const buffer = await storage.get(fileKey);
+      const ext = fileKey.split(".").pop()?.toLowerCase() || "";
+      const mime = ext === "pdf" ? "application/pdf" : ext === "png" ? "image/png" : ext === "jpg" || ext === "jpeg" ? "image/jpeg" : "application/octet-stream";
+      res.writeHead(200, {
+        "Content-Type": mime,
+        "Content-Length": buffer.length.toString(),
+        "Content-Disposition": `inline; filename="${encodeURIComponent(fileKey.split("/").pop() || "source")}"`,
+        "Cache-Control": "private, max-age=3600",
+      });
+      res.end(buffer);
+    } catch (e) {
+      console.error("[IMPORT] source-file error:", e);
+      sendError(res, 500, "INTERNAL_ERROR", "Failed to serve source file");
     }
   });
 
