@@ -112,10 +112,10 @@ export class ClaudeVisionScanner {
       "extractAccountBalances",
       8192,
     );
-    const { accountBalances } = parseBalancesToolInput(balancesInput);
-    const bilan = emitAccountBalancesCsv(accountBalances, "balance");
+    const { accountBalances, statedTotals } = parseBalancesToolInput(balancesInput);
+    const bilan = emitAccountBalancesCsv(accountBalances, "balance", statedTotals);
     if (bilan) files.push({ fileName: `${base}__bilan.csv`, text: bilan });
-    const resultat = emitAccountBalancesCsv(accountBalances, "income");
+    const resultat = emitAccountBalancesCsv(accountBalances, "income", statedTotals);
     if (resultat) files.push({ fileName: `${base}__resultat.csv`, text: resultat });
 
     // General-ledger detail → per-line supplier invoices (some unit-attributed).

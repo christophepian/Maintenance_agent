@@ -97,6 +97,17 @@ export const STATEMENT_BALANCE_TOOL = {
           },
         },
       },
+      statedTotals: {
+        type: "object",
+        description:
+          "The document's OWN printed section grand-totals — the 'Total des charges / Total Charges', 'Total des produits / Total Produits', 'Total de l'actif / Total Actifs' and 'Total du passif / Total Passifs' lines. Report each as a plain signed CHF number using the SAME sign convention as the balance rows above, so each total equals the sum of that section's rows. Omit a section if the document prints no such grand-total. These are used ONLY to verify the extraction ties out — do NOT also emit them as balance rows.",
+        properties: {
+          ACTIF: { type: "number", description: "Printed grand-total of the Actifs section." },
+          PASSIF: { type: "number", description: "Printed grand-total of the Passifs section." },
+          REVENUE: { type: "number", description: "Printed grand-total of the Produits section." },
+          EXPENSE: { type: "number", description: "Printed grand-total of the Charges section." },
+        },
+      },
     },
   },
 } as const;
@@ -304,15 +315,19 @@ export function parseBuildingInfoToolInput(input: unknown): ExtractedBuildingInf
   };
 }
 
+export type StatedSectionTotals = Partial<Record<"ACTIF" | "PASSIF" | "REVENUE" | "EXPENSE", number>>;
+
 export function parseBalancesToolInput(input: unknown): {
   fields: Record<string, string | number | boolean | null>;
   accountBalances: ExtractedAccountBalance[];
+  statedTotals: StatedSectionTotals;
 } {
   const i = unwrapDoubleEncoded(input, "balances") as {
     fiscalYear?: number;
     periodLabel?: string;
     buildingAddress?: string;
     balances?: Array<{ rawAccountCode: string; rawAccountName: string; balanceChf: number; documentSection?: string }>;
+    statedTotals?: Record<string, unknown>;
   } | null;
   const fields: Record<string, string | number | boolean | null> = {};
   if (i?.fiscalYear) fields.fiscalYear = i.fiscalYear;
@@ -334,7 +349,17 @@ export function parseBalancesToolInput(input: unknown): {
         balanceType: deriveLedgerDirection(section, b.balanceChf),
       };
     });
-  return { fields, accountBalances };
+
+  // Document-declared section grand-totals — ground truth for the reconciliation
+  // gate. Kept only for the four real sections, only when numeric.
+  const statedTotals: StatedSectionTotals = {};
+  const rawTotals = i?.statedTotals ?? {};
+  for (const sec of ["ACTIF", "PASSIF", "REVENUE", "EXPENSE"] as const) {
+    const v = rawTotals[sec];
+    if (typeof v === "number" && Number.isFinite(v)) statedTotals[sec] = v;
+  }
+
+  return { fields, accountBalances, statedTotals };
 }
 
 /* ── forced-tool runner ───────────────────────────────────────────────────── */

@@ -163,11 +163,11 @@ export function emitBuildingInfoCsv(fields: ExtractedBuildingInfoFields): string
 export function emitAccountBalancesCsv(
   balances: ExtractedAccountBalance[],
   kind: "balance" | "income",
+  statedTotals?: Partial<Record<"ACTIF" | "PASSIF" | "REVENUE" | "EXPENSE", number>>,
 ): string | null {
-  const wanted =
-    kind === "balance"
-      ? new Set(["ACTIF", "PASSIF"])
-      : new Set(["REVENUE", "EXPENSE"]);
+  const sections: ("ACTIF" | "PASSIF" | "REVENUE" | "EXPENSE")[] =
+    kind === "balance" ? ["ACTIF", "PASSIF"] : ["REVENUE", "EXPENSE"];
+  const wanted = new Set<string>(sections);
   const rows = balances.filter((b) => wanted.has(b.documentSection));
   if (rows.length === 0) return null;
   // A real balance sheet has both sides. An owner current-account statement
@@ -179,12 +179,22 @@ export function emitAccountBalancesCsv(
     if (!hasActif || !hasPassif) return null;
   }
   const body = rows.map((b) => [
+    "", // row_type: leaf account
     cell(b.rawAccountCode),
     cell(b.rawAccountName),
     num(b.balanceChf),
     cell(b.documentSection),
   ]);
-  return toCsv(["accountCode", "accountName", "balanceChf", "section"], body);
+  // The document's own stated section grand-totals become total_section rows —
+  // the CSV mapper picks them up as reconciliation ground truth (extracted line
+  // sums must tie out to them before a statement can be approved).
+  for (const sec of sections) {
+    const total = statedTotals?.[sec];
+    if (typeof total === "number" && Number.isFinite(total)) {
+      body.push(["total_section", "", `Total ${sec}`, num(total), sec]);
+    }
+  }
+  return toCsv(["row_type", "accountCode", "accountName", "balanceChf", "section"], body);
 }
 
 /**

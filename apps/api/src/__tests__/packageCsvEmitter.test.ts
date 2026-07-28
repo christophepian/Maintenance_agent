@@ -9,7 +9,7 @@ import {
 } from "../services/scanners/packageCsvEmitter";
 import type { ExtractedAccountBalance } from "../services/documentScanner";
 import { mapRentRoll } from "../services/rentRollMapper";
-import { mapCsvToAccountBalances } from "../services/csvAccountingMapper";
+import { mapCsvToAccountBalances, reconcileBalances } from "../services/csvAccountingMapper";
 import { mapRegieLedger } from "../services/regieLedgerMapper";
 import { parseLedgerToolInput } from "../services/scanners/packageExtraction";
 import { detectDocumentType, parseBuildingInfo } from "../services/packageDetector";
@@ -226,6 +226,29 @@ describe("emitAccountBalancesCsv → detect + mapCsvToAccountBalances round-trip
   it("returns null when a kind has no rows", () => {
     const onlyActif: ExtractedAccountBalance[] = [balances[0]];
     expect(emitAccountBalancesCsv(onlyActif, "income")).toBeNull();
+  });
+
+  it("emits stated section totals as total_section rows that reconcile (PASS)", () => {
+    // Vision-extracted stated totals ride along as total_section rows; the mapper
+    // captures them and reconcileBalances confirms the leaf sums tie out.
+    const csv = emitAccountBalancesCsv(balances, "income", { REVENUE: 162672, EXPENSE: 18400 })!;
+    const { items, statedTotals } = mapCsvToAccountBalances(csv);
+    // total_section rows are NOT emitted as leaf accounts
+    expect(items.map((i) => i.rawAccountCode).sort()).toEqual(["3000", "4200"]);
+    expect(statedTotals).toMatchObject({ REVENUE: 162672, EXPENSE: 18400 });
+    const persisted = items.map((i) => ({ documentSection: i.documentSection, balanceCents: Math.round(i.balanceChf * 100) }));
+    const stated = Object.fromEntries(Object.entries(statedTotals ?? {}).map(([k, v]) => [k, Math.round((v as number) * 100)]));
+    expect(reconcileBalances(persisted, stated).status).toBe("PASS");
+  });
+
+  it("a mis-read line makes the stated total not tie out (FAIL)", () => {
+    // Entretien mis-read as 9 instead of 18'400 → Charges sum short → FAIL.
+    const misread = balances.map((b) => (b.rawAccountCode === "4200" ? { ...b, balanceChf: 9 } : b));
+    const csv = emitAccountBalancesCsv(misread, "income", { REVENUE: 162672, EXPENSE: 18400 })!;
+    const { items, statedTotals } = mapCsvToAccountBalances(csv);
+    const persisted = items.map((i) => ({ documentSection: i.documentSection, balanceCents: Math.round(i.balanceChf * 100) }));
+    const stated = Object.fromEntries(Object.entries(statedTotals ?? {}).map(([k, v]) => [k, Math.round((v as number) * 100)]));
+    expect(reconcileBalances(persisted, stated).status).toBe("FAIL");
   });
 
   it("does not emit a one-sided bilan (owner-account page → no ACTIF+PASSIF pair)", () => {
