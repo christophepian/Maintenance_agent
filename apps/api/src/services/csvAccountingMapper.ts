@@ -193,9 +193,9 @@ const NON_LEAF_ROW_TYPES = new Set([
  */
 const RESULT_KEYWORDS = ["benefice", "perte", "resultat", "gewinn", "verlust", "ergebnis"];
 /** Swiss KMU chart: 2979 = résultat de l'exercice (equity). */
-const RESULT_ACCOUNT_CODE = "2979";
+export const RESULT_ACCOUNT_CODE = "2979";
 
-function isResultDesignation(name: string): boolean {
+export function isResultDesignation(name: string): boolean {
   const n = normHeader(name);
   if (!n || n.startsWith("total")) return false;
   return RESULT_KEYWORDS.some((k) => n.startsWith(k));

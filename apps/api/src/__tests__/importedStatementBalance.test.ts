@@ -1,4 +1,38 @@
-import { computeBalanceImbalanceCents, computeStatementSanityFlags, computeContinuityFlags, computeSuggestedCorrections } from "../services/importedStatementService";
+import { computeBalanceImbalanceCents, computeStatementSanityFlags, computeContinuityFlags, computeSuggestedCorrections, computeCrossStatementResult } from "../services/importedStatementService";
+
+describe("computeCrossStatementResult (P&L result vs balance-sheet result line)", () => {
+  const rev = (cents: number) => ({ documentSection: "REVENUE", balanceCents: cents });
+  const exp = (cents: number) => ({ documentSection: "EXPENSE", balanceCents: cents });
+  const bsResult = (code: string, name: string, cents: number) => ({ documentSection: "PASSIF", balanceCents: cents, rawAccountCode: code, rawAccountName: name });
+  const asset = (cents: number) => ({ documentSection: "ACTIF", balanceCents: cents, rawAccountCode: "1000", rawAccountName: "Caisse" });
+
+  it("PASS when the P&L result equals the balance sheet's result line", () => {
+    const income = [rev(200_000_00), exp(155_134_00)]; // result +44'866
+    const bs = [asset(500_000_00), bsResult("2979", "Bénéfice de l'exercice", 44_866_00)];
+    expect(computeCrossStatementResult(income, bs).status).toBe("PASS");
+  });
+
+  it("FAILs when a mis-read (gérance 9) inflates the P&L result vs the balance sheet", () => {
+    // Expenses too low by 7'125 → P&L result overstated by 7'125 vs the BS result line.
+    const income = [rev(200_000_00), exp(148_009_00)]; // result +51'991 (wrong)
+    const bs = [asset(500_000_00), bsResult("2979", "Bénéfice de l'exercice", 44_866_00)]; // true result
+    const r = computeCrossStatementResult(income, bs);
+    expect(r.status).toBe("FAIL");
+    expect(Math.abs(r.diffCents!)).toBe(7_125_00);
+  });
+
+  it("NA when no result line is present on the balance sheet", () => {
+    const income = [rev(100_000_00), exp(60_000_00)];
+    const bs = [asset(500_000_00)];
+    expect(computeCrossStatementResult(income, bs).status).toBe("NA");
+  });
+
+  it("finds the result line by name when the 2979 code is absent", () => {
+    const income = [rev(100_000_00), exp(60_000_00)]; // +40'000
+    const bs = [asset(500_000_00), bsResult("2900", "Résultat de l'exercice", 40_000_00)];
+    expect(computeCrossStatementResult(income, bs).status).toBe("PASS");
+  });
+});
 
 describe("computeSuggestedCorrections", () => {
   const exp = (id: string, code: string, name: string, cents: number) => ({ id, documentSection: "EXPENSE", balanceCents: cents, rawAccountCode: code, rawAccountName: name });

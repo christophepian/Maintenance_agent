@@ -33,9 +33,9 @@ import { getAnthropicClient } from "./aiClient";
 import { writeAuditLog } from "./auditLog";
 import { createInvoice } from "./invoices";
 import { postJournalEntries } from "./ledgerService";
-import { mapCsvToAccountBalances, mapCsvToInvoiceLines, ReconciliationLine, CsvMapResult, reconcileBalances, StatedTotalsCents, ReconciliationStatus } from "./csvAccountingMapper";
+import { mapCsvToAccountBalances, mapCsvToInvoiceLines, ReconciliationLine, CsvMapResult, reconcileBalances, StatedTotalsCents, ReconciliationStatus, RESULT_ACCOUNT_CODE, isResultDesignation } from "./csvAccountingMapper";
 import * as accountRepo from "../repositories/accountRepository";
-import { updateStatementStatus, findApprovedIncomeStatementForYear } from "../repositories/importedStatementRepository";
+import { updateStatementStatus, findApprovedIncomeStatementForYear, findSiblingStatement } from "../repositories/importedStatementRepository";
 import * as crypto from "crypto";
 
 /* ══════════════════════════════════════════════════════════════
@@ -89,6 +89,8 @@ export interface ImportedStatementDTO {
   sanityFlags: SanityFlagDTO[];
   /** One-click fixes derived when a section doesn't tie out (detail view only). */
   suggestedCorrections: SuggestedCorrectionDTO[];
+  /** P&L result vs balance-sheet result-line agreement (detail view only). */
+  crossCheck: CrossStatementCheckDTO | null;
   /** Invoices created from this statement (matched by sourceFileUrl) */
   linkedInvoices: LinkedInvoiceDTO[];
   createdAt: string;
@@ -107,6 +109,69 @@ export interface SuggestedCorrectionDTO {
   currentCents: number;
   suggestedCents: number;
   reason: string;
+}
+
+export interface CrossStatementCheckDTO {
+  /** PASS = P&L result agrees with the balance sheet's result line · FAIL = they
+   *  disagree (extraction error on one side) · NA = the sibling/result line is absent. */
+  status: "PASS" | "FAIL" | "NA";
+  plResultCents: number | null;   // income statement: revenue − expenses
+  bsResultCents: number | null;   // balance sheet's "Résultat de l'exercice" line (magnitude)
+  diffCents: number | null;
+}
+
+/**
+ * Cross-statement invariant: an income statement's net result (revenue − expenses)
+ * must equal the balance sheet's own result-of-the-year equity line. They're
+ * extracted separately, so a mis-read on one side (e.g. gérance 9 vs 7'134) makes
+ * them disagree even when each statement is internally consistent — the tell that
+ * a within-statement check can't see. Compares magnitudes (sign conventions vary
+ * per régie); NA when the sibling or the result line is missing.
+ */
+export function computeCrossStatementResult(
+  incomeBalances: { documentSection: string; balanceCents: number }[],
+  bsBalances: { documentSection: string; balanceCents: number; rawAccountCode?: string | null; rawAccountName?: string | null; account?: { code?: string | null; name?: string | null } | null }[],
+): CrossStatementCheckDTO {
+  const TOL = 500; // CHF 5
+  const rev = Math.abs(incomeBalances.filter((b) => b.documentSection === "REVENUE").reduce((s, b) => s + b.balanceCents, 0));
+  const exp = Math.abs(incomeBalances.filter((b) => b.documentSection === "EXPENSE").reduce((s, b) => s + b.balanceCents, 0));
+  if (rev === 0 && exp === 0) return { status: "NA", plResultCents: null, bsResultCents: null, diffCents: null };
+  const plResult = rev - exp;
+
+  const codeOf = (b: { rawAccountCode?: string | null; account?: { code?: string | null } | null }) => (b.account?.code ?? b.rawAccountCode ?? "").replace(/\D/g, "");
+  const nameOf = (b: { rawAccountName?: string | null; account?: { name?: string | null } | null }) => (b.account?.name ?? b.rawAccountName ?? "");
+  let resultLine = bsBalances.find((b) => codeOf(b) === RESULT_ACCOUNT_CODE);
+  if (!resultLine) {
+    const named = bsBalances.filter((b) => isResultDesignation(nameOf(b)));
+    if (named.length === 1) resultLine = named[0]; // unambiguous only
+  }
+  if (!resultLine) return { status: "NA", plResultCents: plResult, bsResultCents: null, diffCents: null };
+
+  const bsResult = Math.abs(resultLine.balanceCents);
+  const diff = Math.abs(plResult) - bsResult;
+  return { status: Math.abs(diff) <= TOL ? "PASS" : "FAIL", plResultCents: plResult, bsResultCents: bsResult, diffCents: diff };
+}
+
+type StatementForCrossCheck = {
+  buildingId: string | null;
+  sectionType: StatementSectionType;
+  fiscalYear: number;
+  uploadBatchId: string | null;
+  accountBalances: { documentSection: string; balanceCents: number; rawAccountCode?: string | null; rawAccountName?: string | null; account?: { code?: string | null; name?: string | null } | null }[];
+};
+
+/** Fetch the sibling statement and cross-reconcile P&L result vs BS result line. */
+async function getCrossStatementCheck(prisma: PrismaClient, orgId: string, s: StatementForCrossCheck): Promise<CrossStatementCheckDTO | null> {
+  if (!s.buildingId) return null;
+  const isIncome = s.sectionType === StatementSectionType.INCOME_STATEMENT;
+  const isBs = s.sectionType === StatementSectionType.BALANCE_SHEET;
+  if (!isIncome && !isBs) return null;
+  const siblingType = isIncome ? StatementSectionType.BALANCE_SHEET : StatementSectionType.INCOME_STATEMENT;
+  const sibling = await findSiblingStatement(prisma, orgId, s.buildingId, s.fiscalYear, siblingType, s.uploadBatchId);
+  if (!sibling) return null;
+  const income = isIncome ? s.accountBalances : sibling.accountBalances;
+  const bs = isIncome ? sibling.accountBalances : s.accountBalances;
+  return computeCrossStatementResult(income, bs);
 }
 
 export interface LinkedInvoiceDTO {
@@ -1015,7 +1080,18 @@ export async function approveStatement(
     const failing = recon.lines.filter((l) => !l.ok).map((l) => `${l.scope}: extracted ${l.computedChf} vs stated ${l.statedChf} (off by ${l.diffChf})`);
     throw new ImportedStatementError("RECONCILIATION_FAILED", `Extracted totals don't tie out to the document — ${failing.join("; ")}. Correct the flagged balances, or approve with override.`);
   }
-  const overrideNote = recon.status === "FAIL" && opts?.override
+  // Cross-statement result reconciliation — the P&L result must equal the balance
+  // sheet's result line. Catches a mis-read on one side even when each statement is
+  // internally consistent. Blocks (like the within-statement gate) unless overridden.
+  const cross = await getCrossStatementCheck(prisma, orgId, statement);
+  if (cross?.status === "FAIL" && !opts?.override) {
+    throw new ImportedStatementError(
+      "CROSS_STATEMENT_MISMATCH",
+      `The income statement's result (${(cross.plResultCents! / 100).toLocaleString("de-CH")}) doesn't match the balance sheet's result line (${(cross.bsResultCents! / 100).toLocaleString("de-CH")}) — off by ${(Math.abs(cross.diffCents!) / 100).toLocaleString("de-CH")}. Fix the mis-read figure, or approve with override.`,
+    );
+  }
+
+  const overrideNote = (recon.status === "FAIL" || cross?.status === "FAIL") && opts?.override
     ? `⚠ Approved despite failed reconciliation${opts.overrideReason ? `: ${opts.overrideReason}` : ""} (by ${approvedBy})`
     : null;
 
@@ -1326,19 +1402,23 @@ export async function getStatement(
 
   const dto = mapDTO(s, linkedInvoices);
 
-  // Year-over-year continuity — only on income statements with a building, and
-  // only against the prior year's APPROVED statement (the trusted baseline).
+  let sanityFlags = dto.sanityFlags;
+  let suggestedCorrections = dto.suggestedCorrections;
+
+  // Year-over-year continuity + one-click corrections — income statements only,
+  // against the prior year's APPROVED statement (the trusted baseline).
   if (s.buildingId && s.sectionType === StatementSectionType.INCOME_STATEMENT) {
     const prior = await findApprovedIncomeStatementForYear(prisma, orgId, s.buildingId, s.fiscalYear - 1);
     if (prior) {
-      const yoy = computeContinuityFlags(s.accountBalances, prior.accountBalances, s.fiscalYear - 1);
-      const suggested = computeSuggestedCorrections(s.accountBalances, prior.accountBalances, (s.statedTotals ?? null) as StatedTotalsCents | null, s.fiscalYear - 1);
-      if (yoy.length > 0 || suggested.length > 0) {
-        return { ...dto, sanityFlags: [...dto.sanityFlags, ...yoy], suggestedCorrections: suggested };
-      }
+      sanityFlags = [...sanityFlags, ...computeContinuityFlags(s.accountBalances, prior.accountBalances, s.fiscalYear - 1)];
+      suggestedCorrections = computeSuggestedCorrections(s.accountBalances, prior.accountBalances, (s.statedTotals ?? null) as StatedTotalsCents | null, s.fiscalYear - 1);
     }
   }
-  return dto;
+
+  // Cross-statement result reconciliation (P&L result ↔ balance-sheet result line).
+  const crossCheck = await getCrossStatementCheck(prisma, orgId, s);
+
+  return { ...dto, sanityFlags, suggestedCorrections, crossCheck };
 }
 
 /** Assign (or reassign) the building for a PENDING_REVIEW statement. */
@@ -1967,6 +2047,7 @@ function mapDTO(s: any, linkedInvoices: any[] = []): ImportedStatementDTO {
     reconciliation,
     sanityFlags,
     suggestedCorrections: [],
+    crossCheck: null,
     linkedInvoices: linkedInvoices.map((inv: any) => ({
       id: inv.id,
       description: inv.description ?? null,

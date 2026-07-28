@@ -74,6 +74,35 @@ export async function findApprovedIncomeStatementForYear(
   });
 }
 
+/**
+ * The sibling statement of a given section type for the same building + fiscal
+ * year (any non-rejected status), preferring the same upload batch — used to
+ * cross-reconcile a P&L result against the balance sheet's result line.
+ */
+export async function findSiblingStatement(
+  prisma: PrismaClient,
+  orgId: string,
+  buildingId: string,
+  fiscalYear: number,
+  sectionType: StatementSectionType,
+  preferBatchId?: string | null,
+) {
+  const base = { orgId, buildingId, fiscalYear, sectionType, status: { not: ImportedStatementStatus.REJECTED } };
+  if (preferBatchId) {
+    const inBatch = await prisma.importedStatement.findFirst({
+      where: { ...base, uploadBatchId: preferBatchId },
+      include: STATEMENT_INCLUDE,
+      orderBy: { updatedAt: "desc" },
+    });
+    if (inBatch) return inBatch;
+  }
+  return prisma.importedStatement.findFirst({
+    where: base,
+    include: STATEMENT_INCLUDE,
+    orderBy: [{ status: "asc" }, { updatedAt: "desc" }],
+  });
+}
+
 /* ── single ─────────────────────────────────────────────────── */
 
 export async function findStatementById(

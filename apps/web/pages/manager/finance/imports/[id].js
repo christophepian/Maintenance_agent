@@ -813,7 +813,7 @@ export default function ImportedStatementReviewPage() {
       if (!res.ok || !json) {
         // Reconciliation gate: extracted figures don't tie out to the document's
         // own totals. Require an explicit, reasoned override before publishing.
-        if (json?.error?.code === "RECONCILIATION_FAILED" && !opts?.override) {
+        if ((json?.error?.code === "RECONCILIATION_FAILED" || json?.error?.code === "CROSS_STATEMENT_MISMATCH") && !opts?.override) {
           const reason = window.prompt(
             `${json?.error?.message}\n\n` +
             "Approving now publishes figures that may be wrong to the owner. If you've verified them against the source, type a reason to approve anyway (or Cancel):",
@@ -927,6 +927,8 @@ export default function ImportedStatementReviewPage() {
   const sanityFlags = s?.sanityFlags ?? [];
   // Derived one-click fixes for figures that don't tie out.
   const suggestedCorrections = s?.suggestedCorrections ?? [];
+  // Cross-statement: P&L result vs the balance sheet's result line.
+  const crossCheck = s?.crossCheck ?? null;
 
   // Approve availability:
   // - INVOICES: building only
@@ -1212,6 +1214,23 @@ export default function ImportedStatementReviewPage() {
                   )}
                   {recon.status === "UNVERIFIED" && (
                     <p className="mt-1">The extraction couldn’t be auto-verified against the source — double-check the figures before approving.</p>
+                  )}
+                </div>
+              )}
+
+              {/* ── Cross-statement: P&L result vs balance-sheet result line ── */}
+              {crossCheck && crossCheck.status !== "NA" && (
+                <div className={cn("rounded-lg border px-4 py-3 text-sm",
+                  crossCheck.status === "PASS" ? "border-green-300 bg-green-50 text-green-800" : "border-red-300 bg-red-50 text-red-800")}>
+                  <p className="font-semibold">
+                    {crossCheck.status === "PASS"
+                      ? "✓ Cross-check — the income statement's result matches the balance sheet"
+                      : "⚠ Cross-check failed — income statement and balance sheet disagree"}
+                  </p>
+                  {crossCheck.status === "FAIL" && (
+                    <p className="mt-1 font-mono text-xs">
+                      P&amp;L result {(crossCheck.plResultCents / 100).toLocaleString("de-CH")} vs balance-sheet result line {(crossCheck.bsResultCents / 100).toLocaleString("de-CH")} (off by {(Math.abs(crossCheck.diffCents) / 100).toLocaleString("de-CH")}) — a figure is mis-read on one of the two statements.
+                    </p>
                   )}
                 </div>
               )}
