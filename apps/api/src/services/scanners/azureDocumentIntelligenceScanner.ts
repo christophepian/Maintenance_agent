@@ -42,6 +42,7 @@ import {
   parseBalancesToolInput,
   parseLedgerToolInput,
   normalizeSwissAccountCode,
+  type StatedSectionTotals,
   type PackageExtractionFile,
 } from "./packageExtraction";
 
@@ -916,6 +917,7 @@ async function extractBalancesFromChunk(
 ): Promise<{
   fields: Record<string, string | number | boolean | null>;
   accountBalances: ExtractedAccountBalance[];
+  statedTotals: StatedSectionTotals;
 }> {
   const chunkLabel = totalChunks > 1 ? ` (chunk ${chunkIndex + 1} of ${totalChunks})` : "";
 
@@ -944,7 +946,7 @@ async function extractBalancesFromChunk(
       return parseBalancesToolInput(block.input);
     }
   }
-  return { fields: {}, accountBalances: [] };
+  return { fields: {}, accountBalances: [], statedTotals: {} };
 }
 
 /**
@@ -1138,10 +1140,13 @@ async function extractRentRollRows(
 async function extractBalancesForPackage(
   client: ReturnType<typeof getAnthropicClient>,
   pages: string[],
-): Promise<ExtractedAccountBalance[]> {
+): Promise<{ balances: ExtractedAccountBalance[]; statedTotals: StatedSectionTotals }> {
   const chunks = splitIntoPageChunks(pages.join("\n\n"), undefined, PACKAGE_CHUNK_CHARS);
   const all: ExtractedAccountBalance[] = [];
   const seen = new Set<string>();
+  // A section's grand-total appears on one chunk (the page carrying it); first
+  // non-null wins so overlapping chunks don't clobber it.
+  const statedTotals: StatedSectionTotals = {};
   for (let i = 0; i < chunks.length; i++) {
     let res: Awaited<ReturnType<typeof extractBalancesFromChunk>>;
     try {
@@ -1157,8 +1162,11 @@ async function extractBalancesForPackage(
         all.push(b);
       }
     }
+    for (const sec of ["ACTIF", "PASSIF", "REVENUE", "EXPENSE"] as const) {
+      if (statedTotals[sec] == null && res.statedTotals[sec] != null) statedTotals[sec] = res.statedTotals[sec];
+    }
   }
-  return all;
+  return { balances: all, statedTotals };
 }
 
 /** Extract + dedupe general-ledger detail rows across pages (chunked, pièce|code|absAmount key). */
@@ -1958,10 +1966,10 @@ export class AzureDocumentIntelligenceScanner implements DocumentScanner {
     // Balance sheet + income statement → reuse the balance extractor, split by section.
     const financialPages = pagesOf("BALANCE_SHEET", "INCOME_STATEMENT");
     if (financialPages.length) {
-      const balances = await extractBalancesForPackage(client, financialPages);
-      const bilan = emitAccountBalancesCsv(balances, "balance");
+      const { balances, statedTotals } = await extractBalancesForPackage(client, financialPages);
+      const bilan = emitAccountBalancesCsv(balances, "balance", statedTotals);
       if (bilan) files.push({ fileName: `${base}__bilan.csv`, text: bilan });
-      const resultat = emitAccountBalancesCsv(balances, "income");
+      const resultat = emitAccountBalancesCsv(balances, "income", statedTotals);
       if (resultat) files.push({ fileName: `${base}__resultat.csv`, text: resultat });
     }
 
