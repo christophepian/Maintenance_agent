@@ -877,6 +877,8 @@
         "recoverableNote": "L'exploitation inclut {{amount}} de charges récupérables (chauffage, eau…) que les locataires remboursent via leurs acomptes — affiché ici en attendant le décompte.",
         "catOwner": "Propriétaire",
         "catRecoverable": "Récupérable",
+        "catTenantRecharge": "À charge locataire",
+        "tenantRechargeNote": "{{amount}} d'entretien est refacturé directement au locataire (« à charge du locataire ») — une créance récupérable, exclue du NOI puisque le propriétaire ne la supporte pas in fine.",
         "reclassify": "Reclasser",
         "reclassifyDone": "Terminé"
       },

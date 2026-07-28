@@ -13,9 +13,9 @@ describe("classifyRegieExpenseAccount", () => {
     ["Conciergeries externes", "RECOVERABLE"],
     ["Entretien des appartements", "OWNER_OPEX"], // upkeep, NOT capex
     ["Entretien immeuble", "OWNER_OPEX"],
-    ["Entretien à charge du locataire", "RECOVERABLE"], // tenant-borne, not owner opex
-    ["Entretien à charge locataire", "RECOVERABLE"],
-    ["Travaux refacturés au locataire", "RECOVERABLE"],
+    ["Entretien à charge du locataire", "TENANT_RECHARGE"], // tenant-owed receivable, excluded from NOI
+    ["Entretien à charge locataire", "TENANT_RECHARGE"],
+    ["Travaux refacturés au locataire", "TENANT_RECHARGE"],
     ["Créances locataires irrécouvrables", "OWNER_OPEX"], // bad debt is an owner cost
     ["Assurances", "OWNER_OPEX"],
     ["Honoraires de gérance", "OWNER_OPEX"],
@@ -37,14 +37,16 @@ describe("classifyRegieExpenseAccount", () => {
       { documentSection: "EXPENSE", balanceCents: 800_00, rawAccountName: "Intérêts hypothécaires", rawAccountCode: "6800", account: null },
       { documentSection: "EXPENSE", balanceCents: 600_00, rawAccountName: "Frais chauffage", rawAccountCode: "4030", account: null },
       { documentSection: "EXPENSE", balanceCents: 400_00, rawAccountName: "Entretien immeuble", rawAccountCode: "4000", account: null },
+      { documentSection: "EXPENSE", balanceCents: 300_00, rawAccountName: "Entretien à charge du locataire", rawAccountCode: "4120", account: null },
     ]);
     expect(r.capexCents).toBe(5_000_00);
     expect(r.financingCents).toBe(800_00);
     expect(r.recoverableCents).toBe(600_00);
+    expect(r.tenantRechargeCents).toBe(300_00);
     expect(r.ownerOpexCents).toBe(400_00);
-    expect(r.expenseCents).toBe(6_800_00); // all four
-    // operating (owner opex + recoverable) = expenses − capex − financing
-    expect(r.expenseCents - r.capexCents - r.financingCents).toBe(1_000_00);
+    expect(r.expenseCents).toBe(7_100_00); // all five
+    // operating (owner opex + recoverable) = expenses − capex − financing − tenant recharge
+    expect(r.expenseCents - r.capexCents - r.financingCents - r.tenantRechargeCents).toBe(1_000_00);
   });
 });
 

@@ -877,6 +877,8 @@
         "recoverableNote": "Operating includes {{amount}} of recoverable charges (heating, water…) that tenants reimburse via their provisions — shown here pending reconciliation.",
         "catOwner": "Owner",
         "catRecoverable": "Recoverable",
+        "catTenantRecharge": "Tenant recharge",
+        "tenantRechargeNote": "{{amount}} of maintenance is billed directly to the tenant (\"à charge du locataire\") — a recoverable receivable, excluded from NOI as the owner doesn't ultimately bear it.",
         "reclassify": "Reclassify",
         "reclassifyDone": "Done"
       },

@@ -30,7 +30,7 @@ export interface ContractorSpendDTO {
 /** How a régie P&L expense account maps to the reporting cost taxonomy. Owner
  *  opex reduces NOI; recoverable (Nebenkosten) is tenant-paid; capex and
  *  financing sit below operating NOI. */
-export type RegieCostCategory = "OWNER_OPEX" | "RECOVERABLE" | "CAPEX" | "FINANCING";
+export type RegieCostCategory = "OWNER_OPEX" | "RECOVERABLE" | "TENANT_RECHARGE" | "CAPEX" | "FINANCING";
 
 export interface AccountTotalDTO {
   accountId: string;
@@ -56,11 +56,13 @@ export function classifyRegieExpenseAccount(_code: string | null | undefined, na
   if (/interet|hypothec|hypothek|emprunt|mortgage/.test(n)) return "FINANCING";
   // Recoverable ancillary (Nebenkosten) — tenant-borne operating charges.
   if (/chauffage|heating|\beau\b|\bwater\b|electric|concierge|nettoyage|ascenseur|elevator|ordure|dechet|\bgaz\b/.test(n)) return "RECOVERABLE";
-  // Maintenance explicitly billed to the tenant ("à charge du locataire",
-  // "refacturé au locataire") — the owner doesn't ultimately bear it, so it's a
-  // recoverable charge, NOT owner opex. Targeted on the "charge … locataire"
+  // Maintenance the tenant is directly liable for ("à charge du locataire",
+  // "refacturé au locataire"). The owner fronts it but the tenant owes it back —
+  // it's a recoverable RECEIVABLE, not an owner cost, and (unlike Nebenkosten,
+  // which net against forfait income) it has no offsetting income line. So it's
+  // pulled OUT of operating NOI entirely. Targeted on the "charge … locataire"
   // qualifier so bad-debt lines ("créances locataires") aren't caught.
-  if (/charge.{0,8}locataire|refactur\w*.{0,8}locataire/.test(n)) return "RECOVERABLE";
+  if (/charge.{0,8}locataire|refactur\w*.{0,8}locataire/.test(n)) return "TENANT_RECHARGE";
   return "OWNER_OPEX";
 }
 
@@ -92,6 +94,12 @@ export interface BuildingFinancialsDTO {
    * can show it as a distinct "recoverable ancillary" line vs landlord expenses.
    */
   recoverableAncillaryCents: number;
+  /**
+   * Tenant-recharged maintenance ("à charge du locataire") — a recoverable
+   * receivable pulled OUT of operating/NOI (imported statements only). Shown
+   * below NOI like capex/financing. 0 when none.
+   */
+  tenantRechargeCents?: number;
 
   // Income breakdown (projected, from lease terms)
   rentalIncomeCents: number;
@@ -300,6 +308,7 @@ export function aggregateImportedPnl(balances: ImportedPnlBalanceRow[]): {
   capexCents: number;
   financingCents: number;
   recoverableCents: number;
+  tenantRechargeCents: number;
   ownerOpexCents: number;
 } {
   // Régie exports differ in sign convention: some store revenue as a positive
@@ -308,7 +317,7 @@ export function aggregateImportedPnl(balances: ImportedPnlBalanceRow[]): {
   // contra line still nets correctly) and take the absolute value of the total.
   let revenueSigned = 0;
   let expenseSigned = 0;
-  let capexCents = 0, financingCents = 0, recoverableCents = 0, ownerOpexCents = 0;
+  let capexCents = 0, financingCents = 0, recoverableCents = 0, tenantRechargeCents = 0, ownerOpexCents = 0;
   const expensesByAccount: AccountTotalDTO[] = [];
   for (const ab of balances) {
     if (ab.documentSection === "REVENUE") {
@@ -319,12 +328,13 @@ export function aggregateImportedPnl(balances: ImportedPnlBalanceRow[]): {
       // Manager override on the account wins over the name heuristic.
       const ov = ab.account?.costCategory;
       const category: RegieCostCategory =
-        ov === "OWNER_OPEX" || ov === "RECOVERABLE" || ov === "CAPEX" || ov === "FINANCING"
+        ov === "OWNER_OPEX" || ov === "RECOVERABLE" || ov === "TENANT_RECHARGE" || ov === "CAPEX" || ov === "FINANCING"
           ? ov
           : classifyRegieExpenseAccount(ab.account?.code ?? ab.rawAccountCode, ab.account?.name ?? ab.rawAccountName);
       if (category === "CAPEX") capexCents += amt;
       else if (category === "FINANCING") financingCents += amt;
       else if (category === "RECOVERABLE") recoverableCents += amt;
+      else if (category === "TENANT_RECHARGE") tenantRechargeCents += amt;
       else ownerOpexCents += amt;
       expensesByAccount.push({
         accountId: ab.account?.id ?? ab.accountId ?? "",
@@ -340,7 +350,7 @@ export function aggregateImportedPnl(balances: ImportedPnlBalanceRow[]): {
     revenueCents: Math.abs(revenueSigned),
     expenseCents: Math.abs(expenseSigned),
     expensesByAccount,
-    capexCents, financingCents, recoverableCents, ownerOpexCents,
+    capexCents, financingCents, recoverableCents, tenantRechargeCents, ownerOpexCents,
   };
 }
 
@@ -380,7 +390,12 @@ async function buildImportedFinancialsDTO(
   const capexCents = Math.round(raw.capexCents * f);
   const financingCents = Math.round(raw.financingCents * f);
   const recoverableCents = Math.round(raw.recoverableCents * f);
-  const operatingCents = Math.max(0, expenseCents - capexCents - financingCents);
+  // Tenant-recharged maintenance ("à charge du locataire") is a recoverable
+  // receivable, not an owner cost, and has no offsetting income line — pull it out
+  // of operating alongside capex/financing so NOI (and per-unit yield) aren't
+  // depressed by costs the tenant ultimately bears.
+  const tenantRechargeCents = Math.round(raw.tenantRechargeCents * f);
+  const operatingCents = Math.max(0, expenseCents - capexCents - financingCents - tenantRechargeCents);
   const noiCents = revenueCents - operatingCents;
 
   const [totalUnitsCount, activeUnitsCount] = await Promise.all([
@@ -403,6 +418,7 @@ async function buildImportedFinancialsDTO(
     netOperatingIncomeCents: noiCents,
     financingTotalCents: financingCents,
     recoverableAncillaryCents: recoverableCents,
+    tenantRechargeCents,
     rentalIncomeCents: revenueCents,
     serviceChargeIncomeCents: 0,
     receivablesCents: 0,
@@ -1939,8 +1955,12 @@ export async function getUnitFinancialSummaries(
   // already appear as INVOICE_ISSUED entries, are never counted twice.
   const { postedInvoiceIds, incoming } = await financialsRepo.findUnitAttributedInvoices(prisma, orgId, unitIds, from, to);
   const postedInvoiceIdSet = new Set(postedInvoiceIds);
+  // Tenant-recharged maintenance ("à charge du locataire") is a recoverable
+  // receivable, not the unit's cost — exclude it so the unit's net income and
+  // yield (and the sell-candidate flag) reflect what the owner actually bears.
   for (const inv of incoming) {
     if (inv.unitId && !postedInvoiceIdSet.has(inv.id)) {
+      if (classifyRegieExpenseAccount(inv.accountCode, inv.accountName) === "TENANT_RECHARGE") continue;
       expensesByUnit[inv.unitId] = (expensesByUnit[inv.unitId] ?? 0) + inv.totalAmount;
     }
   }

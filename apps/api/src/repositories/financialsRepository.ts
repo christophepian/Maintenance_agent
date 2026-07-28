@@ -327,7 +327,7 @@ export async function findUnitAttributedInvoices(
   to: Date,
 ): Promise<{
   postedInvoiceIds: string[];
-  incoming: { id: string; unitId: string | null; totalAmount: number }[];
+  incoming: { id: string; unitId: string | null; totalAmount: number; accountCode: string | null; accountName: string | null }[];
 }> {
   const [postedEntries, incoming] = await Promise.all([
     prisma.ledgerEntry.findMany({
@@ -336,12 +336,19 @@ export async function findUnitAttributedInvoices(
     }),
     prisma.invoice.findMany({
       where: { orgId, direction: "INCOMING", unitId: { in: unitIds }, issueDate: { gte: from, lte: to } },
-      select: { id: true, unitId: true, totalAmount: true },
+      select: { id: true, unitId: true, totalAmount: true, classifiedAccount: { select: { code: true, name: true } }, description: true },
     }),
   ]);
+  const incomingMapped = incoming.map((inv) => ({
+    id: inv.id,
+    unitId: inv.unitId,
+    totalAmount: inv.totalAmount,
+    accountCode: inv.classifiedAccount?.code ?? null,
+    accountName: inv.classifiedAccount?.name ?? inv.description ?? null,
+  }));
   return {
     postedInvoiceIds: postedEntries.map((e) => e.sourceId).filter((s): s is string => !!s),
-    incoming,
+    incoming: incomingMapped,
   };
 }
 

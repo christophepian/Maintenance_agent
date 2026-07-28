@@ -514,6 +514,7 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
   const capexCents      = bf?.capexTotalCents ?? 0;
   const financingCents  = bf?.financingTotalCents ?? 0;
   const recoverableCents = bf?.recoverableAncillaryCents ?? 0;
+  const tenantRechargeCents = bf?.tenantRechargeCents ?? 0;
   const netResultCents  = bf?.netIncomeCents ?? noi; // after capex + financing
   const noiMargin = earned > 0 ? noi / earned : null;
   const opexRatio = earned > 0 ? operatingCents / earned : null;
@@ -899,7 +900,7 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
         // the cost-centre list sums to OPERATING, matching the bridge above.
         const allAcctRows = (bf.expensesByAccount ?? [])
           .map((a) => ({ accountId: a.accountId, accountCode: a.accountCode, accountName: a.accountName, totalCents: a.totalCents, category: a.category }));
-        const acctRows = allAcctRows.filter((a) => a.category !== "CAPEX" && a.category !== "FINANCING");
+        const acctRows = allAcctRows.filter((a) => a.category !== "CAPEX" && a.category !== "FINANCING" && a.category !== "TENANT_RECHARGE");
         const acctSum = acctRows.reduce((s, a) => s + a.totalCents, 0);
         const otherCents = operatingCents - acctSum;
         const periodAccounts = otherCents > 5000
@@ -915,10 +916,11 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
         // capex/financing ones filtered out above) so any can be re-categorised.
         const expRows = expView === "vend" ? vendors : expView === "cat" ? categoryRows : (reclassMode && expView === "acc" ? allAcctRows : periodAccounts);
         const catShort = (c) => c === "RECOVERABLE" ? t("buildingsId.reporting.revex.catRecoverable")
+          : c === "TENANT_RECHARGE" ? t("buildingsId.reporting.revex.catTenantRecharge")
           : c === "CAPEX" ? t("buildingsId.reporting.kpi.capex")
           : c === "FINANCING" ? t("buildingsId.reporting.revex.financing")
           : t("buildingsId.reporting.revex.catOwner");
-        const CAT_CHIP = { OWNER_OPEX: "bg-surface-hover text-muted", RECOVERABLE: "bg-warning-light text-warning-text", CAPEX: "bg-brand-light text-brand-dark", FINANCING: "bg-info-light text-info-text" };
+        const CAT_CHIP = { OWNER_OPEX: "bg-surface-hover text-muted", RECOVERABLE: "bg-warning-light text-warning-text", TENANT_RECHARGE: "bg-success-light text-success-text", CAPEX: "bg-brand-light text-brand-dark", FINANCING: "bg-info-light text-info-text" };
 
         const revexSlide = (
           <div className="p-5 space-y-4">
@@ -945,14 +947,21 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
               </div>
             </div>
 
-            {/* Below operating NOI: capital works + financing, and the net result */}
-            {(capexCents > 0 || financingCents > 0) && (
+            {/* Below operating NOI: capital works + financing + tenant recharges, and the net result */}
+            {(capexCents > 0 || financingCents > 0 || tenantRechargeCents > 0) && (
               <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 rounded-xl border border-surface-border bg-surface-subtle px-4 py-2.5 text-sm">
                 <span className="text-[10px] font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.revex.belowNoi")}</span>
                 {capexCents > 0 && <span className="text-muted">{t("buildingsId.reporting.kpi.capex")} <b className="tabular-nums text-foreground">{rFmtChf(capexCents)}</b></span>}
                 {financingCents > 0 && <span className="text-muted">{t("buildingsId.reporting.revex.financing")} <b className="tabular-nums text-foreground">{rFmtChf(financingCents)}</b></span>}
+                {tenantRechargeCents > 0 && <span className="text-muted">{t("buildingsId.reporting.revex.catTenantRecharge")} <b className="tabular-nums text-foreground">{rFmtChf(tenantRechargeCents)}</b></span>}
                 <span className="ml-auto text-muted">{t("buildingsId.reporting.revex.netResult")} <b className={cn("tabular-nums", netResultCents >= 0 ? "text-success-text" : "text-destructive-text")}>{rFmtChf(netResultCents)}</b></span>
               </div>
+            )}
+            {tenantRechargeCents > 0 && (
+              <p className="flex items-start gap-1.5 text-xs text-foreground-dim">
+                <span aria-hidden>ℹ</span>
+                <span>{t("buildingsId.reporting.revex.tenantRechargeNote", { amount: rFmtChf(tenantRechargeCents) })}</span>
+              </p>
             )}
             {recoverableCents > 0 && (
               <p className="flex items-start gap-1.5 text-xs text-foreground-dim">
@@ -1023,7 +1032,7 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
                               <span className="min-w-0 flex-1 truncate text-sm text-foreground">{r.accountCode ? <span className="text-foreground-dim tabular-nums">{r.accountCode} </span> : null}{name}</span>
                               <select value={r.category ?? "OWNER_OPEX"} onChange={(e) => reclassifyAccount(r.accountId, e.target.value)}
                                 className="rounded-md border border-surface-border bg-surface px-1.5 py-0.5 text-xs text-foreground">
-                                {["OWNER_OPEX", "RECOVERABLE", "CAPEX", "FINANCING"].map((c) => <option key={c} value={c}>{catShort(c)}</option>)}
+                                {["OWNER_OPEX", "RECOVERABLE", "TENANT_RECHARGE", "CAPEX", "FINANCING"].map((c) => <option key={c} value={c}>{catShort(c)}</option>)}
                               </select>
                               <span className="w-20 shrink-0 text-right text-sm font-medium tabular-nums text-foreground">{rFmtChf(r.totalCents)}</span>
                             </div>
