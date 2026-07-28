@@ -512,7 +512,7 @@ export default function LedgerPage() {
                   <div className={cn("mb-4 px-4 py-2 rounded text-sm font-medium", tbBalanced ? "bg-green-50 text-green-700 border border-green-200" : "bg-red-50 text-red-700 border border-red-200")}>
                     {tbBalanced
                       ? "✓ Ledger is balanced — total debits equal total credits"
-                      : `⚠ Ledger is out of balance — difference: CHF ${formatChfCents(Math.abs(tbTotals.debit - tbTotals.credit))}`}
+                      : `⚠ Ledger is out of balance — difference: ${formatChfCents(Math.abs(tbTotals.debit - tbTotals.credit))}`}
                   </div>
 
                   {/* Grouped by account type */}
@@ -596,7 +596,7 @@ export default function LedgerPage() {
                     <span>{t("manager:financeLedger.text.grandTotalDebit")} <span className="font-mono">{formatChfCents(tbTotals.debit)}</span></span>
                     <span>{t("manager:financeLedger.text.grandTotalCredit")} <span className="font-mono">{formatChfCents(tbTotals.credit)}</span></span>
                     <span className={tbBalanced ? "text-green-700" : "text-red-600"}>
-                      {tbBalanced ? "Balanced ✓" : `Off by CHF ${formatChfCents(Math.abs(tbTotals.debit - tbTotals.credit))}`}
+                      {tbBalanced ? "Balanced ✓" : `Off by ${formatChfCents(Math.abs(tbTotals.debit - tbTotals.credit))}`}
                     </span>
                   </div>
                 </>
@@ -680,7 +680,7 @@ export default function LedgerPage() {
                     <div className={cn("px-4 py-2 rounded text-sm font-medium border", isBalanced ? "bg-green-50 text-green-700 border-green-200" : "bg-red-50 text-red-700 border-red-200")}>
                       {isBalanced
                         ? `✓ Balance sheet is balanced as of ${bsAsOf}`
-                        : `⚠ Out of balance — difference: CHF ${formatChfCents(Math.abs(differenceCents))}`}
+                        : `⚠ Out of balance — difference: ${formatChfCents(Math.abs(differenceCents))}`}
                     </div>
 
                     {/* Two-column layout for wide screens, stacked on mobile */}

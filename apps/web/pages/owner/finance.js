@@ -757,7 +757,7 @@ function BalanceSheetTab() {
             <div className={cn("px-4 py-2 rounded text-sm font-medium border", isBalanced ? "bg-green-50 text-green-700 border-green-200" : "bg-amber-50 text-amber-700 border-amber-200")}>
               {isBalanced
                 ? `Balance sheet as of ${bsAsOf} — balanced`
-                : `As of ${bsAsOf} — difference: CHF ${formatChfCents(Math.abs(differenceCents))}`}
+                : `As of ${bsAsOf} — difference: ${formatChfCents(Math.abs(differenceCents))}`}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
