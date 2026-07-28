@@ -1,4 +1,34 @@
-import { computeBalanceImbalanceCents, computeStatementSanityFlags } from "../services/importedStatementService";
+import { computeBalanceImbalanceCents, computeStatementSanityFlags, computeContinuityFlags } from "../services/importedStatementService";
+
+describe("computeContinuityFlags (year-over-year)", () => {
+  const exp = (code: string, name: string, cents: number) => ({ documentSection: "EXPENSE", balanceCents: cents, rawAccountCode: code, rawAccountName: name });
+
+  it("flags the 7'134→9 gérance mis-read as a material swing", () => {
+    const prior = [exp("6500", "Honoraires de gérance", 7_134_00), exp("6000", "Entretien", 40_000_00)];
+    const current = [exp("6500", "Honoraires de gérance", 9_00), exp("6000", "Entretien", 41_000_00)];
+    const flags = computeContinuityFlags(current, prior, 2023);
+    expect(flags.some((f) => f.code === "YOY_SWING" && /gérance/i.test(f.message))).toBe(true);
+  });
+
+  it("flags an account that vanished vs the prior year", () => {
+    const prior = [exp("6500", "Honoraires de gérance", 7_000_00), exp("6800", "Intérêts hypothécaires", 12_000_00)];
+    const current = [exp("6500", "Honoraires de gérance", 7_100_00)];
+    const flags = computeContinuityFlags(current, prior, 2023);
+    expect(flags.some((f) => f.code === "YOY_VANISHED")).toBe(true);
+  });
+
+  it("does not flag stable year-over-year figures", () => {
+    const prior = [exp("6500", "Gérance", 7_000_00), exp("6000", "Entretien", 40_000_00)];
+    const current = [exp("6500", "Gérance", 7_200_00), exp("6000", "Entretien", 41_000_00)];
+    expect(computeContinuityFlags(current, prior, 2023)).toEqual([]);
+  });
+
+  it("returns nothing for balance-sheet rows", () => {
+    const prior = [{ documentSection: "ACTIF", balanceCents: 100_00, rawAccountCode: "1000", rawAccountName: "Caisse" }];
+    const current = [{ documentSection: "ACTIF", balanceCents: 900_00, rawAccountCode: "1000", rawAccountName: "Caisse" }];
+    expect(computeContinuityFlags(current, prior, 2023)).toEqual([]);
+  });
+});
 
 describe("computeStatementSanityFlags", () => {
   const rev = (name: string, cents: number) => ({ documentSection: "REVENUE", balanceCents: cents, rawAccountName: name });

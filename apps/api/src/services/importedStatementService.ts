@@ -35,7 +35,7 @@ import { createInvoice } from "./invoices";
 import { postJournalEntries } from "./ledgerService";
 import { mapCsvToAccountBalances, mapCsvToInvoiceLines, ReconciliationLine, CsvMapResult, reconcileBalances, StatedTotalsCents, ReconciliationStatus } from "./csvAccountingMapper";
 import * as accountRepo from "../repositories/accountRepository";
-import { updateStatementStatus } from "../repositories/importedStatementRepository";
+import { updateStatementStatus, findApprovedIncomeStatementForYear } from "../repositories/importedStatementRepository";
 import * as crypto from "crypto";
 
 /* ══════════════════════════════════════════════════════════════
@@ -1314,7 +1314,18 @@ export async function getStatement(
         })
       : [];
 
-  return mapDTO(s, linkedInvoices);
+  const dto = mapDTO(s, linkedInvoices);
+
+  // Year-over-year continuity — only on income statements with a building, and
+  // only against the prior year's APPROVED statement (the trusted baseline).
+  if (s.buildingId && s.sectionType === StatementSectionType.INCOME_STATEMENT) {
+    const prior = await findApprovedIncomeStatementForYear(prisma, orgId, s.buildingId, s.fiscalYear - 1);
+    if (prior) {
+      const yoy = computeContinuityFlags(s.accountBalances, prior.accountBalances, s.fiscalYear - 1);
+      if (yoy.length > 0) return { ...dto, sanityFlags: [...dto.sanityFlags, ...yoy] };
+    }
+  }
+  return dto;
 }
 
 /** Assign (or reassign) the building for a PENDING_REVIEW statement. */
@@ -1813,6 +1824,55 @@ export function computeStatementSanityFlags(
   }
 
   return flags;
+}
+
+type ContinuityRow = { documentSection: string; balanceCents: number; rawAccountCode?: string | null; rawAccountName?: string | null; account?: { name?: string | null; code?: string | null } | null };
+
+/**
+ * Year-over-year continuity on a P&L: flag account lines that swing materially,
+ * vanish, or appear vs the prior year's approved statement — the check that
+ * catches the 7'134→9 mis-read (a 99.9% drop) even though the year in isolation
+ * reconciles. Matched by account code (Swiss charts are stable across years).
+ * Non-blocking. Balance sheets are excluded (asset values swing legitimately).
+ */
+export function computeContinuityFlags(current: ContinuityRow[], prior: ContinuityRow[], priorYear: number): SanityFlagDTO[] {
+  const MATERIAL = 200000; // CHF 2'000
+  const codeOf = (b: ContinuityRow) => (b.account?.code ?? b.rawAccountCode ?? "").replace(/\D/g, "");
+  const nameOf = (b: ContinuityRow) => (b.account?.name ?? b.rawAccountName ?? "");
+  const chf = (cents: number) => `CHF ${(Math.abs(cents) / 100).toLocaleString("de-CH", { maximumFractionDigits: 0 })}`;
+  const isPnl = (b: ContinuityRow) => b.documentSection === "REVENUE" || b.documentSection === "EXPENSE";
+
+  const cur = current.filter(isPnl);
+  const pri = prior.filter(isPnl);
+  if (cur.length === 0 || pri.length === 0) return [];
+
+  const priByCode = new Map<string, { amt: number; name: string }>();
+  for (const b of pri) {
+    const c = codeOf(b); if (!c) continue;
+    const e = priByCode.get(c);
+    priByCode.set(c, { amt: (e?.amt ?? 0) + Math.abs(b.balanceCents), name: e?.name ?? nameOf(b) });
+  }
+  const flags: SanityFlagDTO[] = [];
+  const seen = new Set<string>();
+  for (const b of cur) {
+    const c = codeOf(b); if (!c) continue;
+    seen.add(c);
+    const curAmt = Math.abs(b.balanceCents);
+    const p = priByCode.get(c);
+    if (!p) {
+      if (curAmt >= MATERIAL) flags.push({ code: "YOY_NEW", severity: "info", message: `New this year: "${nameOf(b)}" ${chf(curAmt)} (no such line in ${priorYear}).` });
+      continue;
+    }
+    const delta = curAmt - p.amt;
+    const rel = p.amt > 0 ? Math.abs(delta) / p.amt : (curAmt > 0 ? Infinity : 0);
+    if (Math.abs(delta) >= MATERIAL && rel > 0.6) {
+      flags.push({ code: "YOY_SWING", severity: "warn", message: `"${nameOf(b)}" moved ${delta > 0 ? "up" : "down"} from ${chf(p.amt)} (${priorYear}) to ${chf(curAmt)} — ${(rel * 100).toFixed(0)}% change; verify.` });
+    }
+  }
+  for (const [c, p] of priByCode) {
+    if (!seen.has(c) && p.amt >= MATERIAL) flags.push({ code: "YOY_VANISHED", severity: "warn", message: `"${p.name}" was ${chf(p.amt)} in ${priorYear} but has no line this year — check it wasn't dropped.` });
+  }
+  return flags.sort((a, b) => (a.severity === b.severity ? 0 : a.severity === "warn" ? -1 : 1)).slice(0, 8);
 }
 
 function mapDTO(s: any, linkedInvoices: any[] = []): ImportedStatementDTO {
