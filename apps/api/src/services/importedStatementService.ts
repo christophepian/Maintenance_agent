@@ -85,10 +85,18 @@ export interface ImportedStatementDTO {
    * doesn't (blocks approval); UNVERIFIED = no stated totals to check against.
    */
   reconciliation: { status: ReconciliationStatus; lines: ReconciliationLine[] } | null;
+  /** Domain smell-tests (implausible ratios) — non-blocking warnings for review. */
+  sanityFlags: SanityFlagDTO[];
   /** Invoices created from this statement (matched by sourceFileUrl) */
   linkedInvoices: LinkedInvoiceDTO[];
   createdAt: string;
   updatedAt: string;
+}
+
+export interface SanityFlagDTO {
+  code: string;
+  severity: "warn" | "info";
+  message: string;
 }
 
 export interface LinkedInvoiceDTO {
@@ -1769,9 +1777,48 @@ export function computeBalanceImbalanceCents(balances: BalanceRowForCheck[]): nu
   return 0;
 }
 
+/**
+ * Domain smell-tests on an income statement's figures — the layer that catches
+ * implausible-but-arithmetically-consistent values the reconciliation gate can't
+ * (e.g. a management fee mis-read as CHF 9 when it should be ~7'000). Non-blocking
+ * warnings surfaced in the review UI. Income statements only (needs P&L rows).
+ */
+export function computeStatementSanityFlags(
+  balances: { documentSection: string; balanceCents: number; rawAccountName?: string | null; account?: { name?: string | null } | null }[],
+): SanityFlagDTO[] {
+  const flags: SanityFlagDTO[] = [];
+  const nameOf = (b: { rawAccountName?: string | null; account?: { name?: string | null } | null }) => (b.account?.name ?? b.rawAccountName ?? "");
+  const norm = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  const chf = (cents: number) => `CHF ${(Math.abs(cents) / 100).toLocaleString("de-CH", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+
+  const revenue = balances.filter((b) => b.documentSection === "REVENUE");
+  const expenses = balances.filter((b) => b.documentSection === "EXPENSE");
+  if (expenses.length === 0 && revenue.length === 0) return flags; // balance sheet — no P&L ratios
+  const revTotal = Math.abs(revenue.reduce((s, b) => s + b.balanceCents, 0));
+  const expTotal = expenses.reduce((s, b) => s + Math.abs(b.balanceCents), 0);
+
+  // 1) Management-fee plausibility — honoraires de gérance run ~2–8% of rental income.
+  const fee = expenses.find((b) => /gerance|honoraires|gestion|verwaltung|management|administration des immeubles/.test(norm(nameOf(b))));
+  if (fee && revTotal > 0) {
+    const pct = Math.abs(fee.balanceCents) / revTotal;
+    if (pct < 0.005) flags.push({ code: "FEE_IMPLAUSIBLY_LOW", severity: "warn", message: `Management fee ${chf(fee.balanceCents)} is only ${(pct * 100).toFixed(2)}% of rental income (${chf(revTotal)}) — implausibly low; likely a mis-read of "${nameOf(fee)}".` });
+    else if (pct > 0.12) flags.push({ code: "FEE_IMPLAUSIBLY_HIGH", severity: "warn", message: `Management fee ${chf(fee.balanceCents)} is ${(pct * 100).toFixed(0)}% of rental income — unusually high; double-check "${nameOf(fee)}".` });
+  }
+
+  // 2) One expense account dominating the total — a possible mis-mapped subtotal or double-count.
+  if (expTotal > 0 && expenses.length > 2) {
+    const top = expenses.reduce((m, b) => (Math.abs(b.balanceCents) > Math.abs(m.balanceCents) ? b : m), expenses[0]);
+    const share = Math.abs(top.balanceCents) / expTotal;
+    if (share > 0.6) flags.push({ code: "DOMINANT_EXPENSE", severity: "info", message: `"${nameOf(top)}" (${chf(top.balanceCents)}) is ${(share * 100).toFixed(0)}% of total expenses — check it isn't a mis-mapped subtotal.` });
+  }
+
+  return flags;
+}
+
 function mapDTO(s: any, linkedInvoices: any[] = []): ImportedStatementDTO {
   const balances: any[] = s.accountBalances ?? [];
   const balanceImbalanceCents = computeBalanceImbalanceCents(balances);
+  const sanityFlags = computeStatementSanityFlags(balances);
   const reconciliation = balances.length > 0
     ? reconcileBalances(balances, (s.statedTotals ?? null) as StatedTotalsCents | null)
     : null;
@@ -1809,6 +1856,7 @@ function mapDTO(s: any, linkedInvoices: any[] = []): ImportedStatementDTO {
     })),
     balanceImbalanceCents,
     reconciliation,
+    sanityFlags,
     linkedInvoices: linkedInvoices.map((inv: any) => ({
       id: inv.id,
       description: inv.description ?? null,

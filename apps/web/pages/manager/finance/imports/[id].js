@@ -896,6 +896,8 @@ export default function ImportedStatementReviewPage() {
   // Reconciliation of extracted lines vs the document's own stated totals (server DTO,
   // recomputed each fetch). PASS ties out · FAIL doesn't · UNVERIFIED = no totals to check.
   const recon = s?.reconciliation ?? null;
+  // Domain smell-tests (implausible ratios) — non-blocking review warnings.
+  const sanityFlags = s?.sanityFlags ?? [];
 
   // Approve availability:
   // - INVOICES: building only
@@ -1174,6 +1176,18 @@ export default function ImportedStatementReviewPage() {
                   {recon.status === "UNVERIFIED" && (
                     <p className="mt-1">The extraction couldn’t be auto-verified against the source — double-check the figures before approving.</p>
                   )}
+                </div>
+              )}
+
+              {/* ── Sanity checks — implausible ratios (non-blocking) ── */}
+              {sanityFlags.length > 0 && (
+                <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                  <p className="font-semibold mb-1">⚠ Sanity checks — worth a second look</p>
+                  <ul className="space-y-0.5">
+                    {sanityFlags.map((f, i) => (
+                      <li key={i}>{f.severity === "warn" ? "⚠" : "ℹ"} {f.message}</li>
+                    ))}
+                  </ul>
                 </div>
               )}
 
