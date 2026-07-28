@@ -987,19 +987,18 @@ export async function approveStatement(
   // Reconciliation gate: the extracted line items must tie out to the document's
   // own stated section totals before a statement can feed client-facing reporting.
   // Recomputed here from the CURRENT balances so manager corrections are reflected.
-  // FAIL (totals don't match) and UNVERIFIED (no stated totals to check) both block
-  // unless the manager explicitly overrides with a reason — nothing un-verified
-  // reaches an owner silently.
+  // FAIL (stated totals exist but the extraction doesn't match them — e.g. the
+  // 7'134→9 gérance misread) HARD-BLOCKS unless the manager overrides with a
+  // reason. UNVERIFIED (no stated totals to check against) is surfaced as a
+  // caution but does not block — capturing those totals across every extraction
+  // path is Phase 2; until then it would block legitimate imports.
   const recon = reconcileBalances(statement.accountBalances, (statement.statedTotals ?? null) as StatedTotalsCents | null);
-  if (recon.status !== "PASS" && !opts?.override) {
+  if (recon.status === "FAIL" && !opts?.override) {
     const failing = recon.lines.filter((l) => !l.ok).map((l) => `${l.scope}: extracted ${l.computedChf} vs stated ${l.statedChf} (off by ${l.diffChf})`);
-    const detail = recon.status === "UNVERIFIED"
-      ? "The document declared no section totals to verify the extraction against."
-      : `Extracted totals don't tie out to the document — ${failing.join("; ")}.`;
-    throw new ImportedStatementError("RECONCILIATION_FAILED", `${detail} Correct the flagged balances, or approve with override.`);
+    throw new ImportedStatementError("RECONCILIATION_FAILED", `Extracted totals don't tie out to the document — ${failing.join("; ")}. Correct the flagged balances, or approve with override.`);
   }
-  const overrideNote = recon.status !== "PASS" && opts?.override
-    ? `⚠ Approved despite reconciliation ${recon.status}${opts.overrideReason ? `: ${opts.overrideReason}` : ""} (by ${approvedBy})`
+  const overrideNote = recon.status === "FAIL" && opts?.override
+    ? `⚠ Approved despite failed reconciliation${opts.overrideReason ? `: ${opts.overrideReason}` : ""} (by ${approvedBy})`
     : null;
 
   const isIncomeStatement = statement.sectionType === StatementSectionType.INCOME_STATEMENT;

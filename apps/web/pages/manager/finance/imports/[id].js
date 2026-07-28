@@ -1168,8 +1168,11 @@ export default function ImportedStatementReviewPage() {
                       ))}
                     </ul>
                   )}
-                  {recon.status !== "PASS" && (
+                  {recon.status === "FAIL" && (
                     <p className="mt-1">Correct the flagged balances below, or approve with an override reason — the override is recorded on the statement.</p>
+                  )}
+                  {recon.status === "UNVERIFIED" && (
+                    <p className="mt-1">The extraction couldn’t be auto-verified against the source — double-check the figures before approving.</p>
                   )}
                 </div>
               )}
