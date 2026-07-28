@@ -56,6 +56,11 @@ export function classifyRegieExpenseAccount(_code: string | null | undefined, na
   if (/interet|hypothec|hypothek|emprunt|mortgage/.test(n)) return "FINANCING";
   // Recoverable ancillary (Nebenkosten) — tenant-borne operating charges.
   if (/chauffage|heating|\beau\b|\bwater\b|electric|concierge|nettoyage|ascenseur|elevator|ordure|dechet|\bgaz\b/.test(n)) return "RECOVERABLE";
+  // Maintenance explicitly billed to the tenant ("à charge du locataire",
+  // "refacturé au locataire") — the owner doesn't ultimately bear it, so it's a
+  // recoverable charge, NOT owner opex. Targeted on the "charge … locataire"
+  // qualifier so bad-debt lines ("créances locataires") aren't caught.
+  if (/charge.{0,8}locataire|refactur\w*.{0,8}locataire/.test(n)) return "RECOVERABLE";
   return "OWNER_OPEX";
 }
 

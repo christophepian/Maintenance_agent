@@ -13,6 +13,10 @@ describe("classifyRegieExpenseAccount", () => {
     ["Conciergeries externes", "RECOVERABLE"],
     ["Entretien des appartements", "OWNER_OPEX"], // upkeep, NOT capex
     ["Entretien immeuble", "OWNER_OPEX"],
+    ["Entretien à charge du locataire", "RECOVERABLE"], // tenant-borne, not owner opex
+    ["Entretien à charge locataire", "RECOVERABLE"],
+    ["Travaux refacturés au locataire", "RECOVERABLE"],
+    ["Créances locataires irrécouvrables", "OWNER_OPEX"], // bad debt is an owner cost
     ["Assurances", "OWNER_OPEX"],
     ["Honoraires de gérance", "OWNER_OPEX"],
     ["Impôts et taxes", "OWNER_OPEX"],
