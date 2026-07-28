@@ -725,6 +725,7 @@
       "viewInvoices": "View invoices",
       "openingReceivable": "{{amount}} opening receivable",
       "openingPayable": "{{amount}} opening payable",
+      "ledgerImbalance": "Ledger out of balance by {{amount}} — imported opening balances don't tie out; fix the source statement in Finance → Imports.",
       "openingHint": "Carried in from the imported balance sheet. Not yet aged — these opening items have no due date or tenant breakdown.",
       "arrearsTitle": "Rent arrears aging",
       "arrearsSub": "Unpaid rent invoices by days overdue",

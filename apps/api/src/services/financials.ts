@@ -12,6 +12,7 @@ import * as mortgageRepo from "../repositories/mortgageRepository";
 import type { ExpenseLedgerRow, ArrearsAgingDTO } from "../repositories/financialsRepository";
 import { mapWithConcurrency } from "../utils/concurrency";
 import { computeUnitProfitability, type UnitProfitabilityInput, type UnitProfitabilityResult } from "./unitProfitability";
+import { getBalanceSheet } from "./ledgerService";
 
 // ==========================================
 // DTOs
@@ -2283,6 +2284,10 @@ export interface BuildingPeriodReportDTO {
   monthlyData: BuildingMonthlyBreakdownDTO[] | null;
   /** Live leases whose fixed term ends within the next ~6 months (outlook). */
   leaseExpiries: Array<{ unitNumber: string; tenantName: string; endDate: string; netRentChf: number }>;
+  /** Trial-balance imbalance of the building's ledger as of `to` (Assets − Liabilities).
+   *  Non-zero ⇒ unbalanced entries were posted (e.g. an imported opening balance that
+   *  didn't tie out). Surfaced as a data-integrity flag on the reporting tab. */
+  ledgerImbalanceCents: number;
 }
 
 export async function getBuildingPeriodReport(
@@ -2444,6 +2449,7 @@ export async function getBuildingPeriodReport(
     })),
     monthlyData,
     leaseExpiries,
+    ledgerImbalanceCents: (await getBalanceSheet(prisma, orgId, buildingId, new Date(to + "T23:59:59.999Z"))).differenceCents,
   };
 }
 

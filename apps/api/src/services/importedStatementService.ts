@@ -1470,7 +1470,7 @@ export async function deleteStatementBatch(
   );
   for (const s of toDelete) {
     await prisma.ledgerEntry.deleteMany({
-      where: { orgId, sourceType: "IMPORTED_STATEMENT", sourceId: s.id },
+      where: { orgId, sourceType: { in: ["BALANCE_SHEET_IMPORT", "INCOME_STATEMENT_IMPORT", "IMPORTED_STATEMENT"] }, sourceId: s.id },
     });
     await prisma.importedAccountBalance.deleteMany({ where: { statementId: s.id } });
     await prisma.importedStatement.delete({ where: { id: s.id } });
@@ -1497,7 +1497,7 @@ export async function deleteStatement(
   if (!statement) throw new ImportedStatementError("NOT_FOUND", "Statement not found");
   // LedgerEntry has no FK cascade to ImportedStatement — delete orphans first.
   await prisma.ledgerEntry.deleteMany({
-    where: { orgId, sourceType: "IMPORTED_STATEMENT", sourceId: statementId },
+    where: { orgId, sourceType: { in: ["BALANCE_SHEET_IMPORT", "INCOME_STATEMENT_IMPORT", "IMPORTED_STATEMENT"] }, sourceId: statementId },
   });
   // Deletes statement + cascades to ImportedAccountBalance.
   await prisma.importedStatement.delete({ where: { id: statementId } });
@@ -1515,7 +1515,7 @@ export async function deleteAllStatements(
   if (rows.length === 0) return 0;
   const ids = rows.map((r) => r.id);
   await prisma.ledgerEntry.deleteMany({
-    where: { orgId, sourceType: "IMPORTED_STATEMENT", sourceId: { in: ids } },
+    where: { orgId, sourceType: { in: ["BALANCE_SHEET_IMPORT", "INCOME_STATEMENT_IMPORT", "IMPORTED_STATEMENT"] }, sourceId: { in: ids } },
   });
   await prisma.importedStatement.deleteMany({ where: { orgId } });
   return ids.length;

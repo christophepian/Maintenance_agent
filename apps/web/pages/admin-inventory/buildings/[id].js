@@ -619,12 +619,21 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
             bf.openingPayablesCents > 0 ? t("buildingsId.reporting.openingPayable", { amount: rFmtChf(bf.openingPayablesCents) }) : null,
           ].filter(Boolean).join(" · "),
         });
+        // Ledger integrity: a non-zero trial-balance means unbalanced entries were
+        // posted (typically an imported opening balance that didn't tie out).
+        const ledgerImbalanceCents = report?.ledgerImbalanceCents ?? 0;
+        if (Math.abs(ledgerImbalanceCents) >= 100) flags.push({
+          tone: "danger",
+          text: t("buildingsId.reporting.ledgerImbalance", { amount: rFmtChf(Math.abs(ledgerImbalanceCents)) }),
+        });
         const flagsRow = flags.length > 0 && (
           <div className="flex flex-wrap items-center gap-2 border-b border-surface-border bg-surface-subtle px-5 py-3">
             {flags.map((f, i) => (
               <span key={i} className={cn("inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold",
-                f.tone === "warn" ? "border-warning-ring bg-warning-light text-warning-text" : "border-info-ring bg-info-light text-info-text")}>
-                {f.tone === "warn" ? "⚠" : "↪"} {f.text}
+                f.tone === "danger" ? "border-destructive-ring bg-destructive-light text-destructive-text"
+                  : f.tone === "warn" ? "border-warning-ring bg-warning-light text-warning-text"
+                    : "border-info-ring bg-info-light text-info-text")}>
+                {f.tone === "danger" ? "⛔" : f.tone === "warn" ? "⚠" : "↪"} {f.text}
               </span>
             ))}
             {bf.receivablesCents > 0 && (

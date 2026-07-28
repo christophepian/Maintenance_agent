@@ -725,6 +725,7 @@
       "viewInvoices": "Voir les factures",
       "openingReceivable": "{{amount}} de créances initiales",
       "openingPayable": "{{amount}} de dettes initiales",
+      "ledgerImbalance": "Grand livre déséquilibré de {{amount}} — les soldes d'ouverture importés ne bouclent pas ; corrigez le relevé source dans Finance → Imports.",
       "openingHint": "Repris du bilan importé. Pas encore échelonné — ces soldes initiaux n'ont ni échéance ni ventilation par locataire.",
       "arrearsTitle": "Ancienneté des arriérés de loyer",
       "arrearsSub": "Factures de loyer impayées par jours de retard",
