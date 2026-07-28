@@ -34,6 +34,47 @@ export interface CsvMapResult<T> {
   skipped: string[];
   /** Present for account balances: extracted-vs-document-declared totals. */
   reconciliation?: ReconciliationLine[];
+  /** The document's own declared section grand-totals (CHF), for persistence. */
+  statedTotals?: Partial<Record<DocumentSection, number>>;
+}
+
+/** Document-declared section grand-totals in CHF cents. Persisted on the
+ *  statement so the approval gate can re-verify against current balances. */
+export type StatedTotalsCents = Partial<Record<"ACTIF" | "PASSIF" | "REVENUE" | "EXPENSE", number>>;
+export type ReconciliationStatus = "PASS" | "FAIL" | "UNVERIFIED";
+
+/**
+ * Reconcile persisted account balances against the document's own stated section
+ * totals — the approval gate's checkable invariant. Sign-safe: each section's sum
+ * is compared to that same section's stated total (same sign convention), plus the
+ * Actif = Passif identity. Returns UNVERIFIED when the document declared no totals
+ * to check against (we can't confirm the extraction — treat as low-confidence).
+ */
+export function reconcileBalances(
+  balances: { documentSection: string; balanceCents: number }[],
+  statedTotalsCents: StatedTotalsCents | null | undefined,
+): { lines: ReconciliationLine[]; status: ReconciliationStatus } {
+  const stated = statedTotalsCents ?? {};
+  const TOL_CENTS = 1; // 1 rappen
+  const sums = new Map<string, number>(); // cents, signed
+  for (const b of balances) sums.set(b.documentSection, (sums.get(b.documentSection) ?? 0) + b.balanceCents);
+
+  const lines: ReconciliationLine[] = [];
+  const line = (scope: string, computedCents: number, statedCents: number) => {
+    const diff = computedCents - statedCents;
+    lines.push({ scope, computedChf: round2(computedCents / 100), statedChf: round2(statedCents / 100), diffChf: round2(diff / 100), ok: Math.abs(diff) <= TOL_CENTS });
+  };
+  for (const [sec, label] of [["ACTIF", "Actifs"], ["PASSIF", "Passifs"], ["REVENUE", "Produits"], ["EXPENSE", "Charges"]] as const) {
+    const s = stated[sec];
+    if (s == null) continue;
+    line(label, sums.get(sec) ?? 0, s);
+  }
+  if (sums.has("ACTIF") && sums.has("PASSIF")) {
+    const a = sums.get("ACTIF") ?? 0, p = sums.get("PASSIF") ?? 0;
+    lines.push({ scope: "Bilan (Actif = Passif)", computedChf: round2(a / 100), statedChf: round2(p / 100), diffChf: round2((a - p) / 100), ok: Math.abs(a - p) <= TOL_CENTS });
+  }
+  const status: ReconciliationStatus = lines.length === 0 ? "UNVERIFIED" : lines.every((l) => l.ok) ? "PASS" : "FAIL";
+  return { lines, status };
 }
 
 /* ── Templates (exact headers the parser expects) ─────────────────────────── */
@@ -270,7 +311,7 @@ export function mapCsvToAccountBalances(text: string): CsvMapResult<ExtractedAcc
     });
   });
 
-  return { items, skipped, reconciliation: buildReconciliation(items, statedTotals) };
+  return { items, skipped, reconciliation: buildReconciliation(items, statedTotals), statedTotals: Object.fromEntries(statedTotals) };
 }
 
 const round2 = (n: number): number => Math.round(n * 100) / 100;

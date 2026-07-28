@@ -244,8 +244,16 @@ export function registerImportedStatementRoutes(router: Router) {
     const user = requireAnyRole(req, res, ["MANAGER"]);
     if (!user) return;
 
+    let override = false;
+    let overrideReason: string | undefined;
     try {
-      const statement = await approveStatement(prisma, params.id, orgId, user.userId);
+      const body = JSON.parse((await readRawBody(req, 4096)).toString("utf8"));
+      override = body.override === true;
+      overrideReason = typeof body.overrideReason === "string" ? body.overrideReason.slice(0, 500) : undefined;
+    } catch { /* no body → no override */ }
+
+    try {
+      const statement = await approveStatement(prisma, params.id, orgId, user.userId, { override, overrideReason });
       sendJson(res, 200, { data: statement });
     } catch (e: any) {
       if (e instanceof ImportedStatementError) {

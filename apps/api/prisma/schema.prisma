@@ -3057,6 +3057,7 @@ model ImportedStatement {
   approvedAt              DateTime?
   rawOcrText              String?                 @db.Text /// Truncated OCR dump stored for audit
   ocrConfidence           Int? /// 0–100 overall extraction confidence
+  statedTotals            Json? /// Document's own declared section grand-totals in CHF cents ({ ACTIF, PASSIF, REVENUE, EXPENSE, RESULT }) — ground truth for the approval reconciliation gate. Null = none extractable (unverified).
   buildingMatchConfidence MatchConfidence? /// How the building was identified from the PDF
   notes                   String? /// Manager annotation (visible in review UI)
   createdAt               DateTime                @default(now())

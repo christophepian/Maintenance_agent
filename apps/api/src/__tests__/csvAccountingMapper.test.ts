@@ -1,7 +1,41 @@
 import {
   mapCsvToAccountBalances,
   mapCsvToInvoiceLines,
+  reconcileBalances,
 } from "../services/csvAccountingMapper";
+
+describe("reconcileBalances (approval gate)", () => {
+  const bal = (documentSection: string, balanceCents: number) => ({ documentSection, balanceCents });
+
+  it("PASS when section sums tie out to the stated totals", () => {
+    const balances = [bal("EXPENSE", 500000), bal("EXPENSE", 713400), bal("REVENUE", -1300000)];
+    const r = reconcileBalances(balances, { EXPENSE: 1213400, REVENUE: -1300000 });
+    expect(r.status).toBe("PASS");
+    expect(r.lines.every((l) => l.ok)).toBe(true);
+  });
+
+  it("FAIL when an extracted total is off (the 7'134 → 9 case)", () => {
+    // Gérance mis-read as 9 CHF instead of 7'134 → Charges sum short by 7'125.
+    const balances = [bal("EXPENSE", 500000), bal("EXPENSE", 900)];
+    const r = reconcileBalances(balances, { EXPENSE: 1213400 });
+    expect(r.status).toBe("FAIL");
+    const charges = r.lines.find((l) => l.scope === "Charges")!;
+    expect(charges.ok).toBe(false);
+    expect(charges.diffChf).toBeCloseTo(-7125, 2);
+  });
+
+  it("checks the Actif = Passif identity", () => {
+    const r = reconcileBalances([bal("ACTIF", 1000000), bal("PASSIF", 900000)], {});
+    expect(r.status).toBe("FAIL");
+    expect(r.lines.find((l) => l.scope.startsWith("Bilan"))!.ok).toBe(false);
+  });
+
+  it("UNVERIFIED when the document declared no totals to check against", () => {
+    const r = reconcileBalances([bal("EXPENSE", 500000)], null);
+    expect(r.status).toBe("UNVERIFIED");
+    expect(r.lines).toEqual([]);
+  });
+});
 
 describe("mapCsvToAccountBalances", () => {
   it("maps rows and derives section + balanceType from the account code", () => {

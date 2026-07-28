@@ -800,16 +800,29 @@ export default function ImportedStatementReviewPage() {
     setApproveModalOpen(true);
   }
 
-  async function doApprove() {
+  async function doApprove(opts) {
     setActionLoading(true);
     setActionError("");
     try {
       const res = await fetch(`/api/imported-statements/${id}/approve`, {
         method: "POST",
-        headers: authHeaders(),
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify(opts?.override ? { override: true, overrideReason: opts.overrideReason } : {}),
       });
       const json = await res.json().catch(() => null);
-      if (!res.ok || !json) throw new Error(json?.error?.message || "Failed to approve");
+      if (!res.ok || !json) {
+        // Reconciliation gate: extracted figures don't tie out to the document's
+        // own totals. Require an explicit, reasoned override before publishing.
+        if (json?.error?.code === "RECONCILIATION_FAILED" && !opts?.override) {
+          const reason = window.prompt(
+            `${json?.error?.message}\n\n` +
+            "Approving now publishes figures that may be wrong to the owner. If you've verified them against the source, type a reason to approve anyway (or Cancel):",
+          );
+          if (reason && reason.trim()) return doApprove({ override: true, overrideReason: reason.trim() });
+          throw new Error(json?.error?.message || "Reconciliation failed");
+        }
+        throw new Error(json?.error?.message || "Failed to approve");
+      }
       setApproveModalOpen(false);
       setStatement(json.data);
     } catch (e) {
@@ -879,6 +892,10 @@ export default function ImportedStatementReviewPage() {
   const isExactlyBalanced = isBalanceSheet ? (imbalanceCents === 0) : true;
   // Show the imbalance warning banner only for balance sheets
   const hasBalanceWarning = isBalanceSheet && imbalanceCents !== null && imbalanceCents !== 0;
+
+  // Reconciliation of extracted lines vs the document's own stated totals (server DTO,
+  // recomputed each fetch). PASS ties out · FAIL doesn't · UNVERIFIED = no totals to check.
+  const recon = s?.reconciliation ?? null;
 
   // Approve availability:
   // - INVOICES: building only
@@ -1126,6 +1143,34 @@ export default function ImportedStatementReviewPage() {
                     {" "}The equation must reach exactly zero before entries can be posted.
                     Use the edit buttons below to correct amounts or add missing rows.
                   </p>
+                </div>
+              )}
+
+              {/* ── Reconciliation gate — extracted lines vs the document's own totals ── */}
+              {recon && !hasNoBalances && (
+                <div className={cn("rounded-lg border px-4 py-3 text-sm",
+                  recon.status === "PASS" ? "border-green-300 bg-green-50 text-green-800"
+                    : recon.status === "FAIL" ? "border-red-300 bg-red-50 text-red-800"
+                      : "border-amber-300 bg-amber-50 text-amber-800")}>
+                  <p className="font-semibold mb-1">
+                    {recon.status === "PASS" ? "✓ Reconciled — extracted totals tie out to the document"
+                      : recon.status === "FAIL" ? "⚠ Reconciliation failed — extracted totals don’t match the document"
+                        : "⚠ Unverified — the document declared no totals to check the extraction against"}
+                  </p>
+                  {recon.lines.length > 0 && (
+                    <ul className="mt-1 space-y-0.5 font-mono text-xs">
+                      {recon.lines.map((l, i) => (
+                        <li key={i} className={l.ok ? "" : "font-semibold"}>
+                          {l.ok ? "✓" : "✗"} {l.scope}: {l.computedChf.toLocaleString("de-CH")}
+                          {l.statedChf != null && ` vs ${l.statedChf.toLocaleString("de-CH")}`}
+                          {!l.ok && ` (off by ${l.diffChf.toLocaleString("de-CH")})`}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {recon.status !== "PASS" && (
+                    <p className="mt-1">Correct the flagged balances below, or approve with an override reason — the override is recorded on the statement.</p>
+                  )}
                 </div>
               )}
 

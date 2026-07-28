@@ -24,6 +24,7 @@ import {
   InvoiceDirection,
   InvoiceStatus,
   IngestionStatus,
+  Prisma,
 } from "@prisma/client";
 import type { ExtractedAccountBalance, ExtractedInvoiceLine, ScanResult } from "./documentScanner";
 import { scanDocument } from "./documentScan";
@@ -32,7 +33,7 @@ import { getAnthropicClient } from "./aiClient";
 import { writeAuditLog } from "./auditLog";
 import { createInvoice } from "./invoices";
 import { postJournalEntries } from "./ledgerService";
-import { mapCsvToAccountBalances, mapCsvToInvoiceLines, ReconciliationLine, CsvMapResult } from "./csvAccountingMapper";
+import { mapCsvToAccountBalances, mapCsvToInvoiceLines, ReconciliationLine, CsvMapResult, reconcileBalances, StatedTotalsCents, ReconciliationStatus } from "./csvAccountingMapper";
 import * as accountRepo from "../repositories/accountRepository";
 import { updateStatementStatus } from "../repositories/importedStatementRepository";
 import * as crypto from "crypto";
@@ -78,6 +79,12 @@ export interface ImportedStatementDTO {
    * Null when no account balances have been extracted yet.
    */
   balanceImbalanceCents: number | null;
+  /**
+   * Reconciliation of the extracted line items against the document's own stated
+   * section totals — recomputed from current balances. PASS = ties out; FAIL =
+   * doesn't (blocks approval); UNVERIFIED = no stated totals to check against.
+   */
+  reconciliation: { status: ReconciliationStatus; lines: ReconciliationLine[] } | null;
   /** Invoices created from this statement (matched by sourceFileUrl) */
   linkedInvoices: LinkedInvoiceDTO[];
   createdAt: string;
@@ -628,6 +635,22 @@ interface PersistSectionsInput {
   accountBalances: ExtractedAccountBalance[];
   invoiceLines: ExtractedInvoiceLine[];
   logPrefix: string;
+  /** Document's own declared section grand-totals (CHF cents), for the approval gate. */
+  statedTotals?: StatedTotalsCents;
+}
+
+/** The stated totals relevant to one statement's section type (BS → Actif/Passif,
+ *  IS → Produits/Charges), so a balance-sheet statement isn't flagged for missing
+ *  income totals and vice-versa. Returns undefined when none apply. */
+function statedTotalsForSection(
+  all: StatedTotalsCents | undefined,
+  type: StatementSectionType,
+): StatedTotalsCents | undefined {
+  if (!all) return undefined;
+  const keys: (keyof StatedTotalsCents)[] = type === StatementSectionType.BALANCE_SHEET ? ["ACTIF", "PASSIF"] : ["REVENUE", "EXPENSE"];
+  const out: StatedTotalsCents = {};
+  for (const k of keys) if (all[k] != null) out[k] = all[k];
+  return Object.keys(out).length > 0 ? out : undefined;
 }
 
 /**
@@ -663,7 +686,11 @@ async function persistExtractedSections(
 
   await prisma.importedStatement.update({
     where: { id: placeholderStatementId },
-    data: { ...metadata, sectionType: firstSectionType },
+    data: {
+      ...metadata,
+      sectionType: firstSectionType,
+      statedTotals: (statedTotalsForSection(input.statedTotals, firstSectionType) ?? Prisma.JsonNull) as Prisma.InputJsonValue,
+    },
   });
 
   if (firstSectionBalances.length > 0) {
@@ -689,6 +716,7 @@ async function persistExtractedSections(
         uploadedBy: uploader,
         status: ImportedStatementStatus.PROCESSING,
         ...metadata,
+        statedTotals: (statedTotalsForSection(input.statedTotals, StatementSectionType.INCOME_STATEMENT) ?? Prisma.JsonNull) as Prisma.InputJsonValue,
       },
     });
     await persistBalances(prisma, orgId, isStatement.id, isBalances, orgAccounts);
@@ -845,6 +873,9 @@ async function ingestCsvSections(
         (skipped.length ? `\nSkipped rows:\n- ${skipped.join("\n- ")}` : ""),
     };
 
+    const statedTotalsCents = balanceResult.statedTotals
+      ? Object.fromEntries(Object.entries(balanceResult.statedTotals).map(([k, v]) => [k, Math.round((v as number) * 100)]))
+      : undefined;
     await persistExtractedSections(prisma, {
       batchId,
       placeholderStatementId,
@@ -854,6 +885,7 @@ async function ingestCsvSections(
       accountBalances: balanceResult.items,
       invoiceLines: invoiceResult.items,
       logPrefix: "[CSV IMPORT]",
+      statedTotals: statedTotalsCents,
     });
 
     // Surface the reconciliation status + any skipped rows on the placeholder so
@@ -934,6 +966,7 @@ export async function approveStatement(
   statementId: string,
   orgId: string,
   approvedBy: string,
+  opts?: { override?: boolean; overrideReason?: string },
 ): Promise<ImportedStatementDTO> {
   const statement = await prisma.importedStatement.findFirst({
     where: { id: statementId, orgId },
@@ -950,6 +983,24 @@ export async function approveStatement(
   if (!statement.buildingId) {
     throw new ImportedStatementError("BUILDING_REQUIRED", "A building must be assigned before this statement can be approved");
   }
+
+  // Reconciliation gate: the extracted line items must tie out to the document's
+  // own stated section totals before a statement can feed client-facing reporting.
+  // Recomputed here from the CURRENT balances so manager corrections are reflected.
+  // FAIL (totals don't match) and UNVERIFIED (no stated totals to check) both block
+  // unless the manager explicitly overrides with a reason — nothing un-verified
+  // reaches an owner silently.
+  const recon = reconcileBalances(statement.accountBalances, (statement.statedTotals ?? null) as StatedTotalsCents | null);
+  if (recon.status !== "PASS" && !opts?.override) {
+    const failing = recon.lines.filter((l) => !l.ok).map((l) => `${l.scope}: extracted ${l.computedChf} vs stated ${l.statedChf} (off by ${l.diffChf})`);
+    const detail = recon.status === "UNVERIFIED"
+      ? "The document declared no section totals to verify the extraction against."
+      : `Extracted totals don't tie out to the document — ${failing.join("; ")}.`;
+    throw new ImportedStatementError("RECONCILIATION_FAILED", `${detail} Correct the flagged balances, or approve with override.`);
+  }
+  const overrideNote = recon.status !== "PASS" && opts?.override
+    ? `⚠ Approved despite reconciliation ${recon.status}${opts.overrideReason ? `: ${opts.overrideReason}` : ""} (by ${approvedBy})`
+    : null;
 
   const isIncomeStatement = statement.sectionType === StatementSectionType.INCOME_STATEMENT;
 
@@ -1091,10 +1142,12 @@ export async function approveStatement(
     });
   }
 
-  // Mark statement approved; record whether this was reference-only
-  const approvalNotes = referenceOnly
-    ? `Approved as reference only — existing ledger activity found for FY${statement.fiscalYear}. No journal entries posted.`
-    : null;
+  // Mark statement approved; record whether this was reference-only + any
+  // reconciliation override so the audit trail shows the numbers weren't blindly trusted.
+  const approvalNotes = [
+    referenceOnly ? `Approved as reference only — existing ledger activity found for FY${statement.fiscalYear}. No journal entries posted.` : null,
+    overrideNote,
+  ].filter(Boolean).join("\n") || null;
 
   const updated = await prisma.importedStatement.update({
     where: { id: statementId },
@@ -1720,6 +1773,9 @@ export function computeBalanceImbalanceCents(balances: BalanceRowForCheck[]): nu
 function mapDTO(s: any, linkedInvoices: any[] = []): ImportedStatementDTO {
   const balances: any[] = s.accountBalances ?? [];
   const balanceImbalanceCents = computeBalanceImbalanceCents(balances);
+  const reconciliation = balances.length > 0
+    ? reconcileBalances(balances, (s.statedTotals ?? null) as StatedTotalsCents | null)
+    : null;
 
   return {
     id: s.id,
@@ -1753,6 +1809,7 @@ function mapDTO(s: any, linkedInvoices: any[] = []): ImportedStatementDTO {
       accountCode: ab.account?.code ?? null,
     })),
     balanceImbalanceCents,
+    reconciliation,
     linkedInvoices: linkedInvoices.map((inv: any) => ({
       id: inv.id,
       description: inv.description ?? null,
