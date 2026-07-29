@@ -326,12 +326,15 @@ export function aggregateImportedPnl(balances: ImportedPnlBalanceRow[]): {
     } else if (ab.documentSection === "EXPENSE") {
       expenseSigned += ab.balanceCents;
       const amt = Math.abs(ab.balanceCents);
-      // Manager override on the account wins over the name heuristic.
+      // The régie's OWN account name/code is the source of truth for display and
+      // name-based categorization — canonical COA codes collide across régie charts,
+      // so the raw line is more faithful than a mapped canonical label. The canonical
+      // account is used only for the manager's explicit costCategory override.
       const ov = ab.account?.costCategory;
       const category: RegieCostCategory =
         ov === "OWNER_OPEX" || ov === "RECOVERABLE" || ov === "TENANT_RECHARGE" || ov === "CAPEX" || ov === "FINANCING"
           ? ov
-          : classifyRegieExpenseAccount(ab.account?.code ?? ab.rawAccountCode, ab.account?.name ?? ab.rawAccountName);
+          : classifyRegieExpenseAccount(ab.rawAccountCode ?? ab.account?.code, ab.rawAccountName ?? ab.account?.name);
       if (category === "CAPEX") capexCents += amt;
       else if (category === "FINANCING") financingCents += amt;
       else if (category === "RECOVERABLE") recoverableCents += amt;
@@ -339,8 +342,8 @@ export function aggregateImportedPnl(balances: ImportedPnlBalanceRow[]): {
       else ownerOpexCents += amt;
       expensesByAccount.push({
         accountId: ab.account?.id ?? ab.accountId ?? "",
-        accountName: ab.account?.name ?? ab.rawAccountName,
-        accountCode: ab.account?.code ?? ab.rawAccountCode ?? null,
+        accountName: ab.rawAccountName ?? ab.account?.name,
+        accountCode: ab.rawAccountCode ?? ab.account?.code ?? null,
         totalCents: amt,
         category,
       });
