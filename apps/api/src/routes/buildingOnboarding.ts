@@ -45,13 +45,24 @@ async function expandPackageFiles(
       fromPdf = true;
       // Reuse a prior extraction of the byte-identical PDF (content hash + extractor
       // version) so re-uploads skip the ~$0.45 vision pass. Org-scoped for isolation.
+      // The cache is a pure optimization — any cache error must degrade to a normal
+      // extraction, never fail the upload.
       const cacheKey = `${EXTRACTOR_VERSION}|pkg|${crypto.createHash("sha256").update(p.data).digest("hex")}`;
-      let csvs = (await findExtractionCache(prisma, orgId, cacheKey)) as PackageExtractionFile[] | null;
+      let csvs: PackageExtractionFile[] | null = null;
+      try {
+        csvs = (await findExtractionCache(prisma, orgId, cacheKey)) as PackageExtractionFile[] | null;
+      } catch (e) {
+        console.error("[ONBOARDING] extraction cache lookup failed (continuing without cache):", errDetail(e));
+      }
       if (csvs) {
         console.log(`[ONBOARDING] extraction cache HIT — skipped vision for "${p.filename}"`);
       } else {
         csvs = await extractPackageFromPdf(p.data, p.filename as string, p.contentType || "application/pdf");
-        await putExtractionCache(prisma, orgId, cacheKey, csvs);
+        try {
+          await putExtractionCache(prisma, orgId, cacheKey, csvs);
+        } catch (e) {
+          console.error("[ONBOARDING] extraction cache store failed (continuing):", errDetail(e));
+        }
       }
       files.push(...csvs);
     } else {

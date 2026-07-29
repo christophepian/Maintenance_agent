@@ -661,13 +661,22 @@ async function runIngestionBackground(
     //    extraction of the IDENTICAL file (same content hash + extractor version) so
     //    re-uploads skip the costly vision pass. Cache is org-scoped for isolation.
     const cacheKey = `${EXTRACTOR_VERSION}|doc|${hintDocType ?? ""}|${crypto.createHash("sha256").update(buffer).digest("hex")}`;
-    let scanResult = (await findExtractionCache(prisma, orgId, cacheKey)) as ScanResult | null;
+    let scanResult: ScanResult | null = null;
+    try {
+      scanResult = (await findExtractionCache(prisma, orgId, cacheKey)) as ScanResult | null;
+    } catch (e) {
+      console.error(`[IMPORT] [bg] batch=${batchId} extraction cache lookup failed (continuing without cache):`, e);
+    }
     if (scanResult) {
       console.log(`[IMPORT] [bg] batch=${batchId} extraction cache HIT — skipped vision for "${fileName}"`);
     } else {
       console.log(`[IMPORT] [bg] batch=${batchId} Scanning "${fileName}" size=${buffer.length}${hintDocType ? ` hint=${hintDocType}` : ""}`);
       scanResult = await scanDocument(buffer, fileName, mimeType, hintDocType);
-      await putExtractionCache(prisma, orgId, cacheKey, scanResult);
+      try {
+        await putExtractionCache(prisma, orgId, cacheKey, scanResult);
+      } catch (e) {
+        console.error(`[IMPORT] [bg] batch=${batchId} extraction cache store failed (continuing):`, e);
+      }
     }
     console.log(
       `[IMPORT] [bg] Scan complete: docType=${scanResult.docType} confidence=${scanResult.confidence} ` +
