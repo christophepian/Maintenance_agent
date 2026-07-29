@@ -3026,17 +3026,20 @@ enum MatchConfidence {
 
 /// Groups all ImportedStatement records produced from a single PDF upload.
 model UploadBatch {
-  id            String   @id @default(uuid())
-  orgId         String
-  sourceFileUrl String /// S3 key to original uploaded PDF
-  fileName      String /// Original file name for display
-  uploadedBy    String /// userId of the manager who uploaded
-  createdAt     DateTime @default(now())
+  id             String   @id @default(uuid())
+  orgId          String
+  sourceFileUrl  String /// S3 key to original uploaded PDF
+  fileName       String /// Original file name for display
+  uploadedBy     String /// userId of the manager who uploaded
+  fileHash       String? /// `${EXTRACTOR_VERSION}|${hintDocType}|sha256(file)` — vision-extraction cache key (org-scoped)
+  scanResultJson Json? /// Cached ScanResult from the vision pass; a re-upload of the identical file reuses it and skips the ~$0.45 extraction
+  createdAt      DateTime @default(now())
 
   org        Org                 @relation(fields: [orgId], references: [id], onDelete: Cascade)
   statements ImportedStatement[]
 
   @@index([orgId])
+  @@index([orgId, fileHash])
 }
 
 /// One section extracted from a PDF upload — one record per section type per PDF.

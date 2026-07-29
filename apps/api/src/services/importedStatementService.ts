@@ -35,7 +35,7 @@ import { createInvoice } from "./invoices";
 import { postJournalEntries } from "./ledgerService";
 import { mapCsvToAccountBalances, mapCsvToInvoiceLines, ReconciliationLine, CsvMapResult, reconcileBalances, StatedTotalsCents, ReconciliationStatus, RESULT_ACCOUNT_CODE, isResultDesignation } from "./csvAccountingMapper";
 import * as accountRepo from "../repositories/accountRepository";
-import { updateStatementStatus, findApprovedIncomeStatementForYear, findSiblingStatement } from "../repositories/importedStatementRepository";
+import { updateStatementStatus, findApprovedIncomeStatementForYear, findSiblingStatement, findCachedScan, storeCachedScan } from "../repositories/importedStatementRepository";
 import * as crypto from "crypto";
 
 /* ══════════════════════════════════════════════════════════════
@@ -313,6 +313,7 @@ async function matchAccount(
   rawCode: string,
   rawName: string,
   balanceCents: number,
+  allowClaude = true,
 ): Promise<{ accountId: string | null; confidence: MatchConfidence }> {
   // 1. Exact code match — trusted ONLY when the account NAME is also consistent.
   //    Régie charts use their own (French/German) numbering that COLLIDES with our
@@ -358,6 +359,11 @@ async function matchAccount(
       nameNorm.includes(a.name.toLowerCase()),
   );
   if (fuzzy) return { accountId: fuzzy.id, confidence: MatchConfidence.FUZZY };
+
+  // Skip the PAID Claude step when the caller opts out (income statements: they are
+  // reference-only, never posted, and display the régie's own name — a free exact/
+  // fuzzy hit above still links; otherwise leave UNMATCHED rather than pay per row).
+  if (!allowClaude) return { accountId: null, confidence: MatchConfidence.UNMATCHED };
 
   // 3. Claude Haiku classification — same account type only.
   //    If there are no same-type candidates, skip Claude and return UNMATCHED so
@@ -510,6 +516,12 @@ async function resolveContractorFromLine(
    Main ingest pipeline
    ══════════════════════════════════════════════════════════════ */
 
+/**
+ * Bump when the extraction logic (scanner prompts / parsing) changes, so cached
+ * ScanResults from the old logic are no longer reused. The cache key embeds this.
+ */
+const EXTRACTOR_VERSION = "v1";
+
 export async function ingestStatement(
   prisma: PrismaClient,
   input: IngestStatementInput,
@@ -644,9 +656,18 @@ async function runIngestionBackground(
   };
 
   try {
-    // 1. Scan document (OCR + Claude extraction)
-    console.log(`[IMPORT] [bg] batch=${batchId} Scanning "${fileName}" size=${buffer.length}${hintDocType ? ` hint=${hintDocType}` : ""}`);
-    const scanResult: ScanResult = await scanDocument(buffer, fileName, mimeType, hintDocType);
+    // 1. Scan document (OCR + Claude extraction) — but first try to reuse a prior
+    //    extraction of the IDENTICAL file (same content hash + extractor version) so
+    //    re-uploads skip the costly vision pass. Cache is org-scoped for isolation.
+    const cacheKey = `${EXTRACTOR_VERSION}|${hintDocType ?? ""}|${crypto.createHash("sha256").update(buffer).digest("hex")}`;
+    let scanResult = (await findCachedScan(prisma, orgId, cacheKey)) as ScanResult | null;
+    if (scanResult) {
+      console.log(`[IMPORT] [bg] batch=${batchId} extraction cache HIT — skipped vision for "${fileName}"`);
+    } else {
+      console.log(`[IMPORT] [bg] batch=${batchId} Scanning "${fileName}" size=${buffer.length}${hintDocType ? ` hint=${hintDocType}` : ""}`);
+      scanResult = await scanDocument(buffer, fileName, mimeType, hintDocType);
+      await storeCachedScan(prisma, batchId, cacheKey, scanResult);
+    }
     console.log(
       `[IMPORT] [bg] Scan complete: docType=${scanResult.docType} confidence=${scanResult.confidence} ` +
       `balances=${scanResult.accountBalances?.length ?? 0} invoices=${scanResult.invoiceLines?.length ?? 0}`,
@@ -800,7 +821,7 @@ async function persistExtractedSections(
   });
 
   if (firstSectionBalances.length > 0) {
-    await persistBalances(prisma, orgId, placeholderStatementId, firstSectionBalances, orgAccounts);
+    await persistBalances(prisma, orgId, placeholderStatementId, firstSectionBalances, orgAccounts, firstSectionType);
   }
 
   // Status flip happens last — after balances are committed
@@ -825,7 +846,7 @@ async function persistExtractedSections(
         statedTotals: (statedTotalsForSection(input.statedTotals, StatementSectionType.INCOME_STATEMENT) ?? Prisma.JsonNull) as Prisma.InputJsonValue,
       },
     });
-    await persistBalances(prisma, orgId, isStatement.id, isBalances, orgAccounts);
+    await persistBalances(prisma, orgId, isStatement.id, isBalances, orgAccounts, StatementSectionType.INCOME_STATEMENT);
     await prisma.importedStatement.update({
       where: { id: isStatement.id },
       data: { status: ImportedStatementStatus.PENDING_REVIEW },
@@ -1040,12 +1061,16 @@ async function persistBalances(
   statementId: string,
   balances: ExtractedAccountBalance[],
   orgAccounts: Awaited<ReturnType<typeof accountRepo.findAccountsByOrg>>,
+  sectionType: StatementSectionType,
 ): Promise<void> {
+  // Income statements are reference-only + display the régie's own name, so we don't
+  // pay for Claude account matching on them (free exact/fuzzy still applies).
+  const allowClaude = sectionType !== StatementSectionType.INCOME_STATEMENT;
   const rows = await Promise.all(
     balances.map(async (ab) => {
       // Preserve sign — negative values are contra-accounts / deductions within their section
       const balanceCents = Math.round(ab.balanceChf * 100);
-      const match = await matchAccount(orgAccounts, ab.rawAccountCode, ab.rawAccountName, Math.abs(balanceCents));
+      const match = await matchAccount(orgAccounts, ab.rawAccountCode, ab.rawAccountName, Math.abs(balanceCents), allowClaude);
       return {
         orgId,
         statementId,

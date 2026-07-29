@@ -80,17 +80,19 @@ describe("aggregateImportedPnl", () => {
     expect(expenseCents).toBe(0);
   });
 
-  it("prefers the linked account's code/name over the raw values", () => {
+  it("prefers the régie's own (raw) name/code but keeps the linked accountId", () => {
+    // Régie charts collide with our canonical COA codes (régie 4600 "Honoraires de
+    // gestion" == our 4600 "Property Tax"), so the raw line is the faithful label.
     const balances = [
       {
         documentSection: "EXPENSE",
         balanceCents: 1000,
-        rawAccountName: "raw name",
-        rawAccountCode: "6000",
-        account: { id: "acc-1", code: "6000", name: "Entretien courant" },
+        rawAccountName: "Honoraires de gestion",
+        rawAccountCode: "4600",
+        account: { id: "acc-1", code: "4600", name: "Property Tax" },
       },
     ];
     const { expensesByAccount } = aggregateImportedPnl(balances);
-    expect(expensesByAccount[0]).toMatchObject({ accountId: "acc-1", accountName: "Entretien courant", accountCode: "6000" });
+    expect(expensesByAccount[0]).toMatchObject({ accountId: "acc-1", accountName: "Honoraires de gestion", accountCode: "4600" });
   });
 });

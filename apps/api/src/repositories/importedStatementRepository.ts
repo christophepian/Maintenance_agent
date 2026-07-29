@@ -5,7 +5,7 @@
  * G9: all DB access for this domain goes through this file.
  */
 
-import { ImportedStatementStatus, MatchConfidence, StatementSectionType, PrismaClient } from "@prisma/client";
+import { ImportedStatementStatus, MatchConfidence, StatementSectionType, Prisma, PrismaClient } from "@prisma/client";
 
 /* ── statement includes ─────────────────────────────────────── */
 
@@ -100,6 +100,40 @@ export async function findSiblingStatement(
     where: base,
     include: STATEMENT_INCLUDE,
     orderBy: [{ status: "asc" }, { updatedAt: "desc" }],
+  });
+}
+
+/* ── extraction cache (vision-reuse) ─────────────────────────── */
+
+/**
+ * Look up a prior vision extraction for the identical file (same `fileHash`,
+ * which embeds the content hash + extractor version). Lets a re-upload skip the
+ * expensive scanDocument() call. Org-scoped for tenant isolation. `fileHash` is
+ * only ever set together with `scanResultJson`, so a hash hit always has a result.
+ */
+export async function findCachedScan(
+  prisma: PrismaClient,
+  orgId: string,
+  fileHash: string,
+): Promise<unknown | null> {
+  const hit = await prisma.uploadBatch.findFirst({
+    where: { orgId, fileHash },
+    orderBy: { createdAt: "desc" },
+    select: { scanResultJson: true },
+  });
+  return hit?.scanResultJson ?? null;
+}
+
+/** Persist a vision extraction on its batch so future identical uploads reuse it. */
+export async function storeCachedScan(
+  prisma: PrismaClient,
+  batchId: string,
+  fileHash: string,
+  scanResult: unknown,
+): Promise<void> {
+  await prisma.uploadBatch.update({
+    where: { id: batchId },
+    data: { fileHash, scanResultJson: scanResult as Prisma.InputJsonValue },
   });
 }
 
