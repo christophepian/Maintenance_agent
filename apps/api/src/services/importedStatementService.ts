@@ -304,7 +304,9 @@ interface AccountRow {
 
 /**
  * Match a single extracted account balance row to an Account in the org's COA.
- * Order: exact code → name fuzzy → Claude Haiku classification → UNMATCHED.
+ * Order: exact code (only if the name agrees) → name fuzzy → Claude Haiku
+ * classification → UNMATCHED. Code alone is NOT authoritative: régie charts reuse
+ * our canonical numbers for different accounts, so a name check guards the code step.
  */
 async function matchAccount(
   orgAccounts: AccountRow[],
@@ -312,11 +314,26 @@ async function matchAccount(
   rawName: string,
   balanceCents: number,
 ): Promise<{ accountId: string | null; confidence: MatchConfidence }> {
-  // 1. Exact code match — always authoritative regardless of account type
+  // 1. Exact code match — trusted ONLY when the account NAME is also consistent.
+  //    Régie charts use their own (French/German) numbering that COLLIDES with our
+  //    canonical COA while meaning something entirely different — e.g. this régie's
+  //    "4500 Electricité" is our "4500 Property Management Fee", their "4600 Honoraires
+  //    de gestion" (the real management fee) is our "4600 Property Tax", and their
+  //    "4100 Contrats d'entretien" is our "4100 Mortgage Interest" (FINANCING!).
+  //    A bare code collision therefore mislabels AND miscategorises the line. When the
+  //    code matches but the name disagrees, fall through to name / cross-language
+  //    semantic matching (fuzzy → Claude) below instead of trusting the number.
+  const nameNorm = rawName.toLowerCase().trim();
+  const nameConsistent = (a: AccountRow) => {
+    const an = a.name.toLowerCase().trim();
+    return !nameNorm || !an || an.includes(nameNorm) || nameNorm.includes(an);
+  };
   const exactCode = orgAccounts.find(
     (a) => a.code && a.code.trim() === rawCode.trim(),
   );
-  if (exactCode) return { accountId: exactCode.id, confidence: MatchConfidence.AUTO };
+  if (exactCode && nameConsistent(exactCode)) {
+    return { accountId: exactCode.id, confidence: MatchConfidence.AUTO };
+  }
 
   // Narrow the candidate pool to accounts whose code starts with the same digit as
   // the raw code.  This prevents a 2xxx liability row (e.g. "2210 Compte courant
@@ -335,7 +352,6 @@ async function matchAccount(
     : orgAccounts;
 
   // 2. Name fuzzy match (case-insensitive substring) — same account type only
-  const nameNorm = rawName.toLowerCase().trim();
   const fuzzy = sameTypeAccounts.find(
     (a) =>
       a.name.toLowerCase().includes(nameNorm) ||
