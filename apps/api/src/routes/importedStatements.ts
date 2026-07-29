@@ -304,7 +304,13 @@ export function registerImportedStatementRoutes(router: Router) {
 
       const buffer = await storage.get(fileKey);
       const ext = fileKey.split(".").pop()?.toLowerCase() || "";
-      const mime = ext === "pdf" ? "application/pdf" : ext === "png" ? "image/png" : ext === "jpg" || ext === "jpeg" ? "image/jpeg" : "application/octet-stream";
+      // Package imports store the intermediate CSV (not a PDF) as the source — serve
+      // it as text so "View original" opens it readable instead of downloading a blob.
+      const mime = ext === "pdf" ? "application/pdf"
+        : ext === "png" ? "image/png"
+          : ext === "jpg" || ext === "jpeg" ? "image/jpeg"
+            : ext === "csv" || ext === "txt" ? "text/plain; charset=utf-8"
+              : "application/octet-stream";
       res.writeHead(200, {
         "Content-Type": mime,
         "Content-Length": buffer.length.toString(),
