@@ -753,11 +753,18 @@ async function persistExtractedSections(
   const finalBuildingId = metadata.buildingId;
   const orgAccounts = await accountRepo.findAccountsByOrg(prisma, orgId);
 
-  // 4. Classify accounts into balance-sheet vs income-statement by account code prefix.
-  //    Swiss chart of accounts: 1xxx–2xxx = balance sheet, 3xxx–8xxx = income statement.
+  // 4. Classify accounts into balance-sheet vs income-statement. The extracted
+  //    documentSection (from the printed section header) is authoritative — a régie
+  //    can use non-standard codes (e.g. 9900 "c/c régie" is a balance-sheet current
+  //    account, or an asset-range code placed under Passifs). Only fall back to the
+  //    code prefix (1xxx–2xxx = balance sheet) when the section is unknown.
+  const isBalanceSheetRow = (b: ExtractedAccountBalance) =>
+    b.documentSection === "ACTIF" || b.documentSection === "PASSIF" ? true
+      : b.documentSection === "REVENUE" || b.documentSection === "EXPENSE" ? false
+        : isBalanceSheetAccount(b.rawAccountCode);
   const allBalances = input.accountBalances;
-  const bsBalances = allBalances.filter((b) => isBalanceSheetAccount(b.rawAccountCode));
-  const isBalances = allBalances.filter((b) => !isBalanceSheetAccount(b.rawAccountCode));
+  const bsBalances = allBalances.filter(isBalanceSheetRow);
+  const isBalances = allBalances.filter((b) => !isBalanceSheetRow(b));
 
   // 5. Populate the placeholder statement as BALANCE_SHEET (or INCOME_STATEMENT if no BS rows).
   //    Persist balances BEFORE flipping status to PENDING_REVIEW so the UI never sees
