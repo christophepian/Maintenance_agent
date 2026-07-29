@@ -1357,22 +1357,80 @@ function MultiPeriodCompareCard({ buildingId, onClose, embedded }) {
   );
 }
 
-// The building reporting surface. A period bar (Month/Quarter/Year + scrubber +
-// presets) chooses the period the HERO reports on; the time-series drives both
-// the scrubber and the histogram (which now lives in the Revenue & expenses
-// slide, where a bar click/brush re-drives the period).
+// ── Client-side period model for the reporting navigator ─────────────────────
+// The navigator only needs the *list of selectable periods* and the current
+// window's [from,to]+label — never the per-bucket financials (the detail panel
+// fetches its own numbers). So we derive everything from a single anchor date
+// on the client: switching Month/Quarter/Year is instant, and the selected
+// position is preserved across switches and never reset by a background fetch.
+function reportingPeriodStart(gran, d) {
+  const y = d.getFullYear(), m = d.getMonth();
+  if (gran === "year") return new Date(y, 0, 1);
+  if (gran === "quarter") return new Date(y, Math.floor(m / 3) * 3, 1);
+  return new Date(y, m, 1);
+}
+function reportingPeriodEnd(gran, start) {
+  const y = start.getFullYear(), m = start.getMonth();
+  if (gran === "year") return new Date(y, 11, 31);
+  if (gran === "quarter") return new Date(y, m + 3, 0);
+  return new Date(y, m + 1, 0);
+}
+function reportingIsoDay(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+function reportingStepStart(gran, start, dir) {
+  const d = new Date(start);
+  if (gran === "year") d.setFullYear(d.getFullYear() + dir);
+  else if (gran === "quarter") d.setMonth(d.getMonth() + 3 * dir);
+  else d.setMonth(d.getMonth() + dir);
+  return reportingPeriodStart(gran, d);
+}
+function reportingLabel(gran, start, locale, qp) {
+  const y = start.getFullYear();
+  if (gran === "year") return String(y);
+  if (gran === "quarter") return `${qp}${Math.floor(start.getMonth() / 3) + 1} ${y}`;
+  return start.toLocaleDateString(locale, { month: "long", year: "numeric" });
+}
+
+// The building reporting surface. A period bar (Month/Quarter/Year + stepper +
+// presets) chooses the period the HERO reports on. Period navigation is fully
+// client-side; a single background fetch only learns how far back real data
+// goes so the navigator doesn't offer years of empty buckets.
 function BuildingReportingView({ buildingId, etatLocatifNet }) {
-  const { t } = useTranslation("manager");
+  const { t, i18n } = useTranslation("manager");
+  const locale = i18n?.language;
+  const qp = locale && locale.startsWith("fr") ? "T" : "Q";
+
   const [gran, setGran]   = useState("month");
+  const [anchor, setAnchor] = useState(() => reportingIsoDay(reportingPeriodStart("month", new Date())));
+  const [ytd, setYtd]   = useState(false);
   const [customRange, setCustomRange] = useState(null); // { from, to } | null — arbitrary date range
-  const [points, setPoints] = useState([]);
-  const [focus, setFocus]   = useState({ s: 0, e: 0 });
-  const [tsLoading, setTsLoading] = useState(false);
+  const [spanStart, setSpanStart] = useState(null);     // Date | null — earliest period that has data
   const [tsError, setTsError]     = useState("");
-  const pendingJump = useRef(null); // "ytd" — applied after the async re-fetch
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pkYear, setPkYear] = useState(new Date().getFullYear());
   const pickerRef = useRef(null);
+  const tRef = useRef(t); tRef.current = t;
+  const spanFetched = useRef(false);
+
+  // One non-blocking fetch: learn how far back real data goes. It only sets the
+  // lower bound of the period list — it never touches the selected period, so it
+  // can never "snap" the user back the way the old gran-keyed refetch did.
+  useEffect(() => {
+    if (!buildingId || spanFetched.current) return;
+    spanFetched.current = true;
+    fetch(`/api/buildings/${buildingId}/timeseries?range=${GRAN_RANGE.year}`, { headers: authHeaders() })
+      .then((r) => r.json())
+      .then((d) => {
+        const pts = d?.data?.points ?? [];
+        if (pts.length) {
+          const earliest = pts.reduce((min, p) => (p.periodStart < min ? p.periodStart : min), pts[0].periodStart);
+          setSpanStart(new Date(`${earliest}T00:00:00`));
+        }
+        if (!d?.data) setTsError(d?.error?.message || tRef.current("buildingsId.reporting.failedToLoad"));
+      })
+      .catch(() => setTsError(tRef.current("buildingsId.reporting.failedToLoad")));
+  }, [buildingId]);
 
   useEffect(() => {
     if (!pickerOpen) return;
@@ -1381,78 +1439,71 @@ function BuildingReportingView({ buildingId, etatLocatifNet }) {
     return () => document.removeEventListener("mousedown", onDown);
   }, [pickerOpen]);
 
-  useEffect(() => {
-    if (!buildingId) return;
-    setTsLoading(true);
-    setTsError("");
-    fetch(`/api/buildings/${buildingId}/timeseries?range=${GRAN_RANGE[gran]}`, { headers: authHeaders() })
-      .then((r) => r.json())
-      .then((d) => {
-        const pts = d?.data?.points ?? [];
-        setPoints(pts);
-        const last = Math.max(0, pts.length - 1);
-        if (pendingJump.current === "ytd") {
-          const y = new Date().getFullYear();
-          const idxs = pts.map((p, i) => (new Date(p.periodStart).getFullYear() === y ? i : -1)).filter((i) => i >= 0);
-          setFocus(idxs.length ? { s: idxs[0], e: idxs[idxs.length - 1] } : { s: last, e: last });
-        } else {
-          setFocus({ s: last, e: last });
-        }
-        pendingJump.current = null;
-        if (!d?.data) setTsError(d?.error?.message || t("buildingsId.reporting.failedToLoad"));
-      })
-      .catch(() => setTsError(t("buildingsId.reporting.failedToLoad")))
-      .finally(() => setTsLoading(false));
-  }, [buildingId, gran, t]);
+  // The current bucket start, re-derived from the anchor date under the active
+  // granularity — this is what makes a Month→Year→Month round-trip land you back
+  // on the same period instead of resetting.
+  const anchorStart = useMemo(() => reportingPeriodStart(gran, new Date(`${anchor}T00:00:00`)), [gran, anchor]);
 
-  // The focused window → [from,to] + label fed to the period detail + hero.
+  // Selectable bucket-starts, ascending — pure client-side, no network.
+  const periods = useMemo(() => {
+    const now = new Date();
+    const fallback = new Date(now.getFullYear() - 2, 0, 1); // sensible default until span loads
+    const rawStart = spanStart && spanStart < now ? spanStart : fallback;
+    const endStart = reportingPeriodStart(gran, now);
+    const out = [];
+    let cur = reportingPeriodStart(gran, rawStart);
+    for (let guard = 0; cur <= endStart && guard < 600; guard++) {
+      out.push(cur);
+      cur = reportingStepStart(gran, cur, 1);
+    }
+    return out;
+  }, [gran, spanStart]);
+
+  // The selected window → [from,to] + label fed to the period detail + hero.
   const { from, to, periodLabel } = useMemo(() => {
-    // An explicit custom range overrides the bucket navigation.
     if (customRange?.from && customRange?.to) {
       return { from: customRange.from, to: customRange.to, periodLabel: `${customRange.from} → ${customRange.to}` };
     }
-    if (!points.length) {
-      // Default to the current month so the detail loads immediately (without
-      // waiting on the histogram) and matches the eventual last monthly bucket.
-      const d = new Date();
-      const mm = String(d.getMonth() + 1).padStart(2, "0");
-      const last = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
-      return { from: `${d.getFullYear()}-${mm}-01`, to: `${d.getFullYear()}-${mm}-${String(last).padStart(2, "0")}`, periodLabel: d.toLocaleDateString(undefined, { month: "long", year: "numeric" }) };
+    if (ytd) {
+      const y = anchorStart.getFullYear();
+      return { from: `${y}-01-01`, to: reportingIsoDay(new Date()), periodLabel: `${t("buildingsId.reporting.histogram.jumpYtd")} ${y}` };
     }
-    const s = Math.min(focus.s, focus.e), e = Math.max(focus.s, focus.e);
-    const a = points[Math.min(s, points.length - 1)];
-    const b = points[Math.min(e, points.length - 1)];
-    return { from: a.periodStart, to: b.periodEnd, periodLabel: s === e ? a.label : `${a.label} – ${b.label}` };
-  }, [points, focus, customRange]);
+    return {
+      from: reportingIsoDay(anchorStart),
+      to: reportingIsoDay(reportingPeriodEnd(gran, anchorStart)),
+      periodLabel: reportingLabel(gran, anchorStart, locale, qp),
+    };
+  }, [gran, anchorStart, customRange, ytd, t, locale, qp]);
 
-  function step(d) {
-    let i = Math.max(0, Math.min(points.length - 1, Math.max(focus.s, focus.e) + d));
-    setFocus({ s: i, e: i });
+  const atStart = !periods.length || +anchorStart <= +periods[0];
+  const atEnd   = !periods.length || +anchorStart >= +periods[periods.length - 1];
+
+  function step(dir) {
+    if (!periods.length) return;
+    const next = reportingStepStart(gran, anchorStart, dir);
+    if (+next < +periods[0] || +next > +periods[periods.length - 1]) return;
+    setYtd(false);
+    setAnchor(reportingIsoDay(next));
   }
-  function jump(kind) {
-    pendingJump.current = null;
-    setCustomRange(null);
-    if (kind === "latest") { if (gran === "month") setFocus({ s: points.length - 1, e: points.length - 1 }); else setGran("month"); }
-    else if (kind === "year") { if (gran === "year") setFocus({ s: points.length - 1, e: points.length - 1 }); else setGran("year"); }
-    else { // ytd
-      if (gran === "month") {
-        const y = new Date().getFullYear();
-        const idxs = points.map((p, i) => (new Date(p.periodStart).getFullYear() === y ? i : -1)).filter((i) => i >= 0);
-        if (idxs.length) setFocus({ s: idxs[0], e: idxs[idxs.length - 1] });
-      } else { pendingJump.current = "ytd"; setGran("month"); }
-    }
+  function changeGran(g) { setPickerOpen(false); setYtd(false); setCustomRange(null); setGran(g); }
+  function selectStart(d) { setYtd(false); setCustomRange(null); setAnchor(reportingIsoDay(reportingPeriodStart(gran, d))); setPickerOpen(false); }
+  function preset(kind) {
+    setPickerOpen(false); setCustomRange(null);
+    const now = new Date();
+    if (kind === "latest") { setYtd(false); setGran("month"); setAnchor(reportingIsoDay(reportingPeriodStart("month", now))); }
+    else if (kind === "year") { setYtd(false); setGran("year"); setAnchor(reportingIsoDay(reportingPeriodStart("year", now))); }
+    else { setGran("month"); setAnchor(reportingIsoDay(reportingPeriodStart("month", now))); setYtd(true); }
   }
-  const atStart = Math.min(focus.s, focus.e) <= 0;
-  const atEnd = Math.max(focus.s, focus.e) >= points.length - 1;
-  const focusIdx = Math.max(focus.s, focus.e);
-  const pickerYears = [...new Set(points.map((p) => new Date(p.periodStart).getFullYear()))];
-  const monShort = Array.from({ length: 12 }, (_, mi) => new Intl.DateTimeFormat(undefined, { month: "short" }).format(new Date(2024, mi, 1)));
-  function openPicker() { setPkYear(points[focusIdx] ? new Date(points[focusIdx].periodStart).getFullYear() : new Date().getFullYear()); setPickerOpen((v) => !v); }
-  function pickIndex(i) { if (i >= 0) { setFocus({ s: i, e: i }); setPickerOpen(false); } }
-  const pkBtn = (label, i, key) => (
-    <button key={key} disabled={i < 0} aria-pressed={i === focusIdx} onClick={() => pickIndex(i)}
+
+  const pickerYears = [...new Set(periods.map((p) => p.getFullYear()))];
+  const monShort = Array.from({ length: 12 }, (_, mi) => new Intl.DateTimeFormat(locale, { month: "short" }).format(new Date(2024, mi, 1)));
+  function openPicker() { setPkYear(anchorStart.getFullYear()); setPickerOpen((v) => !v); }
+  const isCur = (d) => !ytd && !customRange && d != null && +d === +anchorStart;
+  const findPeriod = (pred) => periods.find(pred) || null;
+  const pkBtn = (label, d, key) => (
+    <button key={key} disabled={!d} aria-pressed={isCur(d)} onClick={() => d && selectStart(d)}
       className={cn("rounded-md border px-2 py-1.5 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-30",
-        i === focusIdx ? "border-brand bg-brand text-white" : "border-surface-border text-foreground hover:border-brand hover:text-brand")}>{label}</button>
+        isCur(d) ? "border-brand bg-brand text-white" : "border-surface-border text-foreground hover:border-brand hover:text-brand")}>{label}</button>
   );
 
   return (
@@ -1464,24 +1515,24 @@ function BuildingReportingView({ buildingId, etatLocatifNet }) {
           <span className="text-[11px] font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.period.label")}</span>
           <div className="inline-flex rounded-lg border border-surface-border bg-surface p-0.5 gap-0.5">
             {REPORTING_GRANS.map((g) => (
-              <button key={g} onClick={() => { pendingJump.current = null; setPickerOpen(false); setGran(g); }} aria-pressed={gran === g}
-                className={cn("rounded-md px-3 py-1 text-sm font-medium transition-colors", gran === g ? "bg-brand text-white" : "text-muted hover:text-muted-dark")}>{t(`buildingsId.reporting.period.${g}`)}</button>
+              <button key={g} onClick={() => changeGran(g)} aria-pressed={!ytd && gran === g}
+                className={cn("rounded-md px-3 py-1 text-sm font-medium transition-colors", !ytd && gran === g ? "bg-brand text-white" : "text-muted hover:text-muted-dark")}>{t(`buildingsId.reporting.period.${g}`)}</button>
             ))}
           </div>
         </div>
         <div className="relative flex items-center gap-1.5" ref={pickerRef}>
-          <button onClick={() => step(-1)} disabled={atStart || tsLoading} aria-label={t("buildingsId.reporting.period.prev")}
+          <button onClick={() => step(-1)} disabled={atStart} aria-label={t("buildingsId.reporting.period.prev")}
             className="grid h-7 w-7 place-items-center rounded-lg border border-surface-border bg-surface text-muted transition-colors hover:border-brand hover:text-brand disabled:opacity-40 disabled:cursor-not-allowed">‹</button>
           <button onClick={openPicker} aria-expanded={pickerOpen}
             className="min-w-[128px] rounded-lg border border-transparent px-2 py-1 text-center text-sm font-semibold text-foreground transition-colors hover:border-surface-border hover:bg-surface">
             {periodLabel} <span className="text-foreground-dim">▾</span>
           </button>
-          <button onClick={() => step(1)} disabled={atEnd || tsLoading} aria-label={t("buildingsId.reporting.period.next")}
+          <button onClick={() => step(1)} disabled={atEnd} aria-label={t("buildingsId.reporting.period.next")}
             className="grid h-7 w-7 place-items-center rounded-lg border border-surface-border bg-surface text-muted transition-colors hover:border-brand hover:text-brand disabled:opacity-40 disabled:cursor-not-allowed">›</button>
-          {pickerOpen && points.length > 0 && (
+          {pickerOpen && periods.length > 0 && (
             <div className="absolute left-1/2 top-full z-30 mt-2 w-64 -translate-x-1/2 rounded-xl border border-surface-border bg-surface p-3 shadow-lg">
               {gran === "year" ? (
-                <div className="grid grid-cols-3 gap-1.5">{points.map((p, i) => pkBtn(p.label, i, i))}</div>
+                <div className="grid grid-cols-3 gap-1.5">{periods.map((p) => pkBtn(String(p.getFullYear()), p, p.getFullYear()))}</div>
               ) : (
                 <>
                   <div className="mb-2 flex items-center justify-between">
@@ -1491,8 +1542,8 @@ function BuildingReportingView({ buildingId, etatLocatifNet }) {
                   </div>
                   <div className="grid grid-cols-4 gap-1.5">
                     {gran === "quarter"
-                      ? [1, 2, 3, 4].map((q) => pkBtn(`Q${q}`, points.findIndex((p) => { const d = new Date(p.periodStart); return d.getFullYear() === pkYear && Math.floor(d.getMonth() / 3) + 1 === q; }), q))
-                      : monShort.map((mm, mi) => pkBtn(mm, points.findIndex((p) => { const d = new Date(p.periodStart); return d.getFullYear() === pkYear && d.getMonth() === mi; }), mi))}
+                      ? [1, 2, 3, 4].map((q) => pkBtn(`${qp}${q}`, findPeriod((p) => p.getFullYear() === pkYear && Math.floor(p.getMonth() / 3) + 1 === q), q))
+                      : monShort.map((mm, mi) => pkBtn(mm, findPeriod((p) => p.getFullYear() === pkYear && p.getMonth() === mi), mi))}
                   </div>
                 </>
               )}
@@ -1511,7 +1562,8 @@ function BuildingReportingView({ buildingId, etatLocatifNet }) {
         )}
         <div className="flex gap-1.5">
           {[["latest", t("buildingsId.reporting.histogram.jumpMonth")], ["ytd", t("buildingsId.reporting.histogram.jumpYtd")], ["year", t("buildingsId.reporting.histogram.jumpYear")]].map(([k, l]) => (
-            <button key={k} onClick={() => { setPickerOpen(false); jump(k); }} className="rounded-lg border border-surface-border bg-surface px-2.5 py-1 text-xs text-muted transition-colors hover:border-brand hover:text-brand">{l}</button>
+            <button key={k} onClick={() => preset(k)} aria-pressed={k === "ytd" && ytd}
+              className={cn("rounded-lg border px-2.5 py-1 text-xs transition-colors", k === "ytd" && ytd ? "border-brand bg-brand-light text-brand-dark" : "border-surface-border bg-surface text-muted hover:border-brand hover:text-brand")}>{l}</button>
           ))}
           <button onClick={() => setCustomRange((r) => (r ? null : { from, to }))} aria-pressed={!!customRange}
             className={cn("rounded-lg border px-2.5 py-1 text-xs transition-colors", customRange ? "border-brand bg-brand-light text-brand-dark" : "border-surface-border bg-surface text-muted hover:border-brand hover:text-brand")}>{t("buildingsId.reporting.period.custom")}</button>
