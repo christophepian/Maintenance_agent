@@ -106,34 +106,35 @@ export async function findSiblingStatement(
 /* ── extraction cache (vision-reuse) ─────────────────────────── */
 
 /**
- * Look up a prior vision extraction for the identical file (same `fileHash`,
- * which embeds the content hash + extractor version). Lets a re-upload skip the
- * expensive scanDocument() call. Org-scoped for tenant isolation. `fileHash` is
- * only ever set together with `scanResultJson`, so a hash hit always has a result.
+ * Look up a prior vision extraction for the identical file (cacheKey embeds the
+ * content hash + extractor version + kind). Lets a re-upload skip the expensive
+ * scanDocument()/extractPackageFromPdf() call. Org-scoped for tenant isolation.
+ * Returns the cached payload (ScanResult or PackageExtractionFile[]) or null.
  */
-export async function findCachedScan(
+export async function findExtractionCache(
   prisma: PrismaClient,
   orgId: string,
-  fileHash: string,
+  cacheKey: string,
 ): Promise<unknown | null> {
-  const hit = await prisma.uploadBatch.findFirst({
-    where: { orgId, fileHash },
-    orderBy: { createdAt: "desc" },
-    select: { scanResultJson: true },
+  const hit = await prisma.extractionCache.findUnique({
+    where: { orgId_cacheKey: { orgId, cacheKey } },
+    select: { payload: true },
   });
-  return hit?.scanResultJson ?? null;
+  return hit?.payload ?? null;
 }
 
-/** Persist a vision extraction on its batch so future identical uploads reuse it. */
-export async function storeCachedScan(
+/** Persist a vision extraction so future identical uploads reuse it (upsert). */
+export async function putExtractionCache(
   prisma: PrismaClient,
-  batchId: string,
-  fileHash: string,
-  scanResult: unknown,
+  orgId: string,
+  cacheKey: string,
+  payload: unknown,
 ): Promise<void> {
-  await prisma.uploadBatch.update({
-    where: { id: batchId },
-    data: { fileHash, scanResultJson: scanResult as Prisma.InputJsonValue },
+  const data = payload as Prisma.InputJsonValue;
+  await prisma.extractionCache.upsert({
+    where: { orgId_cacheKey: { orgId, cacheKey } },
+    create: { orgId, cacheKey, payload: data },
+    update: { payload: data },
   });
 }
 

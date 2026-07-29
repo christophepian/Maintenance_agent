@@ -13,7 +13,11 @@ import { readRawBody, parseMultipart } from "../storage/attachments";
 import { previewOnboarding, commitOnboarding, OnboardingError } from "../services/buildingOnboardingService";
 import { previewInvoiceOnboarding, commitInvoiceOnboarding } from "../services/invoiceOnboardingService";
 import { analyzePackage, analyzePackageForNewBuilding, commitPackage } from "../services/packageOnboardingService";
-import { extractPackageFromPdf } from "../services/documentScan";
+import { extractPackageFromPdf, type PackageExtractionFile } from "../services/documentScan";
+import { EXTRACTOR_VERSION } from "../services/importedStatementService";
+import { findExtractionCache, putExtractionCache } from "../repositories/importedStatementRepository";
+import { PrismaClient } from "@prisma/client";
+import * as crypto from "crypto";
 
 /** 10 MB limit — a rent roll is small even for a large portfolio. */
 const ONBOARDING_MAX_BYTES = 10 * 1024 * 1024;
@@ -28,6 +32,8 @@ const errDetail = (e: unknown): string => (e instanceof Error ? e.message : Stri
  */
 async function expandPackageFiles(
   parts: ReturnType<typeof parseMultipart>,
+  prisma: PrismaClient,
+  orgId: string,
 ): Promise<{ files: { fileName: string; text: string }[]; fromPdf: boolean }> {
   const fileParts = parts.filter((p) => p.filename && p.name === "file");
   const files: { fileName: string; text: string }[] = [];
@@ -37,7 +43,16 @@ async function expandPackageFiles(
       (p.contentType ?? "").toLowerCase().includes("pdf") || /\.pdf$/i.test(p.filename ?? "");
     if (isPdf) {
       fromPdf = true;
-      const csvs = await extractPackageFromPdf(p.data, p.filename as string, p.contentType || "application/pdf");
+      // Reuse a prior extraction of the byte-identical PDF (content hash + extractor
+      // version) so re-uploads skip the ~$0.45 vision pass. Org-scoped for isolation.
+      const cacheKey = `${EXTRACTOR_VERSION}|pkg|${crypto.createHash("sha256").update(p.data).digest("hex")}`;
+      let csvs = (await findExtractionCache(prisma, orgId, cacheKey)) as PackageExtractionFile[] | null;
+      if (csvs) {
+        console.log(`[ONBOARDING] extraction cache HIT — skipped vision for "${p.filename}"`);
+      } else {
+        csvs = await extractPackageFromPdf(p.data, p.filename as string, p.contentType || "application/pdf");
+        await putExtractionCache(prisma, orgId, cacheKey, csvs);
+      }
       files.push(...csvs);
     } else {
       files.push({ fileName: p.filename as string, text: p.data.toString("utf8") });
@@ -204,7 +219,7 @@ export function registerBuildingOnboardingRoutes(router: Router) {
   });
 
   // ── New-building package analyze (no building yet — extract its identity) ──
-  router.post("/onboarding/package/analyze", async ({ req, res }) => {
+  router.post("/onboarding/package/analyze", async ({ req, res, orgId, prisma }) => {
     const user = requireAnyRole(req, res, ["MANAGER"]);
     if (!user) return;
 
@@ -223,7 +238,7 @@ export function registerBuildingOnboardingRoutes(router: Router) {
     let files: { fileName: string; text: string }[];
     let fromPdf: boolean;
     try {
-      ({ files, fromPdf } = await expandPackageFiles(parts));
+      ({ files, fromPdf } = await expandPackageFiles(parts, prisma, orgId));
     } catch (e) {
       console.error("[ONBOARDING] new-building package PDF extraction error:", e);
       return sendError(res, 502, "PDF_EXTRACTION_FAILED", "Failed to extract the PDF", errDetail(e));
@@ -261,7 +276,7 @@ export function registerBuildingOnboardingRoutes(router: Router) {
     let files: { fileName: string; text: string }[];
     let fromPdf: boolean;
     try {
-      ({ files, fromPdf } = await expandPackageFiles(parts));
+      ({ files, fromPdf } = await expandPackageFiles(parts, prisma, orgId));
     } catch (e) {
       console.error("[ONBOARDING] package PDF extraction error:", e);
       return sendError(res, 502, "PDF_EXTRACTION_FAILED", "Failed to extract the PDF", errDetail(e));

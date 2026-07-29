@@ -211,6 +211,7 @@ model Org {
   openingReceivables          OpeningReceivable[]
   // Bulk CSV import (buildings & units)
   importBatches               ImportBatch[]
+  extractionCaches            ExtractionCache[]
 }
 
 model OrgConfig {
@@ -3026,20 +3027,33 @@ enum MatchConfidence {
 
 /// Groups all ImportedStatement records produced from a single PDF upload.
 model UploadBatch {
-  id             String   @id @default(uuid())
-  orgId          String
-  sourceFileUrl  String /// S3 key to original uploaded PDF
-  fileName       String /// Original file name for display
-  uploadedBy     String /// userId of the manager who uploaded
-  fileHash       String? /// `${EXTRACTOR_VERSION}|${hintDocType}|sha256(file)` — vision-extraction cache key (org-scoped)
-  scanResultJson Json? /// Cached ScanResult from the vision pass; a re-upload of the identical file reuses it and skips the ~$0.45 extraction
-  createdAt      DateTime @default(now())
+  id            String   @id @default(uuid())
+  orgId         String
+  sourceFileUrl String /// S3 key to original uploaded PDF
+  fileName      String /// Original file name for display
+  uploadedBy    String /// userId of the manager who uploaded
+  createdAt     DateTime @default(now())
 
   org        Org                 @relation(fields: [orgId], references: [id], onDelete: Cascade)
   statements ImportedStatement[]
 
   @@index([orgId])
-  @@index([orgId, fileHash])
+}
+
+/// Content-addressed cache of expensive vision extractions. Keyed by
+/// `${EXTRACTOR_VERSION}|${kind}|sha256(file)` (kind = doc | pkg), org-scoped for
+/// tenant isolation. A re-upload of the byte-identical file reuses the stored
+/// payload (ScanResult or PackageExtractionFile[]) and skips the ~$0.45 vision pass.
+model ExtractionCache {
+  id        String   @id @default(uuid())
+  orgId     String
+  cacheKey  String
+  payload   Json
+  createdAt DateTime @default(now())
+
+  org Org @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, cacheKey])
 }
 
 /// One section extracted from a PDF upload — one record per section type per PDF.

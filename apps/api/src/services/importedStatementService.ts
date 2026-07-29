@@ -35,7 +35,7 @@ import { createInvoice } from "./invoices";
 import { postJournalEntries } from "./ledgerService";
 import { mapCsvToAccountBalances, mapCsvToInvoiceLines, ReconciliationLine, CsvMapResult, reconcileBalances, StatedTotalsCents, ReconciliationStatus, RESULT_ACCOUNT_CODE, isResultDesignation } from "./csvAccountingMapper";
 import * as accountRepo from "../repositories/accountRepository";
-import { updateStatementStatus, findApprovedIncomeStatementForYear, findSiblingStatement, findCachedScan, storeCachedScan } from "../repositories/importedStatementRepository";
+import { updateStatementStatus, findApprovedIncomeStatementForYear, findSiblingStatement, findExtractionCache, putExtractionCache } from "../repositories/importedStatementRepository";
 import * as crypto from "crypto";
 
 /* ══════════════════════════════════════════════════════════════
@@ -518,9 +518,10 @@ async function resolveContractorFromLine(
 
 /**
  * Bump when the extraction logic (scanner prompts / parsing) changes, so cached
- * ScanResults from the old logic are no longer reused. The cache key embeds this.
+ * extractions from the old logic are no longer reused. The cache key embeds this.
+ * Shared by the single-statement path here and the régie-package wizard path.
  */
-const EXTRACTOR_VERSION = "v1";
+export const EXTRACTOR_VERSION = "v1";
 
 export async function ingestStatement(
   prisma: PrismaClient,
@@ -659,14 +660,14 @@ async function runIngestionBackground(
     // 1. Scan document (OCR + Claude extraction) — but first try to reuse a prior
     //    extraction of the IDENTICAL file (same content hash + extractor version) so
     //    re-uploads skip the costly vision pass. Cache is org-scoped for isolation.
-    const cacheKey = `${EXTRACTOR_VERSION}|${hintDocType ?? ""}|${crypto.createHash("sha256").update(buffer).digest("hex")}`;
-    let scanResult = (await findCachedScan(prisma, orgId, cacheKey)) as ScanResult | null;
+    const cacheKey = `${EXTRACTOR_VERSION}|doc|${hintDocType ?? ""}|${crypto.createHash("sha256").update(buffer).digest("hex")}`;
+    let scanResult = (await findExtractionCache(prisma, orgId, cacheKey)) as ScanResult | null;
     if (scanResult) {
       console.log(`[IMPORT] [bg] batch=${batchId} extraction cache HIT — skipped vision for "${fileName}"`);
     } else {
       console.log(`[IMPORT] [bg] batch=${batchId} Scanning "${fileName}" size=${buffer.length}${hintDocType ? ` hint=${hintDocType}` : ""}`);
       scanResult = await scanDocument(buffer, fileName, mimeType, hintDocType);
-      await storeCachedScan(prisma, batchId, cacheKey, scanResult);
+      await putExtractionCache(prisma, orgId, cacheKey, scanResult);
     }
     console.log(
       `[IMPORT] [bg] Scan complete: docType=${scanResult.docType} confidence=${scanResult.confidence} ` +
