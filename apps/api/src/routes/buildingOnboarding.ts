@@ -24,6 +24,12 @@ const ONBOARDING_MAX_BYTES = 10 * 1024 * 1024;
 
 const errDetail = (e: unknown): string => (e instanceof Error ? e.message : String(e));
 
+/** A transient Anthropic capacity error (HTTP 529 overloaded_error) — retryable. */
+function isOverloaded(e: unknown): boolean {
+  const anyE = e as { status?: number; error?: { type?: string } } | null;
+  return anyE?.status === 529 || anyE?.error?.type === "overloaded_error" || /overloaded/i.test(errDetail(e));
+}
+
 /**
  * Turn multipart file parts into package CSV files. A CSV part is decoded as-is;
  * a PDF part is OCR'd + extracted into the canonical CSVs the package pipeline
@@ -252,6 +258,7 @@ export function registerBuildingOnboardingRoutes(router: Router) {
       ({ files, fromPdf } = await expandPackageFiles(parts, prisma, orgId));
     } catch (e) {
       console.error("[ONBOARDING] new-building package PDF extraction error:", e);
+      if (isOverloaded(e)) return sendError(res, 503, "EXTRACTION_OVERLOADED", "The extraction service is temporarily overloaded. Please try again in a moment.");
       return sendError(res, 502, "PDF_EXTRACTION_FAILED", "Failed to extract the PDF", errDetail(e));
     }
     if (files.length === 0) return sendError(res, 400, "MISSING_FILE", "No files found");
@@ -290,6 +297,7 @@ export function registerBuildingOnboardingRoutes(router: Router) {
       ({ files, fromPdf } = await expandPackageFiles(parts, prisma, orgId));
     } catch (e) {
       console.error("[ONBOARDING] package PDF extraction error:", e);
+      if (isOverloaded(e)) return sendError(res, 503, "EXTRACTION_OVERLOADED", "The extraction service is temporarily overloaded. Please try again in a moment.");
       return sendError(res, 502, "PDF_EXTRACTION_FAILED", "Failed to extract the PDF", errDetail(e));
     }
     if (files.length === 0) return sendError(res, 400, "MISSING_FILE", "No files found");
