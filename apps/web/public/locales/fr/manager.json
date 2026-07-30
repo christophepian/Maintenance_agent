@@ -802,7 +802,10 @@
         "noiShare": "Part RNE",
         "intrinsicValue": "Intrinsèque",
         "yieldIntrinsic": "Rendement net",
-        "yieldBasis": { "market": "sur valeur de marché", "ppe": "sur estimation PPE" },
+        "yieldBasis": {
+          "market": "sur valeur de marché",
+          "ppe": "sur estimation PPE"
+        },
         "sellCandidate": "Candidat vente",
         "total": "Total",
         "reconcileWarn": "La somme des revenus par lot est {{sum}} alors que le revenu de l'immeuble est {{building}} (Δ {{delta}}). Une partie des revenus n'est pas attribuée à un lot ; la répartition ci-dessous est incomplète.",
@@ -858,7 +861,11 @@
           "monitor": "À surveiller : {{items}}.",
           "monitorCollection": "le recouvrement à temps",
           "monitorVacancy": "la vacance"
-        }
+        },
+        "base": "Période de base",
+        "against": "Comparer à",
+        "addPeriod": "Ajouter une période",
+        "emptyPrompt": "Ajoutez une période à comparer avec {{period}}."
       },
       "revex": {
         "title": "Produits & charges",
@@ -1042,6 +1049,10 @@
         "kindLedger": "Facture comptabilisée",
         "kindInvoice": "Facture régie",
         "kindCharges": "Charges réparties"
+      },
+      "mode": {
+        "single": "Une période",
+        "compare": "Comparer"
       }
     },
     "strategyEditor": {

@@ -26,6 +26,7 @@ import { setAuthToken, authHeaders } from "../../lib/api";
 import { withTranslations } from "../../lib/i18n";
 import { resolveLandingPath } from "../../lib/roleRouting";
 import { useTheme } from "../../hooks/useTheme";
+import AnalyzeProgress from "../../components/AnalyzeProgress";
 
 const PROGRESS_KEY = "onboarding_progress_v1";
 
@@ -486,28 +487,21 @@ function RiskStep({ questions, answers, onAnswer, importState, busy, onSubmit, o
         property.
       </p>
 
-      {/* Background import indicator */}
+      {/* Background import indicator — full progress while analyzing, compact once done */}
       {importState && importState.active && (
-        <div
-          className={
-            "flex items-center gap-2 rounded-lg px-3 py-2 mb-5 text-xs border " +
-            (importState.ready
-              ? "border-success-ring bg-success-light text-success"
-              : importState.error
-                ? "border-warning-ring bg-warning-light text-warning-text"
-                : "border-surface-border bg-surface-subtle text-muted")
-          }
-        >
-          {importState.ready ? (
-            <>✓ Your building is ready to import</>
-          ) : importState.error ? (
-            <>⚠ We couldn&apos;t analyze the package — you can retry later from Properties</>
-          ) : (
-            <>
-              <Spinner /> Analyzing your building in the background…
-            </>
-          )}
-        </div>
+        importState.ready ? (
+          <div className="flex items-center gap-2 rounded-lg px-3 py-2 mb-5 text-xs border border-success-ring bg-success-light text-success">
+            ✓ Your building is ready to import
+          </div>
+        ) : importState.error ? (
+          <div className="flex items-center gap-2 rounded-lg px-3 py-2 mb-5 text-xs border border-warning-ring bg-warning-light text-warning-text">
+            ⚠ We couldn&apos;t analyze the package — you can retry later from Properties
+          </div>
+        ) : (
+          <div className="mb-5">
+            <AnalyzeProgress active />
+          </div>
+        )
       )}
 
       <div className="space-y-6 mb-6">

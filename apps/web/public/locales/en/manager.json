@@ -802,7 +802,10 @@
         "noiShare": "NOI share",
         "intrinsicValue": "Intrinsic",
         "yieldIntrinsic": "Net yield",
-        "yieldBasis": { "market": "on market value", "ppe": "on PPE estimate" },
+        "yieldBasis": {
+          "market": "on market value",
+          "ppe": "on PPE estimate"
+        },
         "sellCandidate": "Sell candidate",
         "total": "Total",
         "reconcileWarn": "Per-unit income sums to {{sum}} but the building income is {{building}} (Δ {{delta}}). Some income isn't attributed to a unit, so the breakdown below is incomplete.",
@@ -858,7 +861,11 @@
           "monitor": "Going forward, keep an eye on {{items}}.",
           "monitorCollection": "on-time collection",
           "monitorVacancy": "vacancy"
-        }
+        },
+        "base": "Base period",
+        "against": "Compare against",
+        "addPeriod": "Add period",
+        "emptyPrompt": "Add a period to compare against {{period}}."
       },
       "revex": {
         "title": "Revenue & expenses",
@@ -1042,6 +1049,10 @@
         "kindLedger": "Posted invoice",
         "kindInvoice": "Régie invoice",
         "kindCharges": "Apportioned charges"
+      },
+      "mode": {
+        "single": "One period",
+        "compare": "Compare"
       }
     },
     "strategyEditor": {

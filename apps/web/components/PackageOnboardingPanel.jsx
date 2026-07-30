@@ -11,6 +11,7 @@
 import { useState, useRef } from "react";
 import Panel from "./layout/Panel";
 import Badge from "./ui/Badge";
+import AnalyzeProgress from "./AnalyzeProgress";
 import { authHeaders } from "../lib/api";
 import { cn } from "../lib/utils";
 
@@ -40,6 +41,7 @@ export default function PackageOnboardingPanel({ buildingId, onClose, onCommitte
   const [files, setFiles] = useState([]);
   const [analysis, setAnalysis] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [progressVisible, setProgressVisible] = useState(false);
   const [error, setError] = useState("");
   const [billingMode, setBillingMode] = useState("snapshot");
   const [confirmNewUnits, setConfirmNewUnits] = useState(false);
@@ -59,6 +61,7 @@ export default function PackageOnboardingPanel({ buildingId, onClose, onCommitte
     e.preventDefault();
     if (!files.length) return;
     setLoading(true);
+    setProgressVisible(true);
     setError("");
     setAnalysis(null);
     setResult(null);
@@ -83,6 +86,7 @@ export default function PackageOnboardingPanel({ buildingId, onClose, onCommitte
       if (newMode && eb) setB({ name: eb.name || "", address: eb.address || "", city: eb.city || "", postalCode: eb.postalCode || "" });
     } catch (e) {
       setError(String(e?.message || e));
+      setProgressVisible(false); // failure → drop the progress immediately (no success flourish)
     } finally {
       setLoading(false);
     }
@@ -213,9 +217,15 @@ export default function PackageOnboardingPanel({ buildingId, onClose, onCommitte
         <p className="text-xs text-muted">Nothing is created yet — this detects each file and checks the documents tie out.</p>
       </form>
 
+      {progressVisible && (
+        <div className="mt-4">
+          <AnalyzeProgress active={loading} fileCount={files.length} onComplete={() => setProgressVisible(false)} />
+        </div>
+      )}
+
       {error && <div className="notice notice-err mt-4">{error}</div>}
 
-      {analysis && (
+      {analysis && !progressVisible && (
         <div className="mt-4 space-y-4">
           {/* Document inventory */}
           <div className="overflow-x-auto">

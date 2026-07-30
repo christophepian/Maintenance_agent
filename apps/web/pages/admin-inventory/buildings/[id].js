@@ -213,17 +213,6 @@ function kpiDeltaPp(cur, prev, better) {
   return { txt: `${pp > 0 ? "▲ +" : "▼ "}${Math.abs(pp)}pp`, cls: good ? "text-success-text" : "text-destructive-text" };
 }
 
-// Compare-window helpers — the Comparison tab computes its own benchmark windows
-// from the focused [from,to], so all comparison lives in one place.
-function shiftYearIso(iso, n) { const d = new Date(iso); d.setFullYear(d.getFullYear() + n); return d.toISOString().slice(0, 10); }
-function priorWindowIso(fromIso, toIso) {
-  const f = new Date(fromIso), tt = new Date(toIso);
-  const days = Math.round((tt - f) / 86400000) + 1;
-  const pt = new Date(f); pt.setDate(pt.getDate() - 1);
-  const pf = new Date(pt); pf.setDate(pf.getDate() - days + 1);
-  return { from: pf.toISOString().slice(0, 10), to: pt.toISOString().slice(0, 10) };
-}
-
 function buildingHeadline(bf, t) {
   if (!bf) return t("buildingsId.reporting.headline.loading");
   const noi = bf.netOperatingIncomeCents;
@@ -365,16 +354,20 @@ function buildComparisonNarrative({ curNoi, beNoi, curIncome, beIncome, curExp, 
   return s;
 }
 
-// The "What this means" read-out shown under every comparison table — a heading
-// (styled like "What changed") followed by the plain-language sentences, un-boxed
-// and un-striped.
+// The "What this means" read-out shown under the comparison table — a friendly
+// explainer callout (icon + heading + plain-language sentences). Styled to stand
+// out as the hand-holding layer for non-financial owners: this is the part that
+// says, in words, what the numbers above mean.
 function ComparisonNarrative({ lines, t }) {
   if (!lines?.length) return null;
   return (
-    <div>
-      <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.compare.narrative.heading")}</p>
-      <div className="space-y-1.5">
-        {lines.map((line, i) => <p key={i} className="text-sm leading-6 text-muted-text">{line}</p>)}
+    <div className="rounded-xl border border-info-ring bg-info-light px-5 py-4">
+      <div className="mb-2.5 flex items-center gap-2.5">
+        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-info text-sm font-bold text-white">i</span>
+        <p className="text-sm font-semibold text-info-text">{t("buildingsId.reporting.compare.narrative.heading")}</p>
+      </div>
+      <div className="space-y-2 pl-[38px]">
+        {lines.map((line, i) => <p key={i} className="text-sm leading-6 text-foreground">{line}</p>)}
       </div>
     </div>
   );
@@ -400,12 +393,8 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
   const [expExpanded, setExpExpanded] = useState(false);       // revex expense column: show all rows
   const [expandedUnitId, setExpandedUnitId] = useState(null);  // by-unit: which row's cost detail is open
   const [unitLines, setUnitLines] = useState({});              // by-unit: unitId → { loading, error, data }
-  const [tab, setTab] = useState("breakdown");   // detail tab: breakdown | drivers | comparison
   const [breakdownView, setBreakdownView] = useState("ie"); // breakdown sub-view: ie | unit | prof
   const [metricsOpen, setMetricsOpen] = useState(false);    // "All financial metrics" disclosure
-  const [cmpMode, setCmpMode] = useState(null);  // comparison: null | prior | ly | multi
-  const [benchReport, setBenchReport] = useState(null); // benchmark period (prior/ly)
-  const [cmpYield, setCmpYield] = useState({ cur: null, be: null }); // building net yield, current vs benchmark period
   const [benchmark, setBenchmark] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState("");
@@ -465,38 +454,6 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
       .then((d) => setUnitLines((m) => ({ ...m, [unitId]: { loading: false, data: d?.data ?? null } })))
       .catch(() => setUnitLines((m) => ({ ...m, [unitId]: { loading: false, error: true } })));
   }
-
-  // The prior/last-year benchmark window, derived from the focused [from,to].
-  const cmpWin = useMemo(() => {
-    if (cmpMode === "prior") return priorWindowIso(from, to);
-    if (cmpMode === "ly") return { from: shiftYearIso(from, -1), to: shiftYearIso(to, -1) };
-    return null;
-  }, [cmpMode, from, to]);
-  const cmpFrom = cmpWin?.from ?? null;
-  const cmpTo = cmpWin?.to ?? null;
-
-  // Benchmark period-report (fetched only while a prior/ly comparison is active).
-  useEffect(() => {
-    if (!cmpFrom || !cmpTo) { setBenchReport(null); return undefined; }
-    let cancelled = false;
-    fetch(`/api/buildings/${buildingId}/period-report?from=${cmpFrom}&to=${cmpTo}`, { headers: authHeaders() })
-      .then((r) => r.json()).then((d) => { if (!cancelled) setBenchReport(d?.data ?? null); })
-      .catch(() => { if (!cancelled) setBenchReport(null); });
-    return () => { cancelled = true; };
-  }, [buildingId, cmpFrom, cmpTo]);
-
-  // Building net yield for both windows (annual NOI ÷ intrinsic value), so the
-  // Comparison tab can show the yield delta. Same endpoint the Profitability tab
-  // uses, so the figure matches. Only while a prior/ly comparison is active.
-  useEffect(() => {
-    if (!cmpFrom || !cmpTo) { setCmpYield({ cur: null, be: null }); return undefined; }
-    let cancelled = false;
-    const yieldOf = (f, tt) => fetch(`/api/buildings/${buildingId}/unit-profitability?from=${f}&to=${tt}`, { headers: authHeaders() })
-      .then((r) => r.json()).then((d) => d?.data?.buildingNetYieldPct ?? null).catch(() => null);
-    Promise.all([yieldOf(from, to), yieldOf(cmpFrom, cmpTo)])
-      .then(([cur, be]) => { if (!cancelled) setCmpYield({ cur, be }); });
-    return () => { cancelled = true; };
-  }, [buildingId, from, to, cmpFrom, cmpTo]);
 
   const bf   = report?.financials ?? null;
   const prev = report?.prevFinancials ?? null;
@@ -654,55 +611,6 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
           </div>
         );
 
-        // ── Comparison detail (prior / last-year table + multi-period) ──
-        const benchBf = benchReport?.financials ?? null;
-        const cmpPeriodLabel = cmpWin
-          ? (cmpWin.from.slice(5) === "01-01" && cmpWin.to.slice(5) === "12-31" && cmpWin.from.slice(0, 4) === cmpWin.to.slice(0, 4)
-              ? cmpWin.from.slice(0, 4)
-              : `${cmpWin.from} – ${cmpWin.to}`)
-          : "";
-        // "yieldpct" carries an already-in-percent value (e.g. 3.1) — formatted to
-        // one decimal, with the delta in percentage points; "pct" carries a fraction.
-        const cmpFmt = (type, v) => (v == null ? "—" : type === "yieldpct" ? `${v.toFixed(1)}%` : type === "pct" ? rFmtPct(v) : rFmtChf(v));
-        const cmpDelta = (cur, be, type, better) => {
-          if (cur == null || be == null) return { txt: "—", cls: "text-foreground-dim" };
-          if (type === "yieldpct") {
-            const d = Math.round((cur - be) * 10) / 10;
-            const good = better === 0 ? null : (d > 0 ? better > 0 : better < 0);
-            return { txt: `${d > 0 ? "▲ +" : d < 0 ? "▼ " : "– "}${Math.abs(d).toFixed(1)}pp`, cls: d === 0 || good === null ? "text-foreground-dim" : good ? "text-success-text" : "text-destructive-text" };
-          }
-          if (type === "pct") {
-            const pp = Math.round((cur - be) * 100);
-            const good = better === 0 ? null : (pp > 0 ? better > 0 : better < 0);
-            return { txt: `${pp > 0 ? "▲ +" : pp < 0 ? "▼ " : "– "}${Math.abs(pp)}pp`, cls: pp === 0 || good === null ? "text-foreground-dim" : good ? "text-success-text" : "text-destructive-text" };
-          }
-          const d = cur - be, p = be ? Math.round((d / be) * 100) : 0;
-          const good = better === 0 ? null : (d > 0 ? better > 0 : better < 0);
-          return { txt: `${d > 0 ? "▲ +" : d < 0 ? "▼ " : "– "}${rFmtChf(Math.abs(d))}${be ? ` (${Math.abs(p)}%)` : ""}`, cls: d === 0 || good === null ? "text-foreground-dim" : good ? "text-success-text" : "text-destructive-text" };
-        };
-        const cmpMetrics = benchBf ? [
-          { label: t("buildingsId.reporting.kpi.noi"),             cur: noi,       be: benchBf.netOperatingIncomeCents, type: "chf", better: 1 },
-          { label: t("buildingsId.reporting.kpi.cashReceived"),    cur: earned,    be: benchBf.collectedIncomeCents,    type: "chf", better: 1 },
-          { label: t("buildingsId.reporting.kpi.totalExpenses"),   cur: expenses,  be: benchBf.expensesTotalCents,      type: "chf", better: -1 },
-          { label: t("buildingsId.reporting.kpi.onTimeCollection"),cur: coll,      be: benchBf.collectionRate,          type: "pct", better: 1 },
-          { label: t("buildingsId.reporting.kpi.noiMargin"),       cur: noiMargin, be: benchBf.collectedIncomeCents > 0 ? benchBf.netOperatingIncomeCents / benchBf.collectedIncomeCents : null, type: "pct", better: 1 },
-          { label: t("buildingsId.reporting.kpi.opexRatio"),       cur: opexRatio, be: benchBf.collectedIncomeCents > 0 ? benchBf.expensesTotalCents / benchBf.collectedIncomeCents : null, type: "pct", better: -1 },
-          { label: t("buildingsId.reporting.kpi.occupancy"),       cur: occ,       be: benchBf.totalUnitsCount > 0 ? benchBf.activeUnitsCount / benchBf.totalUnitsCount : null, type: "pct", better: 1 },
-          { label: t("buildingsId.reporting.kpi.receivables"),     cur: bf.receivablesCents, be: benchBf.receivablesCents, type: "chf", better: -1 },
-          // Yield is always the last row (net yield on building value).
-          { label: t("buildingsId.reporting.unitProfit.buildingYield"), cur: cmpYield.cur, be: cmpYield.be, type: "yieldpct", better: 1 },
-        ] : [];
-        const cmpMovers = computeExpenseMovers(bf, benchBf);
-        const cmpNarrative = benchBf ? buildComparisonNarrative({
-          curNoi: noi, beNoi: benchBf.netOperatingIncomeCents,
-          curIncome: earned, beIncome: benchBf.collectedIncomeCents,
-          curExp: expenses, beExp: benchBf.expensesTotalCents,
-          curColl: coll, beColl: benchBf.collectionRate,
-          curOcc: occ, beOcc: benchBf.totalUnitsCount > 0 ? benchBf.activeUnitsCount / benchBf.totalUnitsCount : null,
-          movers: cmpMovers, curYield: cmpYield.cur, beYield: cmpYield.be,
-          periodLabel, cmpPeriodLabel, t,
-        }) : [];
-
         // Grouped KPI sections — the full financial picture folded in from the
         // (retired) Financials tab: performance · income · costs · balances.
         const kpiGroups = [
@@ -771,66 +679,6 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
           </div>
         );
 
-        // Comparison tab — the single home for all comparison: prior period, same
-        // period last year, or up to 5 hand-picked periods.
-        const comparisonSlide = (
-          <div className="p-5 space-y-4">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-sm text-muted">{t("buildingsId.reporting.compare.vs")}</span>
-              {[["prior", t("buildingsId.reporting.compare.prior")], ["ly", t("buildingsId.reporting.compare.lastYear")], ["multi", t("buildingsId.reporting.compare.periods")]].map(([k, l]) => (
-                <button key={k} onClick={() => setCmpMode(k)} aria-pressed={cmpMode === k}
-                  className={cn("rounded-lg border px-3 py-1 text-xs font-semibold transition-colors", cmpMode === k ? "border-brand bg-brand text-white" : "border-surface-border text-muted hover:border-brand hover:text-brand")}>{l}</button>
-              ))}
-              {cmpMode && <button onClick={() => setCmpMode(null)} className="ml-auto rounded-lg border border-surface-border px-2.5 py-1 text-xs text-muted transition-colors hover:border-destructive-ring hover:text-destructive-text">✕ {t("buildingsId.reporting.compare.clear")}</button>}
-            </div>
-
-            {!cmpMode ? (
-              <p className="text-sm text-muted">{t("buildingsId.reporting.compare.pickPrompt")}</p>
-            ) : cmpMode === "multi" ? (
-              <MultiPeriodCompareCard buildingId={buildingId} embedded />
-            ) : !benchBf ? (
-              <p className="text-sm text-muted">{t("buildingsId.reporting.compare.loading")}</p>
-            ) : (
-              <div className="space-y-4">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="text-[10.5px] uppercase tracking-wide text-foreground-dim">
-                        <th className="py-2 pr-2 text-left font-semibold">{t("buildingsId.reporting.compare.metric")}</th>
-                        <th className="py-2 px-2 text-right font-semibold">{periodLabel}</th>
-                        <th className="py-2 px-2 text-right font-semibold">{cmpPeriodLabel}</th>
-                        <th className="py-2 pl-2 text-right font-semibold">Δ</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {cmpMetrics.map((m, i) => { const dd = cmpDelta(m.cur, m.be, m.type, m.better); return (
-                        <tr key={i} className="border-t border-surface-divider">
-                          <td className="py-2 pr-2 text-muted">{m.label}</td>
-                          <td className="py-2 px-2 text-right font-semibold text-foreground tabular-nums">{cmpFmt(m.type, m.cur)}</td>
-                          <td className="py-2 px-2 text-right text-muted tabular-nums">{cmpFmt(m.type, m.be)}</td>
-                          <td className={cn("whitespace-nowrap py-2 pl-2 text-right font-medium tabular-nums", dd.cls)}>{dd.txt}</td>
-                        </tr>); })}
-                    </tbody>
-                  </table>
-                </div>
-                <ComparisonNarrative lines={cmpNarrative} t={t} />
-                {cmpMovers.length > 0 && (
-                  <div>
-                    <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.compare.whatChanged")}</p>
-                    <div className="space-y-1">
-                      {cmpMovers.map((x, i) => (
-                        <div key={i} className="flex items-center justify-between gap-2 rounded-lg px-2 py-1 odd:bg-surface-subtle">
-                          <span className="truncate text-sm text-foreground">{x.name}</span>
-                          <span className={cn("shrink-0 text-sm font-semibold tabular-nums", x.d > 0 ? "text-destructive-text" : "text-success-text")}>{x.d > 0 ? "▲ +" : "▼ "}{rFmtChf(Math.abs(x.d))}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        );
 
         // ── Slide 2: What drove it / What to watch ──
         const driversSlide = (
@@ -1085,11 +933,11 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
           <UnitProfitabilityPanel buildingId={buildingId} from={from} to={to} />
         );
 
-        // Breakdown groups the three "numbers sliced" views behind one sub-switch.
+        // The three "numbers sliced" views behind one sub-switch. (Comparison used
+        // to be a sibling tab here; it's now the page-level Compare mode.)
         const breakdownPanel = breakdownView === "unit" ? byUnitSlide
           : breakdownView === "prof" ? unitProfitSlide
           : revexSlide;
-        const activePanel = tab === "comparison" ? comparisonSlide : breakdownPanel;
         return (
           <>
             {/* ── Result: calm header + (Why? → drivers/watch) + KPI strip + flags ── */}
@@ -1097,27 +945,17 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
             {whyOpen && <div className="border-b border-surface-border">{driversSlide}</div>}
             {noPnlData ? noPnlBlock : (<>{kpiStripEl}{flagsRow}{metricsCollapsible}</>)}
 
-            {/* ── Detail: grouped tabs (Breakdown · Comparison) ── */}
+            {/* ── Detail: Income & expenses · By unit · Profitability (one sub-switch) ── */}
             <div className="border-t border-surface-border">
-              <div className="flex gap-1 px-4 pt-2 overflow-x-auto">
-                {[["breakdown", t("buildingsId.reporting.tab.breakdown")], ["comparison", t("buildingsId.reporting.tab.comparison")]].map(([k, l]) => (
-                  <button key={k} onClick={() => setTab(k)} aria-pressed={tab === k}
-                    className={cn("-mb-px shrink-0 border-b-2 px-3 py-2 text-sm font-medium transition-colors", tab === k ? "border-brand text-brand" : "border-transparent text-muted hover:text-foreground")}>
-                    {l}
-                  </button>
-                ))}
-              </div>
-              {tab === "breakdown" && (
-                <div className="px-4 pb-3 pt-3">
-                  <div className="inline-flex gap-0.5 rounded-lg border border-surface-border bg-surface-subtle p-0.5">
-                    {[["ie", t("buildingsId.reporting.revex.title")], ["unit", t("buildingsId.reporting.byUnit")], ["prof", t("buildingsId.reporting.unitProfitTab")]].map(([k, l]) => (
-                      <button key={k} onClick={() => setBreakdownView(k)} aria-pressed={breakdownView === k}
-                        className={cn("rounded-md px-3 py-1 text-xs font-medium transition-colors", breakdownView === k ? "bg-surface text-foreground shadow-sm" : "text-muted hover:text-muted-dark")}>{l}</button>
-                    ))}
-                  </div>
+              <div className="px-4 pb-3 pt-3">
+                <div className="inline-flex gap-0.5 rounded-lg border border-surface-border bg-surface-subtle p-0.5">
+                  {[["ie", t("buildingsId.reporting.revex.title")], ["unit", t("buildingsId.reporting.byUnit")], ["prof", t("buildingsId.reporting.unitProfitTab")]].map(([k, l]) => (
+                    <button key={k} onClick={() => setBreakdownView(k)} aria-pressed={breakdownView === k}
+                      className={cn("rounded-md px-3 py-1 text-xs font-medium transition-colors", breakdownView === k ? "bg-surface text-foreground shadow-sm" : "text-muted hover:text-muted-dark")}>{l}</button>
+                  ))}
                 </div>
-              )}
-              <div className={cn("border-t border-surface-border", loading && "opacity-60 transition-opacity")}>{activePanel}</div>
+              </div>
+              <div className={cn("border-t border-surface-border", loading && "opacity-60 transition-opacity")}>{breakdownPanel}</div>
             </div>
 
             {/* ── Plan improvements — value creation now lives in Planning ── */}
@@ -1167,37 +1005,13 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
 }
 
 const REPORTING_GRANS = ["month", "quarter", "year"];
+// Compare mode adds half-year (the extra grain the old multi-period card offered).
+const COMPARE_GRANS = ["month", "quarter", "half", "year"];
+const COMPARE_MAX = 5; // anchor + up to 4 comparison periods
 // Period type → the backend time-series range that yields that granularity.
 const GRAN_RANGE = { month: "2Y", quarter: "5Y", year: "10Y" };
 
-/* ── Multi-period comparison (up to 5 periods · quarter / half-year / year) ──
- * Reuses GET /buildings/:id/period-report per selected period — the same
- * arbitrary-window KPI engine as the single "Compare to…". Half-years are
- * calendar H1 (Jan–Jun) / H2 (Jul–Dec). */
-const MULTI_GRANS = ["quarter", "half", "year"];
-const MULTI_MAX = 5;
-const dd2 = (n) => String(n).padStart(2, "0");
-const lastDayIso = (y, m) => `${y}-${dd2(m)}-${new Date(y, m, 0).getDate()}`; // m = 1..12
-
-/** Candidate comparison periods grouped by year (current year + 4 prior). A
- *  period whose start is in the future is disabled. */
-function multiPeriodCandidates(gran, now) {
-  const cy = now.getFullYear();
-  const mk = (from, to, label, short, key) => ({ from, to, label, short, key, disabled: new Date(from) > now });
-  const years = [];
-  for (let y = cy; y >= cy - 4; y -= 1) years.push(y);
-  return years.map((y) => {
-    let subs;
-    if (gran === "year") subs = [mk(`${y}-01-01`, `${y}-12-31`, String(y), String(y), `Y${y}`)];
-    else if (gran === "half") subs = [
-      mk(`${y}-01-01`, `${y}-06-30`, `H1 ${y}`, "H1", `H1${y}`),
-      mk(`${y}-07-01`, `${y}-12-31`, `H2 ${y}`, "H2", `H2${y}`),
-    ];
-    else subs = [1, 2, 3, 4].map((q) => mk(`${y}-${dd2((q - 1) * 3 + 1)}-01`, lastDayIso(y, (q - 1) * 3 + 3), `Q${q} ${String(y).slice(2)}`, `Q${q}`, `Q${q}Y${y}`));
-    return { year: y, subs };
-  });
-}
-
+// The KPI rows shared by the compare table (net-yield row is added by the caller).
 const multiKpis = (t) => [
   { label: t("buildingsId.reporting.kpi.noi"),              type: "chf", better: 1,  get: (f) => f.netOperatingIncomeCents },
   { label: t("buildingsId.reporting.kpi.cashReceived"),     type: "chf", better: 1,  get: (f) => f.collectedIncomeCents },
@@ -1209,19 +1023,56 @@ const multiKpis = (t) => [
   { label: t("buildingsId.reporting.kpi.receivables"),      type: "chf", better: -1, get: (f) => f.receivablesCents },
 ];
 
-function MultiPeriodCompareCard({ buildingId, onClose, embedded }) {
+// ── Client-side period model for the reporting navigator ─────────────────────
+// The navigator only needs the *list of selectable periods* and the current
+// window's [from,to]+label — never the per-bucket financials (the detail panel
+// fetches its own numbers). So we derive everything from a single anchor date
+// on the client: switching Month/Quarter/Year is instant, and the selected
+// position is preserved across switches and never reset by a background fetch.
+function reportingPeriodStart(gran, d) {
+  const y = d.getFullYear(), m = d.getMonth();
+  if (gran === "year") return new Date(y, 0, 1);
+  if (gran === "half") return new Date(y, m < 6 ? 0 : 6, 1);
+  if (gran === "quarter") return new Date(y, Math.floor(m / 3) * 3, 1);
+  return new Date(y, m, 1);
+}
+function reportingPeriodEnd(gran, start) {
+  const y = start.getFullYear(), m = start.getMonth();
+  if (gran === "year") return new Date(y, 11, 31);
+  if (gran === "half") return new Date(y, m + 6, 0);
+  if (gran === "quarter") return new Date(y, m + 3, 0);
+  return new Date(y, m + 1, 0);
+}
+function reportingIsoDay(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+function reportingStepStart(gran, start, dir) {
+  const d = new Date(start);
+  if (gran === "year") d.setFullYear(d.getFullYear() + dir);
+  else if (gran === "half") d.setMonth(d.getMonth() + 6 * dir);
+  else if (gran === "quarter") d.setMonth(d.getMonth() + 3 * dir);
+  else d.setMonth(d.getMonth() + dir);
+  return reportingPeriodStart(gran, d);
+}
+function reportingLabel(gran, start, locale, qp) {
+  const y = start.getFullYear();
+  if (gran === "year") return String(y);
+  if (gran === "half") return `H${start.getMonth() < 6 ? 1 : 2} ${y}`;
+  if (gran === "quarter") return `${qp}${Math.floor(start.getMonth() / 3) + 1} ${y}`;
+  return start.toLocaleDateString(locale, { month: "long", year: "numeric" });
+}
+
+// ── Compare mode body — 2–5 periods side by side. ────────────────────────────
+// The periods (anchor first, then the hand-picked comparisons) are assembled in
+// the top bar; this component just fetches each period's financials + net yield,
+// then renders the side-by-side table, the plain-language explainer, and the
+// biggest cost-centre moves between the earliest and latest period. It replaces
+// both the old prior/last-year table and the multi-period card — one renderer.
+function BuildingCompareView({ buildingId, periods }) {
   const { t } = useTranslation("manager");
-  const [gran, setGran] = useState("year");
-  const [keys, setKeys] = useState([]); // selected candidate keys, ≤ MULTI_MAX
-  const [data, setData] = useState({ key: "", cols: [] }); // fetched reports, keyed by selection
+  const [data, setData] = useState({ key: "", cols: [] });
 
-  const candidates = useMemo(() => multiPeriodCandidates(gran, new Date()), [gran]);
-  const byKey = useMemo(() => { const m = {}; candidates.forEach((g) => g.subs.forEach((s) => { m[s.key] = s; })); return m; }, [candidates]);
-  const periods = useMemo(() => keys.map((k) => byKey[k]).filter(Boolean).sort((a, b) => (a.from < b.from ? -1 : 1)), [keys, byKey]);
   const periodsKey = periods.map((p) => `${p.from}_${p.to}`).join("|");
-
-  // Fetch one period-report per selected period; store keyed by the selection so
-  // `loaded`/`loading` are DERIVED (no synchronous setState in the effect body).
   useEffect(() => {
     if (periods.length === 0) return undefined;
     let cancelled = false;
@@ -1240,156 +1091,89 @@ function MultiPeriodCompareCard({ buildingId, onClose, embedded }) {
   const loading = periods.length > 0 && !loaded;
   const financialsAt = (i) => (loaded ? data.cols[i]?.financials ?? null : null);
 
-  const toggle = (key) => setKeys((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : prev.length >= MULTI_MAX ? prev : [...prev, key]));
-  const chipCls = (sel) => cn("rounded-md border px-2.5 py-1 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-30",
-    sel ? "border-brand bg-brand text-white" : "border-surface-border text-foreground hover:border-brand hover:text-brand");
-  const disabledChip = (s) => s.disabled || (!keys.includes(s.key) && keys.length >= MULTI_MAX);
-  // KPI rows read from each period's financials; the building-net-yield row reads
-  // the separately-fetched yield per period (annual NOI ÷ building value).
+  // KPI rows (the same 8 as the single-period strip) + the net-yield row.
   const rows = [
     ...multiKpis(t).map((k) => ({ label: k.label, type: k.type, better: k.better, valAt: (i) => { const f = financialsAt(i); return f ? k.get(f) : null; } })),
     { label: t("buildingsId.reporting.unitProfit.buildingYield"), type: "yieldpct", better: 1, valAt: (i) => (loaded ? data.cols[i]?.yieldPct ?? null : null) },
   ];
   const fmt = (type, v) => (v == null ? "—" : type === "yieldpct" ? `${v.toFixed(1)}%` : type === "pct" ? rFmtPct(v) : rFmtChf(v));
 
-  // "What this means" — narrate the trend across the selection: earliest → latest.
+  // Narrative + movers read the trend across the selection: earliest → latest.
   const occOf = (f) => (f && f.totalUnitsCount > 0 ? f.activeUnitsCount / f.totalUnitsCount : null);
-  const multiNarrative = (() => {
-    if (!loaded || periods.length < 2) return [];
-    const be = data.cols[0]?.financials, cur = data.cols[periods.length - 1]?.financials;
-    if (!be || !cur) return [];
-    return buildComparisonNarrative({
-      curNoi: cur.netOperatingIncomeCents, beNoi: be.netOperatingIncomeCents,
-      curIncome: cur.collectedIncomeCents, beIncome: be.collectedIncomeCents,
-      curExp: cur.expensesTotalCents, beExp: be.expensesTotalCents,
-      curColl: cur.collectionRate, beColl: be.collectionRate,
-      curOcc: occOf(cur), beOcc: occOf(be),
-      movers: computeExpenseMovers(cur, be),
-      curYield: data.cols[periods.length - 1]?.yieldPct ?? null, beYield: data.cols[0]?.yieldPct ?? null,
-      periodLabel: periods[periods.length - 1].label, cmpPeriodLabel: periods[0].label, t,
-    });
-  })();
+  const be = loaded ? data.cols[0]?.financials : null;
+  const cur = loaded ? data.cols[periods.length - 1]?.financials : null;
+  const movers = be && cur ? computeExpenseMovers(cur, be) : [];
+  const narrative = (be && cur && periods.length >= 2) ? buildComparisonNarrative({
+    curNoi: cur.netOperatingIncomeCents, beNoi: be.netOperatingIncomeCents,
+    curIncome: cur.collectedIncomeCents, beIncome: be.collectedIncomeCents,
+    curExp: cur.expensesTotalCents, beExp: be.expensesTotalCents,
+    curColl: cur.collectionRate, beColl: be.collectionRate,
+    curOcc: occOf(cur), beOcc: occOf(be),
+    movers, curYield: data.cols[periods.length - 1]?.yieldPct ?? null, beYield: data.cols[0]?.yieldPct ?? null,
+    periodLabel: periods[periods.length - 1].label, cmpPeriodLabel: periods[0].label, t,
+  }) : [];
+
+  if (periods.length < 2) {
+    return (
+      <div className="p-8 text-center">
+        <p className="text-sm text-muted">{t("buildingsId.reporting.compare.emptyPrompt", { period: periods[0]?.label ?? "" })}</p>
+      </div>
+    );
+  }
 
   return (
-    <div className={embedded ? "space-y-3" : "rounded-2xl border border-surface-border bg-surface p-4 shadow-sm space-y-3"}>
-      {!embedded && (
-        <div className="flex items-center justify-between gap-2">
-          <h3 className="font-semibold text-foreground">{t("buildingsId.reporting.compare.multiTitle")}</h3>
-          <button onClick={onClose} className="rounded-lg border border-surface-border px-2 py-1 text-xs text-muted transition-colors hover:border-brand hover:text-brand">✕ {t("buildingsId.reporting.compare.clear")}</button>
-        </div>
-      )}
-
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-[11px] font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.period.label")}</span>
-        <div className="inline-flex rounded-lg border border-surface-border bg-surface p-0.5 gap-0.5">
-          {MULTI_GRANS.map((g) => (
-            <button key={g} onClick={() => { setGran(g); setKeys([]); }} aria-pressed={gran === g}
-              className={cn("rounded-md px-3 py-1 text-sm font-medium transition-colors", gran === g ? "bg-brand text-white" : "text-muted hover:text-muted-dark")}>
-              {t(`buildingsId.reporting.period.${g}`)}
-            </button>
-          ))}
-        </div>
-        <span className="text-xs text-foreground-dim">{t("buildingsId.reporting.compare.selected", { n: keys.length })}</span>
+    <div className="space-y-5 p-5">
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-surface-border">
+              <th className="py-2 pr-3 text-left text-xs font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.compare.metric")}</th>
+              {periods.map((p, i) => (
+                <th key={p.key} className={cn("px-3 py-2 text-right text-xs font-semibold whitespace-nowrap", i === periods.length - 1 ? "text-brand" : "text-foreground")}>{p.label}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((k) => {
+              const vals = periods.map((_, i) => k.valAt(i));
+              const nums = vals.filter((v) => v != null);
+              const best = nums.length >= 2 ? (k.better >= 0 ? Math.max(...nums) : Math.min(...nums)) : null;
+              const worst = nums.length >= 2 ? (k.better >= 0 ? Math.min(...nums) : Math.max(...nums)) : null;
+              return (
+                <tr key={k.label} className="border-b border-surface-border/60">
+                  <td className="py-2 pr-3 text-left text-muted-dark">{k.label}</td>
+                  {vals.map((v, ci) => (
+                    <td key={`${k.label}-${periods[ci].key}`} className={cn("px-3 py-2 text-right tabular-nums whitespace-nowrap",
+                      !loaded ? "text-foreground-dim"
+                        : v != null && best !== worst && v === best ? "font-semibold text-success-text"
+                          : v != null && best !== worst && v === worst ? "text-destructive-text"
+                            : "text-foreground")}>{!loaded ? "…" : fmt(k.type, v)}</td>
+                  ))}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+        {loading && <p className="mt-2 text-xs text-muted">{t("buildingsId.reporting.compare.loading")}</p>}
       </div>
 
-      <div className="space-y-1.5">
-        {gran === "year" ? (
-          <div className="flex flex-wrap gap-1.5">
-            {candidates.flatMap((grp) => grp.subs).map((s) => (
-              <button key={s.key} disabled={disabledChip(s)} aria-pressed={keys.includes(s.key)} onClick={() => toggle(s.key)} className={chipCls(keys.includes(s.key))}>{s.short}</button>
+      <ComparisonNarrative lines={narrative} t={t} />
+
+      {movers.length > 0 && (
+        <div>
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.compare.whatChanged")}</p>
+          <div className="space-y-1">
+            {movers.map((x, i) => (
+              <div key={i} className="flex items-center justify-between gap-2 rounded-lg px-2 py-1 odd:bg-surface-subtle">
+                <span className="truncate text-sm text-foreground">{x.name}</span>
+                <span className={cn("shrink-0 text-sm font-semibold tabular-nums", x.d > 0 ? "text-destructive-text" : "text-success-text")}>{x.d > 0 ? "▲ +" : "▼ "}{rFmtChf(Math.abs(x.d))}</span>
+              </div>
             ))}
           </div>
-        ) : (
-          candidates.map((grp) => (
-            <div key={grp.year} className="flex items-center gap-2">
-              <span className="w-10 shrink-0 text-xs tabular-nums text-foreground-dim">{grp.year}</span>
-              <div className="flex flex-wrap gap-1.5">
-                {grp.subs.map((s) => (
-                  <button key={s.key} disabled={disabledChip(s)} aria-pressed={keys.includes(s.key)} onClick={() => toggle(s.key)} className={chipCls(keys.includes(s.key))}>{s.short}</button>
-                ))}
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-
-      {periods.length === 0 ? (
-        <p className="text-sm text-muted">{t("buildingsId.reporting.compare.pickPeriods")}</p>
-      ) : (
-        <>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-surface-border">
-                <th className="py-2 pr-3 text-left text-xs font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.compare.metric")}</th>
-                {periods.map((p) => (
-                  <th key={p.key} className="px-3 py-2 text-right text-xs font-semibold text-foreground whitespace-nowrap">{p.label}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((k) => {
-                const vals = periods.map((_, i) => k.valAt(i));
-                const nums = vals.filter((v) => v != null);
-                const best = nums.length >= 2 ? (k.better >= 0 ? Math.max(...nums) : Math.min(...nums)) : null;
-                const worst = nums.length >= 2 ? (k.better >= 0 ? Math.min(...nums) : Math.max(...nums)) : null;
-                return (
-                  <tr key={k.label} className="border-b border-surface-border/60">
-                    <td className="py-2 pr-3 text-left text-muted-dark">{k.label}</td>
-                    {vals.map((v, ci) => (
-                      <td key={`${k.label}-${periods[ci].key}`} className={cn("px-3 py-2 text-right tabular-nums whitespace-nowrap",
-                        !loaded ? "text-foreground-dim"
-                          : v != null && best !== worst && v === best ? "font-semibold text-success-text"
-                            : v != null && best !== worst && v === worst ? "text-destructive-text"
-                              : "text-foreground")}>{!loaded ? "…" : fmt(k.type, v)}</td>
-                    ))}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-          {loading && <p className="mt-2 text-xs text-muted">{t("buildingsId.reporting.compare.loading")}</p>}
         </div>
-        <ComparisonNarrative lines={multiNarrative} t={t} />
-        </>
       )}
     </div>
   );
-}
-
-// ── Client-side period model for the reporting navigator ─────────────────────
-// The navigator only needs the *list of selectable periods* and the current
-// window's [from,to]+label — never the per-bucket financials (the detail panel
-// fetches its own numbers). So we derive everything from a single anchor date
-// on the client: switching Month/Quarter/Year is instant, and the selected
-// position is preserved across switches and never reset by a background fetch.
-function reportingPeriodStart(gran, d) {
-  const y = d.getFullYear(), m = d.getMonth();
-  if (gran === "year") return new Date(y, 0, 1);
-  if (gran === "quarter") return new Date(y, Math.floor(m / 3) * 3, 1);
-  return new Date(y, m, 1);
-}
-function reportingPeriodEnd(gran, start) {
-  const y = start.getFullYear(), m = start.getMonth();
-  if (gran === "year") return new Date(y, 11, 31);
-  if (gran === "quarter") return new Date(y, m + 3, 0);
-  return new Date(y, m + 1, 0);
-}
-function reportingIsoDay(d) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-function reportingStepStart(gran, start, dir) {
-  const d = new Date(start);
-  if (gran === "year") d.setFullYear(d.getFullYear() + dir);
-  else if (gran === "quarter") d.setMonth(d.getMonth() + 3 * dir);
-  else d.setMonth(d.getMonth() + dir);
-  return reportingPeriodStart(gran, d);
-}
-function reportingLabel(gran, start, locale, qp) {
-  const y = start.getFullYear();
-  if (gran === "year") return String(y);
-  if (gran === "quarter") return `${qp}${Math.floor(start.getMonth() / 3) + 1} ${y}`;
-  return start.toLocaleDateString(locale, { month: "long", year: "numeric" });
 }
 
 // The building reporting surface. A period bar (Month/Quarter/Year + stepper +
@@ -1401,15 +1185,20 @@ function BuildingReportingView({ buildingId, etatLocatifNet }) {
   const locale = i18n?.language;
   const qp = locale && locale.startsWith("fr") ? "T" : "Q";
 
+  const [mode, setMode]   = useState("single"); // "single" | "compare"
   const [gran, setGran]   = useState("month");
   const [anchor, setAnchor] = useState(() => reportingIsoDay(reportingPeriodStart("month", new Date())));
   const [ytd, setYtd]   = useState(false);
   const [customRange, setCustomRange] = useState(null); // { from, to } | null — arbitrary date range
+  const [extras, setExtras] = useState([]); // compare mode: comparison periods added to the anchor (≤ COMPARE_MAX-1)
   const [spanStart, setSpanStart] = useState(null);     // Date | null — earliest period that has data
   const [tsError, setTsError]     = useState("");
-  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);  // anchor-period picker popover
   const [pkYear, setPkYear] = useState(new Date().getFullYear());
+  const [addOpen, setAddOpen] = useState(false);        // compare mode: "add period" picker popover
+  const [addYear, setAddYear] = useState(new Date().getFullYear());
   const pickerRef = useRef(null);
+  const addRef = useRef(null);
   const tRef = useRef(t); tRef.current = t;
   const spanFetched = useRef(false);
 
@@ -1433,11 +1222,14 @@ function BuildingReportingView({ buildingId, etatLocatifNet }) {
   }, [buildingId]);
 
   useEffect(() => {
-    if (!pickerOpen) return;
-    const onDown = (e) => { if (pickerRef.current && !pickerRef.current.contains(e.target)) setPickerOpen(false); };
+    if (!pickerOpen && !addOpen) return undefined;
+    const onDown = (e) => {
+      if (pickerOpen && pickerRef.current && !pickerRef.current.contains(e.target)) setPickerOpen(false);
+      if (addOpen && addRef.current && !addRef.current.contains(e.target)) setAddOpen(false);
+    };
     document.addEventListener("mousedown", onDown);
     return () => document.removeEventListener("mousedown", onDown);
-  }, [pickerOpen]);
+  }, [pickerOpen, addOpen]);
 
   // The current bucket start, re-derived from the anchor date under the active
   // granularity — this is what makes a Month→Year→Month round-trip land you back
@@ -1485,7 +1277,7 @@ function BuildingReportingView({ buildingId, etatLocatifNet }) {
     setYtd(false);
     setAnchor(reportingIsoDay(next));
   }
-  function changeGran(g) { setPickerOpen(false); setYtd(false); setCustomRange(null); setGran(g); }
+  function changeGran(g) { setPickerOpen(false); setAddOpen(false); setYtd(false); setCustomRange(null); setExtras([]); setGran(g); }
   function selectStart(d) { setYtd(false); setCustomRange(null); setAnchor(reportingIsoDay(reportingPeriodStart(gran, d))); setPickerOpen(false); }
   function preset(kind) {
     setPickerOpen(false); setCustomRange(null);
@@ -1495,26 +1287,100 @@ function BuildingReportingView({ buildingId, etatLocatifNet }) {
     else { setGran("month"); setAnchor(reportingIsoDay(reportingPeriodStart("month", now))); setYtd(true); }
   }
 
+  // ── Single ⇄ Compare mode ──────────────────────────────────────────────────
+  // Compare mode deals only in discrete grain-aligned periods, so it drops YTD /
+  // custom range; leaving it drops the comparisons. Half-year is compare-only, so
+  // snap an anchor on "half" back to a single-mode grain when switching to single.
+  function switchMode(m) {
+    setPickerOpen(false); setAddOpen(false);
+    if (m === "compare") { setYtd(false); setCustomRange(null); }
+    else { setExtras([]); if (gran === "half") setGran("quarter"); }
+    setMode(m);
+  }
+
+  // A grain-aligned window object for a bucket start, labelled under the current grain.
+  const winFromStart = (s) => {
+    const wf = reportingIsoDay(s);
+    const wt = reportingIsoDay(reportingPeriodEnd(gran, s));
+    return { from: wf, to: wt, label: reportingLabel(gran, s, locale, qp), key: `${wf}_${wt}` };
+  };
+  function addExtra(win) {
+    setExtras((prev) => {
+      if (win.key === `${from}_${to}` || prev.some((p) => p.key === win.key)) return prev; // dup of anchor / existing
+      if (prev.length >= COMPARE_MAX - 1) return prev;
+      return [...prev, win];
+    });
+  }
+  function addPrior() { addExtra(winFromStart(reportingStepStart(gran, anchorStart, -1))); }
+  function addLastYear() { const d = new Date(anchorStart); d.setFullYear(d.getFullYear() - 1); addExtra(winFromStart(reportingPeriodStart(gran, d))); }
+  function addPeriodAt(d) { addExtra(winFromStart(reportingPeriodStart(gran, d))); }
+  const removeExtra = (key) => setExtras((prev) => prev.filter((p) => p.key !== key));
+
+  // Anchor (column 1) + the added comparisons, deduped and ordered earliest→latest.
+  const comparePeriods = useMemo(() => {
+    const anchorWin = { from, to, label: periodLabel, key: `${from}_${to}` };
+    const seen = new Set();
+    return [anchorWin, ...extras]
+      .filter((p) => (seen.has(p.key) ? false : (seen.add(p.key), true)))
+      .sort((a, b) => (a.from < b.from ? -1 : 1))
+      .slice(0, COMPARE_MAX);
+  }, [from, to, periodLabel, extras]);
+
   const pickerYears = [...new Set(periods.map((p) => p.getFullYear()))];
   const monShort = Array.from({ length: 12 }, (_, mi) => new Intl.DateTimeFormat(locale, { month: "short" }).format(new Date(2024, mi, 1)));
-  function openPicker() { setPkYear(anchorStart.getFullYear()); setPickerOpen((v) => !v); }
+  function openPicker() { setPkYear(anchorStart.getFullYear()); setAddOpen(false); setPickerOpen((v) => !v); }
+  function openAdd() { setAddYear(anchorStart.getFullYear()); setPickerOpen(false); setAddOpen((v) => !v); }
   const isCur = (d) => !ytd && !customRange && d != null && +d === +anchorStart;
+  const isExtra = (d) => { if (!d) return false; const s = reportingPeriodStart(gran, d); return extras.some((p) => p.key === `${reportingIsoDay(s)}_${reportingIsoDay(reportingPeriodEnd(gran, s))}`); };
   const findPeriod = (pred) => periods.find(pred) || null;
-  const pkBtn = (label, d, key) => (
-    <button key={key} disabled={!d} aria-pressed={isCur(d)} onClick={() => d && selectStart(d)}
+  const gridBtn = (label, d, key, pressed, onClick) => (
+    <button key={key} disabled={!d} aria-pressed={pressed} onClick={() => d && onClick(d)}
       className={cn("rounded-md border px-2 py-1.5 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-30",
-        isCur(d) ? "border-brand bg-brand text-white" : "border-surface-border text-foreground hover:border-brand hover:text-brand")}>{label}</button>
+        pressed ? "border-brand bg-brand text-white" : "border-surface-border text-foreground hover:border-brand hover:text-brand")}>{label}</button>
+  );
+  // The year/quarter/half/month grid shared by the anchor picker and the "add
+  // period" picker — only the onPick action and the pressed predicate differ.
+  const pickerGrid = ({ pkYr, setPkYr, onPick, selPred }) => (
+    gran === "year" ? (
+      <div className="grid grid-cols-3 gap-1.5">{periods.map((p) => gridBtn(String(p.getFullYear()), p, p.getFullYear(), selPred(p), onPick))}</div>
+    ) : (
+      <>
+        <div className="mb-2 flex items-center justify-between">
+          <button onClick={() => setPkYr((y) => y - 1)} disabled={pkYr <= pickerYears[0]} className="grid h-6 w-6 place-items-center rounded-md border border-surface-border text-muted hover:border-brand hover:text-brand disabled:opacity-30">‹</button>
+          <span className="text-sm font-semibold text-foreground tabular-nums">{pkYr}</span>
+          <button onClick={() => setPkYr((y) => y + 1)} disabled={pkYr >= pickerYears[pickerYears.length - 1]} className="grid h-6 w-6 place-items-center rounded-md border border-surface-border text-muted hover:border-brand hover:text-brand disabled:opacity-30">›</button>
+        </div>
+        <div className={cn("grid gap-1.5", gran === "half" ? "grid-cols-2" : "grid-cols-4")}>
+          {gran === "quarter"
+            ? [1, 2, 3, 4].map((q) => { const d = findPeriod((p) => p.getFullYear() === pkYr && Math.floor(p.getMonth() / 3) + 1 === q); return gridBtn(`${qp}${q}`, d, q, selPred(d), onPick); })
+            : gran === "half"
+              ? [1, 2].map((h) => { const d = findPeriod((p) => p.getFullYear() === pkYr && (p.getMonth() < 6 ? 1 : 2) === h); return gridBtn(`H${h}`, d, h, selPred(d), onPick); })
+              : monShort.map((mm, mi) => { const d = findPeriod((p) => p.getFullYear() === pkYr && p.getMonth() === mi); return gridBtn(mm, d, mi, selPred(d), onPick); })}
+        </div>
+      </>
+    )
   );
 
   return (
     <div className="space-y-3">
-      {/* ── Period selector — a quiet standalone bar above the report card ── */}
+      {/* ── Mode — analyse one period, or compare periods side by side. Sits at
+          the very top: it decides both what the period bar below offers and what
+          the report card shows. ── */}
+      <div className="inline-flex rounded-lg border border-surface-border bg-surface p-0.5 gap-0.5 shadow-sm">
+        {[["single", t("buildingsId.reporting.mode.single")], ["compare", t("buildingsId.reporting.mode.compare")]].map(([k, l]) => (
+          <button key={k} onClick={() => switchMode(k)} aria-pressed={mode === k}
+            className={cn("rounded-md px-4 py-1.5 text-sm font-semibold transition-colors", mode === k ? "bg-brand text-white" : "text-muted hover:text-muted-dark")}>{l}</button>
+        ))}
+      </div>
+
+      {/* ── Period selector — mode-aware. Compare mode swaps the presets row for a
+          "compare against" builder and adds the half-year grain. ── */}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-surface-border bg-surface px-3 py-2 shadow-sm">
         {!customRange && (<>
         <div className="flex items-center gap-2">
-          <span className="text-[11px] font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.period.label")}</span>
+          <span className="text-[11px] font-semibold uppercase tracking-wide text-foreground-dim">{mode === "compare" ? t("buildingsId.reporting.compare.base") : t("buildingsId.reporting.period.label")}</span>
           <div className="inline-flex rounded-lg border border-surface-border bg-surface p-0.5 gap-0.5">
-            {REPORTING_GRANS.map((g) => (
+            {(mode === "compare" ? COMPARE_GRANS : REPORTING_GRANS).map((g) => (
               <button key={g} onClick={() => changeGran(g)} aria-pressed={!ytd && gran === g}
                 className={cn("rounded-md px-3 py-1 text-sm font-medium transition-colors", !ytd && gran === g ? "bg-brand text-white" : "text-muted hover:text-muted-dark")}>{t(`buildingsId.reporting.period.${g}`)}</button>
             ))}
@@ -1531,22 +1397,7 @@ function BuildingReportingView({ buildingId, etatLocatifNet }) {
             className="grid h-7 w-7 place-items-center rounded-lg border border-surface-border bg-surface text-muted transition-colors hover:border-brand hover:text-brand disabled:opacity-40 disabled:cursor-not-allowed">›</button>
           {pickerOpen && periods.length > 0 && (
             <div className="absolute left-1/2 top-full z-30 mt-2 w-64 -translate-x-1/2 rounded-xl border border-surface-border bg-surface p-3 shadow-lg">
-              {gran === "year" ? (
-                <div className="grid grid-cols-3 gap-1.5">{periods.map((p) => pkBtn(String(p.getFullYear()), p, p.getFullYear()))}</div>
-              ) : (
-                <>
-                  <div className="mb-2 flex items-center justify-between">
-                    <button onClick={() => setPkYear((y) => y - 1)} disabled={pkYear <= pickerYears[0]} className="grid h-6 w-6 place-items-center rounded-md border border-surface-border text-muted hover:border-brand hover:text-brand disabled:opacity-30">‹</button>
-                    <span className="text-sm font-semibold text-foreground tabular-nums">{pkYear}</span>
-                    <button onClick={() => setPkYear((y) => y + 1)} disabled={pkYear >= pickerYears[pickerYears.length - 1]} className="grid h-6 w-6 place-items-center rounded-md border border-surface-border text-muted hover:border-brand hover:text-brand disabled:opacity-30">›</button>
-                  </div>
-                  <div className="grid grid-cols-4 gap-1.5">
-                    {gran === "quarter"
-                      ? [1, 2, 3, 4].map((q) => pkBtn(`${qp}${q}`, findPeriod((p) => p.getFullYear() === pkYear && Math.floor(p.getMonth() / 3) + 1 === q), q))
-                      : monShort.map((mm, mi) => pkBtn(mm, findPeriod((p) => p.getFullYear() === pkYear && p.getMonth() === mi), mi))}
-                  </div>
-                </>
-              )}
+              {pickerGrid({ pkYr: pkYear, setPkYr: setPkYear, onPick: selectStart, selPred: isCur })}
             </div>
           )}
         </div>
@@ -1560,21 +1411,53 @@ function BuildingReportingView({ buildingId, etatLocatifNet }) {
             <button onClick={() => setCustomRange(null)} aria-label={t("buildingsId.reporting.compare.clear")} className="rounded-lg border border-surface-border px-2 py-1 text-xs text-muted transition-colors hover:border-brand hover:text-brand">✕</button>
           </div>
         )}
-        <div className="flex gap-1.5">
-          {[["latest", t("buildingsId.reporting.histogram.jumpMonth")], ["ytd", t("buildingsId.reporting.histogram.jumpYtd")], ["year", t("buildingsId.reporting.histogram.jumpYear")]].map(([k, l]) => (
-            <button key={k} onClick={() => preset(k)} aria-pressed={k === "ytd" && ytd}
-              className={cn("rounded-lg border px-2.5 py-1 text-xs transition-colors", k === "ytd" && ytd ? "border-brand bg-brand-light text-brand-dark" : "border-surface-border bg-surface text-muted hover:border-brand hover:text-brand")}>{l}</button>
-          ))}
-          <button onClick={() => setCustomRange((r) => (r ? null : { from, to }))} aria-pressed={!!customRange}
-            className={cn("rounded-lg border px-2.5 py-1 text-xs transition-colors", customRange ? "border-brand bg-brand-light text-brand-dark" : "border-surface-border bg-surface text-muted hover:border-brand hover:text-brand")}>{t("buildingsId.reporting.period.custom")}</button>
-        </div>
+        {mode === "single" && (
+          <div className="flex gap-1.5">
+            {[["latest", t("buildingsId.reporting.histogram.jumpMonth")], ["ytd", t("buildingsId.reporting.histogram.jumpYtd")], ["year", t("buildingsId.reporting.histogram.jumpYear")]].map(([k, l]) => (
+              <button key={k} onClick={() => preset(k)} aria-pressed={k === "ytd" && ytd}
+                className={cn("rounded-lg border px-2.5 py-1 text-xs transition-colors", k === "ytd" && ytd ? "border-brand bg-brand-light text-brand-dark" : "border-surface-border bg-surface text-muted hover:border-brand hover:text-brand")}>{l}</button>
+            ))}
+            <button onClick={() => setCustomRange((r) => (r ? null : { from, to }))} aria-pressed={!!customRange}
+              className={cn("rounded-lg border px-2.5 py-1 text-xs transition-colors", customRange ? "border-brand bg-brand-light text-brand-dark" : "border-surface-border bg-surface text-muted hover:border-brand hover:text-brand")}>{t("buildingsId.reporting.period.custom")}</button>
+          </div>
+        )}
+        {mode === "compare" && (() => {
+          const full = extras.length >= COMPARE_MAX - 1;
+          const addBtn = "rounded-lg border border-surface-border bg-surface px-2.5 py-1 text-xs text-muted transition-colors hover:border-brand hover:text-brand disabled:opacity-40 disabled:cursor-not-allowed";
+          return (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[11px] font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.compare.against")}</span>
+              <button onClick={addPrior} disabled={full} className={addBtn}>+ {t("buildingsId.reporting.compare.prior")}</button>
+              <button onClick={addLastYear} disabled={full} className={addBtn}>+ {t("buildingsId.reporting.compare.lastYear")}</button>
+              <div className="relative" ref={addRef}>
+                <button onClick={openAdd} aria-expanded={addOpen} disabled={full} className={addBtn}>+ {t("buildingsId.reporting.compare.addPeriod")} <span className="text-foreground-dim">▾</span></button>
+                {addOpen && periods.length > 0 && (
+                  <div className="absolute left-0 top-full z-30 mt-2 w-64 rounded-xl border border-surface-border bg-surface p-3 shadow-lg">
+                    {pickerGrid({ pkYr: addYear, setPkYr: setAddYear, onPick: addPeriodAt, selPred: isExtra })}
+                  </div>
+                )}
+              </div>
+              {extras.map((p) => (
+                <span key={p.key} className="inline-flex items-center gap-1.5 rounded-lg border border-brand bg-brand-light px-2.5 py-1 text-xs font-medium text-brand-dark">
+                  {p.label}
+                  <button onClick={() => removeExtra(p.key)} aria-label={t("buildingsId.reporting.compare.clear")} className="text-brand-dark/60 transition-colors hover:text-brand-dark">✕</button>
+                </span>
+              ))}
+              {extras.length > 0 && (
+                <button onClick={() => setExtras([])} className="rounded-lg border border-surface-border px-2 py-1 text-xs text-muted transition-colors hover:border-destructive-ring hover:text-destructive-text">{t("buildingsId.reporting.compare.clear")}</button>
+              )}
+            </div>
+          );
+        })()}
       </div>
 
       {tsError && <p className="text-sm text-destructive-text">{tsError}</p>}
 
-      {/* ── Report card: result + detail (comparison now lives in its own tab) ── */}
+      {/* ── Report card: single-period detail, or the compare table ── */}
       <div className="overflow-hidden rounded-2xl border border-surface-border bg-surface shadow-sm">
-        <BuildingPeriodAnalysis buildingId={buildingId} etatLocatifNet={etatLocatifNet} from={from} to={to} periodLabel={periodLabel} />
+        {mode === "single"
+          ? <BuildingPeriodAnalysis buildingId={buildingId} etatLocatifNet={etatLocatifNet} from={from} to={to} periodLabel={periodLabel} />
+          : <BuildingCompareView buildingId={buildingId} periods={comparePeriods} />}
       </div>
     </div>
   );
