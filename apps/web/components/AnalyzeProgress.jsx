@@ -11,6 +11,7 @@
  */
 import { useEffect, useRef, useState } from "react";
 import { cn } from "../lib/utils";
+import TicTacToe from "./TicTacToe";
 
 const STAGES = [
   "Uploading the files",
@@ -19,11 +20,21 @@ const STAGES = [
   "Cross-checking the figures",
 ];
 
-const REASSURANCE = [
-  "Régie PDFs take a moment — we read every line so the totals tie out.",
-  "Pulling the balance sheet, income statement and rent roll apart…",
-  "Still working — a scanned year-end package is a lot of numbers.",
-  "Almost there — checking that Actif = Passif and the results agree.",
+// Rotating Swiss real-estate trivia — passes the time and quietly signals we know
+// this market. Facts rotate every ~8s off the elapsed clock.
+const FACTS = [
+  "Switzerland has one of Europe's lowest home-ownership rates — most households rent rather than buy.",
+  "Swiss rents are pegged to a national reference interest rate (taux de référence) — when it falls, tenants can ask for a reduction.",
+  "A rent increase is only valid on the official cantonal form — sent any other way, it's simply void.",
+  "Rental deposits are capped at three months' rent and held in a blocked account in the tenant's name.",
+  "Ancillary costs (Nebenkosten / frais accessoires) can only pass through actual costs — no markup allowed.",
+  "Switzerland's rental vacancy rate is among the lowest in Europe — often around 1%.",
+  "The move-out inspection — état des lieux — settles the vast majority of deposit disputes.",
+  "PPE (Propriété par Étages) is the Swiss form of condominium co-ownership.",
+  "Lex Koller restricts foreigners from buying Swiss residential property.",
+  "An indexed rent (loyer indexé) is only permitted on leases of five years or longer.",
+  "Most Swiss rental buildings are run by a régie on the owner's behalf — accounting, tenants and repairs included.",
+  "Geneva and Zurich regularly rank among the world's most expensive cities to rent in.",
 ];
 
 const EXPECT_SECONDS = 45; // typical régie-PDF analyze time
@@ -34,6 +45,7 @@ export default function AnalyzeProgress({ active, fileCount = 0, onComplete }) {
   const [pct, setPct] = useState(0);
   const [elapsed, setElapsed] = useState(0);
   const [done, setDone] = useState(false);
+  const [showGame, setShowGame] = useState(false);
   const wasActive = useRef(false);
 
   // Eased progress while the request is in flight.
@@ -61,7 +73,7 @@ export default function AnalyzeProgress({ active, fileCount = 0, onComplete }) {
   }, [active, onComplete]);
 
   const remaining = Math.max(0, Math.ceil(EXPECT_SECONDS - elapsed));
-  const reassure = REASSURANCE[Math.min(REASSURANCE.length - 1, Math.floor(elapsed / 8))];
+  const factIdx = Math.floor(elapsed / 8) % FACTS.length;
   const frac = elapsed / EXPECT_SECONDS;
   // Stage advances on elapsed time (the vision call is one opaque block, so this is a
   // deliberate, honest simulation of the pipeline moving forward).
@@ -110,7 +122,22 @@ export default function AnalyzeProgress({ active, fileCount = 0, onComplete }) {
         })}
       </ul>
 
-      {!done && <p className="text-xs italic text-muted">{reassure}</p>}
+      {!done && (
+        <div className="space-y-2 pt-1">
+          <div className="rounded-md border border-surface-border bg-surface px-3 py-2">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-brand">Did you know?</p>
+            <p className="mt-0.5 text-xs text-foreground">{FACTS[factIdx]}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowGame((g) => !g)}
+            className="text-xs font-medium text-brand hover:underline"
+          >
+            {showGame ? "Hide the game" : "Got a minute to spare? Play tic-tac-toe →"}
+          </button>
+          {showGame && <TicTacToe />}
+        </div>
+      )}
     </div>
   );
 }
