@@ -1168,7 +1168,10 @@ describe('G10: API Contract Tests', () => {
   describe('Package onboarding', () => {
     const RENT_ROLL = 'objet\tlocataire_principal\ttype_objet\tloyer_net_mensuel_chf\n531100.01.0001\tJACCARD\tAppartement\t2646\n';
     const LEDGER = 'groupe\tcompte\tlibelle_compte\tdate_valeur\tno_piece\ttexte_ecriture\tmontant_chf\n4110\t41100\tEntretien\t21.05.2025\t1073348\tBURGOS / Infiltration\t2964\n3000\t30000\tLoyer net\t01.01.2025\t\t\t-2646\n';
-    const INCOME = 'section\tcompte\tdesignation\tmontant_chf\ttype\nProduits\t30000\tLoyer net\t-2646\tcompte\nCharges\t41100\tEntretien\t2964\tcompte\n';
+    // Includes the document's own stated section totals (total_section rows) so it
+    // reconciles → GREEN → auto-approves under graduated autonomy. Without them a
+    // statement is UNVERIFIED → AMBER → held for review (see computeConfidenceTier).
+    const INCOME = 'section\tcompte\tdesignation\tmontant_chf\ttype\nProduits\t30000\tLoyer net\t-2646\tcompte\nCharges\t41100\tEntretien\t2964\tcompte\nProduits\t\tTotal Produits\t-2646\ttotal_section\nCharges\t\tTotal Charges\t2964\ttotal_section\n';
 
     it('detects each file, reconciles, and reports the expected DTO shape', async () => {
       const buildings = await fetchJson('/buildings?limit=1');

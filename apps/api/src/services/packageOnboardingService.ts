@@ -18,7 +18,7 @@ import { detectDocumentType, PackageDocType, parseBuildingInfo, ExtractedBuildin
 import { mapRentRoll } from "./rentRollMapper";
 import { mapRegieLedger } from "./regieLedgerMapper";
 import { mapCsvToAccountBalances } from "./csvAccountingMapper";
-import { computeBalanceImbalanceCents, ingestStatement, approveStatement } from "./importedStatementService";
+import { computeBalanceImbalanceCents, ingestStatement, approveStatement, getStatement } from "./importedStatementService";
 import { commitOnboarding, assessRentRollHydration, OnboardingError, OnboardingBillingMode } from "./buildingOnboardingService";
 import { commitInvoiceOnboarding } from "./invoiceOnboardingService";
 
@@ -519,8 +519,18 @@ export async function commitPackage(
           isCsv: true,
         });
         let approved = 0;
+        let heldForReview = 0;
         for (const s of batch.statements) {
           if (s.status !== "PENDING_REVIEW") continue;
+          // Graduated autonomy: only auto-approve statements the invariants fully
+          // cleared (GREEN). AMBER (ties but unverified / a plausibility warning) and
+          // RED (a failed invariant) are left in review for a human — safe-by-default
+          // so questionable figures never post to client reporting unattended.
+          const dto = await getStatement(prisma, s.id, orgId);
+          if (dto && dto.confidence.tier !== "GREEN") {
+            heldForReview += 1;
+            continue;
+          }
           try {
             await approveStatement(prisma, s.id, orgId, opts.actorUserId ?? "system");
             approved += 1;
@@ -532,7 +542,9 @@ export async function commitPackage(
           fileName: f.fileName,
           type: f.type,
           outcome: approved > 0 ? "imported + approved" : "sent to review",
-          detail: approved > 0 ? "Reporting populated." : "Approve it in Finance → Imports.",
+          detail: approved > 0
+            ? (heldForReview > 0 ? `Reporting populated; ${heldForReview} section(s) held for review.` : "Reporting populated.")
+            : "Needs review in Finance → Imports before it posts (not fully verified).",
         });
       }
     } catch (e) {

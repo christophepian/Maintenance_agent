@@ -8,6 +8,9 @@
     }
   ],
   "expect": {
-    "BALANCE_SHEET": { "reconciliation": "FAIL", "tier": "RED" }
+    "BALANCE_SHEET": {
+      "reconciliation": "FAIL",
+      "tier": "RED"
+    }
   }
 }

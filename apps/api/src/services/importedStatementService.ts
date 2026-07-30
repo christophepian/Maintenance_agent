@@ -1055,7 +1055,7 @@ async function ingestCsvSections(
       fiscalYear,
       periodStart: new Date(`${fiscalYear}-01-01T00:00:00Z`),
       periodEnd: new Date(`${fiscalYear}-12-31T00:00:00Z`),
-      ocrConfidence: 1,
+      ocrConfidence: null, // deterministic parse — no OCR uncertainty (≠ a low OCR score)
       rawOcrText:
         `CSV import — ${fileName}\n` +
         `${balanceResult.items.length} balance row(s), ${invoiceResult.items.length} invoice row(s)` +

@@ -12,7 +12,13 @@
     }
   ],
   "expect": {
-    "BALANCE_SHEET": { "reconciliation": "PASS", "tier": "GREEN" },
-    "INCOME_STATEMENT": { "reconciliation": "PASS", "tier": "GREEN" }
+    "BALANCE_SHEET": {
+      "reconciliation": "PASS",
+      "tier": "GREEN"
+    },
+    "INCOME_STATEMENT": {
+      "reconciliation": "PASS",
+      "tier": "GREEN"
+    }
   }
 }
