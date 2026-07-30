@@ -1,4 +1,51 @@
-import { computeBalanceImbalanceCents, computeStatementSanityFlags, computeContinuityFlags, computeSuggestedCorrections, computeCrossStatementResult } from "../services/importedStatementService";
+import { computeBalanceImbalanceCents, computeStatementSanityFlags, computeContinuityFlags, computeSuggestedCorrections, computeCrossStatementResult, computeConfidenceTier } from "../services/importedStatementService";
+
+describe("computeConfidenceTier (graduated-autonomy verdict)", () => {
+  const ok = { reconciliation: { status: "PASS" as const }, crossCheck: { status: "PASS" as const }, sanityFlags: [], ocrConfidence: 95 };
+
+  it("GREEN when every verifiable invariant passes", () => {
+    expect(computeConfidenceTier(ok).tier).toBe("GREEN");
+  });
+
+  it("GREEN when reconciliation passes and there's no sibling to cross-check (NA is neutral)", () => {
+    expect(computeConfidenceTier({ ...ok, crossCheck: { status: "NA" } }).tier).toBe("GREEN");
+  });
+
+  it("GREEN tolerates a null OCR confidence (nothing to fail against)", () => {
+    expect(computeConfidenceTier({ ...ok, ocrConfidence: null }).tier).toBe("GREEN");
+  });
+
+  it("RED when section totals don't reconcile", () => {
+    expect(computeConfidenceTier({ ...ok, reconciliation: { status: "FAIL" } }).tier).toBe("RED");
+  });
+
+  it("RED when the P&L result disagrees with the balance sheet, even if reconciliation passes", () => {
+    expect(computeConfidenceTier({ ...ok, crossCheck: { status: "FAIL" } }).tier).toBe("RED");
+  });
+
+  it("RED wins over AMBER conditions (a warn flag can't downgrade a hard failure)", () => {
+    const r = computeConfidenceTier({ reconciliation: { status: "FAIL" }, crossCheck: { status: "NA" }, sanityFlags: [{ severity: "warn" }], ocrConfidence: 10 });
+    expect(r.tier).toBe("RED");
+  });
+
+  it("AMBER when reconciliation is UNVERIFIED (no printed totals to check)", () => {
+    expect(computeConfidenceTier({ ...ok, reconciliation: { status: "UNVERIFIED" } }).tier).toBe("AMBER");
+  });
+
+  it("AMBER when a plausibility warning fires despite ties", () => {
+    const r = computeConfidenceTier({ ...ok, sanityFlags: [{ severity: "warn" }, { severity: "info" }] });
+    expect(r.tier).toBe("AMBER");
+    expect(r.reasons.join(" ")).toMatch(/1 plausibility warning/);
+  });
+
+  it("AMBER when OCR confidence is below the floor", () => {
+    expect(computeConfidenceTier({ ...ok, ocrConfidence: 40 }).tier).toBe("AMBER");
+  });
+
+  it("info-level sanity flags alone do NOT downgrade GREEN", () => {
+    expect(computeConfidenceTier({ ...ok, sanityFlags: [{ severity: "info" }] }).tier).toBe("GREEN");
+  });
+});
 
 describe("computeCrossStatementResult (P&L result vs balance-sheet result line)", () => {
   const rev = (cents: number) => ({ documentSection: "REVENUE", balanceCents: cents });

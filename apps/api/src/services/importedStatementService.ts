@@ -91,6 +91,12 @@ export interface ImportedStatementDTO {
   suggestedCorrections: SuggestedCorrectionDTO[];
   /** P&L result vs balance-sheet result-line agreement (detail view only). */
   crossCheck: CrossStatementCheckDTO | null;
+  /**
+   * Graduated-autonomy verdict derived from the checks above — GREEN (every
+   * verifiable invariant passed → safe to auto-post), AMBER (ties but something
+   * couldn't be fully verified → post but review), RED (an invariant failed → block).
+   */
+  confidence: ConfidenceDTO;
   /** Invoices created from this statement (matched by sourceFileUrl) */
   linkedInvoices: LinkedInvoiceDTO[];
   createdAt: string;
@@ -118,6 +124,53 @@ export interface CrossStatementCheckDTO {
   plResultCents: number | null;   // income statement: revenue − expenses
   bsResultCents: number | null;   // balance sheet's "Résultat de l'exercice" line (magnitude)
   diffCents: number | null;
+}
+
+export type ConfidenceTier = "GREEN" | "AMBER" | "RED";
+
+export interface ConfidenceDTO {
+  tier: ConfidenceTier;
+  reasons: string[];
+}
+
+/** Below this OCR/extraction confidence a statement can't earn GREEN on its own. */
+export const OCR_CONFIDENCE_FLOOR = 70;
+
+/**
+ * Graduated autonomy: collapse the independent checks into one verdict that decides
+ * how much a statement can be trusted without a human. Format-agnostic — it reads
+ * only the invariant results (which hold for any régie layout), never the layout.
+ *   RED   — a hard invariant failed (totals don't reconcile, or the P&L result
+ *           disagrees with the balance sheet). Never auto-post; a human must fix it.
+ *   AMBER — everything that could be checked ties, but something couldn't be fully
+ *           verified (no printed totals to check against, a plausibility warning, or
+ *           low extraction confidence). Safe to post, but flag for a human's eyes.
+ *   GREEN — every verifiable invariant passed. Safe to auto-post out of the box.
+ */
+export function computeConfidenceTier(input: {
+  reconciliation: { status: ReconciliationStatus } | null;
+  crossCheck: { status: "PASS" | "FAIL" | "NA" } | null;
+  sanityFlags: { severity: "warn" | "info" }[];
+  ocrConfidence: number | null;
+}): ConfidenceDTO {
+  // RED — hard invariant failure.
+  const red: string[] = [];
+  if (input.reconciliation?.status === "FAIL") red.push("Totals don't reconcile — line sums don't match the document's own stated totals (or Actif ≠ Passif).");
+  if (input.crossCheck?.status === "FAIL") red.push("The P&L result disagrees with the balance sheet's result-of-the-year line.");
+  if (red.length > 0) return { tier: "RED", reasons: red };
+
+  // AMBER — ties, but not everything could be verified.
+  const amber: string[] = [];
+  if (!input.reconciliation || input.reconciliation.status === "UNVERIFIED") amber.push("No printed section totals to reconcile against — couldn't fully verify the extraction.");
+  const warn = input.sanityFlags.filter((f) => f.severity === "warn").length;
+  if (warn > 0) amber.push(`${warn} plausibility warning${warn > 1 ? "s" : ""} to eyeball (e.g. an implausible ratio).`);
+  if (input.ocrConfidence != null && input.ocrConfidence < OCR_CONFIDENCE_FLOOR) amber.push(`Low extraction confidence (${input.ocrConfidence}%, floor ${OCR_CONFIDENCE_FLOOR}%).`);
+  if (amber.length > 0) return { tier: "AMBER", reasons: amber };
+
+  // GREEN — everything verifiable passed.
+  const green = ["Section totals reconcile to the document's own stated figures."];
+  if (input.crossCheck?.status === "PASS") green.push("The P&L result agrees with the balance sheet.");
+  return { tier: "GREEN", reasons: green };
 }
 
 /**
@@ -1476,7 +1529,10 @@ export async function getStatement(
   // Cross-statement result reconciliation (P&L result ↔ balance-sheet result line).
   const crossCheck = await getCrossStatementCheck(prisma, orgId, s);
 
-  return { ...dto, sanityFlags, suggestedCorrections, crossCheck };
+  // Final verdict, now that the cross-check and continuity flags are known.
+  const confidence = computeConfidenceTier({ reconciliation: dto.reconciliation, crossCheck, sanityFlags, ocrConfidence: dto.ocrConfidence });
+
+  return { ...dto, sanityFlags, suggestedCorrections, crossCheck, confidence };
 }
 
 /** Assign (or reassign) the building for a PENDING_REVIEW statement. */
@@ -2106,6 +2162,9 @@ function mapDTO(s: any, linkedInvoices: any[] = []): ImportedStatementDTO {
     sanityFlags,
     suggestedCorrections: [],
     crossCheck: null,
+    // Base verdict without the cross-statement check; getStatement recomputes it
+    // once the sibling statement has been fetched.
+    confidence: computeConfidenceTier({ reconciliation, crossCheck: null, sanityFlags, ocrConfidence: s.ocrConfidence ?? null }),
     linkedInvoices: linkedInvoices.map((inv: any) => ({
       id: inv.id,
       description: inv.description ?? null,
