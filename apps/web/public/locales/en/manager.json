@@ -831,7 +831,8 @@
           "below": "Below typical",
           "inRange": "In typical range",
           "above": "Above typical"
-        }
+        },
+        "modelYield": "Model how to move this yield"
       },
       "valueCreationTab": "Value creation",
       "valueCreation": {
@@ -3553,6 +3554,50 @@
       "INTEREST_ONLY": "Interest only",
       "LINEAR": "Linear",
       "ANNUITY": "Annuity"
+    }
+  },
+  "planning": {
+    "goalSeek": {
+      "title": "Reach a target yield",
+      "subtitle": "See what it takes to move this building's net yield — and whether renovation can get you there.",
+      "error": "Couldn't compute the yield model for this building.",
+      "currentYield": "Current yield",
+      "buildingValue": "Building value",
+      "annualNoi": "Annual NOI",
+      "rentRoll": "Rent roll",
+      "targetYield": "Target net yield",
+      "fromToday": "from {{y}} today",
+      "mgmtFee": "Management fee (% of rent)",
+      "alreadyMet": "Already at or above {{tgt}} — current yield is {{cur}}.",
+      "gapLine": "To reach {{tgt}} you need +{{gap}}/yr of NOI ({{noi}} → {{req}}).",
+      "lever": {
+        "rent": "Raise rent",
+        "opex": "Cut operating costs",
+        "occupancy": "Lift occupancy",
+        "fee": "Management fee",
+        "renovation": "Renovate (value uplift modelled)"
+      },
+      "achievable": "achievable",
+      "sizeable": "sizeable",
+      "beyondOblf": "beyond OBLF",
+      "ifAchievable": "if achievable",
+      "feasible": "feasible",
+      "over100": "needs > 100%",
+      "exceedsGap": "exceeds the gap",
+      "worthPct": "worth {{p}}",
+      "reachesTarget": "reaches target",
+      "maxesAt": "maxes at {{y}}",
+      "rentNote": "building-wide, {{p}} of the rent roll",
+      "opexNote": "any recurring opex reduction flows straight to NOI",
+      "occNote": "recover {{g}} of foregone rent",
+      "occHard": "can't close the gap on occupancy alone",
+      "feeNote": "{{f}}% of rent · {{cov}} of the gap",
+      "renoCeiling": "Doing the {{n}} yield-accretive works ({{capex}} → +{{uplift}}/yr) lifts yield to {{ceil}}.",
+      "accretive": "Accretive",
+      "dilutive": "NPV+ / dilutive",
+      "accretiveExplain": "A renovation is accretive only when its marginal yield (uplift ÷ ΔV) beats today's {{y}}. The dimmed ones add value (positive NPV) but dilute yield, so they're excluded from the ceiling.",
+      "simulateCta": "Simulate the {{n}} accretive works",
+      "noValuation": "Add a building or unit valuation to model yield targets."
     }
   }
 }

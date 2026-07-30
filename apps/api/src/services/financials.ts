@@ -12,6 +12,15 @@ import * as mortgageRepo from "../repositories/mortgageRepository";
 import type { ExpenseLedgerRow, ArrearsAgingDTO } from "../repositories/financialsRepository";
 import { mapWithConcurrency } from "../utils/concurrency";
 import { computeUnitProfitability, type UnitProfitabilityInput, type UnitProfitabilityResult } from "./unitProfitability";
+import { getBuildingRenovationOpportunities } from "./assetInventory";
+import { lookupTaxRule, computeTaxProfile, type TaxModelInput } from "./financialModelService";
+import {
+  computeYieldGoalSeek,
+  DEFAULT_CAPITALIZABLE_FRACTION,
+  DEFAULT_OBLF_PASSTHROUGH_PCT,
+  type GoalSeekOpportunity,
+  type YieldGoalSeekResult,
+} from "./yieldGoalSeekService";
 import { getBalanceSheet } from "./ledgerService";
 
 // ==========================================
@@ -2264,6 +2273,93 @@ export async function getUnitProfitability(
   };
 
   return { buildingId, buildingName: building.name, from: fromStr, to: toStr, periodDays, ...result, reconciliation };
+}
+
+// ==========================================
+// Yield goal-seek (Planning what-if)
+// ==========================================
+
+/**
+ * Compose the yield goal-seek: current yield/NOI/value (from unit profitability) +
+ * renovation opportunities (cost + useful life) + the per-asset capitalizable share
+ * (tax split) → the pure computeYieldGoalSeek. Renovation uplift uses the SAME OBLF
+ * formula the simulator does, so the figure survives the handoff into it unchanged.
+ */
+export async function getYieldGoalSeek(
+  orgId: string,
+  buildingId: string,
+  fromStr: string,
+  toStr: string,
+  opts: { targetYieldPct: number; mgmtFeePct: number; oblfPassthroughPct?: number },
+): Promise<YieldGoalSeekResult> {
+  const building = await inventoryRepo.findBuildingByIdAndOrg(prisma, buildingId, orgId);
+  if (!building) throw new Error(`Building ${buildingId} not found`);
+
+  const [profit, opportunities] = await Promise.all([
+    getUnitProfitability(orgId, buildingId, fromStr, toStr),
+    getBuildingRenovationOpportunities(prisma, orgId, buildingId),
+  ]);
+
+  // Yield-basis value — the same basis the Profitability tab shows.
+  const valueChf =
+    profit.buildingNetYieldBasis === "intrinsic" ? (profit.buildingIntrinsicValueChf ?? 0)
+      : profit.buildingNetYieldBasis === "market" ? (profit.marketValueChf ?? 0)
+        : profit.buildingNetYieldBasis === "ppe" ? (profit.ppeEstimateChf ?? 0)
+          : 0;
+  const currentNoiChf = profit.totalAnnualNoiCents / 100;
+
+  // Rent roll (annual contractual) + a building-occupancy proxy from the priced units.
+  const rows = profit.rows ?? [];
+  const rentRollChf = rows.reduce((s, r) => s + (r.monthlyRentChf ?? 0) * 12, 0);
+  const occupancyRate = rows.length
+    ? rows.reduce((s, r) => s + (r.occupancyRate ?? 0), 0) / rows.length
+    : 1;
+
+  // Per-opportunity capitalizable fraction from the tax split, memoised by rule key
+  // (the fraction is cost-independent, so one lookup per assetType::topic::canton).
+  const canton = building.canton ?? null;
+  const capCache = new Map<string, number>();
+  const goalSeekOpps: GoalSeekOpportunity[] = [];
+  for (const o of opportunities) {
+    const costChf = o.estimatedReplacementCostChf ?? 5000;
+    const usefulLifeYears = o.usefulLifeMonths ? Math.max(1, Math.round(o.usefulLifeMonths / 12)) : 10;
+    const key = `${o.assetType}::${o.topic}::${canton ?? ""}`;
+    let capitalizableFraction = capCache.get(key);
+    if (capitalizableFraction == null) {
+      const rule = await lookupTaxRule(prisma, o.assetType as Parameters<typeof lookupTaxRule>[1], o.topic, canton);
+      if (rule) {
+        const tax = computeTaxProfile({
+          totalCost: costChf,
+          classification: rule.classification as TaxModelInput["classification"],
+          deductiblePct: rule.deductiblePct,
+          usefulLifeMonths: rule.usefulLifeMonths,
+        });
+        capitalizableFraction = costChf > 0 ? tax.capitalizableAmount / costChf : DEFAULT_CAPITALIZABLE_FRACTION;
+      } else {
+        capitalizableFraction = DEFAULT_CAPITALIZABLE_FRACTION;
+      }
+      capCache.set(key, capitalizableFraction);
+    }
+    goalSeekOpps.push({
+      assetId: o.assetId,
+      unitId: o.unitId,
+      label: o.unitNumber ? `${o.assetName} — ${o.unitNumber}` : o.assetName,
+      costChf,
+      usefulLifeYears,
+      capitalizableFraction,
+    });
+  }
+
+  return computeYieldGoalSeek({
+    valueChf,
+    currentNoiChf,
+    rentRollChf,
+    occupancyRate,
+    targetYieldPct: opts.targetYieldPct,
+    mgmtFeePct: opts.mgmtFeePct,
+    oblfPassthroughPct: opts.oblfPassthroughPct ?? DEFAULT_OBLF_PASSTHROUGH_PCT,
+    opportunities: goalSeekOpps,
+  });
 }
 
 // ==========================================
