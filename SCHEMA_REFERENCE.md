@@ -5,11 +5,11 @@
 
 ## Database Schema (Prisma)
 
-**Status: ACTIVE AND IN USE — 133 migrations** (shadow DB replay verified clean 2026-03-30)
+**Status: ACTIVE AND IN USE — 137 migrations** (shadow DB replay verified clean 2026-03-30)
 
 **Last verified:** 2026-06-29
 
-### Models (96 total)
+### Models (99 total)
 
 | Model | Key Fields | Relations |
 |-------|-----------|-----------|
@@ -71,6 +71,7 @@
 | **FiscalPeriodClose** | orgId, buildingId, fiscalYear, periodStart/End, status (CLOSED\|REVERSED), closingJournalId, reversalJournalId?, retainedEarningsCents (WS-E year-end close → 2900) | → Org, Building. Unique [orgId,buildingId,fiscalYear] |
 | **FixedAsset** | orgId, buildingId, unitId?, name, sourceInvoiceId? (unique), acquisitionDate, costCents, salvageCents, usefulLifeYears, method, accumulatedDepreciationCents, status (WS-D capitalized capex + depreciation) | → Org, Building, Unit? |
 | **OpeningReceivable** | orgId, buildingId, unitId?, tenantName, amountCents, dueDate?, status (OPEN\|SETTLED), settlementJournalId? (WS-F per-tenant opening AR, sub-ledger of the imported 1100 lump) | → Org, Building, Unit? |
+| **ExtractionCache** | orgId, cacheKey (`${EXTRACTOR_VERSION}\|${kind}\|sha256(file)`), payload (Json — cached ScanResult or PackageExtractionFile[]), createdAt. Content-addressed reuse of expensive vision extractions across both the single-statement and régie-package paths (2026-07-29). Unique [orgId, cacheKey] | → Org |
 | **CashflowPlan** | orgId, buildingId?, name, status (CashflowPlanStatus), incomeGrowthRatePct, openingBalanceCents (BigInt?), horizonMonths, lastComputedAt? | → Org, Building?, CashflowOverride[], Rfp[] |
 | **CashflowOverride** | planId, assetId, originalYear, overriddenYear | → CashflowPlan, Asset |
 | **TaxRule** | jurisdiction, canton?, assetType, topic, scope (LegalRuleScope), isActive | → TaxRuleVersion[] |
@@ -85,7 +86,7 @@
 | **ConversationMessage** | threadId, role (ConversationRole), content (Text), intent (String?), createdAt; @@index([threadId, createdAt]) | → ConversationThread |
 | **WhatsAppOutbox** | orgId, toPhone (E.164), body (Text), status (OutboxStatus, default PENDING), retryCount (default 0), errorMessage?, createdAt, sentAt?; @@index([status, createdAt]) | — |
 
-### Key Enums (78 total)
+### Key Enums (82 total)
 - `CostNature`: CHARGE, DIRECT — set once at the invoice review gate. CHARGE = recoverable Nebenkosten → building cost pool, ventilated to units; DIRECT = repair/maintenance/capex/insurance/tax → ledger/billing flow.
 - `CostBillability`: BILLABLE, NON_BILLABLE · `DistributionKey`: SURFACE_AREA, UNIT_COUNT, CONSUMPTION, OCCUPANT_COUNT, FIXED_SHARE (ancillary-cost taxonomy)
 - `RequestStatus`: PENDING_REVIEW, AUTO_APPROVED, APPROVED, **RFP_PENDING**, ASSIGNED, IN_PROGRESS, COMPLETED, PENDING_OWNER_APPROVAL, **OWNER_REJECTED**
