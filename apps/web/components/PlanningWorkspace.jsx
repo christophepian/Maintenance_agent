@@ -19,6 +19,7 @@ import { cn } from "../lib/utils";
 import RenovationAccordion from "./RenovationAccordion";
 import RenovationSimulatorDrawer from "./RenovationSimulatorDrawer";
 import FinancingPanel from "./FinancingPanel";
+import YieldGoalSeekPanel from "./YieldGoalSeekPanel";
 
 export default function PlanningWorkspace({ buildings: allBuildings = [] }) {
   const router = useRouter();
@@ -28,10 +29,14 @@ export default function PlanningWorkspace({ buildings: allBuildings = [] }) {
   const [simBuildingId, setSimBuildingId] = useState(null);
   const simRef = useRef(null);
 
-  // Auto-select the only building once loaded.
+  // Auto-select: a ?buildingId deep-link (e.g. from the Reporting → Profitability
+  // "model how to move this yield" link) wins; otherwise the only building.
   useEffect(() => {
+    if (!allBuildings.length) return;
+    const wanted = router.query?.buildingId;
+    if (wanted && allBuildings.some((b) => b.id === wanted)) { setSelectedBuildingIds([wanted]); return; }
     if (allBuildings.length === 1) setSelectedBuildingIds([allBuildings[0].id]);
-  }, [allBuildings]);
+  }, [allBuildings, router.query?.buildingId]);
 
   const selectedBuildings = useMemo(
     () => allBuildings.filter((b) => selectedBuildingIds.includes(b.id)),
@@ -110,6 +115,12 @@ export default function PlanningWorkspace({ buildings: allBuildings = [] }) {
           </div>
         )}
       </div>
+
+      {/* Yield goal-seek — per-building what-if; its renovation lever hands the
+          accretive works straight to the simulator below (same onSimulate). */}
+      {selectedBuildings.length === 1 && (
+        <YieldGoalSeekPanel building={selectedBuildings[0]} onSimulate={onSimulate} />
+      )}
 
       {/* Opportunities accordion (full width) */}
       <RenovationAccordion buildings={selectedBuildings} onSimulate={onSimulate} />

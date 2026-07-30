@@ -831,7 +831,8 @@
           "below": "Sous la fourchette",
           "inRange": "Dans la fourchette",
           "above": "Au-dessus"
-        }
+        },
+        "modelYield": "Simuler comment améliorer ce rendement"
       },
       "valueCreationTab": "Création de valeur",
       "valueCreation": {
@@ -3552,6 +3553,50 @@
       "INTEREST_ONLY": "Intérêts seuls",
       "LINEAR": "Linéaire",
       "ANNUITY": "Annuité"
+    }
+  },
+  "planning": {
+    "goalSeek": {
+      "title": "Atteindre un rendement cible",
+      "subtitle": "Voyez ce qu'il faut pour faire évoluer le rendement net de cet immeuble — et si la rénovation peut y parvenir.",
+      "error": "Impossible de calculer le modèle de rendement pour cet immeuble.",
+      "currentYield": "Rendement actuel",
+      "buildingValue": "Valeur de l'immeuble",
+      "annualNoi": "RNE annuel",
+      "rentRoll": "État locatif",
+      "targetYield": "Rendement net cible",
+      "fromToday": "depuis {{y}} aujourd'hui",
+      "mgmtFee": "Honoraires de gérance (% du loyer)",
+      "alreadyMet": "Déjà à ou au-dessus de {{tgt}} — le rendement actuel est {{cur}}.",
+      "gapLine": "Pour atteindre {{tgt}}, il faut +{{gap}}/an de RNE ({{noi}} → {{req}}).",
+      "lever": {
+        "rent": "Augmenter le loyer",
+        "opex": "Réduire les charges",
+        "occupancy": "Améliorer l'occupation",
+        "fee": "Honoraires de gérance",
+        "renovation": "Rénover (plus-value modélisée)"
+      },
+      "achievable": "réalisable",
+      "sizeable": "conséquent",
+      "beyondOblf": "au-delà de l'OBLF",
+      "ifAchievable": "si réalisable",
+      "feasible": "réalisable",
+      "over100": "exige > 100 %",
+      "exceedsGap": "dépasse l'écart",
+      "worthPct": "vaut {{p}}",
+      "reachesTarget": "atteint la cible",
+      "maxesAt": "plafonne à {{y}}",
+      "rentNote": "sur tout l'immeuble, {{p}} de l'état locatif",
+      "opexNote": "toute réduction de charges récurrentes va directement au RNE",
+      "occNote": "récupérer {{g}} de loyers perdus",
+      "occHard": "l'occupation seule ne suffit pas à combler l'écart",
+      "feeNote": "{{f}} % du loyer · {{cov}} de l'écart",
+      "renoCeiling": "Réaliser les {{n}} travaux relutifs ({{capex}} → +{{uplift}}/an) porte le rendement à {{ceil}}.",
+      "accretive": "Relutif",
+      "dilutive": "VAN+ / dilutif",
+      "accretiveExplain": "Une rénovation est relutive seulement si son rendement marginal (plus-value ÷ ΔV) dépasse le {{y}} actuel. Les grisés créent de la valeur (VAN positive) mais diluent le rendement ; ils sont exclus du plafond.",
+      "simulateCta": "Simuler les {{n}} travaux relutifs",
+      "noValuation": "Ajoutez une valorisation de l'immeuble ou des lots pour modéliser des objectifs de rendement."
     }
   }
 }

@@ -13,6 +13,7 @@ import {
   getUnitFinancialSummaries,
   getUnitExpenseLines,
   getUnitProfitability,
+  getYieldGoalSeek,
   getBuildingVendorSpend,
   getBuildingExpenseBreakdown,
   getBuildingPeriodReport,
@@ -472,6 +473,40 @@ export function registerFinancialRoutes(router: Router) {
         }
         console.error("[GET /buildings/:id/unit-profitability]", e);
         sendError(res, 500, "INTERNAL_ERROR", "Failed to load unit profitability");
+      }
+    },
+  );
+
+  // ── GET /buildings/:id/yield-goalseek ──────────────────────
+  router.get(
+    "/buildings/:id/yield-goalseek",
+    async ({ req, res, params, query, orgId }) => {
+      if (!requireAuth(req, res)) return;
+      if (!requireOrgViewer(req, res)) return;
+
+      const from = first(query, "from");
+      const to   = first(query, "to");
+      if (!from || !to) return sendError(res, 400, "VALIDATION_ERROR", "from and to are required");
+
+      const target = Number(first(query, "target"));
+      if (!Number.isFinite(target) || target <= 0 || target > 100) {
+        return sendError(res, 400, "VALIDATION_ERROR", "target (yield %) must be between 0 and 100");
+      }
+      const feeRaw = Number(first(query, "mgmtFeePct"));
+      const mgmtFeePct = Number.isFinite(feeRaw) && feeRaw >= 0 && feeRaw <= 100 ? feeRaw : 0;
+      const ptRaw = Number(first(query, "oblfPassthroughPct"));
+      const oblfPassthroughPct = Number.isFinite(ptRaw) && ptRaw > 0 && ptRaw <= 100 ? ptRaw : undefined;
+
+      try {
+        const data = await getYieldGoalSeek(orgId, params.id, from, to, { targetYieldPct: target, mgmtFeePct, oblfPassthroughPct });
+        sendJson(res, 200, { data });
+      } catch (e) {
+        const err = e as { message?: string };
+        if (e instanceof NotFoundError || String(err?.message).includes("not found")) {
+          return sendError(res, 404, "NOT_FOUND", String(err?.message ?? "Building not found"));
+        }
+        console.error("[GET /buildings/:id/yield-goalseek]", e);
+        sendError(res, 500, "INTERNAL_ERROR", "Failed to compute yield goal-seek");
       }
     },
   );
