@@ -611,22 +611,13 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
           </div>
         );
 
-        // Grouped KPI sections — the full financial picture folded in from the
-        // (retired) Financials tab: performance · income · costs · balances.
+        // Grouped detail sections — the *incremental* picture beyond the headline
+        // KPI strip: income, costs and balances only. The strip already carries the
+        // performance line (NOI, margin, OpEx ratio, collection, occupancy) plus
+        // cash received and receivables, so those are not repeated here.
         const kpiGroups = [
-          { label: t("buildingsId.reporting.kpiGroup.performance"),
-            left: [
-              { label: t("buildingsId.reporting.kpi.noi"),       value: rFmtChf(noi),   delta: prev ? buildingDelta(noi, prev.netOperatingIncomeCents) : null },
-              { label: t("buildingsId.reporting.kpi.noiMargin"), value: noiMargin !== null ? rFmtPct(noiMargin) : "—", delta: null },
-              { label: t("buildingsId.reporting.kpi.opexRatio"), value: opexRatio !== null ? rFmtPct(opexRatio) : "—", delta: null },
-            ],
-            right: [
-              { label: t("buildingsId.reporting.kpi.onTimeCollection"), value: rFmtPct(coll), delta: prev ? buildingDelta(coll, prev.collectionRate) : null },
-              { label: t("buildingsId.reporting.kpi.occupancy"),        value: occ !== null ? rFmtPct(occ) : "—", delta: null },
-            ] },
           { label: t("buildingsId.reporting.kpiGroup.income"),
             left: [
-              { label: t("buildingsId.reporting.kpi.cashReceived"),  value: rFmtChf(earned), delta: prev ? buildingDelta(earned, prev.collectedIncomeCents) : null },
               { label: t("buildingsId.reporting.kpi.accruedIncome"), value: rFmtChf(bf.accruedIncomeCents), delta: null },
               { label: t("buildingsId.reporting.kpi.netIncome"),     value: rFmtChf(bf.netIncomeCents), delta: null },
             ],
@@ -646,7 +637,6 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
             ] },
           { label: t("buildingsId.reporting.kpiGroup.balances"),
             left: [
-              { label: t("buildingsId.reporting.kpi.receivables"), value: bf.receivablesCents > 0 ? rFmtChf(bf.receivablesCents) : "—", delta: null },
               { label: t("buildingsId.reporting.kpi.payables"),    value: bf.payablesCents > 0 ? rFmtChf(bf.payablesCents) : "—", delta: null },
             ],
             right: [
@@ -667,12 +657,13 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
             </div>
           </div>
         );
-        // The "All financial metrics" disclosure that lives under the KPI strip.
+        // The income/cost/balance detail disclosure under the KPI strip — the
+        // metrics the strip doesn't already show (no longer a duplicating superset).
         const metricsCollapsible = (
           <div className="border-b border-surface-border">
             <button onClick={() => setMetricsOpen((v) => !v)} aria-expanded={metricsOpen}
               className="flex w-full items-center justify-between gap-2 px-5 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-surface-hover">
-              <span>{t("buildingsId.reporting.allMetrics")}</span>
+              <span>{t("buildingsId.reporting.fullDetail")}</span>
               <span className="text-foreground-dim">{metricsOpen ? "▾" : "▸"}</span>
             </button>
             {metricsOpen && <div className="px-5 pb-5">{normalKpis}</div>}

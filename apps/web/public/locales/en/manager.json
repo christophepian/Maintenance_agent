@@ -825,6 +825,12 @@
           "methodology": "Benchmark basis & sources",
           "basisNote": "Net yield = NOI ÷ value, before financing, tax and capex. The benchmark is measured on market/purchase price, whereas this yield is on intrinsic (worksheet) value — compare against the value reconciliation above before drawing conclusions. National typical band with a wider regional spread (lower in Geneva/Zurich, higher in peripheral/rural cantons).",
           "sources": "Sources"
+        },
+        "valueYield": "Value & yield",
+        "verdict": {
+          "below": "Below typical",
+          "inRange": "In typical range",
+          "above": "Above typical"
         }
       },
       "valueCreationTab": "Value creation",
@@ -1054,7 +1060,8 @@
       "mode": {
         "single": "One period",
         "compare": "Compare"
-      }
+      },
+      "fullDetail": "Full income & cost detail"
     },
     "strategyEditor": {
       "intro": "Set how this building should be managed — the cashflow recommendation engine uses it to tailor advice for this property.",

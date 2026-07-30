@@ -825,6 +825,12 @@
           "methodology": "Base & sources du benchmark",
           "basisNote": "Rendement net = NOI ÷ valeur, avant financement, impôts et capex. Le benchmark se mesure sur le prix du marché/d’achat, alors que ce rendement porte sur la valeur intrinsèque (valeur de la fiche) — à comparer avec le rapprochement de valeur ci-dessus avant toute conclusion. Fourchette nationale typique, avec un écart régional plus large (plus bas à Genève/Zurich, plus élevé en périphérie/zones rurales).",
           "sources": "Sources"
+        },
+        "valueYield": "Valeur et rendement",
+        "verdict": {
+          "below": "Sous la fourchette",
+          "inRange": "Dans la fourchette",
+          "above": "Au-dessus"
         }
       },
       "valueCreationTab": "Création de valeur",
@@ -1054,7 +1060,8 @@
       "mode": {
         "single": "Une période",
         "compare": "Comparer"
-      }
+      },
+      "fullDetail": "Détail complet des revenus et charges"
     },
     "strategyEditor": {
       "intro": "Définissez la gestion de ce bâtiment — le moteur de recommandation de trésorerie l'utilise pour adapter ses conseils à ce bien.",
