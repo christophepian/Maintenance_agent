@@ -1431,7 +1431,7 @@ function BuildingReportingView({ buildingId, etatLocatifNet }) {
               <div className="relative" ref={addRef}>
                 <button onClick={openAdd} aria-expanded={addOpen} disabled={full} className={addBtn}>+ {t("buildingsId.reporting.compare.addPeriod")} <span className="text-foreground-dim">▾</span></button>
                 {addOpen && periods.length > 0 && (
-                  <div className="absolute left-0 top-full z-30 mt-2 w-64 rounded-xl border border-surface-border bg-surface p-3 shadow-lg">
+                  <div className="absolute right-0 top-full z-30 mt-2 w-64 rounded-xl border border-surface-border bg-surface p-3 shadow-lg">
                     {pickerGrid({ pkYr: addYear, setPkYr: setAddYear, onPick: addPeriodAt, selPred: isExtra })}
                   </div>
                 )}
