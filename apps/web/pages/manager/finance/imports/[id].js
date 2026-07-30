@@ -1187,6 +1187,27 @@ export default function ImportedStatementReviewPage() {
                 </div>
               )}
 
+              {/* ── Confidence verdict (graduated autonomy) — headline of the checks below ── */}
+              {s?.confidence && !hasNoBalances && (
+                <div className={cn("rounded-lg border px-4 py-3 text-sm",
+                  s.confidence.tier === "GREEN" ? "border-green-300 bg-green-50 text-green-800"
+                    : s.confidence.tier === "AMBER" ? "border-amber-300 bg-amber-50 text-amber-800"
+                      : "border-red-300 bg-red-50 text-red-800")}>
+                  <p className="font-semibold mb-1">
+                    {s.confidence.tier === "GREEN" ? "🟢 Green — every verifiable check passed; safe to approve"
+                      : s.confidence.tier === "AMBER" ? "🟡 Amber — it ties out, but eyeball it before relying on it"
+                        : "🔴 Red — a check failed; correct it before approving"}
+                  </p>
+                  {s.confidence.reasons?.length > 0 && (
+                    <ul className="mt-1 space-y-0.5 text-xs">
+                      {s.confidence.reasons.map((r, i) => (
+                        <li key={i}>• {r}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
+
               {/* ── Reconciliation gate — extracted lines vs the document's own totals ── */}
               {recon && !hasNoBalances && (
                 <div className={cn("rounded-lg border px-4 py-3 text-sm",
