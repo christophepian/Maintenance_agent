@@ -1367,8 +1367,8 @@ function BuildingReportingView({ buildingId, etatLocatifNet }) {
           single card whose body is the mode-aware period bar. The tabs read as a
           view switch, visually distinct from the pill toggles inside; compare mode
           swaps the presets row for a "compare against" builder + half-year grain. ── */}
-      <div className="overflow-hidden rounded-xl border border-surface-border bg-surface shadow-sm">
-        <div className="flex gap-1 overflow-x-auto border-b border-surface-border px-3 pt-1">
+      <div className="rounded-xl border border-surface-border bg-surface shadow-sm">
+        <div className="flex gap-1 overflow-x-auto rounded-t-xl border-b border-surface-border px-3 pt-1">
           {[["single", t("buildingsId.reporting.mode.single")], ["compare", t("buildingsId.reporting.mode.compare")]].map(([k, l]) => (
             <button key={k} onClick={() => switchMode(k)} aria-pressed={mode === k}
               className={cn("-mb-px shrink-0 border-b-2 px-3 py-2 text-sm font-semibold transition-colors", mode === k ? "border-brand text-brand" : "border-transparent text-muted hover:text-foreground")}>{l}</button>
