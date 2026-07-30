@@ -1363,19 +1363,18 @@ function BuildingReportingView({ buildingId, etatLocatifNet }) {
 
   return (
     <div className="space-y-3">
-      {/* ── Mode — analyse one period, or compare periods side by side. Sits at
-          the very top: it decides both what the period bar below offers and what
-          the report card shows. ── */}
-      <div className="inline-flex rounded-lg border border-surface-border bg-surface p-0.5 gap-0.5 shadow-sm">
-        {[["single", t("buildingsId.reporting.mode.single")], ["compare", t("buildingsId.reporting.mode.compare")]].map(([k, l]) => (
-          <button key={k} onClick={() => switchMode(k)} aria-pressed={mode === k}
-            className={cn("rounded-md px-4 py-1.5 text-sm font-semibold transition-colors", mode === k ? "bg-brand text-white" : "text-muted hover:text-muted-dark")}>{l}</button>
-        ))}
-      </div>
-
-      {/* ── Period selector — mode-aware. Compare mode swaps the presets row for a
-          "compare against" builder and adds the half-year grain. ── */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-surface-border bg-surface px-3 py-2 shadow-sm">
+      {/* ── Controls card — an underline tab strip (One period · Compare) heads a
+          single card whose body is the mode-aware period bar. The tabs read as a
+          view switch, visually distinct from the pill toggles inside; compare mode
+          swaps the presets row for a "compare against" builder + half-year grain. ── */}
+      <div className="overflow-hidden rounded-xl border border-surface-border bg-surface shadow-sm">
+        <div className="flex gap-1 overflow-x-auto border-b border-surface-border px-3 pt-1">
+          {[["single", t("buildingsId.reporting.mode.single")], ["compare", t("buildingsId.reporting.mode.compare")]].map(([k, l]) => (
+            <button key={k} onClick={() => switchMode(k)} aria-pressed={mode === k}
+              className={cn("-mb-px shrink-0 border-b-2 px-3 py-2 text-sm font-semibold transition-colors", mode === k ? "border-brand text-brand" : "border-transparent text-muted hover:text-foreground")}>{l}</button>
+          ))}
+        </div>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-3 py-2.5">
         {!customRange && (<>
         <div className="flex items-center gap-2">
           <span className="text-[11px] font-semibold uppercase tracking-wide text-foreground-dim">{mode === "compare" ? t("buildingsId.reporting.compare.base") : t("buildingsId.reporting.period.label")}</span>
@@ -1449,6 +1448,7 @@ function BuildingReportingView({ buildingId, etatLocatifNet }) {
             </div>
           );
         })()}
+        </div>
       </div>
 
       {tsError && <p className="text-sm text-destructive-text">{tsError}</p>}
