@@ -1011,14 +1011,17 @@ const COMPARE_MAX = 5; // anchor + up to 4 comparison periods
 // Period type → the backend time-series range that yields that granularity.
 const GRAN_RANGE = { month: "2Y", quarter: "5Y", year: "10Y" };
 
-// The KPI rows shared by the compare table (net-yield row is added by the caller).
+// The KPI rows shared by the compare table, ordered as an income-statement story
+// so the numbers read top-to-bottom: income in → operating expenses out → the
+// resulting NOI (a subtotal) → the ratios that explain it → operational drivers →
+// balances. (The net-yield row is appended by the caller.)
 const multiKpis = (t) => [
-  { label: t("buildingsId.reporting.kpi.noi"),              type: "chf", better: 1,  get: (f) => f.netOperatingIncomeCents },
   { label: t("buildingsId.reporting.kpi.cashReceived"),     type: "chf", better: 1,  get: (f) => f.collectedIncomeCents },
-  { label: t("buildingsId.reporting.kpi.totalExpenses"),    type: "chf", better: -1, get: (f) => f.expensesTotalCents },
-  { label: t("buildingsId.reporting.kpi.onTimeCollection"), type: "pct", better: 1,  get: (f) => f.collectionRate },
+  { label: t("buildingsId.reporting.kpi.operatingExpenses"),type: "chf", better: -1, get: (f) => f.operatingTotalCents ?? f.expensesTotalCents },
+  { label: t("buildingsId.reporting.kpi.noi"),              type: "chf", better: 1,  subtotal: true, get: (f) => f.netOperatingIncomeCents },
   { label: t("buildingsId.reporting.kpi.noiMargin"),        type: "pct", better: 1,  get: (f) => (f.collectedIncomeCents > 0 ? f.netOperatingIncomeCents / f.collectedIncomeCents : null) },
-  { label: t("buildingsId.reporting.kpi.opexRatio"),        type: "pct", better: -1, get: (f) => (f.collectedIncomeCents > 0 ? f.expensesTotalCents / f.collectedIncomeCents : null) },
+  { label: t("buildingsId.reporting.kpi.opexRatio"),        type: "pct", better: -1, get: (f) => (f.collectedIncomeCents > 0 ? (f.operatingTotalCents ?? f.expensesTotalCents) / f.collectedIncomeCents : null) },
+  { label: t("buildingsId.reporting.kpi.onTimeCollection"), type: "pct", better: 1,  get: (f) => f.collectionRate },
   { label: t("buildingsId.reporting.kpi.occupancy"),        type: "pct", better: 1,  get: (f) => (f.totalUnitsCount > 0 ? f.activeUnitsCount / f.totalUnitsCount : null) },
   { label: t("buildingsId.reporting.kpi.receivables"),      type: "chf", better: -1, get: (f) => f.receivablesCents },
 ];
@@ -1091,9 +1094,9 @@ function BuildingCompareView({ buildingId, periods }) {
   const loading = periods.length > 0 && !loaded;
   const financialsAt = (i) => (loaded ? data.cols[i]?.financials ?? null : null);
 
-  // KPI rows (the same 8 as the single-period strip) + the net-yield row.
+  // KPI rows (the income-statement-ordered set) + the net-yield row.
   const rows = [
-    ...multiKpis(t).map((k) => ({ label: k.label, type: k.type, better: k.better, valAt: (i) => { const f = financialsAt(i); return f ? k.get(f) : null; } })),
+    ...multiKpis(t).map((k) => ({ label: k.label, type: k.type, better: k.better, subtotal: k.subtotal, valAt: (i) => { const f = financialsAt(i); return f ? k.get(f) : null; } })),
     { label: t("buildingsId.reporting.unitProfit.buildingYield"), type: "yieldpct", better: 1, valAt: (i) => (loaded ? data.cols[i]?.yieldPct ?? null : null) },
   ];
   const fmt = (type, v) => (v == null ? "—" : type === "yieldpct" ? `${v.toFixed(1)}%` : type === "pct" ? rFmtPct(v) : rFmtChf(v));
@@ -1140,10 +1143,11 @@ function BuildingCompareView({ buildingId, periods }) {
               const best = nums.length >= 2 ? (k.better >= 0 ? Math.max(...nums) : Math.min(...nums)) : null;
               const worst = nums.length >= 2 ? (k.better >= 0 ? Math.min(...nums) : Math.max(...nums)) : null;
               return (
-                <tr key={k.label} className="border-b border-surface-border/60">
-                  <td className="py-2 pr-3 text-left text-muted-dark">{k.label}</td>
+                <tr key={k.label} className={cn(k.subtotal ? "border-t-2 border-surface-border" : "border-b border-surface-border/60")}>
+                  <td className={cn("py-2 pr-3 text-left", k.subtotal ? "font-semibold text-foreground" : "text-muted-dark")}>{k.label}</td>
                   {vals.map((v, ci) => (
                     <td key={`${k.label}-${periods[ci].key}`} className={cn("px-3 py-2 text-right tabular-nums whitespace-nowrap",
+                      k.subtotal && "font-semibold",
                       !loaded ? "text-foreground-dim"
                         : v != null && best !== worst && v === best ? "font-semibold text-success-text"
                           : v != null && best !== worst && v === worst ? "text-destructive-text"

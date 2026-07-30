@@ -707,7 +707,8 @@
         "maintenance": "Entretien",
         "maintenanceRatio": "Ratio d'entretien",
         "capex": "Investissements",
-        "costPerUnit": "Coût par lot"
+        "costPerUnit": "Coût par lot",
+        "operatingExpenses": "Charges d'exploitation"
       },
       "kpiGroup": {
         "performance": "Performance",

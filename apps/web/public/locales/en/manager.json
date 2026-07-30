@@ -707,7 +707,8 @@
         "maintenance": "Maintenance",
         "maintenanceRatio": "Maintenance ratio",
         "capex": "CapEx",
-        "costPerUnit": "Cost per unit"
+        "costPerUnit": "Cost per unit",
+        "operatingExpenses": "Operating expenses"
       },
       "kpiGroup": {
         "performance": "Performance",
