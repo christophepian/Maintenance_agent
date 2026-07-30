@@ -1,0 +1,13 @@
+{
+  "name": "synthetic-unbalanced-bilan",
+  "source": "synthetic — a balance sheet whose Passif line sum (3000) doesn't tie to its own stated Passif total (9000). Exercises the RED path (a hard invariant failure must never auto-post).",
+  "documents": [
+    {
+      "type": "BALANCE_SHEET",
+      "csv": "row_type;accountCode;accountName;balanceChf;section\n;1020;Banque;10000.00;ACTIF\n;2000;Créanciers;3000.00;PASSIF\ntotal_section;;Total ACTIF;10000.00;ACTIF\ntotal_section;;Total PASSIF;9000.00;PASSIF"
+    }
+  ],
+  "expect": {
+    "BALANCE_SHEET": { "reconciliation": "FAIL", "tier": "RED" }
+  }
+}
