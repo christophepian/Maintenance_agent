@@ -3575,7 +3575,8 @@
         "opex": "Cut operating costs",
         "occupancy": "Lift occupancy",
         "fee": "Management fee",
-        "renovation": "Renovate (value uplift modelled)"
+        "renovation": "Renovate (value uplift modelled)",
+        "selfManage": "Self-manage"
       },
       "achievable": "achievable",
       "sizeable": "sizeable",
@@ -3605,7 +3606,23 @@
       "opexNoteShort": "straight to NOI",
       "occNoteShort": "recover vacancy",
       "feeNoteShort": "{{cov}} of the gap",
-      "renoSummary": "The {{n}} accretive works ({{capex}} → +{{uplift}}/yr) lift yield to {{ceil}} — badged in the list below."
+      "renoSummary": "The {{n}} accretive works ({{capex}} → +{{uplift}}/yr) lift yield to {{ceil}} — badged in the list below.",
+      "rentTurnover": "{{p}} of roll · on turnover (~{{mo}} mo)",
+      "rentBeyondMarket": "beyond market (~{{g}}/yr)",
+      "rentChurn": "aggressive — tenant-churn risk",
+      "opexBeyondBest": "beyond your best cost year",
+      "occOver100": "can't exceed 100% occupancy",
+      "selfManageNote": "owner absorbs the work + liability",
+      "feeHandsOff": "you want a hands-off holding",
+      "withinStrategy": "within your strategy",
+      "withinOps": "within normal operations",
+      "renoAvoid": "the renovations you'd rather avoid",
+      "renoAccretive": "the accretive renovations",
+      "reachable": "Realistically reachable",
+      "synthWithin": "You can reach {{tgt}} {{scope}}.",
+      "synthReno": "{{scope}} you can reach ~{{within}}. Reaching {{tgt}} also needs {{reno}}.",
+      "synthSelf": "{{scope}} you can reach ~{{within}}. Reaching {{tgt}} needs {{reno}} and self-managing.",
+      "synthBeyond": "{{tgt}} is beyond what any realistic combination reaches — even with {{reno}} and self-managing (ceiling ~{{self}})."
     },
     "building": "Building",
     "clear": "Clear",
@@ -3615,7 +3632,8 @@
     "plansHint": "Open a plan to review its NPV verdict and assumptions, or to generate RFPs.",
     "subtab": {
       "opportunities": "Opportunities",
-      "plans": "Plans"
+      "plans": "Plans",
+      "recordedPlans": "Recorded Plans"
     }
   }
 }

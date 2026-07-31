@@ -3574,7 +3574,8 @@
         "opex": "Réduire les charges",
         "occupancy": "Améliorer l'occupation",
         "fee": "Honoraires de gérance",
-        "renovation": "Rénover (plus-value modélisée)"
+        "renovation": "Rénover (plus-value modélisée)",
+        "selfManage": "Gérer en direct"
       },
       "achievable": "réalisable",
       "sizeable": "conséquent",
@@ -3604,7 +3605,23 @@
       "opexNoteShort": "directement au RNE",
       "occNoteShort": "récupérer la vacance",
       "feeNoteShort": "{{cov}} de l'écart",
-      "renoSummary": "Les {{n}} travaux relutifs ({{capex}} → +{{uplift}}/an) portent le rendement à {{ceil}} — signalés dans la liste ci-dessous."
+      "renoSummary": "Les {{n}} travaux relutifs ({{capex}} → +{{uplift}}/an) portent le rendement à {{ceil}} — signalés dans la liste ci-dessous.",
+      "rentTurnover": "{{p}} de l'état locatif · au changement de locataire (~{{mo}} mois)",
+      "rentBeyondMarket": "au-delà du marché (~{{g}}/an)",
+      "rentChurn": "agressif — risque de rotation",
+      "opexBeyondBest": "au-delà de votre meilleure année",
+      "occOver100": "ne peut dépasser 100 % d'occupation",
+      "selfManageNote": "le propriétaire assume le travail + la responsabilité",
+      "feeHandsOff": "vous voulez un placement passif",
+      "withinStrategy": "dans votre stratégie",
+      "withinOps": "en exploitation normale",
+      "renoAvoid": "les rénovations que vous préféreriez éviter",
+      "renoAccretive": "les rénovations relutives",
+      "reachable": "Réalistement atteignable",
+      "synthWithin": "Vous pouvez atteindre {{tgt}} {{scope}}.",
+      "synthReno": "{{scope}}, vous pouvez atteindre ~{{within}}. Atteindre {{tgt}} nécessite aussi {{reno}}.",
+      "synthSelf": "{{scope}}, vous pouvez atteindre ~{{within}}. Atteindre {{tgt}} nécessite {{reno}} et la gérance en direct.",
+      "synthBeyond": "{{tgt}} dépasse ce qu'une combinaison réaliste permet — même avec {{reno}} et la gérance en direct (plafond ~{{self}})."
     },
     "building": "Immeuble",
     "clear": "Effacer",
@@ -3614,7 +3631,8 @@
     "plansHint": "Ouvrez un plan pour consulter son verdict VAN et ses hypothèses, ou générer des appels d'offres.",
     "subtab": {
       "opportunities": "Opportunités",
-      "plans": "Plans"
+      "plans": "Plans",
+      "recordedPlans": "Plans enregistrés"
     }
   }
 }
