@@ -418,11 +418,13 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
           {/* ── Planning ── */}
           {activeTabKey === "planning" && (
             <div className="space-y-4">
-              {/* Sub-tabs: keep committed Plans off the main planning scroll. */}
-              <div className="flex gap-1 border-b border-surface-border">
-                {[["opps", t("planning.subtab.opportunities", { defaultValue: "Opportunities" })], ["plans", t("planning.subtab.plans", { defaultValue: "Plans" })]].map(([k, label]) => (
+              {/* Segmented control — a view toggle, deliberately not the underline
+                  tabs used by the finance nav above (two tab rows read as one
+                  confused hierarchy). Keeps committed plans off the main scroll. */}
+              <div className="inline-flex gap-0.5 rounded-lg border border-surface-border bg-surface-subtle p-0.5">
+                {[["opps", t("planning.subtab.opportunities", { defaultValue: "Opportunities" })], ["plans", t("planning.subtab.recordedPlans", { defaultValue: "Recorded Plans" })]].map(([k, label]) => (
                   <button key={k} onClick={() => setPlanningView(k)} aria-pressed={planningView === k}
-                    className={cn("-mb-px shrink-0 border-b-2 px-3 py-2 text-sm font-medium transition-colors", planningView === k ? "border-brand text-brand" : "border-transparent text-muted hover:text-foreground")}>
+                    className={cn("rounded-md px-3.5 py-1.5 text-sm font-semibold transition-colors", planningView === k ? "bg-surface text-foreground shadow-sm" : "text-muted hover:text-foreground")}>
                     {label}
                   </button>
                 ))}
