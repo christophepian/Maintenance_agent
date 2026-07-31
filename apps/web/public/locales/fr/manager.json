@@ -708,7 +708,13 @@
         "maintenanceRatio": "Ratio d'entretien",
         "capex": "Investissements",
         "costPerUnit": "Coût par lot",
-        "operatingExpenses": "Charges d'exploitation"
+        "operatingExpenses": "Charges d'exploitation",
+        "netYield": "Rendement net",
+        "netYieldTip": "RNE ÷ valeur de l’immeuble ({{val}})",
+        "netYieldNoVal": "Ajoutez une valorisation pour calculer le rendement",
+        "freeCashFlow": "Flux de trésorerie disponible",
+        "fcfTip": "RNE − capex − intérêts hypothécaires. Avant amortissement.",
+        "mortgageInterest": "Intérêts hypothécaires"
       },
       "kpiGroup": {
         "performance": "Performance",
@@ -832,7 +838,13 @@
           "inRange": "Dans la fourchette",
           "above": "Au-dessus"
         },
-        "modelYield": "Simuler comment améliorer ce rendement"
+        "modelYield": "Simuler comment améliorer ce rendement",
+        "vsAppraisals": "vs estimations",
+        "howBuilt": "comment il se compose",
+        "rankedByYield": "Par lot · classé par rendement",
+        "showShares": "Afficher les parts",
+        "hideShares": "Masquer les parts",
+        "sellHint": "candidat vente / PPE — faible rendement sur forte valeur"
       },
       "valueCreationTab": "Création de valeur",
       "valueCreation": {
@@ -1063,7 +1075,9 @@
         "single": "Une période",
         "compare": "Comparer"
       },
-      "fullDetail": "Détail complet des revenus et charges"
+      "fullDetail": "Détail complet des revenus et charges",
+      "moreMetrics": "Plus d’indicateurs",
+      "movesSummary": "{{in}} entrées · {{out}} sorties"
     },
     "strategyEditor": {
       "intro": "Définissez la gestion de ce bâtiment — le moteur de recommandation de trésorerie l'utilise pour adapter ses conseils à ce bien.",

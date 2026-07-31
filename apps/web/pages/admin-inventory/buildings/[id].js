@@ -390,6 +390,8 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
   const [report, setReport]   = useState(null);
   const [unitData, setUnitData] = useState([]);
   const [vendors, setVendors] = useState([]);
+  const [profit, setProfit]   = useState(null);   // building value + net yield (for the KPI strip)
+  const [movesOpen, setMovesOpen] = useState(false); // tenant-movements disclosure
   const [expView, setExpView] = useState("acc"); // Revenue & expenses: cost-center | vendor
   const [incomeExpanded, setIncomeExpanded] = useState(false); // revex income column: show all units
   const [expExpanded, setExpExpanded] = useState(false);       // revex expense column: show all rows
@@ -418,9 +420,10 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
       fetch(`/api/buildings/${buildingId}/unit-financials?from=${from}&to=${to}`, { headers: authHeaders() }).then((r) => r.json()),
       fetch(`/api/buildings/${buildingId}/vendor-spend?from=${from}&to=${to}`, { headers: authHeaders() }).then((r) => r.json()).catch(() => null),
       fetch(`/api/financials/portfolio-summary?from=${from}&to=${to}`, { headers: authHeaders() }).then((r) => r.json()).catch(() => null),
+      fetch(`/api/buildings/${buildingId}/unit-profitability?from=${from}&to=${to}`, { headers: authHeaders() }).then((r) => r.json()).catch(() => null),
     ])
-      .then(([rpt, uf, vs, ps]) => {
-        setReport(rpt?.data ?? null); setUnitData(uf?.data ?? []); setVendors(vs?.data ?? []);
+      .then(([rpt, uf, vs, ps, pr]) => {
+        setReport(rpt?.data ?? null); setUnitData(uf?.data ?? []); setVendors(vs?.data ?? []); setProfit(pr?.data ?? null);
         // Portfolio benchmark: median NOI margin / OpEx ratio across the org's buildings.
         const bs = (ps?.data?.buildings ?? []).filter((b) => b.collectedIncomeCents > 0);
         const median = (arr) => { const s = [...arr].sort((a, b) => a - b); return s.length ? s[Math.floor((s.length - 1) / 2)] : 0; };
@@ -477,6 +480,17 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
   const netResultCents  = bf?.netIncomeCents ?? noi; // after capex + financing
   const noiMargin = earned > 0 ? noi / earned : null;
   const opexRatio = earned > 0 ? operatingCents / earned : null;
+
+  // ── Owner-first headline metrics ──
+  // Net yield needs a valuation (from the profitability endpoint); "—" without one.
+  const yieldPct = profit?.buildingNetYieldPct ?? null;
+  const buildingValueChf = profit?.buildingIntrinsicValueChf ?? null;
+  // Free cash flow = NOI − capex − financing (mortgage interest). Financing is 0 on
+  // the operational path, so FCF = NOI − capex there. Principal is not yet deducted.
+  const fcfCents = noi - capexCents - financingCents;
+  const prevFcfCents = prev ? (prev.netOperatingIncomeCents - (prev.capexTotalCents ?? 0) - (prev.financingTotalCents ?? 0)) : null;
+  const prevOcc = prev && prev.totalUnitsCount > 0 ? prev.activeUnitsCount / prev.totalUnitsCount : null;
+  const prevYieldFrac = buildingValueChf && prev ? (prev.netOperatingIncomeCents / 100) / buildingValueChf : null;
 
   // Net rent roll (contractual potential income), scaled to the selected period so
   // it's comparable to the period's actuals. etatLocatifNet is the ANNUAL figure (CHF).
@@ -539,22 +553,28 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
           </header>
         );
 
-        // 8 headline KPIs, always visible — the summary the tab now opens on.
+        // 5 owner-first headline KPIs — return, cash, operating result, health.
         const kpiStripItems = [
-          { k: t("buildingsId.reporting.kpi.noi"),              v: rFmtChf(noi),                            d: prev ? kpiDeltaChf(noi, prev.netOperatingIncomeCents, 1) : null },
-          { k: t("buildingsId.reporting.kpi.noiMargin"),        v: noiMargin != null ? rFmtPct(noiMargin) : "—", d: prev && prev.collectedIncomeCents > 0 ? kpiDeltaPp(noiMargin, prev.netOperatingIncomeCents / prev.collectedIncomeCents, 1) : null },
-          { k: t("buildingsId.reporting.kpi.cashReceived"),     v: rFmtChf(earned),                         d: prev ? kpiDeltaChf(earned, prev.collectedIncomeCents, 1) : null },
-          { k: t("buildingsId.reporting.revex.operating"),      v: rFmtChf(operatingCents),                 d: prev ? kpiDeltaChf(operatingCents, prev.operatingTotalCents ?? prev.expensesTotalCents, -1) : null },
-          { k: t("buildingsId.reporting.kpi.opexRatio"),        v: opexRatio != null ? rFmtPct(opexRatio) : "—", d: prev && prev.collectedIncomeCents > 0 ? kpiDeltaPp(opexRatio, prev.expensesTotalCents / prev.collectedIncomeCents, -1) : null },
-          { k: t("buildingsId.reporting.kpi.onTimeCollection"), v: rFmtPct(coll),                           d: prev ? kpiDeltaPp(coll, prev.collectionRate, 1) : null },
-          { k: t("buildingsId.reporting.kpi.occupancy"),        v: occ != null ? rFmtPct(occ) : "—",        d: prev && prev.totalUnitsCount > 0 ? kpiDeltaPp(occ, prev.activeUnitsCount / prev.totalUnitsCount, 1) : null },
-          { k: t("buildingsId.reporting.kpi.receivables"),      v: bf.receivablesCents > 0 ? rFmtChf(bf.receivablesCents) : "—", d: null, flag: bf.receivablesCents > 0 },
+          { k: t("buildingsId.reporting.kpi.netYield", { defaultValue: "Net yield" }),
+            v: yieldPct != null ? `${yieldPct.toFixed(2)}%` : "—",
+            tip: yieldPct != null && buildingValueChf ? t("buildingsId.reporting.kpi.netYieldTip", { defaultValue: "NOI ÷ building value ({{val}})", val: rFmtChf(buildingValueChf * 100) }) : t("buildingsId.reporting.kpi.netYieldNoVal", { defaultValue: "Add a valuation to compute yield" }),
+            flag: yieldPct != null && yieldPct < 3,
+            d: prevYieldFrac != null ? kpiDeltaPp(yieldPct / 100, prevYieldFrac, 1) : null },
+          { k: t("buildingsId.reporting.kpi.freeCashFlow", { defaultValue: "Free cash flow" }),
+            v: rFmtChf(fcfCents),
+            tip: t("buildingsId.reporting.kpi.fcfTip", { defaultValue: "NOI − capex − mortgage interest. Before debt principal." }),
+            d: prevFcfCents != null ? kpiDeltaChf(fcfCents, prevFcfCents, 1) : null },
+          { k: t("buildingsId.reporting.kpi.noi"),              v: rFmtChf(noi),                     d: prev ? kpiDeltaChf(noi, prev.netOperatingIncomeCents, 1) : null },
+          { k: t("buildingsId.reporting.kpi.occupancy"),        v: occ != null ? rFmtPct(occ) : "—", d: prevOcc != null ? kpiDeltaPp(occ, prevOcc, 1) : null },
+          { k: t("buildingsId.reporting.kpi.onTimeCollection"), v: rFmtPct(coll),                    d: prev ? kpiDeltaPp(coll, prev.collectionRate, 1) : null },
         ];
         const kpiStripEl = (
-          <div className="grid grid-cols-2 gap-px border-b border-surface-border bg-surface-border sm:grid-cols-4 lg:grid-cols-8">
+          <div className="grid grid-cols-2 gap-px border-b border-surface-border bg-surface-border sm:grid-cols-3 lg:grid-cols-5">
             {kpiStripItems.map((x, i) => (
               <div key={i} className="bg-surface p-3">
-                <div className="text-[10.5px] font-medium uppercase tracking-wide text-foreground-dim">{x.k}</div>
+                <div className="text-[10.5px] font-medium uppercase tracking-wide text-foreground-dim" title={x.tip || undefined}>
+                  {x.tip ? <span className="cursor-help underline decoration-dotted decoration-foreground-dim underline-offset-2">{x.k}</span> : x.k}
+                </div>
                 <div className={cn("mt-1 text-lg font-semibold tabular-nums tracking-tight", x.flag ? "text-warning-text" : "text-foreground")}>{x.v}</div>
                 {x.d
                   ? <div className={cn("mt-0.5 text-[11px] font-medium tabular-nums", x.d.cls)}>{x.d.txt}</div>
@@ -613,18 +633,24 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
           </div>
         );
 
-        // Grouped detail sections — the *incremental* picture beyond the headline
-        // KPI strip: income, costs and balances only. The strip already carries the
-        // performance line (NOI, margin, OpEx ratio, collection, occupancy) plus
-        // cash received and receivables, so those are not repeated here.
+        // Grouped detail — everything the 5-KPI headline strip doesn't show: the
+        // secondary performance ratios/figures, income, costs and balances.
         const kpiGroups = [
+          { label: t("buildingsId.reporting.kpiGroup.performance", { defaultValue: "Performance" }),
+            left: [
+              { label: t("buildingsId.reporting.kpi.noiMargin"), value: noiMargin != null ? rFmtPct(noiMargin) : "—", delta: prev && prev.collectedIncomeCents > 0 ? kpiDeltaPp(noiMargin, prev.netOperatingIncomeCents / prev.collectedIncomeCents, 1) : null },
+              { label: t("buildingsId.reporting.kpi.opexRatio"), value: opexRatio != null ? rFmtPct(opexRatio) : "—", delta: prev && prev.collectedIncomeCents > 0 ? kpiDeltaPp(opexRatio, prev.expensesTotalCents / prev.collectedIncomeCents, -1) : null },
+            ],
+            right: [
+              { label: t("buildingsId.reporting.kpi.cashReceived"), value: rFmtChf(earned), delta: prev ? kpiDeltaChf(earned, prev.collectedIncomeCents, 1) : null },
+              { label: t("buildingsId.reporting.revex.operating"),  value: rFmtChf(operatingCents), delta: prev ? kpiDeltaChf(operatingCents, prev.operatingTotalCents ?? prev.expensesTotalCents, -1) : null },
+            ] },
           { label: t("buildingsId.reporting.kpiGroup.income"),
             left: [
               { label: t("buildingsId.reporting.kpi.accruedIncome"), value: rFmtChf(bf.accruedIncomeCents), delta: null },
-              { label: t("buildingsId.reporting.kpi.netIncome"),     value: rFmtChf(bf.netIncomeCents), delta: null },
+              { label: t("buildingsId.reporting.kpi.rentalIncome"),  value: rFmtChf(bf.rentalIncomeCents), delta: null },
             ],
             right: [
-              { label: t("buildingsId.reporting.kpi.rentalIncome"),   value: rFmtChf(bf.rentalIncomeCents), delta: null },
               { label: t("buildingsId.reporting.kpi.serviceCharges"), value: rFmtChf(bf.serviceChargeIncomeCents), delta: null },
             ] },
           { label: t("buildingsId.reporting.kpiGroup.costs"),
@@ -634,11 +660,13 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
               { label: t("buildingsId.reporting.kpi.maintenanceRatio"), value: bf.maintenanceRatio != null ? rFmtPct(bf.maintenanceRatio) : "—", delta: null },
             ],
             right: [
+              ...(financingCents > 0 ? [{ label: t("buildingsId.reporting.kpi.mortgageInterest", { defaultValue: "Mortgage interest" }), value: rFmtChf(financingCents), delta: null }] : []),
               { label: t("buildingsId.reporting.kpi.capex"),       value: rFmtChf(bf.capexTotalCents), delta: null },
               { label: t("buildingsId.reporting.kpi.costPerUnit"), value: rFmtChf(bf.costPerUnitCents), delta: null },
             ] },
           { label: t("buildingsId.reporting.kpiGroup.balances"),
             left: [
+              { label: t("buildingsId.reporting.kpi.receivables"), value: bf.receivablesCents > 0 ? rFmtChf(bf.receivablesCents) : "—", delta: null },
               { label: t("buildingsId.reporting.kpi.payables"),    value: bf.payablesCents > 0 ? rFmtChf(bf.payablesCents) : "—", delta: null },
             ],
             right: [
@@ -665,7 +693,7 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
           <div className="border-b border-surface-border">
             <button onClick={() => setMetricsOpen((v) => !v)} aria-expanded={metricsOpen}
               className="flex w-full items-center justify-between gap-2 px-5 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-surface-hover">
-              <span>{t("buildingsId.reporting.fullDetail")}</span>
+              <span>{t("buildingsId.reporting.moreMetrics", { defaultValue: "More metrics" })}</span>
               <span className="text-foreground-dim">{metricsOpen ? "▾" : "▸"}</span>
             </button>
             {metricsOpen && <div className="px-5 pb-5">{normalKpis}</div>}
@@ -967,11 +995,17 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
               </div>
             </div>
 
-            {/* ── Occupancy movements (folded into the card, below the panel) ── */}
+            {/* ── Occupancy movements — one-line summary that expands ── */}
             {(moveIns.length > 0 || moveOuts.length > 0) && (
-              <div className="border-t border-surface-border p-5">
-                <h2 className="text-base font-semibold text-foreground mb-4">{t("buildingsId.reporting.tenantMovements")}</h2>
-                <div className="grid gap-4 sm:grid-cols-2">
+              <div className="border-t border-surface-border">
+                <button onClick={() => setMovesOpen((v) => !v)} aria-expanded={movesOpen}
+                  className="flex w-full items-center gap-2 px-5 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-surface-hover">
+                  <span>{t("buildingsId.reporting.tenantMovements")}</span>
+                  <span className="font-normal text-muted">· {t("buildingsId.reporting.movesSummary", { defaultValue: "{{in}} in · {{out}} out", in: moveIns.length, out: moveOuts.length })}</span>
+                  <span className="ml-auto text-foreground-dim">{movesOpen ? "▾" : "▸"}</span>
+                </button>
+                {movesOpen && (
+                <div className="grid gap-4 px-5 pb-5 sm:grid-cols-2">
                   <div>
                     <div className="flex items-center gap-2 mb-2">
                       <span className="flex h-5 w-5 items-center justify-center rounded-full bg-success-light text-xs font-semibold text-success-text">↓</span>
@@ -993,6 +1027,7 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
                     {moveOuts.length > 3 && <button onClick={() => setOutsExpanded((v) => !v)} className="mt-2 text-xs font-medium text-muted-dark hover:text-foreground">{outsExpanded ? t("buildingsId.reporting.showLess") : t("buildingsId.reporting.moreCount", { count: moveOuts.length - 3 })}</button>}
                   </div>
                 </div>
+                )}
               </div>
             )}
           </>
@@ -1370,10 +1405,16 @@ function BuildingReportingView({ buildingId, etatLocatifNet }) {
           view switch, visually distinct from the pill toggles inside; compare mode
           swaps the presets row for a "compare against" builder + half-year grain. ── */}
       <div className="rounded-xl border border-surface-border bg-surface shadow-sm">
-        <div className="flex gap-1 overflow-x-auto rounded-t-xl border-b border-surface-border px-3 pt-1">
-          {[["single", t("buildingsId.reporting.mode.single")], ["compare", t("buildingsId.reporting.mode.compare")]].map(([k, l]) => (
+        {/* Mode switch — a full-width segmented control flush to the card edges; its
+            bottom border doubles as the header/body separator. */}
+        <div className="flex border-b border-surface-border">
+          {[["single", t("buildingsId.reporting.mode.single")], ["compare", t("buildingsId.reporting.mode.compare")]].map(([k, l], i) => (
             <button key={k} onClick={() => switchMode(k)} aria-pressed={mode === k}
-              className={cn("-mb-px shrink-0 border-b-2 px-3 py-2 text-sm font-semibold transition-colors", mode === k ? "border-brand text-brand" : "border-transparent text-muted hover:text-foreground")}>{l}</button>
+              className={cn("flex-1 px-3 py-3 text-sm transition-colors",
+                i === 0 ? "rounded-tl-xl" : "rounded-tr-xl border-l border-surface-border",
+                mode === k
+                  ? "bg-brand-light font-bold text-brand-dark shadow-[inset_0_2px_0_0_var(--color-brand)]"
+                  : "bg-surface-subtle font-semibold text-muted hover:text-foreground")}>{l}</button>
           ))}
         </div>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-3 py-2.5">
