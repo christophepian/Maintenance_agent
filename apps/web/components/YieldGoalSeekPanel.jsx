@@ -273,9 +273,10 @@ export default function YieldGoalSeekPanel({ building, onSimulate, onAnnotations
             else if (tgt <= reno + 1e-9) body = t("planning.goalSeek.synthReno", { defaultValue: "{{scope}} you can reach ~{{within}}. Reaching {{tgt}} also needs {{reno}}.", scope: scope.charAt(0).toUpperCase() + scope.slice(1), within: pct(within, 2), tgt: pct(tgt, 2), reno: renoPhrase });
             else if (tgt <= self + 1e-9) body = t("planning.goalSeek.synthSelf", { defaultValue: "{{scope}} you can reach ~{{within}}. Reaching {{tgt}} needs {{reno}} and self-managing.", scope: scope.charAt(0).toUpperCase() + scope.slice(1), within: pct(within, 2), tgt: pct(tgt, 2), reno: renoPhrase });
             else body = t("planning.goalSeek.synthBeyond", { defaultValue: "{{tgt}} is beyond what any realistic combination reaches — even with {{reno}} and self-managing (ceiling ~{{self}}).", tgt: pct(tgt, 2), reno: renoPhrase, self: pct(self, 2) });
+            const beyond = tgt > self + 1e-9;
             return (
-              <div className="mt-3 rounded-lg border border-info-ring bg-info-light px-3.5 py-2.5 text-[13px] leading-relaxed text-foreground">
-                <span className="mr-1.5 text-[10px] font-bold uppercase tracking-wide text-info-text">{t("planning.goalSeek.reachable", { defaultValue: "Realistically reachable" })}</span>
+              <div className={cn("mt-3 rounded-lg border px-3.5 py-2.5 text-[13px] leading-relaxed", beyond ? "border-destructive-ring bg-destructive-light text-destructive-text" : "border-info-ring bg-info-light text-foreground")}>
+                <span className={cn("mr-1.5 text-[10px] font-bold uppercase tracking-wide", beyond ? "text-destructive-text" : "text-info-text")}>{t("planning.goalSeek.reachable", { defaultValue: "Realistically reachable" })}</span>
                 {body}
               </div>
             );

@@ -14,7 +14,7 @@ import { mapWithConcurrency } from "../utils/concurrency";
 import { computeUnitProfitability, type UnitProfitabilityInput, type UnitProfitabilityResult } from "./unitProfitability";
 import { getBuildingRenovationOpportunities } from "./assetInventory";
 import { lookupTaxRule, computeTaxProfile, type TaxModelInput } from "./financialModelService";
-import { getBuildingProfileByBuildingId } from "../repositories/strategyProfileRepository";
+import { getBuildingProfileByBuildingId, getOwnerStrategyProfilesForBuilding } from "../repositories/strategyProfileRepository";
 import {
   computeYieldGoalSeek,
   DEFAULT_CAPITALIZABLE_FRACTION,
@@ -2326,7 +2326,7 @@ export async function getYieldGoalSeek(
   if (!building) throw new Error(`Building ${buildingId} not found`);
 
   const yearsAgo = (n: number) => { const d = new Date(`${toStr}T00:00:00`); d.setFullYear(d.getFullYear() - n); return d.toISOString().slice(0, 10); };
-  const [profit, opportunities, fin1, fin2, fin3, valUnits, zipPrice, activeLeases, buildingProfile] = await Promise.all([
+  const [profit, opportunities, fin1, fin2, fin3, valUnits, zipPrice, activeLeases, buildingProfile, ownerProfiles] = await Promise.all([
     getUnitProfitability(orgId, buildingId, fromStr, toStr),
     getBuildingRenovationOpportunities(prisma, orgId, buildingId),
     // 3 trailing 12-month windows → the "best of the last 3 years" opex floor.
@@ -2337,6 +2337,7 @@ export async function getYieldGoalSeek(
     building.postalCode ? inventoryRepo.findMarketPriceByZip(prisma, orgId, building.postalCode) : Promise.resolve(null),
     leaseRepo.findActiveLeasesByBuilding(prisma, buildingId).catch(() => []),
     getBuildingProfileByBuildingId(prisma, buildingId, orgId).catch(() => null),
+    getOwnerStrategyProfilesForBuilding(prisma, buildingId, orgId).catch(() => []),
   ]);
 
   // Yield-basis value — the same basis the Profitability tab shows.
@@ -2354,32 +2355,37 @@ export async function getYieldGoalSeek(
     ? rows.reduce((s, r) => s + (r.occupancyRate ?? 0), 0) / rows.length
     : 1;
 
-  // ── Opex floor: the best (lowest) operating cost of the last 3 trailing years. ──
-  const opexYearsChf = [fin1, fin2, fin3]
-    .map((f) => (f?.operatingTotalCents ?? 0) / 100)
-    .filter((v) => v > 0);
+  // ── Opex floor: the best (lowest) operating cost of the last 3 trailing years.
+  // Falls back to total expenses when operating opex isn't separately categorised
+  // (e.g. régie-imported P&Ls that bundle everything). ──
+  const opexOf = (f: { operatingTotalCents?: number; expensesTotalCents?: number } | null) =>
+    ((f?.operatingTotalCents || f?.expensesTotalCents || 0)) / 100;
+  const opexYearsChf = [fin1, fin2, fin3].map(opexOf).filter((v) => v > 0);
   const controllableOpexChf = opexYearsChf.length ? opexYearsChf[0] : null;       // most recent year
   const controllableOpexBest3yrChf = opexYearsChf.length ? Math.min(...opexYearsChf) : null;
 
-  // ── Market rent: sale-value × canton gross-yield, discounted for vétusté. The
-  // as-is gap (market − current) is realizable on turnover; the vétusté-recovery gap
-  // (full − as-is) is what a renovation unlocks via OBLF (caps the reno uplift). ──
+  // ── Market rent: value/m² × canton gross-yield, discounted for vétusté. Value/m²
+  // uses the seeded zip sale-price when present, else the unit's own intrinsic price
+  // (already on file from the valuation worksheet) — so this works without the crawl.
+  // The as-is gap (market − current) is realizable on turnover; the vétusté-recovery
+  // gap (full − as-is) is what a renovation unlocks via OBLF (caps the reno uplift). ──
   const canton = building.canton ?? null;
+  const gy = cantonGrossYield(canton);
   const rentByUnit = new Map(rows.map((r) => [r.unitId, (r.monthlyRentChf ?? 0) * 12]));
   const vetusteRecoveryByUnit = new Map<string, number>();
   let rentMarketGapAnnualChf: number | null = null;
-  if (zipPrice?.pricePerSqmChf) {
-    const gy = cantonGrossYield(canton);
-    let gapSum = 0;
-    for (const u of valUnits) {
-      if (u.livingAreaSqm == null) continue;
-      const fullMarketRent = u.livingAreaSqm * zipPrice.pricePerSqmChf * gy;
-      const asIs = fullMarketRent * (1 - VETUSTE_RENT_COEFF * ((u.vetustePct ?? 0) / 100));
-      gapSum += Math.max(0, asIs - (rentByUnit.get(u.id) ?? 0));
-      vetusteRecoveryByUnit.set(u.id, Math.max(0, fullMarketRent - asIs));
-    }
-    rentMarketGapAnnualChf = Math.round(gapSum);
+  let anyPricedUnit = false;
+  let gapSum = 0;
+  for (const u of valUnits) {
+    const pricePerSqm = zipPrice?.pricePerSqmChf ?? u.intrinsicPricePerSqmChf ?? null;
+    if (u.livingAreaSqm == null || pricePerSqm == null) continue;
+    anyPricedUnit = true;
+    const fullMarketRent = u.livingAreaSqm * pricePerSqm * gy;
+    const asIs = fullMarketRent * (1 - VETUSTE_RENT_COEFF * ((u.vetustePct ?? 0) / 100));
+    gapSum += Math.max(0, asIs - (rentByUnit.get(u.id) ?? 0));
+    vetusteRecoveryByUnit.set(u.id, Math.max(0, fullMarketRent - asIs));
   }
+  if (anyPricedUnit) rentMarketGapAnnualChf = Math.round(gapSum);
 
   // ── Turnover timing: average remaining months across active leases. ──
   const remMonths = (activeLeases as Array<{ endDate?: Date | null }>)
@@ -2387,17 +2393,22 @@ export async function getYieldGoalSeek(
     .filter((v): v is number => v != null);
   const avgLeaseRemainingMonths = remMonths.length ? Math.round(remMonths.reduce((s, v) => s + v, 0) / remMonths.length) : null;
 
-  // ── Strategy alignment: building profile → which levers run against the owner. ──
+  // ── Strategy alignment: explicit building profile → else the owners' portfolio
+  // profiles (first one; multi-owner reconciliation deferred) → else none. ──
   let strategy: StrategyContext | null = null;
-  if (buildingProfile?.effectiveDimensionsJson) {
+  const parseStrategy = (dimsJson: string | null | undefined, source: StrategyContext["source"], label: string | null): StrategyContext | null => {
+    if (!dimsJson) return null;
     try {
-      const dims = JSON.parse(buildingProfile.effectiveDimensionsJson) as Record<string, number>;
-      strategy = {
-        source: "building",
-        label: (buildingProfile as { userFacingGoalLabel?: string }).userFacingGoalLabel ?? buildingProfile.primaryArchetype ?? null,
-        flags: strategyFlagsFromDims(dims),
-      };
-    } catch { /* no dims → no strategy axis */ }
+      return { source, label, flags: strategyFlagsFromDims(JSON.parse(dimsJson) as Record<string, number>) };
+    } catch { return null; }
+  };
+  if (buildingProfile?.effectiveDimensionsJson) {
+    strategy = parseStrategy(buildingProfile.effectiveDimensionsJson, "building",
+      (buildingProfile as { userFacingGoalLabel?: string }).userFacingGoalLabel ?? buildingProfile.primaryArchetype ?? null);
+  }
+  if (!strategy && ownerProfiles.length > 0) {
+    const o = ownerProfiles[0] as { dimensionsJson?: string; userFacingGoalLabel?: string; primaryArchetype?: string };
+    strategy = parseStrategy(o.dimensionsJson, "owner-portfolio", o.userFacingGoalLabel ?? o.primaryArchetype ?? null);
   }
 
   // Per-opportunity capitalizable fraction from the tax split, memoised by rule key
