@@ -55,6 +55,7 @@ import { authHeaders } from "../../../lib/api";
 import ScrollableTabs from "../../../components/mobile/ScrollableTabs";
 import PackageOnboardingPanel from "../../../components/PackageOnboardingPanel";
 import UnitProfitabilityPanel from "../../../components/reporting/UnitProfitabilityPanel";
+import YieldGoalSeekPanel from "../../../components/YieldGoalSeekPanel";
 import SortableHeader from "../../../components/SortableHeader";
 import { useLocalSort, clientSort } from "../../../lib/tableUtils";
 import { formatDate, formatChfCents, formatPercent, formatChf, formatNumber } from "../../../lib/format";
@@ -379,6 +380,7 @@ function ComparisonNarrative({ lines, t }) {
 // histogram and let a bar click/brush re-drive the period.
 function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLabel }) {
   const { t } = useTranslation("manager");
+  const router = useRouter();
   const [unitsExpanded, setUnitsExpanded] = useState(false);
   const [insExpanded, setInsExpanded]     = useState(false);
   const [outsExpanded, setOutsExpanded]   = useState(false);
@@ -949,15 +951,18 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
               <div className={cn("border-t border-surface-border", loading && "opacity-60 transition-opacity")}>{breakdownPanel}</div>
             </div>
 
-            {/* ── Plan improvements — value creation now lives in Planning ── */}
+            {/* ── How it can perform better — the prospective companion to the figures
+                   above. Ranked for the owner's mandate; hands off to Planning. ── */}
             <div className="border-t border-surface-border p-4">
-              <a href="/manager/finance?tab=planning" className="flex flex-wrap items-center gap-3 rounded-xl border border-brand/25 bg-brand-light px-4 py-3 no-underline">
-                <div className="min-w-[240px] flex-1">
-                  <p className="text-sm font-semibold text-foreground">{t("buildingsId.reporting.valueCreation.bridgeTitle")}</p>
-                  <p className="text-xs text-foreground-dim">{t("buildingsId.reporting.valueCreation.bridgeSub")}</p>
-                </div>
-                <span className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white">{t("buildingsId.reporting.planImprovements")} →</span>
-              </a>
+              <p className="mb-2.5 text-[13px] italic text-muted">{t("buildingsId.reporting.valueCreation.retro", { defaultValue: "These figures tell you how the asset performed." })}</p>
+              <YieldGoalSeekPanel
+                building={{ id: buildingId }}
+                onPlanImprovements={(opts) => {
+                  const p = new URLSearchParams({ tab: "planning", buildingId });
+                  if (opts?.simulate) p.set("simulate", "accretive");
+                  router.push(`/manager/finance?${p.toString()}`);
+                }}
+              />
             </div>
 
             {/* ── Occupancy movements (folded into the card, below the panel) ── */}
