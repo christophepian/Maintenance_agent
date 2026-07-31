@@ -3629,7 +3629,17 @@
       "basedOn": "sur la base de {{y}}",
       "fromCurrent": "depuis {{cur}} aujourd'hui",
       "occBeyondFull": "Remplir tous les lots n'ajoute que ~{{r}}/an — insuffisant à lui seul",
-      "simulateBeyond": "Cet objectif est hors de portée même avec ces travaux"
+      "simulateBeyond": "Cet objectif est hors de portée même avec ces travaux",
+      "combineHint": "Vous combineriez ces leviers pour le combler :",
+      "rentToMarket": "au marché, au changement de locataire",
+      "rentToMarketTurnover": "au marché · au changement (~{{mo}} mois)",
+      "rentNoBenchmark": "aucune référence de marché pour cet immeuble",
+      "opexToLeanest": "à votre meilleure année · sur {{c}}",
+      "occToFull": "remplissage à 100%",
+      "feeToZero": "si réduits à 0%",
+      "leversTogether": "Ensemble, ils ajoutent ~{{a}}/an",
+      "enoughToReach": "— suffisant pour combler l'écart de {{g}}/an.",
+      "shortBy": "— il manque {{s}}/an ; la rénovation ou la gérance en direct comble le reste."
     },
     "building": "Immeuble",
     "clear": "Effacer",
