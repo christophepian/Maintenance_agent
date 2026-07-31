@@ -837,7 +837,8 @@
       "valueCreationTab": "Création de valeur",
       "valueCreation": {
         "bridgeTitle": "Ces chiffres montrent la performance passée de l'actif.",
-        "bridgeSub": "Découvrez comment l'améliorer la période prochaine — selon le mandat du propriétaire."
+        "bridgeSub": "Découvrez comment l'améliorer la période prochaine — selon le mandat du propriétaire.",
+        "retro": "Ces chiffres indiquent comment l'actif a performé."
       },
       "compare": {
         "button": "Comparer à",
@@ -3644,7 +3645,7 @@
       "matrixLede": "Chaque levier est plafonné à ce qui est réaliste. Lisez une colonne pour la combinaison qui atteint ce rendement ; la dernière colonne est le maximum que tous les leviers réunis permettent d'atteindre. Cliquez un levier pour voir comment, survolez les charges pour le détail, et décochez un levier ou relevez le plancher d'honoraires pour voir le plafond bouger.",
       "maxReachable": "max atteignable",
       "target": "cible",
-      "gapRow": "Écart nécessaire (RNE / an)",
+      "gapRow": "RNE supplémentaire / an",
       "noLevers": "Aucun levier ne peut encore être évalué pour cet immeuble — ajoutez une référence de loyer (prix du marché / m²) et une période avec des charges d'exploitation.",
       "noData": "pas de donnée",
       "offStrategyTip": "À l'encontre de votre stratégie déclarée",
@@ -3668,8 +3669,25 @@
       "opexOverlayTotal": "Total exploitation",
       "openInReporting": "Ouvrir dans le reporting →",
       "legendMaxed": "levier au maximum",
-      "legendOffStrategy": "à l'encontre de votre stratégie",
-      "legendCeiling": "votre plafond — rien au-delà n'est atteignable"
+      "legendOffStrategy": "à l'encontre du mandat — utilisé seulement au-delà de votre plafond",
+      "legendCeiling": "votre plafond",
+      "ctaTitle": "Voyez comment il peut mieux performer sur les prochaines périodes",
+      "ctaMandate": "Classé pour {{who}}{{label}}.",
+      "ctaNoMandate": "Les leviers à actionner, plafonnés à ce qui est réaliste.",
+      "ctaExplore": "Explorer",
+      "ownerMandate": "le mandat de {{name}}",
+      "buildingMandate": "la stratégie de votre immeuble",
+      "genericMandate": "le mandat du propriétaire",
+      "verdictWithin": "Dans {{who}}, vous pouvez atteindre ~{{within}} sans les leviers qu'il écarte. Aller plus loin — jusqu'à {{max}} — implique de les activer.",
+      "verdictWithinFull": "Dans {{who}}, vous pouvez atteindre ~{{max}} — tous les leviers ici y sont conformes.",
+      "verdictNoMandate": "En combinant ces leviers, vous pouvez atteindre jusqu'à ~{{max}} (contre {{cur}} aujourd'hui).",
+      "caveatFirstOwner": "Classé pour {{name}}, le propriétaire principal au dossier. Les copropriétaires peuvent pondérer différemment — nous utilisons le mandat principal tant que celui de chaque propriétaire n'est pas réconcilié.",
+      "colWithin": "dans le mandat",
+      "colBeyond": "au-delà du mandat",
+      "dividerAgainst": "À l'encontre du mandat — {{who}} souhaite les éviter",
+      "theOwner": "le propriétaire",
+      "planCta": "Planifier les améliorations",
+      "footNote": "Reprenez-les dans l'espace Planification pour simuler les travaux, les planifier et lancer un appel d'offres."
     },
     "building": "Immeuble",
     "clear": "Effacer",

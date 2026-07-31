@@ -19,7 +19,7 @@ import { useTranslation } from "next-i18next";
 import RenovationAccordion from "./RenovationAccordion";
 import RenovationSimulatorDrawer from "./RenovationSimulatorDrawer";
 import FinancingPanel from "./FinancingPanel";
-import YieldGoalSeekPanel from "./YieldGoalSeekPanel";
+import { authHeaders } from "../lib/api";
 
 export default function PlanningWorkspace({ buildings: allBuildings = [] }) {
   const router = useRouter();
@@ -28,12 +28,13 @@ export default function PlanningWorkspace({ buildings: allBuildings = [] }) {
   const [selectedBuildingIds, setSelectedBuildingIds] = useState([]);
   const [simItems, setSimItems]           = useState(null);
   const [simBuildingId, setSimBuildingId] = useState(null);
-  // Accretive/dilutive annotations emitted by the goal-seek → badge the accordion rows.
+  // Accretive/dilutive annotations (derived from the goal-seek) → badge the accordion rows.
   const [annotations, setAnnotations]     = useState(null);
   const simRef = useRef(null);
+  const firedKeyRef = useRef(null); // one-shot guard for the ?simulate=accretive deep-link
 
-  // Auto-select: a ?buildingId deep-link (e.g. from the Reporting → Profitability
-  // "model how to move this yield" link) wins; otherwise the only building.
+  // Auto-select: a ?buildingId deep-link (from Reporting → "Plan improvements →")
+  // wins; otherwise the only building.
   useEffect(() => {
     if (!allBuildings.length) return;
     const wanted = router.query?.buildingId;
@@ -64,6 +65,42 @@ export default function PlanningWorkspace({ buildings: allBuildings = [] }) {
     if (planId) router.push(`/manager/cashflow/${planId}`);
   }, [router]);
 
+  // The goal-seek now lives under Reporting; Planning derives the accretive/dilutive
+  // badges itself (from the same endpoint) and honours the ?simulate=accretive
+  // deep-link "Plan improvements →" sends, auto-opening the simulator on the works.
+  useEffect(() => {
+    const id = selectedBuildingIds.length === 1 ? selectedBuildingIds[0] : null;
+    if (!id) { setAnnotations(null); return; }
+    const to = new Date(); const from = new Date(to);
+    from.setFullYear(from.getFullYear() - 1); from.setDate(from.getDate() + 1);
+    const iso = (d) => d.toISOString().slice(0, 10);
+    let cancelled = false;
+    Promise.all([
+      fetch(`/api/buildings/${id}/yield-goalseek?from=${iso(from)}&to=${iso(to)}&target=3&mgmtFeePct=5`, { headers: authHeaders() }).then((r) => r.json()).catch(() => null),
+      fetch(`/api/buildings/${id}/renovation-opportunities`, { headers: authHeaders() }).then((r) => r.json()).catch(() => null),
+    ]).then(([gs, op]) => {
+      if (cancelled) return;
+      const lines = gs?.data?.levers?.renovation?.lines ?? [];
+      const opps = Array.isArray(op?.data) ? op.data : [];
+      if (lines.length) {
+        const map = {};
+        for (const l of lines) {
+          const label = l.accretive ? t("planning.goalSeek.accretive", { defaultValue: "Accretive" }) : t("planning.goalSeek.dilutive", { defaultValue: "NPV+ / dilutive" });
+          map[l.assetId] = { accretive: l.accretive, label: `${label} · ${l.marginalYieldPct.toFixed(1)}%` };
+        }
+        setAnnotations(map);
+      } else setAnnotations(null);
+      // One-shot simulate handoff (keyed on building so a later navigation re-fires).
+      const key = `${id}|${router.query?.simulate}`;
+      if (router.query?.simulate === "accretive" && firedKeyRef.current !== key && lines.length && opps.length) {
+        const ids = new Set(lines.filter((l) => l.accretive).map((l) => l.assetId));
+        const items = opps.filter((o) => ids.has(o.assetId));
+        if (items.length) { firedKeyRef.current = key; onSimulate(items, id); }
+      }
+    });
+    return () => { cancelled = true; };
+  }, [selectedBuildingIds, router.query?.simulate, t, onSimulate]);
+
   // Bring the simulation card into view when it opens.
   useEffect(() => {
     if (simItems && simRef.current) {
@@ -89,13 +126,8 @@ export default function PlanningWorkspace({ buildings: allBuildings = [] }) {
         </div>
       )}
 
-      {/* Yield goal-seek — collapsed by default; emits accretive/dilutive annotations
-          that badge the single opportunity list below (no duplicate asset list). */}
-      {selectedBuildings.length === 1 && (
-        <YieldGoalSeekPanel building={selectedBuildings[0]} onSimulate={onSimulate} onAnnotationsChange={setAnnotations} />
-      )}
-
-      {/* The one opportunity list. */}
+      {/* The one opportunity list — accretive/dilutive badges come from the goal-seek
+          endpoint (derived above); the tool itself now lives under Reporting. */}
       <div>
         <div className="mb-2 flex items-baseline justify-between gap-3">
           <h3 className="m-0 text-sm font-semibold text-foreground">{t("planning.opportunitiesTitle", { defaultValue: "Renovation opportunities" })}</h3>

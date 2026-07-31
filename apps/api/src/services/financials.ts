@@ -14,7 +14,7 @@ import { mapWithConcurrency } from "../utils/concurrency";
 import { computeUnitProfitability, type UnitProfitabilityInput, type UnitProfitabilityResult } from "./unitProfitability";
 import { getBuildingRenovationOpportunities } from "./assetInventory";
 import { lookupTaxRule, computeTaxProfile, type TaxModelInput } from "./financialModelService";
-import { getBuildingProfileByBuildingId, getOwnerStrategyProfilesForBuilding } from "../repositories/strategyProfileRepository";
+import { getBuildingProfileByBuildingId, getOwnerProfilesWithNamesForBuilding } from "../repositories/strategyProfileRepository";
 import {
   computeYieldGoalSeek,
   DEFAULT_CAPITALIZABLE_FRACTION,
@@ -2381,6 +2381,9 @@ export async function getYieldGoalSeek(
   feeSource: "statements" | "assumed";
   /** Top operating-cost accounts behind the opex lever (for the reporting overlay). */
   opexDrivers: OpexDriverDTO[];
+  /** Display name of the primary owner whose mandate ranks the levers (null unless
+   *  the strategy came from an owner-portfolio profile). */
+  strategyOwnerName: string | null;
   periodFrom: string;
   periodTo: string;
 }> {
@@ -2403,7 +2406,7 @@ export async function getYieldGoalSeek(
   } catch { /* fall back to the requested window */ }
 
   const yearsAgo = (n: number) => { const d = new Date(`${effTo}T00:00:00`); d.setFullYear(d.getFullYear() - n); return d.toISOString().slice(0, 10); };
-  const [profit, opportunities, fin1, fin2, fin3, valUnits, zipPrice, activeLeases, buildingProfile, ownerProfiles] = await Promise.all([
+  const [profit, opportunities, fin1, fin2, fin3, valUnits, zipPrice, activeLeases, buildingProfile, ownerProfilesWithNames] = await Promise.all([
     getUnitProfitability(orgId, buildingId, effFrom, effTo),
     getBuildingRenovationOpportunities(prisma, orgId, buildingId),
     // 3 trailing 12-month windows → the "best of the last 3 years" opex floor.
@@ -2415,7 +2418,7 @@ export async function getYieldGoalSeek(
     building.postalCode ? inventoryRepo.findMarketPriceByZip(prisma, orgId, building.postalCode) : Promise.resolve(null),
     leaseRepo.findActiveLeasesByBuilding(prisma, buildingId).catch(() => []),
     getBuildingProfileByBuildingId(prisma, buildingId, orgId).catch(() => null),
-    getOwnerStrategyProfilesForBuilding(prisma, buildingId, orgId).catch(() => []),
+    getOwnerProfilesWithNamesForBuilding(prisma, buildingId, orgId).catch(() => []),
   ]);
 
   // Yield-basis value — the same basis the Profitability tab shows.
@@ -2495,6 +2498,7 @@ export async function getYieldGoalSeek(
   // ── Strategy alignment: explicit building profile → else the owners' portfolio
   // profiles (first one; multi-owner reconciliation deferred) → else none. ──
   let strategy: StrategyContext | null = null;
+  let strategyOwnerName: string | null = null;
   const parseStrategy = (dimsJson: string | null | undefined, source: StrategyContext["source"], label: string | null): StrategyContext | null => {
     if (!dimsJson) return null;
     try {
@@ -2505,9 +2509,12 @@ export async function getYieldGoalSeek(
     strategy = parseStrategy(buildingProfile.effectiveDimensionsJson, "building",
       (buildingProfile as { userFacingGoalLabel?: string }).userFacingGoalLabel ?? buildingProfile.primaryArchetype ?? null);
   }
-  if (!strategy && ownerProfiles.length > 0) {
-    const o = ownerProfiles[0] as { dimensionsJson?: string; userFacingGoalLabel?: string; primaryArchetype?: string };
+  if (!strategy && ownerProfilesWithNames.length > 0) {
+    // First owner profile (multi-owner reconciliation deferred — the panel shows a caveat).
+    const { ownerName, profile } = ownerProfilesWithNames[0];
+    const o = profile as { dimensionsJson?: string; userFacingGoalLabel?: string; primaryArchetype?: string };
     strategy = parseStrategy(o.dimensionsJson, "owner-portfolio", o.userFacingGoalLabel ?? o.primaryArchetype ?? null);
+    if (strategy) strategyOwnerName = ownerName;
   }
 
   // Per-opportunity capitalizable fraction from the tax split, memoised by rule key
@@ -2561,7 +2568,7 @@ export async function getYieldGoalSeek(
     controllableOpexBest3yrChf,
     strategy,
   });
-  return { ...result, currentFeePct, feeSource, opexDrivers, periodFrom: effFrom, periodTo: effTo };
+  return { ...result, currentFeePct, feeSource, opexDrivers, strategyOwnerName, periodFrom: effFrom, periodTo: effTo };
 }
 
 // ==========================================

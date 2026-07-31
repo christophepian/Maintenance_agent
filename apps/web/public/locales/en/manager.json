@@ -837,7 +837,8 @@
       "valueCreationTab": "Value creation",
       "valueCreation": {
         "bridgeTitle": "These figures tell you how the asset performed.",
-        "bridgeSub": "See how it can perform better next period — ranked for this owner's mandate."
+        "bridgeSub": "See how it can perform better next period — ranked for this owner's mandate.",
+        "retro": "These figures tell you how the asset performed."
       },
       "compare": {
         "button": "Compare to",
@@ -3645,7 +3646,7 @@
       "matrixLede": "Each lever is capped at what's realistic. Read down a column for the mix that reaches that target; the last column is as far as every lever combined can take you. Click a lever to see how, hover operating costs for the breakdown, and untick a lever or raise the fee floor to watch the ceiling move.",
       "maxReachable": "max reachable",
       "target": "target",
-      "gapRow": "Gap needed (NOI / yr)",
+      "gapRow": "Extra NOI needed / yr",
       "noLevers": "No levers can be assessed for this building yet — add a rent benchmark (market price / m²) and a period with operating costs on file.",
       "noData": "no data",
       "offStrategyTip": "Against your stated strategy",
@@ -3669,8 +3670,25 @@
       "opexOverlayTotal": "Operating total",
       "openInReporting": "Open in Reporting →",
       "legendMaxed": "lever maxed out",
-      "legendOffStrategy": "against your strategy",
-      "legendCeiling": "your ceiling — nothing beyond it is reachable"
+      "legendOffStrategy": "against the mandate — used only past your ceiling",
+      "legendCeiling": "your ceiling",
+      "ctaTitle": "See how it can perform better over the coming periods",
+      "ctaMandate": "Ranked for {{who}}{{label}}.",
+      "ctaNoMandate": "The levers you'd pull, capped at what's realistic.",
+      "ctaExplore": "Explore",
+      "ownerMandate": "{{name}}'s mandate",
+      "buildingMandate": "your building's strategy",
+      "genericMandate": "the owner's mandate",
+      "verdictWithin": "Within {{who}} you can reach ~{{within}} without the levers it sets aside. Reaching higher — up to {{max}} — means taking those on.",
+      "verdictWithinFull": "Within {{who}} you can reach ~{{max}} — every lever here fits it.",
+      "verdictNoMandate": "Combining these levers you can reach up to ~{{max}} (from {{cur}} today).",
+      "caveatFirstOwner": "Ranked for {{name}}, the primary owner on file. Co-owners may weigh these differently — we use the primary mandate until every owner's is reconciled.",
+      "colWithin": "within mandate",
+      "colBeyond": "beyond mandate",
+      "dividerAgainst": "Against the mandate — {{who}} asked to avoid these",
+      "theOwner": "the owner",
+      "planCta": "Plan improvements",
+      "footNote": "Take these into the Planning workspace to simulate the works, schedule them and open an RFP."
     },
     "building": "Building",
     "clear": "Clear",

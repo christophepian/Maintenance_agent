@@ -157,18 +157,28 @@ export async function getBuildingProfileByBuildingId(
  * Owner-level strategy profiles for every owner of a building, org-scoped via the
  * owning User. Used as the fallback when a building has no BuildingStrategyProfile.
  */
-export async function getOwnerStrategyProfilesForBuilding(
+/** Owner strategy profiles for a building, paired with the owner's display name
+ *  (buildingOwner order — the first is the "primary" owner used for framing). */
+export async function getOwnerProfilesWithNamesForBuilding(
   prisma: PrismaClient,
   buildingId: string,
   orgId: string,
-): Promise<OwnerStrategyProfile[]> {
+): Promise<Array<{ ownerName: string; profile: OwnerStrategyProfile }>> {
   const owners = await prisma.buildingOwner.findMany({
     where: { buildingId, user: { orgId } },
     include: { user: { include: { strategyProfile: true } } },
   });
   return owners
-    .map((o) => o.user?.strategyProfile)
-    .filter((p): p is OwnerStrategyProfile => !!p);
+    .filter((o) => !!o.user?.strategyProfile)
+    .map((o) => ({ ownerName: o.user!.name, profile: o.user!.strategyProfile! }));
+}
+
+export async function getOwnerStrategyProfilesForBuilding(
+  prisma: PrismaClient,
+  buildingId: string,
+  orgId: string,
+): Promise<OwnerStrategyProfile[]> {
+  return (await getOwnerProfilesWithNamesForBuilding(prisma, buildingId, orgId)).map((x) => x.profile);
 }
 
 export async function createBuildingProfile(

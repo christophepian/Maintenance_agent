@@ -1,19 +1,21 @@
 /**
- * YieldGoalSeekPanel — the Planning what-if, as a target × lever matrix.
+ * YieldGoalSeekPanel — the prospective half of the building's performance story,
+ * embedded under Reporting → Profitability.
  *
- * Collapsed by default (a one-line strip) so the page opens calm. Expand it and
- * you get a matrix: reachable target yields across the top (ending in a "max
- * reachable" ceiling column — no perpetually-unreachable column), the realistic
- * levers down the side, each capped at what's actually possible and filled
- * least-disruptive-first. Rows are compact (progressive disclosure): click one to
- * see HOW it gets there. The management fee is a variable (defaulted to the fee
- * detected on the statements). Hovering "operating costs" pulls the reporting
- * expense breakdown; the renovation lever hands its accretive works to the SAME
- * onSimulate the accordion uses. It also emits accretive/dilutive annotations so
- * the single opportunity list below badges each row.
+ * Retrospective figures live above it; this is the "so what": a calm CTA strip
+ * ("See how it can perform better over the coming periods — ranked for the
+ * owner's mandate") that expands in place to a target × lever matrix. Reachable
+ * target yields across the top ending in a "max reachable" ceiling; the levers
+ * down the side, each capped, filled least-disruptive-first — but ON-STRATEGY
+ * levers fill FIRST, off-strategy ones sink below an "against the mandate"
+ * divider, so a target reachable within the mandate never lights an off-strategy
+ * row. Rows expand (progressive disclosure) for the "how". The management fee is
+ * a variable defaulted to the fee detected on the statements; hovering operating
+ * costs pulls the reporting expense breakdown. "Plan improvements →" (and the
+ * renovation lever's "Simulate") hand off to the Planning workspace via
+ * onPlanImprovements — the panel itself is navigation-agnostic.
  *
- * The heavy figures (value, NOI, per-lever ceilings, fee, opex drivers) are
- * fetched once; all allocation/column maths run client-side so it stays instant.
+ * The heavy figures are fetched once; all allocation/column maths run client-side.
  */
 import { useState, useEffect, useMemo, useCallback, Fragment } from "react";
 import { useTranslation } from "next-i18next";
@@ -22,9 +24,7 @@ import { formatChf as fchf } from "../lib/format";
 import { authHeaders } from "../lib/api";
 
 const pct = (x, d = 1) => (x == null ? "—" : `${(x * 100).toFixed(d)}%`);
-// CHF amounts are always whole francs (no cents) in this panel.
 const chf = (v) => (v == null || !Number.isFinite(v) ? "—" : fchf(Math.round(v)));
-// Compact francs for tight matrix cells (drop the "CHF " prefix).
 const num = (v) => (v == null || !Number.isFinite(v) ? "—" : fchf(Math.round(v)).replace(/^CHF\s*/, ""));
 const round2 = (n) => Math.round(n * 100) / 100;
 
@@ -37,24 +37,20 @@ function trailingYearIso() {
   return { from: iso(from), to: iso(to) };
 }
 
-export default function YieldGoalSeekPanel({ building, onSimulate, onAnnotationsChange }) {
+export default function YieldGoalSeekPanel({ building, onPlanImprovements }) {
   const { t } = useTranslation("manager");
   const buildingId = building?.id ?? null;
 
   const [expanded, setExpanded] = useState(false);
   const [data, setData]         = useState(null);
-  const [opps, setOpps]         = useState([]);
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState("");
 
-  // Which levers are enabled (the user can untick one to test a constraint) and
-  // which rows are expanded. Fee is driven by feeToPct (its "cut to" slider).
   const [enabled, setEnabled]   = useState({ opex: true, occ: true, rent: true, reno: true });
   const [openRows, setOpenRows] = useState(() => new Set());
-  const [feeTodayPct, setFeeTodayPct] = useState(null);   // defaults to the detected fee
-  const [feeToPct, setFeeToPct]       = useState(1);      // cut the fee down to this %
+  const [feeTodayPct, setFeeTodayPct] = useState(null);
+  const [feeToPct, setFeeToPct]       = useState(1);
 
-  // Reset the tool when the building changes.
   useEffect(() => {
     setExpanded(false);
     setEnabled({ opex: true, occ: true, rent: true, reno: true });
@@ -63,54 +59,31 @@ export default function YieldGoalSeekPanel({ building, onSimulate, onAnnotations
     setFeeToPct(1);
   }, [buildingId]);
 
-  // One fetch per building. target=3 is arbitrary — the base figures, per-lever
-  // ceilings, the detected fee and the accretive flags are all target-independent.
+  // One fetch per building (target-independent figures + per-lever ceilings + fee).
   useEffect(() => {
-    if (!buildingId) { setData(null); setOpps([]); return; }
+    if (!buildingId) { setData(null); return; }
     const { from, to } = trailingYearIso();
     let cancelled = false;
     setLoading(true); setError("");
-    Promise.all([
-      fetch(`/api/buildings/${buildingId}/yield-goalseek?from=${from}&to=${to}&target=3&mgmtFeePct=5`, { headers: authHeaders() }).then((r) => r.json()),
-      fetch(`/api/buildings/${buildingId}/renovation-opportunities`, { headers: authHeaders() }).then((r) => r.json()).catch(() => null),
-    ])
-      .then(([gs, op]) => {
+    fetch(`/api/buildings/${buildingId}/yield-goalseek?from=${from}&to=${to}&target=3&mgmtFeePct=5`, { headers: authHeaders() })
+      .then((r) => r.json())
+      .then((gs) => {
         if (cancelled) return;
         if (!gs?.data) { setError(t("planning.goalSeek.error", { defaultValue: "Couldn't compute the yield model for this building." })); setData(null); return; }
         setData(gs.data);
         setFeeTodayPct(gs.data.currentFeePct ?? 5);
-        setOpps(Array.isArray(op?.data) ? op.data : []);
       })
       .catch(() => { if (!cancelled) setError(t("planning.goalSeek.error", { defaultValue: "Couldn't compute the yield model for this building." })); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [buildingId, t]);
 
-  // Emit accretive/dilutive annotations for the accordion while the tool is open.
-  useEffect(() => {
-    if (!onAnnotationsChange) return;
-    const lines = data?.levers?.renovation?.lines ?? [];
-    if (!expanded || !lines.length) { onAnnotationsChange(null); return; }
-    const map = {};
-    for (const l of lines) {
-      const label = l.accretive
-        ? t("planning.goalSeek.accretive", { defaultValue: "Accretive" })
-        : t("planning.goalSeek.dilutive", { defaultValue: "NPV+ / dilutive" });
-      map[l.assetId] = { accretive: l.accretive, label: `${label} · ${l.marginalYieldPct.toFixed(1)}%` };
-    }
-    onAnnotationsChange(map);
-  }, [expanded, data, onAnnotationsChange, t]);
-
-  // Clear annotations on unmount (e.g. deselecting the building).
-  useEffect(() => () => { onAnnotationsChange?.(null); }, [onAnnotationsChange]);
-
   const feeMaxChf = useMemo(() => {
     if (!data || feeTodayPct == null) return 0;
     return Math.max(0, ((feeTodayPct - feeToPct) / 100) * data.rentRollChf);
   }, [data, feeTodayPct, feeToPct]);
 
-  // The levers, in fill order (least-disruptive first). max === null ⇒ the
-  // underlying benchmark is missing ⇒ the lever can't be assessed (greyed).
+  // Levers in base disruption order, each tagged on/off the owner's mandate.
   const levers = useMemo(() => {
     if (!data) return [];
     const occ = data.occupancyRate, rentRoll = data.rentRollChf;
@@ -121,85 +94,93 @@ export default function YieldGoalSeekPanel({ building, onSimulate, onAnnotations
     const opexCost = lv.opex?.operatingCostChf ?? null;
     const opexMax = lv.opex?.headroomChf ?? null;
     return [
-      { key: "opex", kind: "toggle", sign: "−",
+      { key: "opex", kind: "toggle", sign: "−", off: false,
         name: t("planning.goalSeek.lever.opex", { defaultValue: "Cut operating costs" }),
-        max: opexMax, off: false,
-        opexCost, leanestChf: opexMax != null && opexCost != null ? opexCost - opexMax : null },
-      { key: "occ", kind: "toggle", sign: "+",
+        max: opexMax, opexCost, leanestChf: opexMax != null && opexCost != null ? opexCost - opexMax : null },
+      { key: "occ", kind: "toggle", sign: "+", off: false,
         name: t("planning.goalSeek.lever.occupancy", { defaultValue: "Lift occupancy" }),
-        max: Math.max(0, 1 - occ) * potentialRent, off: false, occ },
-      { key: "rent", kind: "toggle", sign: "+",
+        max: Math.max(0, 1 - occ) * potentialRent, occ },
+      { key: "rent", kind: "toggle", sign: "+", off: !!flags.rentAggressive,
         name: t("planning.goalSeek.lever.rent", { defaultValue: "Raise rent to market" }),
-        max: lv.rent?.marketGapAnnualChf ?? null, off: !!flags.rentAggressive,
-        months: lv.rent?.avgLeaseRemainingMonths ?? null },
-      { key: "reno", kind: "toggle", sign: "+",
+        max: lv.rent?.marketGapAnnualChf ?? null, months: lv.rent?.avgLeaseRemainingMonths ?? null },
+      { key: "reno", kind: "toggle", sign: "+", off: !!flags.renovation,
         name: t("planning.goalSeek.lever.renovation", { defaultValue: "Renovate" }),
-        max: rn.annualUpliftChf ?? 0, off: !!flags.renovation,
-        accretiveCount: rn.accretiveCount ?? 0, capexChf: rn.capexChf ?? 0, simulate: (rn.accretiveCount ?? 0) > 0 },
-      { key: "fee", kind: "fee", sign: "+",
-        name: t("planning.goalSeek.lever.fee", { defaultValue: "Management fee" }),
-        off: feeToPct < 1 && !!flags.selfManage },
+        max: rn.annualUpliftChf ?? 0, accretiveCount: rn.accretiveCount ?? 0, capexChf: rn.capexChf ?? 0, simulate: (rn.accretiveCount ?? 0) > 0 },
+      { key: "fee", kind: "fee", sign: "+", off: feeToPct < 1 && !!flags.selfManage,
+        name: t("planning.goalSeek.lever.fee", { defaultValue: "Management fee" }) },
     ];
   }, [data, feeToPct, t]);
 
   const levMax    = useCallback((L) => (L.kind === "fee" ? feeMaxChf : L.max), [feeMaxChf]);
   const levActive = useCallback((L) => (L.kind === "fee" ? feeMaxChf > 0 : !!enabled[L.key] && L.max != null && L.max > 0), [enabled, feeMaxChf]);
 
-  // Columns: reachable target steps above today, ending in the actual ceiling.
+  const hasMandate = !!data && !!data.strategySource && data.strategySource !== "none";
+  const ownerLabel = useMemo(() => {
+    if (!hasMandate) return null;
+    if (data.strategyOwnerName) return t("planning.goalSeek.ownerMandate", { defaultValue: "{{name}}'s mandate", name: data.strategyOwnerName });
+    if (data.strategySource === "building") return t("planning.goalSeek.buildingMandate", { defaultValue: "your building's strategy" });
+    return t("planning.goalSeek.genericMandate", { defaultValue: "the owner's mandate" });
+  }, [hasMandate, data, t]);
+
+  // Fill order: on-strategy levers first (base order preserved), then off-strategy.
+  const ordered = useMemo(() => {
+    const on = levers.filter((L) => !L.off), off = levers.filter((L) => L.off);
+    return { list: [...on, ...off], firstOffKey: off[0]?.key ?? null };
+  }, [levers]);
+
   const matrix = useMemo(() => {
     if (!data) return null;
-    const V = data.valueChf, NOI = data.currentNoiChf, cur = data.currentYieldPct;
-    const enabledMax = levers.reduce((s, L) => s + (levActive(L) ? levMax(L) : 0), 0);
-    const ceilingYield = V > 0 ? (NOI + enabledMax) / V * 100 : cur;
+    const V = data.valueChf, NOI = data.currentNoiChf, curY = data.currentYieldPct;
+    const order = ordered.list;
+    const onMax  = order.filter((L) => !L.off && levActive(L)).reduce((s, L) => s + levMax(L), 0);
+    const allMax = order.filter((L) => levActive(L)).reduce((s, L) => s + levMax(L), 0);
+    const withinCeil = V > 0 ? (NOI + onMax) / V * 100 : curY;
+    const maxCeil    = V > 0 ? (NOI + allMax) / V * 100 : curY;
+    const hasOff = order.some((L) => L.off && levActive(L));
+
     const targets = [];
-    for (let tp = Math.ceil((cur + 0.01) * 2) / 2; tp < ceilingYield - 0.05 && targets.length < 5; tp += 0.5) {
+    for (let tp = Math.ceil((curY + 0.01) * 2) / 2; tp < maxCeil - 0.05 && targets.length < 5; tp += 0.5) {
       targets.push({ pct: round2(tp), isMax: false });
     }
-    targets.push({ pct: round2(ceilingYield), isMax: true });
+    targets.push({ pct: round2(maxCeil), isMax: true });
     const cols = targets.map((tg) => {
+      const beyond = hasMandate && hasOff && tg.pct > withinCeil + 0.001;
       let rem = (tg.pct / 100) * V - NOI;
       const gap = rem, use = {};
-      for (const L of levers) {
+      for (const L of order) {
         if (!levActive(L)) { use[L.key] = 0; continue; }
         const c = Math.max(0, Math.min(rem, levMax(L)));
         use[L.key] = c; rem -= c;
       }
-      return { ...tg, gap, use, reachable: rem <= 1 };
+      return { ...tg, gap, use, beyond };
     });
-    return { cols, ceilingYield, hasLevers: enabledMax > 0 };
-  }, [data, levers, levActive, levMax]);
+    return { cols, withinCeil, maxCeil, hasOff, hasLevers: allMax > 0 };
+  }, [data, ordered, levActive, levMax, hasMandate]);
 
   const toggleRow = useCallback((k) => setOpenRows((s) => { const n = new Set(s); n.has(k) ? n.delete(k) : n.add(k); return n; }), []);
-  const openTool  = useCallback(() => setExpanded(true), []);
-  const simulateAccretive = useCallback(() => {
-    if (!buildingId || !data) return;
-    const ids = new Set((data.levers?.renovation?.lines ?? []).filter((l) => l.accretive).map((l) => l.assetId));
-    const items = opps.filter((o) => ids.has(o.assetId));
-    if (items.length > 0 && onSimulate) onSimulate(items, buildingId);
-  }, [data, opps, buildingId, onSimulate]);
+  const plan = useCallback((opts) => { onPlanImprovements?.(opts ?? {}); }, [onPlanImprovements]);
 
   if (!buildingId) return null;
-  if (loading && !data) return <div className="h-14 animate-pulse rounded-xl bg-surface-hover" />;
-  if (error) return <p className="text-sm text-destructive-text">{error}</p>;
-  if (!data || data.valueChf <= 0) {
-    return data ? <p className="rounded-xl border border-surface-border bg-surface px-4 py-3 text-xs text-muted">{t("planning.goalSeek.noValuation", { defaultValue: "Add a building or unit valuation to model yield targets." })}</p> : null;
-  }
+  if (loading && !data) return <div className="h-16 animate-pulse rounded-xl bg-surface-hover" />;
+  if (error || !data || data.valueChf <= 0) return null; // reporting stands on its own; fail quiet
 
   const cur = data.currentYieldPct;
 
-  // ── Collapsed strip ──
+  // ── Collapsed CTA strip ──
   if (!expanded) {
     return (
-      <button onClick={openTool} aria-expanded="false"
-        className="flex w-full items-center gap-3 rounded-xl border border-surface-border bg-surface px-4 py-3 text-left transition-colors hover:border-brand-ring">
-        <span className="shrink-0">
-          <span className="block text-[10px] font-semibold uppercase tracking-wide text-foreground-dim">{t("planning.goalSeek.currentYield", { defaultValue: "Net yield" })}</span>
-          <span className="text-[15px] font-extrabold tabular-nums text-foreground">{pct(cur / 100)}</span>
+      <button onClick={() => setExpanded(true)} aria-expanded="false"
+        className="flex w-full items-center gap-3.5 rounded-xl border border-brand/25 bg-brand-light px-4 py-3.5 text-left transition-colors hover:brightness-[0.98]">
+        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[10px] bg-brand text-[17px] font-bold text-white">↗</span>
+        <span className="flex-1">
+          <span className="block text-sm font-semibold text-foreground">{t("planning.goalSeek.ctaTitle", { defaultValue: "See how it can perform better over the coming periods" })}</span>
+          <span className="block text-[12.5px] text-muted">
+            {hasMandate
+              ? t("planning.goalSeek.ctaMandate", { defaultValue: "Ranked for {{who}}{{label}}.", who: ownerLabel, label: data.strategyLabel ? ` — ${data.strategyLabel.toLowerCase()}` : "" })
+              : t("planning.goalSeek.ctaNoMandate", { defaultValue: "The levers you'd pull, capped at what's realistic." })}
+          </span>
         </span>
-        <span className="flex-1 text-[13px] text-muted">
-          {t("planning.goalSeek.teaserMatrix", { defaultValue: "See which targets are reachable — and exactly what each lever must do", ceil: pct((matrix?.ceilingYield ?? cur) / 100) })}
-        </span>
-        <span className="shrink-0 text-xs text-foreground-dim">▾</span>
+        <span className="shrink-0 whitespace-nowrap text-xs font-bold text-brand-dark">{t("planning.goalSeek.ctaExplore", { defaultValue: "Explore" })} ▸</span>
       </button>
     );
   }
@@ -209,107 +190,136 @@ export default function YieldGoalSeekPanel({ building, onSimulate, onAnnotations
   const ncol = cols.length + 1;
   return (
     <div className="rounded-xl border border-brand-ring bg-surface p-4">
-      <div className="mb-1 flex items-center justify-between gap-2">
+      <div className="mb-2.5 flex items-start justify-between gap-2">
         <span className="text-[12px] font-bold uppercase tracking-wide text-foreground-dim">
           {t("planning.goalSeek.title", { defaultValue: "Reach a target yield" })}
           {data.periodTo && <span className="ml-2 text-[10px] font-medium normal-case tracking-normal text-foreground-dim">{t("planning.goalSeek.basedOn", { defaultValue: "based on {{y}}", y: data.periodTo.slice(0, 4) })}</span>}
-          {data.strategyLabel && <span className="ml-2 rounded-full border border-surface-border bg-surface-subtle px-2 py-0.5 text-[10px] font-semibold normal-case tracking-normal text-muted">{data.strategyLabel}</span>}
         </span>
         <button onClick={() => setExpanded(false)} className="shrink-0 text-xs font-medium text-muted hover:text-foreground">{t("planning.goalSeek.collapse", { defaultValue: "Collapse" })} ▴</button>
       </div>
-      <p className="mb-3 text-[12.5px] leading-relaxed text-muted">
-        {t("planning.goalSeek.matrixLede", { defaultValue: "Each lever is capped at what's realistic. Read down a column for the mix that reaches that target; the last column is as far as every lever combined can take you. Click a lever to see how, hover operating costs for the breakdown, and untick a lever or raise the fee floor to watch the ceiling move." })}
-      </p>
 
       {!matrix?.hasLevers ? (
         <p className="rounded-lg border border-surface-border bg-surface-subtle px-3 py-2.5 text-[13px] text-muted">
           {t("planning.goalSeek.noLevers", { defaultValue: "No levers can be assessed for this building yet — add a rent benchmark (market price / m²) and a period with operating costs on file." })}
         </p>
       ) : (
-        <div className="-mx-1 overflow-x-auto px-1">
-          <table className="w-full min-w-[520px] border-collapse text-[13px]">
-            <thead>
-              <tr>
-                <th className="w-[38%] min-w-[210px] border-b-2 border-surface-border px-2 py-1.5 text-left" />
-                {cols.map((c, i) => (
-                  <th key={i} className={cn("border-b-2 px-2 py-1.5 text-right", c.isMax ? "border-brand bg-brand-light" : "border-surface-border")}>
-                    <div className={cn("text-[15px] font-extrabold tabular-nums", c.isMax ? "text-brand" : "text-foreground")}>{c.pct.toFixed(c.isMax ? 2 : 1)}%</div>
-                    <div className="text-[9.5px] font-semibold uppercase tracking-wide text-foreground-dim">{c.isMax ? t("planning.goalSeek.maxReachable", { defaultValue: "max reachable" }) : t("planning.goalSeek.target", { defaultValue: "target" })}</div>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {/* Gap row */}
-              <tr className="bg-surface-subtle">
-                <td className="px-2 py-1.5 text-left text-[12px] font-semibold text-muted">{t("planning.goalSeek.gapRow", { defaultValue: "Gap needed (NOI / yr)" })}</td>
-                {cols.map((c, i) => (
-                  <td key={i} className={cn("px-2 py-1.5 text-right font-semibold tabular-nums text-muted", c.isMax && "bg-brand-light")}>+{chf(c.gap)}</td>
-                ))}
-              </tr>
+        <>
+          {/* Verdict — lead with the within-mandate ceiling */}
+          <div className="mb-1.5 rounded-lg border border-success-ring bg-success-light px-3.5 py-2.5 text-[13px] leading-relaxed text-foreground">
+            {hasMandate && matrix.hasOff
+              ? t("planning.goalSeek.verdictWithin", { defaultValue: "Within {{who}} you can reach ~{{within}} without the levers it sets aside. Reaching higher — up to {{max}} — means taking those on.", who: ownerLabel, within: pct(matrix.withinCeil / 100, 2), max: pct(matrix.maxCeil / 100, 2) })
+              : hasMandate
+                ? t("planning.goalSeek.verdictWithinFull", { defaultValue: "Within {{who}} you can reach ~{{max}} — every lever here fits it.", who: ownerLabel, max: pct(matrix.maxCeil / 100, 2) })
+                : t("planning.goalSeek.verdictNoMandate", { defaultValue: "Combining these levers you can reach up to ~{{max}} (from {{cur}} today).", max: pct(matrix.maxCeil / 100, 2), cur: pct(cur / 100, 2) })}
+          </div>
+          {/* First-owner caveat */}
+          {data.strategyOwnerName && (
+            <p className="mb-2.5 flex items-start gap-1.5 text-[11.5px] text-muted">
+              <span aria-hidden="true" className="text-foreground-dim">ⓘ</span>
+              {t("planning.goalSeek.caveatFirstOwner", { defaultValue: "Ranked for {{name}}, the primary owner on file. Co-owners may weigh these differently — we use the primary mandate until every owner's is reconciled.", name: data.strategyOwnerName })}
+            </p>
+          )}
 
-              {/* Lever rows (compact + progressive-disclosure detail) */}
-              {levers.map((L) => {
-                const active = levActive(L), mx = levMax(L), open = openRows.has(L.key);
-                const unavailable = L.kind !== "fee" && L.max == null;
-                return (
-                  <Fragment key={L.key}>
-                    <tr className={cn("border-b border-surface-divider", !active && "opacity-50")}>
-                      <td className="px-2 py-1.5 text-left align-top">
-                        {/* Keep the checkbox and the (link-bearing) overlay OUTSIDE the
-                            expand buttons — no nested interactive elements. */}
-                        <div className="flex w-full items-center gap-2">
-                          {L.kind === "toggle" && (
-                            <input type="checkbox" checked={!!enabled[L.key]} disabled={unavailable}
-                              onChange={(e) => setEnabled((s) => ({ ...s, [L.key]: e.target.checked }))}
-                              className="h-3.5 w-3.5 shrink-0 accent-brand disabled:opacity-40" aria-label={L.name} />
-                          )}
-                          <button type="button" onClick={() => toggleRow(L.key)} className="flex items-center gap-2 text-left">
-                            <span className="font-semibold text-foreground">{L.name}</span>
-                            {L.off && <span title={t("planning.goalSeek.offStrategyTip", { defaultValue: "Against your stated strategy" })} className="h-[7px] w-[7px] shrink-0 rounded-full bg-warning-ring" />}
-                          </button>
-                          {L.key === "opex" && <OpexOverlay data={data} buildingId={buildingId} t={t} />}
-                          <button type="button" onClick={() => toggleRow(L.key)} className="ml-auto flex items-center gap-2">
-                            <span className="whitespace-nowrap text-[11px] font-medium text-foreground-dim">
-                              {L.kind === "fee" ? `→ ${feeToPct.toFixed(1)}%` : unavailable ? t("planning.goalSeek.noData", { defaultValue: "no data" }) : `max ${L.sign}${chf(mx)}`}
-                            </span>
-                            <span className={cn("shrink-0 text-[10px] text-foreground-dim transition-transform", open && "rotate-90")}>▶</span>
-                          </button>
-                        </div>
-                      </td>
-                      {cols.map((c, i) => {
-                        const v = c.use[L.key] || 0;
-                        const maxed = active && Math.abs(v - mx) < 1 && v > 0;
-                        return (
-                          <td key={i} className={cn("px-2 py-1.5 text-right tabular-nums", c.isMax && "bg-brand-light",
-                            !active || v <= 0 ? "text-foreground-dim" : maxed ? "font-bold text-success-text" : "font-semibold text-foreground")}>
-                            {!active ? "·" : v <= 0 ? "—" : `${L.sign}${num(v)}`}
+          <div className="-mx-1 overflow-x-auto px-1">
+            <table className="w-full min-w-[520px] border-collapse text-[13px]">
+              <thead>
+                <tr>
+                  <th className="w-[40%] min-w-[210px] border-b-2 border-surface-border px-2 py-1.5 text-left" />
+                  {cols.map((c, i) => (
+                    <th key={i} className={cn("border-b-2 px-2 py-1.5 text-right align-bottom", c.isMax ? "border-brand bg-brand-light" : "border-surface-border")}>
+                      <div className={cn("text-[15px] font-extrabold tabular-nums", c.isMax ? "text-brand" : "text-foreground")}>{c.pct.toFixed(c.isMax ? 2 : 1)}%</div>
+                      <div className={cn("text-[9px] font-bold uppercase tracking-wide", c.beyond ? "text-warning-text" : "text-foreground-dim")}>
+                        {c.isMax ? t("planning.goalSeek.maxReachable", { defaultValue: "max reachable" })
+                          : c.beyond ? t("planning.goalSeek.colBeyond", { defaultValue: "beyond mandate" })
+                            : hasMandate ? t("planning.goalSeek.colWithin", { defaultValue: "within mandate" })
+                              : t("planning.goalSeek.target", { defaultValue: "target" })}
+                      </div>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="bg-surface-subtle">
+                  <td className="px-2 py-1.5 text-left text-[12px] font-semibold text-muted">{t("planning.goalSeek.gapRow", { defaultValue: "Extra NOI needed / yr" })}</td>
+                  {cols.map((c, i) => (
+                    <td key={i} className={cn("px-2 py-1.5 text-right font-semibold tabular-nums text-muted", c.isMax && "bg-brand-light")}>+{chf(c.gap)}</td>
+                  ))}
+                </tr>
+
+                {ordered.list.map((L) => {
+                  const active = levActive(L), mx = levMax(L), open = openRows.has(L.key);
+                  const unavailable = L.kind !== "fee" && L.max == null;
+                  return (
+                    <Fragment key={L.key}>
+                      {ordered.firstOffKey === L.key && (
+                        <tr>
+                          <td colSpan={ncol} className="border-y border-warning-ring bg-warning-light px-2 py-1.5 text-left text-[10.5px] font-bold uppercase tracking-wide text-warning-text">
+                            {t("planning.goalSeek.dividerAgainst", { defaultValue: "Against the mandate — {{who}} asked to avoid these", who: data.strategyOwnerName || t("planning.goalSeek.theOwner", { defaultValue: "the owner" }) })}
                           </td>
-                        );
-                      })}
-                    </tr>
-                    {open && (
-                      <tr>
-                        <td colSpan={ncol} className="px-2 pb-3 pl-8 pt-0 text-left">
-                          <LeverDetail L={L} data={data} feeTodayPct={feeTodayPct} setFeeTodayPct={setFeeTodayPct}
-                            feeToPct={feeToPct} setFeeToPct={setFeeToPct} feeMaxChf={feeMaxChf}
-                            onSimulate={simulateAccretive} t={t} />
+                        </tr>
+                      )}
+                      <tr className={cn("border-b border-surface-divider", !active && "opacity-55")}>
+                        <td className="px-2 py-1.5 text-left align-top">
+                          <div className="flex w-full items-center gap-2">
+                            {L.kind === "toggle" && (
+                              <input type="checkbox" checked={!!enabled[L.key]} disabled={unavailable}
+                                onChange={(e) => setEnabled((s) => ({ ...s, [L.key]: e.target.checked }))}
+                                className="h-3.5 w-3.5 shrink-0 accent-brand disabled:opacity-40" aria-label={L.name} />
+                            )}
+                            <button type="button" onClick={() => toggleRow(L.key)} className="flex items-center gap-2 text-left">
+                              <span className="font-semibold text-foreground">{L.name}</span>
+                              {L.off && <span title={t("planning.goalSeek.offStrategyTip", { defaultValue: "Against the mandate" })} className="h-[7px] w-[7px] shrink-0 rounded-full bg-warning-ring" />}
+                            </button>
+                            {L.key === "opex" && <OpexOverlay data={data} buildingId={buildingId} t={t} />}
+                            <button type="button" onClick={() => toggleRow(L.key)} className="ml-auto flex items-center gap-2">
+                              <span className="whitespace-nowrap text-[11px] font-medium text-foreground-dim">
+                                {L.kind === "fee" ? `→ ${feeToPct.toFixed(1)}%` : unavailable ? t("planning.goalSeek.noData", { defaultValue: "no data" }) : `max ${L.sign}${chf(mx)}`}
+                              </span>
+                              <span className={cn("shrink-0 text-[10px] text-foreground-dim transition-transform", open && "rotate-90")}>▶</span>
+                            </button>
+                          </div>
                         </td>
+                        {cols.map((c, i) => {
+                          const v = c.use[L.key] || 0;
+                          const maxed = active && Math.abs(v - mx) < 1 && v > 0;
+                          return (
+                            <td key={i} className={cn("px-2 py-1.5 text-right tabular-nums", c.isMax && "bg-brand-light",
+                              !active || v <= 0 ? "text-foreground-dim" : maxed ? "font-bold text-success-text" : "font-semibold text-foreground")}>
+                              {!active ? "·" : v <= 0 ? "—" : `${L.sign}${num(v)}`}
+                            </td>
+                          );
+                        })}
                       </tr>
-                    )}
-                  </Fragment>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
+                      {open && (
+                        <tr>
+                          <td colSpan={ncol} className="px-2 pb-3 pl-8 pt-0 text-left">
+                            <LeverDetail L={L} data={data} feeTodayPct={feeTodayPct} setFeeTodayPct={setFeeTodayPct}
+                              feeToPct={feeToPct} setFeeToPct={setFeeToPct} feeMaxChf={feeMaxChf}
+                              onSimulate={() => plan({ simulate: true })} t={t} />
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
 
-      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-[11.5px] text-muted">
-        <span className="inline-flex items-center gap-1.5"><span className="font-bold text-success-text">CHF</span> {t("planning.goalSeek.legendMaxed", { defaultValue: "lever maxed out" })}</span>
-        <span className="inline-flex items-center gap-1.5"><span className="h-[7px] w-[7px] rounded-full bg-warning-ring" /> {t("planning.goalSeek.legendOffStrategy", { defaultValue: "against your strategy" })}</span>
-        <span className="inline-flex items-center gap-1.5"><span className="inline-block h-2.5 w-3.5 rounded-sm border border-brand-ring bg-brand-light" /> {t("planning.goalSeek.legendCeiling", { defaultValue: "your ceiling — nothing beyond it is reachable" })}</span>
-      </div>
+          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-[11.5px] text-muted">
+            <span className="inline-flex items-center gap-1.5"><span className="font-bold text-success-text">CHF</span> {t("planning.goalSeek.legendMaxed", { defaultValue: "lever maxed out" })}</span>
+            {matrix.hasOff && <span className="inline-flex items-center gap-1.5"><span className="h-[7px] w-[7px] rounded-full bg-warning-ring" /> {t("planning.goalSeek.legendOffStrategy", { defaultValue: "against the mandate — used only past your ceiling" })}</span>}
+            <span className="inline-flex items-center gap-1.5"><span className="inline-block h-2.5 w-3.5 rounded-sm border border-brand-ring bg-brand-light" /> {t("planning.goalSeek.legendCeiling", { defaultValue: "your ceiling" })}</span>
+          </div>
+
+          <div className="mt-3.5 flex flex-wrap items-center justify-between gap-3 border-t border-surface-divider pt-3.5">
+            <p className="min-w-[200px] flex-1 text-[12px] text-muted">{t("planning.goalSeek.footNote", { defaultValue: "Take these into the Planning workspace to simulate the works, schedule them and open an RFP." })}</p>
+            <button onClick={() => plan({})} className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-4 py-2 text-[13.5px] font-bold text-white transition-colors hover:bg-brand-dark">
+              {t("planning.goalSeek.planCta", { defaultValue: "Plan improvements" })} →
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 }
