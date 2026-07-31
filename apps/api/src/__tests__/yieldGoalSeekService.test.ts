@@ -81,3 +81,83 @@ describe("computeYieldGoalSeek", () => {
     expect(hard.levers.occupancy.feasible).toBe(false);
   });
 });
+
+// Realism bands + strategy flags + tiered synthesis.
+const REALISM: YieldGoalSeekInput = {
+  ...BASE,
+  targetYieldPct: 3.0,                          // gap = +13,000
+  rentMarketGapAnnualChf: 8_000,                // rent ceiling below the gap
+  controllableOpexChf: 30_000,
+  controllableOpexBest3yrChf: 25_000,           // opex headroom = 5,000
+  strategy: { source: "owner-portfolio", flags: { renovation: true, selfManage: true, rentAggressive: true } },
+};
+
+describe("realism bands", () => {
+  const r = computeYieldGoalSeek(REALISM);
+
+  it("greys out rent when the gap exceeds the as-is market gap", () => {
+    expect(r.levers.rent.marketGapAnnualChf).toBe(8_000);
+    expect(r.levers.rent.feasible).toBe(false); // needs 13k, market supports 8k
+  });
+
+  it("greys out opex when the gap exceeds the best-of-3-years floor", () => {
+    expect(r.levers.opex.headroomChf).toBe(5_000);
+    expect(r.levers.opex.feasible).toBe(false); // needs 13k, headroom 5k
+  });
+
+  it("keeps opex feasible when the gap is within the headroom", () => {
+    const easy = computeYieldGoalSeek({ ...REALISM, targetYieldPct: 2.8 }); // gap 4,600 < 5,000
+    expect(easy.levers.opex.feasible).toBe(true);
+  });
+
+  it("reframes the fee as self-manage below the floor", () => {
+    const low = computeYieldGoalSeek({ ...REALISM, mgmtFeePct: 0.5 });
+    expect(low.levers.mgmtFee.selfManage).toBe(true);
+    const normal = computeYieldGoalSeek({ ...REALISM, mgmtFeePct: 5 });
+    expect(normal.levers.mgmtFee.selfManage).toBe(false);
+  });
+
+  it("caps a renovation's OBLF uplift at what the market supports", () => {
+    const capped = computeYieldGoalSeek({
+      ...REALISM,
+      opportunities: [{ assetId: "x", unitId: null, label: "Kitchen", costChf: 40_000, usefulLifeYears: 20, capitalizableFraction: 0.6, marketUpliftCeilingAnnualChf: 600 }],
+    });
+    // OBLF would be 40000*0.5/20 = 1000; market caps it at 600.
+    expect(capped.levers.renovation.lines[0].annualUpliftChf).toBe(600);
+  });
+});
+
+describe("strategy alignment", () => {
+  const r = computeYieldGoalSeek(REALISM);
+
+  it("flags off-strategy levers from the profile", () => {
+    expect(r.levers.rent.offStrategy).toBe(true);        // aggressive + rentAggressive flag
+    expect(r.levers.renovation.offStrategy).toBe(true);  // renovation-averse
+    const low = computeYieldGoalSeek({ ...REALISM, mgmtFeePct: 0.5 });
+    expect(low.levers.mgmtFee.offStrategy).toBe(true);   // self-manage + hands-off flag
+  });
+
+  it("drops the strategy axis when there is no profile", () => {
+    const none = computeYieldGoalSeek({ ...REALISM, strategy: null });
+    expect(none.strategySource).toBe("none");
+    expect(none.levers.rent.offStrategy).toBe(false);
+    expect(none.levers.renovation.offStrategy).toBe(false);
+  });
+});
+
+describe("tiered synthesis", () => {
+  it("computes monotonic within ≤ +renovation ≤ +self-manage tiers", () => {
+    const r = computeYieldGoalSeek(REALISM);
+    const s = r.synthesis;
+    expect(s.withinStrategyYieldPct).toBeGreaterThanOrEqual(r.currentYieldPct);
+    expect(s.withRenovationYieldPct).toBeGreaterThanOrEqual(s.withinStrategyYieldPct - 1e-9);
+    expect(s.withSelfManageYieldPct).toBeGreaterThanOrEqual(s.withRenovationYieldPct - 1e-9);
+  });
+
+  it("excludes off-strategy levers (aggressive rent) from the within-strategy tier", () => {
+    const off = computeYieldGoalSeek(REALISM); // rentAggressive → rent excluded from within
+    const on = computeYieldGoalSeek({ ...REALISM, strategy: { source: "none", flags: {} } });
+    // With rent on-strategy the within-strategy tier picks up the market gap → higher.
+    expect(on.synthesis.withinStrategyYieldPct).toBeGreaterThan(off.synthesis.withinStrategyYieldPct);
+  });
+});
