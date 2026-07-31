@@ -3565,7 +3565,7 @@
       "buildingValue": "Building value",
       "annualNoi": "Annual NOI",
       "rentRoll": "Rent roll",
-      "targetYield": "Target net yield",
+      "targetYield": "Target",
       "fromToday": "from {{y}} today",
       "mgmtFee": "Management fee (% of rent)",
       "alreadyMet": "Already at or above {{tgt}} — current yield is {{cur}}.",
@@ -3585,9 +3585,9 @@
       "over100": "needs > 100%",
       "exceedsGap": "exceeds the gap",
       "worthPct": "worth {{p}}",
-      "reachesTarget": "reaches target",
-      "maxesAt": "maxes at {{y}}",
-      "rentNote": "building-wide, {{p}} of the rent roll",
+      "reachesTarget": "works reach it",
+      "maxesAt": "works max at {{y}}",
+      "rentNote": "{{p}} of roll",
       "opexNote": "any recurring opex reduction flows straight to NOI",
       "occNote": "recover {{g}} of foregone rent",
       "occHard": "can't close the gap on occupancy alone",
@@ -3597,7 +3597,25 @@
       "dilutive": "NPV+ / dilutive",
       "accretiveExplain": "A renovation is accretive only when its marginal yield (uplift ÷ ΔV) beats today's {{y}}. The dimmed ones add value (positive NPV) but dilute yield, so they're excluded from the ceiling.",
       "simulateCta": "Simulate the {{n}} accretive works",
-      "noValuation": "Add a building or unit valuation to model yield targets."
+      "noValuation": "Add a building or unit valuation to model yield targets.",
+      "teaser": "See what it would take to reach a higher yield",
+      "targetingMsg": "Targeting {{tgt}} · gap +{{gap}}/yr",
+      "collapse": "Collapse",
+      "pickPrompt": "Pick a target to see how to close the gap.",
+      "opexNoteShort": "straight to NOI",
+      "occNoteShort": "recover vacancy",
+      "feeNoteShort": "{{cov}} of the gap",
+      "renoSummary": "The {{n}} accretive works ({{capex}} → +{{uplift}}/yr) lift yield to {{ceil}} — badged in the list below."
+    },
+    "building": "Building",
+    "clear": "Clear",
+    "selectAll": "Select all",
+    "opportunitiesTitle": "Renovation opportunities",
+    "opportunitiesHint": "sorted by urgency",
+    "plansHint": "Open a plan to review its NPV verdict and assumptions, or to generate RFPs.",
+    "subtab": {
+      "opportunities": "Opportunities",
+      "plans": "Plans"
     }
   }
 }

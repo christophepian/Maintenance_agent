@@ -78,10 +78,11 @@ function dueYear(item) {
 
 // ─── Asset row ────────────────────────────────────────────────────────────────
 
-function AssetRow({ item, checked, onToggle, onSimulate }) {
+function AssetRow({ item, checked, onToggle, onSimulate, annotations }) {
   const rec  = REC_STYLE[item.recommendation] ?? REC_STYLE.REPAIR;
   const cond = item.lastConditionStatus ? COND_STYLE[item.lastConditionStatus] : null;
   const due  = dueYear(item);
+  const ann  = annotations?.[item.assetId]; // { accretive, label } when a yield target is set
 
   return (
     <div className={cn(
@@ -106,6 +107,12 @@ function AssetRow({ item, checked, onToggle, onSimulate }) {
       </div>
       {/* Badges */}
       <div className="flex items-center gap-1 shrink-0">
+        {ann && (
+          <span className={cn("rounded-full border px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-wide whitespace-nowrap",
+            ann.accretive ? "border-success-ring bg-success-light text-success-text" : "border-warning-ring bg-warning-light text-warning-text")}>
+            {ann.label}
+          </span>
+        )}
         <HoverTip content={item.recommendationReason}>
           <span className={cn("rounded-full px-2 py-0.5 text-xs font-semibold", rec.badge)}>{rec.label}</span>
         </HoverTip>
@@ -134,7 +141,7 @@ function AssetRow({ item, checked, onToggle, onSimulate }) {
 
 // ─── Unit row ─────────────────────────────────────────────────────────────────
 
-function UnitRow({ unitNumber, items, selectedIds, onToggleAsset, onSimulate, buildingId }) {
+function UnitRow({ unitNumber, items, selectedIds, onToggleAsset, onSimulate, buildingId, annotations }) {
   const [open, setOpen] = useState(false);
   const unitSelected = items.filter((i) => selectedIds.has(i.assetId));
   const allChecked   = items.length > 0 && unitSelected.length === items.length;
@@ -183,6 +190,7 @@ function UnitRow({ unitNumber, items, selectedIds, onToggleAsset, onSimulate, bu
               checked={selectedIds.has(item.assetId)}
               onToggle={() => onToggleAsset(item.assetId, !selectedIds.has(item.assetId))}
               onSimulate={onSimulate}
+              annotations={annotations}
             />
           ))}
         </div>
@@ -193,7 +201,7 @@ function UnitRow({ unitNumber, items, selectedIds, onToggleAsset, onSimulate, bu
 
 // ─── Building section ─────────────────────────────────────────────────────────
 
-function BuildingSection({ buildingId, buildingName, selectedIds, onToggleAsset, onSimulate, autoExpand }) {
+function BuildingSection({ buildingId, buildingName, selectedIds, onToggleAsset, onSimulate, autoExpand, annotations }) {
   // Inject this section's buildingId into every simulate call (opportunity items
   // don't carry buildingId, and the workspace needs it to schedule into a plan).
   const handleSim = useCallback((items) => onSimulate(items, buildingId), [onSimulate, buildingId]);
@@ -289,6 +297,7 @@ function BuildingSection({ buildingId, buildingName, selectedIds, onToggleAsset,
               onToggleAsset={onToggleAsset}
               onSimulate={handleSim}
               buildingId={buildingId}
+              annotations={annotations}
             />
           ))}
         </div>
@@ -302,7 +311,7 @@ function BuildingSection({ buildingId, buildingName, selectedIds, onToggleAsset,
 
 // ─── Main export ──────────────────────────────────────────────────────────────
 
-export default function RenovationAccordion({ buildings, onSimulate: externalOnSimulate }) {
+export default function RenovationAccordion({ buildings, onSimulate: externalOnSimulate, annotations }) {
   // buildings: [{ id, name }]
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [simItems,    setSimItems]    = useState(null);
@@ -343,6 +352,7 @@ export default function RenovationAccordion({ buildings, onSimulate: externalOnS
             onToggleAsset={onToggleAsset}
             onSimulate={onSimulate}
             autoExpand={buildings.length === 1 || i === 0}
+            annotations={annotations}
           />
         ))}
       </div>

@@ -3564,7 +3564,7 @@
       "buildingValue": "Valeur de l'immeuble",
       "annualNoi": "RNE annuel",
       "rentRoll": "État locatif",
-      "targetYield": "Rendement net cible",
+      "targetYield": "Cible",
       "fromToday": "depuis {{y}} aujourd'hui",
       "mgmtFee": "Honoraires de gérance (% du loyer)",
       "alreadyMet": "Déjà à ou au-dessus de {{tgt}} — le rendement actuel est {{cur}}.",
@@ -3584,9 +3584,9 @@
       "over100": "exige > 100 %",
       "exceedsGap": "dépasse l'écart",
       "worthPct": "vaut {{p}}",
-      "reachesTarget": "atteint la cible",
-      "maxesAt": "plafonne à {{y}}",
-      "rentNote": "sur tout l'immeuble, {{p}} de l'état locatif",
+      "reachesTarget": "les travaux y parviennent",
+      "maxesAt": "travaux plafonnés à {{y}}",
+      "rentNote": "{{p}} de l'état locatif",
       "opexNote": "toute réduction de charges récurrentes va directement au RNE",
       "occNote": "récupérer {{g}} de loyers perdus",
       "occHard": "l'occupation seule ne suffit pas à combler l'écart",
@@ -3596,7 +3596,25 @@
       "dilutive": "VAN+ / dilutif",
       "accretiveExplain": "Une rénovation est relutive seulement si son rendement marginal (plus-value ÷ ΔV) dépasse le {{y}} actuel. Les grisés créent de la valeur (VAN positive) mais diluent le rendement ; ils sont exclus du plafond.",
       "simulateCta": "Simuler les {{n}} travaux relutifs",
-      "noValuation": "Ajoutez une valorisation de l'immeuble ou des lots pour modéliser des objectifs de rendement."
+      "noValuation": "Ajoutez une valorisation de l'immeuble ou des lots pour modéliser des objectifs de rendement.",
+      "teaser": "Voyez ce qu'il faudrait pour atteindre un rendement plus élevé",
+      "targetingMsg": "Cible {{tgt}} · écart +{{gap}}/an",
+      "collapse": "Réduire",
+      "pickPrompt": "Choisissez une cible pour voir comment combler l'écart.",
+      "opexNoteShort": "directement au RNE",
+      "occNoteShort": "récupérer la vacance",
+      "feeNoteShort": "{{cov}} de l'écart",
+      "renoSummary": "Les {{n}} travaux relutifs ({{capex}} → +{{uplift}}/an) portent le rendement à {{ceil}} — signalés dans la liste ci-dessous."
+    },
+    "building": "Immeuble",
+    "clear": "Effacer",
+    "selectAll": "Tout sélectionner",
+    "opportunitiesTitle": "Opportunités de rénovation",
+    "opportunitiesHint": "triées par urgence",
+    "plansHint": "Ouvrez un plan pour consulter son verdict VAN et ses hypothèses, ou générer des appels d'offres.",
+    "subtab": {
+      "opportunities": "Opportunités",
+      "plans": "Plans"
     }
   }
 }
