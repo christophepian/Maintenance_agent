@@ -2321,16 +2321,31 @@ export async function getYieldGoalSeek(
   fromStr: string,
   toStr: string,
   opts: { targetYieldPct: number; mgmtFeePct: number; oblfPassthroughPct?: number },
-): Promise<YieldGoalSeekResult> {
+): Promise<YieldGoalSeekResult & { periodFrom: string; periodTo: string }> {
   const building = await inventoryRepo.findBuildingByIdAndOrg(prisma, buildingId, orgId);
   if (!building) throw new Error(`Building ${buildingId} not found`);
 
-  const yearsAgo = (n: number) => { const d = new Date(`${toStr}T00:00:00`); d.setFullYear(d.getFullYear() - n); return d.toISOString().slice(0, 10); };
+  // Anchor to the building's latest period WITH data. The panel's window is
+  // today-trailing and lands on empty months for buildings whose ledger lags
+  // (e.g. régie statements imported for 2023–2025 while "today" is 2026).
+  let effFrom = fromStr, effTo = toStr;
+  try {
+    const ts = await getBuildingTimeSeries(orgId, buildingId, "5Y");
+    const withData = (ts.points ?? []).filter((p) => p.collectedIncomeCents !== 0 || p.expensesCents !== 0);
+    const latest = withData.length ? withData[withData.length - 1] : null;
+    if (latest && latest.periodEnd < toStr) {
+      effTo = latest.periodEnd;
+      const d = new Date(`${effTo}T00:00:00`); d.setFullYear(d.getFullYear() - 1); d.setDate(d.getDate() + 1);
+      effFrom = d.toISOString().slice(0, 10);
+    }
+  } catch { /* fall back to the requested window */ }
+
+  const yearsAgo = (n: number) => { const d = new Date(`${effTo}T00:00:00`); d.setFullYear(d.getFullYear() - n); return d.toISOString().slice(0, 10); };
   const [profit, opportunities, fin1, fin2, fin3, valUnits, zipPrice, activeLeases, buildingProfile, ownerProfiles] = await Promise.all([
-    getUnitProfitability(orgId, buildingId, fromStr, toStr),
+    getUnitProfitability(orgId, buildingId, effFrom, effTo),
     getBuildingRenovationOpportunities(prisma, orgId, buildingId),
     // 3 trailing 12-month windows → the "best of the last 3 years" opex floor.
-    getBuildingFinancials(orgId, buildingId, { from: yearsAgo(1), to: toStr }),
+    getBuildingFinancials(orgId, buildingId, { from: yearsAgo(1), to: effTo }),
     getBuildingFinancials(orgId, buildingId, { from: yearsAgo(2), to: yearsAgo(1) }),
     getBuildingFinancials(orgId, buildingId, { from: yearsAgo(3), to: yearsAgo(2) }),
     inventoryRepo.findUnitsWithValuationForBuilding(prisma, orgId, buildingId),
@@ -2450,7 +2465,7 @@ export async function getYieldGoalSeek(
     });
   }
 
-  return computeYieldGoalSeek({
+  const result = computeYieldGoalSeek({
     valueChf,
     currentNoiChf,
     rentRollChf,
@@ -2465,6 +2480,7 @@ export async function getYieldGoalSeek(
     controllableOpexBest3yrChf,
     strategy,
   });
+  return { ...result, periodFrom: effFrom, periodTo: effTo };
 }
 
 // ==========================================

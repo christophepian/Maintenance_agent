@@ -185,6 +185,7 @@ export default function YieldGoalSeekPanel({ building, onSimulate, onAnnotations
       <div className="mb-2.5 flex items-center justify-between gap-2">
         <span className="text-[12px] font-bold uppercase tracking-wide text-foreground-dim">
           {t("planning.goalSeek.title", { defaultValue: "Reach a target yield" })}
+          {data.periodTo && <span className="ml-2 text-[10px] font-medium normal-case tracking-normal text-foreground-dim">{t("planning.goalSeek.basedOn", { defaultValue: "based on {{y}}", y: data.periodTo.slice(0, 4) })}</span>}
           {data.strategyLabel && <span className="ml-2 rounded-full border border-surface-border bg-surface-subtle px-2 py-0.5 text-[10px] font-semibold normal-case tracking-normal text-muted">{data.strategyLabel}</span>}
         </span>
         <button onClick={() => setExpanded(false)} className="shrink-0 text-xs font-medium text-muted hover:text-foreground">{t("planning.goalSeek.collapse", { defaultValue: "Collapse" })} ▴</button>

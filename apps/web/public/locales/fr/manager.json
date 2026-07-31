@@ -3625,7 +3625,8 @@
       "renoOffStrategy": "contraire à votre stratégie",
       "opexOfCost": "sur {{c}} de charges d'exploitation",
       "opexUnavailable": "charges d'exploitation indisponibles pour cette période",
-      "opexBeyondReal": "au-delà d'une réduction réaliste ({{h}})"
+      "opexBeyondReal": "au-delà d'une réduction réaliste ({{h}})",
+      "basedOn": "sur la base de {{y}}"
     },
     "building": "Immeuble",
     "clear": "Effacer",
