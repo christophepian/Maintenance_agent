@@ -128,10 +128,15 @@ export default function UnitProfitabilityPanel({ buildingId, from, to }) {
             {data?.marketValueChf != null && <span>{t("buildingsId.reporting.unitProfit.marketValue")} {chf(data.marketValueChf)}{recon(data.marketValueChf) ? ` (${recon(data.marketValueChf)})` : ""}</span>}
             {data?.navChf != null && <span>{t("buildingsId.reporting.unitProfit.nav")} {chf(data.navChf)}</span>}
           </div>
-          <a href={`/manager/finance?tab=planning&buildingId=${buildingId}`}
-            className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-brand no-underline hover:underline">
+          {/* The goal-seek card lives on this same page — scroll to it and open it. */}
+          <button type="button"
+            onClick={() => {
+              const el = typeof document !== "undefined" && document.getElementById("yield-goalseek");
+              if (el) { el.scrollIntoView({ behavior: "smooth", block: "start" }); window.dispatchEvent(new CustomEvent("goalseek:expand")); }
+            }}
+            className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-brand hover:underline">
             {t("buildingsId.reporting.unitProfit.modelYield", { defaultValue: "Model how to move this yield" })} →
-          </a>
+          </button>
         </div>
 
         {/* NOI bridge — direct costing: units' direct NOI less shared building-level

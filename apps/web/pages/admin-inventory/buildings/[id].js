@@ -955,14 +955,16 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
                    above. Ranked for the owner's mandate; hands off to Planning. ── */}
             <div className="border-t border-surface-border p-4">
               <p className="mb-2.5 text-[13px] italic text-muted">{t("buildingsId.reporting.valueCreation.retro", { defaultValue: "These figures tell you how the asset performed." })}</p>
-              <YieldGoalSeekPanel
-                building={{ id: buildingId }}
-                onPlanImprovements={(opts) => {
-                  const p = new URLSearchParams({ tab: "planning", buildingId });
-                  if (opts?.simulate) p.set("simulate", "accretive");
-                  router.push(`/manager/finance?${p.toString()}`);
-                }}
-              />
+              <div id="yield-goalseek" className="scroll-mt-20">
+                <YieldGoalSeekPanel
+                  building={{ id: buildingId }}
+                  onPlanImprovements={(opts) => {
+                    const p = new URLSearchParams({ tab: "planning", buildingId });
+                    if (opts?.simulate) p.set("simulate", "accretive");
+                    router.push(`/manager/finance?${p.toString()}`);
+                  }}
+                />
+              </div>
             </div>
 
             {/* ── Occupancy movements (folded into the card, below the panel) ── */}
