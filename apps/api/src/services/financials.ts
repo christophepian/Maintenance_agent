@@ -78,6 +78,60 @@ export function classifyRegieExpenseAccount(_code: string | null | undefined, na
   return "OWNER_OPEX";
 }
 
+/**
+ * Is this expense account the régie's own management fee? Name-based (codes
+ * collide across charts). Matches the common French/German labels — "honoraires
+ * de gérance", "frais de gestion", "commission de régie", "Verwaltungshonorar" —
+ * without catching generic "administration" or bank "commissions". Used to (a)
+ * default the goal-seek's fee lever to the fee actually on the statements and
+ * (b) pull the fee OUT of the opex lever so the two don't double-count.
+ */
+export function isManagementFeeAccount(code: string | null | undefined, name: string | null | undefined): boolean {
+  const n = (name ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  if (!n) return false;
+  if (/honoraire|gerance|geran|verwaltung/.test(n)) return true;
+  if (/commission/.test(n) && /gest|regie|encaiss|locati/.test(n)) return true;
+  if (/frais/.test(n) && /(gest|geran|regie)/.test(n)) return true;
+  return false;
+}
+
+/** One line of the operating-cost breakdown behind the goal-seek's opex lever. */
+export interface OpexDriverDTO {
+  label: string;
+  annualChf: number;
+  category: RegieCostCategory;
+}
+
+/** Sum (annual CHF) of the management-fee accounts in an expense breakdown. */
+export function detectMgmtFeeChf(accounts: AccountTotalDTO[]): number {
+  return accounts
+    .filter((a) => isManagementFeeAccount(a.accountCode, a.accountName))
+    .reduce((s, a) => s + Math.abs(a.totalCents) / 100, 0);
+}
+
+/**
+ * The operating-cost drivers behind the opex lever — the expense accounts a
+ * manager would re-tender, biggest first. Excludes capex/financing (not
+ * operating) and the management fee (its own lever), so the list matches the
+ * opex lever's basis. Category is echoed for display.
+ */
+export function buildOpexDrivers(accounts: AccountTotalDTO[], limit = 6): OpexDriverDTO[] {
+  return accounts
+    .filter((a) => {
+      const cat = a.category ?? classifyRegieExpenseAccount(a.accountCode, a.accountName);
+      if (cat === "CAPEX" || cat === "FINANCING") return false;
+      if (isManagementFeeAccount(a.accountCode, a.accountName)) return false;
+      return Math.abs(a.totalCents) > 0;
+    })
+    .map((a) => ({
+      label: a.accountName || a.accountCode || "—",
+      annualChf: Math.round(Math.abs(a.totalCents) / 100),
+      category: a.category ?? classifyRegieExpenseAccount(a.accountCode, a.accountName),
+    }))
+    .sort((x, y) => y.annualChf - x.annualChf)
+    .slice(0, limit);
+}
+
 export interface BuildingFinancialsDTO {
   buildingId: string;
   buildingName: string;
@@ -2321,7 +2375,15 @@ export async function getYieldGoalSeek(
   fromStr: string,
   toStr: string,
   opts: { targetYieldPct: number; mgmtFeePct: number; oblfPassthroughPct?: number },
-): Promise<YieldGoalSeekResult & { periodFrom: string; periodTo: string }> {
+): Promise<YieldGoalSeekResult & {
+  /** Management fee % actually on the statements (or the assumption when absent). */
+  currentFeePct: number;
+  feeSource: "statements" | "assumed";
+  /** Top operating-cost accounts behind the opex lever (for the reporting overlay). */
+  opexDrivers: OpexDriverDTO[];
+  periodFrom: string;
+  periodTo: string;
+}> {
   const building = await inventoryRepo.findBuildingByIdAndOrg(prisma, buildingId, orgId);
   if (!building) throw new Error(`Building ${buildingId} not found`);
 
@@ -2345,9 +2407,10 @@ export async function getYieldGoalSeek(
     getUnitProfitability(orgId, buildingId, effFrom, effTo),
     getBuildingRenovationOpportunities(prisma, orgId, buildingId),
     // 3 trailing 12-month windows → the "best of the last 3 years" opex floor.
-    getBuildingFinancials(orgId, buildingId, { from: yearsAgo(1), to: effTo }),
-    getBuildingFinancials(orgId, buildingId, { from: yearsAgo(2), to: yearsAgo(1) }),
-    getBuildingFinancials(orgId, buildingId, { from: yearsAgo(3), to: yearsAgo(2) }),
+    // groupByAccount so we can detect the management fee + list the opex drivers.
+    getBuildingFinancials(orgId, buildingId, { from: yearsAgo(1), to: effTo, groupByAccount: true }),
+    getBuildingFinancials(orgId, buildingId, { from: yearsAgo(2), to: yearsAgo(1), groupByAccount: true }),
+    getBuildingFinancials(orgId, buildingId, { from: yearsAgo(3), to: yearsAgo(2), groupByAccount: true }),
     inventoryRepo.findUnitsWithValuationForBuilding(prisma, orgId, buildingId),
     building.postalCode ? inventoryRepo.findMarketPriceByZip(prisma, orgId, building.postalCode) : Promise.resolve(null),
     leaseRepo.findActiveLeasesByBuilding(prisma, buildingId).catch(() => []),
@@ -2373,14 +2436,32 @@ export async function getYieldGoalSeek(
   // ── Opex floor: the best (lowest) operating cost of the last 3 trailing years.
   // Falls back to total expenses when operating opex isn't separately categorised
   // (e.g. régie-imported P&Ls that bundle everything). ──
-  const opexOf = (f: { operatingTotalCents?: number; expensesTotalCents?: number } | null) =>
-    ((f?.operatingTotalCents || f?.expensesTotalCents || 0)) / 100;
-  const currentOpexChf = opexOf(fin1);                                            // current period = the goal-seek window
-  const priorOpexChf = [opexOf(fin2), opexOf(fin3)].filter((v) => v > 0);
+  // Non-fee controllable opex: the operating cost with the management fee removed
+  // (the fee is its own lever), per window so the best-of-3yr floor stays like-for-like.
+  const nonFeeOpexOf = (f: BuildingFinancialsDTO | null) => {
+    if (!f) return 0;
+    const gross = (f.operatingTotalCents || f.expensesTotalCents || 0) / 100;
+    const fee = detectMgmtFeeChf(f.expensesByAccount ?? []);
+    return Math.max(0, gross - fee);
+  };
+  const currentOpexChf = nonFeeOpexOf(fin1);                                      // current period = the goal-seek window
+  const priorOpexChf = [nonFeeOpexOf(fin2), nonFeeOpexOf(fin3)].filter((v) => v > 0);
   const controllableOpexChf = currentOpexChf > 0 ? currentOpexChf : null;
   const controllableOpexBest3yrChf = currentOpexChf > 0
     ? Math.min(currentOpexChf, ...(priorOpexChf.length ? priorOpexChf : [currentOpexChf]))
     : null;
+
+  // ── Management fee ACTUALLY on the statements (annual CHF → % of rent roll).
+  // When detected, the goal-seek's fee lever defaults to it (not a guessed 5%);
+  // otherwise the request's assumption is kept and flagged. ──
+  const detectedFeeChf = detectMgmtFeeChf(fin1.expensesByAccount ?? []);
+  const feeSource: "statements" | "assumed" = detectedFeeChf > 0 && rentRollChf > 0 ? "statements" : "assumed";
+  const currentFeePct = feeSource === "statements"
+    ? Math.round((detectedFeeChf / rentRollChf) * 100 * 100) / 100
+    : opts.mgmtFeePct;
+
+  // ── Opex drivers behind the lever — the reporting expense breakdown (top lines). ──
+  const opexDrivers = buildOpexDrivers(fin1.expensesByAccount ?? []);
 
   // ── Market rent: value/m² × canton gross-yield, discounted for vétusté. Value/m²
   // uses the seeded zip sale-price when present, else the unit's own intrinsic price
@@ -2471,7 +2552,7 @@ export async function getYieldGoalSeek(
     rentRollChf,
     occupancyRate,
     targetYieldPct: opts.targetYieldPct,
-    mgmtFeePct: opts.mgmtFeePct,
+    mgmtFeePct: currentFeePct,
     oblfPassthroughPct: opts.oblfPassthroughPct ?? DEFAULT_OBLF_PASSTHROUGH_PCT,
     opportunities: goalSeekOpps,
     rentMarketGapAnnualChf,
@@ -2480,7 +2561,7 @@ export async function getYieldGoalSeek(
     controllableOpexBest3yrChf,
     strategy,
   });
-  return { ...result, periodFrom: effFrom, periodTo: effTo };
+  return { ...result, currentFeePct, feeSource, opexDrivers, periodFrom: effFrom, periodTo: effTo };
 }
 
 // ==========================================

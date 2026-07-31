@@ -1,4 +1,5 @@
-import { aggregateImportedPnl, classifyRegieExpenseAccount } from "../services/financials";
+import { aggregateImportedPnl, classifyRegieExpenseAccount, isManagementFeeAccount, detectMgmtFeeChf, buildOpexDrivers } from "../services/financials";
+import type { AccountTotalDTO } from "../services/financials";
 
 describe("classifyRegieExpenseAccount", () => {
   const cases: [string, string][] = [
@@ -94,5 +95,73 @@ describe("aggregateImportedPnl", () => {
     ];
     const { expensesByAccount } = aggregateImportedPnl(balances);
     expect(expensesByAccount[0]).toMatchObject({ accountId: "acc-1", accountName: "Honoraires de gestion", accountCode: "4600" });
+  });
+});
+
+describe("isManagementFeeAccount", () => {
+  const fee = [
+    "Honoraires de gérance",
+    "Honoraires de gestion",
+    "Frais de gérance",
+    "Frais de gestion",
+    "Commission de gérance",
+    "Commission d'encaissement",
+    "Verwaltungshonorar",
+    "Hausverwaltung",
+  ];
+  it.each(fee)("matches '%s'", (name) => expect(isManagementFeeAccount(null, name)).toBe(true));
+
+  const notFee = [
+    "Frais bancaires ou postaux",   // bank fees
+    "Frais de bureau",              // office
+    "Frais d'administration",       // generic admin, not gérance
+    "Commission bancaire",          // bank commission
+    "Assurances",
+    "Entretien immeuble",
+    "",
+  ];
+  it.each(notFee)("does not match '%s'", (name) => expect(isManagementFeeAccount(null, name)).toBe(false));
+});
+
+describe("detectMgmtFeeChf", () => {
+  const accts: AccountTotalDTO[] = [
+    { accountId: "a", accountName: "Honoraires de gérance", accountCode: "4600", totalCents: 6_360_00 },
+    { accountId: "b", accountName: "Entretien immeuble", accountCode: "4000", totalCents: 12_000_00 },
+    { accountId: "c", accountName: "Frais bancaires", accountCode: "6900", totalCents: 300_00 },
+  ];
+  it("sums only the fee accounts (annual CHF)", () => {
+    expect(detectMgmtFeeChf(accts)).toBe(6360);
+  });
+  it("uses absolute value for contra/credit-signed balances", () => {
+    expect(detectMgmtFeeChf([{ accountId: "a", accountName: "Honoraires de gérance", accountCode: null, totalCents: -5_000_00 }])).toBe(5000);
+  });
+  it("returns 0 when no fee line is present", () => {
+    expect(detectMgmtFeeChf([{ accountId: "b", accountName: "Assurances", accountCode: null, totalCents: 1_000_00 }])).toBe(0);
+  });
+});
+
+describe("buildOpexDrivers", () => {
+  const accts: AccountTotalDTO[] = [
+    { accountId: "1", accountName: "Entretien immeuble", accountCode: "4000", totalCents: 14_200_00, category: "OWNER_OPEX" },
+    { accountId: "2", accountName: "Frais chauffage", accountCode: "4030", totalCents: 9_600_00, category: "RECOVERABLE" },
+    { accountId: "3", accountName: "Honoraires de gérance", accountCode: "4600", totalCents: 6_360_00, category: "OWNER_OPEX" },
+    { accountId: "4", accountName: "Rénovation immeuble", accountCode: "6010", totalCents: 50_000_00, category: "CAPEX" },
+    { accountId: "5", accountName: "Intérêts hypothécaires", accountCode: "6800", totalCents: 8_000_00, category: "FINANCING" },
+    { accountId: "6", accountName: "Assurances", accountCode: "4100", totalCents: 4_800_00, category: "OWNER_OPEX" },
+  ];
+  it("excludes capex, financing and the management fee; sorts desc", () => {
+    const drivers = buildOpexDrivers(accts);
+    expect(drivers.map((d) => d.label)).toEqual(["Entretien immeuble", "Frais chauffage", "Assurances"]);
+    expect(drivers[0].annualChf).toBe(14200);
+  });
+  it("honours the limit", () => {
+    expect(buildOpexDrivers(accts, 2)).toHaveLength(2);
+  });
+  it("falls back to name-based classification when category is absent", () => {
+    const drivers = buildOpexDrivers([
+      { accountId: "x", accountName: "Rénovation immeuble", accountCode: "6010", totalCents: 5_000_00 },
+      { accountId: "y", accountName: "Entretien immeuble", accountCode: "4000", totalCents: 3_000_00 },
+    ]);
+    expect(drivers.map((d) => d.label)).toEqual(["Entretien immeuble"]); // capex dropped
   });
 });
