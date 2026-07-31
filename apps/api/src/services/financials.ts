@@ -2384,6 +2384,16 @@ export async function getYieldGoalSeek(
   /** Display name of the primary owner whose mandate ranks the levers (null unless
    *  the strategy came from an owner-portfolio profile). */
   strategyOwnerName: string | null;
+  /** Occupancy lever sized from each vacant unit's OWN asking rent (garages as
+   *  garages), not an average extrapolation. */
+  occupancyGainAnnualChf: number;
+  vacantUnits: Array<{ label: string; kind: "parking" | "residential"; expectedAnnualChf: number; hasAskingRent: boolean }>;
+  /** Per-unit market-gap working behind the rent lever (biggest gap first). */
+  rentMarketDetail: Array<{
+    label: string; livingAreaSqm: number | null; pricePerSqmChf: number; grossYieldPct: number;
+    vetustePct: number; currentAnnualChf: number; marketAnnualChf: number; gapChf: number;
+  }>;
+  rentMarketBasis: { grossYieldPct: number; vetusteCoeffPct: number; pricePerSqmSource: "zip" | "intrinsic" } | null;
   periodFrom: string;
   periodTo: string;
 }> {
@@ -2436,6 +2446,22 @@ export async function getYieldGoalSeek(
     ? rows.reduce((s, r) => s + (r.occupancyRate ?? 0), 0) / rows.length
     : 1;
 
+  // ── Occupancy lever: foregone rent from vacant units, each valued at its OWN
+  // asking rent (Unit.monthlyRentChf) — so an empty garage is worth a garage's
+  // rent, not extrapolated from the flats' average. Units with no asking rent on
+  // file can't be sized (fail-closed: they contribute 0 and are flagged). ──
+  const typeById = new Map(valUnits.map((u) => [u.id, u.type]));
+  const vacantRows = rows.filter((r) => (r.occupancyRate ?? 1) < 1);
+  const occupancyGainAnnualChf = Math.round(
+    vacantRows.reduce((s, r) => s + Math.max(0, (r.monthlyRentChf ?? 0)) * 12, 0),
+  );
+  const vacantUnits = vacantRows.map((r) => ({
+    label: r.unitNumber ?? "",
+    kind: (typeById.get(r.unitId) === "PARKING" ? "parking" : "residential") as "parking" | "residential",
+    expectedAnnualChf: Math.round(Math.max(0, (r.monthlyRentChf ?? 0)) * 12),
+    hasAskingRent: (r.monthlyRentChf ?? 0) > 0,
+  }));
+
   // ── Opex floor: the best (lowest) operating cost of the last 3 trailing years.
   // Falls back to total expenses when operating opex isn't separately categorised
   // (e.g. régie-imported P&Ls that bundle everything). ──
@@ -2474,7 +2500,13 @@ export async function getYieldGoalSeek(
   const canton = building.canton ?? null;
   const gy = cantonGrossYield(canton);
   const rentByUnit = new Map(rows.map((r) => [r.unitId, (r.monthlyRentChf ?? 0) * 12]));
+  const unitNumById = new Map(rows.map((r) => [r.unitId, r.unitNumber]));
   const vetusteRecoveryByUnit = new Map<string, number>();
+  // Per-unit market-gap working, so the rent lever can show HOW the total was reached.
+  const rentMarketDetail: Array<{
+    label: string; livingAreaSqm: number | null; pricePerSqmChf: number; grossYieldPct: number;
+    vetustePct: number; currentAnnualChf: number; marketAnnualChf: number; gapChf: number;
+  }> = [];
   let rentMarketGapAnnualChf: number | null = null;
   let anyPricedUnit = false;
   let gapSum = 0;
@@ -2484,10 +2516,26 @@ export async function getYieldGoalSeek(
     anyPricedUnit = true;
     const fullMarketRent = u.livingAreaSqm * pricePerSqm * gy;
     const asIs = fullMarketRent * (1 - VETUSTE_RENT_COEFF * ((u.vetustePct ?? 0) / 100));
-    gapSum += Math.max(0, asIs - (rentByUnit.get(u.id) ?? 0));
+    const currentAnnual = rentByUnit.get(u.id) ?? 0;
+    const gap = Math.max(0, asIs - currentAnnual);
+    gapSum += gap;
     vetusteRecoveryByUnit.set(u.id, Math.max(0, fullMarketRent - asIs));
+    if (gap > 0) rentMarketDetail.push({
+      label: unitNumById.get(u.id) ?? "",
+      livingAreaSqm: u.livingAreaSqm,
+      pricePerSqmChf: Math.round(pricePerSqm),
+      grossYieldPct: Math.round(gy * 100 * 100) / 100,
+      vetustePct: u.vetustePct ?? 0,
+      currentAnnualChf: Math.round(currentAnnual),
+      marketAnnualChf: Math.round(asIs),
+      gapChf: Math.round(gap),
+    });
   }
   if (anyPricedUnit) rentMarketGapAnnualChf = Math.round(gapSum);
+  rentMarketDetail.sort((a, b) => b.gapChf - a.gapChf);
+  const rentMarketBasis = anyPricedUnit
+    ? { grossYieldPct: Math.round(gy * 100 * 100) / 100, vetusteCoeffPct: Math.round(VETUSTE_RENT_COEFF * 100), pricePerSqmSource: (zipPrice?.pricePerSqmChf != null ? "zip" : "intrinsic") as "zip" | "intrinsic" }
+    : null;
 
   // ── Turnover timing: average remaining months across active leases. ──
   const remMonths = (activeLeases as Array<{ endDate?: Date | null }>)
@@ -2568,7 +2616,11 @@ export async function getYieldGoalSeek(
     controllableOpexBest3yrChf,
     strategy,
   });
-  return { ...result, currentFeePct, feeSource, opexDrivers, strategyOwnerName, periodFrom: effFrom, periodTo: effTo };
+  return {
+    ...result, currentFeePct, feeSource, opexDrivers, strategyOwnerName,
+    occupancyGainAnnualChf, vacantUnits, rentMarketDetail, rentMarketBasis,
+    periodFrom: effFrom, periodTo: effTo,
+  };
 }
 
 // ==========================================

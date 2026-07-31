@@ -99,15 +99,21 @@ export default function YieldGoalSeekPanel({ building, onPlanImprovements }) {
         max: opexMax, opexCost, leanestChf: opexMax != null && opexCost != null ? opexCost - opexMax : null },
       { key: "occ", kind: "toggle", sign: "+", off: false,
         name: t("planning.goalSeek.lever.occupancy", { defaultValue: "Lift occupancy" }),
-        max: Math.max(0, 1 - occ) * potentialRent, occ },
+        // Each vacant unit at its OWN asking rent (garages as garages), from the API.
+        max: data.occupancyGainAnnualChf != null ? data.occupancyGainAnnualChf : Math.max(0, 1 - occ) * potentialRent,
+        vacantUnits: data.vacantUnits ?? [] },
       { key: "rent", kind: "toggle", sign: "+", off: !!flags.rentAggressive,
         name: t("planning.goalSeek.lever.rent", { defaultValue: "Raise rent to market" }),
-        max: lv.rent?.marketGapAnnualChf ?? null, months: lv.rent?.avgLeaseRemainingMonths ?? null },
+        max: lv.rent?.marketGapAnnualChf ?? null, months: lv.rent?.avgLeaseRemainingMonths ?? null,
+        detailRows: data.rentMarketDetail ?? [], basis: data.rentMarketBasis ?? null,
+        offReason: t("planning.goalSeek.offReasonRent", { defaultValue: "you prefer stable tenancies to pushing rents" }) },
       { key: "reno", kind: "toggle", sign: "+", off: !!flags.renovation,
         name: t("planning.goalSeek.lever.renovation", { defaultValue: "Renovate" }),
-        max: rn.annualUpliftChf ?? 0, accretiveCount: rn.accretiveCount ?? 0, capexChf: rn.capexChf ?? 0, simulate: (rn.accretiveCount ?? 0) > 0 },
+        max: rn.annualUpliftChf ?? 0, accretiveCount: rn.accretiveCount ?? 0, capexChf: rn.capexChf ?? 0, simulate: (rn.accretiveCount ?? 0) > 0,
+        offReason: t("planning.goalSeek.offReasonReno", { defaultValue: "you'd rather avoid costly renovations" }) },
       { key: "fee", kind: "fee", sign: "+", off: feeToPct < 1 && !!flags.selfManage,
-        name: t("planning.goalSeek.lever.fee", { defaultValue: "Management fee" }) },
+        name: t("planning.goalSeek.lever.fee", { defaultValue: "Management fee" }),
+        offReason: t("planning.goalSeek.offReasonFee", { defaultValue: "you want a hands-off holding, not to self-manage" }) },
     ];
   }, [data, feeToPct, t]);
 
@@ -251,13 +257,17 @@ export default function YieldGoalSeekPanel({ building, onPlanImprovements }) {
                   const unavailable = L.kind !== "fee" && L.max == null;
                   return (
                     <Fragment key={L.key}>
-                      {ordered.firstOffKey === L.key && (
-                        <tr>
-                          <td colSpan={ncol} className="border-y border-warning-ring bg-warning-light px-2 py-1.5 text-left text-[10.5px] font-bold uppercase tracking-wide text-warning-text">
-                            {t("planning.goalSeek.dividerAgainst", { defaultValue: "Against the mandate — {{who}} asked to avoid these", who: data.strategyOwnerName || t("planning.goalSeek.theOwner", { defaultValue: "the owner" }) })}
-                          </td>
-                        </tr>
-                      )}
+                      {ordered.firstOffKey === L.key && (() => {
+                        const offList = ordered.list.filter((x) => x.off);
+                        const why = offList.length === 1 && offList[0].offReason ? ` — ${offList[0].offReason}` : "";
+                        return (
+                          <tr>
+                            <td colSpan={ncol} className="border-y border-warning-ring bg-warning-light px-2 py-1.5 text-left text-[11px] font-semibold normal-case tracking-normal text-warning-text">
+                              {t("planning.goalSeek.dividerAgainst", { defaultValue: "Outside the mandate — {{name}} would rather not use the lever{{plural}} below{{why}}", name: data.strategyOwnerName || t("planning.goalSeek.theOwner", { defaultValue: "the owner" }), plural: offList.length > 1 ? "s" : "", why })}
+                            </td>
+                          </tr>
+                        );
+                      })()}
                       <tr className={cn("border-b border-surface-divider", !active && "opacity-55")}>
                         <td className="px-2 py-1.5 text-left align-top">
                           <div className="flex w-full items-center gap-2">
@@ -358,11 +368,54 @@ function LeverDetail({ L, data, feeTodayPct, setFeeTodayPct, feeToPct, setFeeToP
       ? t("planning.goalSeek.opexHow", { defaultValue: "You ran this as lean as {{lean}}/yr before (now {{now}}) — re-tendering the biggest contracts recovers up to {{max}}/yr.", lean: chf(L.leanestChf), now: chf(L.opexCost), max: chf(L.max) })
       : t("planning.goalSeek.opexHowNoData", { defaultValue: "Operating cost isn't on file for this period, so this lever can't be sized." });
   } else if (L.key === "occ") {
-    body = t("planning.goalSeek.occHow", { defaultValue: "Currently {{occ}} let. Filling to 100% at today's rents adds up to {{max}}/yr.", occ: pct(L.occ, 0), max: chf(L.max) });
+    const vacant = L.vacantUnits ?? [];
+    const priced = vacant.filter((v) => v.hasAskingRent);
+    const noRent = vacant.filter((v) => !v.hasAskingRent);
+    body = vacant.length === 0
+      ? t("planning.goalSeek.occFull", { defaultValue: "Every unit is let — there's no occupancy gain to capture." })
+      : (
+        <>
+          <div>{t("planning.goalSeek.occHow2", { defaultValue: "{{n}} unit(s) sit empty. Each is valued at its own asking rent — a garage as a garage, not extrapolated from the flats — {{max}}/yr in all.", n: vacant.length, max: chf(L.max) })}</div>
+          {priced.length > 0 && (
+            <div className="mt-1.5 flex flex-col gap-0.5">
+              {priced.map((v, i) => (
+                <div key={i} className="flex justify-between gap-3">
+                  <span>{v.label}{v.kind === "parking" ? ` · ${t("planning.goalSeek.kindParking", { defaultValue: "parking" })}` : ""}</span>
+                  <span className="font-semibold tabular-nums text-foreground">+{chf(v.expectedAnnualChf)}/yr</span>
+                </div>
+              ))}
+            </div>
+          )}
+          {noRent.length > 0 && (
+            <div className="mt-1.5 text-warning-text">{t("planning.goalSeek.occNoRent", { defaultValue: "{{n}} vacant unit(s) have no asking rent on file, so they're not counted.", n: noRent.length })}</div>
+          )}
+        </>
+      );
   } else if (L.key === "rent") {
-    body = L.max != null
-      ? t("planning.goalSeek.rentHow", { defaultValue: "Rents sit below the area benchmark. Re-let at market as leases turn over{{turn}} — up to {{max}}/yr.", max: chf(L.max), turn: L.months != null ? ` (~${Math.round(L.months)} mo avg remaining)` : "" })
-      : t("planning.goalSeek.rentHowNoData", { defaultValue: "No market benchmark (price / m²) is on file for this building, so this lever can't be sized." });
+    const detailRows = L.detailRows ?? [];
+    const b = L.basis;
+    body = L.max == null
+      ? t("planning.goalSeek.rentHowNoData", { defaultValue: "No market benchmark (price / m²) is on file for this building, so this lever can't be sized." })
+      : (
+        <>
+          <div>
+            {b
+              ? t("planning.goalSeek.rentHow2", { defaultValue: "Market rent = living area × {{src}} price/m² × {{gy}} canton gross yield, discounted for vétusté; the gap vs current rent is realized on turnover{{turn}}.", gy: `${b.grossYieldPct}%`, src: b.pricePerSqmSource === "zip" ? t("planning.goalSeek.srcZip", { defaultValue: "the area's" }) : t("planning.goalSeek.srcIntrinsic", { defaultValue: "the unit's" }), turn: L.months != null ? t("planning.goalSeek.turnMonths", { defaultValue: " (~{{m}} mo remaining on average)", m: Math.round(L.months) }) : "" })
+              : t("planning.goalSeek.rentHow", { defaultValue: "Rents sit below the area benchmark. Re-let at market as leases turn over — up to {{max}}/yr.", max: chf(L.max) })}
+          </div>
+          {detailRows.length > 0 && (
+            <div className="mt-1.5 flex flex-col gap-0.5">
+              {detailRows.slice(0, 4).map((r, i) => (
+                <div key={i} className="flex justify-between gap-3">
+                  <span>{r.label}{r.livingAreaSqm != null ? ` · ${r.livingAreaSqm} m²` : ""}</span>
+                  <span className="tabular-nums">{chf(r.currentAnnualChf)} → {chf(r.marketAnnualChf)} <span className="font-semibold text-foreground">= +{chf(r.gapChf)}</span></span>
+                </div>
+              ))}
+              {detailRows.length > 4 && <div className="text-foreground-dim">{t("planning.goalSeek.andMore", { defaultValue: "…and {{n}} more", n: detailRows.length - 4 })}</div>}
+            </div>
+          )}
+        </>
+      );
   } else if (L.key === "reno") {
     body = L.accretiveCount > 0
       ? t("planning.goalSeek.renoHow", { defaultValue: "OBLF Art. 14 adds part of a value-adding renovation's cost to the rent over its life. Only the {{n}} yield-positive (accretive) works count — {{capex}} of works → +{{max}}/yr.", n: L.accretiveCount, capex: chf(L.capexChf), max: chf(L.max) })
@@ -370,6 +423,9 @@ function LeverDetail({ L, data, feeTodayPct, setFeeTodayPct, feeToPct, setFeeToP
   }
   return (
     <div className="max-w-[62ch] text-[12.5px] text-muted">
+      {L.off && L.offReason && (
+        <div className="mb-1 font-medium text-warning-text">{t("planning.goalSeek.offReasonPrefix", { defaultValue: "Outside the mandate: {{why}}.", why: L.offReason })}</div>
+      )}
       {body}
       {L.simulate && (
         <div className="mt-2">

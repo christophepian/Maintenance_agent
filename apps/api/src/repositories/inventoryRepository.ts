@@ -455,6 +455,7 @@ export async function findUnitsWithValuationForBuilding(
     where: { orgId, buildingId, isActive: true },
     select: {
       id: true,
+      type: true,
       livingAreaSqm: true,
       intrinsicPricePerSqmChf: true,
       vetustePct: true,
