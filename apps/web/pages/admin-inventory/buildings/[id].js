@@ -966,18 +966,17 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
             {whyOpen && <div className="border-b border-surface-border">{driversSlide}</div>}
             {noPnlData ? noPnlBlock : (<>{kpiStripEl}{flagsRow}{metricsCollapsible}</>)}
 
-            {/* ── Detail: Income & expenses · By unit · Profitability (one sub-switch) ── */}
-            <div className="border-t border-surface-border">
-              <div className="px-4 pb-3 pt-3">
-                <div className="inline-flex gap-0.5 rounded-lg border border-surface-border bg-surface-subtle p-0.5">
-                  {[["ie", t("buildingsId.reporting.revex.title")], ["unit", t("buildingsId.reporting.byUnit")], ["prof", t("buildingsId.reporting.unitProfitTab")]].map(([k, l]) => (
-                    <button key={k} onClick={() => setBreakdownView(k)} aria-pressed={breakdownView === k}
-                      className={cn("rounded-md px-3 py-1 text-xs font-medium transition-colors", breakdownView === k ? "bg-surface text-foreground shadow-sm" : "text-muted hover:text-muted-dark")}>{l}</button>
-                  ))}
-                </div>
-              </div>
-              <div className={cn("border-t border-surface-border", loading && "opacity-60 transition-opacity")}>{breakdownPanel}</div>
+            {/* ── Detail: Income & expenses · By unit · Profitability — a full-width,
+                   edge-to-edge segmented band (highlight fill only); its top/bottom
+                   borders separate the KPI area above from the pane below. ── */}
+            <div className="flex border-t border-b border-surface-border">
+              {[["ie", t("buildingsId.reporting.revex.title")], ["unit", t("buildingsId.reporting.byUnit")], ["prof", t("buildingsId.reporting.unitProfitTab")]].map(([k, l]) => (
+                <button key={k} onClick={() => setBreakdownView(k)} aria-pressed={breakdownView === k}
+                  className={cn("flex-1 px-2 py-3 text-center text-[13px] leading-tight transition-colors",
+                    breakdownView === k ? "bg-brand-light font-bold text-brand-dark" : "bg-surface-subtle font-semibold text-muted hover:bg-surface-hover hover:text-foreground")}>{l}</button>
+              ))}
             </div>
+            <div className={cn(loading && "opacity-60 transition-opacity")}>{breakdownPanel}</div>
 
             {/* ── How it can perform better — the prospective companion to the figures
                    above. Ranked for the owner's mandate; hands off to Planning. ── */}
@@ -1406,15 +1405,16 @@ function BuildingReportingView({ buildingId, etatLocatifNet }) {
           swaps the presets row for a "compare against" builder + half-year grain. ── */}
       <div className="rounded-xl border border-surface-border bg-surface shadow-sm">
         {/* Mode switch — a full-width segmented control flush to the card edges; its
-            bottom border doubles as the header/body separator. */}
+            bottom border doubles as the header/body separator. Selection is shown by
+            the fill highlight alone (no accent stroke, no inter-segment divider). */}
         <div className="flex border-b border-surface-border">
           {[["single", t("buildingsId.reporting.mode.single")], ["compare", t("buildingsId.reporting.mode.compare")]].map(([k, l], i) => (
             <button key={k} onClick={() => switchMode(k)} aria-pressed={mode === k}
               className={cn("flex-1 px-3 py-3 text-sm transition-colors",
-                i === 0 ? "rounded-tl-xl" : "rounded-tr-xl border-l border-surface-border",
+                i === 0 ? "rounded-tl-xl" : "rounded-tr-xl",
                 mode === k
-                  ? "bg-brand-light font-bold text-brand-dark shadow-[inset_0_2px_0_0_var(--color-brand)]"
-                  : "bg-surface-subtle font-semibold text-muted hover:text-foreground")}>{l}</button>
+                  ? "bg-brand-light font-bold text-brand-dark"
+                  : "bg-surface-subtle font-semibold text-muted hover:bg-surface-hover hover:text-foreground")}>{l}</button>
           ))}
         </div>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-3 py-2.5">
