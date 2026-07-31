@@ -3622,7 +3622,10 @@
       "synthReno": "{{scope}}, vous pouvez atteindre ~{{within}}. Atteindre {{tgt}} nécessite aussi {{reno}}.",
       "synthSelf": "{{scope}}, vous pouvez atteindre ~{{within}}. Atteindre {{tgt}} nécessite {{reno}} et la gérance en direct.",
       "synthBeyond": "{{tgt}} dépasse ce qu'une combinaison réaliste permet — même avec {{reno}} et la gérance en direct (plafond ~{{self}}).",
-      "renoOffStrategy": "contraire à votre stratégie"
+      "renoOffStrategy": "contraire à votre stratégie",
+      "opexOfCost": "sur {{c}} de charges d'exploitation",
+      "opexUnavailable": "charges d'exploitation indisponibles pour cette période",
+      "opexBeyondReal": "au-delà d'une réduction réaliste ({{h}})"
     },
     "building": "Immeuble",
     "clear": "Effacer",

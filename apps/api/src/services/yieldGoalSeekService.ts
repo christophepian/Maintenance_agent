@@ -30,6 +30,8 @@ export const DEFAULT_OBLF_PASSTHROUGH_PCT = 50;
 export const SELF_MANAGE_FEE_FLOOR_PCT = 1;
 /** A rent increase above this share of the roll is "aggressive" (churn risk). */
 const AGGRESSIVE_RENT_PCT = 0.04;
+/** Realistic re-tender savings on controllable opex when no leaner year is on record. */
+const OPEX_EFFICIENCY_FLOOR = 0.05;
 
 export interface GoalSeekOpportunity {
   assetId: string;
@@ -106,7 +108,7 @@ export interface YieldGoalSeekResult {
   strategyLabel: string | null;
   levers: {
     rent: LeverSignals & { deltaMonthlyChf: number; pctOfRentRoll: number; marketGapAnnualChf: number | null; avgLeaseRemainingMonths: number | null };
-    opex: LeverSignals & { requiredReductionChf: number; headroomChf: number | null };
+    opex: LeverSignals & { requiredReductionChf: number; operatingCostChf: number | null; headroomChf: number | null };
     occupancy: LeverSignals & { requiredOccupancyRate: number };
     mgmtFee: LeverSignals & { feeChf: number; ppOfYield: number; gapCoverPct: number; selfManage: boolean };
     renovation: LeverSignals & {
@@ -159,25 +161,33 @@ export function computeYieldGoalSeek(input: YieldGoalSeekInput): YieldGoalSeekRe
   const met = gap <= 0;
   const potentialRent = occupancyRate > 0 ? rentRollChf / occupancyRate : rentRollChf;
 
-  // ── Rent — realistic ceiling = the as-is market gap (on turnover) ──
+  // ── Rent — realistic ceiling = the as-is market gap (on turnover). Unknown
+  //    benchmark ⇒ can't assess ⇒ not feasible (never unbounded). ──
   const rentPct = rentRollChf > 0 ? gap / rentRollChf : 0;
   const rent = {
     deltaMonthlyChf: round(gap / 12),
     pctOfRentRoll: round(rentPct, 4),
     marketGapAnnualChf: rentMarketGapAnnualChf != null ? round(rentMarketGapAnnualChf) : null,
     avgLeaseRemainingMonths,
-    feasible: rentMarketGapAnnualChf == null ? true : gap <= rentMarketGapAnnualChf + 1e-6,
+    feasible: rentMarketGapAnnualChf != null && gap <= rentMarketGapAnnualChf + 1e-6,
     offStrategy: !!flags.rentAggressive && rentPct > AGGRESSIVE_RENT_PCT,
   };
 
-  // ── Opex — floor at the best non-fee controllable cost of the last 3 years ──
-  const opexHeadroom = controllableOpexChf != null && controllableOpexBest3yrChf != null
-    ? Math.max(0, controllableOpexChf - controllableOpexBest3yrChf)
+  // ── Opex — bounded by the actual operating cost. Realistic reduction = the best
+  //    (leanest) year on record, else a modest re-tender efficiency; hard-capped at
+  //    the operating cost (can't cut more than you spend). Unknown cost ⇒ not
+  //    feasible (never an unbounded cut). ──
+  const opexKnown = controllableOpexChf != null && controllableOpexChf > 0;
+  const opexDemonstrated = opexKnown && controllableOpexBest3yrChf != null
+    ? Math.max(0, controllableOpexChf - controllableOpexBest3yrChf) : 0;
+  const opexCeiling = opexKnown
+    ? Math.min(controllableOpexChf, Math.max(opexDemonstrated, OPEX_EFFICIENCY_FLOOR * controllableOpexChf))
     : null;
   const opex = {
     requiredReductionChf: round(gap),
-    headroomChf: opexHeadroom != null ? round(opexHeadroom) : null,
-    feasible: opexHeadroom == null ? true : gap <= opexHeadroom + 1e-6,
+    operatingCostChf: opexKnown ? round(controllableOpexChf) : null,
+    headroomChf: opexCeiling != null ? round(opexCeiling) : null,
+    feasible: opexCeiling != null && gap <= opexCeiling + 1e-6,
     offStrategy: false,
   };
 
@@ -233,8 +243,8 @@ export function computeYieldGoalSeek(input: YieldGoalSeekInput): YieldGoalSeekRe
   };
 
   // ── Tiered synthesis (levers are non-overlapping by construction) ──
-  const dRentMarket = rentMarketGapAnnualChf ?? 0;                       // on turnover
-  const dOpex = opexHeadroom ?? 0;                                       // non-fee
+  const dRentMarket = rent.feasible || rentMarketGapAnnualChf != null ? (rentMarketGapAnnualChf ?? 0) : 0; // on turnover
+  const dOpex = opexCeiling ?? 0;                                        // bounded by operating cost
   const dOcc = Math.max(0, (1 - occupancyRate)) * potentialRent;
   const dFeeToFloor = Math.max(0, ((mgmtFeePct - SELF_MANAGE_FEE_FLOOR_PCT) / 100) * rentRollChf);
   const dFeeFull = (mgmtFeePct / 100) * rentRollChf;

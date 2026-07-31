@@ -2360,9 +2360,12 @@ export async function getYieldGoalSeek(
   // (e.g. régie-imported P&Ls that bundle everything). ──
   const opexOf = (f: { operatingTotalCents?: number; expensesTotalCents?: number } | null) =>
     ((f?.operatingTotalCents || f?.expensesTotalCents || 0)) / 100;
-  const opexYearsChf = [fin1, fin2, fin3].map(opexOf).filter((v) => v > 0);
-  const controllableOpexChf = opexYearsChf.length ? opexYearsChf[0] : null;       // most recent year
-  const controllableOpexBest3yrChf = opexYearsChf.length ? Math.min(...opexYearsChf) : null;
+  const currentOpexChf = opexOf(fin1);                                            // current period = the goal-seek window
+  const priorOpexChf = [opexOf(fin2), opexOf(fin3)].filter((v) => v > 0);
+  const controllableOpexChf = currentOpexChf > 0 ? currentOpexChf : null;
+  const controllableOpexBest3yrChf = currentOpexChf > 0
+    ? Math.min(currentOpexChf, ...(priorOpexChf.length ? priorOpexChf : [currentOpexChf]))
+    : null;
 
   // ── Market rent: value/m² × canton gross-yield, discounted for vétusté. Value/m²
   // uses the seeded zip sale-price when present, else the unit's own intrinsic price

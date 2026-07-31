@@ -121,16 +121,17 @@ export default function YieldGoalSeekPanel({ building, onSimulate, onAnnotations
     const feeChf = (fee / 100) * rentRoll;
     const lv = data.levers ?? {};
     const reno = lv.renovation ?? { ceilingYieldPct: data.currentYieldPct, accretiveCount: 0, capexChf: 0, annualUpliftChf: 0, offStrategy: false };
-    const rentMarketGap = lv.rent?.marketGapAnnualChf ?? null;   // null until market rent is wired
-    const opexHeadroom = lv.opex?.headroomChf ?? null;           // null until 3-yr opex is wired
+    const rentMarketGap = lv.rent?.marketGapAnnualChf ?? null;   // null = no benchmark → can't assess
+    const opexHeadroom = lv.opex?.headroomChf ?? null;           // null = operating cost unknown → can't assess
+    const opexCost = lv.opex?.operatingCostChf ?? null;
     const selfManage = fee < 1;
     const flags = data.strategyFlags ?? {};                      // recompute off-strategy live (target/fee-dependent)
     const rentPct = rentRoll > 0 ? gap / rentRoll : 0;
     return {
       gap, met: gap <= 0, requiredNOI: (target / 100) * V,
       rentMo: gap / 12, rentPct,
-      rentMarketGap, rentFeasible: rentMarketGap == null ? true : gap <= rentMarketGap + 1e-6, rentOff: !!flags.rentAggressive && rentPct > 0.04,
-      opexHeadroom, opexFeasible: opexHeadroom == null ? true : gap <= opexHeadroom + 1e-6,
+      rentMarketGap, rentFeasible: rentMarketGap != null && gap <= rentMarketGap + 1e-6, rentOff: !!flags.rentAggressive && rentPct > 0.04,
+      opexHeadroom, opexCost, opexFeasible: opexHeadroom != null && gap <= opexHeadroom + 1e-6,
       newOcc, occFeasible: newOcc <= 1,
       feeChf, feeCover: gap > 0 ? Math.min(feeChf, gap) / gap : 0, selfManage, feeOff: selfManage && !!flags.selfManage,
       reno, renoReach: reno.ceilingYieldPct / 100 >= target / 100 - 1e-9, renoOff: !!flags.renovation,
@@ -227,10 +228,10 @@ export default function YieldGoalSeekPanel({ building, onSimulate, onAnnotations
             />
             <Lever
               name={t("planning.goalSeek.lever.opex", { defaultValue: "Opex" })}
-              value={m.opexFeasible ? `−${formatChf(m.gap)}/yr` : `−${formatChf(m.opexHeadroom ?? 0)}/yr max`}
-              note={t("planning.goalSeek.opexNoteShort", { defaultValue: "straight to NOI" })}
+              value={m.opexFeasible ? `−${formatChf(m.gap)}/yr` : m.opexCost != null ? `−${formatChf(m.opexHeadroom ?? 0)}/yr max` : "—"}
+              note={m.opexCost != null ? t("planning.goalSeek.opexOfCost", { defaultValue: "of {{c}} operating cost", c: formatChf(m.opexCost) }) : ""}
               tone="ok" feasible={m.opexFeasible}
-              reason={t("planning.goalSeek.opexBeyondBest", { defaultValue: "beyond your best cost year" })}
+              reason={m.opexCost == null ? t("planning.goalSeek.opexUnavailable", { defaultValue: "operating cost unavailable for this period" }) : t("planning.goalSeek.opexBeyondReal", { defaultValue: "beyond a realistic opex reduction ({{h}})", h: formatChf(m.opexHeadroom ?? 0) })}
             />
             <Lever
               name={t("planning.goalSeek.lever.occupancy", { defaultValue: "Occupancy" })}
