@@ -16,7 +16,6 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import { useRouter } from "next/router";
 import { useTranslation } from "next-i18next";
-import { cn } from "../lib/utils";
 import RenovationAccordion from "./RenovationAccordion";
 import RenovationSimulatorDrawer from "./RenovationSimulatorDrawer";
 import FinancingPanel from "./FinancingPanel";
@@ -47,11 +46,9 @@ export default function PlanningWorkspace({ buildings: allBuildings = [] }) {
     [allBuildings, selectedBuildingIds],
   );
 
-  const toggleBuilding = useCallback((id) => {
-    setSelectedBuildingIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
-    );
-  }, []);
+  // Single-building: the goal-seek and simulation are per-building, so selection is
+  // a dropdown, not multi-select pills.
+  const selectBuilding = useCallback((id) => { setSelectedBuildingIds(id ? [id] : []); }, []);
 
   const clear = useCallback(() => { setSimItems(null); setSimBuildingId(null); }, []);
 
@@ -74,40 +71,21 @@ export default function PlanningWorkspace({ buildings: allBuildings = [] }) {
     }
   }, [simItems]);
 
-  const allSelected = allBuildings.length > 0 && selectedBuildingIds.length === allBuildings.length;
-
   return (
     <div className="space-y-4">
-      {/* Quiet toolbar: building filter only. */}
+      {/* Building selector — single-building (goal-seek + simulation are per-building). */}
       {allBuildings.length > 0 && (
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span className="mr-1 text-[11px] font-semibold uppercase tracking-wide text-foreground-dim">{t("planning.building", { defaultValue: "Building" })}</span>
-          {allBuildings.map((b) => {
-            const on = selectedBuildingIds.includes(b.id);
-            return (
-              <button
-                key={b.id}
-                type="button"
-                onClick={() => toggleBuilding(b.id)}
-                className={cn(
-                  "rounded-full px-3 py-1 text-xs font-medium border transition-colors",
-                  on ? "bg-brand text-white border-brand"
-                     : "border-surface-border text-foreground-dim hover:bg-surface-subtle",
-                )}
-              >
-                {b.name}
-              </button>
-            );
-          })}
-          {allBuildings.length > 1 && (
-            <button
-              type="button"
-              onClick={() => setSelectedBuildingIds(allSelected ? [] : allBuildings.map((b) => b.id))}
-              className="text-xs text-brand hover:underline ml-1"
-            >
-              {allSelected ? t("planning.clear", { defaultValue: "Clear" }) : t("planning.selectAll", { defaultValue: "Select all" })}
-            </button>
-          )}
+        <div className="flex flex-wrap items-center gap-2">
+          <label htmlFor="planning-building" className="text-[11px] font-semibold uppercase tracking-wide text-foreground-dim">{t("planning.building", { defaultValue: "Building" })}</label>
+          <select
+            id="planning-building"
+            value={selectedBuildingIds[0] ?? ""}
+            onChange={(e) => selectBuilding(e.target.value)}
+            className="rounded-lg border border-surface-border bg-surface px-3 py-1.5 text-sm text-foreground"
+          >
+            {allBuildings.length !== 1 && <option value="">{t("planning.selectBuilding", { defaultValue: "Select a building…" })}</option>}
+            {allBuildings.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+          </select>
         </div>
       )}
 
