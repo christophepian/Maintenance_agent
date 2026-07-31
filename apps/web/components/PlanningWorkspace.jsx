@@ -15,6 +15,7 @@
  */
 import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import { useRouter } from "next/router";
+import { useTranslation } from "next-i18next";
 import { cn } from "../lib/utils";
 import RenovationAccordion from "./RenovationAccordion";
 import RenovationSimulatorDrawer from "./RenovationSimulatorDrawer";
@@ -23,10 +24,13 @@ import YieldGoalSeekPanel from "./YieldGoalSeekPanel";
 
 export default function PlanningWorkspace({ buildings: allBuildings = [] }) {
   const router = useRouter();
+  const { t } = useTranslation("manager");
   // Building filter: default to all when there's a single building, else none (pick).
   const [selectedBuildingIds, setSelectedBuildingIds] = useState([]);
   const [simItems, setSimItems]           = useState(null);
   const [simBuildingId, setSimBuildingId] = useState(null);
+  // Accretive/dilutive annotations emitted by the goal-seek → badge the accordion rows.
+  const [annotations, setAnnotations]     = useState(null);
   const simRef = useRef(null);
 
   // Auto-select: a ?buildingId deep-link (e.g. from the Reporting → Profitability
@@ -74,56 +78,53 @@ export default function PlanningWorkspace({ buildings: allBuildings = [] }) {
 
   return (
     <div className="space-y-4">
-      {/* Bundled header: title + description + building filter chips */}
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h3 className="text-sm font-semibold text-foreground m-0">Renovation Opportunities</h3>
-          <p className="text-xs text-foreground-dim mt-0.5 max-w-2xl">
-            Assets at risk of end-of-life or flagged in condition reports, sorted by urgency.
-            Select a bundle, set the assumptions, then plan the work — you’ll review the cash
-            position and approve on the next step.
-          </p>
-        </div>
-        {allBuildings.length > 0 && (
-          <div className="flex flex-wrap items-center gap-1.5">
-            {allBuildings.map((b) => {
-              const on = selectedBuildingIds.includes(b.id);
-              return (
-                <button
-                  key={b.id}
-                  type="button"
-                  onClick={() => toggleBuilding(b.id)}
-                  className={cn(
-                    "rounded-full px-3 py-1 text-xs font-medium border transition-colors",
-                    on ? "bg-brand text-white border-brand"
-                       : "border-surface-border text-foreground-dim hover:bg-surface-subtle",
-                  )}
-                >
-                  {b.name}
-                </button>
-              );
-            })}
-            {allBuildings.length > 1 && (
+      {/* Quiet toolbar: building filter only. */}
+      {allBuildings.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="mr-1 text-[11px] font-semibold uppercase tracking-wide text-foreground-dim">{t("planning.building", { defaultValue: "Building" })}</span>
+          {allBuildings.map((b) => {
+            const on = selectedBuildingIds.includes(b.id);
+            return (
               <button
+                key={b.id}
                 type="button"
-                onClick={() => setSelectedBuildingIds(allSelected ? [] : allBuildings.map((b) => b.id))}
-                className="text-xs text-brand hover:underline ml-1"
+                onClick={() => toggleBuilding(b.id)}
+                className={cn(
+                  "rounded-full px-3 py-1 text-xs font-medium border transition-colors",
+                  on ? "bg-brand text-white border-brand"
+                     : "border-surface-border text-foreground-dim hover:bg-surface-subtle",
+                )}
               >
-                {allSelected ? "Clear" : "Select all"}
+                {b.name}
               </button>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Yield goal-seek — per-building what-if; its renovation lever hands the
-          accretive works straight to the simulator below (same onSimulate). */}
-      {selectedBuildings.length === 1 && (
-        <YieldGoalSeekPanel building={selectedBuildings[0]} onSimulate={onSimulate} />
+            );
+          })}
+          {allBuildings.length > 1 && (
+            <button
+              type="button"
+              onClick={() => setSelectedBuildingIds(allSelected ? [] : allBuildings.map((b) => b.id))}
+              className="text-xs text-brand hover:underline ml-1"
+            >
+              {allSelected ? t("planning.clear", { defaultValue: "Clear" }) : t("planning.selectAll", { defaultValue: "Select all" })}
+            </button>
+          )}
+        </div>
       )}
 
-      {/* Opportunities accordion (full width) */}
-      <RenovationAccordion buildings={selectedBuildings} onSimulate={onSimulate} />
+      {/* Yield goal-seek — collapsed by default; emits accretive/dilutive annotations
+          that badge the single opportunity list below (no duplicate asset list). */}
+      {selectedBuildings.length === 1 && (
+        <YieldGoalSeekPanel building={selectedBuildings[0]} onSimulate={onSimulate} onAnnotationsChange={setAnnotations} />
+      )}
+
+      {/* The one opportunity list. */}
+      <div>
+        <div className="mb-2 flex items-baseline justify-between gap-3">
+          <h3 className="m-0 text-sm font-semibold text-foreground">{t("planning.opportunitiesTitle", { defaultValue: "Renovation opportunities" })}</h3>
+          <span className="text-xs text-foreground-dim">{t("planning.opportunitiesHint", { defaultValue: "sorted by urgency" })}</span>
+        </div>
+        <RenovationAccordion buildings={selectedBuildings} onSimulate={onSimulate} annotations={annotations} />
+      </div>
 
       {/* Simulation + financing — full width, brought in beneath the table */}
       {simItems && (

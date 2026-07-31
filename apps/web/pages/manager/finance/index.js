@@ -98,6 +98,7 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
   const [portfolioError, setPortfolioError] = useState("");
   const [buildingsExpanded, setBuildingsExpanded] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
+  const [planningView, setPlanningView] = useState("opps"); // Planning sub-tab: opps | plans
 
   const fetchPortfolio = useCallback(async () => {
     setPortfolioLoading(true);
@@ -416,22 +417,27 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
 
           {/* ── Planning ── */}
           {activeTabKey === "planning" && (
-            <div className="space-y-6">
-
-              {/* Renovation Opportunities + simulation workspace (building selector lives in its header) */}
-              <PlanningWorkspace buildings={allBuildings} />
-
-              {/* Plans */}
-              <div>
-                <div className="mb-3">
-                  <h3 className="text-sm font-semibold text-foreground">Plans</h3>
-                  <p className="text-xs text-foreground-dim mt-0.5">
-                    Open a plan to review its NPV verdict and assumptions, or to generate RFPs.
-                  </p>
-                </div>
-                <CashflowPlansList />
+            <div className="space-y-4">
+              {/* Sub-tabs: keep committed Plans off the main planning scroll. */}
+              <div className="flex gap-1 border-b border-surface-border">
+                {[["opps", t("planning.subtab.opportunities", { defaultValue: "Opportunities" })], ["plans", t("planning.subtab.plans", { defaultValue: "Plans" })]].map(([k, label]) => (
+                  <button key={k} onClick={() => setPlanningView(k)} aria-pressed={planningView === k}
+                    className={cn("-mb-px shrink-0 border-b-2 px-3 py-2 text-sm font-medium transition-colors", planningView === k ? "border-brand text-brand" : "border-transparent text-muted hover:text-foreground")}>
+                    {label}
+                  </button>
+                ))}
               </div>
 
+              {planningView === "opps" && <PlanningWorkspace buildings={allBuildings} />}
+
+              {planningView === "plans" && (
+                <div>
+                  <p className="mb-3 text-xs text-foreground-dim">
+                    {t("planning.plansHint", { defaultValue: "Open a plan to review its NPV verdict and assumptions, or to generate RFPs." })}
+                  </p>
+                  <CashflowPlansList />
+                </div>
+              )}
             </div>
           )}
 
