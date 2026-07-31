@@ -2,24 +2,21 @@
  * UnitProfitabilityPanel — building profitability, broken down by unit
  * (Reporting → "Profitability" sub-tab).
  *
- * Header: building value computed bottom-up (Σ unit intrinsic), reconciled against
- * the stored PPE / market appraisals, plus building net yield and NAV. Table:
- * per-unit fully-loaded annualised NOI, intrinsic value, % of building value, and
- * yield-on-intrinsic — ranked by yield, low-yield/high-value units flagged as
- * sell / PPE candidates. Dual render so it never scrolls the page horizontally.
+ * Opens on the two things that matter — net yield vs the typical band, and the
+ * per-unit ranking. Everything else is progressive disclosure: the appraisal
+ * reconciliation (PPE / market / NAV), the NOI bridge, the benchmark methodology,
+ * and the two "% of building" columns sit behind expanders / an ⓘ. Dual render so
+ * it never scrolls the page horizontally.
  */
+import { useState } from "react";
 import { useTranslation } from "next-i18next";
 import { cn } from "../../lib/utils";
 import { formatChf, formatChfCents } from "../../lib/format";
 import { useDetailResource } from "../../lib/hooks/useDetailResource";
 import { SWISS_RESIDENTIAL_NET_YIELD, classifyNetYield, yieldTrackPosition } from "../../lib/benchmarks/swissRentalYield";
 
-function pct(v) {
-  return v == null ? "—" : `${v.toFixed(1)}%`;
-}
-function chf(v) {
-  return v == null ? "—" : formatChf(v);
-}
+function pct(v) { return v == null ? "—" : `${v.toFixed(1)}%`; }
+function chf(v) { return v == null ? "—" : formatChf(v); }
 
 function SellFlag({ t }) {
   return (
@@ -29,9 +26,8 @@ function SellFlag({ t }) {
   );
 }
 
-// The net-yield track: this building's marker against the shaded Swiss residential
-// "typical" band, plus a methodology disclosure. Rendered inline under the yield
-// figure (no card of its own) — the verdict now shows as a chip beside the number.
+// Slim net-yield track: this building's marker against the shaded Swiss residential
+// "typical" band, one caption. Methodology + sources live behind the table's ⓘ.
 function YieldTrack({ yieldPct, t }) {
   const b = SWISS_RESIDENTIAL_NET_YIELD;
   if (classifyNetYield(yieldPct) == null) return null;
@@ -39,11 +35,9 @@ function YieldTrack({ yieldPct, t }) {
   const bandLeft = yieldTrackPosition(b.lowPct) * 100;
   const bandRight = yieldTrackPosition(b.highPct) * 100;
   return (
-    <div>
+    <div className="max-w-[300px]">
       <div className="relative h-2 rounded-full bg-surface-hover">
-        {/* national "typical" band */}
         <div className="absolute inset-y-0 rounded-full bg-success-light" style={{ left: `${bandLeft}%`, width: `${Math.max(0, bandRight - bandLeft)}%` /* no-token: benchmark band extent */ }} />
-        {/* this building */}
         <div className="absolute -top-1 h-4 w-0.5 -translate-x-1/2 rounded bg-foreground" style={{ left: `${markerLeft}%` /* no-token: dynamic marker position */ }} title={`${yieldPct.toFixed(1)}%`} />
       </div>
       <div className="mt-1 flex justify-between text-[10px] tabular-nums text-foreground-dim">
@@ -51,25 +45,35 @@ function YieldTrack({ yieldPct, t }) {
         <span>{t("buildingsId.reporting.unitProfit.benchmark.typical", { low: b.lowPct, high: b.highPct })}</span>
         <span>{b.regionalHighPct}%</span>
       </div>
-      <details className="mt-2 text-[11px] text-foreground-dim">
-        <summary className="cursor-pointer select-none hover:text-foreground">{t("buildingsId.reporting.unitProfit.benchmark.methodology")}</summary>
-        <p className="mt-1">{t("buildingsId.reporting.unitProfit.benchmark.basisNote")}</p>
-        <p className="mt-1">
+    </div>
+  );
+}
+
+// Methodology + sources, tucked behind an ⓘ at the foot of the table.
+function MethodologyInfo({ t }) {
+  const b = SWISS_RESIDENTIAL_NET_YIELD;
+  return (
+    <span className="group relative inline-flex">
+      <span className="cursor-help font-semibold text-brand hover:underline">{t("buildingsId.reporting.unitProfit.benchmark.methodology")}</span>
+      <span className="pointer-events-none absolute bottom-full right-0 z-30 mb-1.5 hidden w-72 rounded-xl border border-surface-border bg-surface p-3 text-left text-[11.5px] leading-relaxed text-muted shadow-xl group-hover:block group-focus-within:block">
+        <span className="block">{t("buildingsId.reporting.unitProfit.benchmark.basisNote")}</span>
+        <span className="mt-1 block">
           {t("buildingsId.reporting.unitProfit.benchmark.sources")}:{" "}
           {b.sources.map((s, i) => (
-            <span key={s.url}>
-              {i > 0 ? " · " : ""}
-              <a href={s.url} target="_blank" rel="noopener noreferrer" className="text-brand no-underline hover:underline">{s.name}</a>
-            </span>
+            <span key={s.url}>{i > 0 ? " · " : ""}<a href={s.url} target="_blank" rel="noopener noreferrer" className="pointer-events-auto text-brand no-underline hover:underline">{s.name}</a></span>
           ))}
-        </p>
-      </details>
-    </div>
+        </span>
+      </span>
+    </span>
   );
 }
 
 export default function UnitProfitabilityPanel({ buildingId, from, to }) {
   const { t } = useTranslation("manager");
+  const [apprOpen, setApprOpen]     = useState(false);
+  const [bridgeOpen, setBridgeOpen] = useState(false);
+  const [sharesOpen, setSharesOpen] = useState(false);
+
   const url = buildingId && from && to
     ? `/api/buildings/${buildingId}/unit-profitability?from=${from}&to=${to}`
     : null;
@@ -81,10 +85,10 @@ export default function UnitProfitabilityPanel({ buildingId, from, to }) {
   const rows = data?.rows ?? [];
   const buildingValue = data?.buildingIntrinsicValueChf;
   const yieldPct = data?.buildingNetYieldPct ?? null;
-  const verdict = yieldPct != null ? classifyNetYield(yieldPct) : null; // below | inRange | above | null
+  const verdict = yieldPct != null ? classifyNetYield(yieldPct) : null;
   const hasBridge = data != null && data.buildingOperatingNoiCents != null;
+  const hasAppraisals = data != null && (data.ppeEstimateChf != null || data.marketValueChf != null || data.navChf != null);
 
-  // Reconciliation deltas vs the bottom-up value.
   const recon = (appraisal) =>
     buildingValue && appraisal != null
       ? `${appraisal >= buildingValue ? "+" : ""}${(((appraisal - buildingValue) / buildingValue) * 100).toFixed(1)}%`
@@ -92,19 +96,13 @@ export default function UnitProfitabilityPanel({ buildingId, from, to }) {
 
   return (
     <div className="p-4 sm:p-5">
-      {/* Header — a two-column summary: Value & yield · NOI bridge. */}
-      <div className="mb-3">
-        <h3 className="text-sm font-semibold text-foreground">{t("buildingsId.reporting.unitProfit.title")}</h3>
-        <p className="text-xs text-foreground-dim">{t("buildingsId.reporting.unitProfit.subtitle")}</p>
-      </div>
-      <div className={cn("mb-4 grid gap-3", hasBridge ? "sm:grid-cols-2" : "grid-cols-1")}>
-        {/* Value & yield — yield stated once, with its benchmark directly under it,
-            then building value + a compact reconciliation line. */}
-        <div className="rounded-xl border border-surface-border bg-surface-subtle p-4">
-          <p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.unitProfit.valueYield")}</p>
+      {/* ── Hero: yield + band on the left, building value + appraisals on the right ── */}
+      <div className="flex flex-wrap items-start justify-between gap-x-8 gap-y-4">
+        <div className="min-w-[210px] flex-1">
+          <p className="text-[10px] font-bold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.unitProfit.valueYield")}</p>
           {yieldPct != null ? (
             <>
-              <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+              <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1">
                 <span className="text-3xl font-bold tabular-nums tracking-tight text-foreground">{pct(yieldPct)}</span>
                 {verdict && (
                   <span className={cn("rounded-full px-2.5 py-0.5 text-xs font-semibold", verdict === "below" ? "bg-warning-light text-warning-text" : "bg-success-light text-success-text")}>
@@ -115,20 +113,8 @@ export default function UnitProfitabilityPanel({ buildingId, from, to }) {
               <div className="mt-3"><YieldTrack yieldPct={yieldPct} t={t} /></div>
             </>
           ) : (
-            <span className="text-3xl font-bold text-foreground-dim">—</span>
+            <span className="mt-1 block text-3xl font-bold text-foreground-dim">—</span>
           )}
-          <div className="my-3 h-px bg-surface-divider" />
-          <div className="flex items-baseline justify-between gap-2">
-            <span className="text-sm text-muted">{t("buildingsId.reporting.unitProfit.buildingValue")}</span>
-            <span className="text-base font-semibold tabular-nums text-foreground">{chf(buildingValue)}</span>
-          </div>
-          <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-foreground-dim">
-            <span>{t("buildingsId.reporting.unitProfit.buildingValueSub")}</span>
-            {data?.ppeEstimateChf != null && <span>{t("buildingsId.reporting.unitProfit.ppeEstimate")} {chf(data.ppeEstimateChf)}{recon(data.ppeEstimateChf) ? ` (${recon(data.ppeEstimateChf)})` : ""}</span>}
-            {data?.marketValueChf != null && <span>{t("buildingsId.reporting.unitProfit.marketValue")} {chf(data.marketValueChf)}{recon(data.marketValueChf) ? ` (${recon(data.marketValueChf)})` : ""}</span>}
-            {data?.navChf != null && <span>{t("buildingsId.reporting.unitProfit.nav")} {chf(data.navChf)}</span>}
-          </div>
-          {/* The goal-seek card lives on this same page — scroll to it and open it. */}
           <button type="button"
             onClick={() => {
               const el = typeof document !== "undefined" && document.getElementById("yield-goalseek");
@@ -139,30 +125,58 @@ export default function UnitProfitabilityPanel({ buildingId, from, to }) {
           </button>
         </div>
 
-        {/* NOI bridge — direct costing: units' direct NOI less shared building-level
-            costs reconciles to the building operating NOI. */}
-        {hasBridge && (
-          <div className="rounded-xl border border-surface-border bg-surface-subtle p-4">
-            <p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.unitProfit.noiBreakdown")}</p>
-            <div className="flex items-baseline justify-between gap-2 py-1 text-sm">
-              <span className="text-muted">{t("buildingsId.reporting.unitProfit.unitsDirectNoi")}</span>
-              <span className="font-semibold tabular-nums text-foreground">{formatChfCents(data.totalAnnualNoiCents)}</span>
-            </div>
-            <div className="flex items-baseline justify-between gap-2 py-1 text-sm">
-              <span className="text-muted">− {t("buildingsId.reporting.unitProfit.buildingLevelCosts")}</span>
-              <span className="font-semibold tabular-nums text-foreground">{formatChfCents(data.buildingLevelCostsCents)}</span>
-            </div>
-            <div className="mt-1 flex items-baseline justify-between gap-2 border-t-2 border-surface-border pt-2 text-sm">
-              <span className="font-bold text-foreground">= {t("buildingsId.reporting.unitProfit.buildingNoi")}</span>
-              <span className="font-bold tabular-nums text-foreground">{formatChfCents(data.buildingOperatingNoiCents)}</span>
-            </div>
-            <p className="mt-2 text-[11px] text-foreground-dim">{t("buildingsId.reporting.unitProfit.noiBreakdownNote")}</p>
-          </div>
-        )}
+        <div className="text-right">
+          <p className="text-[10px] font-bold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.unitProfit.buildingValue")}</p>
+          <p className="mt-1 text-xl font-semibold tabular-nums text-foreground">{chf(buildingValue)}</p>
+          {hasAppraisals && (
+            <>
+              <button type="button" onClick={() => setApprOpen((v) => !v)} aria-expanded={apprOpen}
+                className="mt-1.5 inline-flex items-center gap-1 text-xs font-semibold text-muted hover:text-foreground">
+                {t("buildingsId.reporting.unitProfit.vsAppraisals", { defaultValue: "vs appraisals" })} <span className="text-[9px] text-foreground-dim">{apprOpen ? "▾" : "▸"}</span>
+              </button>
+              {apprOpen && (
+                <div className="mt-1.5 flex flex-wrap justify-end gap-x-4 gap-y-1 text-[11px] text-foreground-dim">
+                  {data?.ppeEstimateChf != null && <span>{t("buildingsId.reporting.unitProfit.ppeEstimate")} {chf(data.ppeEstimateChf)}{recon(data.ppeEstimateChf) ? ` (${recon(data.ppeEstimateChf)})` : ""}</span>}
+                  {data?.marketValueChf != null && <span>{t("buildingsId.reporting.unitProfit.marketValue")} {chf(data.marketValueChf)}{recon(data.marketValueChf) ? ` (${recon(data.marketValueChf)})` : ""}</span>}
+                  {data?.navChf != null && <span>{t("buildingsId.reporting.unitProfit.nav")} {chf(data.navChf)}</span>}
+                </div>
+              )}
+            </>
+          )}
+        </div>
       </div>
 
+      {/* ── NOI bridge — one line, expandable ── */}
+      {hasBridge && (
+        <div className="mt-4 border-t border-surface-divider pt-3">
+          <button type="button" onClick={() => setBridgeOpen((v) => !v)} aria-expanded={bridgeOpen}
+            className="inline-flex items-center gap-1.5 text-sm text-foreground">
+            <span className="font-semibold">{t("buildingsId.reporting.unitProfit.buildingNoi")} {formatChfCents(data.buildingOperatingNoiCents)}</span>
+            <span className="font-normal text-muted">— {t("buildingsId.reporting.unitProfit.howBuilt", { defaultValue: "how it's built" })}</span>
+            <span className="text-[9px] text-foreground-dim">{bridgeOpen ? "▾" : "▸"}</span>
+          </button>
+          {bridgeOpen && (
+            <div className="mt-2 max-w-[360px]">
+              <div className="flex items-baseline justify-between gap-2 py-1 text-sm">
+                <span className="text-muted">{t("buildingsId.reporting.unitProfit.unitsDirectNoi")}</span>
+                <span className="font-semibold tabular-nums text-foreground">{formatChfCents(data.totalAnnualNoiCents)}</span>
+              </div>
+              <div className="flex items-baseline justify-between gap-2 py-1 text-sm">
+                <span className="text-muted">− {t("buildingsId.reporting.unitProfit.buildingLevelCosts")}</span>
+                <span className="font-semibold tabular-nums text-foreground">{formatChfCents(data.buildingLevelCostsCents)}</span>
+              </div>
+              <div className="mt-1 flex items-baseline justify-between gap-2 border-t-2 border-surface-border pt-2 text-sm">
+                <span className="font-bold text-foreground">= {t("buildingsId.reporting.unitProfit.buildingNoi")}</span>
+                <span className="font-bold tabular-nums text-foreground">{formatChfCents(data.buildingOperatingNoiCents)}</span>
+              </div>
+              <p className="mt-2 text-[11px] text-foreground-dim">{t("buildingsId.reporting.unitProfit.noiBreakdownNote")}</p>
+            </div>
+          )}
+        </div>
+      )}
+
       {data?.reconciliation && !data.reconciliation.reconciled && (
-        <div className="mb-3 flex items-start gap-2 rounded-lg bg-warning-light px-3 py-2 text-xs text-warning-text" role="alert">
+        <div className="mt-3 flex items-start gap-2 rounded-lg bg-warning-light px-3 py-2 text-xs text-warning-text" role="alert">
           <span aria-hidden="true">⚠</span>
           <span>{t("buildingsId.reporting.unitProfit.reconcileWarn", {
             sum: formatChfCents(data.reconciliation.sumUnitIncomeCents),
@@ -173,11 +187,19 @@ export default function UnitProfitabilityPanel({ buildingId, from, to }) {
       )}
 
       {rows.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-surface-border p-6 text-center text-sm text-foreground-dim">
+        <p className="mt-4 rounded-xl border border-dashed border-surface-border p-6 text-center text-sm text-foreground-dim">
           {t("buildingsId.reporting.unitProfit.empty")}
         </p>
       ) : (
         <>
+          <div className="mb-2 mt-5 flex items-center justify-between gap-2">
+            <p className="text-[10px] font-bold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.unitProfit.rankedByYield", { defaultValue: "By unit · ranked by yield" })}</p>
+            <button type="button" onClick={() => setSharesOpen((v) => !v)} aria-pressed={sharesOpen}
+              className="text-[11px] font-semibold text-muted hover:text-foreground">
+              {sharesOpen ? t("buildingsId.reporting.unitProfit.hideShares", { defaultValue: "Hide shares" }) : t("buildingsId.reporting.unitProfit.showShares", { defaultValue: "Show shares" })}
+            </button>
+          </div>
+
           {/* Mobile cards */}
           <div className="flex flex-col gap-2 sm:hidden">
             {rows.map((r) => (
@@ -193,7 +215,7 @@ export default function UnitProfitabilityPanel({ buildingId, from, to }) {
                   <div><span className="text-foreground-dim">{t("buildingsId.reporting.unitProfit.annualNoi")}: </span><span className="font-semibold tabular-nums">{formatChfCents(r.annualNoiCents)}</span></div>
                   <div><span className="text-foreground-dim">{t("buildingsId.reporting.unitProfit.yieldIntrinsic")}: </span><span className="font-semibold tabular-nums">{pct(r.netYieldOnIntrinsicPct)}</span></div>
                   <div><span className="text-foreground-dim">{t("buildingsId.reporting.unitProfit.intrinsicValue")}: </span><span className="tabular-nums">{chf(r.intrinsicValueChf)}</span></div>
-                  <div><span className="text-foreground-dim">{t("buildingsId.reporting.unitProfit.valueShare")}: </span><span className="tabular-nums">{pct(r.valueSharePct)}</span></div>
+                  {sharesOpen && <div><span className="text-foreground-dim">{t("buildingsId.reporting.unitProfit.valueShare")}: </span><span className="tabular-nums">{pct(r.valueSharePct)}</span></div>}
                 </div>
               </div>
             ))}
@@ -201,15 +223,15 @@ export default function UnitProfitabilityPanel({ buildingId, from, to }) {
 
           {/* Desktop table */}
           <div className="hidden overflow-x-auto sm:block">
-            <table className="w-full min-w-[680px] text-sm">
+            <table className="w-full min-w-[560px] text-sm">
               <thead>
                 <tr className="border-b border-surface-border text-left text-xs uppercase tracking-wide text-foreground-dim">
                   <th className="py-2 pr-3 font-semibold">{t("buildingsId.reporting.unitProfit.unit")}</th>
                   <th className="py-2 pr-3 font-semibold">{t("buildingsId.reporting.unitProfit.tenant")}</th>
                   <th className="py-2 pr-3 text-right font-semibold">{t("buildingsId.reporting.unitProfit.annualNoi")}</th>
-                  <th className="py-2 pr-3 text-right font-semibold">{t("buildingsId.reporting.unitProfit.noiShare")}</th>
+                  {sharesOpen && <th className="py-2 pr-3 text-right font-semibold">{t("buildingsId.reporting.unitProfit.noiShare")}</th>}
                   <th className="py-2 pr-3 text-right font-semibold">{t("buildingsId.reporting.unitProfit.intrinsicValue")}</th>
-                  <th className="py-2 pr-3 text-right font-semibold">{t("buildingsId.reporting.unitProfit.valueShare")}</th>
+                  {sharesOpen && <th className="py-2 pr-3 text-right font-semibold">{t("buildingsId.reporting.unitProfit.valueShare")}</th>}
                   <th className="py-2 pr-3 text-right font-semibold">{t("buildingsId.reporting.unitProfit.yieldIntrinsic")}</th>
                   <th className="py-2 font-semibold" />
                 </tr>
@@ -220,9 +242,9 @@ export default function UnitProfitabilityPanel({ buildingId, from, to }) {
                     <td className="py-2 pr-3 font-medium text-foreground">{r.unitNumber}</td>
                     <td className="py-2 pr-3 text-foreground-dim">{r.tenantName || <span className="italic">{t("buildingsId.reporting.unitProfit.vacant")}</span>}</td>
                     <td className="py-2 pr-3 text-right font-semibold tabular-nums">{formatChfCents(r.annualNoiCents)}</td>
-                    <td className="py-2 pr-3 text-right tabular-nums text-foreground-dim">{pct(r.noiContributionPct)}</td>
+                    {sharesOpen && <td className="py-2 pr-3 text-right tabular-nums text-foreground-dim">{pct(r.noiContributionPct)}</td>}
                     <td className="py-2 pr-3 text-right tabular-nums">{chf(r.intrinsicValueChf)}</td>
-                    <td className="py-2 pr-3 text-right tabular-nums text-foreground-dim">{pct(r.valueSharePct)}</td>
+                    {sharesOpen && <td className="py-2 pr-3 text-right tabular-nums text-foreground-dim">{pct(r.valueSharePct)}</td>}
                     <td className="py-2 pr-3 text-right font-semibold tabular-nums">{pct(r.netYieldOnIntrinsicPct)}</td>
                     <td className="py-2 text-right">{r.sellCandidate && <SellFlag t={t} />}</td>
                   </tr>
@@ -232,9 +254,9 @@ export default function UnitProfitabilityPanel({ buildingId, from, to }) {
                 <tr className="border-t-2 border-surface-border font-semibold">
                   <td className="py-2 pr-3" colSpan={2}>{t("buildingsId.reporting.unitProfit.total")}</td>
                   <td className="py-2 pr-3 text-right tabular-nums">{formatChfCents(data.totalAnnualNoiCents)}</td>
-                  <td className="py-2 pr-3 text-right tabular-nums text-foreground-dim">100%</td>
+                  {sharesOpen && <td className="py-2 pr-3 text-right tabular-nums text-foreground-dim">100%</td>}
                   <td className="py-2 pr-3 text-right tabular-nums">{chf(buildingValue)}</td>
-                  <td className="py-2 pr-3 text-right tabular-nums text-foreground-dim">{buildingValue ? "100%" : "—"}</td>
+                  {sharesOpen && <td className="py-2 pr-3 text-right tabular-nums text-foreground-dim">{buildingValue ? "100%" : "—"}</td>}
                   <td className="py-2 pr-3 text-right tabular-nums">{pct(data?.buildingNetYieldPct)}</td>
                   <td />
                 </tr>
@@ -246,7 +268,11 @@ export default function UnitProfitabilityPanel({ buildingId, from, to }) {
             <span>{t("buildingsId.reporting.unitProfit.total")}</span>
             <span className="tabular-nums">{formatChfCents(data.totalAnnualNoiCents)} · {pct(data?.buildingNetYieldPct)}</span>
           </div>
-          <p className="mt-3 text-xs text-foreground-dim">{t("buildingsId.reporting.unitProfit.footnote")}</p>
+          <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-foreground-dim">
+            <span className="inline-flex items-center gap-1.5"><span className="inline-block h-[7px] w-[7px] rounded-full bg-orange-text" /> {t("buildingsId.reporting.unitProfit.sellHint", { defaultValue: "sell / PPE candidate — low yield on high value" })}</span>
+            <span>·</span>
+            <MethodologyInfo t={t} />
+          </div>
         </>
       )}
     </div>

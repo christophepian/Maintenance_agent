@@ -708,7 +708,13 @@
         "maintenanceRatio": "Maintenance ratio",
         "capex": "CapEx",
         "costPerUnit": "Cost per unit",
-        "operatingExpenses": "Operating expenses"
+        "operatingExpenses": "Operating expenses",
+        "netYield": "Net yield",
+        "netYieldTip": "NOI ÷ building value ({{val}})",
+        "netYieldNoVal": "Add a valuation to compute yield",
+        "freeCashFlow": "Free cash flow",
+        "fcfTip": "NOI − capex − mortgage interest. Before debt principal.",
+        "mortgageInterest": "Mortgage interest"
       },
       "kpiGroup": {
         "performance": "Performance",
@@ -832,7 +838,13 @@
           "inRange": "In typical range",
           "above": "Above typical"
         },
-        "modelYield": "Model how to move this yield"
+        "modelYield": "Model how to move this yield",
+        "vsAppraisals": "vs appraisals",
+        "howBuilt": "how it's built",
+        "rankedByYield": "By unit · ranked by yield",
+        "showShares": "Show shares",
+        "hideShares": "Hide shares",
+        "sellHint": "sell / PPE candidate — low yield on high value"
       },
       "valueCreationTab": "Value creation",
       "valueCreation": {
@@ -1063,7 +1075,9 @@
         "single": "One period",
         "compare": "Compare"
       },
-      "fullDetail": "Full income & cost detail"
+      "fullDetail": "Full income & cost detail",
+      "moreMetrics": "More metrics",
+      "movesSummary": "{{in}} in · {{out}} out"
     },
     "strategyEditor": {
       "intro": "Set how this building should be managed — the cashflow recommendation engine uses it to tailor advice for this property.",
