@@ -13,10 +13,12 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useTranslation } from "next-i18next";
 import { cn } from "../lib/utils";
-import { formatChf } from "../lib/format";
+import { formatChf as fchf } from "../lib/format";
 import { authHeaders } from "../lib/api";
 
 const pct = (x, d = 1) => (x == null ? "—" : `${(x * 100).toFixed(d)}%`);
+// CHF amounts are always shown as whole francs (no cents) in this panel.
+const chf = (v) => (v == null || !Number.isFinite(v) ? "—" : fchf(Math.round(v)));
 
 function trailingYearIso() {
   const to = new Date();
@@ -116,26 +118,29 @@ export default function YieldGoalSeekPanel({ building, onSimulate, onAnnotations
     const V = data.valueChf, NOI = data.currentNoiChf, rentRoll = data.rentRollChf, occ = data.occupancyRate;
     const gap = (target / 100) * V - NOI;
     const potentialRent = occ > 0 ? rentRoll / occ : rentRoll;
-    const newOcc = occ + (potentialRent > 0 ? gap / potentialRent : 0);
-    const feeChf = (fee / 100) * rentRoll;
     const lv = data.levers ?? {};
     const reno = lv.renovation ?? { ceilingYieldPct: data.currentYieldPct, accretiveCount: 0, capexChf: 0, annualUpliftChf: 0, offStrategy: false };
-    const rentMarketGap = lv.rent?.marketGapAnnualChf ?? null;   // null = no benchmark → can't assess
-    const opexHeadroom = lv.opex?.headroomChf ?? null;           // null = operating cost unknown → can't assess
+    // Each lever's realistic CONTRIBUTION toward the gap (not "close it alone").
+    // null = data unavailable → the lever can't be assessed (greyed).
+    const rentContribution = lv.rent?.marketGapAnnualChf ?? null;   // to market, on turnover
+    const opexHeadroom = lv.opex?.headroomChf ?? null;              // to the leanest year on record
     const opexCost = lv.opex?.operatingCostChf ?? null;
+    const occContribution = Math.max(0, 1 - occ) * potentialRent;   // to 100% occupancy
+    const feeContribution = (fee / 100) * rentRoll;                 // fee reduced to 0
     const selfManage = fee < 1;
-    const flags = data.strategyFlags ?? {};                      // recompute off-strategy live (target/fee-dependent)
-    const rentPct = rentRoll > 0 ? gap / rentRoll : 0;
+    const flags = data.strategyFlags ?? {};
+    const synth = data.synthesis ?? null;
+    // Combined within-strategy NOI these operational levers add (from the synthesis).
+    const withinAddChf = synth ? Math.max(0, (synth.withinStrategyYieldPct / 100) * V - NOI) : 0;
     return {
       gap, met: gap <= 0, requiredNOI: (target / 100) * V,
-      rentMo: gap / 12, rentPct,
-      rentMarketGap, rentFeasible: rentMarketGap != null && gap <= rentMarketGap + 1e-6, rentOff: !!flags.rentAggressive && rentPct > 0.04,
-      opexHeadroom, opexCost, opexFeasible: opexHeadroom != null && gap <= opexHeadroom + 1e-6,
-      newOcc, occFeasible: newOcc <= 1, occRecoverable: Math.max(0, 1 - occ) * potentialRent,
-      feeChf, feeCover: gap > 0 ? Math.min(feeChf, gap) / gap : 0, selfManage, feeOff: selfManage && !!flags.selfManage,
+      rentContribution, opexHeadroom, opexCost, occContribution, feeContribution,
+      selfManage, feeOff: selfManage && !!flags.selfManage,
       reno, renoReach: reno.ceilingYieldPct / 100 >= target / 100 - 1e-9, renoOff: !!flags.renovation,
-      synth: data.synthesis ?? null,
-      beyond: data.synthesis ? target / 100 > data.synthesis.withSelfManageYieldPct / 100 + 1e-9 : false,
+      synth, withinAddChf,
+      // Does the combination of within-strategy operational levers already reach it?
+      combinationReaches: synth ? synth.withinStrategyYieldPct / 100 >= target / 100 - 1e-9 : false,
+      beyond: synth ? target / 100 > synth.withSelfManageYieldPct / 100 + 1e-9 : false,
       avgLeaseMonths: lv.rent?.avgLeaseRemainingMonths ?? null,
     };
   }, [data, target, fee]);
@@ -171,7 +176,7 @@ export default function YieldGoalSeekPanel({ building, onSimulate, onAnnotations
         </span>
         <span className="flex-1 text-[13px] text-muted">
           {target != null && m
-            ? <>{t("planning.goalSeek.targetingMsg", { defaultValue: "Targeting {{tgt}} · gap +{{gap}}/yr", tgt: pct(target / 100, 1), gap: formatChf(m.gap) })}</>
+            ? <>{t("planning.goalSeek.targetingMsg", { defaultValue: "Targeting {{tgt}} · gap +{{gap}}/yr", tgt: pct(target / 100, 1), gap: chf(m.gap) })}</>
             : t("planning.goalSeek.teaser", { defaultValue: "See what it would take to reach a higher yield" })}
         </span>
         <span className="shrink-0 text-xs text-foreground-dim">▾</span>
@@ -184,7 +189,7 @@ export default function YieldGoalSeekPanel({ building, onSimulate, onAnnotations
   const cur = data.currentYieldPct;
   const presetBase = Math.ceil((cur + 0.01) * 2) / 2;   // next 0.5% above current
   const presets = [presetBase, presetBase + 0.5, presetBase + 1.0];
-  const sliderMin = Math.floor(cur * 20) / 20;          // ≈ current, rounded to 0.05
+  const minTarget = Math.ceil((cur + 0.001) * 20) / 20; // strictly above current (next 0.05%)
   const sliderMax = Math.max(6, Math.ceil(cur + 2));
   return (
     <div className="rounded-xl border border-brand-ring bg-surface p-4">
@@ -210,7 +215,7 @@ export default function YieldGoalSeekPanel({ building, onSimulate, onAnnotations
           {target != null && <button onClick={() => setTarget(null)} className="rounded-lg border border-surface-border px-2 py-1 text-xs text-muted transition-colors hover:border-destructive-ring hover:text-destructive-text">✕</button>}
         </div>
       </div>
-      <input type="range" min={sliderMin} max={sliderMax} step="0.05" value={target ?? cur} onChange={(e) => setTarget(Math.max(cur, parseFloat(e.target.value)))}
+      <input type="range" min={minTarget} max={sliderMax} step="0.05" value={target ?? minTarget} onChange={(e) => setTarget(Math.max(minTarget, parseFloat(e.target.value)))}
         className="mt-2 w-full accent-brand" aria-label={t("planning.goalSeek.targetYield", { defaultValue: "Target" })} />
       <div className="mt-2 flex items-center gap-2">
         <span className="text-[11px] font-semibold uppercase tracking-wide text-foreground-dim">{t("planning.goalSeek.mgmtFee", { defaultValue: "Management fee" })}</span>
@@ -224,38 +229,52 @@ export default function YieldGoalSeekPanel({ building, onSimulate, onAnnotations
         <p className="mt-3 rounded-lg border border-success-ring bg-success-light px-3 py-2 text-sm font-semibold text-success-text">{t("planning.goalSeek.alreadyMet", { defaultValue: "Already at or above {{tgt}} — current yield is {{cur}}.", tgt: pct(target / 100, 2), cur: pct(data.currentYieldPct / 100) })}</p>
       ) : (
         <>
-          <p className="mb-2 mt-3 text-sm">{t("planning.goalSeek.gapLine", { defaultValue: "To reach {{tgt}} you need +{{gap}}/yr of NOI ({{noi}} → {{req}}).", tgt: pct(target / 100, 2), gap: formatChf(m.gap), noi: formatChf(data.currentNoiChf), req: formatChf(m.requiredNOI) })}</p>
+          <p className="mb-2 mt-3 text-sm">
+            {t("planning.goalSeek.gapLine", { defaultValue: "To reach {{tgt}}, net operating income needs to grow by {{gap}}/yr — from {{noi}} today to {{req}}.", tgt: pct(target / 100, 2), gap: chf(m.gap), noi: chf(data.currentNoiChf), req: chf(m.requiredNOI) })}
+            {" "}<span className="text-muted">{t("planning.goalSeek.combineHint", { defaultValue: "You'd combine these levers to close it:" })}</span>
+          </p>
           <div className="flex flex-wrap gap-2">
+            {/* Each lever shows what it can realistically ADD toward the gap; they
+                combine (see the running total below). Grey only when the underlying
+                benchmark data is missing. */}
             <Lever
               name={t("planning.goalSeek.lever.rent", { defaultValue: "Rent" })}
-              value={`+${formatChf(m.rentMo)}/mo`}
-              note={m.avgLeaseMonths != null ? t("planning.goalSeek.rentTurnover", { defaultValue: "{{p}} of roll · on turnover (~{{mo}} mo)", p: pct(m.rentPct), mo: Math.round(m.avgLeaseMonths) }) : t("planning.goalSeek.rentNote", { defaultValue: "{{p}} of roll", p: pct(m.rentPct) })}
-              tone={m.rentPct <= 0.05 ? "ok" : m.rentPct <= 0.10 ? "warn" : "bad"}
-              feasible={m.rentFeasible} offStrategy={m.rentOff}
-              reason={!m.rentFeasible ? t("planning.goalSeek.rentBeyondMarket", { defaultValue: "beyond market (~{{g}}/yr)", g: formatChf(m.rentMarketGap ?? 0) }) : t("planning.goalSeek.rentChurn", { defaultValue: "aggressive — tenant-churn risk" })}
+              value={m.rentContribution != null ? `+${chf(m.rentContribution)}/yr` : "—"}
+              note={m.rentContribution != null ? (m.avgLeaseMonths != null ? t("planning.goalSeek.rentToMarketTurnover", { defaultValue: "to market · on turnover (~{{mo}} mo)", mo: Math.round(m.avgLeaseMonths) }) : t("planning.goalSeek.rentToMarket", { defaultValue: "to market, on turnover" })) : ""}
+              tone="ok" feasible={m.rentContribution != null}
+              reason={t("planning.goalSeek.rentNoBenchmark", { defaultValue: "no market benchmark on file for this building" })}
             />
             <Lever
               name={t("planning.goalSeek.lever.opex", { defaultValue: "Opex" })}
-              value={m.opexFeasible ? `−${formatChf(m.gap)}/yr` : m.opexCost != null ? `−${formatChf(m.opexHeadroom ?? 0)}/yr max` : "—"}
-              note={m.opexCost != null ? t("planning.goalSeek.opexOfCost", { defaultValue: "of {{c}} operating cost", c: formatChf(m.opexCost) }) : ""}
-              tone="ok" feasible={m.opexFeasible}
-              reason={m.opexCost == null ? t("planning.goalSeek.opexUnavailable", { defaultValue: "operating cost unavailable for this period" }) : t("planning.goalSeek.opexBeyondReal", { defaultValue: "beyond a realistic opex reduction ({{h}})", h: formatChf(m.opexHeadroom ?? 0) })}
+              value={m.opexHeadroom != null ? `−${chf(m.opexHeadroom)}/yr` : "—"}
+              note={m.opexCost != null ? t("planning.goalSeek.opexToLeanest", { defaultValue: "to your leanest year · of {{c}}", c: chf(m.opexCost) }) : ""}
+              tone="ok" feasible={m.opexHeadroom != null}
+              reason={t("planning.goalSeek.opexUnavailable", { defaultValue: "operating cost unavailable for this period" })}
             />
             <Lever
               name={t("planning.goalSeek.lever.occupancy", { defaultValue: "Occupancy" })}
-              value={m.occFeasible ? `${pct(data.occupancyRate, 0)}→${pct(m.newOcc, 1)}` : `${pct(data.occupancyRate, 0)}→${pct(m.newOcc, 0)}`}
-              note={m.occFeasible ? t("planning.goalSeek.occNoteShort", { defaultValue: "recover vacancy" }) : ""}
-              tone={m.occFeasible ? "ok" : "bad"} feasible={m.occFeasible}
-              reason={t("planning.goalSeek.occBeyondFull", { defaultValue: "Filling every unit adds only ~{{r}}/yr — not enough on its own", r: formatChf(m.occRecoverable) })}
+              value={`+${chf(m.occContribution)}/yr`}
+              note={t("planning.goalSeek.occToFull", { defaultValue: "filling to 100%" })}
+              tone="ok"
             />
             <Lever
               name={m.selfManage ? t("planning.goalSeek.lever.selfManage", { defaultValue: "Self-manage" }) : t("planning.goalSeek.lever.fee", { defaultValue: "Mgmt fee" })}
-              value={m.selfManage ? `${formatChf(m.feeChf)}/yr → 0` : `${formatChf(m.feeChf)}/yr`}
-              note={m.selfManage ? t("planning.goalSeek.selfManageNote", { defaultValue: "owner absorbs the work + liability" }) : t("planning.goalSeek.feeNoteShort", { defaultValue: "{{cov}} of the gap", cov: pct(m.feeCover, 0) })}
-              tone={m.selfManage ? "warn" : m.feeChf >= m.gap ? "ok" : "warn"}
+              value={`+${chf(m.feeContribution)}/yr`}
+              note={m.selfManage ? t("planning.goalSeek.selfManageNote", { defaultValue: "owner absorbs the work + liability" }) : t("planning.goalSeek.feeToZero", { defaultValue: "if reduced to 0%" })}
+              tone={m.selfManage ? "warn" : "ok"}
               offStrategy={m.feeOff}
               reason={t("planning.goalSeek.feeHandsOff", { defaultValue: "you want a hands-off holding" })}
             />
+          </div>
+          {/* Running total — the path: do the levers together reach it? */}
+          <div className="mt-2 text-[13px]">
+            <span className="font-semibold text-foreground">{t("planning.goalSeek.leversTogether", { defaultValue: "Together, these add ~{{a}}/yr", a: chf(m.withinAddChf) })}</span>
+            {" "}
+            <span className={m.combinationReaches ? "font-medium text-success-text" : "text-muted"}>
+              {m.combinationReaches
+                ? t("planning.goalSeek.enoughToReach", { defaultValue: "— enough to close the {{g}}/yr gap.", g: chf(m.gap) })
+                : t("planning.goalSeek.shortBy", { defaultValue: "— {{s}}/yr short of the gap; renovation or self-managing covers the rest.", s: chf(Math.max(0, m.gap - m.withinAddChf)) })}
+            </span>
           </div>
 
           {/* Renovation summary — the list lives in the accordion below, badged. */}
@@ -263,7 +282,7 @@ export default function YieldGoalSeekPanel({ building, onSimulate, onAnnotations
             <Chip tone={m.renoReach ? "ok" : "bad"}>{m.renoReach ? t("planning.goalSeek.reachesTarget", { defaultValue: "works reach it" }) : t("planning.goalSeek.maxesAt", { defaultValue: "works max at {{y}}", y: pct(m.reno.ceilingYieldPct / 100, 2) })}</Chip>
             {m.renoOff && <Chip tone="warn">{t("planning.goalSeek.renoOffStrategy", { defaultValue: "against your strategy" })}</Chip>}
             <span className="flex-1 text-[13px] text-muted">
-              {t("planning.goalSeek.renoSummary", { defaultValue: "The {{n}} accretive works ({{capex}} → +{{uplift}}/yr) lift yield to {{ceil}} — badged in the list below.", n: m.reno.accretiveCount, capex: formatChf(m.reno.capexChf), uplift: formatChf(m.reno.annualUpliftChf), ceil: pct(m.reno.ceilingYieldPct / 100, 2) })}
+              {t("planning.goalSeek.renoSummary", { defaultValue: "The {{n}} accretive works ({{capex}} → +{{uplift}}/yr) lift yield to {{ceil}} — badged in the list below.", n: m.reno.accretiveCount, capex: chf(m.reno.capexChf), uplift: chf(m.reno.annualUpliftChf), ceil: pct(m.reno.ceilingYieldPct / 100, 2) })}
             </span>
             {m.reno.accretiveCount > 0 && (
               <button onClick={simulateAccretive} disabled={m.beyond} title={m.beyond ? t("planning.goalSeek.simulateBeyond", { defaultValue: "This target is out of reach even with these works" }) : undefined}
