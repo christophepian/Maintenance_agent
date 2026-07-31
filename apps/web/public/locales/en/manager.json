@@ -3626,7 +3626,8 @@
       "renoOffStrategy": "against your strategy",
       "opexOfCost": "of {{c}} operating cost",
       "opexUnavailable": "operating cost unavailable for this period",
-      "opexBeyondReal": "beyond a realistic opex reduction ({{h}})"
+      "opexBeyondReal": "beyond a realistic opex reduction ({{h}})",
+      "basedOn": "based on {{y}}"
     },
     "building": "Building",
     "clear": "Clear",
