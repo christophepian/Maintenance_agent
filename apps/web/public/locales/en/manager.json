@@ -3622,7 +3622,8 @@
       "synthWithin": "You can reach {{tgt}} {{scope}}.",
       "synthReno": "{{scope}} you can reach ~{{within}}. Reaching {{tgt}} also needs {{reno}}.",
       "synthSelf": "{{scope}} you can reach ~{{within}}. Reaching {{tgt}} needs {{reno}} and self-managing.",
-      "synthBeyond": "{{tgt}} is beyond what any realistic combination reaches — even with {{reno}} and self-managing (ceiling ~{{self}})."
+      "synthBeyond": "{{tgt}} is beyond what any realistic combination reaches — even with {{reno}} and self-managing (ceiling ~{{self}}).",
+      "renoOffStrategy": "against your strategy"
     },
     "building": "Building",
     "clear": "Clear",

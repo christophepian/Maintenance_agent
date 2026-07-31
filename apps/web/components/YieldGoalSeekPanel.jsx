@@ -124,14 +124,16 @@ export default function YieldGoalSeekPanel({ building, onSimulate, onAnnotations
     const rentMarketGap = lv.rent?.marketGapAnnualChf ?? null;   // null until market rent is wired
     const opexHeadroom = lv.opex?.headroomChf ?? null;           // null until 3-yr opex is wired
     const selfManage = fee < 1;
+    const flags = data.strategyFlags ?? {};                      // recompute off-strategy live (target/fee-dependent)
+    const rentPct = rentRoll > 0 ? gap / rentRoll : 0;
     return {
       gap, met: gap <= 0, requiredNOI: (target / 100) * V,
-      rentMo: gap / 12, rentPct: rentRoll > 0 ? gap / rentRoll : 0,
-      rentMarketGap, rentFeasible: rentMarketGap == null ? true : gap <= rentMarketGap + 1e-6, rentOff: !!lv.rent?.offStrategy,
+      rentMo: gap / 12, rentPct,
+      rentMarketGap, rentFeasible: rentMarketGap == null ? true : gap <= rentMarketGap + 1e-6, rentOff: !!flags.rentAggressive && rentPct > 0.04,
       opexHeadroom, opexFeasible: opexHeadroom == null ? true : gap <= opexHeadroom + 1e-6,
       newOcc, occFeasible: newOcc <= 1,
-      feeChf, feeCover: gap > 0 ? Math.min(feeChf, gap) / gap : 0, selfManage, feeOff: selfManage && !!lv.mgmtFee?.offStrategy,
-      reno, renoReach: reno.ceilingYieldPct / 100 >= target / 100 - 1e-9, renoOff: !!reno.offStrategy,
+      feeChf, feeCover: gap > 0 ? Math.min(feeChf, gap) / gap : 0, selfManage, feeOff: selfManage && !!flags.selfManage,
+      reno, renoReach: reno.ceilingYieldPct / 100 >= target / 100 - 1e-9, renoOff: !!flags.renovation,
       synth: data.synthesis ?? null,
       avgLeaseMonths: lv.rent?.avgLeaseRemainingMonths ?? null,
     };
@@ -179,9 +181,12 @@ export default function YieldGoalSeekPanel({ building, onSimulate, onAnnotations
   // ── Expanded panel (lighter; no asset list — the accordion carries it) ──
   return (
     <div className="rounded-xl border border-brand-ring bg-surface p-4">
-      <div className="mb-2.5 flex items-center justify-between">
-        <span className="text-[12px] font-bold uppercase tracking-wide text-foreground-dim">{t("planning.goalSeek.title", { defaultValue: "Reach a target yield" })}</span>
-        <button onClick={() => setExpanded(false)} className="text-xs font-medium text-muted hover:text-foreground">{t("planning.goalSeek.collapse", { defaultValue: "Collapse" })} ▴</button>
+      <div className="mb-2.5 flex items-center justify-between gap-2">
+        <span className="text-[12px] font-bold uppercase tracking-wide text-foreground-dim">
+          {t("planning.goalSeek.title", { defaultValue: "Reach a target yield" })}
+          {data.strategyLabel && <span className="ml-2 rounded-full border border-surface-border bg-surface-subtle px-2 py-0.5 text-[10px] font-semibold normal-case tracking-normal text-muted">{data.strategyLabel}</span>}
+        </span>
+        <button onClick={() => setExpanded(false)} className="shrink-0 text-xs font-medium text-muted hover:text-foreground">{t("planning.goalSeek.collapse", { defaultValue: "Collapse" })} ▴</button>
       </div>
 
       {/* Target */}
@@ -247,6 +252,7 @@ export default function YieldGoalSeekPanel({ building, onSimulate, onAnnotations
           {/* Renovation summary — the list lives in the accordion below, badged. */}
           <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-surface-divider pt-3">
             <Chip tone={m.renoReach ? "ok" : "bad"}>{m.renoReach ? t("planning.goalSeek.reachesTarget", { defaultValue: "works reach it" }) : t("planning.goalSeek.maxesAt", { defaultValue: "works max at {{y}}", y: pct(m.reno.ceilingYieldPct / 100, 2) })}</Chip>
+            {m.renoOff && <Chip tone="warn">{t("planning.goalSeek.renoOffStrategy", { defaultValue: "against your strategy" })}</Chip>}
             <span className="flex-1 text-[13px] text-muted">
               {t("planning.goalSeek.renoSummary", { defaultValue: "The {{n}} accretive works ({{capex}} → +{{uplift}}/yr) lift yield to {{ceil}} — badged in the list below.", n: m.reno.accretiveCount, capex: formatChf(m.reno.capexChf), uplift: formatChf(m.reno.annualUpliftChf), ceil: pct(m.reno.ceilingYieldPct / 100, 2) })}
             </span>

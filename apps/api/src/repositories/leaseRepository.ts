@@ -380,7 +380,7 @@ export async function findActiveLeasesByBuilding(
 ) {
   return prisma.lease.findMany({
     where: { unit: { buildingId }, status: "ACTIVE" },
-    select: { rentTotalChf: true },
+    select: { rentTotalChf: true, endDate: true },
   });
 }
 

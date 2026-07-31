@@ -14,11 +14,13 @@ import { mapWithConcurrency } from "../utils/concurrency";
 import { computeUnitProfitability, type UnitProfitabilityInput, type UnitProfitabilityResult } from "./unitProfitability";
 import { getBuildingRenovationOpportunities } from "./assetInventory";
 import { lookupTaxRule, computeTaxProfile, type TaxModelInput } from "./financialModelService";
+import { getBuildingProfileByBuildingId } from "../repositories/strategyProfileRepository";
 import {
   computeYieldGoalSeek,
   DEFAULT_CAPITALIZABLE_FRACTION,
   DEFAULT_OBLF_PASSTHROUGH_PCT,
   type GoalSeekOpportunity,
+  type StrategyContext,
   type YieldGoalSeekResult,
 } from "./yieldGoalSeekService";
 import { getBalanceSheet } from "./ledgerService";
@@ -2302,6 +2304,17 @@ function cantonGrossYield(canton: string | null): number {
 // vétusté-recovery gap (full − as-is) is what a renovation monetises via OBLF.
 const VETUSTE_RENT_COEFF = 0.4;
 
+// Map the owner's strategy dimensions → which levers run against their wishes.
+// Dimensions are normalised 0–1 (handles a 0–100 scale defensively).
+function strategyFlagsFromDims(dims: Record<string, number>): { renovation: boolean; selfManage: boolean; rentAggressive: boolean } {
+  const n = (v: number | undefined) => (v == null ? 0.5 : v > 1 ? v / 100 : v);
+  return {
+    renovation: n(dims.capexTolerance) < 0.4,          // low capex tolerance → avoids costly renovations
+    rentAggressive: n(dims.stabilityPreference) > 0.6, // high stability preference → churn-averse
+    selfManage: n(dims.disruptionTolerance) < 0.4,     // low disruption tolerance → won't self-manage
+  };
+}
+
 export async function getYieldGoalSeek(
   orgId: string,
   buildingId: string,
@@ -2313,7 +2326,7 @@ export async function getYieldGoalSeek(
   if (!building) throw new Error(`Building ${buildingId} not found`);
 
   const yearsAgo = (n: number) => { const d = new Date(`${toStr}T00:00:00`); d.setFullYear(d.getFullYear() - n); return d.toISOString().slice(0, 10); };
-  const [profit, opportunities, fin1, fin2, fin3, valUnits, zipPrice] = await Promise.all([
+  const [profit, opportunities, fin1, fin2, fin3, valUnits, zipPrice, activeLeases, buildingProfile] = await Promise.all([
     getUnitProfitability(orgId, buildingId, fromStr, toStr),
     getBuildingRenovationOpportunities(prisma, orgId, buildingId),
     // 3 trailing 12-month windows → the "best of the last 3 years" opex floor.
@@ -2322,6 +2335,8 @@ export async function getYieldGoalSeek(
     getBuildingFinancials(orgId, buildingId, { from: yearsAgo(3), to: yearsAgo(2) }),
     inventoryRepo.findUnitsWithValuationForBuilding(prisma, orgId, buildingId),
     building.postalCode ? inventoryRepo.findMarketPriceByZip(prisma, orgId, building.postalCode) : Promise.resolve(null),
+    leaseRepo.findActiveLeasesByBuilding(prisma, buildingId).catch(() => []),
+    getBuildingProfileByBuildingId(prisma, buildingId, orgId).catch(() => null),
   ]);
 
   // Yield-basis value — the same basis the Profitability tab shows.
@@ -2366,9 +2381,24 @@ export async function getYieldGoalSeek(
     rentMarketGapAnnualChf = Math.round(gapSum);
   }
 
-  // Turnover-timing annotation deferred: the active-lease query doesn't expose
-  // endDate, and adding a Prisma read here would trip the service-access ratchet.
-  const avgLeaseRemainingMonths = null;
+  // ── Turnover timing: average remaining months across active leases. ──
+  const remMonths = (activeLeases as Array<{ endDate?: Date | null }>)
+    .map((l) => (l.endDate ? Math.max(0, (new Date(l.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24 * 30.44)) : null))
+    .filter((v): v is number => v != null);
+  const avgLeaseRemainingMonths = remMonths.length ? Math.round(remMonths.reduce((s, v) => s + v, 0) / remMonths.length) : null;
+
+  // ── Strategy alignment: building profile → which levers run against the owner. ──
+  let strategy: StrategyContext | null = null;
+  if (buildingProfile?.effectiveDimensionsJson) {
+    try {
+      const dims = JSON.parse(buildingProfile.effectiveDimensionsJson) as Record<string, number>;
+      strategy = {
+        source: "building",
+        label: (buildingProfile as { userFacingGoalLabel?: string }).userFacingGoalLabel ?? buildingProfile.primaryArchetype ?? null,
+        flags: strategyFlagsFromDims(dims),
+      };
+    } catch { /* no dims → no strategy axis */ }
+  }
 
   // Per-opportunity capitalizable fraction from the tax split, memoised by rule key
   // (the fraction is cost-independent, so one lookup per assetType::topic::canton).
@@ -2419,6 +2449,7 @@ export async function getYieldGoalSeek(
     avgLeaseRemainingMonths,
     controllableOpexChf,
     controllableOpexBest3yrChf,
+    strategy,
   });
 }
 

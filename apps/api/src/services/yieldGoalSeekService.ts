@@ -100,6 +100,10 @@ export interface YieldGoalSeekResult {
   gapChf: number;
   met: boolean;
   strategySource: StrategyContext["source"];
+  /** Raw flags echoed so the client can recompute off-strategy live as it moves the
+   *  target/fee (rent/fee off-strategy are target/fee-dependent). Null when no profile. */
+  strategyFlags: StrategyContext["flags"] | null;
+  strategyLabel: string | null;
   levers: {
     rent: LeverSignals & { deltaMonthlyChf: number; pctOfRentRoll: number; marketGapAnnualChf: number | null; avgLeaseRemainingMonths: number | null };
     opex: LeverSignals & { requiredReductionChf: number; headroomChf: number | null };
@@ -261,6 +265,8 @@ export function computeYieldGoalSeek(input: YieldGoalSeekInput): YieldGoalSeekRe
     gapChf: round(gap),
     met,
     strategySource: strategy?.source ?? "none",
+    strategyFlags: strategy ? flags : null,
+    strategyLabel: strategy?.label ?? null,
     levers: { rent, opex, occupancy, mgmtFee, renovation },
     synthesis: {
       withinStrategyYieldPct: round(withinYield * 100),
