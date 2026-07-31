@@ -2285,6 +2285,23 @@ export async function getUnitProfitability(
  * (tax split) → the pure computeYieldGoalSeek. Renovation uplift uses the SAME OBLF
  * formula the simulator does, so the figure survives the handoff into it unchanged.
  */
+// Residential GROSS rental yields by canton (rent ÷ value), from the multi-source
+// benchmark in web/lib/benchmarks/swissRentalYield. Converts the sale-price market
+// value into an estimated market rent. Default ~national gross (~3.3%).
+const CANTON_GROSS_YIELD: Record<string, number> = {
+  GE: 0.025, ZH: 0.030, ZG: 0.030, VD: 0.033, BS: 0.040, BL: 0.040, BE: 0.035,
+  LU: 0.035, TI: 0.032, SG: 0.038, AG: 0.038, VS: 0.042, FR: 0.038, NE: 0.042,
+  JU: 0.045, GR: 0.040, SO: 0.040, TG: 0.040, SH: 0.040, GL: 0.045, UR: 0.045,
+  OW: 0.042, NW: 0.038, SZ: 0.035, AR: 0.045, AI: 0.045,
+};
+const NATIONAL_GROSS_YIELD = 0.033;
+function cantonGrossYield(canton: string | null): number {
+  return (canton && CANTON_GROSS_YIELD[canton.toUpperCase()]) || NATIONAL_GROSS_YIELD;
+}
+// How hard vétusté (wear %) discounts achievable rent vs a pristine unit. The
+// vétusté-recovery gap (full − as-is) is what a renovation monetises via OBLF.
+const VETUSTE_RENT_COEFF = 0.4;
+
 export async function getYieldGoalSeek(
   orgId: string,
   buildingId: string,
@@ -2295,9 +2312,16 @@ export async function getYieldGoalSeek(
   const building = await inventoryRepo.findBuildingByIdAndOrg(prisma, buildingId, orgId);
   if (!building) throw new Error(`Building ${buildingId} not found`);
 
-  const [profit, opportunities] = await Promise.all([
+  const yearsAgo = (n: number) => { const d = new Date(`${toStr}T00:00:00`); d.setFullYear(d.getFullYear() - n); return d.toISOString().slice(0, 10); };
+  const [profit, opportunities, fin1, fin2, fin3, valUnits, zipPrice] = await Promise.all([
     getUnitProfitability(orgId, buildingId, fromStr, toStr),
     getBuildingRenovationOpportunities(prisma, orgId, buildingId),
+    // 3 trailing 12-month windows → the "best of the last 3 years" opex floor.
+    getBuildingFinancials(orgId, buildingId, { from: yearsAgo(1), to: toStr }),
+    getBuildingFinancials(orgId, buildingId, { from: yearsAgo(2), to: yearsAgo(1) }),
+    getBuildingFinancials(orgId, buildingId, { from: yearsAgo(3), to: yearsAgo(2) }),
+    inventoryRepo.findUnitsWithValuationForBuilding(prisma, orgId, buildingId),
+    building.postalCode ? inventoryRepo.findMarketPriceByZip(prisma, orgId, building.postalCode) : Promise.resolve(null),
   ]);
 
   // Yield-basis value — the same basis the Profitability tab shows.
@@ -2315,9 +2339,39 @@ export async function getYieldGoalSeek(
     ? rows.reduce((s, r) => s + (r.occupancyRate ?? 0), 0) / rows.length
     : 1;
 
+  // ── Opex floor: the best (lowest) operating cost of the last 3 trailing years. ──
+  const opexYearsChf = [fin1, fin2, fin3]
+    .map((f) => (f?.operatingTotalCents ?? 0) / 100)
+    .filter((v) => v > 0);
+  const controllableOpexChf = opexYearsChf.length ? opexYearsChf[0] : null;       // most recent year
+  const controllableOpexBest3yrChf = opexYearsChf.length ? Math.min(...opexYearsChf) : null;
+
+  // ── Market rent: sale-value × canton gross-yield, discounted for vétusté. The
+  // as-is gap (market − current) is realizable on turnover; the vétusté-recovery gap
+  // (full − as-is) is what a renovation unlocks via OBLF (caps the reno uplift). ──
+  const canton = building.canton ?? null;
+  const rentByUnit = new Map(rows.map((r) => [r.unitId, (r.monthlyRentChf ?? 0) * 12]));
+  const vetusteRecoveryByUnit = new Map<string, number>();
+  let rentMarketGapAnnualChf: number | null = null;
+  if (zipPrice?.pricePerSqmChf) {
+    const gy = cantonGrossYield(canton);
+    let gapSum = 0;
+    for (const u of valUnits) {
+      if (u.livingAreaSqm == null) continue;
+      const fullMarketRent = u.livingAreaSqm * zipPrice.pricePerSqmChf * gy;
+      const asIs = fullMarketRent * (1 - VETUSTE_RENT_COEFF * ((u.vetustePct ?? 0) / 100));
+      gapSum += Math.max(0, asIs - (rentByUnit.get(u.id) ?? 0));
+      vetusteRecoveryByUnit.set(u.id, Math.max(0, fullMarketRent - asIs));
+    }
+    rentMarketGapAnnualChf = Math.round(gapSum);
+  }
+
+  // Turnover-timing annotation deferred: the active-lease query doesn't expose
+  // endDate, and adding a Prisma read here would trip the service-access ratchet.
+  const avgLeaseRemainingMonths = null;
+
   // Per-opportunity capitalizable fraction from the tax split, memoised by rule key
   // (the fraction is cost-independent, so one lookup per assetType::topic::canton).
-  const canton = building.canton ?? null;
   const capCache = new Map<string, number>();
   const goalSeekOpps: GoalSeekOpportunity[] = [];
   for (const o of opportunities) {
@@ -2347,6 +2401,8 @@ export async function getYieldGoalSeek(
       costChf,
       usefulLifeYears,
       capitalizableFraction,
+      // Cap the OBLF uplift at the unit's vétusté-recovery rent (renovated − as-is market).
+      marketUpliftCeilingAnnualChf: o.unitId ? (vetusteRecoveryByUnit.get(o.unitId) ?? null) : null,
     });
   }
 
@@ -2359,6 +2415,10 @@ export async function getYieldGoalSeek(
     mgmtFeePct: opts.mgmtFeePct,
     oblfPassthroughPct: opts.oblfPassthroughPct ?? DEFAULT_OBLF_PASSTHROUGH_PCT,
     opportunities: goalSeekOpps,
+    rentMarketGapAnnualChf,
+    avgLeaseRemainingMonths,
+    controllableOpexChf,
+    controllableOpexBest3yrChf,
   });
 }
 
