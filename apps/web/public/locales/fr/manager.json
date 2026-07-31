@@ -3568,7 +3568,7 @@
       "fromToday": "depuis {{y}} aujourd'hui",
       "mgmtFee": "Honoraires de gérance (% du loyer)",
       "alreadyMet": "Déjà à ou au-dessus de {{tgt}} — le rendement actuel est {{cur}}.",
-      "gapLine": "Pour atteindre {{tgt}}, il faut +{{gap}}/an de RNE ({{noi}} → {{req}}).",
+      "gapLine": "Pour atteindre {{tgt}}, le résultat net d'exploitation doit croître de {{gap}}/an — de {{noi}} aujourd'hui à {{req}}.",
       "lever": {
         "rent": "Augmenter le loyer",
         "opex": "Réduire les charges",
@@ -3607,7 +3607,7 @@
       "feeNoteShort": "{{cov}} de l'écart",
       "renoSummary": "Les {{n}} travaux relutifs ({{capex}} → +{{uplift}}/an) portent le rendement à {{ceil}} — signalés dans la liste ci-dessous.",
       "rentTurnover": "{{p}} de l'état locatif · au changement de locataire (~{{mo}} mois)",
-      "rentBeyondMarket": "au-delà du marché (~{{g}}/an)",
+      "rentBeyondMarket": "Le loyer ne peut monter que d'environ {{g}}/an pour atteindre le marché — insuffisant à lui seul.",
       "rentChurn": "agressif — risque de rotation",
       "opexBeyondBest": "au-delà de votre meilleure année",
       "occOver100": "ne peut dépasser 100 % d'occupation",
@@ -3625,8 +3625,11 @@
       "renoOffStrategy": "contraire à votre stratégie",
       "opexOfCost": "sur {{c}} de charges d'exploitation",
       "opexUnavailable": "charges d'exploitation indisponibles pour cette période",
-      "opexBeyondReal": "au-delà d'une réduction réaliste ({{h}})",
-      "basedOn": "sur la base de {{y}}"
+      "opexBeyondReal": "C'est plus de {{h}}/an — sous la meilleure année que vous ayez réalisée.",
+      "basedOn": "sur la base de {{y}}",
+      "fromCurrent": "depuis {{cur}} aujourd'hui",
+      "occBeyondFull": "Remplir tous les lots n'ajoute que ~{{r}}/an — insuffisant à lui seul",
+      "simulateBeyond": "Cet objectif est hors de portée même avec ces travaux"
     },
     "building": "Immeuble",
     "clear": "Effacer",

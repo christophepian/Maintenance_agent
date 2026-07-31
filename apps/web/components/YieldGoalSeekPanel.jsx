@@ -16,7 +16,6 @@ import { cn } from "../lib/utils";
 import { formatChf } from "../lib/format";
 import { authHeaders } from "../lib/api";
 
-const PRESETS = [3.0, 3.5, 4.0];
 const pct = (x, d = 1) => (x == null ? "—" : `${(x * 100).toFixed(d)}%`);
 
 function trailingYearIso() {
@@ -132,10 +131,11 @@ export default function YieldGoalSeekPanel({ building, onSimulate, onAnnotations
       rentMo: gap / 12, rentPct,
       rentMarketGap, rentFeasible: rentMarketGap != null && gap <= rentMarketGap + 1e-6, rentOff: !!flags.rentAggressive && rentPct > 0.04,
       opexHeadroom, opexCost, opexFeasible: opexHeadroom != null && gap <= opexHeadroom + 1e-6,
-      newOcc, occFeasible: newOcc <= 1,
+      newOcc, occFeasible: newOcc <= 1, occRecoverable: Math.max(0, 1 - occ) * potentialRent,
       feeChf, feeCover: gap > 0 ? Math.min(feeChf, gap) / gap : 0, selfManage, feeOff: selfManage && !!flags.selfManage,
       reno, renoReach: reno.ceilingYieldPct / 100 >= target / 100 - 1e-9, renoOff: !!flags.renovation,
       synth: data.synthesis ?? null,
+      beyond: data.synthesis ? target / 100 > data.synthesis.withSelfManageYieldPct / 100 + 1e-9 : false,
       avgLeaseMonths: lv.rent?.avgLeaseRemainingMonths ?? null,
     };
   }, [data, target, fee]);
@@ -180,6 +180,12 @@ export default function YieldGoalSeekPanel({ building, onSimulate, onAnnotations
   }
 
   // ── Expanded panel (lighter; no asset list — the accordion carries it) ──
+  // Targets only make sense above today's yield; presets step up from it.
+  const cur = data.currentYieldPct;
+  const presetBase = Math.ceil((cur + 0.01) * 2) / 2;   // next 0.5% above current
+  const presets = [presetBase, presetBase + 0.5, presetBase + 1.0];
+  const sliderMin = Math.floor(cur * 20) / 20;          // ≈ current, rounded to 0.05
+  const sliderMax = Math.max(6, Math.ceil(cur + 2));
   return (
     <div className="rounded-xl border border-brand-ring bg-surface p-4">
       <div className="mb-2.5 flex items-center justify-between gap-2">
@@ -195,15 +201,16 @@ export default function YieldGoalSeekPanel({ building, onSimulate, onAnnotations
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-[11px] font-semibold uppercase tracking-wide text-foreground-dim">{t("planning.goalSeek.targetYield", { defaultValue: "Target" })}</span>
         <span className="text-2xl font-extrabold tabular-nums text-brand">{target != null ? pct(target / 100, 2) : "—"}</span>
-        <div className="ml-1 flex gap-1.5">
-          {PRESETS.map((p) => (
+        <span className="text-xs text-muted">{t("planning.goalSeek.fromCurrent", { defaultValue: "from {{cur}} today", cur: pct(cur / 100, 2) })}</span>
+        <div className="ml-auto flex gap-1.5">
+          {presets.map((p) => (
             <button key={p} onClick={() => setTarget(p)} aria-pressed={target === p}
               className={cn("rounded-lg border px-2.5 py-1 text-xs font-semibold transition-colors", target === p ? "border-brand bg-brand text-white" : "border-surface-border bg-surface text-muted hover:border-brand hover:text-brand")}>{pct(p / 100, 1)}</button>
           ))}
           {target != null && <button onClick={() => setTarget(null)} className="rounded-lg border border-surface-border px-2 py-1 text-xs text-muted transition-colors hover:border-destructive-ring hover:text-destructive-text">✕</button>}
         </div>
       </div>
-      <input type="range" min="2" max="6" step="0.05" value={target ?? data.currentYieldPct} onChange={(e) => setTarget(parseFloat(e.target.value))}
+      <input type="range" min={sliderMin} max={sliderMax} step="0.05" value={target ?? cur} onChange={(e) => setTarget(Math.max(cur, parseFloat(e.target.value)))}
         className="mt-2 w-full accent-brand" aria-label={t("planning.goalSeek.targetYield", { defaultValue: "Target" })} />
       <div className="mt-2 flex items-center gap-2">
         <span className="text-[11px] font-semibold uppercase tracking-wide text-foreground-dim">{t("planning.goalSeek.mgmtFee", { defaultValue: "Management fee" })}</span>
@@ -239,7 +246,7 @@ export default function YieldGoalSeekPanel({ building, onSimulate, onAnnotations
               value={m.occFeasible ? `${pct(data.occupancyRate, 0)}→${pct(m.newOcc, 1)}` : `${pct(data.occupancyRate, 0)}→${pct(m.newOcc, 0)}`}
               note={m.occFeasible ? t("planning.goalSeek.occNoteShort", { defaultValue: "recover vacancy" }) : ""}
               tone={m.occFeasible ? "ok" : "bad"} feasible={m.occFeasible}
-              reason={t("planning.goalSeek.occOver100", { defaultValue: "can't exceed 100% occupancy" })}
+              reason={t("planning.goalSeek.occBeyondFull", { defaultValue: "Filling every unit adds only ~{{r}}/yr — not enough on its own", r: formatChf(m.occRecoverable) })}
             />
             <Lever
               name={m.selfManage ? t("planning.goalSeek.lever.selfManage", { defaultValue: "Self-manage" }) : t("planning.goalSeek.lever.fee", { defaultValue: "Mgmt fee" })}
@@ -259,7 +266,8 @@ export default function YieldGoalSeekPanel({ building, onSimulate, onAnnotations
               {t("planning.goalSeek.renoSummary", { defaultValue: "The {{n}} accretive works ({{capex}} → +{{uplift}}/yr) lift yield to {{ceil}} — badged in the list below.", n: m.reno.accretiveCount, capex: formatChf(m.reno.capexChf), uplift: formatChf(m.reno.annualUpliftChf), ceil: pct(m.reno.ceilingYieldPct / 100, 2) })}
             </span>
             {m.reno.accretiveCount > 0 && (
-              <button onClick={simulateAccretive} className="rounded-lg bg-brand px-3.5 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-brand-dark">
+              <button onClick={simulateAccretive} disabled={m.beyond} title={m.beyond ? t("planning.goalSeek.simulateBeyond", { defaultValue: "This target is out of reach even with these works" }) : undefined}
+                className="rounded-lg bg-brand px-3.5 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-brand">
                 {t("planning.goalSeek.simulateCta", { defaultValue: "Simulate the {{n}} accretive works", n: m.reno.accretiveCount })} →
               </button>
             )}
