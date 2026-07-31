@@ -10125,6 +10125,48 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /buildings/{id}/yield-goalseek:
+    get:
+      tags: [Financials]
+      summary: Yield goal-seek — the NOI gap for a target net yield, translated into each realistic lever (rent · opex · occupancy · management fee · renovation) with feasibility bands, strategy-alignment flags and a tiered synthesis
+      operationId: getBuildingYieldGoalSeek
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+        - name: from
+          in: query
+          required: true
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          required: true
+          schema: { type: string, format: date }
+        - name: target
+          in: query
+          required: true
+          description: Target net yield, in percent
+          schema: { type: number }
+        - name: mgmtFeePct
+          in: query
+          required: false
+          description: Management fee assumption (%); when omitted the fee detected on the statements is used
+          schema: { type: number }
+        - name: oblfPassthroughPct
+          in: query
+          required: false
+          description: OBLF Art. 14 renovation rent passthrough (%)
+          schema: { type: number }
+      responses:
+        '200':
+          description: Per-lever goal-seek result — feasibility bands, strategy flags, tiered synthesis, plus the detected fee, opex drivers and occupancy/rent working
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: object }
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /forecasting/renovation-catalog:
     get:
       tags: [Forecasting]
