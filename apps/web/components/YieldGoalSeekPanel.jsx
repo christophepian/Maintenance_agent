@@ -59,6 +59,14 @@ export default function YieldGoalSeekPanel({ building, onPlanImprovements }) {
     setFeeToPct(1);
   }, [buildingId]);
 
+  // The Profitability "Model how to move this yield →" CTA lives on the same page;
+  // it scrolls here and fires this to open the card.
+  useEffect(() => {
+    const h = () => setExpanded(true);
+    window.addEventListener("goalseek:expand", h);
+    return () => window.removeEventListener("goalseek:expand", h);
+  }, []);
+
   // One fetch per building (target-independent figures + per-lever ceilings + fee).
   useEffect(() => {
     if (!buildingId) { setData(null); return; }
