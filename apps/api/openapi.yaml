@@ -10167,6 +10167,41 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /buildings/{id}/tenants/remove:
+    post:
+      tags: [Tenants]
+      summary: Batch-remove import-junk tenant entries from a building — soft-deletes the underlying lease(s), deletes the occupancy, and deactivates the tenant if orphaned; entries whose lease has real (non-draft) billing are kept
+      operationId: removeBuildingTenantEntries
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [entries]
+              properties:
+                entries:
+                  type: array
+                  items:
+                    type: object
+                    required: [unitId, tenantId]
+                    properties:
+                      unitId: { type: string }
+                      tenantId: { type: string, description: "Building-tenant row key — a Tenant id, or 'lease:<leaseId>' for lease-only rows" }
+      responses:
+        '200':
+          description: Per-entry outcomes with counts (removed / keptBilling / notFound)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: object }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
   /forecasting/renovation-catalog:
     get:
       tags: [Forecasting]

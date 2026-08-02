@@ -1103,10 +1103,15 @@
       "removing": "Suppression…",
       "clear": "Effacer",
       "selectAll": "Tout sélectionner",
-      "confirmDelete": "Retirer {{count}} locataire(s) de cet immeuble ? Les locataires avec un bail actif ne peuvent pas être retirés.",
+      "confirmDelete": "Retirer {{count}} entrée(s) de locataire de cet immeuble ? Cela efface leur occupation et leur bail. Les entrées avec un historique de facturation réel sont conservées.",
       "deleted": "{{count}} locataire(s) retiré(s).",
       "deletedPartial": "{{ok}} retiré(s) · {{blocked}} conservé(s) (bail actif){{failedSuffix}}",
-      "deleteNone": "Aucun retrait — {{blocked}} ont un bail actif{{failedSuffix}}."
+      "deleteNone": "Aucun retrait — {{blocked}} ont un bail actif{{failedSuffix}}.",
+      "removed": "{{count}} entrée(s) retirée(s)",
+      "keptTail": "conservée(s) (facturation)",
+      "notFoundTail": "introuvable(s)",
+      "keptAll": "Aucun retrait — {{count}} ont un historique de facturation réel et nécessitent une résiliation de bail.",
+      "error": "Impossible de retirer les entrées sélectionnées."
     }
   },
   "unitsId": {

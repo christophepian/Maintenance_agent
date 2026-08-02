@@ -2112,28 +2112,32 @@ export default function BuildingDetail() {
     }
   }
 
-  // Batch-deactivate the selected tenants. DELETE /tenants/:id is a soft delete and
-  // returns 409 for a tenant with an active lease, so we aggregate the outcomes.
+  // Batch-remove the selected building-tenant entries (import-junk cleanup). Each
+  // selection key is `${tenantId}|${unitId}`; the server soft-deletes the lease,
+  // deletes the occupancy, and deactivates the tenant if orphaned — keeping any entry
+  // whose lease has real billing.
   async function batchDeleteTenants() {
-    const ids = [...selTenantIds];
-    if (ids.length === 0 || tenantDeleting) return;
-    if (typeof window !== "undefined" && !window.confirm(t("manager:buildingsId.tenants.confirmDelete", { defaultValue: "Remove {{count}} tenant(s) from this building? Tenants with an active lease can't be removed.", count: ids.length }))) return;
+    const keys = [...selTenantIds];
+    if (keys.length === 0 || tenantDeleting) return;
+    if (typeof window !== "undefined" && !window.confirm(t("manager:buildingsId.tenants.confirmDelete", { defaultValue: "Remove {{count}} tenant entry(ies) from this building? This clears their occupancy and lease. Entries with real billing history are kept.", count: keys.length }))) return;
     setTenantDeleting(true);
     try {
-      const settled = await Promise.allSettled(ids.map((tid) =>
-        fetch(`/api/tenants/${tid}`, { method: "DELETE", headers: authHeaders() }).then((r) => r.status)
-      ));
-      let ok = 0, blocked = 0, failed = 0;
-      for (const r of settled) {
-        if (r.status === "fulfilled" && r.value === 200) ok++;
-        else if (r.status === "fulfilled" && r.value === 409) blocked++;
-        else failed++;
-      }
+      const entries = keys.map((k) => { const i = k.indexOf("|"); return { tenantId: k.slice(0, i), unitId: k.slice(i + 1) }; });
+      const res = await fetch(`/api/buildings/${id}/tenants/remove`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ entries }),
+      });
+      const json = await res.json().catch(() => null);
+      const d = json?.data;
       await loadBuilding();
       setSelTenantIds(new Set());
-      if (ok > 0 && blocked === 0 && failed === 0) setOk(t("manager:buildingsId.tenants.deleted", { defaultValue: "{{count}} tenant(s) removed.", count: ok }));
-      else if (ok > 0) setOk(t("manager:buildingsId.tenants.deletedPartial", { defaultValue: "{{ok}} removed · {{blocked}} kept (active lease){{failedSuffix}}", ok, blocked, failedSuffix: failed ? ` · ${failed} failed` : "" }));
-      else setErr(t("manager:buildingsId.tenants.deleteNone", { defaultValue: "Nothing removed — {{blocked}} have an active lease{{failedSuffix}}.", blocked, failedSuffix: failed ? `, ${failed} failed` : "" }));
+      if (!res.ok || !d) { setErr(t("manager:buildingsId.tenants.error", { defaultValue: "Couldn't remove the selected entries." })); return; }
+      const removed = d.removed || 0, kept = d.keptBilling || 0, missing = d.notFound || 0;
+      const tail = (kept ? ` · ${kept} ${t("manager:buildingsId.tenants.keptTail", { defaultValue: "kept (billing history)" })}` : "") + (missing ? ` · ${missing} ${t("manager:buildingsId.tenants.notFoundTail", { defaultValue: "not found" })}` : "");
+      if (removed > 0) setOk(t("manager:buildingsId.tenants.removed", { defaultValue: "{{count}} entry(ies) removed", count: removed }) + tail);
+      else if (kept > 0) setErr(t("manager:buildingsId.tenants.keptAll", { defaultValue: "Nothing removed — {{count}} have real billing history and need a proper lease termination.", count: kept }));
+      else setErr(t("manager:buildingsId.tenants.error", { defaultValue: "Couldn't remove the selected entries." }));
     } catch (e) {
       setErr(`Failed to remove tenants: ${e.message}`);
     } finally {
@@ -3281,9 +3285,10 @@ export default function BuildingDetail() {
 
           {/* Tenants tab */}
           {activeTab === "Tenants" && (() => {
-            const selectableIds = sortedBuildingTenants.filter((x) => x.tenantId).map((x) => x.tenantId);
-            const allSelected = selectableIds.length > 0 && selectableIds.every((tid) => selTenantIds.has(tid));
-            const someSelected = selectableIds.some((tid) => selTenantIds.has(tid));
+            const rowKeyOf = (x) => `${x.tenantId}|${x.unitId}`;
+            const selectableIds = sortedBuildingTenants.filter((x) => x.tenantId).map(rowKeyOf);
+            const allSelected = selectableIds.length > 0 && selectableIds.every((k) => selTenantIds.has(k));
+            const someSelected = selectableIds.some((k) => selTenantIds.has(k));
             const toggleAll = () => setSelTenantIds(allSelected ? new Set() : new Set(selectableIds));
             return (
             <Panel title={t("manager:buildingsId.title.tenants")}>
@@ -3302,9 +3307,9 @@ export default function BuildingDetail() {
                 {/* Mobile: card list */}
                 <div className="sm:hidden space-y-2">
                   {sortedBuildingTenants.map((ten, idx) => (
-                    <label key={ten.tenantId || idx} className={cn("flex items-start gap-2.5 rounded-lg border px-3 py-2.5", ten.tenantId && selTenantIds.has(ten.tenantId) ? "border-brand-ring bg-brand-light" : "border-surface-border bg-surface-subtle")}>
+                    <label key={ten.tenantId ? rowKeyOf(ten) : idx} className={cn("flex items-start gap-2.5 rounded-lg border px-3 py-2.5", ten.tenantId && selTenantIds.has(rowKeyOf(ten)) ? "border-brand-ring bg-brand-light" : "border-surface-border bg-surface-subtle")}>
                       {ten.tenantId && (
-                        <input type="checkbox" className="mt-0.5 h-4 w-4 shrink-0 accent-brand" checked={selTenantIds.has(ten.tenantId)} onChange={() => toggleTenant(ten.tenantId)} aria-label={ten.name} />
+                        <input type="checkbox" className="mt-0.5 h-4 w-4 shrink-0 accent-brand" checked={selTenantIds.has(rowKeyOf(ten))} onChange={() => toggleTenant(rowKeyOf(ten))} aria-label={ten.name} />
                       )}
                       <span className="min-w-0">
                         <span className="block text-sm font-medium text-foreground">{ten.name}</span>
@@ -3338,12 +3343,12 @@ export default function BuildingDetail() {
                           : ten.source === "LEASE"
                           ? "info"
                           : "muted";
-                      const sel = ten.tenantId && selTenantIds.has(ten.tenantId);
+                      const sel = ten.tenantId && selTenantIds.has(rowKeyOf(ten));
                       return (
-                        <tr key={ten.tenantId || idx} className={cn("border-b border-surface-divider", sel && "bg-brand-light")}>
+                        <tr key={ten.tenantId ? rowKeyOf(ten) : idx} className={cn("border-b border-surface-divider", sel && "bg-brand-light")}>
                           <td>
                             {ten.tenantId && (
-                              <input type="checkbox" className="h-4 w-4 accent-brand" checked={sel} onChange={() => toggleTenant(ten.tenantId)} aria-label={ten.name} />
+                              <input type="checkbox" className="h-4 w-4 accent-brand" checked={sel} onChange={() => toggleTenant(rowKeyOf(ten))} aria-label={ten.name} />
                             )}
                           </td>
                           <td className="text-foreground font-medium">{ten.name}</td>

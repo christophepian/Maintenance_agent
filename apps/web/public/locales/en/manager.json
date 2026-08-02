@@ -1103,10 +1103,15 @@
       "removing": "Removing…",
       "clear": "Clear",
       "selectAll": "Select all",
-      "confirmDelete": "Remove {{count}} tenant(s) from this building? Tenants with an active lease can't be removed.",
+      "confirmDelete": "Remove {{count}} tenant entry(ies) from this building? This clears their occupancy and lease. Entries with real billing history are kept.",
       "deleted": "{{count}} tenant(s) removed.",
       "deletedPartial": "{{ok}} removed · {{blocked}} kept (active lease){{failedSuffix}}",
-      "deleteNone": "Nothing removed — {{blocked}} have an active lease{{failedSuffix}}."
+      "deleteNone": "Nothing removed — {{blocked}} have an active lease{{failedSuffix}}.",
+      "removed": "{{count}} entry(ies) removed",
+      "keptTail": "kept (billing history)",
+      "notFoundTail": "not found",
+      "keptAll": "Nothing removed — {{count}} have real billing history and need a proper lease termination.",
+      "error": "Couldn't remove the selected entries."
     }
   },
   "unitsId": {
