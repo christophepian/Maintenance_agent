@@ -969,7 +969,7 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
             {/* ── Result: calm header + (Why? → drivers/watch) + KPI strip + flags ── */}
             {topSection}
             {whyOpen && <div className="border-b border-surface-border">{driversSlide}</div>}
-            {noPnlData ? noPnlBlock : (<>{kpiStripEl}{flagsRow}{metricsCollapsible}</>)}
+            {noPnlData ? noPnlBlock : (<>{kpiStripEl}{metricsCollapsible}{flagsRow}</>)}
 
             {/* ── Detail: Income & expenses · By unit · Profitability — a full-width,
                    edge-to-edge segmented band (highlight fill only); its top/bottom
@@ -1235,7 +1235,7 @@ function BuildingReportingView({ buildingId, etatLocatifNet }) {
   const [spanStart, setSpanStart] = useState(null);     // Date | null — earliest period that has data
   const [tsError, setTsError]     = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);  // anchor-period picker popover
-  const [periodOpen, setPeriodOpen] = useState(false);  // period "Adjust" details (grain + presets / compare builder)
+  const [periodOpen, setPeriodOpen] = useState(true);   // period controls (grid + grain + presets); open by default
   const [pkYear, setPkYear] = useState(new Date().getFullYear());
   const [addOpen, setAddOpen] = useState(false);        // compare mode: "add period" picker popover
   const [addYear, setAddYear] = useState(new Date().getFullYear());
@@ -1277,6 +1277,9 @@ function BuildingReportingView({ buildingId, etatLocatifNet }) {
   // granularity — this is what makes a Month→Year→Month round-trip land you back
   // on the same period instead of resetting.
   const anchorStart = useMemo(() => reportingPeriodStart(gran, new Date(`${anchor}T00:00:00`)), [gran, anchor]);
+  // The period grid is inline (always visible), so keep its year on the selected
+  // period; navigating the grid's own ‹/› still moves freely (anchor unchanged).
+  useEffect(() => { setPkYear(anchorStart.getFullYear()); }, [anchorStart]);
 
   // Selectable bucket-starts, ascending — pure client-side, no network.
   const periods = useMemo(() => {
@@ -1370,7 +1373,6 @@ function BuildingReportingView({ buildingId, etatLocatifNet }) {
 
   const pickerYears = [...new Set(periods.map((p) => p.getFullYear()))];
   const monShort = Array.from({ length: 12 }, (_, mi) => new Intl.DateTimeFormat(locale, { month: "short" }).format(new Date(2024, mi, 1)));
-  function openPicker() { setPkYear(anchorStart.getFullYear()); setAddOpen(false); setPickerOpen((v) => !v); }
   function openAdd() { setAddYear(anchorStart.getFullYear()); setPickerOpen(false); setAddOpen((v) => !v); }
   const isCur = (d) => !ytd && !customRange && d != null && +d === +anchorStart;
   const isExtra = (d) => { if (!d) return false; const s = reportingPeriodStart(gran, d); return extras.some((p) => p.key === `${reportingIsoDay(s)}_${reportingIsoDay(reportingPeriodEnd(gran, s))}`); };
@@ -1422,24 +1424,25 @@ function BuildingReportingView({ buildingId, etatLocatifNet }) {
           ))}
         </div>
 
-        {/* Period peek row + collapsible "Adjust" details. */}
+        {/* Period — the controls are fully visible: prev/next + label, then the grain,
+            presets / compare builder, and the month/year grid inline. Open by default
+            in One period (collapsible via the label), always open in Compare. */}
         <div className="border-b border-surface-border">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2.5">
             {!customRange ? (
-              <div className="relative flex items-center gap-1.5" ref={pickerRef}>
+              <div className="flex items-center gap-1.5">
                 <button onClick={() => step(-1)} disabled={atStart} aria-label={t("buildingsId.reporting.period.prev")}
                   className="grid h-7 w-7 place-items-center rounded-lg border border-surface-border bg-surface text-muted transition-colors hover:border-brand hover:text-brand disabled:opacity-40 disabled:cursor-not-allowed">‹</button>
-                <button onClick={openPicker} aria-expanded={pickerOpen}
-                  className="min-w-[120px] rounded-lg border border-transparent px-2 py-1 text-center text-[15px] font-bold text-foreground transition-colors hover:border-surface-border hover:bg-surface-subtle">
-                  {periodLabel} <span className="text-foreground-dim">▾</span>
-                </button>
+                {mode === "single" ? (
+                  <button onClick={() => setPeriodOpen((v) => !v)} aria-expanded={periodOpen}
+                    className="min-w-[120px] rounded-lg border border-transparent px-2 py-1 text-center text-[15px] font-bold text-foreground transition-colors hover:border-surface-border hover:bg-surface-subtle">
+                    {periodLabel} <span className={cn("inline-block text-xs text-foreground-dim transition-transform", periodOpen && "rotate-180")}>▾</span>
+                  </button>
+                ) : (
+                  <span className="min-w-[120px] px-2 py-1 text-center text-[15px] font-bold text-foreground">{periodLabel}</span>
+                )}
                 <button onClick={() => step(1)} disabled={atEnd} aria-label={t("buildingsId.reporting.period.next")}
                   className="grid h-7 w-7 place-items-center rounded-lg border border-surface-border bg-surface text-muted transition-colors hover:border-brand hover:text-brand disabled:opacity-40 disabled:cursor-not-allowed">›</button>
-                {pickerOpen && periods.length > 0 && (
-                  <div className="absolute left-1/2 top-full z-30 mt-2 w-64 -translate-x-1/2 rounded-xl border border-surface-border bg-surface p-3 shadow-lg">
-                    {pickerGrid({ pkYr: pkYear, setPkYr: setPkYear, onPick: selectStart, selPred: isCur })}
-                  </div>
-                )}
               </div>
             ) : (
               <div className="flex flex-wrap items-center gap-2">
@@ -1450,7 +1453,6 @@ function BuildingReportingView({ buildingId, etatLocatifNet }) {
                 <button onClick={() => setCustomRange(null)} aria-label={t("buildingsId.reporting.compare.clear")} className="rounded-lg border border-surface-border px-2 py-1 text-xs text-muted transition-colors hover:border-brand hover:text-brand">✕</button>
               </div>
             )}
-            {/* compare: the chosen comparison periods stay in the peek row */}
             {mode === "compare" && extras.length > 0 && (
               <>
                 <span className="text-xs font-semibold text-foreground-dim">{t("buildingsId.reporting.compare.vs", { defaultValue: "vs" })}</span>
@@ -1462,58 +1464,61 @@ function BuildingReportingView({ buildingId, etatLocatifNet }) {
                 ))}
               </>
             )}
-            <button onClick={() => setPeriodOpen((v) => !v)} aria-expanded={periodOpen}
-              className="ml-auto inline-flex shrink-0 items-center gap-1.5 text-xs font-semibold text-muted transition-colors hover:text-foreground">
-              {t("buildingsId.reporting.period.adjust", { defaultValue: "Adjust" })}
-              <span className={cn("text-[9px] text-foreground-dim transition-transform", periodOpen && "rotate-180")}>▾</span>
-            </button>
           </div>
 
-          {periodOpen && (
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-dashed border-surface-border px-4 pb-3 pt-2.5">
-              {!customRange && (
-                <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-semibold uppercase tracking-wide text-foreground-dim">{mode === "compare" ? t("buildingsId.reporting.compare.base") : t("buildingsId.reporting.period.label")}</span>
-                  <div className="inline-flex rounded-lg border border-surface-border bg-surface p-0.5 gap-0.5">
-                    {(mode === "compare" ? COMPARE_GRANS : REPORTING_GRANS).map((g) => (
-                      <button key={g} onClick={() => changeGran(g)} aria-pressed={!ytd && gran === g}
-                        className={cn("rounded-md px-3 py-1 text-sm font-medium transition-colors", !ytd && gran === g ? "bg-brand text-white" : "text-muted hover:text-muted-dark")}>{t(`buildingsId.reporting.period.${g}`)}</button>
-                    ))}
+          {(mode === "compare" || periodOpen) && (
+            <div className="border-t border-dashed border-surface-border px-4 pb-3.5 pt-3">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                {!customRange && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-semibold uppercase tracking-wide text-foreground-dim">{mode === "compare" ? t("buildingsId.reporting.compare.base") : t("buildingsId.reporting.period.label")}</span>
+                    <div className="inline-flex rounded-lg border border-surface-border bg-surface p-0.5 gap-0.5">
+                      {(mode === "compare" ? COMPARE_GRANS : REPORTING_GRANS).map((g) => (
+                        <button key={g} onClick={() => changeGran(g)} aria-pressed={!ytd && gran === g}
+                          className={cn("rounded-md px-3 py-1 text-sm font-medium transition-colors", !ytd && gran === g ? "bg-brand text-white" : "text-muted hover:text-muted-dark")}>{t(`buildingsId.reporting.period.${g}`)}</button>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
-              {mode === "single" && (
-                <div className="flex gap-1.5">
-                  {[["latest", t("buildingsId.reporting.histogram.jumpMonth")], ["ytd", t("buildingsId.reporting.histogram.jumpYtd")], ["year", t("buildingsId.reporting.histogram.jumpYear")]].map(([k, l]) => (
-                    <button key={k} onClick={() => preset(k)} aria-pressed={k === "ytd" && ytd}
-                      className={cn("rounded-lg border px-2.5 py-1 text-xs transition-colors", k === "ytd" && ytd ? "border-brand bg-brand-light text-brand-dark" : "border-surface-border bg-surface text-muted hover:border-brand hover:text-brand")}>{l}</button>
-                  ))}
-                  <button onClick={() => setCustomRange((r) => (r ? null : { from, to }))} aria-pressed={!!customRange}
-                    className={cn("rounded-lg border px-2.5 py-1 text-xs transition-colors", customRange ? "border-brand bg-brand-light text-brand-dark" : "border-surface-border bg-surface text-muted hover:border-brand hover:text-brand")}>{t("buildingsId.reporting.period.custom")}</button>
-                </div>
-              )}
-              {mode === "compare" && (() => {
-                const full = extras.length >= COMPARE_MAX - 1;
-                const addBtn = "rounded-lg border border-surface-border bg-surface px-2.5 py-1 text-xs text-muted transition-colors hover:border-brand hover:text-brand disabled:opacity-40 disabled:cursor-not-allowed";
-                return (
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-[11px] font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.compare.against")}</span>
-                    <button onClick={addPrior} disabled={full} className={addBtn}>+ {t("buildingsId.reporting.compare.prior")}</button>
-                    <button onClick={addLastYear} disabled={full} className={addBtn}>+ {t("buildingsId.reporting.compare.lastYear")}</button>
-                    <div className="relative" ref={addRef}>
-                      <button onClick={openAdd} aria-expanded={addOpen} disabled={full} className={addBtn}>+ {t("buildingsId.reporting.compare.addPeriod")} <span className="text-foreground-dim">▾</span></button>
-                      {addOpen && periods.length > 0 && (
-                        <div className="absolute right-0 top-full z-30 mt-2 w-64 rounded-xl border border-surface-border bg-surface p-3 shadow-lg">
-                          {pickerGrid({ pkYr: addYear, setPkYr: setAddYear, onPick: addPeriodAt, selPred: isExtra })}
-                        </div>
+                )}
+                {mode === "single" && (
+                  <div className="flex gap-1.5">
+                    {[["latest", t("buildingsId.reporting.histogram.jumpMonth")], ["ytd", t("buildingsId.reporting.histogram.jumpYtd")], ["year", t("buildingsId.reporting.histogram.jumpYear")]].map(([k, l]) => (
+                      <button key={k} onClick={() => preset(k)} aria-pressed={k === "ytd" && ytd}
+                        className={cn("rounded-lg border px-2.5 py-1 text-xs transition-colors", k === "ytd" && ytd ? "border-brand bg-brand-light text-brand-dark" : "border-surface-border bg-surface text-muted hover:border-brand hover:text-brand")}>{l}</button>
+                    ))}
+                    <button onClick={() => setCustomRange((r) => (r ? null : { from, to }))} aria-pressed={!!customRange}
+                      className={cn("rounded-lg border px-2.5 py-1 text-xs transition-colors", customRange ? "border-brand bg-brand-light text-brand-dark" : "border-surface-border bg-surface text-muted hover:border-brand hover:text-brand")}>{t("buildingsId.reporting.period.custom")}</button>
+                  </div>
+                )}
+                {mode === "compare" && (() => {
+                  const full = extras.length >= COMPARE_MAX - 1;
+                  const addBtn = "rounded-lg border border-surface-border bg-surface px-2.5 py-1 text-xs text-muted transition-colors hover:border-brand hover:text-brand disabled:opacity-40 disabled:cursor-not-allowed";
+                  return (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-[11px] font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.compare.against")}</span>
+                      <button onClick={addPrior} disabled={full} className={addBtn}>+ {t("buildingsId.reporting.compare.prior")}</button>
+                      <button onClick={addLastYear} disabled={full} className={addBtn}>+ {t("buildingsId.reporting.compare.lastYear")}</button>
+                      <div className="relative" ref={addRef}>
+                        <button onClick={openAdd} aria-expanded={addOpen} disabled={full} className={addBtn}>+ {t("buildingsId.reporting.compare.addPeriod")} <span className="text-foreground-dim">▾</span></button>
+                        {addOpen && periods.length > 0 && (
+                          <div className="absolute right-0 top-full z-30 mt-2 w-64 rounded-xl border border-surface-border bg-surface p-3 shadow-lg">
+                            {pickerGrid({ pkYr: addYear, setPkYr: setAddYear, onPick: addPeriodAt, selPred: isExtra })}
+                          </div>
+                        )}
+                      </div>
+                      {extras.length > 0 && (
+                        <button onClick={() => setExtras([])} className="rounded-lg border border-surface-border px-2 py-1 text-xs text-muted transition-colors hover:border-destructive-ring hover:text-destructive-text">{t("buildingsId.reporting.compare.clear")}</button>
                       )}
                     </div>
-                    {extras.length > 0 && (
-                      <button onClick={() => setExtras([])} className="rounded-lg border border-surface-border px-2 py-1 text-xs text-muted transition-colors hover:border-destructive-ring hover:text-destructive-text">{t("buildingsId.reporting.compare.clear")}</button>
-                    )}
-                  </div>
-                );
-              })()}
+                  );
+                })()}
+              </div>
+              {/* Inline month/year grid — pick a specific period without a popover. */}
+              {!customRange && (
+                <div className="mt-3 w-full max-w-[17rem] rounded-lg border border-surface-border bg-surface-subtle p-2.5">
+                  {pickerGrid({ pkYr: pkYear, setPkYr: setPkYear, onPick: selectStart, selPred: isCur })}
+                </div>
+              )}
             </div>
           )}
         </div>

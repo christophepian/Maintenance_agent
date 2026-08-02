@@ -10,6 +10,10 @@ import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "next-i18next";
 import { tenantFetch } from "../lib/api";
 import { cn } from "../lib/utils";
+import { useVoiceCall } from "../lib/useVoiceCall";
+
+// Map the app's i18n language to a BCP-47 tag for speech recognition/synthesis.
+const SPEECH_LANG = { fr: "fr-FR", en: "en-US", de: "de-DE" };
 
 function MessageBubble({ role, content }) {
   const isTenant = role === "TENANT";
@@ -44,13 +48,15 @@ function TypingIndicator() {
 }
 
 export default function InlineChatSection() {
-  const { t } = useTranslation("tenant");
+  const { t, i18n } = useTranslation("tenant");
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
+
+  const speechLang = SPEECH_LANG[i18n?.language?.split("-")[0]] || "fr-FR";
 
   const [hasTenantToken, setHasTenantToken] = useState(false);
   useEffect(() => {
@@ -65,19 +71,16 @@ export default function InlineChatSection() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, sending]);
 
-  async function handleSend(e) {
-    e.preventDefault();
-    const text = input.trim();
-    if (!text || sending) return;
-
-    setInput("");
+  // Core send path shared by the text form and the voice call. Pushes the
+  // tenant + assistant bubbles and returns the reply text (for TTS). Throws on
+  // failure after rolling back the optimistic tenant bubble.
+  async function sendText(text) {
     setError("");
     setMessages((prev) => [
       ...prev,
       { role: "TENANT", content: text, createdAt: new Date().toISOString() },
     ]);
     setSending(true);
-
     try {
       const res = await tenantFetch("/api/tenant/conversation", {
         method: "POST",
@@ -91,12 +94,30 @@ export default function InlineChatSection() {
         ...prev,
         { role: "ASSISTANT", content: reply, createdAt: new Date().toISOString() },
       ]);
+      return reply;
     } catch (err) {
       setError(err.message || t("chatWidget.error", { defaultValue: "Something went wrong. Please try again." }));
       setMessages((prev) => prev.slice(0, -1));
-      setInput(text);
+      throw err;
     } finally {
       setSending(false);
+    }
+  }
+
+  const voice = useVoiceCall({
+    lang: speechLang,
+    onUtterance: (text) => sendText(text),
+  });
+
+  async function handleSend(e) {
+    e.preventDefault();
+    const text = input.trim();
+    if (!text || sending) return;
+    setInput("");
+    try {
+      await sendText(text);
+    } catch {
+      setInput(text); // restore so the tenant can retry
     }
   }
 
