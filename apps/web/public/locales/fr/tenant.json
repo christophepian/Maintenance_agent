@@ -35,7 +35,18 @@
     "suggestion3": "Afficher mes factures",
     "placeholder": "Décrivez un problème ou posez une question…",
     "enterHint": "Entrée pour envoyer · Maj+Entrée pour nouvelle ligne",
-    "error": "Une erreur s'est produite. Veuillez réessayer."
+    "error": "Une erreur s'est produite. Veuillez réessayer.",
+    "callLabel": "Appeler",
+    "callStart": "Appeler l'assistant",
+    "callConnecting": "Connexion…",
+    "callListening": "Je vous écoute…",
+    "callThinking": "Un instant…",
+    "callSpeaking": "L'assistant parle…",
+    "callHint": "Parlez naturellement, comme au téléphone.",
+    "callInterrupt": "Interrompre",
+    "callHangup": "Raccrocher",
+    "callMicDenied": "Accès au micro refusé. Autorisez le microphone pour appeler.",
+    "callUnsupported": "L'appel vocal n'est pas pris en charge par ce navigateur."
   },
   "index": {
     "heading": {

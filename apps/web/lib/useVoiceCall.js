@@ -62,7 +62,7 @@ export function useVoiceCall({ lang = "fr-FR", onUtterance }) {
   const submitRef = useRef(async () => {});
   const speakRef = useRef(() => {});
   const onUtteranceRef = useRef(onUtterance);
-  onUtteranceRef.current = onUtterance;
+  useEffect(() => { onUtteranceRef.current = onUtterance; });
 
   useEffect(() => {
     const hasStt = Boolean(getSpeechRecognition());
@@ -182,10 +182,13 @@ export function useVoiceCall({ lang = "fr-FR", onUtterance }) {
     }
   }, [lang]);
 
-  // Keep forward-references current.
-  listenRef.current = listen;
-  submitRef.current = submit;
-  speakRef.current = speak;
+  // Keep forward-references current (assigned in an effect, read only from
+  // event handlers / async callbacks — never during render).
+  useEffect(() => {
+    listenRef.current = listen;
+    submitRef.current = submit;
+    speakRef.current = speak;
+  });
 
   const startCall = useCallback(() => {
     if (!supported) { setError("unsupported"); return; }
