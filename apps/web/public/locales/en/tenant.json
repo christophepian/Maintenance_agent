@@ -35,7 +35,18 @@
     "suggestion3": "Show my invoices",
     "placeholder": "Describe an issue or ask a question…",
     "enterHint": "Press Enter to send · Shift+Enter for new line",
-    "error": "Something went wrong. Please try again."
+    "error": "Something went wrong. Please try again.",
+    "callLabel": "Call",
+    "callStart": "Call the assistant",
+    "callConnecting": "Connecting…",
+    "callListening": "Listening…",
+    "callThinking": "One moment…",
+    "callSpeaking": "Assistant speaking…",
+    "callHint": "Speak naturally, like on a phone.",
+    "callInterrupt": "Interrupt",
+    "callHangup": "Hang up",
+    "callMicDenied": "Microphone access denied. Allow the mic to call.",
+    "callUnsupported": "Voice calling isn't supported in this browser."
   },
   "index": {
     "heading": {

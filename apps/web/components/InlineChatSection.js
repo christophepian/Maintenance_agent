@@ -145,10 +145,23 @@ export default function InlineChatSection() {
             <path fillRule="evenodd" d="M4.848 2.771A49.144 49.144 0 0112 2.25c2.43 0 4.817.178 7.152.52 1.978.292 3.348 2.024 3.348 3.97v6.02c0 1.946-1.37 3.678-3.348 3.97a48.901 48.901 0 01-3.476.383.39.39 0 00-.297.17l-2.755 4.133a.75.75 0 01-1.248 0l-2.755-4.133a.39.39 0 00-.297-.17 48.9 48.9 0 01-3.476-.384c-1.978-.29-3.348-2.024-3.348-3.97V6.741c0-1.946 1.37-3.68 3.348-3.97z" clipRule="evenodd" />
           </svg>
         </div>
-        <div>
+        <div className="min-w-0">
           <p className="text-sm font-semibold text-foreground leading-tight">{t("chatWidget.assistantName")}</p>
           <p className="text-xs text-foreground-dim leading-tight">{t("chatWidget.assistantTagline")}</p>
         </div>
+        {voice.supported && !voice.isActive && (
+          <button
+            type="button"
+            onClick={voice.startCall}
+            aria-label={t("chatWidget.callStart", { defaultValue: "Call the assistant" })}
+            className="ml-auto flex shrink-0 items-center gap-1.5 rounded-full bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700 focus-visible:ring-2 focus-visible:ring-emerald-500 transition"
+          >
+            <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <path d="M2 3.5A1.5 1.5 0 013.5 2h1.148a1.5 1.5 0 011.465 1.175l.716 3.223a1.5 1.5 0 01-1.052 1.767l-.933.267c-.41.117-.643.555-.48.95a11.542 11.542 0 006.254 6.254c.395.163.833-.07.95-.48l.267-.933a1.5 1.5 0 011.767-1.052l3.223.716A1.5 1.5 0 0118 15.352V16.5a1.5 1.5 0 01-1.5 1.5H15c-7.18 0-13-5.82-13-13V3.5z" />
+            </svg>
+            {t("chatWidget.callLabel", { defaultValue: "Call" })}
+          </button>
+        )}
       </div>
 
       {/* Message area */}
@@ -181,8 +194,65 @@ export default function InlineChatSection() {
         <div ref={messagesEndRef} />
       </div>
 
+      {/* Call bar — shown while a voice call is active */}
+      {voice.isActive && (
+        <div className="border-t border-surface-divider bg-surface-hover px-4 py-3">
+          <div className="flex items-center gap-3">
+            <span className="relative flex h-3 w-3 shrink-0">
+              <span className={cn(
+                "absolute inline-flex h-full w-full rounded-full opacity-75",
+                voice.status === "listening" && "animate-ping bg-emerald-400",
+                voice.status === "speaking" && "animate-ping bg-indigo-400",
+              )} />
+              <span className={cn(
+                "relative inline-flex h-3 w-3 rounded-full",
+                voice.status === "listening" ? "bg-emerald-500"
+                  : voice.status === "speaking" ? "bg-indigo-500"
+                  : "bg-amber-500",
+              )} />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium text-foreground leading-tight">
+                {voice.status === "listening" && t("chatWidget.callListening", { defaultValue: "Listening…" })}
+                {voice.status === "thinking" && t("chatWidget.callThinking", { defaultValue: "One moment…" })}
+                {voice.status === "speaking" && t("chatWidget.callSpeaking", { defaultValue: "Assistant speaking…" })}
+                {voice.status === "idle" && t("chatWidget.callConnecting", { defaultValue: "Connecting…" })}
+              </p>
+              <p className="truncate text-xs text-foreground-dim leading-tight">
+                {voice.interim || t("chatWidget.callHint", { defaultValue: "Speak naturally, like on a phone." })}
+              </p>
+            </div>
+            {voice.status === "speaking" && (
+              <button
+                type="button"
+                onClick={voice.interrupt}
+                className="shrink-0 rounded-full border border-surface-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-surface transition"
+              >
+                {t("chatWidget.callInterrupt", { defaultValue: "Interrupt" })}
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={voice.endCall}
+              aria-label={t("chatWidget.callHangup", { defaultValue: "Hang up" })}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-red-600 text-white hover:bg-red-700 focus-visible:ring-2 focus-visible:ring-red-500 transition"
+            >
+              <svg className="h-4 w-4 rotate-[135deg]" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                <path d="M2 3.5A1.5 1.5 0 013.5 2h1.148a1.5 1.5 0 011.465 1.175l.716 3.223a1.5 1.5 0 01-1.052 1.767l-.933.267c-.41.117-.643.555-.48.95a11.542 11.542 0 006.254 6.254c.395.163.833-.07.95-.48l.267-.933a1.5 1.5 0 011.767-1.052l3.223.716A1.5 1.5 0 0118 15.352V16.5a1.5 1.5 0 01-1.5 1.5H15c-7.18 0-13-5.82-13-13V3.5z" />
+              </svg>
+            </button>
+          </div>
+          {voice.error === "mic-denied" && (
+            <p className="mt-2 text-xs text-red-500">{t("chatWidget.callMicDenied", { defaultValue: "Microphone access denied." })}</p>
+          )}
+        </div>
+      )}
+
       {/* Input area */}
-      <div className="border-t border-surface-divider px-4 py-3">
+      <div className={cn("border-t border-surface-divider px-4 py-3", voice.isActive && "hidden")}>
+        {voice.error === "unsupported" && (
+          <p className="mb-2 text-xs text-foreground-dim">{t("chatWidget.callUnsupported", { defaultValue: "Voice calling isn't supported in this browser." })}</p>
+        )}
         <form onSubmit={handleSend} className="flex items-end gap-2">
           <textarea
             ref={inputRef}
