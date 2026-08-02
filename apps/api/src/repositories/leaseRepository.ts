@@ -315,6 +315,34 @@ export async function listInvoicesByLease(
   });
 }
 
+/** Soft-delete a lease (org-scoped) — sets deletedAt so it drops out of the
+ *  active views (the building/tenant list filters `status: ACTIVE, deletedAt: null`).
+ *  Returns the number of rows affected (0 if not found / already deleted). */
+export async function softDeleteLeaseInOrg(
+  prisma: PrismaClient,
+  leaseId: string,
+  orgId: string,
+) {
+  const r = await prisma.lease.updateMany({
+    where: { id: leaseId, orgId, deletedAt: null },
+    data: { deletedAt: new Date() },
+  });
+  return r.count;
+}
+
+/** Active, non-deleted leases on a unit matching a tenant phone (org-scoped). */
+export async function findActiveLeasesForUnitPhone(
+  prisma: PrismaClient,
+  orgId: string,
+  unitId: string,
+  phone: string,
+) {
+  return prisma.lease.findMany({
+    where: { orgId, unitId, status: "ACTIVE", deletedAt: null, tenantPhone: phone },
+    select: { id: true },
+  });
+}
+
 // ─── Rent Reduction / Legal Engine Lease Lookups ──────────────
 
 /** Select fields needed for rent reduction calculation. */

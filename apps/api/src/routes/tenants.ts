@@ -5,7 +5,7 @@ import { first } from "../http/query";
 import { maybeRequireManager, requireRole } from "../authz";
 import { withAuthRequired } from "../http/routeProtection";
 import { normalizePhoneToE164 } from "../utils/phoneNormalization";
-import { getTenantByPhone, createOrGetTenant, updateTenant, deactivateTenant, listTenants, getTenantById } from "../services/tenants";
+import { getTenantByPhone, createOrGetTenant, updateTenant, deactivateTenant, listTenants, getTenantById, removeBuildingTenantEntries } from "../services/tenants";
 import { listContractors, createContractor, getContractorById, updateContractor, deactivateContractor } from "../services/contractorRequests";
 import { findContractorOrgId } from "../repositories/contractorRepository";
 
@@ -85,6 +85,25 @@ export function registerTenantRoutes(router: Router) {
       sendJson(res, 200, { message: "Tenant deactivated" });
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to deactivate tenant", String(e));
+    }
+  });
+
+  // POST /buildings/:id/tenants/remove — batch-remove import-junk tenant entries
+  // (soft-delete lease + delete occupancy + deactivate orphaned tenant; keeps any
+  // entry whose lease has real billing).
+  router.post("/buildings/:id/tenants/remove", async ({ req, res, orgId, params }) => {
+    if (!requireRole(req, res, "MANAGER")) return;
+    try {
+      const body = await readJson(req) as { entries?: Array<{ unitId?: string; tenantId?: string }> };
+      const entries = Array.isArray(body?.entries)
+        ? body.entries.filter((e): e is { unitId: string; tenantId: string } => !!e?.unitId && !!e?.tenantId)
+        : [];
+      if (entries.length === 0) return sendError(res, 400, "VALIDATION_ERROR", "entries[] (unitId + tenantId) required");
+      const result = await removeBuildingTenantEntries(orgId, params.id, entries);
+      sendJson(res, 200, { data: result });
+    } catch (e) {
+      console.error("[POST /buildings/:id/tenants/remove]", e);
+      sendError(res, 500, "DB_ERROR", "Failed to remove tenant entries", String(e));
     }
   });
 
