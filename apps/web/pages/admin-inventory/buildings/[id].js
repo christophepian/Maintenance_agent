@@ -1680,6 +1680,13 @@ export default function BuildingDetail() {
   const [legalSources, setLegalSources] = useState([]);
   const [legalSourcesLoading, setLegalSourcesLoading] = useState(false);
 
+  // ─── Tenant batch-selection (for batch delete) ───
+  const [selTenantIds, setSelTenantIds] = useState(() => new Set());
+  const [tenantDeleting, setTenantDeleting] = useState(false);
+  const toggleTenant = (tid) => setSelTenantIds((s) => { const n = new Set(s); n.has(tid) ? n.delete(tid) : n.add(tid); return n; });
+  // Clear the selection when the tab or building changes.
+  useEffect(() => { setSelTenantIds(new Set()); }, [activeTab, id]);
+
   // ─── Sort state for Tenants + Requests tabs (must be here, before early returns) ───
   const { sortField: tenSF, sortDir: tenSD, handleSort: handleTenSort } = useLocalSort("name", "asc");
   const { sortField: reqSF, sortDir: reqSD, handleSort: handleReqSort } = useLocalSort("createdAt", "desc");
@@ -2102,6 +2109,35 @@ export default function BuildingDetail() {
       setErr(`Failed to remove owner: ${e.message}`);
     } finally {
       setOwnerLoading(false);
+    }
+  }
+
+  // Batch-deactivate the selected tenants. DELETE /tenants/:id is a soft delete and
+  // returns 409 for a tenant with an active lease, so we aggregate the outcomes.
+  async function batchDeleteTenants() {
+    const ids = [...selTenantIds];
+    if (ids.length === 0 || tenantDeleting) return;
+    if (typeof window !== "undefined" && !window.confirm(t("manager:buildingsId.tenants.confirmDelete", { defaultValue: "Remove {{count}} tenant(s) from this building? Tenants with an active lease can't be removed.", count: ids.length }))) return;
+    setTenantDeleting(true);
+    try {
+      const settled = await Promise.allSettled(ids.map((tid) =>
+        fetch(`/api/tenants/${tid}`, { method: "DELETE", headers: authHeaders() }).then((r) => r.status)
+      ));
+      let ok = 0, blocked = 0, failed = 0;
+      for (const r of settled) {
+        if (r.status === "fulfilled" && r.value === 200) ok++;
+        else if (r.status === "fulfilled" && r.value === 409) blocked++;
+        else failed++;
+      }
+      await loadBuilding();
+      setSelTenantIds(new Set());
+      if (ok > 0 && blocked === 0 && failed === 0) setOk(t("manager:buildingsId.tenants.deleted", { defaultValue: "{{count}} tenant(s) removed.", count: ok }));
+      else if (ok > 0) setOk(t("manager:buildingsId.tenants.deletedPartial", { defaultValue: "{{ok}} removed · {{blocked}} kept (active lease){{failedSuffix}}", ok, blocked, failedSuffix: failed ? ` · ${failed} failed` : "" }));
+      else setErr(t("manager:buildingsId.tenants.deleteNone", { defaultValue: "Nothing removed — {{blocked}} have an active lease{{failedSuffix}}.", blocked, failedSuffix: failed ? `, ${failed} failed` : "" }));
+    } catch (e) {
+      setErr(`Failed to remove tenants: ${e.message}`);
+    } finally {
+      setTenantDeleting(false);
     }
   }
 
@@ -3244,23 +3280,48 @@ export default function BuildingDetail() {
           )}
 
           {/* Tenants tab */}
-          {activeTab === "Tenants" && (
+          {activeTab === "Tenants" && (() => {
+            const selectableIds = sortedBuildingTenants.filter((x) => x.tenantId).map((x) => x.tenantId);
+            const allSelected = selectableIds.length > 0 && selectableIds.every((tid) => selTenantIds.has(tid));
+            const someSelected = selectableIds.some((tid) => selTenantIds.has(tid));
+            const toggleAll = () => setSelTenantIds(allSelected ? new Set() : new Set(selectableIds));
+            return (
             <Panel title={t("manager:buildingsId.title.tenants")}>
               {building?.tenants && building.tenants.length > 0 ? (
                 <>
+                {/* Batch-action bar — appears once a tenant is selected. */}
+                {selTenantIds.size > 0 && (
+                  <div className="mb-3 flex flex-wrap items-center gap-3 rounded-lg border border-brand-ring bg-brand-light px-3 py-2">
+                    <span className="text-sm font-semibold text-brand-dark">{t("manager:buildingsId.tenants.selectedCount", { defaultValue: "{{count}} selected", count: selTenantIds.size })}</span>
+                    <button type="button" onClick={batchDeleteTenants} disabled={tenantDeleting} className="button-danger text-sm disabled:opacity-50">
+                      {tenantDeleting ? t("manager:buildingsId.tenants.removing", { defaultValue: "Removing…" }) : t("manager:buildingsId.tenants.removeSelected", { defaultValue: "Remove selected" })}
+                    </button>
+                    <button type="button" onClick={() => setSelTenantIds(new Set())} className="text-xs font-medium text-muted hover:text-foreground">{t("manager:buildingsId.tenants.clear", { defaultValue: "Clear" })}</button>
+                  </div>
+                )}
                 {/* Mobile: card list */}
                 <div className="sm:hidden space-y-2">
                   {sortedBuildingTenants.map((ten, idx) => (
-                    <div key={ten.tenantId || idx} className="rounded-lg border border-surface-border bg-surface-subtle px-3 py-2.5">
-                      <p className="text-sm font-medium text-foreground">{ten.name}</p>
-                      <p className="text-xs text-muted mt-0.5">Unit {ten.unitNumber}{ten.phone ? ` · ${ten.phone}` : ""}</p>
-                    </div>
+                    <label key={ten.tenantId || idx} className={cn("flex items-start gap-2.5 rounded-lg border px-3 py-2.5", ten.tenantId && selTenantIds.has(ten.tenantId) ? "border-brand-ring bg-brand-light" : "border-surface-border bg-surface-subtle")}>
+                      {ten.tenantId && (
+                        <input type="checkbox" className="mt-0.5 h-4 w-4 shrink-0 accent-brand" checked={selTenantIds.has(ten.tenantId)} onChange={() => toggleTenant(ten.tenantId)} aria-label={ten.name} />
+                      )}
+                      <span className="min-w-0">
+                        <span className="block text-sm font-medium text-foreground">{ten.name}</span>
+                        <span className="block text-xs text-muted mt-0.5">Unit {ten.unitNumber}{ten.phone ? ` · ${ten.phone}` : ""}</span>
+                      </span>
+                    </label>
                   ))}
                 </div>
                 {/* Desktop: table */}
                 <table className="hidden sm:table data-table">
                   <thead>
                     <tr>
+                      <th className="w-8">
+                        <input type="checkbox" className="h-4 w-4 accent-brand" checked={allSelected} disabled={selectableIds.length === 0}
+                          ref={(el) => { if (el) el.indeterminate = someSelected && !allSelected; }}
+                          onChange={toggleAll} aria-label={t("manager:buildingsId.tenants.selectAll", { defaultValue: "Select all" })} />
+                      </th>
                       <SortableHeader label={t("manager:buildingsId.col.name")} field="name" sortField={tenSF} sortDir={tenSD} onSort={handleTenSort} />
                       <SortableHeader label={t("manager:buildingsId.col.unit")} field="unit" sortField={tenSF} sortDir={tenSD} onSort={handleTenSort} />
                       <SortableHeader label={t("manager:buildingsId.col.phone")} field="phone" sortField={tenSF} sortDir={tenSD} onSort={handleTenSort} />
@@ -3277,8 +3338,14 @@ export default function BuildingDetail() {
                           : ten.source === "LEASE"
                           ? "info"
                           : "muted";
+                      const sel = ten.tenantId && selTenantIds.has(ten.tenantId);
                       return (
-                        <tr key={ten.tenantId || idx} className="border-b border-surface-divider">
+                        <tr key={ten.tenantId || idx} className={cn("border-b border-surface-divider", sel && "bg-brand-light")}>
+                          <td>
+                            {ten.tenantId && (
+                              <input type="checkbox" className="h-4 w-4 accent-brand" checked={sel} onChange={() => toggleTenant(ten.tenantId)} aria-label={ten.name} />
+                            )}
+                          </td>
                           <td className="text-foreground font-medium">{ten.name}</td>
                           <td className="text-muted-dark">{ten.unitNumber}</td>
                           <td className="text-muted-dark">{ten.phone || "—"}</td>
@@ -3299,7 +3366,8 @@ export default function BuildingDetail() {
                 <div className="text-center text-muted italic text-sm py-6">{t("manager:buildingsId.text.noTenantsYet")}</div>
               )}
             </Panel>
-          )}
+            );
+          })()}
 
           {/* Assets tab */}
           {activeTab === "Assets" && (

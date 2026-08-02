@@ -1096,6 +1096,17 @@
       "exterior": "Extérieure",
       "garage": "Garage",
       "linkedFlat": "↳ logement {{label}}"
+    },
+    "tenants": {
+      "selectedCount": "{{count}} sélectionné(s)",
+      "removeSelected": "Supprimer la sélection",
+      "removing": "Suppression…",
+      "clear": "Effacer",
+      "selectAll": "Tout sélectionner",
+      "confirmDelete": "Retirer {{count}} locataire(s) de cet immeuble ? Les locataires avec un bail actif ne peuvent pas être retirés.",
+      "deleted": "{{count}} locataire(s) retiré(s).",
+      "deletedPartial": "{{ok}} retiré(s) · {{blocked}} conservé(s) (bail actif){{failedSuffix}}",
+      "deleteNone": "Aucun retrait — {{blocked}} ont un bail actif{{failedSuffix}}."
     }
   },
   "unitsId": {
