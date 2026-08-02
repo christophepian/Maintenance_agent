@@ -714,7 +714,11 @@
         "netYieldNoVal": "Ajoutez une valorisation pour calculer le rendement",
         "freeCashFlow": "Flux de trésorerie disponible",
         "fcfTip": "RNE − capex − intérêts hypothécaires. Avant amortissement.",
-        "mortgageInterest": "Intérêts hypothécaires"
+        "mortgageInterest": "Intérêts hypothécaires",
+        "ltv": "LTV",
+        "ltvTip": "Dette hypothécaire ({{debt}}) ÷ valeur de l’immeuble. 0 % = sans dette.",
+        "ltvNoVal": "Ajoutez une valorisation pour calculer l’endettement",
+        "mortgageDebt": "Dette hypothécaire"
       },
       "kpiGroup": {
         "performance": "Performance",
