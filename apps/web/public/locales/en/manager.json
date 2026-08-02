@@ -714,7 +714,11 @@
         "netYieldNoVal": "Add a valuation to compute yield",
         "freeCashFlow": "Free cash flow",
         "fcfTip": "NOI − capex − mortgage interest. Before debt principal.",
-        "mortgageInterest": "Mortgage interest"
+        "mortgageInterest": "Mortgage interest",
+        "ltv": "LTV",
+        "ltvTip": "Mortgage debt ({{debt}}) ÷ building value. 0% = unlevered.",
+        "ltvNoVal": "Add a valuation to compute leverage",
+        "mortgageDebt": "Mortgage debt"
       },
       "kpiGroup": {
         "performance": "Performance",

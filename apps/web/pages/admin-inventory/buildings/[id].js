@@ -482,13 +482,14 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
   const opexRatio = earned > 0 ? operatingCents / earned : null;
 
   // ── Owner-first headline metrics ──
-  // Net yield needs a valuation (from the profitability endpoint); "—" without one.
+  // Net yield + LTV both need a valuation (from the profitability endpoint); "—" without one.
   const yieldPct = profit?.buildingNetYieldPct ?? null;
   const buildingValueChf = profit?.buildingIntrinsicValueChf ?? null;
-  // Free cash flow = NOI − capex − financing (mortgage interest). Financing is 0 on
-  // the operational path, so FCF = NOI − capex there. Principal is not yet deducted.
-  const fcfCents = noi - capexCents - financingCents;
-  const prevFcfCents = prev ? (prev.netOperatingIncomeCents - (prev.capexTotalCents ?? 0) - (prev.financingTotalCents ?? 0)) : null;
+  const totalDebtChf = profit?.totalDebtChf ?? null;   // Σ mortgage balances (0 = unlevered)
+  // Loan-to-value = mortgage debt ÷ building value. Distinct from yield/NOI; 0% when
+  // unlevered. (Free cash flow returns as a true FCFE once per-period debt service —
+  // interest + principal — is wired; NOI − capex alone just duplicates NOI here.)
+  const ltvPct = buildingValueChf && totalDebtChf != null ? (totalDebtChf / buildingValueChf) * 100 : null;
   const prevOcc = prev && prev.totalUnitsCount > 0 ? prev.activeUnitsCount / prev.totalUnitsCount : null;
   const prevYieldFrac = buildingValueChf && prev ? (prev.netOperatingIncomeCents / 100) / buildingValueChf : null;
 
@@ -560,10 +561,13 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
             tip: yieldPct != null && buildingValueChf ? t("buildingsId.reporting.kpi.netYieldTip", { defaultValue: "NOI ÷ building value ({{val}})", val: rFmtChf(buildingValueChf * 100) }) : t("buildingsId.reporting.kpi.netYieldNoVal", { defaultValue: "Add a valuation to compute yield" }),
             flag: yieldPct != null && yieldPct < 3,
             d: prevYieldFrac != null ? kpiDeltaPp(yieldPct / 100, prevYieldFrac, 1) : null },
-          { k: t("buildingsId.reporting.kpi.freeCashFlow", { defaultValue: "Free cash flow" }),
-            v: rFmtChf(fcfCents),
-            tip: t("buildingsId.reporting.kpi.fcfTip", { defaultValue: "NOI − capex − mortgage interest. Before debt principal." }),
-            d: prevFcfCents != null ? kpiDeltaChf(fcfCents, prevFcfCents, 1) : null },
+          { k: t("buildingsId.reporting.kpi.ltv", { defaultValue: "LTV" }),
+            v: ltvPct != null ? `${ltvPct.toFixed(0)}%` : "—",
+            tip: ltvPct != null
+              ? t("buildingsId.reporting.kpi.ltvTip", { defaultValue: "Mortgage debt ({{debt}}) ÷ building value. 0% = unlevered.", debt: rFmtChf(totalDebtChf * 100) })
+              : t("buildingsId.reporting.kpi.ltvNoVal", { defaultValue: "Add a valuation to compute leverage" }),
+            flag: ltvPct != null && ltvPct > 80,   // above the ~80% Swiss residential ceiling
+            d: null },
           { k: t("buildingsId.reporting.kpi.noi"),              v: rFmtChf(noi),                     d: prev ? kpiDeltaChf(noi, prev.netOperatingIncomeCents, 1) : null },
           { k: t("buildingsId.reporting.kpi.occupancy"),        v: occ != null ? rFmtPct(occ) : "—", d: prevOcc != null ? kpiDeltaPp(occ, prevOcc, 1) : null },
           { k: t("buildingsId.reporting.kpi.onTimeCollection"), v: rFmtPct(coll),                    d: prev ? kpiDeltaPp(coll, prev.collectionRate, 1) : null },
@@ -652,6 +656,7 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
             ],
             right: [
               { label: t("buildingsId.reporting.kpi.serviceCharges"), value: rFmtChf(bf.serviceChargeIncomeCents), delta: null },
+              { label: t("buildingsId.reporting.kpi.netIncome"), value: rFmtChf(netResultCents), delta: null },
             ] },
           { label: t("buildingsId.reporting.kpiGroup.costs"),
             left: [
@@ -671,6 +676,7 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
             ],
             right: [
               { label: t("buildingsId.reporting.kpi.rentRoll"), value: rentRollCents != null ? rFmtChf(rentRollCents) : "—", delta: null },
+              ...(totalDebtChf != null && totalDebtChf > 0 ? [{ label: t("buildingsId.reporting.kpi.mortgageDebt", { defaultValue: "Mortgage debt" }), value: rFmtChf(totalDebtChf * 100), delta: null }] : []),
             ] },
         ];
         const normalKpis = (
