@@ -149,7 +149,7 @@ export default function InlineChatSection() {
           <p className="text-sm font-semibold text-foreground leading-tight">{t("chatWidget.assistantName")}</p>
           <p className="text-xs text-foreground-dim leading-tight">{t("chatWidget.assistantTagline")}</p>
         </div>
-        {voice.supported && !voice.isActive && (
+        {!voice.isActive && (
           <button
             type="button"
             onClick={voice.startCall}
@@ -251,7 +251,13 @@ export default function InlineChatSection() {
       {/* Input area */}
       <div className={cn("border-t border-surface-divider px-4 py-3", voice.isActive && "hidden")}>
         {voice.error === "unsupported" && (
-          <p className="mb-2 text-xs text-foreground-dim">{t("chatWidget.callUnsupported", { defaultValue: "Voice calling isn't supported in this browser." })}</p>
+          <p className="mb-2 text-xs text-amber-600">{t("chatWidget.callUnsupported", { defaultValue: "Voice calling isn't supported in this browser." })}</p>
+        )}
+        {voice.error === "mic-denied" && (
+          <p className="mb-2 text-xs text-red-500">{t("chatWidget.callMicDenied", { defaultValue: "Microphone access denied. Allow the mic to call." })}</p>
+        )}
+        {voice.error === "send-failed" && (
+          <p className="mb-2 text-xs text-red-500">{t("chatWidget.error", { defaultValue: "Something went wrong. Please try again." })}</p>
         )}
         <form onSubmit={handleSend} className="flex items-end gap-2">
           <textarea

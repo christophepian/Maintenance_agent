@@ -18,6 +18,16 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+// Toggle with localStorage.setItem("voiceCallDebug","1") in the browser.
+function dbg(...args) {
+  try {
+    if (typeof window !== "undefined" && window.localStorage?.getItem("voiceCallDebug")) {
+      // eslint-disable-next-line no-console
+      console.log("[voiceCall]", ...args);
+    }
+  } catch { /* ignore */ }
+}
+
 function getSpeechRecognition() {
   if (typeof window === "undefined") return null;
   return window.SpeechRecognition || window.webkitSpeechRecognition || null;
@@ -67,6 +77,7 @@ export function useVoiceCall({ lang = "fr-FR", onUtterance }) {
   useEffect(() => {
     const hasStt = Boolean(getSpeechRecognition());
     const hasTts = typeof window !== "undefined" && "speechSynthesis" in window;
+    dbg("feature-detect", { hasStt, hasTts });
     setSupported(hasStt && hasTts);
     // Warm the voice list (some browsers populate it lazily).
     if (hasTts) {
@@ -106,7 +117,7 @@ export function useVoiceCall({ lang = "fr-FR", onUtterance }) {
     setInterim("");
     setStatus("listening");
 
-    rec.onstart = () => { startingRef.current = false; };
+    rec.onstart = () => { startingRef.current = false; dbg("recognition onstart"); };
 
     rec.onresult = (e) => {
       let interimText = "";
@@ -120,6 +131,7 @@ export function useVoiceCall({ lang = "fr-FR", onUtterance }) {
 
     rec.onerror = (e) => {
       startingRef.current = false;
+      dbg("recognition onerror", e.error);
       if (e.error === "not-allowed" || e.error === "service-not-allowed") {
         setError("mic-denied");
         endCall();
@@ -137,9 +149,11 @@ export function useVoiceCall({ lang = "fr-FR", onUtterance }) {
     };
 
     try {
+      dbg("recognition start()", { lang });
       rec.start();
-    } catch {
-      // start() throws if a prior recognition is still tearing down; retry soon.
+    } catch (err) {
+      // start() throws if a prior recognition is still tearing down.
+      dbg("recognition start() threw", String(err));
       startingRef.current = false;
     }
   }, [lang, endCall]);
@@ -191,6 +205,7 @@ export function useVoiceCall({ lang = "fr-FR", onUtterance }) {
   });
 
   const startCall = useCallback(() => {
+    dbg("startCall", { supported });
     if (!supported) { setError("unsupported"); return; }
     setError("");
     activeRef.current = true;
