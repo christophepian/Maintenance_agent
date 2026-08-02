@@ -1411,7 +1411,11 @@ function BuildingReportingView({ buildingId, etatLocatifNet }) {
           content: a flush mode control, a compact period peek row whose details
           (grain + presets / compare builder) collapse behind "Adjust", then the hero
           (One period) or the comparison table (Compare) flowing straight out. ── */}
-      <div className="overflow-hidden rounded-2xl border border-surface-border bg-surface shadow-sm">
+      {/* No overflow-hidden here: the period-picker popovers (top-full) must be
+          able to escape the card when the body below is short (e.g. Compare mode
+          before periods are added). Bottom-corner clipping is delegated to the
+          content wrapper below instead. */}
+      <div className="rounded-2xl border border-surface-border bg-surface shadow-sm">
         {/* Mode switch — full-width segmented control, highlight-only. */}
         <div className="flex border-b border-surface-border">
           {[["single", t("buildingsId.reporting.mode.single")], ["compare", t("buildingsId.reporting.mode.compare")]].map(([k, l], i) => (
@@ -1516,9 +1520,13 @@ function BuildingReportingView({ buildingId, etatLocatifNet }) {
 
         {tsError && <p className="px-4 py-2 text-sm text-destructive-text">{tsError}</p>}
 
-        {mode === "single"
-          ? <BuildingPeriodAnalysis buildingId={buildingId} etatLocatifNet={etatLocatifNet} from={from} to={to} periodLabel={periodLabel} />
-          : <BuildingCompareView buildingId={buildingId} periods={comparePeriods} />}
+        {/* Rounds the card's bottom corners now that the root no longer clips.
+            The picker popovers live above this block, so they aren't clipped. */}
+        <div className="overflow-hidden rounded-b-2xl">
+          {mode === "single"
+            ? <BuildingPeriodAnalysis buildingId={buildingId} etatLocatifNet={etatLocatifNet} from={from} to={to} periodLabel={periodLabel} />
+            : <BuildingCompareView buildingId={buildingId} periods={comparePeriods} />}
+        </div>
       </div>
     </div>
   );
