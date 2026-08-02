@@ -79,6 +79,18 @@ describe("computeUnitProfitability", () => {
     for (const row of r.rows) expect(typeof row.sellCandidate).toBe("boolean");
   });
 
+  it("prices parking/garage units from the garage/parking value lines (no area × price/m²)", () => {
+    // A garage carries its whole value in garageValueChf with null livingAreaSqm
+    // and null intrinsicPricePerSqmChf — its yield must still compute.
+    const garage: UnitProfitabilityInput[] = [{
+      fin: { unitId: "9001", unitNumber: "9001", floor: null, tenantName: null, netIncomeCents: 120_000, expensesCents: 0, apportionedChargesCents: 0, occupancyRate: 1, monthlyRentChf: null },
+      val: { livingAreaSqm: null, intrinsicPricePerSqmChf: null, vetustePct: 0, garageValueChf: 40_000 },
+    }];
+    const r = computeUnitProfitability(garage, { operatingTotalCents: 0, recoverableAncillaryCents: 0, netOperatingIncomeCents: 0, ppeEstimateChf: null, marketValueChf: null, totalDebtChf: null }, YEAR);
+    expect(r.rows[0].intrinsicValueChf).toBe(40_000);
+    expect(r.rows[0].netYieldOnIntrinsicPct).toBeCloseTo(3, 2); // 1200 / 40000
+  });
+
   it("is graceful when units have no intrinsic inputs", () => {
     const noVal: UnitProfitabilityInput[] = [{
       fin: { unitId: "X", unitNumber: "X", floor: null, tenantName: null, netIncomeCents: 5_000, expensesCents: 0, apportionedChargesCents: 0, occupancyRate: 1, monthlyRentChf: null },

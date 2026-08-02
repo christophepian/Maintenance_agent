@@ -96,7 +96,12 @@ export interface UnitProfitabilityResult {
 }
 
 function intrinsicOf(val: UnitProfitabilityInput["val"]): number | null {
-  if (!val || val.intrinsicPricePerSqmChf == null || val.livingAreaSqm == null) return null;
+  // Don't require livingAreaSqm / intrinsicPricePerSqmChf: parking & garage
+  // units carry their whole value in the flat extParkingValueChf / garageValueChf
+  // lines (no area × price/m²). computeUnitIntrinsicValue already sums all
+  // components with `?? 0`, so an unpriced unit falls out as 0 → null below,
+  // while a priced garage returns its real value instead of being blanked.
+  if (!val) return null;
   const v = computeUnitIntrinsicValue(val).intrinsicValueChf;
   return v > 0 ? v : null;
 }
