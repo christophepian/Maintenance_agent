@@ -788,7 +788,8 @@
         "prev": "Previous period",
         "next": "Next period",
         "custom": "Custom",
-        "half": "Half-year"
+        "half": "Half-year",
+        "adjust": "Adjust"
       },
       "kpiTab": "KPIs",
       "unitProfitTab": "Profitability",
@@ -862,7 +863,7 @@
         "prior": "Prior period",
         "lastYear": "Same period last year",
         "clear": "Clear",
-        "vs": "Comparing to",
+        "vs": "vs",
         "metric": "Metric",
         "whatChanged": "What changed — biggest cost-centre moves",
         "loading": "Loading comparison…",

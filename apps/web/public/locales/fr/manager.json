@@ -788,7 +788,8 @@
         "prev": "Période précédente",
         "next": "Période suivante",
         "custom": "Personnalisé",
-        "half": "Semestre"
+        "half": "Semestre",
+        "adjust": "Ajuster"
       },
       "kpiTab": "Indicateurs",
       "unitProfitTab": "Rentabilité",
@@ -862,7 +863,7 @@
         "prior": "Période précédente",
         "lastYear": "Même période l'an dernier",
         "clear": "Effacer",
-        "vs": "Comparaison avec",
+        "vs": "vs",
         "metric": "Indicateur",
         "whatChanged": "Ce qui a changé — principaux mouvements par centre de coûts",
         "loading": "Chargement de la comparaison…",

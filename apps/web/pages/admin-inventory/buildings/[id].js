@@ -535,16 +535,15 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
         //    gradient hero and the three separate alert blocks are retired here. ──
         const topSection = (
           <header className="p-5 sm:p-6 border-b border-surface-border">
-            <div className="flex flex-wrap items-center gap-2 mb-2.5">
-              <span className="inline-flex items-center rounded-full border border-surface-border bg-surface-subtle px-3 py-1 text-xs font-medium text-muted">
-                {periodLabel} · {t("buildingsId.reporting.monthlyReport")}
-              </span>
-              {bf.source === "imported" && (
+            {/* Period pill removed — the period lives in the selector above this card.
+                The Imported-actuals badge stays (it's data provenance, not a repeat). */}
+            {bf.source === "imported" && (
+              <div className="mb-2.5">
                 <span className="inline-flex items-center rounded-full border border-brand-ring bg-brand-light px-3 py-1 text-xs font-medium text-brand-dark" title={t("buildingsId.reporting.importedActualsTooltip")}>
                   {t("buildingsId.reporting.importedActuals", { year })}
                 </span>
-              )}
-            </div>
+              </div>
+            )}
             <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
               <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-foreground">{headline}</h1>
               <button onClick={() => setWhyOpen((v) => !v)} aria-expanded={whyOpen} className="text-sm font-semibold text-brand hover:underline">
@@ -1236,6 +1235,7 @@ function BuildingReportingView({ buildingId, etatLocatifNet }) {
   const [spanStart, setSpanStart] = useState(null);     // Date | null — earliest period that has data
   const [tsError, setTsError]     = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);  // anchor-period picker popover
+  const [periodOpen, setPeriodOpen] = useState(false);  // period "Adjust" details (grain + presets / compare builder)
   const [pkYear, setPkYear] = useState(new Date().getFullYear());
   const [addOpen, setAddOpen] = useState(false);        // compare mode: "add period" picker popover
   const [addYear, setAddYear] = useState(new Date().getFullYear());
@@ -1404,106 +1404,122 @@ function BuildingReportingView({ buildingId, etatLocatifNet }) {
   );
 
   return (
-    <div className="space-y-3">
-      {/* ── Controls card — an underline tab strip (One period · Compare) heads a
-          single card whose body is the mode-aware period bar. The tabs read as a
-          view switch, visually distinct from the pill toggles inside; compare mode
-          swaps the presets row for a "compare against" builder + half-year grain. ── */}
-      <div className="rounded-xl border border-surface-border bg-surface shadow-sm">
-        {/* Mode switch — a full-width segmented control flush to the card edges; its
-            bottom border doubles as the header/body separator. Selection is shown by
-            the fill highlight alone (no accent stroke, no inter-segment divider). */}
+    <div>
+      {/* ── Reporting card — the period selector is blended into the SAME card as its
+          content: a flush mode control, a compact period peek row whose details
+          (grain + presets / compare builder) collapse behind "Adjust", then the hero
+          (One period) or the comparison table (Compare) flowing straight out. ── */}
+      <div className="overflow-hidden rounded-2xl border border-surface-border bg-surface shadow-sm">
+        {/* Mode switch — full-width segmented control, highlight-only. */}
         <div className="flex border-b border-surface-border">
           {[["single", t("buildingsId.reporting.mode.single")], ["compare", t("buildingsId.reporting.mode.compare")]].map(([k, l], i) => (
             <button key={k} onClick={() => switchMode(k)} aria-pressed={mode === k}
               className={cn("flex-1 px-3 py-3 text-sm transition-colors",
-                i === 0 ? "rounded-tl-xl" : "rounded-tr-xl",
+                i === 0 ? "rounded-tl-2xl" : "rounded-tr-2xl",
                 mode === k
                   ? "bg-brand-light font-bold text-brand-dark"
                   : "bg-surface-subtle font-semibold text-muted hover:bg-surface-hover hover:text-foreground")}>{l}</button>
           ))}
         </div>
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-3 py-2.5">
-        {!customRange && (<>
-        <div className="flex items-center gap-2">
-          <span className="text-[11px] font-semibold uppercase tracking-wide text-foreground-dim">{mode === "compare" ? t("buildingsId.reporting.compare.base") : t("buildingsId.reporting.period.label")}</span>
-          <div className="inline-flex rounded-lg border border-surface-border bg-surface p-0.5 gap-0.5">
-            {(mode === "compare" ? COMPARE_GRANS : REPORTING_GRANS).map((g) => (
-              <button key={g} onClick={() => changeGran(g)} aria-pressed={!ytd && gran === g}
-                className={cn("rounded-md px-3 py-1 text-sm font-medium transition-colors", !ytd && gran === g ? "bg-brand text-white" : "text-muted hover:text-muted-dark")}>{t(`buildingsId.reporting.period.${g}`)}</button>
-            ))}
-          </div>
-        </div>
-        <div className="relative flex items-center gap-1.5" ref={pickerRef}>
-          <button onClick={() => step(-1)} disabled={atStart} aria-label={t("buildingsId.reporting.period.prev")}
-            className="grid h-7 w-7 place-items-center rounded-lg border border-surface-border bg-surface text-muted transition-colors hover:border-brand hover:text-brand disabled:opacity-40 disabled:cursor-not-allowed">‹</button>
-          <button onClick={openPicker} aria-expanded={pickerOpen}
-            className="min-w-[128px] rounded-lg border border-transparent px-2 py-1 text-center text-sm font-semibold text-foreground transition-colors hover:border-surface-border hover:bg-surface">
-            {periodLabel} <span className="text-foreground-dim">▾</span>
-          </button>
-          <button onClick={() => step(1)} disabled={atEnd} aria-label={t("buildingsId.reporting.period.next")}
-            className="grid h-7 w-7 place-items-center rounded-lg border border-surface-border bg-surface text-muted transition-colors hover:border-brand hover:text-brand disabled:opacity-40 disabled:cursor-not-allowed">›</button>
-          {pickerOpen && periods.length > 0 && (
-            <div className="absolute left-1/2 top-full z-30 mt-2 w-64 -translate-x-1/2 rounded-xl border border-surface-border bg-surface p-3 shadow-lg">
-              {pickerGrid({ pkYr: pkYear, setPkYr: setPkYear, onPick: selectStart, selPred: isCur })}
-            </div>
-          )}
-        </div>
-        </>)}
-        {customRange && (
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[11px] font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.period.custom")}</span>
-            <input type="date" value={customRange.from} onChange={(e) => setCustomRange((r) => ({ ...r, from: e.target.value }))} className="rounded-lg border border-surface-border bg-surface px-2 py-1 text-sm text-foreground" />
-            <span className="text-foreground-dim">→</span>
-            <input type="date" value={customRange.to} onChange={(e) => setCustomRange((r) => ({ ...r, to: e.target.value }))} className="rounded-lg border border-surface-border bg-surface px-2 py-1 text-sm text-foreground" />
-            <button onClick={() => setCustomRange(null)} aria-label={t("buildingsId.reporting.compare.clear")} className="rounded-lg border border-surface-border px-2 py-1 text-xs text-muted transition-colors hover:border-brand hover:text-brand">✕</button>
-          </div>
-        )}
-        {mode === "single" && (
-          <div className="flex gap-1.5">
-            {[["latest", t("buildingsId.reporting.histogram.jumpMonth")], ["ytd", t("buildingsId.reporting.histogram.jumpYtd")], ["year", t("buildingsId.reporting.histogram.jumpYear")]].map(([k, l]) => (
-              <button key={k} onClick={() => preset(k)} aria-pressed={k === "ytd" && ytd}
-                className={cn("rounded-lg border px-2.5 py-1 text-xs transition-colors", k === "ytd" && ytd ? "border-brand bg-brand-light text-brand-dark" : "border-surface-border bg-surface text-muted hover:border-brand hover:text-brand")}>{l}</button>
-            ))}
-            <button onClick={() => setCustomRange((r) => (r ? null : { from, to }))} aria-pressed={!!customRange}
-              className={cn("rounded-lg border px-2.5 py-1 text-xs transition-colors", customRange ? "border-brand bg-brand-light text-brand-dark" : "border-surface-border bg-surface text-muted hover:border-brand hover:text-brand")}>{t("buildingsId.reporting.period.custom")}</button>
-          </div>
-        )}
-        {mode === "compare" && (() => {
-          const full = extras.length >= COMPARE_MAX - 1;
-          const addBtn = "rounded-lg border border-surface-border bg-surface px-2.5 py-1 text-xs text-muted transition-colors hover:border-brand hover:text-brand disabled:opacity-40 disabled:cursor-not-allowed";
-          return (
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-[11px] font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.compare.against")}</span>
-              <button onClick={addPrior} disabled={full} className={addBtn}>+ {t("buildingsId.reporting.compare.prior")}</button>
-              <button onClick={addLastYear} disabled={full} className={addBtn}>+ {t("buildingsId.reporting.compare.lastYear")}</button>
-              <div className="relative" ref={addRef}>
-                <button onClick={openAdd} aria-expanded={addOpen} disabled={full} className={addBtn}>+ {t("buildingsId.reporting.compare.addPeriod")} <span className="text-foreground-dim">▾</span></button>
-                {addOpen && periods.length > 0 && (
-                  <div className="absolute right-0 top-full z-30 mt-2 w-64 rounded-xl border border-surface-border bg-surface p-3 shadow-lg">
-                    {pickerGrid({ pkYr: addYear, setPkYr: setAddYear, onPick: addPeriodAt, selPred: isExtra })}
+
+        {/* Period peek row + collapsible "Adjust" details. */}
+        <div className="border-b border-surface-border">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2.5">
+            {!customRange ? (
+              <div className="relative flex items-center gap-1.5" ref={pickerRef}>
+                <button onClick={() => step(-1)} disabled={atStart} aria-label={t("buildingsId.reporting.period.prev")}
+                  className="grid h-7 w-7 place-items-center rounded-lg border border-surface-border bg-surface text-muted transition-colors hover:border-brand hover:text-brand disabled:opacity-40 disabled:cursor-not-allowed">‹</button>
+                <button onClick={openPicker} aria-expanded={pickerOpen}
+                  className="min-w-[120px] rounded-lg border border-transparent px-2 py-1 text-center text-[15px] font-bold text-foreground transition-colors hover:border-surface-border hover:bg-surface-subtle">
+                  {periodLabel} <span className="text-foreground-dim">▾</span>
+                </button>
+                <button onClick={() => step(1)} disabled={atEnd} aria-label={t("buildingsId.reporting.period.next")}
+                  className="grid h-7 w-7 place-items-center rounded-lg border border-surface-border bg-surface text-muted transition-colors hover:border-brand hover:text-brand disabled:opacity-40 disabled:cursor-not-allowed">›</button>
+                {pickerOpen && periods.length > 0 && (
+                  <div className="absolute left-1/2 top-full z-30 mt-2 w-64 -translate-x-1/2 rounded-xl border border-surface-border bg-surface p-3 shadow-lg">
+                    {pickerGrid({ pkYr: pkYear, setPkYr: setPkYear, onPick: selectStart, selPred: isCur })}
                   </div>
                 )}
               </div>
-              {extras.map((p) => (
-                <span key={p.key} className="inline-flex items-center gap-1.5 rounded-lg border border-brand bg-brand-light px-2.5 py-1 text-xs font-medium text-brand-dark">
-                  {p.label}
-                  <button onClick={() => removeExtra(p.key)} aria-label={t("buildingsId.reporting.compare.clear")} className="text-brand-dark/60 transition-colors hover:text-brand-dark">✕</button>
-                </span>
-              ))}
-              {extras.length > 0 && (
-                <button onClick={() => setExtras([])} className="rounded-lg border border-surface-border px-2 py-1 text-xs text-muted transition-colors hover:border-destructive-ring hover:text-destructive-text">{t("buildingsId.reporting.compare.clear")}</button>
+            ) : (
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[11px] font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.period.custom")}</span>
+                <input type="date" value={customRange.from} onChange={(e) => setCustomRange((r) => ({ ...r, from: e.target.value }))} className="rounded-lg border border-surface-border bg-surface px-2 py-1 text-sm text-foreground" />
+                <span className="text-foreground-dim">→</span>
+                <input type="date" value={customRange.to} onChange={(e) => setCustomRange((r) => ({ ...r, to: e.target.value }))} className="rounded-lg border border-surface-border bg-surface px-2 py-1 text-sm text-foreground" />
+                <button onClick={() => setCustomRange(null)} aria-label={t("buildingsId.reporting.compare.clear")} className="rounded-lg border border-surface-border px-2 py-1 text-xs text-muted transition-colors hover:border-brand hover:text-brand">✕</button>
+              </div>
+            )}
+            {/* compare: the chosen comparison periods stay in the peek row */}
+            {mode === "compare" && extras.length > 0 && (
+              <>
+                <span className="text-xs font-semibold text-foreground-dim">{t("buildingsId.reporting.compare.vs", { defaultValue: "vs" })}</span>
+                {extras.map((p) => (
+                  <span key={p.key} className="inline-flex items-center gap-1.5 rounded-lg border border-brand bg-brand-light px-2.5 py-1 text-xs font-medium text-brand-dark">
+                    {p.label}
+                    <button onClick={() => removeExtra(p.key)} aria-label={t("buildingsId.reporting.compare.clear")} className="text-brand-dark/60 transition-colors hover:text-brand-dark">✕</button>
+                  </span>
+                ))}
+              </>
+            )}
+            <button onClick={() => setPeriodOpen((v) => !v)} aria-expanded={periodOpen}
+              className="ml-auto inline-flex shrink-0 items-center gap-1.5 text-xs font-semibold text-muted transition-colors hover:text-foreground">
+              {t("buildingsId.reporting.period.adjust", { defaultValue: "Adjust" })}
+              <span className={cn("text-[9px] text-foreground-dim transition-transform", periodOpen && "rotate-180")}>▾</span>
+            </button>
+          </div>
+
+          {periodOpen && (
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-dashed border-surface-border px-4 pb-3 pt-2.5">
+              {!customRange && (
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-semibold uppercase tracking-wide text-foreground-dim">{mode === "compare" ? t("buildingsId.reporting.compare.base") : t("buildingsId.reporting.period.label")}</span>
+                  <div className="inline-flex rounded-lg border border-surface-border bg-surface p-0.5 gap-0.5">
+                    {(mode === "compare" ? COMPARE_GRANS : REPORTING_GRANS).map((g) => (
+                      <button key={g} onClick={() => changeGran(g)} aria-pressed={!ytd && gran === g}
+                        className={cn("rounded-md px-3 py-1 text-sm font-medium transition-colors", !ytd && gran === g ? "bg-brand text-white" : "text-muted hover:text-muted-dark")}>{t(`buildingsId.reporting.period.${g}`)}</button>
+                    ))}
+                  </div>
+                </div>
               )}
+              {mode === "single" && (
+                <div className="flex gap-1.5">
+                  {[["latest", t("buildingsId.reporting.histogram.jumpMonth")], ["ytd", t("buildingsId.reporting.histogram.jumpYtd")], ["year", t("buildingsId.reporting.histogram.jumpYear")]].map(([k, l]) => (
+                    <button key={k} onClick={() => preset(k)} aria-pressed={k === "ytd" && ytd}
+                      className={cn("rounded-lg border px-2.5 py-1 text-xs transition-colors", k === "ytd" && ytd ? "border-brand bg-brand-light text-brand-dark" : "border-surface-border bg-surface text-muted hover:border-brand hover:text-brand")}>{l}</button>
+                  ))}
+                  <button onClick={() => setCustomRange((r) => (r ? null : { from, to }))} aria-pressed={!!customRange}
+                    className={cn("rounded-lg border px-2.5 py-1 text-xs transition-colors", customRange ? "border-brand bg-brand-light text-brand-dark" : "border-surface-border bg-surface text-muted hover:border-brand hover:text-brand")}>{t("buildingsId.reporting.period.custom")}</button>
+                </div>
+              )}
+              {mode === "compare" && (() => {
+                const full = extras.length >= COMPARE_MAX - 1;
+                const addBtn = "rounded-lg border border-surface-border bg-surface px-2.5 py-1 text-xs text-muted transition-colors hover:border-brand hover:text-brand disabled:opacity-40 disabled:cursor-not-allowed";
+                return (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-[11px] font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.compare.against")}</span>
+                    <button onClick={addPrior} disabled={full} className={addBtn}>+ {t("buildingsId.reporting.compare.prior")}</button>
+                    <button onClick={addLastYear} disabled={full} className={addBtn}>+ {t("buildingsId.reporting.compare.lastYear")}</button>
+                    <div className="relative" ref={addRef}>
+                      <button onClick={openAdd} aria-expanded={addOpen} disabled={full} className={addBtn}>+ {t("buildingsId.reporting.compare.addPeriod")} <span className="text-foreground-dim">▾</span></button>
+                      {addOpen && periods.length > 0 && (
+                        <div className="absolute right-0 top-full z-30 mt-2 w-64 rounded-xl border border-surface-border bg-surface p-3 shadow-lg">
+                          {pickerGrid({ pkYr: addYear, setPkYr: setAddYear, onPick: addPeriodAt, selPred: isExtra })}
+                        </div>
+                      )}
+                    </div>
+                    {extras.length > 0 && (
+                      <button onClick={() => setExtras([])} className="rounded-lg border border-surface-border px-2 py-1 text-xs text-muted transition-colors hover:border-destructive-ring hover:text-destructive-text">{t("buildingsId.reporting.compare.clear")}</button>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
-          );
-        })()}
+          )}
         </div>
-      </div>
 
-      {tsError && <p className="text-sm text-destructive-text">{tsError}</p>}
+        {tsError && <p className="px-4 py-2 text-sm text-destructive-text">{tsError}</p>}
 
-      {/* ── Report card: single-period detail, or the compare table ── */}
-      <div className="overflow-hidden rounded-2xl border border-surface-border bg-surface shadow-sm">
         {mode === "single"
           ? <BuildingPeriodAnalysis buildingId={buildingId} etatLocatifNet={etatLocatifNet} from={from} to={to} periodLabel={periodLabel} />
           : <BuildingCompareView buildingId={buildingId} periods={comparePeriods} />}
