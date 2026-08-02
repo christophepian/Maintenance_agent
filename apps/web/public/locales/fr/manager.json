@@ -789,7 +789,9 @@
         "next": "Période suivante",
         "custom": "Personnalisé",
         "half": "Semestre",
-        "adjust": "Ajuster"
+        "adjust": "Ajuster",
+        "collapse": "Réduire",
+        "change": "Changer de période"
       },
       "kpiTab": "Indicateurs",
       "unitProfitTab": "Rentabilité",

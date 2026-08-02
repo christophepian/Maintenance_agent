@@ -789,7 +789,9 @@
         "next": "Next period",
         "custom": "Custom",
         "half": "Half-year",
-        "adjust": "Adjust"
+        "adjust": "Adjust",
+        "collapse": "Collapse",
+        "change": "Change period"
       },
       "kpiTab": "KPIs",
       "unitProfitTab": "Profitability",

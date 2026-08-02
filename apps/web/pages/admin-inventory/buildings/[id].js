@@ -697,9 +697,9 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
         const metricsCollapsible = (
           <div className="border-b border-surface-border">
             <button onClick={() => setMetricsOpen((v) => !v)} aria-expanded={metricsOpen}
-              className="flex w-full items-center justify-between gap-2 px-5 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-surface-hover">
+              className="flex w-full items-center justify-center gap-1.5 px-5 py-3 text-sm font-semibold text-brand hover:underline">
               <span>{t("buildingsId.reporting.moreMetrics", { defaultValue: "More metrics" })}</span>
-              <span className="text-foreground-dim">{metricsOpen ? "▾" : "▸"}</span>
+              <span className="text-xs">{metricsOpen ? "▾" : "▸"}</span>
             </button>
             {metricsOpen && <div className="px-5 pb-5">{normalKpis}</div>}
           </div>
@@ -1235,7 +1235,7 @@ function BuildingReportingView({ buildingId, etatLocatifNet }) {
   const [spanStart, setSpanStart] = useState(null);     // Date | null — earliest period that has data
   const [tsError, setTsError]     = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);  // anchor-period picker popover
-  const [periodOpen, setPeriodOpen] = useState(true);   // period controls (grid + grain + presets); open by default
+  const [periodOpen, setPeriodOpen] = useState(true);   // period picker open by default; collapsible via the toggle
   const [pkYear, setPkYear] = useState(new Date().getFullYear());
   const [addOpen, setAddOpen] = useState(false);        // compare mode: "add period" picker popover
   const [addYear, setAddYear] = useState(new Date().getFullYear());
@@ -1433,14 +1433,7 @@ function BuildingReportingView({ buildingId, etatLocatifNet }) {
               <div className="flex items-center gap-1.5">
                 <button onClick={() => step(-1)} disabled={atStart} aria-label={t("buildingsId.reporting.period.prev")}
                   className="grid h-7 w-7 place-items-center rounded-lg border border-surface-border bg-surface text-muted transition-colors hover:border-brand hover:text-brand disabled:opacity-40 disabled:cursor-not-allowed">‹</button>
-                {mode === "single" ? (
-                  <button onClick={() => setPeriodOpen((v) => !v)} aria-expanded={periodOpen}
-                    className="min-w-[120px] rounded-lg border border-transparent px-2 py-1 text-center text-[15px] font-bold text-foreground transition-colors hover:border-surface-border hover:bg-surface-subtle">
-                    {periodLabel} <span className={cn("inline-block text-xs text-foreground-dim transition-transform", periodOpen && "rotate-180")}>▾</span>
-                  </button>
-                ) : (
-                  <span className="min-w-[120px] px-2 py-1 text-center text-[15px] font-bold text-foreground">{periodLabel}</span>
-                )}
+                <span className="min-w-[120px] px-2 py-1 text-center text-[15px] font-bold text-foreground">{periodLabel}</span>
                 <button onClick={() => step(1)} disabled={atEnd} aria-label={t("buildingsId.reporting.period.next")}
                   className="grid h-7 w-7 place-items-center rounded-lg border border-surface-border bg-surface text-muted transition-colors hover:border-brand hover:text-brand disabled:opacity-40 disabled:cursor-not-allowed">›</button>
               </div>
@@ -1463,6 +1456,14 @@ function BuildingReportingView({ buildingId, etatLocatifNet }) {
                   </span>
                 ))}
               </>
+            )}
+            {/* Collapse toggle — One period only (Compare keeps the picker always visible). */}
+            {mode === "single" && (
+              <button onClick={() => setPeriodOpen((v) => !v)} aria-expanded={periodOpen}
+                className="ml-auto inline-flex shrink-0 items-center gap-1.5 text-sm font-semibold text-brand hover:underline">
+                {periodOpen ? t("buildingsId.reporting.period.collapse", { defaultValue: "Collapse" }) : t("buildingsId.reporting.period.change", { defaultValue: "Change period" })}
+                <span className={cn("inline-block text-[9px] transition-transform", periodOpen && "rotate-180")}>▾</span>
+              </button>
             )}
           </div>
 
