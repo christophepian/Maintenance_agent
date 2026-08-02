@@ -1096,6 +1096,17 @@
       "exterior": "Exterior",
       "garage": "Garage",
       "linkedFlat": "↳ flat {{label}}"
+    },
+    "tenants": {
+      "selectedCount": "{{count}} selected",
+      "removeSelected": "Remove selected",
+      "removing": "Removing…",
+      "clear": "Clear",
+      "selectAll": "Select all",
+      "confirmDelete": "Remove {{count}} tenant(s) from this building? Tenants with an active lease can't be removed.",
+      "deleted": "{{count}} tenant(s) removed.",
+      "deletedPartial": "{{ok}} removed · {{blocked}} kept (active lease){{failedSuffix}}",
+      "deleteNone": "Nothing removed — {{blocked}} have an active lease{{failedSuffix}}."
     }
   },
   "unitsId": {
