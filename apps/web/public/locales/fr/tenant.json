@@ -38,6 +38,7 @@
     "error": "Une erreur s'est produite. Veuillez réessayer.",
     "callLabel": "Appeler",
     "callStart": "Appeler l'assistant",
+    "callGreeting": "Bonjour, je vous écoute. Décrivez votre problème.",
     "callConnecting": "Connexion…",
     "callListening": "Je vous écoute…",
     "callThinking": "Un instant…",

@@ -7,9 +7,18 @@
  * /api/tenant/conversation brain), and the reply is spoken back with
  * speechSynthesis. The loop then resumes listening — like a real call.
  *
- * State machine: idle → listening → thinking → speaking → listening → …
+ * State machine: idle → speaking(greeting) → listening → thinking → speaking → …
  * While the assistant is speaking, recognition is stopped so the mic doesn't
  * pick up the TTS output. `interrupt()` provides barge-in.
+ *
+ * speechSynthesis on Chrome is riddled with foot-guns that all present as
+ * "no audio": the utterance is garbage-collected before it speaks unless a
+ * reference is held; the synth can start paused or pause itself ~15s in
+ * (needs resume()); voices load asynchronously; and onend/onerror sometimes
+ * never fire. speakThen() below defends against every one of those and adds a
+ * safety timeout so a silent hang can never stall the call. TTS is also primed
+ * inside the connect gesture (a spoken greeting) to satisfy Chrome's autoplay
+ * policy.
  *
  * Prototype scope (Option B): quality/coverage is browser-dependent
  * (best on Chrome/Edge/Safari; Firefox lacks SpeechRecognition). This is the
@@ -50,11 +59,13 @@ function pickVoice(lang) {
 /**
  * @param {object}   opts
  * @param {string}   [opts.lang="fr-FR"]  BCP-47 language tag for STT + TTS.
+ * @param {string}   [opts.greeting]  Spoken on connect (also primes/unlocks TTS
+ *   inside the user gesture). Falls back to a silent prime if omitted.
  * @param {(text: string) => Promise<string>} opts.onUtterance  Handles a final
  *   transcript and resolves to the reply text to speak. Should also drive any
  *   UI (message bubbles) on the caller's side.
  */
-export function useVoiceCall({ lang = "fr-FR", onUtterance }) {
+export function useVoiceCall({ lang = "fr-FR", greeting = "", onUtterance }) {
   const [supported, setSupported] = useState(false);
   const [isActive, setIsActive] = useState(false);
   const [status, setStatus] = useState("idle"); // idle | listening | thinking | speaking
@@ -65,6 +76,12 @@ export function useVoiceCall({ lang = "fr-FR", onUtterance }) {
   const activeRef = useRef(false); // true for the duration of a call
   const finalRef = useRef(""); // accumulated final transcript for the current utterance
   const startingRef = useRef(false); // guards against double .start()
+
+  // TTS bookkeeping. utterRef pins the live utterance so Chrome can't GC it
+  // mid-speech; the timers are the resume() keep-alive and the safety net.
+  const utterRef = useRef(null);
+  const keepAliveRef = useRef(null);
+  const speakTimerRef = useRef(null);
 
   // Forward-references so the machine functions can call each other without
   // stale closures (all mutable state lives in refs above).
@@ -79,11 +96,62 @@ export function useVoiceCall({ lang = "fr-FR", onUtterance }) {
     const hasTts = typeof window !== "undefined" && "speechSynthesis" in window;
     dbg("feature-detect", { hasStt, hasTts });
     setSupported(hasStt && hasTts);
-    // Warm the voice list (some browsers populate it lazily).
+    // Warm the voice list (Chrome/Safari populate it lazily, sometimes only
+    // after the voiceschanged event fires).
     if (hasTts) {
-      try { window.speechSynthesis.getVoices(); } catch { /* ignore */ }
+      const warm = () => { try { window.speechSynthesis.getVoices(); } catch { /* ignore */ } };
+      warm();
+      try { window.speechSynthesis.addEventListener("voiceschanged", warm); } catch { /* ignore */ }
+      return () => { try { window.speechSynthesis.removeEventListener("voiceschanged", warm); } catch { /* ignore */ } };
     }
+    return undefined;
   }, []);
+
+  const clearSpeakTimers = useCallback(() => {
+    if (keepAliveRef.current) { clearInterval(keepAliveRef.current); keepAliveRef.current = null; }
+    if (speakTimerRef.current) { clearTimeout(speakTimerRef.current); speakTimerRef.current = null; }
+  }, []);
+
+  // --- Speak `text`, then invoke onDone exactly once ------------------------
+  // Robust against Chrome's speechSynthesis quirks (see file header).
+  const speakThen = useCallback((text, onDone) => {
+    const synth = typeof window !== "undefined" ? window.speechSynthesis : null;
+    if (!synth || !text) { onDone?.(); return; }
+
+    let done = false;
+    const finish = (why) => {
+      if (done) return;
+      done = true;
+      clearSpeakTimers();
+      dbg("tts finish", why);
+      onDone?.();
+    };
+
+    try {
+      synth.cancel(); // drop any prior/queued utterance
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = lang;
+      const voice = pickVoice(lang);
+      if (voice) u.voice = voice;
+      u.onstart = () => dbg("tts onstart");
+      u.onend = () => finish("onend");
+      u.onerror = (e) => finish("onerror:" + (e?.error || "?"));
+      utterRef.current = u; // pin against GC
+
+      dbg("tts speak()", { len: text.length, voice: voice?.name || "(default)" });
+      synth.speak(u);
+      // Chrome can start paused, and pauses long utterances ~15s in.
+      try { synth.resume(); } catch { /* ignore */ }
+      keepAliveRef.current = setInterval(() => { try { synth.resume(); } catch { /* ignore */ } }, 8000);
+      // Safety net: if neither onend nor onerror ever fires (a known Chrome
+      // hang), release the loop after a generous estimate (~90ms/char).
+      const estMs = Math.min(30000, Math.max(4000, text.length * 90));
+      speakTimerRef.current = setTimeout(() => finish("timeout"), estMs);
+    } catch (err) {
+      dbg("tts threw", String(err));
+      finish("throw");
+    }
+  }, [lang, clearSpeakTimers]);
 
   const endCall = useCallback(() => {
     activeRef.current = false;
@@ -96,8 +164,9 @@ export function useVoiceCall({ lang = "fr-FR", onUtterance }) {
     }
     recognitionRef.current = null;
     startingRef.current = false;
+    clearSpeakTimers();
     try { window.speechSynthesis?.cancel(); } catch { /* ignore */ }
-  }, []);
+  }, [clearSpeakTimers]);
 
   // --- Listen: start a fresh recognition cycle -----------------------------
   const listen = useCallback(() => {
@@ -170,31 +239,16 @@ export function useVoiceCall({ lang = "fr-FR", onUtterance }) {
       reply = "";
     }
     if (!activeRef.current) return;
+    dbg("submit reply", { len: reply.length });
     if (reply) speakRef.current(reply);
     else listenRef.current(); // nothing to say — resume listening
   }, []);
 
-  // --- Speak: TTS the reply, then resume listening -------------------------
+  // --- Speak the reply, then resume listening ------------------------------
   const speak = useCallback((text) => {
     setStatus("speaking");
-    if (typeof window === "undefined" || !window.speechSynthesis) {
-      if (activeRef.current) listenRef.current();
-      return;
-    }
-    try {
-      window.speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance(text);
-      u.lang = lang;
-      const voice = pickVoice(lang);
-      if (voice) u.voice = voice;
-      const resume = () => { if (activeRef.current) listenRef.current(); };
-      u.onend = resume;
-      u.onerror = resume;
-      window.speechSynthesis.speak(u);
-    } catch {
-      if (activeRef.current) listenRef.current();
-    }
-  }, [lang]);
+    speakThen(text, () => { if (activeRef.current) listenRef.current(); });
+  }, [speakThen]);
 
   // Keep forward-references current (assigned in an effect, read only from
   // event handlers / async callbacks — never during render).
@@ -210,15 +264,19 @@ export function useVoiceCall({ lang = "fr-FR", onUtterance }) {
     setError("");
     activeRef.current = true;
     setIsActive(true);
-    listenRef.current();
-  }, [supported]);
+    setStatus("speaking");
+    // Prime TTS inside the user gesture (unlocks Chrome audio) and greet;
+    // start listening once the greeting finishes (or the safety timeout fires).
+    speakThen(greeting || " ", () => { if (activeRef.current) listenRef.current(); });
+  }, [supported, greeting, speakThen]);
 
   // Barge-in: cut the assistant off and go straight back to listening.
   const interrupt = useCallback(() => {
     if (!activeRef.current) return;
+    clearSpeakTimers();
     try { window.speechSynthesis?.cancel(); } catch { /* ignore */ }
     listenRef.current();
-  }, []);
+  }, [clearSpeakTimers]);
 
   // Tear down on unmount.
   useEffect(() => endCall, [endCall]);
