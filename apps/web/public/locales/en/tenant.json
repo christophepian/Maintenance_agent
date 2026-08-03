@@ -38,7 +38,7 @@
     "error": "Something went wrong. Please try again.",
     "callLabel": "Call",
     "callStart": "Call the assistant",
-    "callGreeting": "Hi, I'm listening. Describe your issue.",
+    "callGreeting": "Welcome to StoneIQ, I'm the electronic assistant, how can I help you?",
     "callConnecting": "Connecting…",
     "callListening": "Listening…",
     "callThinking": "One moment…",

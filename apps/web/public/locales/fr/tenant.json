@@ -38,7 +38,7 @@
     "error": "Une erreur s'est produite. Veuillez réessayer.",
     "callLabel": "Appeler",
     "callStart": "Appeler l'assistant",
-    "callGreeting": "Bonjour, je vous écoute. Décrivez votre problème.",
+    "callGreeting": "Bienvenue chez StoneIQ, je suis l'assistant électronique, comment puis-je vous aider ?",
     "callConnecting": "Connexion…",
     "callListening": "Je vous écoute…",
     "callThinking": "Un instant…",

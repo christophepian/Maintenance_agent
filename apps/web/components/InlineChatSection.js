@@ -106,7 +106,7 @@ export default function InlineChatSection() {
 
   const voice = useVoiceCall({
     lang: speechLang,
-    greeting: t("chatWidget.callGreeting", { defaultValue: "Bonjour, je vous écoute. Décrivez votre problème." }),
+    greeting: t("chatWidget.callGreeting", { defaultValue: "Bienvenue chez StoneIQ, je suis l'assistant électronique, comment puis-je vous aider ?" }),
     onUtterance: (text) => sendText(text),
   });
 
