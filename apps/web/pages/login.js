@@ -314,6 +314,10 @@ export default function LoginPage() {
   const { t } = useTranslation("common");
   const router = useRouter();
   const { next, error: queryError, reason: queryReason } = router.query;
+  // Sandbox shows magic-link only by design; `/login?pw=1` reveals the password
+  // tab as a team escape hatch when email delivery is rate-limited/unavailable.
+  const passwordEnabled =
+    process.env.NEXT_PUBLIC_SANDBOX !== "true" || router.query.pw === "1";
 
   const [email, setEmail]         = useState("");
   const [password, setPassword]   = useState("");
@@ -500,8 +504,8 @@ export default function LoginPage() {
 
       {notice && <Notice type={notice.type} msg={notice.msg} />}
 
-      {/* Method tabs — hidden in sandbox (magic link only) */}
-      {process.env.NEXT_PUBLIC_SANDBOX !== "true" && (
+      {/* Method tabs — hidden in sandbox (magic link only) unless ?pw=1 escape hatch */}
+      {passwordEnabled && (
         <div className="flex gap-1 p-1 bg-slate-100 rounded-xl mb-6">
           <MethodTab
             active={method === "magic"}
@@ -518,8 +522,8 @@ export default function LoginPage() {
         </div>
       )}
 
-      {/* Magic link form — always shown in sandbox; shown when method=magic elsewhere */}
-      {(process.env.NEXT_PUBLIC_SANDBOX === "true" || method === "magic") && (
+      {/* Magic link form — the sandbox default; shown when method=magic when tabs are on */}
+      {(!passwordEnabled || method === "magic") && (
         <form onSubmit={sendMagicLink}>
           <div className="mb-5">
             <label className="block text-sm font-medium text-slate-700 mb-1.5">
@@ -549,8 +553,8 @@ export default function LoginPage() {
         </form>
       )}
 
-      {/* Password form — never shown in sandbox */}
-      {process.env.NEXT_PUBLIC_SANDBOX !== "true" && method === "password" && (
+      {/* Password form — shown when password is enabled and selected (incl. sandbox ?pw=1) */}
+      {passwordEnabled && method === "password" && (
         <form onSubmit={signInWithPassword}>
           <div className="mb-4">
             <label className="block text-sm font-medium text-slate-700 mb-1.5">
