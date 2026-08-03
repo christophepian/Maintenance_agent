@@ -2157,9 +2157,11 @@ export default function BuildingDetail() {
       setInviteSent(true);
       await loadBuilding();
       await loadOwnerCandidates();
-      setOk(json?.invited === false
-        ? t("manager:buildingsId.msg.ownerLinkedExisting", { defaultValue: "Owner linked to this building (they already had an account)." })
-        : t("manager:buildingsId.msg.inviteSent", { defaultValue: "Invite sent and owner linked to this building." }));
+      setOk(json?.sandbox
+        ? t("manager:buildingsId.msg.ownerProvisionedSandbox", { defaultValue: "Owner provisioned + allowlisted for this building. They can sign in with a magic link on the sandbox." })
+        : json?.invited === false
+          ? t("manager:buildingsId.msg.ownerLinkedExisting", { defaultValue: "Owner linked to this building (they already had an account)." })
+          : t("manager:buildingsId.msg.inviteSent", { defaultValue: "Invite sent and owner linked to this building." }));
     } catch (e) {
       setErr(`Failed to invite owner: ${e.message}`);
     } finally {

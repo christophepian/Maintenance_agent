@@ -1126,7 +1126,8 @@
     "msg": {
       "inviteConfirm": "✓ Invite sent.",
       "inviteSent": "Invite sent and owner linked to this building.",
-      "ownerLinkedExisting": "Owner linked to this building (they already had an account)."
+      "ownerLinkedExisting": "Owner linked to this building (they already had an account).",
+      "ownerProvisionedSandbox": "Owner provisioned + allowlisted for this building. They can sign in with a magic link on the sandbox."
     }
   },
   "unitsId": {

@@ -1126,7 +1126,8 @@
     "msg": {
       "inviteConfirm": "✓ Invitation envoyée.",
       "inviteSent": "Invitation envoyée et propriétaire rattaché à cet immeuble.",
-      "ownerLinkedExisting": "Propriétaire rattaché à cet immeuble (le compte existait déjà)."
+      "ownerLinkedExisting": "Propriétaire rattaché à cet immeuble (le compte existait déjà).",
+      "ownerProvisionedSandbox": "Propriétaire provisionné + autorisé pour cet immeuble. Il peut se connecter via un lien magique sur le bac à sable."
     }
   },
   "unitsId": {
