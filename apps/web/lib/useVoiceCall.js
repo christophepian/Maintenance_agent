@@ -113,7 +113,10 @@ export function useVoiceCall({ lang = "fr-FR", greeting = "", onUtterance }) {
   }, []);
 
   // --- Speak `text`, then invoke onDone exactly once ------------------------
-  // Robust against Chrome's speechSynthesis quirks (see file header).
+  // Robust against Chrome's speechSynthesis quirks (see file header) — most
+  // importantly, a speak() issued right after SpeechRecognition stops is often
+  // silently dropped (the audio device is still held). We detect that the
+  // engine never started, re-issue once, and bail fast rather than hang.
   const speakThen = useCallback((text, onDone) => {
     const synth = typeof window !== "undefined" ? window.speechSynthesis : null;
     if (!synth || !text) { onDone?.(); return; }
@@ -127,8 +130,7 @@ export function useVoiceCall({ lang = "fr-FR", greeting = "", onUtterance }) {
       onDone?.();
     };
 
-    try {
-      synth.cancel(); // drop any prior/queued utterance
+    const issue = () => {
       const u = new SpeechSynthesisUtterance(text);
       u.lang = lang;
       const voice = pickVoice(lang);
@@ -137,14 +139,29 @@ export function useVoiceCall({ lang = "fr-FR", greeting = "", onUtterance }) {
       u.onend = () => finish("onend");
       u.onerror = (e) => finish("onerror:" + (e?.error || "?"));
       utterRef.current = u; // pin against GC
-
       dbg("tts speak()", { len: text.length, voice: voice?.name || "(default)" });
       synth.speak(u);
-      // Chrome can start paused, and pauses long utterances ~15s in.
-      try { synth.resume(); } catch { /* ignore */ }
+      try { synth.resume(); } catch { /* ignore */ } // Chrome can start paused
+    };
+
+    try {
+      synth.cancel(); // drop any prior/queued utterance
+      issue();
       keepAliveRef.current = setInterval(() => { try { synth.resume(); } catch { /* ignore */ } }, 8000);
-      // Safety net: if neither onend nor onerror ever fires (a known Chrome
-      // hang), release the loop after a generous estimate (~90ms/char).
+      // If the engine never actually started (dropped speak), re-issue once…
+      setTimeout(() => {
+        if (done || !activeRef.current) return;
+        if (!synth.speaking && !synth.pending) {
+          dbg("tts retry — engine idle after speak()");
+          try { synth.cancel(); issue(); } catch { /* ignore */ }
+          // …and if it STILL won't start, don't hang the call on "speaking".
+          setTimeout(() => {
+            if (done) return;
+            if (!synth.speaking && !synth.pending) finish("no-audio");
+          }, 500);
+        }
+      }, 350);
+      // Backstop: if onend/onerror never fire mid-speech, release the loop.
       const estMs = Math.min(30000, Math.max(4000, text.length * 90));
       speakTimerRef.current = setTimeout(() => finish("timeout"), estMs);
     } catch (err) {
@@ -231,9 +248,19 @@ export function useVoiceCall({ lang = "fr-FR", greeting = "", onUtterance }) {
   const submit = useCallback(async (text) => {
     setStatus("thinking");
     setInterim("");
+    // Fully release the just-ended recognition so the audio device is free
+    // before we synthesize (see speakThen's dropped-speak defence).
+    const rec = recognitionRef.current;
+    if (rec) { try { rec.onend = null; rec.onresult = null; rec.onerror = null; rec.abort(); } catch { /* ignore */ } }
+    recognitionRef.current = null;
+
     let reply = "";
     try {
-      reply = (await onUtteranceRef.current?.(text)) || "";
+      // Don't let a hung server turn freeze "thinking" forever.
+      reply = (await Promise.race([
+        Promise.resolve(onUtteranceRef.current?.(text)),
+        new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), 20000)),
+      ])) || "";
     } catch {
       setError("send-failed");
       reply = "";
