@@ -1665,6 +1665,10 @@ export default function BuildingDetail() {
   const [ownerCandidates, setOwnerCandidates] = useState([]);
   const [selectedCandidateId, setSelectedCandidateId] = useState("");
   const [ownerLoading, setOwnerLoading] = useState(false);
+  // ─── Invite-owner form (scopes a new owner to THIS building) ───
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteName, setInviteName] = useState("");
+  const [inviteSent, setInviteSent] = useState(false);
   const [ownerStrategyProfiles, setOwnerStrategyProfiles] = useState({});
   const [buildingStrategyProfile, setBuildingStrategyProfile] = useState(null);
   // ─── Owner-facing building-strategy editor (sets roleIntent on this building) ───
@@ -2127,6 +2131,37 @@ export default function BuildingDetail() {
       setOk("Owner removed.");
     } catch (e) {
       setErr(`Failed to remove owner: ${e.message}`);
+    } finally {
+      setOwnerLoading(false);
+    }
+  }
+
+  // Invite a brand-new owner scoped to THIS building: provisions a Supabase login
+  // (appRole=OWNER) and links exactly this one building, so the owner surface shows
+  // them only this property.
+  async function onInviteOwner() {
+    const email = inviteEmail.trim();
+    if (!email) return;
+    try {
+      setOwnerLoading(true);
+      setInviteSent(false);
+      const res = await fetch(`/api/buildings/${id}/owners/invite`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ email, name: inviteName.trim() }),
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(json?.error?.message || json?.error || `Failed (${res.status})`);
+      setInviteEmail("");
+      setInviteName("");
+      setInviteSent(true);
+      await loadBuilding();
+      await loadOwnerCandidates();
+      setOk(json?.invited === false
+        ? t("manager:buildingsId.msg.ownerLinkedExisting", { defaultValue: "Owner linked to this building (they already had an account)." })
+        : t("manager:buildingsId.msg.inviteSent", { defaultValue: "Invite sent and owner linked to this building." }));
+    } catch (e) {
+      setErr(`Failed to invite owner: ${e.message}`);
     } finally {
       setOwnerLoading(false);
     }
@@ -2972,6 +3007,51 @@ export default function BuildingDetail() {
                         >
                           {t("manager:buildingsId.btn.add")}
                         </button>
+                      </div>
+                    )}
+
+                    {/* Invite a NEW owner scoped to this building (email login via Supabase) */}
+                    {editMode && (
+                      <div className="mt-4 border-t border-surface-border pt-3">
+                        <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim mb-1">
+                          {t("manager:buildingsId.label.inviteOwner", { defaultValue: "Invite a new owner" })}
+                        </div>
+                        <p className="text-xs text-muted mb-2">
+                          {t("manager:buildingsId.help.inviteOwner", { defaultValue: "Sends an email invite and grants owner access to this building only." })}
+                        </p>
+                        <div className="flex flex-wrap items-end gap-2">
+                          <div className="flex-1 min-w-[180px]">
+                            <input
+                              type="email"
+                              className="input text-sm w-full"
+                              placeholder={t("manager:buildingsId.placeholder.ownerEmail", { defaultValue: "owner@email.com" })}
+                              value={inviteEmail}
+                              onChange={(e) => { setInviteEmail(e.target.value); setInviteSent(false); }}
+                            />
+                          </div>
+                          <div className="flex-1 min-w-[140px]">
+                            <input
+                              type="text"
+                              className="input text-sm w-full"
+                              placeholder={t("manager:buildingsId.placeholder.ownerName", { defaultValue: "Name (optional)" })}
+                              value={inviteName}
+                              onChange={(e) => setInviteName(e.target.value)}
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            className="button-primary text-sm"
+                            disabled={!inviteEmail.trim() || ownerLoading}
+                            onClick={onInviteOwner}
+                          >
+                            {t("manager:buildingsId.btn.sendInvite", { defaultValue: "Send invite" })}
+                          </button>
+                        </div>
+                        {inviteSent && (
+                          <p className="text-xs text-green-600 mt-1.5">
+                            {t("manager:buildingsId.msg.inviteConfirm", { defaultValue: "✓ Invite sent." })}
+                          </p>
+                        )}
                       </div>
                     )}
                   </div>

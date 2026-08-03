@@ -489,7 +489,9 @@
       "eG1995": "ex. 1995",
       "eG1013bCommonArea1": "ex. 101, 3B, Partie commune 1",
       "leaveBlankForOrgDefault": "Laisser vide pour la valeur org par défaut",
-      "eGAutoApproveOvensChf500": "ex. Approbation automatique fours < CHF 500"
+      "eGAutoApproveOvensChf500": "ex. Approbation automatique fours < CHF 500",
+      "ownerEmail": "proprietaire@email.com",
+      "ownerName": "Nom (facultatif)"
     },
     "title": {
       "buildingInformation": "Informations immeuble",
@@ -554,7 +556,8 @@
       "editPolicies": "Modifier les politiques",
       "cancelPolicies": "Annuler",
       "addOverride": "+ Ajouter règle d’exception",
-      "setStrategy": "Définir la stratégie"
+      "setStrategy": "Définir la stratégie",
+      "sendInvite": "Envoyer l’invitation"
     },
     "label": {
       "name": "Nom",
@@ -586,7 +589,8 @@
       "ruleName": "Nom de la règle",
       "priorityLabel": "Priorité (plus élevée = évaluée en premier)",
       "conditions": "Conditions (toutes doivent être remplies)",
-      "action": "Action"
+      "action": "Action",
+      "inviteOwner": "Inviter un nouveau propriétaire"
     },
     "select": {
       "selectOwner": "Sélectionner un propriétaire…",
@@ -1115,6 +1119,14 @@
       "notFoundTail": "introuvable(s)",
       "keptAll": "Aucun retrait — {{count}} ont un historique de facturation réel et nécessitent une résiliation de bail.",
       "error": "Impossible de retirer les entrées sélectionnées."
+    },
+    "help": {
+      "inviteOwner": "Envoie une invitation par e-mail et donne accès propriétaire à cet immeuble uniquement."
+    },
+    "msg": {
+      "inviteConfirm": "✓ Invitation envoyée.",
+      "inviteSent": "Invitation envoyée et propriétaire rattaché à cet immeuble.",
+      "ownerLinkedExisting": "Propriétaire rattaché à cet immeuble (le compte existait déjà)."
     }
   },
   "unitsId": {

@@ -404,13 +404,36 @@ export function registerInventoryRoutes(router: Router) {
     }
   }));
 
+  // Attach an owner to a building. Two shapes:
+  //   { userId }        → link an EXISTING org OWNER user.
+  //   { email, name? }  → find-or-create a passwordless OWNER user by email (used
+  //                       by the invite flow, where login is provisioned in Supabase
+  //                       and bridged to this row by email), then link.
+  // Always links exactly ONE building — scoping stays building-level.
   router.post("/buildings/:id/owners", async ({ req, res, orgId, params, prisma }) => {
     if (!requireRole(req, res, "MANAGER")) return;
     try {
       const raw = await readJson(req);
-      const userId = raw?.userId;
-      if (!userId || typeof userId !== "string") {
-        return sendError(res, 400, "VALIDATION_ERROR", "userId is required");
+      const email = typeof raw?.email === "string" ? raw.email.trim().toLowerCase() : "";
+      let userId = typeof raw?.userId === "string" ? raw.userId : "";
+
+      if (!userId && email) {
+        // Find-or-create the OWNER user for this email within the org.
+        const existing = await inventoryRepo.findUserByOrgAndEmail(prisma, orgId, email);
+        if (existing) {
+          if (existing.role !== "OWNER") {
+            return sendError(res, 422, "VALIDATION_ERROR", "A user with this email exists but is not an owner");
+          }
+          userId = existing.id;
+        } else {
+          const name = typeof raw?.name === "string" && raw.name.trim() ? raw.name.trim() : email;
+          const created = await inventoryRepo.createOwnerUser(prisma, { orgId, name, email });
+          userId = created.id;
+        }
+      }
+
+      if (!userId) {
+        return sendError(res, 400, "VALIDATION_ERROR", "userId or email is required");
       }
 
       // Validate user exists, same org, role=OWNER

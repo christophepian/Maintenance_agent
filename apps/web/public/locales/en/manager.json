@@ -489,7 +489,9 @@
       "eG1995": "e.g. 1995",
       "eG1013bCommonArea1": "e.g. 101, 3B, Common Area 1",
       "leaveBlankForOrgDefault": "Leave blank for org default",
-      "eGAutoApproveOvensChf500": "e.g., Auto-approve ovens < CHF 500"
+      "eGAutoApproveOvensChf500": "e.g., Auto-approve ovens < CHF 500",
+      "ownerEmail": "owner@email.com",
+      "ownerName": "Name (optional)"
     },
     "title": {
       "buildingInformation": "Building information",
@@ -554,7 +556,8 @@
       "editPolicies": "Edit policies",
       "cancelPolicies": "Cancel",
       "addOverride": "+ Add override rule",
-      "setStrategy": "Set strategy"
+      "setStrategy": "Set strategy",
+      "sendInvite": "Send invite"
     },
     "label": {
       "name": "Name",
@@ -586,7 +589,8 @@
       "ruleName": "Rule name",
       "priorityLabel": "Priority (higher = evaluated first)",
       "conditions": "Conditions (all must match)",
-      "action": "Action"
+      "action": "Action",
+      "inviteOwner": "Invite a new owner"
     },
     "select": {
       "selectOwner": "Select an owner…",
@@ -1115,6 +1119,14 @@
       "notFoundTail": "not found",
       "keptAll": "Nothing removed — {{count}} have real billing history and need a proper lease termination.",
       "error": "Couldn't remove the selected entries."
+    },
+    "help": {
+      "inviteOwner": "Sends an email invite and grants owner access to this building only."
+    },
+    "msg": {
+      "inviteConfirm": "✓ Invite sent.",
+      "inviteSent": "Invite sent and owner linked to this building.",
+      "ownerLinkedExisting": "Owner linked to this building (they already had an account)."
     }
   },
   "unitsId": {

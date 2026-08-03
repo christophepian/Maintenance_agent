@@ -700,14 +700,16 @@ export async function findUserByOrgAndEmail(
 }
 
 /**
- * Create an owner user with hashed password.
+ * Create an owner user. `passwordHash` is optional: invited owners have no local
+ * password (they authenticate via Supabase and are bridged to this row by email),
+ * whereas manager-created owners get a bcrypt hash.
  */
 export async function createOwnerUser(
   prisma: PrismaClient,
-  data: { orgId: string; name: string; email: string; passwordHash: string },
+  data: { orgId: string; name: string; email: string; passwordHash?: string | null },
 ) {
   return prisma.user.create({
-    data: { orgId: data.orgId, name: data.name, email: data.email, passwordHash: data.passwordHash, role: "OWNER" },
+    data: { orgId: data.orgId, name: data.name, email: data.email, passwordHash: data.passwordHash ?? null, role: "OWNER" },
   });
 }
 
