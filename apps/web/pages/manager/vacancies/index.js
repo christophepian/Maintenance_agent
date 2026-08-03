@@ -123,7 +123,7 @@ function VacantGroupTable({ units, onTogglePublish, publishingId }) {
     return "";
   }), [units, uSF, uSD]);
   return (
-    <div className="hidden sm:block overflow-x-auto rounded-lg border border-table-border">
+    <div className="hidden sm:block overflow-x-auto rounded-lg border border-surface-border">
       <table className="data-table">
         <thead>
           <tr>
@@ -350,7 +350,7 @@ export default function ManagerVacanciesPage() {
             {!selectionsLoading && selections.length > 0 && (
               <>
                 {/* Mobile card list — sm:hidden */}
-                <div className="sm:hidden rounded-lg border border-table-border divide-y divide-table-divider">
+                <div className="sm:hidden rounded-lg border border-surface-border divide-y divide-surface-divider">
                   {sortedSelections.map((sel) => (
                     <div key={sel.id} className={cn("table-card", !sel.lease ? "bg-amber-50/50" : "")}>
                       <div className="flex items-start justify-between gap-2">
@@ -389,7 +389,7 @@ export default function ManagerVacanciesPage() {
                 </div>
 
                 {/* Wide table — hidden sm:block */}
-                <div className="hidden sm:block overflow-x-auto rounded-lg border border-table-border">
+                <div className="hidden sm:block overflow-x-auto rounded-lg border border-surface-border">
                   <table className="data-table">
                     <thead>
                       <tr>
@@ -473,7 +473,7 @@ export default function ManagerVacanciesPage() {
                 </h3>
 
                 {/* Mobile card list — sm:hidden */}
-                <div className="sm:hidden rounded-lg border border-table-border divide-y divide-table-divider">
+                <div className="sm:hidden rounded-lg border border-surface-border divide-y divide-surface-divider">
                   {group.units.map((u) => (
                     <div key={u.id} className="table-card">
                       <p className="table-card-head">{u.unitNumber || "—"}</p>

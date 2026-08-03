@@ -1,9 +1,25 @@
 import '../styles/globals.css';
 import { useEffect } from 'react';
 import { appWithTranslation } from 'next-i18next';
+import { SWRConfig } from 'swr';
 import nextI18NextConfig from '../next-i18next.config';
 import ErrorBoundary from '../components/ErrorBoundary';
 import { ToastProvider } from '../components/ui/UndoToast';
+import { swrFetcher } from '../lib/api';
+
+// App-wide SWR defaults. The big win is the shared client cache: revisiting a
+// page (back button, tab switch, re-navigation) serves the last response from
+// cache instantly and revalidates in the background, instead of re-fetching
+// from scratch every time. Tuned to match the app's prior fetch semantics:
+//   - revalidateOnFocus off  — property data isn't realtime; no surprise refetch on tab focus
+//   - shouldRetryOnError off  — preserve the previous single-shot "fetch, show error" behaviour
+//   - dedupingInterval 2s     — collapse duplicate requests for the same key
+const SWR_CONFIG = {
+  fetcher: swrFetcher,
+  revalidateOnFocus: false,
+  shouldRetryOnError: false,
+  dedupingInterval: 2000,
+};
 
 // DEV-ONLY: Bootstrap role-specific auth tokens so all portal sections
 // (manager, owner, vendor) work without a login flow. Never runs in production.
@@ -65,9 +81,11 @@ function MyApp({ Component, pageProps }) {
 
   return (
     <ErrorBoundary>
-      <ToastProvider>
-        <Component {...pageProps} />
-      </ToastProvider>
+      <SWRConfig value={SWR_CONFIG}>
+        <ToastProvider>
+          <Component {...pageProps} />
+        </ToastProvider>
+      </SWRConfig>
     </ErrorBoundary>
   );
 }

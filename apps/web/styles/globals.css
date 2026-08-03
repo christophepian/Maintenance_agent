@@ -1,3 +1,6 @@
+/* External @import must precede Tailwind's — `@import "tailwindcss"` inlines the
+   generated CSS, so a following url() import would land mid-bundle (illegal). */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&display=swap');
 @import "tailwindcss";
 @source "../pages/**/*.{js,jsx,ts,tsx}";
 @source "../components/**/*.{js,jsx,ts,tsx}";
@@ -54,6 +57,34 @@
   --color-info-ring:  #7dd3fc;   /* sky-300  */
   --color-info-text:  #0369a1;   /* sky-700  */
 
+  /* ── Orange (severity ramp: sits between warning/amber and destructive/red) ── */
+  --color-orange:       #ea580c;   /* orange-600 */
+  --color-orange-light: #fff7ed;   /* orange-50  */
+  --color-orange-dark:  #9a3412;   /* orange-800 */
+  --color-orange-ring:  #fdba74;   /* orange-300 */
+  --color-orange-text:  #c2410c;   /* orange-700 */
+
+  /* ── Categorical accents (no severity meaning — used to differentiate
+     notification / event types where the 7 semantic hues run out) ── */
+  --color-purple:       #9333ea;   /* purple-600 */
+  --color-purple-light: #faf5ff;   /* purple-50  */
+  --color-purple-dark:  #6b21a8;   /* purple-800 */
+  --color-purple-ring:  #d8b4fe;   /* purple-300 */
+  --color-purple-text:  #7e22ce;   /* purple-700 */
+
+  --color-violet:       #7c3aed;   /* violet-600 */
+  --color-violet-light: #f5f3ff;   /* violet-50  */
+  --color-violet-dark:  #5b21b6;   /* violet-800 */
+  --color-violet-ring:  #c4b5fd;   /* violet-300 */
+  --color-violet-text:  #6d28d9;   /* violet-700 */
+
+
+  --color-teal:       #0d9488;   /* teal-600 */
+  --color-teal-light: #f0fdfa;   /* teal-50  */
+  --color-teal-dark:  #115e59;   /* teal-800 */
+  --color-teal-ring:  #5eead4;   /* teal-300 */
+  --color-teal-text:  #0f766e;   /* teal-700 */
+
   /* ── Track (progress bars, toggle tracks, step connectors) ── */
   --color-track: #e2e8f0;   /* slate-200 — inactive fill */
 
@@ -68,16 +99,6 @@
   --color-surface-border:  #e2e8f0;   /* slate-200 */
   --color-surface-hover:   #f1f5f9;   /* slate-100 */
   --color-surface-divider: #f1f5f9;   /* slate-100 — in-card / in-panel dividers */
-
-  /* ── Table surface ────────────────────────────────────────────────────
-     Tables are NEVER wrapped in a card/Panel. They self-border.
-     Change these three tokens to restyle every table across the app.
-     Card/Panel bg: --color-surface-raised (#ffffff)
-     Table row bg:  always bg-white (--color-surface)
-     ────────────────────────────────────────────────────────────────── */
-  --color-table-header:  #f1f5f9;   /* slate-100 — thead background */
-  --color-table-border:  #e2e8f0;   /* slate-200 — outer border + thead divider */
-  --color-table-divider: #e2e8f0;   /* slate-200 — tbody row dividers */
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -98,11 +119,6 @@ html.dark {
   --color-surface-border:  rgba(255,255,255,.22);
   --color-surface-hover:   rgba(255,255,255,.08);
   --color-surface-divider: rgba(255,255,255,.12);
-
-  /* ── Table ── */
-  --color-table-header:    rgba(255,255,255,.06);
-  --color-table-border:    rgba(255,255,255,.2);
-  --color-table-divider:   rgba(255,255,255,.12);
 
   /* ── Muted ── */
   --color-muted:       rgba(255,255,255,.6);
@@ -144,6 +160,33 @@ html.dark {
   --color-info-dark:  #7dd3fc;
   --color-info-ring:  rgba(125,211,252,.25);
   --color-info-text:  #7dd3fc;
+
+  /* ── Orange ── */
+  --color-orange:       #ea580c;
+  --color-orange-light: rgba(234,88,12,.15);
+  --color-orange-dark:  #fdba74;
+  --color-orange-ring:  rgba(253,186,116,.25);
+  --color-orange-text:  #fdba74;
+
+  /* ── Categorical accents (translucent fills + light text for dark bg) ── */
+  --color-purple:       #9333ea;
+  --color-purple-light: rgba(147,51,234,.15);
+  --color-purple-dark:  #d8b4fe;
+  --color-purple-ring:  rgba(216,180,254,.25);
+  --color-purple-text:  #d8b4fe;
+
+  --color-violet:       #7c3aed;
+  --color-violet-light: rgba(124,58,237,.15);
+  --color-violet-dark:  #c4b5fd;
+  --color-violet-ring:  rgba(196,181,253,.25);
+  --color-violet-text:  #c4b5fd;
+
+
+  --color-teal:       #0d9488;
+  --color-teal-light: rgba(13,148,136,.15);
+  --color-teal-dark:  #5eead4;
+  --color-teal-ring:  rgba(94,234,212,.25);
+  --color-teal-text:  #5eead4;
 
   /* ── Track ── */
   --color-track: rgba(255,255,255,.1);
@@ -256,9 +299,8 @@ h1, h2 {
  *
  * TABLE  →  use <ConfigurableTable> (never wrap in <Panel>)
  *   row bg:    #ffffff (transparent on white page)
- *   header bg: --color-table-header (slate-100)
- *   border:    --color-table-border (slate-200)
- *   dividers:  --color-table-divider (slate-200)
+ *   border:    --color-surface-border (outer border + thead divider)
+ *   dividers:  --color-surface-divider (tbody row dividers)
  *   radius: rounded-lg (outer wrapper)
  *   Rule: tables self-border and self-round. Adding a Panel around a
  *         ConfigurableTable is forbidden — it creates a double-border
@@ -275,6 +317,17 @@ h1, h2 {
  */
 
 @layer components {
+  /* ── Brand wordmark — Playfair Display "prop" (400) + "folio" (700).
+     Color is inherited from the parent so it adapts to light/dark surfaces. */
+  .brand-wordmark {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-weight: 400;
+    letter-spacing: -0.03em;
+    line-height: 1;
+    color: inherit;
+  }
+  .brand-wordmark-bold { font-weight: 700; }
+
   /* ── KPI grid — 2-col on mobile, expands at larger breakpoints via page-level overrides.
      Rule: if the last card would sit alone on a mobile row, add col-span-2 [breakpoint]:col-span-1
      to it so it fills the row. Never use a single-column grid for KPI sections. */
@@ -370,7 +423,7 @@ h1, h2 {
      Use: <div class="hidden sm:block data-table-wrap"> (or md:block for wider tables)
      This is the design-system reference — do NOT add overflow/border inline. */
   .data-table-wrap {
-    @apply overflow-x-auto rounded-lg border border-table-border;
+    @apply overflow-x-auto rounded-lg border border-surface-border;
   }
   .data-table th {
     @apply px-3 py-2.5 text-left font-medium text-xs uppercase tracking-wider;

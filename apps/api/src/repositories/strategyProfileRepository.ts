@@ -7,7 +7,7 @@
  * All queries are org-scoped. Routes and workflows must not call Prisma directly.
  */
 
-import { PrismaClient, Prisma, StrategyArchetype, StrategySource, RoleIntent, BuildingConditionRating } from "@prisma/client";
+import { PrismaClient, Prisma, StrategyArchetype, StrategySource, RoleIntent, BuildingConditionRating, OwnerStrategyProfile } from "@prisma/client";
 
 // ─── Canonical includes (G9) ───────────────────────────────────
 
@@ -151,6 +151,34 @@ export async function getBuildingProfileByBuildingId(
     where: { buildingId, orgId },
     include: BUILDING_PROFILE_INCLUDE,
   });
+}
+
+/**
+ * Owner-level strategy profiles for every owner of a building, org-scoped via the
+ * owning User. Used as the fallback when a building has no BuildingStrategyProfile.
+ */
+/** Owner strategy profiles for a building, paired with the owner's display name
+ *  (buildingOwner order — the first is the "primary" owner used for framing). */
+export async function getOwnerProfilesWithNamesForBuilding(
+  prisma: PrismaClient,
+  buildingId: string,
+  orgId: string,
+): Promise<Array<{ ownerName: string; profile: OwnerStrategyProfile }>> {
+  const owners = await prisma.buildingOwner.findMany({
+    where: { buildingId, user: { orgId } },
+    include: { user: { include: { strategyProfile: true } } },
+  });
+  return owners
+    .filter((o) => !!o.user?.strategyProfile)
+    .map((o) => ({ ownerName: o.user!.name, profile: o.user!.strategyProfile! }));
+}
+
+export async function getOwnerStrategyProfilesForBuilding(
+  prisma: PrismaClient,
+  buildingId: string,
+  orgId: string,
+): Promise<OwnerStrategyProfile[]> {
+  return (await getOwnerProfilesWithNamesForBuilding(prisma, buildingId, orgId)).map((x) => x.profile);
 }
 
 export async function createBuildingProfile(

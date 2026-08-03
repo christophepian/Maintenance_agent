@@ -5,7 +5,25 @@ import * as inventoryRepo from "../repositories/inventoryRepository";
 import * as leaseRepo from "../repositories/leaseRepository";
 import * as snapshotRepo from "../repositories/buildingFinancialSnapshotRepository";
 import * as financialsRepo from "../repositories/financialsRepository";
-import type { ExpenseLedgerRow } from "../repositories/financialsRepository";
+import * as dailySnapshotRepo from "../repositories/portfolioDailySnapshotRepository";
+import * as billingPeriodRepo from "../repositories/billingPeriodRepository";
+import * as importedStatementRepo from "../repositories/importedStatementRepository";
+import * as mortgageRepo from "../repositories/mortgageRepository";
+import type { ExpenseLedgerRow, ArrearsAgingDTO } from "../repositories/financialsRepository";
+import { mapWithConcurrency } from "../utils/concurrency";
+import { computeUnitProfitability, type UnitProfitabilityInput, type UnitProfitabilityResult } from "./unitProfitability";
+import { getBuildingRenovationOpportunities } from "./assetInventory";
+import { lookupTaxRule, computeTaxProfile, type TaxModelInput } from "./financialModelService";
+import { getBuildingProfileByBuildingId, getOwnerProfilesWithNamesForBuilding } from "../repositories/strategyProfileRepository";
+import {
+  computeYieldGoalSeek,
+  DEFAULT_CAPITALIZABLE_FRACTION,
+  DEFAULT_OBLF_PASSTHROUGH_PCT,
+  type GoalSeekOpportunity,
+  type StrategyContext,
+  type YieldGoalSeekResult,
+} from "./yieldGoalSeekService";
+import { getBalanceSheet } from "./ledgerService";
 
 // ==========================================
 // DTOs
@@ -21,11 +39,97 @@ export interface ContractorSpendDTO {
   totalCents: number;
 }
 
+/** How a régie P&L expense account maps to the reporting cost taxonomy. Owner
+ *  opex reduces NOI; recoverable (Nebenkosten) is tenant-paid; capex and
+ *  financing sit below operating NOI. */
+export type RegieCostCategory = "OWNER_OPEX" | "RECOVERABLE" | "TENANT_RECHARGE" | "CAPEX" | "FINANCING";
+
 export interface AccountTotalDTO {
   accountId: string;
   accountName: string;
   accountCode: string | null;
   totalCents: number;
+  /** Cost taxonomy (imported income statements only). */
+  category?: RegieCostCategory;
+}
+
+/**
+ * Classify a régie income-statement EXPENSE account by name (portable across
+ * chart-of-account schemes; codes differ per régie). Régie P&Ls routinely bundle
+ * capital works, mortgage interest and recoverable Nebenkosten in with owner
+ * opex — this pulls them apart so NOI reflects owner operating costs only.
+ * A heuristic default; a per-account override lands in a follow-up.
+ */
+export function classifyRegieExpenseAccount(_code: string | null | undefined, name: string | null | undefined): RegieCostCategory {
+  const n = (name ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  // Capital works — NOT routine "entretien" (upkeep), which is owner opex.
+  if (/renovation|transformation|refection|amelioration|agrandissement|construction/.test(n)) return "CAPEX";
+  // Financing — mortgage interest (not ordinary "frais bancaires").
+  if (/interet|hypothec|hypothek|emprunt|mortgage/.test(n)) return "FINANCING";
+  // Recoverable ancillary (Nebenkosten) — tenant-borne operating charges.
+  if (/chauffage|heating|\beau\b|\bwater\b|electric|concierge|nettoyage|ascenseur|elevator|ordure|dechet|\bgaz\b/.test(n)) return "RECOVERABLE";
+  // Maintenance the tenant is directly liable for ("à charge du locataire",
+  // "refacturé au locataire"). The owner fronts it but the tenant owes it back —
+  // it's a recoverable RECEIVABLE, not an owner cost, and (unlike Nebenkosten,
+  // which net against forfait income) it has no offsetting income line. So it's
+  // pulled OUT of operating NOI entirely. Targeted on the "charge … locataire"
+  // qualifier so bad-debt lines ("créances locataires") aren't caught.
+  if (/charge.{0,8}locataire|refactur\w*.{0,8}locataire/.test(n)) return "TENANT_RECHARGE";
+  return "OWNER_OPEX";
+}
+
+/**
+ * Is this expense account the régie's own management fee? Name-based (codes
+ * collide across charts). Matches the common French/German labels — "honoraires
+ * de gérance", "frais de gestion", "commission de régie", "Verwaltungshonorar" —
+ * without catching generic "administration" or bank "commissions". Used to (a)
+ * default the goal-seek's fee lever to the fee actually on the statements and
+ * (b) pull the fee OUT of the opex lever so the two don't double-count.
+ */
+export function isManagementFeeAccount(code: string | null | undefined, name: string | null | undefined): boolean {
+  const n = (name ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  if (!n) return false;
+  if (/honoraire|gerance|geran|verwaltung/.test(n)) return true;
+  if (/commission/.test(n) && /gest|regie|encaiss|locati/.test(n)) return true;
+  if (/frais/.test(n) && /(gest|geran|regie)/.test(n)) return true;
+  return false;
+}
+
+/** One line of the operating-cost breakdown behind the goal-seek's opex lever. */
+export interface OpexDriverDTO {
+  label: string;
+  annualChf: number;
+  category: RegieCostCategory;
+}
+
+/** Sum (annual CHF) of the management-fee accounts in an expense breakdown. */
+export function detectMgmtFeeChf(accounts: AccountTotalDTO[]): number {
+  return accounts
+    .filter((a) => isManagementFeeAccount(a.accountCode, a.accountName))
+    .reduce((s, a) => s + Math.abs(a.totalCents) / 100, 0);
+}
+
+/**
+ * The operating-cost drivers behind the opex lever — the expense accounts a
+ * manager would re-tender, biggest first. Excludes capex/financing (not
+ * operating) and the management fee (its own lever), so the list matches the
+ * opex lever's basis. Category is echoed for display.
+ */
+export function buildOpexDrivers(accounts: AccountTotalDTO[], limit = 6): OpexDriverDTO[] {
+  return accounts
+    .filter((a) => {
+      const cat = a.category ?? classifyRegieExpenseAccount(a.accountCode, a.accountName);
+      if (cat === "CAPEX" || cat === "FINANCING") return false;
+      if (isManagementFeeAccount(a.accountCode, a.accountName)) return false;
+      return Math.abs(a.totalCents) > 0;
+    })
+    .map((a) => ({
+      label: a.accountName || a.accountCode || "—",
+      annualChf: Math.round(Math.abs(a.totalCents) / 100),
+      category: a.category ?? classifyRegieExpenseAccount(a.accountCode, a.accountName),
+    }))
+    .sort((x, y) => y.annualChf - x.annualChf)
+    .slice(0, limit);
 }
 
 export interface BuildingFinancialsDTO {
@@ -35,14 +139,33 @@ export interface BuildingFinancialsDTO {
   to: string; // ISO date
 
   // Core totals (all in cents)
-  earnedIncomeCents: number;
-  projectedIncomeCents: number;
+  collectedIncomeCents: number;
+  accruedIncomeCents: number;
   expensesTotalCents: number;
   maintenanceTotalCents: number;
   capexTotalCents: number;
   operatingTotalCents: number;
   netIncomeCents: number;
   netOperatingIncomeCents: number;
+  /**
+   * Financing costs (mortgage interest) classified out of operating expense —
+   * they sit BELOW operating NOI. Imported income statements only; 0/undefined
+   * on the operational path (interest isn't in the operating ledger).
+   */
+  financingTotalCents?: number;
+  /**
+   * Recoverable ancillary charges (Nebenkosten) booked to the building cost pool
+   * for the period, de-duped against ledger entries by source invoice. Included
+   * in expensesTotalCents / operatingTotalCents; exposed separately so a report
+   * can show it as a distinct "recoverable ancillary" line vs landlord expenses.
+   */
+  recoverableAncillaryCents: number;
+  /**
+   * Tenant-recharged maintenance ("à charge du locataire") — a recoverable
+   * receivable pulled OUT of operating/NOI (imported statements only). Shown
+   * below NOI like capex/financing. 0 when none.
+   */
+  tenantRechargeCents?: number;
 
   // Income breakdown (projected, from lease terms)
   rentalIncomeCents: number;
@@ -51,17 +174,38 @@ export interface BuildingFinancialsDTO {
   // Point-in-time balances
   receivablesCents: number; // ISSUED unpaid lease invoices
   payablesCents: number;    // ISSUED/APPROVED unpaid job invoices
+  /**
+   * Opening receivables/payables carried in from the imported balance sheet
+   * (sourceType BALANCE_SHEET_IMPORT on accounts 1100/2000), as of the report
+   * end date. UN-AGED — these lumps have no due date / tenant / invoice, so they
+   * are surfaced as a distinct "opening balance (from import)" line and are NOT
+   * folded into the dueDate arrears buckets. De-duped from invoice activity by
+   * sourceType, so they do not overlap receivablesCents/payablesCents.
+   */
+  openingReceivablesCents: number;
+  openingPayablesCents: number;
 
   // KPIs
   maintenanceRatio: number;
   costPerUnitCents: number;
   collectionRate: number;
+  // Raw inputs to collectionRate (paid ÷ invoiced by billing period) — exposed so
+  // the portfolio rate can be a true weighted aggregate across buildings.
+  invoicedForPeriodCents: number;
+  paidForPeriodCents: number;
 
   // Breakdowns
   activeUnitsCount: number;
+  totalUnitsCount: number;
   expensesByCategory: ExpenseCategoryTotalDTO[];
   topContractorsBySpend: ContractorSpendDTO[];
   expensesByAccount?: AccountTotalDTO[];
+  /**
+   * Provenance of the figures. "operational" = computed from live leases/invoices;
+   * "imported" = substituted from an approved imported income statement that covers
+   * this fiscal year (the régie's own actuals for a year not managed in the tool).
+   */
+  source: "operational" | "imported";
 }
 
 // ==========================================
@@ -119,9 +263,9 @@ async function getProjectedIncome(
   unitIds: string[],
   from: Date,
   to: Date,
-): Promise<{ projectedIncomeCents: number; rentalIncomeCents: number; serviceChargeIncomeCents: number }> {
+): Promise<{ accruedIncomeCents: number; rentalIncomeCents: number; serviceChargeIncomeCents: number }> {
   if (unitIds.length === 0) {
-    return { projectedIncomeCents: 0, rentalIncomeCents: 0, serviceChargeIncomeCents: 0 };
+    return { accruedIncomeCents: 0, rentalIncomeCents: 0, serviceChargeIncomeCents: 0 };
   }
 
   const activeLeases = await leaseRepo.findActiveLeasesForProjection(prisma, orgId, unitIds, from, to);
@@ -149,7 +293,7 @@ async function getProjectedIncome(
   }
 
   return {
-    projectedIncomeCents: rentalIncomeCents + serviceChargeIncomeCents,
+    accruedIncomeCents: rentalIncomeCents + serviceChargeIncomeCents,
     rentalIncomeCents,
     serviceChargeIncomeCents,
   };
@@ -159,23 +303,210 @@ async function getProjectedIncome(
 // Point-in-time balances
 // ==========================================
 
-async function getReceivables(orgId: string, buildingId: string): Promise<number> {
-  const unitIds = await inventoryRepo.findActiveUnitIdsByBuilding(prisma, orgId, buildingId);
+// Receivables/payables operate on the building's active unit IDs. The caller
+// already fetched these (for projected income), so they're passed in rather
+// than re-queried — getBuildingFinancials previously fetched the same active
+// unit list three times per building (here, here, and for projection).
+async function getReceivables(orgId: string, unitIds: string[]): Promise<number> {
   if (unitIds.length === 0) return 0;
-
   return invoiceRepo.aggregateIssuedInvoicesForUnits(prisma, orgId, unitIds);
 }
 
-async function getPayables(orgId: string, buildingId: string): Promise<number> {
-  const unitIds = await inventoryRepo.findActiveUnitIdsByBuilding(prisma, orgId, buildingId);
+async function getPayables(orgId: string, unitIds: string[]): Promise<number> {
   if (unitIds.length === 0) return 0;
-
   return invoiceRepo.aggregatePayableInvoicesForUnits(prisma, orgId, unitIds);
 }
 
 // ==========================================
 // Main entry point
 // ==========================================
+
+type ApprovedIncomeStatement = NonNullable<
+  Awaited<ReturnType<typeof importedStatementRepo.findApprovedIncomeStatementForYear>>
+>;
+
+/**
+ * True when the requested [from,to] range encompasses the whole period the
+ * imported statement covers — so we substitute the annual actuals for the yearly
+ * review, but not for a sub-period (e.g. a single month) request.
+ */
+function requestCoversStatementPeriod(stmt: ApprovedIncomeStatement, from: Date, to: Date): boolean {
+  const ps = stmt.periodStart ?? new Date(`${stmt.fiscalYear}-01-01T00:00:00.000Z`);
+  const pe = stmt.periodEnd ?? new Date(`${stmt.fiscalYear}-12-31T00:00:00.000Z`);
+  return from <= ps && to >= pe;
+}
+
+/**
+ * When the statement period fully contains the requested (sub-)period, return the
+ * fraction of the statement the request spans (request days ÷ statement days) so
+ * an annual imported statement can be prorated to a month/day for rolling charts.
+ * Returns null when the request isn't wholly inside the statement period.
+ */
+function statementCoversRequestFactor(stmt: ApprovedIncomeStatement, from: Date, to: Date): number | null {
+  const ps = stmt.periodStart ?? new Date(`${stmt.fiscalYear}-01-01T00:00:00.000Z`);
+  const pe = stmt.periodEnd ?? new Date(`${stmt.fiscalYear}-12-31T00:00:00.000Z`);
+  if (from < ps || to > pe) return null;
+  const dayMs = 24 * 60 * 60 * 1000;
+  const stmtDays = Math.max(1, Math.round((pe.getTime() - ps.getTime()) / dayMs) + 1);
+  const reqDays = Math.max(1, Math.round((to.getTime() - from.getTime()) / dayMs) + 1);
+  return Math.min(1, reqDays / stmtDays);
+}
+
+export interface ImportedPnlBalanceRow {
+  documentSection: string | null;
+  balanceCents: number;
+  rawAccountName: string;
+  rawAccountCode: string | null;
+  accountId?: string | null;
+  account?: { id: string; code: string | null; name: string; costCategory?: string | null } | null;
+}
+
+/**
+ * Aggregate an imported income statement's account balances into revenue vs
+ * expense totals (signed cents; REVENUE positive = income, EXPENSE positive =
+ * expense), plus a per-account expense breakdown sorted desc.
+ */
+export function aggregateImportedPnl(balances: ImportedPnlBalanceRow[]): {
+  revenueCents: number;
+  expenseCents: number;
+  expensesByAccount: AccountTotalDTO[];
+  /** Expense split by cost taxonomy (capex/financing excluded from operating NOI). */
+  capexCents: number;
+  financingCents: number;
+  recoverableCents: number;
+  tenantRechargeCents: number;
+  ownerOpexCents: number;
+} {
+  // Régie exports differ in sign convention: some store revenue as a positive
+  // amount, others credit-negative (like the general ledger's −13556). A P&L
+  // revenue/expense total is a magnitude, so we sum each section signed (so a
+  // contra line still nets correctly) and take the absolute value of the total.
+  let revenueSigned = 0;
+  let expenseSigned = 0;
+  let capexCents = 0, financingCents = 0, recoverableCents = 0, tenantRechargeCents = 0, ownerOpexCents = 0;
+  const expensesByAccount: AccountTotalDTO[] = [];
+  for (const ab of balances) {
+    if (ab.documentSection === "REVENUE") {
+      revenueSigned += ab.balanceCents;
+    } else if (ab.documentSection === "EXPENSE") {
+      expenseSigned += ab.balanceCents;
+      const amt = Math.abs(ab.balanceCents);
+      // The régie's OWN account name/code is the source of truth for display and
+      // name-based categorization — canonical COA codes collide across régie charts,
+      // so the raw line is more faithful than a mapped canonical label. The canonical
+      // account is used only for the manager's explicit costCategory override.
+      const ov = ab.account?.costCategory;
+      const category: RegieCostCategory =
+        ov === "OWNER_OPEX" || ov === "RECOVERABLE" || ov === "TENANT_RECHARGE" || ov === "CAPEX" || ov === "FINANCING"
+          ? ov
+          : classifyRegieExpenseAccount(ab.rawAccountCode ?? ab.account?.code, ab.rawAccountName ?? ab.account?.name);
+      if (category === "CAPEX") capexCents += amt;
+      else if (category === "FINANCING") financingCents += amt;
+      else if (category === "RECOVERABLE") recoverableCents += amt;
+      else if (category === "TENANT_RECHARGE") tenantRechargeCents += amt;
+      else ownerOpexCents += amt;
+      expensesByAccount.push({
+        accountId: ab.account?.id ?? ab.accountId ?? "",
+        accountName: ab.rawAccountName ?? ab.account?.name,
+        accountCode: ab.rawAccountCode ?? ab.account?.code ?? null,
+        totalCents: amt,
+        category,
+      });
+    }
+  }
+  expensesByAccount.sort((a, b) => b.totalCents - a.totalCents);
+  return {
+    revenueCents: Math.abs(revenueSigned),
+    expenseCents: Math.abs(expenseSigned),
+    expensesByAccount,
+    capexCents, financingCents, recoverableCents, tenantRechargeCents, ownerOpexCents,
+  };
+}
+
+/**
+ * Build a BuildingFinancialsDTO from an approved imported income statement.
+ * Revenue = Σ REVENUE balances, expenses = Σ EXPENSE balances (signed cents);
+ * a closed year's actuals are treated as fully realized (collectionRate = 1).
+ */
+async function buildImportedFinancialsDTO(
+  orgId: string,
+  stmt: ApprovedIncomeStatement,
+  ctx: {
+    building: { id: string; name: string };
+    params: { from: string; to: string };
+    from: Date;
+    to: Date;
+    openingReceivablesCents: number;
+    openingPayablesCents: number;
+    /** Scale factor for sub-period requests (request days ÷ statement days). Default 1. */
+    prorationFactor?: number;
+  },
+): Promise<BuildingFinancialsDTO> {
+  const { building, params, from, to, openingReceivablesCents, openingPayablesCents } = ctx;
+
+  const f = ctx.prorationFactor ?? 1;
+  const raw = aggregateImportedPnl(stmt.accountBalances);
+  const revenueCents = Math.round(raw.revenueCents * f);
+  const expenseCents = Math.round(raw.expenseCents * f);
+  const expensesByAccount = raw.expensesByAccount.map((a) => ({ ...a, totalCents: Math.round(a.totalCents * f) }));
+  const netCents = revenueCents - expenseCents; // régie bottom line (after capex + interest)
+
+  // Pull capital works + mortgage interest OUT of operating NOI (régie P&Ls bundle
+  // them in). Recoverable Nebenkosten stays in operating for now (surfaced, but the
+  // provision-netting lands with the ancillary reconciliation). So:
+  //   operating = owner opex + recoverable = expenses − capex − financing
+  //   NOI       = income − operating
+  const capexCents = Math.round(raw.capexCents * f);
+  const financingCents = Math.round(raw.financingCents * f);
+  const recoverableCents = Math.round(raw.recoverableCents * f);
+  // Tenant-recharged maintenance ("à charge du locataire") is a recoverable
+  // receivable, not an owner cost, and has no offsetting income line — pull it out
+  // of operating alongside capex/financing so NOI (and per-unit yield) aren't
+  // depressed by costs the tenant ultimately bears.
+  const tenantRechargeCents = Math.round(raw.tenantRechargeCents * f);
+  const operatingCents = Math.max(0, expenseCents - capexCents - financingCents - tenantRechargeCents);
+  const noiCents = revenueCents - operatingCents;
+
+  const [totalUnitsCount, activeUnitsCount] = await Promise.all([
+    inventoryRepo.countTotalUnitsByBuilding(prisma, orgId, building.id),
+    inventoryRepo.countLeasedUnitsByBuilding(prisma, orgId, building.id, from, to),
+  ]);
+
+  return {
+    buildingId: building.id,
+    buildingName: building.name,
+    from: params.from,
+    to: params.to,
+    collectedIncomeCents: revenueCents,
+    accruedIncomeCents: revenueCents,
+    expensesTotalCents: expenseCents,
+    maintenanceTotalCents: 0,
+    capexTotalCents: capexCents,
+    operatingTotalCents: operatingCents,
+    netIncomeCents: netCents,
+    netOperatingIncomeCents: noiCents,
+    financingTotalCents: financingCents,
+    recoverableAncillaryCents: recoverableCents,
+    tenantRechargeCents,
+    rentalIncomeCents: revenueCents,
+    serviceChargeIncomeCents: 0,
+    receivablesCents: 0,
+    payablesCents: 0,
+    openingReceivablesCents,
+    openingPayablesCents,
+    maintenanceRatio: 0,
+    costPerUnitCents: totalUnitsCount > 0 ? Math.round(operatingCents / totalUnitsCount) : 0,
+    collectionRate: 1,
+    invoicedForPeriodCents: revenueCents,
+    paidForPeriodCents: revenueCents,
+    activeUnitsCount,
+    totalUnitsCount,
+    expensesByCategory: [],
+    topContractorsBySpend: [],
+    expensesByAccount,
+    source: "imported",
+  };
+}
 
 export async function getBuildingFinancials(
   orgId: string,
@@ -194,39 +525,107 @@ export async function getBuildingFinancials(
   if (from >= to)
     throw new ValidationError("'from' must be before 'to'.");
 
-  // 2b. Check snapshot cache (unless forceRefresh or groupByAccount)
-  if (!params.forceRefresh && !params.groupByAccount) {
+  // 2b. Check snapshot cache — bypass for any period that overlaps the current
+  //     calendar month so live payments are always reflected without a force-refresh.
+  const startOfCurrentMonth = new Date();
+  startOfCurrentMonth.setUTCDate(1);
+  startOfCurrentMonth.setUTCHours(0, 0, 0, 0);
+  const periodOverlapsCurrentMonth = to >= startOfCurrentMonth;
+
+  // Opening balances carried in from the imported balance sheet (point-in-time,
+  // as of the report end). Cheap aggregate; computed for both cached and fresh
+  // paths. Source-filtered to BALANCE_SHEET_IMPORT so they never double-count
+  // invoice-driven receivables/payables. Receivable = debit balance on 1100;
+  // payable = credit balance on 2000 (negate the signed result).
+  const [openingArSigned, openingApSigned] = await Promise.all([
+    // AR nets per-tenant settlements (WS-F) so the figure shrinks as opening
+    // arrears are collected; AP is just the imported lump.
+    financialsRepo.aggregateOpeningBalanceFromImport(prisma, orgId, buildingId, "1100", to, ["BALANCE_SHEET_IMPORT", "OPENING_AR_SETTLEMENT"]),
+    financialsRepo.aggregateOpeningBalanceFromImport(prisma, orgId, buildingId, "2000", to),
+  ]);
+  const openingReceivablesCents = Math.max(0, openingArSigned);
+  const openingPayablesCents = Math.max(0, -openingApSigned);
+
+  // Imported-actuals substitution: when the requested period fully covers an
+  // approved imported income statement's fiscal year, report the régie's own
+  // actuals for that year (a year not managed in the tool). Sits ahead of the
+  // snapshot cache so no stale operational figures are served, and reads
+  // ImportedAccountBalance directly because income statements are stored
+  // reference-only (no ledger entries) once operational activity exists.
+  const importedIncome = await importedStatementRepo.findApprovedIncomeStatementForYear(
+    prisma, orgId, buildingId, to.getUTCFullYear(),
+  );
+  if (importedIncome && requestCoversStatementPeriod(importedIncome, from, to)) {
+    return buildImportedFinancialsDTO(orgId, importedIncome, {
+      building, params, from, to, openingReceivablesCents, openingPayablesCents,
+    });
+  }
+  // Sub-period of a covered year (e.g. a single month/day for the monthly
+  // trendline or performance canvas): the imported statement is annual with no
+  // finer detail, so prorate its actuals by the fraction of the statement period
+  // the request spans. This keeps every rolling chart populated for imported years.
+  const subPeriodFactor = importedIncome ? statementCoversRequestFactor(importedIncome, from, to) : null;
+  if (importedIncome && subPeriodFactor !== null) {
+    return buildImportedFinancialsDTO(orgId, importedIncome, {
+      building, params, from, to, openingReceivablesCents, openingPayablesCents, prorationFactor: subPeriodFactor,
+    });
+  }
+
+  if (!params.forceRefresh && !params.groupByAccount && !periodOverlapsCurrentMonth) {
     const cached = await snapshotRepo.findBuildingFinancialSnapshotByPeriod(prisma, orgId, buildingId, from, to);
     if (cached) {
+      const [cachedTotalUnits, cachedActiveUnits] = await Promise.all([
+        inventoryRepo.countTotalUnitsByBuilding(prisma, orgId, buildingId),
+        inventoryRepo.countLeasedUnitsByBuilding(prisma, orgId, buildingId, from, to),
+      ]);
+      const [cachedInvoicedForPeriodCents, cachedPaidForPeriodCents] = await Promise.all([
+        financialsRepo.aggregateInvoicedRentForPeriod(prisma, orgId, buildingId, from, to),
+        financialsRepo.aggregatePaidRentForPeriod(prisma, orgId, buildingId, from, to),
+      ]);
+      // Mirror the fresh-path formula so cached periods agree: paid ÷ invoiced by
+      // billing period, falling back to earned ÷ projected when nothing was invoiced.
+      const cachedCollectionRate = Math.min(1, cachedInvoicedForPeriodCents > 0
+        ? safeDivide(cachedPaidForPeriodCents, cachedInvoicedForPeriodCents)
+        : safeDivide(cached.collectedIncomeCents, cached.accruedIncomeCents));
       return {
         buildingId,
         buildingName: building.name,
         from: params.from,
         to: params.to,
-        earnedIncomeCents: cached.earnedIncomeCents,
-        projectedIncomeCents: cached.projectedIncomeCents,
+        collectedIncomeCents: cached.collectedIncomeCents,
+        accruedIncomeCents: cached.accruedIncomeCents,
         expensesTotalCents: cached.expensesTotalCents,
         maintenanceTotalCents: cached.maintenanceTotalCents,
         capexTotalCents: cached.capexTotalCents,
         operatingTotalCents: cached.operatingTotalCents,
         netIncomeCents: cached.netIncomeCents,
         netOperatingIncomeCents: cached.netOperatingIncomeCents,
+        recoverableAncillaryCents: 0, // already folded into cached expensesTotalCents
         rentalIncomeCents: 0,
         serviceChargeIncomeCents: 0,
         receivablesCents: 0,
         payablesCents: 0,
+        openingReceivablesCents,
+        openingPayablesCents,
         maintenanceRatio: 0,
         costPerUnitCents: 0,
-        collectionRate: 0,
-        activeUnitsCount: cached.activeUnitsCount,
+        collectionRate: cachedCollectionRate,
+        invoicedForPeriodCents: cachedInvoicedForPeriodCents,
+        paidForPeriodCents: cachedPaidForPeriodCents,
+        activeUnitsCount: cachedActiveUnits,
+        totalUnitsCount: cachedTotalUnits,
         expensesByCategory: [],
         topContractorsBySpend: [],
+        source: "operational",
       };
     }
   }
 
-  const unitIds = await inventoryRepo.findActiveUnitIdsByBuilding(prisma, orgId, buildingId);
-  const activeUnitsCount = unitIds.length;
+  const [unitIds, totalUnitsCount, activeUnitsCount] = await Promise.all([
+    inventoryRepo.findActiveUnitIdsByBuilding(prisma, orgId, buildingId),
+    inventoryRepo.countTotalUnitsByBuilding(prisma, orgId, buildingId),
+    inventoryRepo.countLeasedUnitsByBuilding(prisma, orgId, buildingId, from, to),
+  ]);
 
   // 4. Expense ledger entries — INVOICE_ISSUED debit legs on EXPENSE accounts
   const expenseEntries = await getExpenseLedgerEntries(orgId, buildingId, from, to);
@@ -297,24 +696,69 @@ export async function getBuildingFinancials(
   }
 
   // 7. Earned income from ledger (rent payments: bank debit on INVOICE_PAID)
-  const earnedIncomeCents = await getEarnedIncomeFromLedger(orgId, buildingId, from, to);
+  const collectedIncomeCents = await getEarnedIncomeFromLedger(orgId, buildingId, from, to);
 
   // 8. Projected income from active leases (prorated)
   const incomeBreakdown = await getProjectedIncome(orgId, unitIds, from, to);
 
   // 9. Point-in-time outstanding balances
   const [receivablesCents, payablesCents] = await Promise.all([
-    getReceivables(orgId, buildingId),
-    getPayables(orgId, buildingId),
+    getReceivables(orgId, unitIds),
+    getPayables(orgId, unitIds),
   ]);
 
+  // 9b. Invoice-based collection rate — scoped to billing period, not payment date.
+  //     Comparing paid/invoiced by billing period means catching up 3 months of
+  //     backlogged payments in one go doesn't push the rate above 100 %.
+  const [invoicedForPeriodCents, paidForPeriodCents] = await Promise.all([
+    financialsRepo.aggregateInvoicedRentForPeriod(prisma, orgId, buildingId, from, to),
+    financialsRepo.aggregatePaidRentForPeriod(prisma, orgId, buildingId, from, to),
+  ]);
+
+  // 9c. Recoverable ancillary charges from the cost pool (WS3). De-dupe against
+  //     the ledger by source invoice so a charge already posted as an expense
+  //     isn't counted twice; scope to the window by the source invoice's date.
+  //     Manual cost entries (no source invoice) are trusted by period overlap.
+  const ledgerInvoiceIdSet = new Set(invoiceIds);
+  const chargeEntries = await billingPeriodRepo.findChargeCostEntriesForBuildingWindow(
+    prisma, orgId, buildingId, from, endOfDayUTC(to),
+  );
+  let recoverableAncillaryCents = 0;     // gross ventilated charges (for display)
+  let chargesAlreadyInLedgerCents = 0;   // portion double-represented as a ledger expense
+  for (const e of chargeEntries) {
+    const d = e.sourceInvoice?.issueDate ?? e.sourceInvoice?.createdAt ?? null;
+    if (d && (d < from || d > endOfDayUTC(to))) continue; // outside the window
+    recoverableAncillaryCents += e.amountCents;
+    if (e.sourceInvoiceId && ledgerInvoiceIdSet.has(e.sourceInvoiceId)) {
+      chargesAlreadyInLedgerCents += e.amountCents;
+    }
+  }
+  // Fold only the charges NOT already posted to the ledger into the expense total
+  // (operating, never capex) so nothing is double-counted; the gross figure stays
+  // exposed for display. Done before deriving KPIs and persisting the snapshot.
+  expensesTotalCents += recoverableAncillaryCents - chargesAlreadyInLedgerCents;
+
+  // 9d. Capex capitalization + depreciation (WS-D). Capitalized CAPEX is moved
+  //     off the P&L (a CAPITALIZATION credit on the expense account), so net it
+  //     out of expenses; depreciation is the new operating expense, so add it.
+  //     `capexStillExpensedCents` is the capex NOT capitalized (legacy/pre-WS-D),
+  //     which keeps the operating formula correct for both old and new data.
+  const { capitalizedCents, depreciationCents } =
+    await financialsRepo.aggregateCapexAdjustments(prisma, orgId, buildingId, from, to);
+  expensesTotalCents += depreciationCents - capitalizedCents;
+  const capexStillExpensedCents = Math.max(0, capexTotalCents - capitalizedCents);
+
   // 10. Derived totals and KPIs
-  const operatingTotalCents = expensesTotalCents - capexTotalCents;
-  const netIncomeCents = earnedIncomeCents - expensesTotalCents;
-  const netOperatingIncomeCents = earnedIncomeCents - operatingTotalCents;
-  const maintenanceRatio = safeDivide(maintenanceTotalCents, earnedIncomeCents);
+  const operatingTotalCents = expensesTotalCents - capexStillExpensedCents;
+  const netIncomeCents = collectedIncomeCents - expensesTotalCents;
+  const netOperatingIncomeCents = collectedIncomeCents - operatingTotalCents;
+  const maintenanceRatio = safeDivide(maintenanceTotalCents, collectedIncomeCents);
   const costPerUnitCents = Math.round(safeDivide(expensesTotalCents, activeUnitsCount));
-  const collectionRate = safeDivide(earnedIncomeCents, incomeBreakdown.projectedIncomeCents);
+  // Invoice-billing-period rate capped at 100% to prevent catch-up payments
+  // inflating the rate above 1.0 when the fallback formula fires.
+  const collectionRate = Math.min(1, invoicedForPeriodCents > 0
+    ? safeDivide(paidForPeriodCents, invoicedForPeriodCents)
+    : safeDivide(collectedIncomeCents, incomeBreakdown.accruedIncomeCents));
 
   // 11. Format breakdown arrays
   const expensesByCategory: ExpenseCategoryTotalDTO[] = Array.from(categoryTotals.entries())
@@ -343,8 +787,8 @@ export async function getBuildingFinancials(
 
   // 12. Persist snapshot (upsert keyed on org+building+period)
   await snapshotRepo.upsertBuildingFinancialSnapshot(prisma, orgId, buildingId, from, to, {
-    earnedIncomeCents,
-    projectedIncomeCents: incomeBreakdown.projectedIncomeCents,
+    collectedIncomeCents,
+    accruedIncomeCents: incomeBreakdown.accruedIncomeCents,
     expensesTotalCents,
     maintenanceTotalCents,
     capexTotalCents,
@@ -360,25 +804,32 @@ export async function getBuildingFinancials(
     buildingName: building.name,
     from: params.from,
     to: params.to,
-    earnedIncomeCents,
-    projectedIncomeCents: incomeBreakdown.projectedIncomeCents,
+    collectedIncomeCents,
+    accruedIncomeCents: incomeBreakdown.accruedIncomeCents,
     expensesTotalCents,
     maintenanceTotalCents,
     capexTotalCents,
     operatingTotalCents,
     netIncomeCents,
     netOperatingIncomeCents,
+    recoverableAncillaryCents,
     rentalIncomeCents: incomeBreakdown.rentalIncomeCents,
     serviceChargeIncomeCents: incomeBreakdown.serviceChargeIncomeCents,
     receivablesCents,
     payablesCents,
+    openingReceivablesCents,
+    openingPayablesCents,
     maintenanceRatio: Math.round(maintenanceRatio * 10000) / 10000,
     costPerUnitCents,
     collectionRate: Math.round(collectionRate * 10000) / 10000,
+    invoicedForPeriodCents,
+    paidForPeriodCents,
     activeUnitsCount,
+    totalUnitsCount,
     expensesByCategory,
     topContractorsBySpend,
     ...(expensesByAccount !== undefined && { expensesByAccount }),
+    source: "operational",
   };
 }
 
@@ -390,29 +841,50 @@ export interface BuildingSummaryDTO {
   buildingId: string;
   buildingName: string;
   health: "green" | "amber" | "red";
-  earnedIncomeCents: number;
+  collectedIncomeCents: number;
+  accruedIncomeCents: number;
   expensesTotalCents: number;
+  operatingTotalCents: number;
+  capexTotalCents: number;
   netIncomeCents: number;
+  netOperatingIncomeCents: number;
   collectionRate: number;
+  invoicedForPeriodCents: number;
+  paidForPeriodCents: number;
   maintenanceRatio: number;
   activeUnitsCount: number;
+  totalUnitsCount: number;
   receivablesCents: number;
   payablesCents: number;
+}
+
+export interface MonthlyBreakdownDTO {
+  month: number; // 1–12
+  collectedIncomeCents: number;
+  expensesTotalCents: number;
+  noiCents: number;
+  collectionRate: number;
 }
 
 export interface PortfolioSummaryDTO {
   from: string;
   to: string;
-  totalEarnedIncomeCents: number;
+  totalCollectedIncomeCents: number;
+  totalAccruedIncomeCents: number;
   totalExpensesCents: number;
+  totalOperatingCents: number;
+  totalCapexCents: number;
   totalNetIncomeCents: number;
+  totalNetOperatingIncomeCents: number;
   avgCollectionRate: number;
   avgMaintenanceRatio: number;
   totalActiveUnits: number;
+  totalUnits: number;
   buildingsInRed: number;
   buildingCount: number;
   totalReceivablesCents: number;
   totalPayablesCents: number;
+  arrears: ArrearsAgingDTO;
   buildings: BuildingSummaryDTO[];
 }
 
@@ -429,56 +901,139 @@ export async function getPortfolioSummary(
 ): Promise<PortfolioSummaryDTO> {
   const buildings = await inventoryRepo.listBuildings(prisma, orgId, undefined, ownerId);
 
+  // Each getBuildingFinancials issues many queries (and itself fans out
+  // internally), so an unbounded Promise.all over every building would put
+  // buildingCount × ~6 queries in flight at once and saturate Prisma's default
+  // connection pool on large portfolios. Cap the per-building concurrency; a
+  // failed building is skipped (logged) rather than failing the whole summary.
+  const PORTFOLIO_BUILDING_CONCURRENCY = 4;
+  const buildingResults = await mapWithConcurrency(
+    buildings,
+    PORTFOLIO_BUILDING_CONCURRENCY,
+    async (building) => {
+      try {
+        return await getBuildingFinancials(orgId, building.id, { from: params.from, to: params.to });
+      } catch (reason) {
+        console.warn(`[portfolio-summary] Skipping building ${building.id}: ${reason}`);
+        return null;
+      }
+    },
+  );
+
   const summaries: BuildingSummaryDTO[] = [];
-  for (const building of buildings) {
-    try {
-      const dto = await getBuildingFinancials(orgId, building.id, {
-        from: params.from,
-        to: params.to,
-      });
-      summaries.push({
-        buildingId: dto.buildingId,
-        buildingName: dto.buildingName,
-        health: deriveHealth(dto.netIncomeCents, dto.collectionRate),
-        earnedIncomeCents: dto.earnedIncomeCents,
-        expensesTotalCents: dto.expensesTotalCents,
-        netIncomeCents: dto.netIncomeCents,
-        collectionRate: dto.collectionRate,
-        maintenanceRatio: dto.maintenanceRatio,
-        activeUnitsCount: dto.activeUnitsCount,
-        receivablesCents: dto.receivablesCents,
-        payablesCents: dto.payablesCents,
-      });
-    } catch (e) {
-      console.warn(`[portfolio-summary] Skipping building ${building.id}: ${e}`);
-    }
+  for (const dto of buildingResults) {
+    if (!dto) continue;
+    summaries.push({
+      buildingId: dto.buildingId,
+      buildingName: dto.buildingName,
+      health: deriveHealth(dto.netIncomeCents, dto.collectionRate),
+      collectedIncomeCents: dto.collectedIncomeCents,
+      accruedIncomeCents: dto.accruedIncomeCents,
+      expensesTotalCents: dto.expensesTotalCents,
+      operatingTotalCents: dto.operatingTotalCents,
+      capexTotalCents: dto.capexTotalCents,
+      netIncomeCents: dto.netIncomeCents,
+      netOperatingIncomeCents: dto.netOperatingIncomeCents,
+      collectionRate: dto.collectionRate,
+      invoicedForPeriodCents: dto.invoicedForPeriodCents,
+      paidForPeriodCents: dto.paidForPeriodCents,
+      maintenanceRatio: dto.maintenanceRatio,
+      activeUnitsCount: dto.activeUnitsCount,
+      totalUnitsCount: dto.totalUnitsCount,
+      receivablesCents: dto.receivablesCents,
+      payablesCents: dto.payablesCents,
+    });
   }
 
-  const totalEarned = summaries.reduce((s, b) => s + b.earnedIncomeCents, 0);
+  const arrears = await financialsRepo.getArrearsAging(prisma, orgId);
+
+  const totalEarned = summaries.reduce((s, b) => s + b.collectedIncomeCents, 0);
+  const totalProjected = summaries.reduce((s, b) => s + b.accruedIncomeCents, 0);
   const totalExpenses = summaries.reduce((s, b) => s + b.expensesTotalCents, 0);
+  const totalOperating = summaries.reduce((s, b) => s + b.operatingTotalCents, 0);
+  const totalCapex = summaries.reduce((s, b) => s + b.capexTotalCents, 0);
   const totalNet = summaries.reduce((s, b) => s + b.netIncomeCents, 0);
-  const totalUnits = summaries.reduce((s, b) => s + b.activeUnitsCount, 0);
-  const active = summaries.filter((b) => b.earnedIncomeCents > 0 || b.expensesTotalCents > 0);
-  const avgCollection = active.length > 0
-    ? active.reduce((s, b) => s + b.collectionRate, 0) / active.length : 0;
+  const totalNOI = summaries.reduce((s, b) => s + b.netOperatingIncomeCents, 0);
+  const totalActive = summaries.reduce((s, b) => s + b.activeUnitsCount, 0);
+  const totalAllUnits = summaries.reduce((s, b) => s + b.totalUnitsCount, 0);
+  const active = summaries.filter((b) => b.collectedIncomeCents > 0 || b.expensesTotalCents > 0);
+  // Weighted collection rate: total PAID / total INVOICED across buildings, by
+  // billing period — the same invoice-based definition used by the per-building,
+  // building-report and unit-report surfaces, so every page agrees. (Previously
+  // this used earned/projected, which could exceed 100% — masked by the cap — and
+  // disagreed with the inventory page's paid/invoiced rate.)
+  const totalInvoicedActive = active.reduce((s, b) => s + b.invoicedForPeriodCents, 0);
+  const totalPaidActive     = active.reduce((s, b) => s + b.paidForPeriodCents, 0);
+  const avgCollection = Math.min(1, totalInvoicedActive > 0
+    ? safeDivide(totalPaidActive, totalInvoicedActive)
+    : (active.length > 0 ? active.reduce((s, b) => s + b.collectionRate, 0) / active.length : 0));
   const avgMaintenance = active.length > 0
     ? active.reduce((s, b) => s + b.maintenanceRatio, 0) / active.length : 0;
 
   return {
     from: params.from,
     to: params.to,
-    totalEarnedIncomeCents: totalEarned,
+    totalCollectedIncomeCents: totalEarned,
+    totalAccruedIncomeCents: totalProjected,
     totalExpensesCents: totalExpenses,
+    totalOperatingCents: totalOperating,
+    totalCapexCents: totalCapex,
     totalNetIncomeCents: totalNet,
+    totalNetOperatingIncomeCents: totalNOI,
     avgCollectionRate: Math.round(avgCollection * 10000) / 10000,
     avgMaintenanceRatio: Math.round(avgMaintenance * 10000) / 10000,
-    totalActiveUnits: totalUnits,
+    totalActiveUnits: totalActive,
+    totalUnits: totalAllUnits,
     buildingsInRed: summaries.filter((b) => b.health === "red").length,
     buildingCount: summaries.length,
     totalReceivablesCents: summaries.reduce((s, b) => s + b.receivablesCents, 0),
     totalPayablesCents: summaries.reduce((s, b) => s + b.payablesCents, 0),
+    arrears,
     buildings: summaries,
   };
+}
+
+// ==========================================
+// Monthly breakdown for YTD trendlines
+// ==========================================
+
+export async function getPortfolioMonthlyBreakdown(
+  orgId: string,
+  year: number,
+  ownerId?: string,
+): Promise<MonthlyBreakdownDTO[]> {
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const lastMonth = year < currentYear ? 12 : now.getMonth() + 1;
+
+  const months = Array.from({ length: lastMonth }, (_, i) => i + 1);
+
+  // Each month's getPortfolioSummary already fans out (in parallel) over every
+  // building, so running all 12 months at once would put 12 × buildingCount
+  // computations in flight and saturate the Prisma connection pool. Cap the
+  // month-level concurrency to keep total in-flight work bounded while still
+  // collapsing the previously-serial 12-iteration await loop into a few waves.
+  // mapWithConcurrency preserves order, so results stay month 1..lastMonth.
+  const MONTH_CONCURRENCY = 3;
+
+  return mapWithConcurrency(months, MONTH_CONCURRENCY, async (m): Promise<MonthlyBreakdownDTO> => {
+    const from = `${year}-${String(m).padStart(2, "0")}-01`;
+    const lastDay = new Date(year, m, 0).getDate();
+    const to   = `${year}-${String(m).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+
+    try {
+      const summary = await getPortfolioSummary(orgId, { from, to }, ownerId);
+      return {
+        month: m,
+        collectedIncomeCents: summary.totalCollectedIncomeCents,
+        expensesTotalCents: summary.totalExpensesCents,
+        noiCents: summary.totalNetOperatingIncomeCents,
+        collectionRate: summary.avgCollectionRate,
+      };
+    } catch {
+      return { month: m, collectedIncomeCents: 0, expensesTotalCents: 0, noiCents: 0, collectionRate: 0 };
+    }
+  });
 }
 
 // ==========================================
@@ -511,8 +1066,8 @@ export async function setInvoiceExpenseCategory(
 export interface AnnualSnapshotDTO {
   periodStart: string; // YYYY-MM-DD
   periodEnd: string;   // YYYY-MM-DD
-  earnedIncomeCents: number;
-  projectedIncomeCents: number;
+  collectedIncomeCents: number;
+  accruedIncomeCents: number;
   expensesTotalCents: number;
   maintenanceTotalCents: number;
   capexTotalCents: number;
@@ -524,6 +1079,87 @@ export interface AnnualSnapshotDTO {
 }
 
 /** List all stored financial snapshots for a building. */
+export interface VendorSpendDTO {
+  contractorId: string | null;
+  vendorName: string;
+  totalCents: number;
+  invoiceCount: number;
+}
+
+/**
+ * Top vendors by expenditure for a building over a period, aggregated from
+ * INCOMING invoices (by issueDate). Independent of the ledger, so it works for
+ * imported/reference-only invoices (régie-ledger onboarding) as well as
+ * operational ones. Amounts are in cents.
+ */
+export async function getBuildingVendorSpend(
+  orgId: string,
+  buildingId: string,
+  params: { from: string; to: string },
+): Promise<VendorSpendDTO[]> {
+  const building = await inventoryRepo.findBuildingByIdAndOrg(prisma, buildingId, orgId);
+  if (!building) throw new NotFoundError(`Building ${buildingId} not found`);
+
+  const rows = await invoiceRepo.aggregateBuildingSpendByVendor(
+    prisma,
+    orgId,
+    buildingId,
+    new Date(params.from),
+    new Date(params.to + "T23:59:59.999Z"),
+  );
+  return rows.map((r) => ({
+    contractorId: r.contractorId,
+    vendorName: r.issuerName ?? "Unknown",
+    totalCents: r.totalCents,
+    invoiceCount: r.count,
+  }));
+}
+
+export interface ExpenseBreakdownVendorDTO {
+  contractorId: string | null;
+  vendorName: string;
+  totalCents: number;
+  invoiceCount: number;
+}
+
+export interface ExpenseBreakdownAccountDTO {
+  accountId: string | null;
+  accountCode: string | null;
+  accountName: string | null;
+  totalCents: number;
+}
+
+export interface ExpenseBreakdownMonthDTO {
+  month: string; // YYYY-MM
+  totalCents: number;
+  vendors: ExpenseBreakdownVendorDTO[];
+  accounts: ExpenseBreakdownAccountDTO[];
+}
+
+/**
+ * Building expenses broken down by month, and within each month by vendor and by
+ * ledger account. Aggregated from INCOMING invoices (by issueDate) — the same
+ * source as vendor-spend, so it covers imported/reference-only invoices too.
+ * Powers the reporting "expenses by month" drill-down into the filtered invoices
+ * view. Amounts are in cents.
+ */
+export async function getBuildingExpenseBreakdown(
+  orgId: string,
+  buildingId: string,
+  params: { from: string; to: string },
+): Promise<ExpenseBreakdownMonthDTO[]> {
+  const building = await inventoryRepo.findBuildingByIdAndOrg(prisma, buildingId, orgId);
+  if (!building) throw new NotFoundError(`Building ${buildingId} not found`);
+
+  return invoiceRepo.aggregateBuildingExpenseBreakdown(
+    prisma,
+    orgId,
+    buildingId,
+    new Date(params.from),
+    new Date(params.to + "T23:59:59.999Z"),
+  );
+}
+
 export async function listBuildingSnapshots(
   orgId: string,
   buildingId: string,
@@ -535,8 +1171,8 @@ export async function listBuildingSnapshots(
   return rows.map((r) => ({
     periodStart: r.periodStart.toISOString().slice(0, 10),
     periodEnd: r.periodEnd.toISOString().slice(0, 10),
-    earnedIncomeCents: r.earnedIncomeCents,
-    projectedIncomeCents: r.projectedIncomeCents,
+    collectedIncomeCents: r.collectedIncomeCents,
+    accruedIncomeCents: r.accruedIncomeCents,
     expensesTotalCents: r.expensesTotalCents,
     maintenanceTotalCents: r.maintenanceTotalCents,
     capexTotalCents: r.capexTotalCents,
@@ -580,6 +1216,333 @@ export async function computeAnnualSnapshots(
 }
 
 // ==========================================
+// Portfolio time-series
+// ==========================================
+
+export type TimeSeriesRange = "1W" | "1M" | "6M" | "1Y" | "2Y" | "5Y" | "10Y";
+
+export interface TimeSeriesPoint {
+  periodStart:       string;   // ISO date YYYY-MM-DD
+  periodEnd:         string;
+  label:             string;   // display label: "Jun", "Q2 2024", "2023", etc.
+  noiCents:          number;
+  collectedIncomeCents: number;
+  expensesCents:     number;
+  collectionRate:    number;
+  noiMarginPct:      number | null;
+  opexRatioPct:      number | null;
+  occupancyRate:     number | null;
+}
+
+export interface PortfolioTimeSeriesDTO {
+  range:          TimeSeriesRange;
+  points:         TimeSeriesPoint[];
+  earliestDate:   string | null;  // ISO date of earliest available data (for auto-detect)
+}
+
+function isoDate(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+
+function monthLabel(year: number, month: number, locale = "en"): string {
+  return new Intl.DateTimeFormat(locale, { month: "short" }).format(
+    new Date(year, month - 1, 1),
+  );
+}
+
+function safePct(num: number, den: number): number | null {
+  if (den === 0) return null;
+  return Math.round((num / den) * 10000) / 10000;
+}
+
+/**
+ * Occupancy ratio (occupied units / total units), rounded to 4 dp and CLAMPED to
+ * [0,1] as a guardrail — occupancy can never exceed 100%, even if an upstream count
+ * is momentarily inconsistent. (Root cause of a 131% reading was fixed separately by
+ * counting distinct leased units, not lease rows.)
+ */
+export function occupancyRatio(active: number, total: number): number {
+  if (total <= 0) return 0;
+  return Math.min(1, Math.round((active / total) * 10000) / 10000);
+}
+
+function summaryToPoint(
+  summary: Awaited<ReturnType<typeof getPortfolioSummary>>,
+  periodStart: string,
+  periodEnd: string,
+  label: string,
+): TimeSeriesPoint {
+  const noi      = summary.totalNetOperatingIncomeCents;
+  const earned   = summary.totalCollectedIncomeCents;
+  const expenses = summary.totalExpensesCents;
+  return {
+    periodStart,
+    periodEnd,
+    label,
+    noiCents:          noi,
+    collectedIncomeCents: earned,
+    expensesCents:     expenses,
+    collectionRate:    summary.avgCollectionRate,
+    noiMarginPct:      safePct(noi, earned),
+    opexRatioPct:      safePct(expenses, earned),
+    occupancyRate:
+      summary.totalUnits > 0
+        ? occupancyRatio(summary.totalActiveUnits, summary.totalUnits)
+        : null,
+  };
+}
+
+async function getPortfolioMonthlyPoints(
+  orgId: string,
+  fromYear: number,
+  fromMonth: number,
+  toYear: number,
+  toMonth: number,
+  ownerId?: string,
+): Promise<TimeSeriesPoint[]> {
+  const now = new Date();
+  const periods: { from: string; to: string; label: string }[] = [];
+
+  let y = fromYear;
+  let m = fromMonth;
+  while (y < toYear || (y === toYear && m <= toMonth)) {
+    if (new Date(y, m - 1, 1) > now) break;
+    const from    = `${y}-${String(m).padStart(2, "0")}-01`;
+    const lastDay = new Date(y, m, 0).getDate();
+    const to      = `${y}-${String(m).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+    const label   = `${monthLabel(y, m)} ${toYear - fromYear >= 1 ? y : ""}`.trim();
+    periods.push({ from, to, label });
+    m++;
+    if (m > 12) { m = 1; y++; }
+  }
+
+  const results = await Promise.allSettled(
+    periods.map(({ from, to }) => getPortfolioSummary(orgId, { from, to }, ownerId)),
+  );
+
+  return results
+    .map((r, i) => r.status === "fulfilled" ? summaryToPoint(r.value, periods[i].from, periods[i].to, periods[i].label) : null)
+    .filter((p): p is TimeSeriesPoint => p !== null);
+}
+
+async function getPortfolioQuarterlyPoints(
+  orgId: string,
+  fromYear: number,
+  toYear: number,
+  ownerId?: string,
+): Promise<TimeSeriesPoint[]> {
+  const now = new Date();
+  const periods: { from: string; to: string; label: string }[] = [];
+
+  for (let y = fromYear; y <= toYear; y++) {
+    for (let q = 1; q <= 4; q++) {
+      const qStart  = (q - 1) * 3 + 1;
+      const qEnd    = q * 3;
+      const from    = `${y}-${String(qStart).padStart(2, "0")}-01`;
+      const lastDay = new Date(y, qEnd, 0).getDate();
+      const to      = `${y}-${String(qEnd).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+      if (new Date(y, qStart - 1, 1) > now) break;
+      periods.push({ from, to, label: `Q${q} ${y}` });
+    }
+  }
+
+  const results = await Promise.allSettled(
+    periods.map(({ from, to }) => getPortfolioSummary(orgId, { from, to }, ownerId)),
+  );
+
+  return results
+    .map((r, i) => r.status === "fulfilled" ? summaryToPoint(r.value, periods[i].from, periods[i].to, periods[i].label) : null)
+    .filter((p): p is TimeSeriesPoint => p !== null);
+}
+
+async function getPortfolioAnnualPoints(
+  orgId: string,
+  fromYear: number,
+  toYear: number,
+  ownerId?: string,
+): Promise<TimeSeriesPoint[]> {
+  const now = new Date();
+  const periods: { from: string; to: string; label: string }[] = [];
+
+  for (let y = fromYear; y <= toYear; y++) {
+    if (y > now.getFullYear()) break;
+    const from = `${y}-01-01`;
+    const to   = y < now.getFullYear() ? `${y}-12-31` : isoDate(now);
+    periods.push({ from, to, label: String(y) });
+  }
+
+  const results = await Promise.allSettled(
+    periods.map(({ from, to }) => getPortfolioSummary(orgId, { from, to }, ownerId)),
+  );
+
+  return results
+    .map((r, i) => r.status === "fulfilled" ? summaryToPoint(r.value, periods[i].from, periods[i].to, periods[i].label) : null)
+    .filter((p): p is TimeSeriesPoint => p !== null);
+}
+
+async function getDailyPoints(
+  orgId: string,
+  from: Date,
+  to: Date,
+  ownerId?: string,
+): Promise<TimeSeriesPoint[]> {
+  // Read whatever is already cached
+  const cached = await dailySnapshotRepo.findDailySnapshotsInRange(prisma, orgId, from, to);
+  const cachedDates = new Set(cached.map((r) => isoDate(r.date)));
+
+  // Compute and store any missing past days on-demand (excludes today — live data)
+  const now = new Date();
+  const todayStr = isoDate(new Date(now.getFullYear(), now.getMonth(), now.getDate()));
+  const cur = new Date(from);
+  const compute: Array<{ date: Date; str: string }> = [];
+  while (cur <= to) {
+    const str = isoDate(cur);
+    if (str < todayStr && !cachedDates.has(str)) {
+      compute.push({ date: new Date(cur), str });
+    }
+    cur.setDate(cur.getDate() + 1);
+  }
+
+  for (const { date, str } of compute) {
+    try {
+      const summary = await getPortfolioSummary(orgId, { from: str, to: str }, ownerId);
+      const noi     = summary.totalNetOperatingIncomeCents;
+      const earned  = summary.totalCollectedIncomeCents;
+      const expenses = summary.totalExpensesCents;
+      await dailySnapshotRepo.upsertPortfolioDailySnapshot(prisma, orgId, date, {
+        noiCents:          noi,
+        collectedIncomeCents: earned,
+        expensesCents:     expenses,
+        collectionRate:    summary.avgCollectionRate,
+        noiMarginPct:      safePct(noi, earned),
+        opexRatioPct:      safePct(expenses, earned),
+        occupancyRate:     summary.totalUnits > 0
+          ? occupancyRatio(summary.totalActiveUnits, summary.totalUnits)
+          : null,
+        activeUnitsCount: summary.totalActiveUnits,
+      });
+    } catch {
+      // skip days where computation fails
+    }
+  }
+
+  // Re-read after fill
+  const rows = await dailySnapshotRepo.findDailySnapshotsInRange(prisma, orgId, from, to);
+  return rows.map((r) => ({
+    periodStart:       isoDate(r.date),
+    periodEnd:         isoDate(r.date),
+    label:             new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(r.date),
+    noiCents:          r.noiCents,
+    collectedIncomeCents: r.collectedIncomeCents,
+    expensesCents:     r.expensesCents,
+    collectionRate:    r.collectionRate,
+    noiMarginPct:      r.noiMarginPct,
+    opexRatioPct:      r.opexRatioPct,
+    occupancyRate:     r.occupancyRate,
+  }));
+}
+
+export async function getPortfolioTimeSeries(
+  orgId: string,
+  range: TimeSeriesRange,
+  ownerId?: string,
+): Promise<PortfolioTimeSeriesDTO> {
+  const now   = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  let points: TimeSeriesPoint[] = [];
+
+  if (range === "1W") {
+    const from = new Date(today); from.setDate(today.getDate() - 6);
+    points = await getDailyPoints(orgId, from, today, ownerId);
+  } else if (range === "1M") {
+    const from = new Date(today); from.setDate(today.getDate() - 29);
+    points = await getDailyPoints(orgId, from, today, ownerId);
+  } else if (range === "6M") {
+    const from = new Date(today); from.setMonth(today.getMonth() - 5); from.setDate(1);
+    points = await getPortfolioMonthlyPoints(
+      orgId,
+      from.getFullYear(), from.getMonth() + 1,
+      now.getFullYear(), now.getMonth() + 1,
+      ownerId,
+    );
+  } else if (range === "1Y") {
+    const from = new Date(today); from.setFullYear(today.getFullYear() - 1); from.setDate(1);
+    points = await getPortfolioMonthlyPoints(
+      orgId,
+      from.getFullYear(), from.getMonth() + 1,
+      now.getFullYear(), now.getMonth() + 1,
+      ownerId,
+    );
+  } else if (range === "2Y") {
+    const from = new Date(today); from.setFullYear(today.getFullYear() - 2); from.setDate(1);
+    points = await getPortfolioMonthlyPoints(
+      orgId,
+      from.getFullYear(), from.getMonth() + 1,
+      now.getFullYear(), now.getMonth() + 1,
+      ownerId,
+    );
+  } else if (range === "5Y") {
+    const toYear   = now.getFullYear();
+    const fromYear = toYear - 4;
+    points = await getPortfolioQuarterlyPoints(orgId, fromYear, toYear, ownerId);
+  } else {
+    // 10Y
+    const toYear   = now.getFullYear();
+    const fromYear = toYear - 9;
+    points = await getPortfolioAnnualPoints(orgId, fromYear, toYear, ownerId);
+  }
+
+  // Auto-detect earliest available data
+  const earliest = await dailySnapshotRepo.findEarliestDailySnapshot(prisma, orgId);
+
+  return {
+    range,
+    points,
+    earliestDate: earliest ? isoDate(earliest) : (points[0]?.periodStart ?? null),
+  };
+}
+
+// ==========================================
+// Daily snapshot computation (called by background job)
+// ==========================================
+
+export async function computeAndStoreDailyPortfolioSnapshot(
+  orgId: string,
+  ownerId?: string,
+): Promise<boolean> {
+  const now       = new Date();
+  const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+
+  const alreadyDone = await dailySnapshotRepo.findDailySnapshotExists(
+    prisma, orgId, yesterday,
+  );
+  if (alreadyDone) return false;
+
+  const from = isoDate(yesterday);
+  const to   = isoDate(yesterday);
+
+  const summary = await getPortfolioSummary(orgId, { from, to }, ownerId);
+  const noi     = summary.totalNetOperatingIncomeCents;
+  const earned  = summary.totalCollectedIncomeCents;
+  const expenses = summary.totalExpensesCents;
+
+  await dailySnapshotRepo.upsertPortfolioDailySnapshot(prisma, orgId, yesterday, {
+    noiCents:          noi,
+    collectedIncomeCents: earned,
+    expensesCents:     expenses,
+    collectionRate:    summary.avgCollectionRate,
+    noiMarginPct:      safePct(noi, earned),
+    opexRatioPct:      safePct(expenses, earned),
+    occupancyRate:
+      summary.totalUnits > 0
+        ? occupancyRatio(summary.totalActiveUnits, summary.totalUnits)
+        : null,
+    activeUnitsCount: summary.totalActiveUnits,
+  });
+  return true;
+}
+
+// ==========================================
 // Custom error classes
 // ==========================================
 
@@ -593,4 +1556,1483 @@ export class ValidationError extends Error {
 
 export class ConflictError extends Error {
   constructor(message: string) { super(message); this.name = "ConflictError"; }
+}
+
+// ==========================================
+// Building-level time-series (Reporting tab)
+// ==========================================
+
+import * as buildingDailyRepo from "../repositories/buildingDailySnapshotRepository";
+
+export interface BuildingTimeSeriesDTO {
+  buildingId:    string;
+  range:         TimeSeriesRange;
+  points:        TimeSeriesPoint[];
+  earliestDate:  string | null;
+}
+
+function buildingSummaryToPoint(
+  dto: BuildingFinancialsDTO,
+  periodStart: string,
+  periodEnd: string,
+  label: string,
+): TimeSeriesPoint {
+  const noi      = dto.netOperatingIncomeCents;
+  const earned   = dto.collectedIncomeCents;
+  const expenses = dto.expensesTotalCents;
+  return {
+    periodStart,
+    periodEnd,
+    label,
+    noiCents:          noi,
+    collectedIncomeCents: earned,
+    expensesCents:     expenses,
+    collectionRate:    dto.collectionRate,
+    noiMarginPct:      safePct(noi, earned),
+    opexRatioPct:      safePct(expenses, earned),
+    occupancyRate:
+      dto.totalUnitsCount > 0
+        ? occupancyRatio(dto.activeUnitsCount, dto.totalUnitsCount)
+        : null,
+  };
+}
+
+/**
+ * For a year served by an imported (annual) income statement, precompute a
+ * realistic monthly split: income is even (rent is monthly-flat), and expenses
+ * follow the actual dates of the attributed invoices, with the remainder of the
+ * statement's expense total (recurring/non-contractor items we don't hold as
+ * dated invoices) spread evenly. This reconciles to the annual statement while
+ * reflecting when costs were actually incurred — instead of day-prorating the
+ * annual total into a wobbly-income / flat-expense curve.
+ */
+interface ImportedYearSplit {
+  monthly: Map<number, { incomeCents: number; expensesCents: number }>;
+  dto: BuildingFinancialsDTO;
+}
+async function buildImportedYearSplit(
+  orgId: string,
+  buildingId: string,
+  year: number,
+): Promise<ImportedYearSplit | null> {
+  const dto = await getBuildingFinancials(orgId, buildingId, { from: `${year}-01-01`, to: `${year}-12-31` });
+  if (dto.source !== "imported") return null;
+
+  const invoices = await financialsRepo.findBuildingIncomingInvoiceDates(
+    prisma, orgId, buildingId, new Date(`${year}-01-01T00:00:00.000Z`), new Date(`${year}-12-31T23:59:59.999Z`),
+  );
+  const datedByMonth = new Array(13).fill(0);
+  let totalDated = 0;
+  for (const inv of invoices) {
+    if (!inv.issueDate) continue;
+    datedByMonth[inv.issueDate.getUTCMonth() + 1] += inv.totalAmount;
+    totalDated += inv.totalAmount;
+  }
+  const remainderPerMonth = Math.round(Math.max(0, dto.expensesTotalCents - totalDated) / 12);
+  const incomePerMonth = Math.round(dto.collectedIncomeCents / 12);
+
+  const monthly = new Map<number, { incomeCents: number; expensesCents: number }>();
+  for (let mm = 1; mm <= 12; mm++) {
+    monthly.set(mm, { incomeCents: incomePerMonth, expensesCents: datedByMonth[mm] + remainderPerMonth });
+  }
+  return { monthly, dto };
+}
+
+// Bucket financials feeding the reporting histogram are computed per-bucket via
+// getBuildingFinancials (heavy). Bound the fan-out so a 25-month range doesn't
+// run 25 serial computes on the reporting critical path, without saturating the
+// connection pool (this runs alongside the period-detail fetches).
+const TIMESERIES_CONCURRENCY = 4;
+
+async function getBuildingMonthlyPoints(
+  orgId: string,
+  buildingId: string,
+  fromYear: number,
+  fromMonth: number,
+  toYear: number,
+  toMonth: number,
+): Promise<TimeSeriesPoint[]> {
+  const now = new Date();
+
+  // 1. Enumerate the months in range.
+  const periods: { y: number; m: number; from: string; to: string; label: string }[] = [];
+  let y = fromYear, m = fromMonth;
+  while (y < toYear || (y === toYear && m <= toMonth)) {
+    if (new Date(y, m - 1, 1) > now) break;
+    const from    = `${y}-${String(m).padStart(2, "0")}-01`;
+    const lastDay = new Date(y, m, 0).getDate();
+    const to      = `${y}-${String(m).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+    const label   = `${monthLabel(y, m)} ${toYear - fromYear >= 1 ? y : ""}`.trim();
+    periods.push({ y, m, from, to, label });
+    m++;
+    if (m > 12) { m = 1; y++; }
+  }
+
+  // 2. Resolve each year's imported (annual→monthly) split once, in parallel.
+  const years = [...new Set(periods.map((p) => p.y))];
+  const splits = await Promise.all(years.map((yy) => buildImportedYearSplit(orgId, buildingId, yy).catch(() => null)));
+  const importedByYear = new Map<number, ImportedYearSplit | null>();
+  years.forEach((yy, i) => importedByYear.set(yy, splits[i]));
+
+  // 3. Build each point with bounded concurrency (imported = local, else fetch).
+  const points = await mapWithConcurrency(periods, TIMESERIES_CONCURRENCY, async (p): Promise<TimeSeriesPoint | null> => {
+    try {
+      const imported = importedByYear.get(p.y);
+      if (imported) {
+        const md = imported.monthly.get(p.m)!;
+        const noi = md.incomeCents - md.expensesCents;
+        const d = imported.dto;
+        return {
+          periodStart: p.from,
+          periodEnd: p.to,
+          label: p.label,
+          noiCents: noi,
+          collectedIncomeCents: md.incomeCents,
+          expensesCents: md.expensesCents,
+          collectionRate: d.collectionRate,
+          noiMarginPct: safePct(noi, md.incomeCents),
+          opexRatioPct: safePct(md.expensesCents, md.incomeCents),
+          occupancyRate: d.totalUnitsCount > 0 ? occupancyRatio(d.activeUnitsCount, d.totalUnitsCount) : null,
+        };
+      }
+      const dto = await getBuildingFinancials(orgId, buildingId, { from: p.from, to: p.to });
+      return buildingSummaryToPoint(dto, p.from, p.to, p.label);
+    } catch {
+      return null; // skip months with no data
+    }
+  });
+  return points.filter((p): p is TimeSeriesPoint => p !== null);
+}
+
+async function getBuildingQuarterlyPoints(
+  orgId: string,
+  buildingId: string,
+  fromYear: number,
+  toYear: number,
+): Promise<TimeSeriesPoint[]> {
+  const now = new Date();
+  const periods: { from: string; to: string; label: string }[] = [];
+  for (let y = fromYear; y <= toYear; y++) {
+    for (let q = 1; q <= 4; q++) {
+      const qStart  = (q - 1) * 3 + 1;
+      const qEnd    = q * 3;
+      if (new Date(y, qStart - 1, 1) > now) break;
+      const from    = `${y}-${String(qStart).padStart(2, "0")}-01`;
+      const lastDay = new Date(y, qEnd, 0).getDate();
+      const to      = `${y}-${String(qEnd).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+      periods.push({ from, to, label: `Q${q} ${y}` });
+    }
+  }
+  const points = await mapWithConcurrency(periods, TIMESERIES_CONCURRENCY, async (p): Promise<TimeSeriesPoint | null> => {
+    try {
+      const dto = await getBuildingFinancials(orgId, buildingId, { from: p.from, to: p.to });
+      return buildingSummaryToPoint(dto, p.from, p.to, p.label);
+    } catch {
+      return null; // skip quarters with no data
+    }
+  });
+  return points.filter((p): p is TimeSeriesPoint => p !== null);
+}
+
+async function getBuildingAnnualPoints(
+  orgId: string,
+  buildingId: string,
+  fromYear: number,
+  toYear: number,
+): Promise<TimeSeriesPoint[]> {
+  const now = new Date();
+  const periods: { from: string; to: string; label: string }[] = [];
+  for (let y = fromYear; y <= toYear; y++) {
+    if (y > now.getFullYear()) break;
+    periods.push({ from: `${y}-01-01`, to: y < now.getFullYear() ? `${y}-12-31` : isoDate(now), label: String(y) });
+  }
+  const points = await mapWithConcurrency(periods, TIMESERIES_CONCURRENCY, async (p): Promise<TimeSeriesPoint | null> => {
+    try {
+      const dto = await getBuildingFinancials(orgId, buildingId, { from: p.from, to: p.to });
+      return buildingSummaryToPoint(dto, p.from, p.to, p.label);
+    } catch {
+      return null; // skip years with no data
+    }
+  });
+  return points.filter((p): p is TimeSeriesPoint => p !== null);
+}
+
+async function getBuildingDailyPoints(
+  orgId: string,
+  buildingId: string,
+  from: Date,
+  to: Date,
+): Promise<TimeSeriesPoint[]> {
+  const cached     = await buildingDailyRepo.findBuildingDailySnapshotsInRange(prisma, orgId, buildingId, from, to);
+  const cachedDates = new Set(cached.map((r) => isoDate(r.date)));
+
+  const now      = new Date();
+  const todayStr = isoDate(new Date(now.getFullYear(), now.getMonth(), now.getDate()));
+  const cur      = new Date(from);
+  const compute: Array<{ date: Date; str: string }> = [];
+
+  while (cur <= to) {
+    const str = isoDate(cur);
+    if (str < todayStr && !cachedDates.has(str)) {
+      compute.push({ date: new Date(cur), str });
+    }
+    cur.setDate(cur.getDate() + 1);
+  }
+
+  for (const { date, str } of compute) {
+    try {
+      const dto      = await getBuildingFinancials(orgId, buildingId, { from: str, to: str });
+      const noi      = dto.netOperatingIncomeCents;
+      const earned   = dto.collectedIncomeCents;
+      const expenses = dto.expensesTotalCents;
+      await buildingDailyRepo.upsertBuildingDailySnapshot(prisma, orgId, buildingId, date, {
+        noiCents:          noi,
+        collectedIncomeCents: earned,
+        expensesCents:     expenses,
+        collectionRate:    dto.collectionRate,
+        noiMarginPct:      safePct(noi, earned),
+        opexRatioPct:      safePct(expenses, earned),
+        occupancyRate:
+          dto.totalUnitsCount > 0
+            ? occupancyRatio(dto.activeUnitsCount, dto.totalUnitsCount)
+            : null,
+        activeUnitsCount: dto.activeUnitsCount,
+      });
+    } catch {
+      // skip days where computation fails
+    }
+  }
+
+  const rows = await buildingDailyRepo.findBuildingDailySnapshotsInRange(prisma, orgId, buildingId, from, to);
+  return rows.map((r) => ({
+    periodStart:       isoDate(r.date),
+    periodEnd:         isoDate(r.date),
+    label:             new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(r.date),
+    noiCents:          r.noiCents,
+    collectedIncomeCents: r.collectedIncomeCents,
+    expensesCents:     r.expensesCents,
+    collectionRate:    r.collectionRate,
+    noiMarginPct:      r.noiMarginPct,
+    opexRatioPct:      r.opexRatioPct,
+    occupancyRate:     r.occupancyRate,
+  }));
+}
+
+export async function getBuildingTimeSeries(
+  orgId: string,
+  buildingId: string,
+  range: TimeSeriesRange,
+): Promise<BuildingTimeSeriesDTO> {
+  const now   = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  let points: TimeSeriesPoint[] = [];
+
+  if (range === "1W") {
+    const from = new Date(today); from.setDate(today.getDate() - 6);
+    points = await getBuildingDailyPoints(orgId, buildingId, from, today);
+  } else if (range === "1M") {
+    const from = new Date(today); from.setDate(today.getDate() - 29);
+    points = await getBuildingDailyPoints(orgId, buildingId, from, today);
+  } else if (range === "6M") {
+    const from = new Date(today); from.setMonth(today.getMonth() - 5); from.setDate(1);
+    points = await getBuildingMonthlyPoints(
+      orgId, buildingId,
+      from.getFullYear(), from.getMonth() + 1,
+      now.getFullYear(), now.getMonth() + 1,
+    );
+  } else if (range === "1Y") {
+    const from = new Date(today); from.setFullYear(today.getFullYear() - 1); from.setDate(1);
+    points = await getBuildingMonthlyPoints(
+      orgId, buildingId,
+      from.getFullYear(), from.getMonth() + 1,
+      now.getFullYear(), now.getMonth() + 1,
+    );
+  } else if (range === "2Y") {
+    const from = new Date(today); from.setFullYear(today.getFullYear() - 2); from.setDate(1);
+    points = await getBuildingMonthlyPoints(
+      orgId, buildingId,
+      from.getFullYear(), from.getMonth() + 1,
+      now.getFullYear(), now.getMonth() + 1,
+    );
+  } else if (range === "5Y") {
+    points = await getBuildingQuarterlyPoints(orgId, buildingId, now.getFullYear() - 4, now.getFullYear());
+  } else {
+    points = await getBuildingAnnualPoints(orgId, buildingId, now.getFullYear() - 9, now.getFullYear());
+  }
+
+  const earliest = await buildingDailyRepo.findEarliestBuildingDailySnapshot(prisma, orgId, buildingId);
+
+  return {
+    buildingId,
+    range,
+    points,
+    earliestDate: earliest ? isoDate(earliest) : (points[0]?.periodStart ?? null),
+  };
+}
+
+export async function computeAndStoreDailyBuildingSnapshot(
+  orgId: string,
+  buildingId: string,
+): Promise<boolean> {
+  const now       = new Date();
+  const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+  const from      = isoDate(yesterday);
+
+  // Check if already done
+  const existing = await prisma.buildingDailySnapshot.findUnique({
+    where: { orgId_buildingId_date: { orgId, buildingId, date: yesterday } },
+    select: { id: true },
+  });
+  if (existing) return false;
+
+  try {
+    const dto      = await getBuildingFinancials(orgId, buildingId, { from, to: from });
+    const noi      = dto.netOperatingIncomeCents;
+    const earned   = dto.collectedIncomeCents;
+    const expenses = dto.expensesTotalCents;
+    await buildingDailyRepo.upsertBuildingDailySnapshot(prisma, orgId, buildingId, yesterday, {
+      noiCents:          noi,
+      collectedIncomeCents: earned,
+      expensesCents:     expenses,
+      collectionRate:    dto.collectionRate,
+      noiMarginPct:      safePct(noi, earned),
+      opexRatioPct:      safePct(expenses, earned),
+      occupancyRate:
+        dto.totalUnitsCount > 0
+          ? occupancyRatio(dto.activeUnitsCount, dto.totalUnitsCount)
+          : null,
+      activeUnitsCount: dto.activeUnitsCount,
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// ==========================================
+// Per-unit financial summaries (Building Reporting tab)
+// ==========================================
+
+export interface UnitFinancialSummaryDTO {
+  unitId:               string;
+  unitNumber:           string;
+  floor:                string | null;
+  tenantName:           string | null;
+  accruedIncomeCents: number;
+  collectedIncomeCents:    number;
+  expensesCents:        number;
+  /** Apportioned recoverable-charge share from the cost pool, included in expensesCents. */
+  apportionedChargesCents: number;
+  netIncomeCents:       number;
+  collectionRate:       number;
+  occupancyRate:        number; // 0 or 1 per unit (vacant / occupied)
+  monthlyRentChf:       number | null; // asking/contractual monthly net rent — foregone rent when vacant
+}
+
+export async function getUnitFinancialSummaries(
+  orgId: string,
+  buildingId: string,
+  fromStr: string,
+  toStr: string,
+): Promise<UnitFinancialSummaryDTO[]> {
+  const from = new Date(fromStr + "T00:00:00.000Z");
+  const to   = new Date(toStr   + "T23:59:59.999Z");
+
+  // Fetch all active units for the building
+  const units = await prisma.unit.findMany({
+    where: { orgId, buildingId, isActive: true },
+    orderBy: [{ unitNumber: "asc" }],
+    select: { id: true, unitNumber: true, floor: true, monthlyRentChf: true },
+  });
+
+  if (units.length === 0) return [];
+
+  const unitIds = units.map((u) => u.id);
+
+  // Projected income: OUTGOING invoices issued (not DRAFT) with billing period in range
+  const projectedRows = await prisma.invoice.groupBy({
+    by: ["leaseId"],
+    where: {
+      orgId,
+      direction: "OUTGOING",
+      leaseId: { not: null },
+      billingPeriodStart: { gte: from, lte: to },
+      status: { not: "DRAFT" },
+      lease: { unitId: { in: unitIds } },
+    },
+    _sum: { totalAmount: true },
+  });
+  // Need unitId from leaseId — fetch lease→unit mapping
+  const leaseIds = projectedRows.map((r) => r.leaseId!).filter(Boolean);
+  const leaseUnitMap: Record<string, string> = {};
+  if (leaseIds.length > 0) {
+    const leases = await prisma.lease.findMany({
+      where: { id: { in: leaseIds } },
+      select: { id: true, unitId: true },
+    });
+    for (const l of leases) {
+      if (l.unitId) leaseUnitMap[l.id] = l.unitId;
+    }
+  }
+  const projectedByUnit: Record<string, number> = {};
+  for (const row of projectedRows) {
+    const uid = leaseUnitMap[row.leaseId!];
+    if (uid) projectedByUnit[uid] = (projectedByUnit[uid] ?? 0) + (row._sum.totalAmount ?? 0);
+  }
+
+  // Earned income: same but status = PAID
+  const earnedRows = await prisma.invoice.groupBy({
+    by: ["leaseId"],
+    where: {
+      orgId,
+      direction: "OUTGOING",
+      leaseId: { not: null },
+      billingPeriodStart: { gte: from, lte: to },
+      status: "PAID",
+      lease: { unitId: { in: unitIds } },
+    },
+    _sum: { totalAmount: true },
+  });
+  const earnedByUnit: Record<string, number> = {};
+  for (const row of earnedRows) {
+    const uid = leaseUnitMap[row.leaseId!];
+    if (uid) earnedByUnit[uid] = (earnedByUnit[uid] ?? 0) + (row._sum.totalAmount ?? 0);
+  }
+
+  // Expenses: ledger entries with unitId, INVOICE_ISSUED, debit
+  const expenseAgg = await prisma.ledgerEntry.groupBy({
+    by: ["unitId"],
+    where: {
+      orgId,
+      unitId: { in: unitIds },
+      sourceType: "INVOICE_ISSUED",
+      date: { gte: from, lte: to },
+      debitCents: { gt: 0 },
+      account: { accountType: "EXPENSE" },
+    },
+    _sum: { debitCents: true },
+  });
+  const expensesByUnit: Record<string, number> = {};
+  for (const row of expenseAgg) {
+    if (row.unitId) expensesByUnit[row.unitId] = row._sum.debitCents ?? 0;
+  }
+
+  // Reference-only per-unit expenses: INCOMING invoices attributed to a unit that
+  // were NOT posted to the ledger — the régie-ledger onboarding invoices. These
+  // carry real per-unit maintenance costs for imported/snapshot years; de-duped
+  // against the ledger agg above (by invoice id) so operational invoices, which
+  // already appear as INVOICE_ISSUED entries, are never counted twice.
+  const { postedInvoiceIds, incoming } = await financialsRepo.findUnitAttributedInvoices(prisma, orgId, unitIds, from, to);
+  const postedInvoiceIdSet = new Set(postedInvoiceIds);
+  // Tenant-recharged maintenance ("à charge du locataire") is a recoverable
+  // receivable, not the unit's cost — exclude it so the unit's net income and
+  // yield (and the sell-candidate flag) reflect what the owner actually bears.
+  for (const inv of incoming) {
+    if (inv.unitId && !postedInvoiceIdSet.has(inv.id)) {
+      if (classifyRegieExpenseAccount(inv.accountCode, inv.accountName) === "TENANT_RECHARGE") continue;
+      expensesByUnit[inv.unitId] = (expensesByUnit[inv.unitId] ?? 0) + inv.totalAmount;
+    }
+  }
+
+  // Active leases (for tenant name + occupancy + charge apportionment)
+  const activeLeases = await prisma.lease.findMany({
+    where: {
+      unitId: { in: unitIds },
+      status: { in: ["ACTIVE", "SIGNED"] },
+      startDate: { lte: to },
+      OR: [{ endDate: null }, { endDate: { gte: from } }],
+    },
+    select: {
+      id: true,
+      unitId: true,
+      tenantName: true,
+    },
+    distinct: ["unitId"],
+  });
+  const leaseByUnit: Record<string, { id: string; tenantName: string | null }> = {};
+  for (const l of activeLeases) {
+    if (l.unitId) leaseByUnit[l.unitId] = { id: l.id, tenantName: l.tenantName };
+  }
+
+  // Apportioned recoverable-charge share per unit (cost pool). Charges are
+  // building-level, so they never appear in the per-unit ledger above; without
+  // this the "By unit" view shows none of the ventilated Nebenkosten. We use the
+  // billing period overlapping the window (same basis as the unit page).
+  const apportionedByUnit: Record<string, number> = {};
+  const chargePeriod = await billingPeriodRepo.findBillingPeriodOverlappingWindow(prisma, orgId, buildingId, from, to);
+  if (chargePeriod) {
+    const { apportionForLease } = await import("./ancillaryReconciliationService");
+    await Promise.all(
+      Object.entries(leaseByUnit).map(async ([unitId, lease]) => {
+        try {
+          const a = await apportionForLease(orgId, chargePeriod.id, lease.id);
+          apportionedByUnit[unitId] = a.totalActualCostsCents;
+        } catch { /* no apportionable charges for this unit */ }
+      }),
+    );
+  }
+
+  // Months spanned by the period, for prorating contractual rent.
+  const monthsInPeriod = Math.max(
+    1,
+    (to.getUTCFullYear() - from.getUTCFullYear()) * 12 + (to.getUTCMonth() - from.getUTCMonth()) + 1,
+  );
+
+  const summaries: UnitFinancialSummaryDTO[] = units.map((u) => {
+    const occupied  = !!leaseByUnit[u.id];
+    const invoicedIncome = projectedByUnit[u.id] ?? 0;
+    // Fallback for imported/snapshot years with no rent invoices: show the unit's
+    // contractual net rent prorated over the period (état locatif), so an occupied
+    // unit isn't blank. Only when there's no invoiced income (no double-count).
+    const contractualIncome =
+      invoicedIncome === 0 && occupied && u.monthlyRentChf
+        ? u.monthlyRentChf * 100 * monthsInPeriod
+        : 0;
+    const projected = invoicedIncome || contractualIncome;
+    const earned    = (earnedByUnit[u.id] ?? 0) || contractualIncome;
+    const ledgerExp = expensesByUnit[u.id]  ?? 0;
+    const charges   = apportionedByUnit[u.id] ?? 0;
+    const expenses  = ledgerExp + charges; // charges fold into expenses, mirroring the building total
+    return {
+      unitId:               u.id,
+      unitNumber:           u.unitNumber,
+      floor:                u.floor,
+      tenantName:           leaseByUnit[u.id]?.tenantName ?? null,
+      accruedIncomeCents: projected,
+      collectedIncomeCents:    earned,
+      expensesCents:        expenses, // DIRECT costs only — expenses booked to this unit
+      apportionedChargesCents: charges,
+      netIncomeCents:       earned - expenses,
+      collectionRate:       projected > 0 ? Math.min(1, earned / projected) : 0,
+      occupancyRate:        occupied ? 1 : 0,
+      monthlyRentChf:       u.monthlyRentChf ?? null,
+    };
+  });
+
+  return summaries;
+}
+
+// ==========================================
+// Per-unit direct-cost line items (drill-down)
+// ==========================================
+
+export interface UnitExpenseLineDTO {
+  id:          string;
+  /** "ledger" = posted expense entry · "invoice" = reference-only régie invoice · "charges" = apportioned recoverable share */
+  kind:        "ledger" | "invoice" | "charges";
+  date:        string | null; // ISO yyyy-mm-dd
+  vendor:      string | null;
+  description: string;
+  accountCode: string | null;
+  accountName: string | null;
+  reference:   string | null; // invoice number
+  amountCents: number;
+  invoiceId:   string | null; // for drill-through to the invoice
+}
+
+export interface UnitExpenseDetailDTO {
+  unitId:     string;
+  /** Sum of all lines — reconciles to `expensesCents` on the unit summary for the same window. */
+  totalCents: number;
+  lines:      UnitExpenseLineDTO[];
+}
+
+/**
+ * The individual costs that make up a single unit's "Direct costs" figure for a
+ * window — the same three sources `getUnitFinancialSummaries` sums into
+ * `expensesCents`, itemised so a manager can verify the number:
+ *   1. Ledger-posted expense entries booked to the unit (operational invoices).
+ *   2. Reference-only INCOMING invoices attributed to the unit (régie grand-livre
+ *      onboarding), de-duped against posted ledger entries by invoice id.
+ *   3. The apportioned recoverable-charge share (single synthetic line).
+ * The returned `totalCents` reconciles to the unit summary's `expensesCents`.
+ */
+export async function getUnitExpenseLines(
+  orgId: string,
+  unitId: string,
+  fromStr: string,
+  toStr: string,
+): Promise<UnitExpenseDetailDTO> {
+  const from = new Date(fromStr + "T00:00:00.000Z");
+  const to   = new Date(toStr   + "T23:59:59.999Z");
+
+  const data = await financialsRepo.findUnitExpenseLineData(prisma, orgId, unitId, from, to);
+  if (!data.unit) throw new NotFoundError("Unit not found");
+  const { unit, ledgerEntries, incoming } = data;
+
+  // 1. Ledger-posted expense entries booked directly to the unit — same filter as
+  //    the `expensesByUnit` aggregate in getUnitFinancialSummaries.
+  // Vendor / invoice-number lookup for the originating invoices.
+  const invoiceMeta: Record<string, { issuerName: string | null; invoiceNumber: string | null }> = {};
+  for (const inv of data.ledgerInvoiceMeta) invoiceMeta[inv.id] = { issuerName: inv.issuerName, invoiceNumber: inv.invoiceNumber };
+
+  const lines: UnitExpenseLineDTO[] = ledgerEntries.map((e) => ({
+    id:          e.id,
+    kind:        "ledger",
+    date:        e.date.toISOString().slice(0, 10),
+    vendor:      (e.sourceId && invoiceMeta[e.sourceId]?.issuerName) || null,
+    description: e.description,
+    accountCode: e.account?.code ?? null,
+    accountName: e.account?.name ?? null,
+    reference:   (e.sourceId && invoiceMeta[e.sourceId]?.invoiceNumber) || e.reference || null,
+    amountCents: e.debitCents,
+    invoiceId:   e.sourceId ?? null,
+  }));
+
+  // 2. Reference-only INCOMING invoices attributed to the unit (régie grand-livre),
+  //    excluding any already posted to the ledger — identical de-dup to the summary.
+  const postedSet = new Set(data.postedInvoiceIds);
+  for (const inv of incoming) {
+    if (postedSet.has(inv.id)) continue;
+    lines.push({
+      id:          inv.id,
+      kind:        "invoice",
+      date:        inv.issueDate ? inv.issueDate.toISOString().slice(0, 10) : null,
+      vendor:      inv.issuerName,
+      description: inv.description,
+      accountCode: inv.classifiedAccount?.code ?? null,
+      accountName: inv.classifiedAccount?.name ?? null,
+      reference:   inv.invoiceNumber,
+      amountCents: inv.totalAmount,
+      invoiceId:   inv.id,
+    });
+  }
+
+  // 3. Apportioned recoverable-charge share — building-level, ventilated to the
+  //    unit's active lease. Same basis as the summary's apportionedChargesCents.
+  let apportionedCents = 0;
+  if (data.activeLeaseId && unit.buildingId) {
+    const chargePeriod = await billingPeriodRepo.findBillingPeriodOverlappingWindow(prisma, orgId, unit.buildingId, from, to);
+    if (chargePeriod) {
+      const { apportionForLease } = await import("./ancillaryReconciliationService");
+      try {
+        const a = await apportionForLease(orgId, chargePeriod.id, data.activeLeaseId);
+        apportionedCents = a.totalActualCostsCents;
+      } catch { /* no apportionable charges for this unit */ }
+    }
+  }
+  if (apportionedCents > 0) {
+    lines.push({
+      id:          `charges-${unitId}`,
+      kind:        "charges",
+      date:        null,
+      vendor:      null,
+      description: "Apportioned recoverable charges",
+      accountCode: null,
+      accountName: null,
+      reference:   null,
+      amountCents: apportionedCents,
+      invoiceId:   null,
+    });
+  }
+
+  const totalCents = lines.reduce((s, l) => s + l.amountCents, 0);
+  return { unitId, totalCents, lines };
+}
+
+// ==========================================
+// Unit profitability (disposition decision support)
+// ==========================================
+
+export interface UnitProfitabilityReportDTO extends UnitProfitabilityResult {
+  buildingId: string;
+  buildingName: string;
+  from: string;
+  to: string;
+  periodDays: number;
+  /**
+   * Footing check: the per-unit income breakdown vs the building's income (the
+   * "KPIs" figure). A mismatch means income is booked to a lease with no unit, or
+   * at building level — the per-unit table won't foot to the building total.
+   */
+  reconciliation: {
+    sumUnitIncomeCents: number;
+    buildingIncomeCents: number;
+    buildingNoiCents: number;
+    incomeDeltaCents: number; // building − Σ unit
+    reconciled: boolean;
+  };
+}
+
+function dayCountInclusive(fromStr: string, toStr: string): number {
+  const from = new Date(fromStr + "T00:00:00.000Z").getTime();
+  const to = new Date(toStr + "T00:00:00.000Z").getTime();
+  return Math.max(1, Math.round((to - from) / 86_400_000) + 1);
+}
+
+/**
+ * Per-unit profitability for the building Reporting → "Unit profitability" sub-tab.
+ * Fully-loaded (overhead pro-rata by area), annualised, accrual-basis NOI, with
+ * yield-on-value against both the intrinsic worksheet and the per-zip market estimate.
+ */
+export async function getUnitProfitability(
+  orgId: string,
+  buildingId: string,
+  fromStr: string,
+  toStr: string,
+): Promise<UnitProfitabilityReportDTO> {
+  const building = await inventoryRepo.findBuildingByIdAndOrg(prisma, buildingId, orgId);
+  if (!building) throw new Error(`Building ${buildingId} not found`);
+
+  const [summaries, buildingFin, valUnits, mortgages] = await Promise.all([
+    getUnitFinancialSummaries(orgId, buildingId, fromStr, toStr),
+    getBuildingFinancials(orgId, buildingId, { from: fromStr, to: toStr }),
+    inventoryRepo.findUnitsWithValuationForBuilding(prisma, orgId, buildingId),
+    mortgageRepo.listMortgagesByBuilding(prisma, orgId, buildingId),
+  ]);
+  // Total mortgage balance for NAV (0 when the building has no mortgages = unlevered).
+  const totalDebtChf = Math.round(mortgages.reduce((s, m) => s + (m.currentBalanceChf ?? 0), 0));
+
+  const valById = new Map(valUnits.map((v) => [v.id, v]));
+  const inputs: UnitProfitabilityInput[] = summaries.map((s) => ({
+    fin: {
+      unitId: s.unitId,
+      unitNumber: s.unitNumber,
+      floor: s.floor,
+      tenantName: s.tenantName,
+      // Accrual (economic) direct net income: accrued income − attributed expenses.
+      netIncomeCents: s.accruedIncomeCents - s.expensesCents,
+      expensesCents: s.expensesCents,
+      apportionedChargesCents: s.apportionedChargesCents,
+      occupancyRate: s.occupancyRate,
+      monthlyRentChf: s.monthlyRentChf,
+    },
+    val: valById.get(s.unitId) ?? null,
+  }));
+
+  const periodDays = dayCountInclusive(fromStr, toStr);
+  const result = computeUnitProfitability(
+    inputs,
+    {
+      operatingTotalCents: buildingFin.operatingTotalCents,
+      recoverableAncillaryCents: buildingFin.recoverableAncillaryCents,
+      netOperatingIncomeCents: buildingFin.netOperatingIncomeCents,
+      ppeEstimateChf: building.ppeEstimateChf ?? null,
+      marketValueChf: building.marketValueChf ?? null,
+      totalDebtChf,
+    },
+    periodDays,
+  );
+
+  // Footing check: per-unit income should sum to the building's income (same source
+  // — OUTGOING lease invoices). A gap means income is unattributed to any unit.
+  const sumUnitIncomeCents = summaries.reduce((s, u) => s + u.accruedIncomeCents, 0);
+  const buildingIncomeCents = buildingFin.accruedIncomeCents;
+  const incomeDeltaCents = buildingIncomeCents - sumUnitIncomeCents;
+  const tolerance = Math.max(100, Math.round(Math.abs(buildingIncomeCents) * 0.005));
+  const reconciliation = {
+    sumUnitIncomeCents,
+    buildingIncomeCents,
+    buildingNoiCents: buildingFin.netOperatingIncomeCents,
+    incomeDeltaCents,
+    reconciled: Math.abs(incomeDeltaCents) <= tolerance,
+  };
+
+  return { buildingId, buildingName: building.name, from: fromStr, to: toStr, periodDays, ...result, reconciliation };
+}
+
+// ==========================================
+// Yield goal-seek (Planning what-if)
+// ==========================================
+
+/**
+ * Compose the yield goal-seek: current yield/NOI/value (from unit profitability) +
+ * renovation opportunities (cost + useful life) + the per-asset capitalizable share
+ * (tax split) → the pure computeYieldGoalSeek. Renovation uplift uses the SAME OBLF
+ * formula the simulator does, so the figure survives the handoff into it unchanged.
+ */
+// Residential GROSS rental yields by canton (rent ÷ value), from the multi-source
+// benchmark in web/lib/benchmarks/swissRentalYield. Converts the sale-price market
+// value into an estimated market rent. Default ~national gross (~3.3%).
+const CANTON_GROSS_YIELD: Record<string, number> = {
+  GE: 0.025, ZH: 0.030, ZG: 0.030, VD: 0.033, BS: 0.040, BL: 0.040, BE: 0.035,
+  LU: 0.035, TI: 0.032, SG: 0.038, AG: 0.038, VS: 0.042, FR: 0.038, NE: 0.042,
+  JU: 0.045, GR: 0.040, SO: 0.040, TG: 0.040, SH: 0.040, GL: 0.045, UR: 0.045,
+  OW: 0.042, NW: 0.038, SZ: 0.035, AR: 0.045, AI: 0.045,
+};
+const NATIONAL_GROSS_YIELD = 0.033;
+function cantonGrossYield(canton: string | null): number {
+  return (canton && CANTON_GROSS_YIELD[canton.toUpperCase()]) || NATIONAL_GROSS_YIELD;
+}
+// How hard vétusté (wear %) discounts achievable rent vs a pristine unit. The
+// vétusté-recovery gap (full − as-is) is what a renovation monetises via OBLF.
+const VETUSTE_RENT_COEFF = 0.4;
+
+// Map the owner's strategy dimensions → which levers run against their wishes.
+// Dimensions are normalised 0–1 (handles a 0–100 scale defensively).
+function strategyFlagsFromDims(dims: Record<string, number>): { renovation: boolean; selfManage: boolean; rentAggressive: boolean } {
+  const n = (v: number | undefined) => (v == null ? 0.5 : v > 1 ? v / 100 : v);
+  return {
+    renovation: n(dims.capexTolerance) < 0.4,          // low capex tolerance → avoids costly renovations
+    rentAggressive: n(dims.stabilityPreference) > 0.6, // high stability preference → churn-averse
+    selfManage: n(dims.disruptionTolerance) < 0.4,     // low disruption tolerance → won't self-manage
+  };
+}
+
+export async function getYieldGoalSeek(
+  orgId: string,
+  buildingId: string,
+  fromStr: string,
+  toStr: string,
+  opts: { targetYieldPct: number; mgmtFeePct: number; oblfPassthroughPct?: number },
+): Promise<YieldGoalSeekResult & {
+  /** Management fee % actually on the statements (or the assumption when absent). */
+  currentFeePct: number;
+  feeSource: "statements" | "assumed";
+  /** Top operating-cost accounts behind the opex lever (for the reporting overlay). */
+  opexDrivers: OpexDriverDTO[];
+  /** Display name of the primary owner whose mandate ranks the levers (null unless
+   *  the strategy came from an owner-portfolio profile). */
+  strategyOwnerName: string | null;
+  /** Occupancy lever sized from each vacant unit's OWN asking rent (garages as
+   *  garages), not an average extrapolation. */
+  occupancyGainAnnualChf: number;
+  vacantUnits: Array<{ label: string; kind: "parking" | "residential"; expectedAnnualChf: number; hasAskingRent: boolean }>;
+  /** Per-unit market-gap working behind the rent lever (biggest gap first). */
+  rentMarketDetail: Array<{
+    label: string; livingAreaSqm: number | null; pricePerSqmChf: number; grossYieldPct: number;
+    vetustePct: number; currentAnnualChf: number; marketAnnualChf: number; gapChf: number;
+  }>;
+  rentMarketBasis: { grossYieldPct: number; vetusteCoeffPct: number; pricePerSqmSource: "zip" | "intrinsic" } | null;
+  periodFrom: string;
+  periodTo: string;
+}> {
+  const building = await inventoryRepo.findBuildingByIdAndOrg(prisma, buildingId, orgId);
+  if (!building) throw new Error(`Building ${buildingId} not found`);
+
+  // Anchor to the building's latest period WITH data. The panel's window is
+  // today-trailing and lands on empty months for buildings whose ledger lags
+  // (e.g. régie statements imported for 2023–2025 while "today" is 2026).
+  let effFrom = fromStr, effTo = toStr;
+  try {
+    const ts = await getBuildingTimeSeries(orgId, buildingId, "5Y");
+    const withData = (ts.points ?? []).filter((p) => p.collectedIncomeCents !== 0 || p.expensesCents !== 0);
+    const latest = withData.length ? withData[withData.length - 1] : null;
+    if (latest && latest.periodEnd < toStr) {
+      effTo = latest.periodEnd;
+      const d = new Date(`${effTo}T00:00:00`); d.setFullYear(d.getFullYear() - 1); d.setDate(d.getDate() + 1);
+      effFrom = d.toISOString().slice(0, 10);
+    }
+  } catch { /* fall back to the requested window */ }
+
+  const yearsAgo = (n: number) => { const d = new Date(`${effTo}T00:00:00`); d.setFullYear(d.getFullYear() - n); return d.toISOString().slice(0, 10); };
+  const [profit, opportunities, fin1, fin2, fin3, valUnits, zipPrice, activeLeases, buildingProfile, ownerProfilesWithNames] = await Promise.all([
+    getUnitProfitability(orgId, buildingId, effFrom, effTo),
+    getBuildingRenovationOpportunities(prisma, orgId, buildingId),
+    // 3 trailing 12-month windows → the "best of the last 3 years" opex floor.
+    // groupByAccount so we can detect the management fee + list the opex drivers.
+    getBuildingFinancials(orgId, buildingId, { from: yearsAgo(1), to: effTo, groupByAccount: true }),
+    getBuildingFinancials(orgId, buildingId, { from: yearsAgo(2), to: yearsAgo(1), groupByAccount: true }),
+    getBuildingFinancials(orgId, buildingId, { from: yearsAgo(3), to: yearsAgo(2), groupByAccount: true }),
+    inventoryRepo.findUnitsWithValuationForBuilding(prisma, orgId, buildingId),
+    building.postalCode ? inventoryRepo.findMarketPriceByZip(prisma, orgId, building.postalCode) : Promise.resolve(null),
+    leaseRepo.findActiveLeasesByBuilding(prisma, buildingId).catch(() => []),
+    getBuildingProfileByBuildingId(prisma, buildingId, orgId).catch(() => null),
+    getOwnerProfilesWithNamesForBuilding(prisma, buildingId, orgId).catch(() => []),
+  ]);
+
+  // Yield-basis value — the same basis the Profitability tab shows.
+  const valueChf =
+    profit.buildingNetYieldBasis === "intrinsic" ? (profit.buildingIntrinsicValueChf ?? 0)
+      : profit.buildingNetYieldBasis === "market" ? (profit.marketValueChf ?? 0)
+        : profit.buildingNetYieldBasis === "ppe" ? (profit.ppeEstimateChf ?? 0)
+          : 0;
+  const currentNoiChf = profit.totalAnnualNoiCents / 100;
+
+  // Rent roll (annual contractual) + a building-occupancy proxy from the priced units.
+  const rows = profit.rows ?? [];
+  const rentRollChf = rows.reduce((s, r) => s + (r.monthlyRentChf ?? 0) * 12, 0);
+  const occupancyRate = rows.length
+    ? rows.reduce((s, r) => s + (r.occupancyRate ?? 0), 0) / rows.length
+    : 1;
+
+  // ── Occupancy lever: foregone rent from vacant units, each valued at its OWN
+  // asking rent (Unit.monthlyRentChf) — so an empty garage is worth a garage's
+  // rent, not extrapolated from the flats' average. Units with no asking rent on
+  // file can't be sized (fail-closed: they contribute 0 and are flagged). ──
+  const typeById = new Map(valUnits.map((u) => [u.id, u.type]));
+  const vacantRows = rows.filter((r) => (r.occupancyRate ?? 1) < 1);
+  const occupancyGainAnnualChf = Math.round(
+    vacantRows.reduce((s, r) => s + Math.max(0, (r.monthlyRentChf ?? 0)) * 12, 0),
+  );
+  const vacantUnits = vacantRows.map((r) => ({
+    label: r.unitNumber ?? "",
+    kind: (typeById.get(r.unitId) === "PARKING" ? "parking" : "residential") as "parking" | "residential",
+    expectedAnnualChf: Math.round(Math.max(0, (r.monthlyRentChf ?? 0)) * 12),
+    hasAskingRent: (r.monthlyRentChf ?? 0) > 0,
+  }));
+
+  // ── Opex floor: the best (lowest) operating cost of the last 3 trailing years.
+  // Falls back to total expenses when operating opex isn't separately categorised
+  // (e.g. régie-imported P&Ls that bundle everything). ──
+  // Non-fee controllable opex: the operating cost with the management fee removed
+  // (the fee is its own lever), per window so the best-of-3yr floor stays like-for-like.
+  const nonFeeOpexOf = (f: BuildingFinancialsDTO | null) => {
+    if (!f) return 0;
+    const gross = (f.operatingTotalCents || f.expensesTotalCents || 0) / 100;
+    const fee = detectMgmtFeeChf(f.expensesByAccount ?? []);
+    return Math.max(0, gross - fee);
+  };
+  const currentOpexChf = nonFeeOpexOf(fin1);                                      // current period = the goal-seek window
+  const priorOpexChf = [nonFeeOpexOf(fin2), nonFeeOpexOf(fin3)].filter((v) => v > 0);
+  const controllableOpexChf = currentOpexChf > 0 ? currentOpexChf : null;
+  const controllableOpexBest3yrChf = currentOpexChf > 0
+    ? Math.min(currentOpexChf, ...(priorOpexChf.length ? priorOpexChf : [currentOpexChf]))
+    : null;
+
+  // ── Management fee ACTUALLY on the statements (annual CHF → % of rent roll).
+  // When detected, the goal-seek's fee lever defaults to it (not a guessed 5%);
+  // otherwise the request's assumption is kept and flagged. ──
+  const detectedFeeChf = detectMgmtFeeChf(fin1.expensesByAccount ?? []);
+  const feeSource: "statements" | "assumed" = detectedFeeChf > 0 && rentRollChf > 0 ? "statements" : "assumed";
+  const currentFeePct = feeSource === "statements"
+    ? Math.round((detectedFeeChf / rentRollChf) * 100 * 100) / 100
+    : opts.mgmtFeePct;
+
+  // ── Opex drivers behind the lever — the reporting expense breakdown (top lines). ──
+  const opexDrivers = buildOpexDrivers(fin1.expensesByAccount ?? []);
+
+  // ── Market rent: value/m² × canton gross-yield, discounted for vétusté. Value/m²
+  // uses the seeded zip sale-price when present, else the unit's own intrinsic price
+  // (already on file from the valuation worksheet) — so this works without the crawl.
+  // The as-is gap (market − current) is realizable on turnover; the vétusté-recovery
+  // gap (full − as-is) is what a renovation unlocks via OBLF (caps the reno uplift). ──
+  const canton = building.canton ?? null;
+  const gy = cantonGrossYield(canton);
+  const rentByUnit = new Map(rows.map((r) => [r.unitId, (r.monthlyRentChf ?? 0) * 12]));
+  const unitNumById = new Map(rows.map((r) => [r.unitId, r.unitNumber]));
+  const vetusteRecoveryByUnit = new Map<string, number>();
+  // Per-unit market-gap working, so the rent lever can show HOW the total was reached.
+  const rentMarketDetail: Array<{
+    label: string; livingAreaSqm: number | null; pricePerSqmChf: number; grossYieldPct: number;
+    vetustePct: number; currentAnnualChf: number; marketAnnualChf: number; gapChf: number;
+  }> = [];
+  let rentMarketGapAnnualChf: number | null = null;
+  let anyPricedUnit = false;
+  let gapSum = 0;
+  for (const u of valUnits) {
+    const pricePerSqm = zipPrice?.pricePerSqmChf ?? u.intrinsicPricePerSqmChf ?? null;
+    if (u.livingAreaSqm == null || pricePerSqm == null) continue;
+    anyPricedUnit = true;
+    const fullMarketRent = u.livingAreaSqm * pricePerSqm * gy;
+    const asIs = fullMarketRent * (1 - VETUSTE_RENT_COEFF * ((u.vetustePct ?? 0) / 100));
+    const currentAnnual = rentByUnit.get(u.id) ?? 0;
+    const gap = Math.max(0, asIs - currentAnnual);
+    gapSum += gap;
+    vetusteRecoveryByUnit.set(u.id, Math.max(0, fullMarketRent - asIs));
+    if (gap > 0) rentMarketDetail.push({
+      label: unitNumById.get(u.id) ?? "",
+      livingAreaSqm: u.livingAreaSqm,
+      pricePerSqmChf: Math.round(pricePerSqm),
+      grossYieldPct: Math.round(gy * 100 * 100) / 100,
+      vetustePct: u.vetustePct ?? 0,
+      currentAnnualChf: Math.round(currentAnnual),
+      marketAnnualChf: Math.round(asIs),
+      gapChf: Math.round(gap),
+    });
+  }
+  if (anyPricedUnit) rentMarketGapAnnualChf = Math.round(gapSum);
+  rentMarketDetail.sort((a, b) => b.gapChf - a.gapChf);
+  const rentMarketBasis = anyPricedUnit
+    ? { grossYieldPct: Math.round(gy * 100 * 100) / 100, vetusteCoeffPct: Math.round(VETUSTE_RENT_COEFF * 100), pricePerSqmSource: (zipPrice?.pricePerSqmChf != null ? "zip" : "intrinsic") as "zip" | "intrinsic" }
+    : null;
+
+  // ── Turnover timing: average remaining months across active leases. ──
+  const remMonths = (activeLeases as Array<{ endDate?: Date | null }>)
+    .map((l) => (l.endDate ? Math.max(0, (new Date(l.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24 * 30.44)) : null))
+    .filter((v): v is number => v != null);
+  const avgLeaseRemainingMonths = remMonths.length ? Math.round(remMonths.reduce((s, v) => s + v, 0) / remMonths.length) : null;
+
+  // ── Strategy alignment: explicit building profile → else the owners' portfolio
+  // profiles (first one; multi-owner reconciliation deferred) → else none. ──
+  let strategy: StrategyContext | null = null;
+  let strategyOwnerName: string | null = null;
+  const parseStrategy = (dimsJson: string | null | undefined, source: StrategyContext["source"], label: string | null): StrategyContext | null => {
+    if (!dimsJson) return null;
+    try {
+      return { source, label, flags: strategyFlagsFromDims(JSON.parse(dimsJson) as Record<string, number>) };
+    } catch { return null; }
+  };
+  if (buildingProfile?.effectiveDimensionsJson) {
+    strategy = parseStrategy(buildingProfile.effectiveDimensionsJson, "building",
+      (buildingProfile as { userFacingGoalLabel?: string }).userFacingGoalLabel ?? buildingProfile.primaryArchetype ?? null);
+  }
+  if (!strategy && ownerProfilesWithNames.length > 0) {
+    // First owner profile (multi-owner reconciliation deferred — the panel shows a caveat).
+    const { ownerName, profile } = ownerProfilesWithNames[0];
+    const o = profile as { dimensionsJson?: string; userFacingGoalLabel?: string; primaryArchetype?: string };
+    strategy = parseStrategy(o.dimensionsJson, "owner-portfolio", o.userFacingGoalLabel ?? o.primaryArchetype ?? null);
+    if (strategy) strategyOwnerName = ownerName;
+  }
+
+  // Per-opportunity capitalizable fraction from the tax split, memoised by rule key
+  // (the fraction is cost-independent, so one lookup per assetType::topic::canton).
+  const capCache = new Map<string, number>();
+  const goalSeekOpps: GoalSeekOpportunity[] = [];
+  for (const o of opportunities) {
+    const costChf = o.estimatedReplacementCostChf ?? 5000;
+    const usefulLifeYears = o.usefulLifeMonths ? Math.max(1, Math.round(o.usefulLifeMonths / 12)) : 10;
+    const key = `${o.assetType}::${o.topic}::${canton ?? ""}`;
+    let capitalizableFraction = capCache.get(key);
+    if (capitalizableFraction == null) {
+      const rule = await lookupTaxRule(prisma, o.assetType as Parameters<typeof lookupTaxRule>[1], o.topic, canton);
+      if (rule) {
+        const tax = computeTaxProfile({
+          totalCost: costChf,
+          classification: rule.classification as TaxModelInput["classification"],
+          deductiblePct: rule.deductiblePct,
+          usefulLifeMonths: rule.usefulLifeMonths,
+        });
+        capitalizableFraction = costChf > 0 ? tax.capitalizableAmount / costChf : DEFAULT_CAPITALIZABLE_FRACTION;
+      } else {
+        capitalizableFraction = DEFAULT_CAPITALIZABLE_FRACTION;
+      }
+      capCache.set(key, capitalizableFraction);
+    }
+    goalSeekOpps.push({
+      assetId: o.assetId,
+      unitId: o.unitId,
+      label: o.unitNumber ? `${o.assetName} — ${o.unitNumber}` : o.assetName,
+      costChf,
+      usefulLifeYears,
+      capitalizableFraction,
+      // Cap the OBLF uplift at the unit's vétusté-recovery rent (renovated − as-is market).
+      marketUpliftCeilingAnnualChf: o.unitId ? (vetusteRecoveryByUnit.get(o.unitId) ?? null) : null,
+    });
+  }
+
+  const result = computeYieldGoalSeek({
+    valueChf,
+    currentNoiChf,
+    rentRollChf,
+    occupancyRate,
+    targetYieldPct: opts.targetYieldPct,
+    mgmtFeePct: currentFeePct,
+    oblfPassthroughPct: opts.oblfPassthroughPct ?? DEFAULT_OBLF_PASSTHROUGH_PCT,
+    opportunities: goalSeekOpps,
+    rentMarketGapAnnualChf,
+    avgLeaseRemainingMonths,
+    controllableOpexChf,
+    controllableOpexBest3yrChf,
+    strategy,
+  });
+  return {
+    ...result, currentFeePct, feeSource, opexDrivers, strategyOwnerName,
+    occupancyGainAnnualChf, vacantUnits, rentMarketDetail, rentMarketBasis,
+    periodFrom: effFrom, periodTo: effTo,
+  };
+}
+
+// ==========================================
+// Building period report (for building Reporting tab)
+// ==========================================
+
+export interface BuildingMonthlyBreakdownDTO {
+  month: number;
+  collectedIncomeCents: number;
+  expensesTotalCents: number;
+  noiCents: number;
+  collectionRate: number;
+}
+
+export interface BuildingPeriodReportDTO {
+  financials:  BuildingFinancialsDTO;
+  prevFinancials: BuildingFinancialsDTO | null;
+  arrears:     import("../repositories/financialsRepository").ArrearsAgingDTO;
+  moveIns:     Array<{ id: string; unitId: string; unitNumber: string; tenantName: string; startDate: string }>;
+  moveOuts:    Array<{ id: string; unitId: string; unitNumber: string; tenantName: string; endDate: string }>;
+  monthlyData: BuildingMonthlyBreakdownDTO[] | null;
+  /** Live leases whose fixed term ends within the next ~6 months (outlook). */
+  leaseExpiries: Array<{ unitNumber: string; tenantName: string; endDate: string; netRentChf: number }>;
+  /** Trial-balance imbalance of the building's ledger as of `to` (Assets − Liabilities).
+   *  Non-zero ⇒ unbalanced entries were posted (e.g. an imported opening balance that
+   *  didn't tie out). Surfaced as a data-integrity flag on the reporting tab. */
+  ledgerImbalanceCents: number;
+}
+
+export async function getBuildingPeriodReport(
+  orgId: string,
+  buildingId: string,
+  from: string,
+  to: string,
+  includeMonthly: boolean,
+): Promise<BuildingPeriodReportDTO> {
+  const building = await inventoryRepo.findBuildingByIdAndOrg(prisma, buildingId, orgId);
+  if (!building) throw new NotFoundError(`Building ${buildingId} not found`);
+
+  // Current period financials. groupByAccount so the reporting "Revenue &
+  // expenses" cost-center breakdown is driven by the ledger decomposition
+  // (which reconciles to expensesTotalCents) rather than invoices alone.
+  const financials = await getBuildingFinancials(orgId, buildingId, { from, to, groupByAccount: true });
+
+  // Prev period: same duration, immediately before
+  const fromDate = new Date(from + "T00:00:00Z");
+  const toDate   = new Date(to   + "T00:00:00Z");
+  const duration = toDate.getTime() - fromDate.getTime();
+  const prevToDate   = new Date(fromDate.getTime() - 1);
+  const prevFromDate = new Date(prevToDate.getTime() - duration);
+  const prevFrom = prevFromDate.toISOString().slice(0, 10);
+  const prevTo   = prevToDate.toISOString().slice(0, 10);
+  let prevFinancials: BuildingFinancialsDTO | null = null;
+  try {
+    prevFinancials = await getBuildingFinancials(orgId, buildingId, { from: prevFrom, to: prevTo });
+  } catch { /* prev period may have no data */ }
+
+  // Arrears — scoped to this building's units
+  const unitIds = await inventoryRepo.findActiveUnitIdsByBuilding(prisma, orgId, buildingId);
+  const rawInvoices = await prisma.invoice.findMany({
+    where: {
+      orgId,
+      direction: "OUTGOING",
+      status: "ISSUED",
+      lease: { unitId: { in: unitIds } },
+    },
+    select: { totalAmount: true, dueDate: true },
+  });
+  const today = new Date();
+  let currentCents = 0, o1 = 0, o2 = 0, o3 = 0;
+  for (const inv of rawInvoices) {
+    const amt = inv.totalAmount ?? 0;
+    if (!inv.dueDate) { currentCents += amt; continue; }
+    const days = Math.floor((today.getTime() - inv.dueDate.getTime()) / 86400000);
+    if (days <= 0) currentCents += amt;
+    else if (days <= 30) o1 += amt;
+    else if (days <= 60) o2 += amt;
+    else o3 += amt;
+  }
+  const arrears = {
+    currentCents, overdue1to30Cents: o1, overdue31to60Cents: o2,
+    overdue61plusCents: o3, totalOverdueCents: o1 + o2 + o3,
+  };
+
+  // Pre-fetch unit number map for this building (avoids TS inference issues with nested select+where)
+  const buildingUnitRows = await prisma.unit.findMany({
+    where: { buildingId, orgId },
+    select: { id: true, unitNumber: true },
+  });
+  const unitNumMap: Record<string, string> = {};
+  for (const u of buildingUnitRows) unitNumMap[u.id] = u.unitNumber;
+
+  // Lease expiries in the next ~6 months (forward outlook).
+  const expiryFrom = new Date();
+  const expiryTo = new Date(expiryFrom);
+  expiryTo.setMonth(expiryTo.getMonth() + 6);
+  const expiringLeases = await leaseRepo.findLeasesExpiringForUnits(prisma, buildingUnitRows.map((u) => u.id), expiryFrom, expiryTo);
+  const leaseExpiries = expiringLeases
+    .filter((l) => l.unitId && l.endDate)
+    .map((l) => ({
+      unitNumber: unitNumMap[l.unitId!] ?? "?",
+      tenantName: l.tenantName,
+      endDate: l.endDate!.toISOString().slice(0, 10),
+      netRentChf: l.netRentChf,
+    }));
+
+  // Move-ins: leases starting in period for this building
+  const moveInLeases = await prisma.lease.findMany({
+    where: {
+      unitId: { in: buildingUnitRows.map((u) => u.id) },
+      startDate: { gte: new Date(from + "T00:00:00Z"), lte: new Date(to + "T23:59:59Z") },
+      status: { in: ["ACTIVE", "SIGNED", "TERMINATED", "CANCELLED"] },
+      isTemplate: false,
+    },
+    select: { id: true, unitId: true, tenantName: true, startDate: true },
+    take: 50,
+  });
+  const moveOuts_ = await prisma.lease.findMany({
+    where: {
+      unitId: { in: buildingUnitRows.map((u) => u.id) },
+      endDate: { gte: new Date(from + "T00:00:00Z"), lte: new Date(to + "T23:59:59Z") },
+      status: { in: ["TERMINATED", "CANCELLED"] },
+      isTemplate: false,
+    },
+    select: { id: true, unitId: true, tenantName: true, endDate: true },
+    take: 50,
+  });
+
+  // Monthly breakdown (for YTD trendline)
+  let monthlyData: BuildingMonthlyBreakdownDTO[] | null = null;
+  if (includeMonthly) {
+    const year = fromDate.getUTCFullYear();
+    const now2 = new Date();
+    const lastMonth = year < now2.getFullYear() ? 12 : now2.getMonth() + 1;
+    monthlyData = [];
+    if (financials.source === "imported") {
+      // An imported income statement is annual — it has no monthly detail — so a
+      // per-month query returns 0 (it can't encompass the annual statement). Spread
+      // the annual actuals evenly across the year so the trendline isn't flat-zero;
+      // the last month absorbs the rounding remainder so the months sum to the year.
+      const split = (total: number, m: number): number => {
+        const base = Math.trunc(total / lastMonth);
+        return m === lastMonth ? total - base * (lastMonth - 1) : base;
+      };
+      for (let m = 1; m <= lastMonth; m++) {
+        monthlyData.push({
+          month: m,
+          collectedIncomeCents: split(financials.collectedIncomeCents, m),
+          expensesTotalCents: split(financials.expensesTotalCents, m),
+          noiCents: split(financials.netOperatingIncomeCents, m),
+          collectionRate: financials.collectionRate,
+        });
+      }
+    } else {
+      for (let m = 1; m <= lastMonth; m++) {
+        const mf = `${year}-${String(m).padStart(2, "0")}-01`;
+        const lastDay = new Date(year, m, 0).getDate();
+        const mt = `${year}-${String(m).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+        try {
+          const s = await getBuildingFinancials(orgId, buildingId, { from: mf, to: mt });
+          monthlyData.push({ month: m, collectedIncomeCents: s.collectedIncomeCents, expensesTotalCents: s.expensesTotalCents, noiCents: s.netOperatingIncomeCents, collectionRate: s.collectionRate });
+        } catch {
+          monthlyData.push({ month: m, collectedIncomeCents: 0, expensesTotalCents: 0, noiCents: 0, collectionRate: 0 });
+        }
+      }
+    }
+  }
+
+  return {
+    financials,
+    prevFinancials,
+    arrears,
+    moveIns: moveInLeases.filter(l => l.unitId).map(l => ({
+      id: l.id,
+      unitId: l.unitId!,
+      unitNumber: unitNumMap[l.unitId ?? ""] ?? "?",
+      tenantName: l.tenantName,
+      startDate: l.startDate.toISOString().slice(0, 10),
+    })),
+    moveOuts: moveOuts_.filter(l => l.unitId && l.endDate).map(l => ({
+      id: l.id,
+      unitId: l.unitId!,
+      unitNumber: unitNumMap[l.unitId ?? ""] ?? "?",
+      tenantName: l.tenantName,
+      endDate: l.endDate!.toISOString().slice(0, 10),
+    })),
+    monthlyData,
+    leaseExpiries,
+    ledgerImbalanceCents: (await getBalanceSheet(prisma, orgId, buildingId, new Date(to + "T23:59:59.999Z"))).differenceCents,
+  };
+}
+
+// ==========================================
+// Unit period report (for unit Reporting tab)
+// ==========================================
+
+export interface UnitPeriodFinancials {
+  accruedIncomeCents: number;
+  collectedIncomeCents:    number;
+  expensesCents:        number;
+  netIncomeCents:       number;
+  collectionRate:       number;
+}
+
+export interface UnitPeriodReportDTO {
+  unitId:     string;
+  unitNumber: string;
+  from:       string;
+  to:         string;
+  current:    UnitPeriodFinancials;
+  prev:       UnitPeriodFinancials | null;
+  currentLease: {
+    id:               string;
+    tenantName:       string;
+    netRentChf:       number;
+    startDate:        string;
+    endDate:          string | null;
+    remainingMonths:  number | null;
+    status:           string;
+  } | null;
+  arrearsCents: number;
+  /**
+   * The unit's apportioned recoverable-charge share from the building cost pool
+   * for the billing period overlapping the window (WS3, passive). null when no
+   * active lease / period / cost pool exists. Settling stays an explicit action.
+   */
+  apportionedChargesCents: number | null;
+  monthlyData: Array<{
+    month:              number;
+    collectedIncomeCents:  number;
+    expensesCents:      number;
+    noiCents:           number;
+  }> | null;
+  assetConditionSummary: {
+    total:   number;
+    good:    number;
+    fair:    number;
+    poor:    number;
+    damaged: number;
+  } | null;
+}
+
+export async function getUnitPeriodReport(
+  orgId:          string,
+  unitId:         string,
+  fromStr:        string,
+  toStr:          string,
+  includeMonthly: boolean,
+): Promise<UnitPeriodReportDTO> {
+  const unit = await prisma.unit.findFirst({
+    where: { id: unitId, orgId },
+    select: { id: true, unitNumber: true },
+  });
+  if (!unit) throw new NotFoundError(`Unit ${unitId} not found`);
+
+  // Pre-fetch all lease IDs for this unit (avoids relation-filter TS inference issues)
+  const unitLeases = await prisma.lease.findMany({
+    where: { unitId, orgId, isTemplate: false },
+    select: { id: true },
+  });
+  const leaseIdList = unitLeases.map((l) => l.id);
+
+  async function computeFinancials(f: Date, t: Date): Promise<UnitPeriodFinancials> {
+    const [projAgg, earnedAgg, expAgg] = await Promise.all([
+      prisma.invoice.aggregate({
+        where: {
+          orgId,
+          leaseId: { in: leaseIdList },
+          direction: "OUTGOING",
+          status: { not: "DRAFT" },
+          billingPeriodStart: { gte: f, lte: t },
+        },
+        _sum: { totalAmount: true },
+      }),
+      prisma.invoice.aggregate({
+        where: {
+          orgId,
+          leaseId: { in: leaseIdList },
+          direction: "OUTGOING",
+          status: "PAID",
+          billingPeriodStart: { gte: f, lte: t },
+        },
+        _sum: { totalAmount: true },
+      }),
+      prisma.ledgerEntry.aggregate({
+        where: {
+          orgId,
+          unitId,
+          sourceType: "INVOICE_ISSUED",
+          date: { gte: f, lte: t },
+          debitCents: { gt: 0 },
+          account: { accountType: "EXPENSE" },
+        },
+        _sum: { debitCents: true },
+      }),
+    ]);
+    const projected = projAgg._sum.totalAmount ?? 0;
+    const earned    = earnedAgg._sum.totalAmount ?? 0;
+    const expenses  = expAgg._sum.debitCents ?? 0;
+    return {
+      accruedIncomeCents: projected,
+      collectedIncomeCents:    earned,
+      expensesCents:        expenses,
+      netIncomeCents:       earned - expenses,
+      collectionRate:       projected > 0 ? Math.min(1, earned / projected) : 0,
+    };
+  }
+
+  const from = new Date(fromStr + "T00:00:00.000Z");
+  const to   = new Date(toStr   + "T23:59:59.999Z");
+  const current = await computeFinancials(from, to);
+
+  // Prev period: same duration, immediately before
+  const duration  = to.getTime() - from.getTime();
+  const prevTo    = new Date(from.getTime() - 1);
+  const prevFrom  = new Date(prevTo.getTime() - duration);
+  let prev: UnitPeriodFinancials | null = null;
+  try { prev = await computeFinancials(prevFrom, prevTo); } catch { /* no prev data */ }
+
+  // Current active lease
+  const today = new Date();
+  const activeLease = await prisma.lease.findFirst({
+    where: { unitId, orgId, status: { in: ["ACTIVE", "SIGNED"] }, isTemplate: false },
+    orderBy: { startDate: "desc" },
+    select: { id: true, tenantName: true, netRentChf: true, startDate: true, endDate: true, status: true },
+  });
+  const currentLease = activeLease ? {
+    id:              activeLease.id,
+    tenantName:      activeLease.tenantName,
+    netRentChf:      activeLease.netRentChf,
+    startDate:       activeLease.startDate.toISOString().slice(0, 10),
+    endDate:         activeLease.endDate?.toISOString().slice(0, 10) ?? null,
+    remainingMonths: activeLease.endDate
+      ? Math.max(0, Math.round((activeLease.endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24 * 30.44)))
+      : null,
+    status:          activeLease.status,
+  } : null;
+
+  // Arrears: outstanding OUTGOING invoices for this unit
+  const arrearsAgg = await prisma.invoice.aggregate({
+    where: { orgId, leaseId: { in: leaseIdList }, direction: "OUTGOING", status: "ISSUED" },
+    _sum: { totalAmount: true },
+  });
+  const arrearsCents = arrearsAgg._sum.totalAmount ?? 0;
+
+  // Apportioned recoverable-charge share from the cost pool (WS3, passive). Find
+  // the billing period overlapping the window and apportion this unit's active
+  // lease. Best-effort: any gap (no lease, no period, no costs) yields null.
+  let apportionedChargesCents: number | null = null;
+  try {
+    if (activeLease) {
+      const unitRow = await prisma.unit.findFirst({ where: { id: unitId, orgId }, select: { buildingId: true } });
+      if (unitRow?.buildingId) {
+        const period = await billingPeriodRepo.findBillingPeriodOverlappingWindow(prisma, orgId, unitRow.buildingId, from, to);
+        if (period) {
+          const { apportionForLease } = await import("./ancillaryReconciliationService");
+          const apportion = await apportionForLease(orgId, period.id, activeLease.id);
+          apportionedChargesCents = apportion.totalActualCostsCents;
+        }
+      }
+    }
+  } catch { /* no apportionable charges for this unit/period */ }
+
+  // Monthly data (YTD)
+  let monthlyData: UnitPeriodReportDTO["monthlyData"] = null;
+  if (includeMonthly) {
+    const year = from.getUTCFullYear();
+    const now2 = new Date();
+    const lastMonth = year < now2.getFullYear() ? 12 : now2.getMonth() + 1;
+    monthlyData = [];
+    for (let m = 1; m <= lastMonth; m++) {
+      const mf = new Date(`${year}-${String(m).padStart(2, "0")}-01T00:00:00.000Z`);
+      const lastDay = new Date(year, m, 0).getDate();
+      const mt = new Date(`${year}-${String(m).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}T23:59:59.999Z`);
+      try {
+        const md = await computeFinancials(mf, mt);
+        monthlyData.push({ month: m, collectedIncomeCents: md.collectedIncomeCents, expensesCents: md.expensesCents, noiCents: md.netIncomeCents });
+      } catch {
+        monthlyData.push({ month: m, collectedIncomeCents: 0, expensesCents: 0, noiCents: 0 });
+      }
+    }
+  }
+
+  // Latest condition report summary
+  let assetConditionSummary: UnitPeriodReportDTO["assetConditionSummary"] = null;
+  const latestReport = await prisma.unitConditionReport.findFirst({
+    where: { unitId, orgId, status: { in: ["SUBMITTED", "APPROVED"] } },
+    orderBy: { submittedAt: "desc" },
+    select: { items: { select: { condition: true } } },
+  });
+  if (latestReport) {
+    let good = 0, fair = 0, poor = 0, damaged = 0;
+    for (const item of latestReport.items) {
+      if (item.condition === "GOOD") good++;
+      else if (item.condition === "FAIR") fair++;
+      else if (item.condition === "POOR") poor++;
+      else if (item.condition === "DAMAGED") damaged++;
+    }
+    assetConditionSummary = { total: latestReport.items.length, good, fair, poor, damaged };
+  }
+
+  return {
+    unitId: unit.id,
+    unitNumber: unit.unitNumber,
+    from: fromStr,
+    to: toStr,
+    current,
+    prev,
+    currentLease,
+    arrearsCents,
+    apportionedChargesCents,
+    monthlyData,
+    assetConditionSummary,
+  };
 }

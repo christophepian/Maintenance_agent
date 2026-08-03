@@ -1,4 +1,4 @@
-import { InvoiceStatus, BillingEntityType, Prisma, InvoiceDirection, InvoiceSourceChannel, IngestionStatus } from '@prisma/client';
+import { InvoiceStatus, BillingEntityType, Prisma, InvoiceDirection, InvoiceSourceChannel, IngestionStatus, CostNature } from '@prisma/client';
 import prisma from './prismaClient';
 import { INVOICE_FULL_INCLUDE, INVOICE_SUMMARY_INCLUDE, findInvoicesWithCount } from '../repositories/invoiceRepository';
 import * as invoiceRepo from '../repositories/invoiceRepository';
@@ -22,6 +22,12 @@ export interface CreateInvoiceParams {
   amount?: number; // CHF (legacy)
   description?: string;
   issuerBillingEntityId?: string;
+  // Raw issuer text (from OCR)
+  issuerName?: string;
+  issuerAddressLine1?: string;
+  issuerPostalCode?: string;
+  issuerCity?: string;
+  issuerCountry?: string;
   recipientName?: string;
   recipientAddressLine1?: string;
   recipientAddressLine2?: string;
@@ -60,6 +66,12 @@ export interface UpdateInvoiceParams {
   amount?: number; // CHF (legacy)
   description?: string;
   issuerBillingEntityId?: string | null;
+  // Raw issuer text fields
+  issuerName?: string | null;
+  issuerAddressLine1?: string | null;
+  issuerPostalCode?: string | null;
+  issuerCity?: string | null;
+  issuerCountry?: string | null;
   recipientName?: string;
   recipientAddressLine1?: string;
   recipientAddressLine2?: string | null;
@@ -80,6 +92,14 @@ export interface UpdateInvoiceParams {
   submittedAt?: Date;
   approvedAt?: Date;
   paidAt?: Date;
+  // Building/unit attribution
+  buildingId?: string | null;
+  unitId?: string | null;
+  // Vendor (supplier) attribution — used by régie-ledger invoice onboarding
+  contractorId?: string | null;
+  // Ancillary cost classification (v3): nature + charge category
+  costNature?: CostNature | null;
+  ancillaryCategoryId?: string | null;
 }
 
 export interface InvoiceLineItemDTO {
@@ -99,6 +119,12 @@ export interface InvoiceDTO {
   amount: number; // CHF (legacy)
   description?: string;
   issuerBillingEntityId?: string;
+  // Raw issuer text (OCR-extracted or manually entered)
+  issuerName?: string | null;
+  issuerAddressLine1?: string | null;
+  issuerPostalCode?: string | null;
+  issuerCity?: string | null;
+  issuerCountry?: string | null;
   recipientName: string;
   recipientAddressLine1: string;
   recipientAddressLine2?: string;
@@ -127,12 +153,17 @@ export interface InvoiceDTO {
   leaseId?: string | null;
   expenseTypeId?: string | null;
   accountId?: string | null;
+  expenseCategory?: string | null;
   expenseType?: { id: string; name: string; code: string | null } | null;
   account?: { id: string; name: string; code: string | null } | null;
   /** Unit attribution derived from job.request.unit — populated when available */
   unitId?: string | null;
   /** Building attribution derived from job.request.unit.buildingId — populated when available */
   buildingId?: string | null;
+  // Ancillary cost classification (v3 remediation)
+  costNature?: CostNature | null;
+  ancillaryCategoryId?: string | null;
+  ancillaryCategory?: { id: string; code: string; name: string } | null;
   // INV-HUB ingestion fields
   direction: InvoiceDirection;
   sourceChannel: InvoiceSourceChannel;
@@ -173,6 +204,7 @@ export interface InvoiceDTO {
     recipientName?: string;
     unitNumber?: string;
     buildingName?: string;
+    buildingId?: string | null;
     // INV-HUB ingestion fields
     direction: InvoiceDirection;
     sourceChannel: InvoiceSourceChannel;
@@ -453,6 +485,11 @@ export async function createInvoice(params: CreateInvoiceParams): Promise<Invoic
       ...(params.matchedJobId ? { matchedJobId: params.matchedJobId } : {}),
       ...(params.matchedLeaseId ? { matchedLeaseId: params.matchedLeaseId } : {}),
       ...(params.matchedBuildingId ? { matchedBuildingId: params.matchedBuildingId } : {}),
+      ...(params.issuerName ? { issuerName: params.issuerName } : {}),
+      ...(params.issuerAddressLine1 ? { issuerAddressLine1: params.issuerAddressLine1 } : {}),
+      ...(params.issuerPostalCode ? { issuerPostalCode: params.issuerPostalCode } : {}),
+      ...(params.issuerCity ? { issuerCity: params.issuerCity } : {}),
+      ...(params.issuerCountry ? { issuerCountry: params.issuerCountry } : {}),
       lineItems: normalizedLineItems.length
         ? {
             create: normalizedLineItems,
@@ -482,6 +519,7 @@ export async function listInvoices(
   filters?: {
     jobId?: string;
     status?: InvoiceStatus;
+    statusIn?: InvoiceStatus[];
     view?: "summary" | "full";
     contractorId?: string;
     expenseCategory?: string;
@@ -490,6 +528,10 @@ export async function listInvoices(
     paidBefore?: string;
     createdAfter?: string;
     createdBefore?: string;
+    issueDateFrom?: string;
+    issueDateTo?: string;
+    issuerName?: string;
+    vendorContractorId?: string;
     expenseTypeId?: string;
     accountId?: string;
     direction?: string;
@@ -510,13 +552,25 @@ export async function listInvoices(
   const where: any = {
     orgId,
     ...(filters?.jobId && { jobId: filters.jobId }),
-    ...(filters?.status && { status: filters.status }),
+    ...(filters?.statusIn?.length ? { status: { in: filters.statusIn } } : filters?.status ? { status: filters.status } : {}),
     ...(filters?.expenseCategory && { expenseCategory: filters.expenseCategory }),
     ...(filters?.expenseTypeId && { expenseTypeId: filters.expenseTypeId }),
     ...(filters?.accountId && { accountId: filters.accountId }),
     ...(filters?.direction && { direction: filters.direction }),
     ...(filters?.ingestionStatus && { ingestionStatus: filters.ingestionStatus }),
+    // Vendor drill-down (reporting → invoices): match the invoice's own attribution,
+    // not the job relation. contractorId identifies a resolved vendor Contractor;
+    // issuerName matches uncontractored incoming invoices by supplier name.
+    ...(filters?.vendorContractorId && { contractorId: filters.vendorContractorId }),
+    ...(filters?.issuerName && { issuerName: { equals: filters.issuerName, mode: "insensitive" } }),
   };
+
+  // Date range on issueDate (period drill-down: a specific month/year).
+  if (filters?.issueDateFrom || filters?.issueDateTo) {
+    where.issueDate = {};
+    if (filters?.issueDateFrom) where.issueDate.gte = new Date(filters.issueDateFrom);
+    if (filters?.issueDateTo) where.issueDate.lte = new Date(filters.issueDateTo + "T23:59:59.999Z");
+  }
 
   // Restrict to invoices that carry an expense category (expenses surface).
   if (filters?.categorized && !filters?.expenseCategory) {
@@ -544,17 +598,30 @@ export async function listInvoices(
     jobFilter.request = { ...jobFilter.request, unitId: filters.unitId };
   }
   if (Object.keys(jobFilter).length > 0) {
-    // Include invoices that match the job filter OR have no job (incoming invoices)
-    // When filtering by unitId, also include invoices linked via lease
     const orClauses: any[] = [{ job: jobFilter }];
-    if (!filters?.contractorId) orClauses.push({ jobId: null });
+    // Match invoices directly attributed to this building/unit, or to a lease on
+    // the unit. NOTE: do NOT add a bare `{ jobId: null }` clause here — it would
+    // match every job-less invoice in the org (all rent + all ingested bills),
+    // bypassing the unit/building filter entirely. Job-less invoices that truly
+    // belong to this unit/building are caught by the attribution clauses below.
     if (filters?.unitId) orClauses.push({ lease: { unitId: filters.unitId } });
+    if (filters?.buildingId) orClauses.push({ buildingId: filters.buildingId });
+    // Rent invoices are lease-linked; traverse lease → unit → building so a
+    // building view includes rent for all its units.
+    if (filters?.buildingId) orClauses.push({ lease: { unit: { buildingId: filters.buildingId } } });
+    if (filters?.unitId) orClauses.push({ unitId: filters.unitId });
     where.OR = orClauses;
   } else if (filters?.unitId) {
-    // unitId-only filter (no other job-based filters)
     where.OR = [
       { job: { request: { unitId: filters.unitId } } },
       { lease: { unitId: filters.unitId } },
+      { unitId: filters.unitId },
+    ];
+  } else if (filters?.buildingId) {
+    // buildingId-only — include direct attribution (no job filter needed separately)
+    where.OR = [
+      { job: { request: { unit: { buildingId: filters.buildingId } } } },
+      { buildingId: filters.buildingId },
     ];
   }
 
@@ -648,11 +715,23 @@ export async function updateInvoice(
     throw new Error('INVOICE_NOT_FOUND');
   }
 
+  // Coerce empty-string FK attributes to null. The invoice page sends unitId: ""
+  // (and buildingId/ancillaryCategoryId: "") when no value is chosen; an empty
+  // string is an invalid FK and would fail the write. See ANCILLARY_COSTS_V3.
+  if ((params.unitId as any) === '') params.unitId = null;
+  if ((params.buildingId as any) === '') params.buildingId = null;
+  if ((params.ancillaryCategoryId as any) === '') params.ancillaryCategoryId = null;
+
   const mutatingFields =
     params.lineItems ||
     params.amount !== undefined ||
     params.description !== undefined ||
     params.issuerBillingEntityId !== undefined ||
+    params.issuerName !== undefined ||
+    params.issuerAddressLine1 !== undefined ||
+    params.issuerPostalCode !== undefined ||
+    params.issuerCity !== undefined ||
+    params.issuerCountry !== undefined ||
     params.recipientName !== undefined ||
     params.recipientAddressLine1 !== undefined ||
     params.recipientAddressLine2 !== undefined ||
@@ -663,7 +742,16 @@ export async function updateInvoice(
     params.dueDate !== undefined ||
     params.vatRate !== undefined;
 
-  if (existing.lockedAt && mutatingFields) {
+  // building/unit attribution, expenseType/account and cost classification never
+  // lock — they're metadata
+  const isAttributionOnly =
+    !mutatingFields &&
+    (params.buildingId !== undefined || params.unitId !== undefined ||
+     params.contractorId !== undefined ||
+     params.expenseTypeId !== undefined || params.accountId !== undefined ||
+     params.costNature !== undefined || params.ancillaryCategoryId !== undefined);
+
+  if (existing.lockedAt && mutatingFields && !isAttributionOnly) {
     throw new Error('INVOICE_LOCKED');
   }
 
@@ -686,6 +774,18 @@ export async function updateInvoice(
         ...(params.description !== undefined && { description: params.description }),
         ...(params.issuerBillingEntityId !== undefined && {
           issuerBillingEntityId: params.issuerBillingEntityId === null ? null : params.issuerBillingEntityId,
+        }),
+        ...(params.issuerName !== undefined && { issuerName: params.issuerName }),
+        ...(params.issuerAddressLine1 !== undefined && { issuerAddressLine1: params.issuerAddressLine1 }),
+        ...(params.issuerPostalCode !== undefined && { issuerPostalCode: params.issuerPostalCode }),
+        ...(params.issuerCity !== undefined && { issuerCity: params.issuerCity }),
+        ...(params.issuerCountry !== undefined && { issuerCountry: params.issuerCountry }),
+        ...(params.buildingId !== undefined && { buildingId: params.buildingId }),
+        ...(params.unitId !== undefined && { unitId: params.unitId }),
+        ...(params.contractorId !== undefined && { contractorId: params.contractorId === null ? null : params.contractorId }),
+        ...(params.costNature !== undefined && { costNature: params.costNature }),
+        ...(params.ancillaryCategoryId !== undefined && {
+          ancillaryCategoryId: params.ancillaryCategoryId === null ? null : params.ancillaryCategoryId,
         }),
         ...(params.recipientName !== undefined && { recipientName: params.recipientName }),
         ...(params.recipientAddressLine1 !== undefined && { recipientAddressLine1: params.recipientAddressLine1 }),
@@ -735,6 +835,65 @@ export async function updateInvoice(
     }
 
     return invoice;
+  });
+
+  // Keep the ledger (and cost pool) in sync when attribution/classification changes
+  // on an already-posted invoice. Posting captured the building/unit at issue time;
+  // a later change must backfill those columns, or reporting scoped by unitId/
+  // buildingId reads zero for the newly-attributed unit. See ANCILLARY_COSTS_V3.
+  const attributionChanged = params.buildingId !== undefined || params.unitId !== undefined;
+  const natureChanged = params.costNature !== undefined || params.ancillaryCategoryId !== undefined;
+  if (attributionChanged || natureChanged) {
+    const isCharge = (updated as any).costNature === 'CHARGE';
+    await prisma.ledgerEntry.updateMany({
+      where: { orgId: existing.orgId, sourceId: invoiceId, sourceType: { in: ['INVOICE_ISSUED', 'INVOICE_PAID'] } },
+      data: {
+        ...(params.buildingId !== undefined && { buildingId: params.buildingId }),
+        // A recoverable charge is building-level — clear any unit on its ledger legs.
+        ...(isCharge ? { unitId: null } : params.unitId !== undefined ? { unitId: params.unitId } : {}),
+      },
+    });
+    // If an already-approved invoice is (re)classified as a charge, make sure its
+    // cost-pool entry exists (the approval-time bridge ran before classification).
+    if (isCharge && (updated as any).status === 'APPROVED') {
+      const { bridgeChargeInvoiceToCostPool } = await import('./ancillaryReconciliationService');
+      bridgeChargeInvoiceToCostPool(existing.orgId, invoiceId).catch((e) =>
+        console.error('[ANCILLARY] post-hoc charge bridge failed', e),
+      );
+    }
+  }
+
+  return mapInvoiceToDTO(updated);
+}
+
+/**
+ * Swap issuer ↔ recipient raw text fields.
+ * Clears issuerBillingEntityId so the manager re-links the correct billing entity.
+ */
+export async function swapInvoiceParties(invoiceId: string, orgId: string): Promise<InvoiceDTO> {
+  const existing = await invoiceRepo.findInvoiceById(prisma, invoiceId);
+  // Verify org ownership BEFORE mutating (was a TOCTOU: the route checked org
+  // only after the swap had already committed).
+  if (!existing || (existing as any).orgId !== orgId) throw new Error('INVOICE_NOT_FOUND');
+
+  const inv = existing as any;
+
+  const updated = await prisma.invoice.update({
+    where: { id: invoiceId },
+    data: {
+      issuerBillingEntityId: null,
+      issuerName:         inv.recipientName         || null,
+      issuerAddressLine1: inv.recipientAddressLine1 || null,
+      issuerPostalCode:   inv.recipientPostalCode   || null,
+      issuerCity:         inv.recipientCity         || null,
+      issuerCountry:      inv.recipientCountry      || null,
+      recipientName:         inv.issuerName         || 'Unknown',
+      recipientAddressLine1: inv.issuerAddressLine1 || 'Unknown',
+      recipientPostalCode:   inv.issuerPostalCode   || '0000',
+      recipientCity:         inv.issuerCity         || 'Unknown',
+      recipientCountry:      inv.issuerCountry      || 'CH',
+    },
+    include: INVOICE_INCLUDE,
   });
 
   return mapInvoiceToDTO(updated);
@@ -834,6 +993,11 @@ function mapInvoiceToDTO(invoice: InvoiceWithFullInclude): InvoiceDTO {
         : fromCents(totalAmount),
     description: invoice.description || undefined,
     issuerBillingEntityId: invoice.issuerBillingEntityId || undefined,
+    issuerName: (invoice as any).issuerName ?? null,
+    issuerAddressLine1: (invoice as any).issuerAddressLine1 ?? null,
+    issuerPostalCode: (invoice as any).issuerPostalCode ?? null,
+    issuerCity: (invoice as any).issuerCity ?? null,
+    issuerCountry: (invoice as any).issuerCountry ?? null,
     recipientName: invoice.recipientName,
     recipientAddressLine1: invoice.recipientAddressLine1,
     recipientAddressLine2: invoice.recipientAddressLine2 || undefined,
@@ -862,6 +1026,7 @@ function mapInvoiceToDTO(invoice: InvoiceWithFullInclude): InvoiceDTO {
     leaseId: (invoice as any).leaseId || null,
     expenseTypeId: invoice.expenseTypeId || null,
     accountId: invoice.accountId || null,
+    expenseCategory: invoice.expenseCategory || null,
     expenseType: (invoice as any).classifiedExpenseType
       ? { id: (invoice as any).classifiedExpenseType.id, name: (invoice as any).classifiedExpenseType.name, code: (invoice as any).classifiedExpenseType.code }
       : null,
@@ -887,12 +1052,28 @@ function mapInvoiceToDTO(invoice: InvoiceWithFullInclude): InvoiceDTO {
       ? (invoice as any).billingPeriodEnd.toISOString()
       : null,
     billingScheduleId: (invoice as any).billingScheduleId ?? null,
+    buildingId: (invoice as any).buildingId ?? null,
+    unitId: (invoice as any).unitId ?? null,
+    costNature: (invoice as any).costNature ?? null,
+    ancillaryCategoryId: (invoice as any).ancillaryCategoryId ?? null,
+    ancillaryCategory: (invoice as any).ancillaryCategory
+      ? {
+          id: (invoice as any).ancillaryCategory.id,
+          code: (invoice as any).ancillaryCategory.code,
+          name: (invoice as any).ancillaryCategory.name,
+        }
+      : null,
   };
 }
 
   function mapInvoiceToSummaryDTO(invoice: InvoiceWithSummaryInclude): InvoiceSummaryDTO {
     const totalAmount = invoice.totalAmount ?? 0;
-    const unit = (invoice as any).job?.request?.unit;
+    // Resolve unit/building across all linkage paths: maintenance (job → request),
+    // rent (lease → unit), and direct attribution (attributedUnit/attributedBuilding).
+    const unit = (invoice as any).job?.request?.unit
+      || (invoice as any).lease?.unit
+      || (invoice as any).attributedUnit;
+    const buildingName = unit?.building?.name || (invoice as any).attributedBuilding?.name || undefined;
     return {
       id: invoice.id,
       orgId: invoice.orgId,
@@ -910,7 +1091,8 @@ function mapInvoiceToDTO(invoice: InvoiceWithFullInclude): InvoiceDTO {
       issuerName: (invoice as any).issuer?.name || undefined,
       recipientName: invoice.recipientName || undefined,
       unitNumber: unit?.unitNumber || undefined,
-      buildingName: unit?.building?.name || undefined,
+      buildingName,
+      buildingId: (invoice as any).buildingId ?? null,
       // INV-HUB ingestion fields
       direction: (invoice as any).direction ?? 'OUTGOING',
       sourceChannel: (invoice as any).sourceChannel ?? 'MANUAL',

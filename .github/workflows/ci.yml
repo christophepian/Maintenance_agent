@@ -41,11 +41,12 @@ jobs:
       - name: "Guardrails: automated enforcement"
         run: bash scripts/guardrails.sh
 
-      - name: Install dependencies (backend)
-        run: npm --prefix apps/api install --no-audit --no-fund
-
-      - name: Install dependencies (frontend)
-        run: npm --prefix apps/web install --no-audit --no-fund
+      # Root workspace install. Per-app `npm --prefix` installs left shared,
+      # hoisted deps (typescript, uuid, …) unresolved — anything not declared
+      # directly in the sub-package failed in CI while resolving locally via the
+      # hoisted root node_modules. A root install hoists correctly for all steps.
+      - name: Install dependencies (workspaces)
+        run: npm install --no-audit --no-fund
 
       - name: Create test database
         run: psql -h localhost -U postgres -c "CREATE DATABASE maint_agent_test;" || true
@@ -86,8 +87,11 @@ jobs:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/maint_agent_test
 
       # ── G7-3: Backend type check ──
+      # Workspaces hoist typescript to the ROOT node_modules; per-app installs
+      # leave no tsc in apps/api, so a bare `npx tsc` fetches the wrong package.
+      # Pin the real compiler explicitly.
       - name: "G7: Type-check backend (tsc --noEmit)"
-        run: npx tsc --noEmit
+        run: npx -p typescript@5.9.3 tsc --noEmit
         working-directory: apps/api
 
       # ── G7-4: Frontend build ──
@@ -100,8 +104,15 @@ jobs:
       # ── G7-4b: Frontend type-check ──
       # next lint was removed in Next.js 16 (no ESLint integration). Use tsc instead.
       - name: "G7: Type-check frontend (tsc --noEmit)"
-        run: npx tsc --noEmit
+        run: npx -p typescript@5.9.3 tsc --noEmit
         working-directory: apps/web
+
+      # ── G7-4c: Code-quality no-regression gate ──
+      # Fails the build if any metric (eslint_warn/any/console/tsc/suppress/...)
+      # regresses above docs/quality-baseline.json. Debt may only shrink; the
+      # baseline is lowered deliberately in the commit that burns it down.
+      - name: "G7: Code-quality regression gate (strict)"
+        run: bash scripts/code-quality-report.sh --strict
 
       # ── G7-5: Jest tests ──
       - name: "G7: Run Jest tests"
@@ -109,6 +120,10 @@ jobs:
         working-directory: apps/api
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/maint_agent_test
+          # .env.test is gitignored (absent in CI). The test process signs JWTs
+          # with AUTH_SECRET; testHelpers starts the server with "test-secret",
+          # so the jest process must match or token verification 401s.
+          AUTH_SECRET: test-secret
 
       # ── T-08: Production boot guard validation ──
       # Verify the server correctly refuses to start when production safety vars are misconfigured.
@@ -129,27 +144,30 @@ jobs:
         working-directory: apps/api
 
       # ── G7-6: Boot smoke test ──
+      # The smoke curls are unauthenticated, so boot the server auth-optional
+      # (NODE_ENV stays "test" from the job env, so the production boot-guard
+      # tested above is unaffected) — otherwise the reads 401.
       - name: "G7: Backend boot + smoke curls"
+        env:
+          AUTH_OPTIONAL: "true"
+          AUTH_SECRET: test-secret
         run: |
           npx ts-node --transpile-only src/server.ts &
           SERVER_PID=$!
           echo "Waiting for server to start..."
-          for i in $(seq 1 15); do
-            if curl -sf http://127.0.0.1:3001/requests?limit=1 > /dev/null 2>&1; then
+          for i in $(seq 1 20); do
+            if curl -sf http://127.0.0.1:3001/health > /dev/null 2>&1; then
               break
             fi
             sleep 1
           done
-          echo "Testing endpoints..."
-          curl -sf 'http://127.0.0.1:3001/requests?limit=1' > /dev/null && echo "✅ /requests" || exit 1
-          curl -sf 'http://127.0.0.1:3001/jobs?limit=1' > /dev/null && echo "✅ /jobs" || exit 1
-          curl -sf 'http://127.0.0.1:3001/leases?limit=1' > /dev/null && echo "✅ /leases" || exit 1
-          curl -sf 'http://127.0.0.1:3001/invoices?limit=1' > /dev/null && echo "✅ /invoices" || exit 1
-          curl -sf 'http://127.0.0.1:3001/contractors?limit=1' > /dev/null && echo "✅ /contractors" || exit 1
-          curl -sf 'http://127.0.0.1:3001/units?limit=1' > /dev/null && echo "✅ /units" || exit 1
-          curl -sf 'http://127.0.0.1:3001/buildings?limit=1' > /dev/null && echo "✅ /buildings" || exit 1
-          curl -sf 'http://127.0.0.1:3001/rental-applications?limit=1' > /dev/null && echo "✅ /rental-applications" || exit 1
-          curl -sf 'http://127.0.0.1:3001/rfp?limit=1' > /dev/null && echo "✅ /rfp" || exit 1
+          # Boot smoke = purpose-built liveness/readiness probes (no auth, no
+          # seed, no per-endpoint query-param requirements). /readyz also
+          # confirms DB connectivity.
+          echo "Smoke: liveness + readiness..."
+          curl -sf http://127.0.0.1:3001/health  > /dev/null && echo "✅ /health"      || { echo "❌ /health";  exit 1; }
+          curl -sf http://127.0.0.1:3001/healthz > /dev/null && echo "✅ /healthz"     || { echo "❌ /healthz"; exit 1; }
+          curl -sf http://127.0.0.1:3001/readyz  > /dev/null && echo "✅ /readyz (db)" || { echo "❌ /readyz";  exit 1; }
           kill $SERVER_PID 2>/dev/null || true
-          echo "✅ All smoke tests passed"
+          echo "✅ Boot smoke passed"
         working-directory: apps/api

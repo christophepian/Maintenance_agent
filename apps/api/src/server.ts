@@ -31,17 +31,26 @@ import { registerSchedulingRoutes } from "./routes/scheduling";
 import { registerCompletionRoutes } from "./routes/completion";
 import { registerCoaRoutes } from "./routes/coa";
 import { registerLedgerRoutes } from "./routes/ledger";
+import { registerFixedAssetRoutes } from "./routes/fixedAssets";
+import { registerOpeningReceivableRoutes } from "./routes/openingReceivables";
 import { registerCaptureSessionRoutes } from "./routes/captureSessions";
 import { registerCashflowPlanRoutes } from "./routes/cashflowPlans";
+import { registerMortgageRoutes } from "./routes/mortgages";
 import { registerForecastingRoutes } from "./routes/forecasting";
 import { registerBillingScheduleRoutes } from "./routes/billingSchedules";
 import { registerChargeReconciliationRoutes } from "./routes/chargeReconciliations";
+import { registerAncillaryCostCategoryRoutes } from "./routes/ancillaryCostCategories";
+import { registerBillingPeriodRoutes } from "./routes/billingPeriods";
+import { registerCreditNoteRoutes } from "./routes/creditNotes";
 import { registerRentAdjustmentRoutes } from "./routes/rentAdjustments";
 import { registerContractorBillingRoutes } from "./routes/contractorBillingSchedules";
 import { registerStrategyRoutes } from "./routes/strategy";
 import { registerRecommendationRoutes } from "./routes/recommendations";
 import { registerTenantConversationRoutes } from "./routes/tenantConversation";
+import { registerTwilioWebhookRoutes } from "./routes/twilioWebhook";
 import { registerImportedStatementRoutes } from "./routes/importedStatements";
+import { registerInventoryImportRoutes } from "./routes/inventoryImport";
+import { registerBuildingOnboardingRoutes } from "./routes/buildingOnboarding";
 import { registerSandboxRoutes } from "./routes/sandbox";
 import { registerCorrespondenceRoutes } from "./routes/correspondence";
 import { registerConditionReportRoutes } from "./routes/conditionReports";
@@ -52,7 +61,9 @@ import {
 } from "./services/ownerSelection";
 import { processSchedulingEscalations } from "./workflows/schedulingWorkflow";
 import { flushPendingEmails } from "./services/emailTransport";
+import { drainOutbox as drainWhatsAppOutbox } from "./services/whatsAppService";
 import { processRecurringBilling } from "./services/recurringBillingService";
+import { computeAndStoreDailyPortfolioSnapshot, computeAndStoreDailyBuildingSnapshot } from "./services/financials";
 import { processOverdueInvoices } from "./services/overdueInvoiceService";
 import { flushLegalVariableIngestion } from "./services/legalVariableIngestion";
 
@@ -127,13 +138,25 @@ if (isProdEnv) {
     );
     process.exit(1);
   }
-  // Guard against deploying from a branch other than main.
+  // Guard against deploying from an unexpected branch.
   // RENDER_GIT_BRANCH is injected automatically by Render at build time.
+  // 'sandbox' is intentional: the beta sandbox environment is a separate Render
+  // service that deploys from the `sandbox` branch with SANDBOX_MODE=true. The
+  // production (`main`) service must NEVER run in sandbox mode — see guard below.
   const deployedBranch = process.env.RENDER_GIT_BRANCH;
   const allowedBranches = ["main", "sandbox"];
   if (deployedBranch && !allowedBranches.includes(deployedBranch)) {
     console.error(
       `[FATAL] Production must deploy from 'main' or 'sandbox'. Currently on '${deployedBranch}'. Update the Render service branch setting.`,
+    );
+    process.exit(1);
+  }
+  // Defense in depth: sandbox demo provisioning/seeding must never activate on
+  // the production deployment. SANDBOX_MODE is only legitimate on the sandbox
+  // branch service. (Audit CRITICAL_AUDIT_2026-06-23 — sandbox/branch policy.)
+  if (process.env.SANDBOX_MODE === "true" && deployedBranch && deployedBranch !== "sandbox") {
+    console.error(
+      `[FATAL] SANDBOX_MODE=true is only permitted on the 'sandbox' branch deployment, not '${deployedBranch}'. Refusing to start.`,
     );
     process.exit(1);
   }
@@ -173,17 +196,26 @@ registerSchedulingRoutes(router);
 registerCompletionRoutes(router);
 registerCoaRoutes(router);
 registerLedgerRoutes(router);
+registerFixedAssetRoutes(router);
+registerOpeningReceivableRoutes(router);
 registerCaptureSessionRoutes(router);
 registerCashflowPlanRoutes(router);
+registerMortgageRoutes(router);
 registerForecastingRoutes(router);
 registerBillingScheduleRoutes(router);
 registerChargeReconciliationRoutes(router);
+registerAncillaryCostCategoryRoutes(router);
+registerBillingPeriodRoutes(router);
+registerCreditNoteRoutes(router);
 registerRentAdjustmentRoutes(router);
 registerContractorBillingRoutes(router);
 registerStrategyRoutes(router);
 registerRecommendationRoutes(router);
 registerTenantConversationRoutes(router);
+registerTwilioWebhookRoutes(router);
 registerImportedStatementRoutes(router);
+registerInventoryImportRoutes(router);
+registerBuildingOnboardingRoutes(router);
 registerSandboxRoutes(router);
 registerCorrespondenceRoutes(router);
 registerConditionReportRoutes(router);
@@ -306,8 +338,12 @@ const server = http.createServer(async (req: AuthedRequest, res) => {
        origin (non-production only) → localhost (dev only).
        In production, CORS_ORIGIN must be set — no hardcoded fallbacks apply. */
     const isProd = process.env.NODE_ENV === "production";
-    // Vercel preview/staging URL — allowed in non-production only.
-    // In production add it to the CORS_ORIGIN env var if needed.
+    // Vercel git-main preview/staging URL — a single, stable, first-party origin.
+    // The shared (production) Render backend serves this staging frontend too, so it
+    // must be allowed even when NODE_ENV=production (otherwise the browser-direct
+    // large-file upload to /imported-statements/upload fails CORS preflight).
+    // OTHER preview URLs (per-PR, other branches) are not stable — add them to the
+    // CORS_ORIGIN env var as needed.
     const VERCEL_STAGING_ORIGIN = "https://maintenance-agent-api-git-main-christophepians-projects.vercel.app";
     const DEV_ALLOWED_ORIGINS = ["http://localhost:3000", "http://localhost:3001", "http://127.0.0.1:3000", "http://127.0.0.1:3001"];
     const requestOrigin = req.headers["origin"] as string | undefined;
@@ -319,8 +355,10 @@ const server = http.createServer(async (req: AuthedRequest, res) => {
         corsOrigin = requestOrigin;
       }
     }
-    // Hardcoded convenience origins apply in non-production only
-    if (!corsOrigin && !isProd && requestOrigin === VERCEL_STAGING_ORIGIN) {
+    // The stable git-main staging origin is allowed in every environment (the
+    // production backend is shared with the staging frontend). Other localhost
+    // dev origins remain non-production only.
+    if (!corsOrigin && requestOrigin === VERCEL_STAGING_ORIGIN) {
       corsOrigin = requestOrigin;
     }
     if (!corsOrigin && !isProd && requestOrigin && DEV_ALLOWED_ORIGINS.includes(requestOrigin)) {
@@ -355,9 +393,26 @@ const server = http.createServer(async (req: AuthedRequest, res) => {
     /* Parse URL + resolve org */
     const { path, query } = parseQuery(req.url);
 
-    /* T-03: Health endpoint — unauthenticated, used by Render/Vercel uptime probes.
-       Must be reachable without AUTH_SECRET, before org resolution, and never throw. */
+    /* T-03: Liveness probe — unauthenticated, used by Render's deploy health check.
+       LIVENESS ONLY: returns 200 as soon as the HTTP server is up, with NO external
+       dependency (no DB). Gating this on a DB round-trip made deploys time out when
+       the Supabase pgbouncer pool was slow/contended during the old↔new overlap.
+       Returns 503 only while shutting down so Render drains gracefully.
+       Readiness (incl. DB) lives at /readyz. */
     if ((path === "/health" || path === "/healthz") && req.method === "GET") {
+      sendJson(res, isShuttingDown ? 503 : 200, {
+        status: isShuttingDown ? "shutting_down" : "ok",
+        shuttingDown: isShuttingDown,
+        uptimeSeconds: Math.round(process.uptime()),
+        version: process.env.GIT_SHA || process.env.RENDER_GIT_COMMIT || "dev",
+        codeVersion: "2026-05-09-public-listings",
+      });
+      return;
+    }
+
+    /* Readiness probe — includes the DB check (was the old /health behaviour).
+       Use this for uptime/monitoring dashboards, not for the deploy health check. */
+    if (path === "/readyz" && req.method === "GET") {
       const startedAt = Date.now();
       let dbStatus: "connected" | "disconnected" = "disconnected";
       let dbLatencyMs: number | null = null;
@@ -369,15 +424,13 @@ const server = http.createServer(async (req: AuthedRequest, res) => {
       } catch {
         // fall through with disconnected
       }
-      const healthy = dbStatus === "connected" && !isShuttingDown;
-      sendJson(res, healthy ? 200 : 503, {
-        status: healthy ? "ok" : "degraded",
+      const ready = dbStatus === "connected" && !isShuttingDown;
+      sendJson(res, ready ? 200 : 503, {
+        status: ready ? "ready" : "degraded",
         db: dbStatus,
         dbLatencyMs,
         shuttingDown: isShuttingDown,
         uptimeSeconds: Math.round(process.uptime()),
-        version: process.env.GIT_SHA || process.env.RENDER_GIT_COMMIT || "dev",
-        codeVersion: "2026-05-09-public-listings",
         checkedInMs: Date.now() - startedAt,
       });
       return;
@@ -435,6 +488,13 @@ const server = http.createServer(async (req: AuthedRequest, res) => {
       return;
     }
 
+    /* ── Twilio webhook — signature-validated internally, no Supabase session ── */
+    if (path === "/webhooks/twilio/whatsapp" && req.method === "POST") {
+      const handled = await router.dispatch(req, res, path, query, DEFAULT_ORG_ID, prisma);
+      if (!handled) sendError(res, 404, "NOT_FOUND", "Not found");
+      return;
+    }
+
     /* ── Public capture session routes — token-gated internally, no Supabase session ── */
     // These are called by the phone after scanning the QR code. Auth is enforced
     // by the signed JWT embedded in the session token, not by our Supabase auth.
@@ -476,6 +536,11 @@ const BG_JOB_INTERVAL_MS = Number(process.env.BG_JOB_INTERVAL_MS) || 60 * 60 * 1
 const BG_JOBS_ENABLED = process.env.BG_JOBS_ENABLED !== "false"; // enabled by default
 let bgJobTimer: ReturnType<typeof setInterval> | null = null;
 
+// WhatsApp outbox drain runs on a short interval (30s) independent of the hourly
+// background job — replies to tenant messages must arrive in near-real-time.
+const WA_DRAIN_INTERVAL_MS = 30_000;
+let waDrainTimer: ReturnType<typeof setInterval> | null = null;
+
 // Slice 4: Postgres advisory-lock key so only ONE instance runs the scheduler
 // at a time. Protects the deploy-overlap window (old + new instance both live)
 // and any accidental horizontal scale-out. Arbitrary constant unique to this job.
@@ -502,21 +567,46 @@ async function runBackgroundJobsInner() {
   }
 
   try {
-    const invoicesGenerated = await processRecurringBilling(prisma);
-    if (invoicesGenerated > 0) {
-      console.log(`[BG-JOBS] Generated ${invoicesGenerated} recurring invoice(s)`);
-    }
+    await processRecurringBilling(prisma);
   } catch (e) {
     console.error("[BG-JOBS] Recurring billing error:", e);
   }
 
   try {
-    const overdueCount = await processOverdueInvoices(prisma);
-    if (overdueCount > 0) {
-      console.log(`[BG-JOBS] Sent ${overdueCount} overdue invoice notification(s)`);
-    }
+    await processOverdueInvoices(prisma);
   } catch (e) {
     console.error("[BG-JOBS] Overdue invoice error:", e);
+  }
+
+  try {
+    // Compute yesterday's portfolio daily snapshot for all orgs (idempotent — skips if already done)
+    const orgs = await prisma.org.findMany({ select: { id: true } });
+    for (const org of orgs) {
+      await computeAndStoreDailyPortfolioSnapshot(org.id);
+    }
+  } catch (e) {
+    console.error("[BG-JOBS] Daily portfolio snapshot error:", e);
+  }
+
+  try {
+    const buildings = await prisma.building.findMany({ select: { id: true, orgId: true } });
+    for (const b of buildings) {
+      await computeAndStoreDailyBuildingSnapshot(b.orgId, b.id);
+    }
+  } catch (e) {
+    console.error("[BG-JOBS] Daily building snapshot error:", e);
+  }
+
+  // Post straight-line depreciation due (WS-D). Idempotent: only posts when a
+  // new month is due, so a daily run is safe.
+  try {
+    const { runDepreciation } = await import("./services/fixedAssetService");
+    const orgsForDep = await prisma.org.findMany({ select: { id: true } });
+    for (const org of orgsForDep) {
+      await runDepreciation(prisma, org.id);
+    }
+  } catch (e) {
+    console.error("[BG-JOBS] Depreciation run error:", e);
   }
 
   try {
@@ -580,9 +670,6 @@ async function start() {
       process.exit(1);
     }
 
-    const supabaseUrl = process.env.SUPABASE_URL;
-    console.log(`[STARTUP] SUPABASE_URL: ${supabaseUrl ? `set (${supabaseUrl.slice(0, 30)}...)` : "NOT SET — Supabase JWT verification will fail"}`);
-
     await ensureDefaultOrgConfig(prisma);
     await bootstrapLegalEngine(prisma);
     registerEventHandlers(prisma);
@@ -597,6 +684,16 @@ async function start() {
         `[BG-JOBS] Scheduler started (interval: ${BG_JOB_INTERVAL_MS / 1000}s)`,
       );
     }
+
+    /* Start WhatsApp outbox drain (30s — independent of hourly job) */
+    waDrainTimer = setInterval(async () => {
+      try {
+        const sent = await drainWhatsAppOutbox(prisma);
+        if (sent > 0) console.log(`[WA-DRAIN] Sent ${sent} WhatsApp message(s)`);
+      } catch (e) {
+        console.error("[WA-DRAIN] Error:", e);
+      }
+    }, WA_DRAIN_INTERVAL_MS);
   } catch (e) {
     console.error("Failed to start API:", e);
     process.exit(1);
@@ -618,6 +715,7 @@ async function shutdown() {
   hardExit.unref();
 
   if (bgJobTimer) clearInterval(bgJobTimer);
+  if (waDrainTimer) clearInterval(waDrainTimer);
   server.close();
 
   /* Give in-flight requests time to finish */

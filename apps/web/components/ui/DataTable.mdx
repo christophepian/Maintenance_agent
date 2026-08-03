@@ -1,0 +1,71 @@
+import { Meta, Title, Canvas } from "@storybook/addon-docs/blocks";
+import * as DataTableStories from "./DataTable.stories";
+
+<Meta of={DataTableStories} />
+
+<Title />
+
+A thin wrapper for tabular data — pass `columns` + `rows` + a `renderRow`, and it
+handles the header, overflow, and empty state.
+
+```jsx
+import DataTable from "@/components/ui/DataTable";
+
+<DataTable
+  columns={["Unit", "Tenant", "Rent", "Status"]}
+  rows={units}
+  renderRow={(u) => (
+    <tr key={u.id}>
+      <td className="cell-bold">{u.unit}</td>
+      <td>{u.tenant}</td>
+      <td>{u.rent}</td>
+      <td><StatusPill variant={statusVariant(u.status)}>{u.status}</StatusPill></td>
+    </tr>
+  )}
+  empty="No units on this building yet."
+/>
+```
+
+<Canvas of={DataTableStories.Default} />
+
+## ⚠️ Known issue — class mismatch
+
+The component renders `<table class="inline-table …">`, but **all the design-system
+styling lives on `.data-table`** (header band, cell padding, row borders, row
+hover). `inline-table` is just a Tailwind *display* utility, so out of the box the
+table is unstyled.
+
+- **Workaround (used in these stories):** pass `className="data-table"`.
+- **Proper fix:** change the component to emit `data-table` (inside the canonical
+  `.data-table-wrap` where an outer border is wanted) instead of `inline-table`.
+
+## Anatomy
+
+| Prop | Role |
+|---|---|
+| `columns` | Array of header labels → `<th>` cells |
+| `rows` + `renderRow(row, i)` | Data + a function returning a `<tr>` |
+| `children` | Alternative to `rows`/`renderRow` — pass your own `<tbody>` |
+| `empty` | Message shown when `rows` is empty |
+
+Cell helpers (from `.data-table`): `td.cell-bold` for the emphasized first column;
+rows hover to `surface-subtle`.
+
+## Empty state
+
+<Canvas of={DataTableStories.Empty} />
+
+## Do / Don't
+
+- ⛔ **Don't** wrap a data table in a [Card](?path=/docs/ui-card--docs) — it
+  self-borders via `.data-table`.
+- ✅ **Do** drive status cells through `statusVariants.js` +
+  [Badge](?path=/docs/ui-badge--docs) / [StatusPill](?path=/docs/ui-statuspill--docs).
+- ✅ **Do** sort via `lib/tableUtils` (`useLocalSort`) and a `<SortableHeader>`
+  rather than hand-rolled sort logic.
+
+## Accessibility
+
+- Renders a real `<table>` with `<th>` headers — keep headers meaningful.
+- Provide an accessible caption/context where the table isn't self-evident from
+  the surrounding heading.

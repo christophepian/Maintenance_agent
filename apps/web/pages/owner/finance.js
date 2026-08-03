@@ -111,7 +111,7 @@ function HealthDot({ health }) {
   return (
     <span
       title={health}
-      className={cn("inline-block w-2.5 h-2.5 rounded-full shrink-0", HEALTH_DOT_CLASS[health] || "bg-slate-400")}
+      className={cn("inline-block w-2.5 h-2.5 rounded-full shrink-0", HEALTH_DOT_CLASS[health] || "bg-foreground-dim")}
     />
   );
 }
@@ -207,7 +207,7 @@ function OverviewTab() {
   const netAccent = p ? (p.totalNetIncomeCents > 0 ? "green" : p.totalNetIncomeCents < 0 ? "red" : "") : "";
   const sortedBuildings = useMemo(() => clientSort(p?.buildings ?? [], bSF, bSD, (b, f) => {
     if (f === "buildingName") return (b.buildingName || "").toLowerCase();
-    if (f === "earnedIncomeCents") return b.earnedIncomeCents ?? 0;
+    if (f === "collectedIncomeCents") return b.collectedIncomeCents ?? 0;
     if (f === "expensesTotalCents") return b.expensesTotalCents ?? 0;
     if (f === "netIncomeCents") return b.netIncomeCents ?? 0;
     if (f === "collectionRate") return b.collectionRate ?? 0;
@@ -246,7 +246,7 @@ function OverviewTab() {
             <div className="sm:hidden mb-3">
               <KpiInlineGrid
                 items={[
-                  { label: "Earned Income",  value: formatChfCents(p.totalEarnedIncomeCents), tone: "good" },
+                  { label: "Earned Income",  value: formatChfCents(p.totalCollectedIncomeCents), tone: "good" },
                   { label: "Total Expenses", value: formatChfCents(p.totalExpensesCents) },
                   { label: "Net Result",     value: formatChfCents(p.totalNetIncomeCents), tone: p.totalNetIncomeCents >= 0 ? "good" : "warn" },
                   { label: "Receivables",    value: formatChfCents(p.totalReceivablesCents), tone: p.totalReceivablesCents > 0 ? "warn" : undefined },
@@ -256,7 +256,7 @@ function OverviewTab() {
             </div>
             {/* Desktop KPI cards */}
             <div className="hidden sm:grid grid-cols-2 md:grid-cols-5 gap-3">
-              <SummaryCard label={t("owner:finance.prop.earnedIncome")}  value={formatChfCents(p.totalEarnedIncomeCents)} accent="green" />
+              <SummaryCard label={t("owner:finance.prop.earnedIncome")}  value={formatChfCents(p.totalCollectedIncomeCents)} accent="green" />
               <SummaryCard label={t("owner:finance.prop.totalExpenses")} value={formatChfCents(p.totalExpensesCents)} />
               <SummaryCard label={t("owner:finance.prop.netResult")}     value={formatChfCents(p.totalNetIncomeCents)} accent={netAccent} sub="Income − Expenses" />
               <SummaryCard label={t("owner:finance.prop.receivables")}    value={formatChfCents(p.totalReceivablesCents)} accent={p.totalReceivablesCents > 0 ? "amber" : ""} sub="Unpaid rent invoices" />
@@ -279,7 +279,7 @@ function OverviewTab() {
             ) : (
               <>
                 {/* Mobile */}
-                <div className="md:hidden overflow-hidden rounded-lg border border-table-border divide-y divide-table-divider">
+                <div className="md:hidden overflow-hidden rounded-lg border border-surface-border divide-y divide-surface-divider">
                   {(buildingsExpanded ? sortedBuildings : sortedBuildings.slice(0, 5)).map((b) => (
                     <div key={b.buildingId} className="table-card">
                       <div className="flex items-center gap-2">
@@ -297,13 +297,13 @@ function OverviewTab() {
                   ))}
                 </div>
                 {/* Desktop */}
-                <div className="hidden md:block overflow-hidden rounded-lg border border-table-border">
+                <div className="hidden md:block overflow-hidden rounded-lg border border-surface-border">
                   <div className="overflow-x-auto">
                     <table className="data-table">
                       <thead>
                         <tr>
                           <SortableHeader label={t("owner:finance.prop.building")} field="buildingName" sortField={bSF} sortDir={bSD} onSort={handleBSort} />
-                          <SortableHeader label={t("owner:finance.prop.earnedIncome")} field="earnedIncomeCents" sortField={bSF} sortDir={bSD} onSort={handleBSort} className="text-right" />
+                          <SortableHeader label={t("owner:finance.prop.earnedIncome")} field="collectedIncomeCents" sortField={bSF} sortDir={bSD} onSort={handleBSort} className="text-right" />
                           <SortableHeader label={t("owner:finance.prop.expenses")} field="expensesTotalCents" sortField={bSF} sortDir={bSD} onSort={handleBSort} className="text-right" />
                           <SortableHeader label={t("owner:finance.prop.net")} field="netIncomeCents" sortField={bSF} sortDir={bSD} onSort={handleBSort} className="text-right" />
                           <SortableHeader label={t("owner:finance.prop.collection")} field="collectionRate" sortField={bSF} sortDir={bSD} onSort={handleBSort} className="text-right" />
@@ -319,7 +319,7 @@ function OverviewTab() {
                                 <span className="cell-bold">{b.buildingName}</span>
                               </span>
                             </td>
-                            <td className="text-right font-mono">{formatChfCents(b.earnedIncomeCents)}</td>
+                            <td className="text-right font-mono">{formatChfCents(b.collectedIncomeCents)}</td>
                             <td className="text-right font-mono">{formatChfCents(b.expensesTotalCents)}</td>
                             <td className={cn("text-right font-mono font-semibold", b.netIncomeCents >= 0 ? "text-success-text" : "text-destructive-text")}>
                               {formatChfCents(b.netIncomeCents)}
@@ -587,7 +587,7 @@ function InvoicesTab() {
       ) : (
         <>
           {/* Mobile card list */}
-          <div className="sm:hidden overflow-hidden rounded-lg border border-table-border divide-y divide-table-divider">
+          <div className="sm:hidden overflow-hidden rounded-lg border border-surface-border divide-y divide-surface-divider">
             {visibleInvoices.map((inv) => (
               <div
                 key={inv.id}
@@ -757,7 +757,7 @@ function BalanceSheetTab() {
             <div className={cn("px-4 py-2 rounded text-sm font-medium border", isBalanced ? "bg-green-50 text-green-700 border-green-200" : "bg-amber-50 text-amber-700 border-amber-200")}>
               {isBalanced
                 ? `Balance sheet as of ${bsAsOf} — balanced`
-                : `As of ${bsAsOf} — difference: CHF ${formatChfCents(Math.abs(differenceCents))}`}
+                : `As of ${bsAsOf} — difference: ${formatChfCents(Math.abs(differenceCents))}`}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

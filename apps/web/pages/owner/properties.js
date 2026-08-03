@@ -56,7 +56,7 @@ function MonopolyCard({ building, fin, onClick }) {
 
   // Financial metrics — derived from the YTD portfolio-summary slice
   const months = fin?._months ?? 1;
-  const monthlyIncome = fin ? fin.earnedIncomeCents / months : null;
+  const monthlyIncome = fin ? fin.collectedIncomeCents / months : null;
   const monthlyNOI    = fin ? fin.netIncomeCents / months : null;
   const avgRent       = fin && unitCount ? monthlyIncome / unitCount : null;
   const collectionPct = fin ? Math.round(fin.collectionRate * 100) : null;

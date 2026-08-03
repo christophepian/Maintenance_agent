@@ -10,7 +10,7 @@
  * G9: canonical include constants live here.
  */
 
-import { PrismaClient, Prisma, RequestStatus, RequestUrgency, RequestType, ApprovalSource, PayingParty } from "@prisma/client";
+import { PrismaClient, Prisma, RequestStatus, RequestUrgency, RequestType, ApprovalSource, PayingParty, RequestEventType } from "@prisma/client";
 
 // ─── Canonical Includes ────────────────────────────────────────
 
@@ -584,5 +584,60 @@ export async function findDistinctRequestCategories(prisma: PrismaClient) {
   return prisma.request.findMany({
     select: { category: true },
     distinct: ["category"],
+  });
+}
+
+// ─── RequestEvent access (used by requestEventService) ──────────
+
+export async function listRequestEventsByRequestId(
+  prisma: PrismaClient,
+  requestId: string,
+) {
+  return prisma.requestEvent.findMany({
+    where: { requestId },
+    orderBy: { timestamp: "asc" },
+  });
+}
+
+export async function createRequestEventRow(
+  prisma: PrismaClient,
+  data: {
+    requestId: string;
+    contractorId: string;
+    type: RequestEventType;
+    message: string;
+  },
+) {
+  return prisma.requestEvent.create({ data });
+}
+
+// ─── Building KPI counts ───────────────────────────────────────
+
+/** "Open" (actionable) request statuses used for building/portfolio KPI counts. */
+export const OPEN_REQUEST_STATUSES: RequestStatus[] = [
+  RequestStatus.PENDING_REVIEW,
+  RequestStatus.PENDING_OWNER_APPROVAL,
+  RequestStatus.RFP_PENDING,
+  RequestStatus.APPROVED,
+  RequestStatus.ASSIGNED,
+];
+
+/**
+ * Count open requests attributed to a building, scoped by org.
+ * Request has no direct buildingId, so attribution is via the unit relation;
+ * building-level requests without a unit are intentionally excluded to match
+ * the manager building-detail KPI semantics.
+ */
+export async function countOpenRequestsForBuilding(
+  prisma: PrismaClient,
+  orgId: string,
+  buildingId: string,
+): Promise<number> {
+  return prisma.request.count({
+    where: {
+      orgId,
+      status: { in: OPEN_REQUEST_STATUSES },
+      unit: { buildingId },
+    },
   });
 }

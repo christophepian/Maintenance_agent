@@ -182,7 +182,7 @@ export async function postInvoiceIssued(
       findAccountByCode(prisma, orgId, "3200"),
     ]);
     if (!debtorAcc || !revenueAcc) {
-      console.warn(`[LEDGER] Skipping INVOICE_ISSUED posting for ${invoice.id} — accounts 1100/3200 not seeded`);
+      console.error(`[LEDGER] Skipping INVOICE_ISSUED posting for ${invoice.id} — accounts 1100/3200 not seeded. Run POST /api/coa/seed to fix.`);
       return null;
     }
     return postJournalEntries(prisma, orgId, [
@@ -231,7 +231,7 @@ export async function postInvoicePaid(
       findAccountByCode(prisma, orgId, "1100"),
     ]);
     if (!bankAcc || !debtorAcc) {
-      console.warn(`[LEDGER] Skipping INVOICE_PAID posting for ${invoice.id} — accounts 1020/1100 not seeded`);
+      console.error(`[LEDGER] Skipping INVOICE_PAID posting for ${invoice.id} — accounts 1020/1100 not seeded. Run POST /api/coa/seed to fix.`);
       return null;
     }
     return postJournalEntries(prisma, orgId, [

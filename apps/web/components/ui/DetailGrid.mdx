@@ -1,0 +1,41 @@
+import { Meta, Title, Canvas } from "@storybook/addon-docs/blocks";
+import * as DetailGridStories from "./DetailGrid.stories";
+
+<Meta of={DetailGridStories} />
+
+<Title />
+
+A responsive grid of label/value pairs — the standard way to lay out an object's
+attributes on a detail page.
+
+```jsx
+import { DetailGrid, DetailItem } from "@/components/ui/DetailGrid";
+
+<DetailGrid>
+  <DetailItem label="Status"><Badge variant="success">Occupied</Badge></DetailItem>
+  <DetailItem label="Units">24</DetailItem>
+  <DetailItem label="Monthly rent" valueClassName="font-semibold">CHF 34,300</DetailItem>
+</DetailGrid>
+```
+
+<Canvas of={DetailGridStories.Default} />
+
+## Anatomy
+
+| Part | Role |
+|---|---|
+| `DetailGrid` | Grid wrapper — default `grid-cols-2 md:grid-cols-4`; override via `cols` |
+| `DetailItem` | One cell — muted `label` above the value; `valueClassName` for emphasis |
+
+## When to use
+
+- ✅ **Use DetailGrid** for scannable attribute grids on wide detail pages.
+- For a narrow column (sidebar, card), use
+  [DetailList](?path=/docs/ui-detaillist--docs) — a vertical key/value list.
+- Values can be anything — text, a `Badge`, a formatted amount.
+
+## Do / Don't
+
+- ✅ **Do** format values with `lib/format.js`.
+- ✅ **Do** set `cols` when the default 2/4 grid doesn't fit the content.
+- ⛔ **Don't** use it as a general layout grid — it's specifically label/value pairs.

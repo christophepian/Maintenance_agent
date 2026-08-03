@@ -24,7 +24,7 @@ Full-stack Swiss property management platform. Monorepo with Node.js + TypeScrip
 |-|-|
 | Backend | Raw `http.createServer()` — no Express/NestJS. Port 3001. |
 | Frontend | Next.js Pages Router. Port 3000. |
-| Database | PostgreSQL 16 via Docker. Prisma ORM. 74 models · 67 enums · 99 migrations. |
+| Database | PostgreSQL 16 via Docker. Prisma ORM. 99 models · 82 enums · 137 migrations. |
 | Auth | JWT-based. Role enum: MANAGER, CONTRACTOR, TENANT, OWNER. |
 | Personas | Manager · Contractor · Tenant · Owner |
 
@@ -126,12 +126,12 @@ Maintenance_Agent/
 │   ├── routes/          # Thin HTTP handlers
 │   ├── workflows/       # Orchestration + domain events
 │   ├── services/        # Domain logic
-│   ├── repositories/    # Prisma access + canonical includes (41 repos)
+│   ├── repositories/    # Prisma access + canonical includes (56 repos)
 │   ├── events/          # Domain event bus
 │   └── governance/      # Org scoping + authz
 ├── apps/api/prisma/
-│   ├── schema.prisma    # 74 models · 67 enums
-│   └── migrations/      # 99 dirs — never edit past migrations
+│   ├── schema.prisma    # 99 models · 82 enums
+│   └── migrations/      # 124 dirs — never edit past migrations
 ├── apps/web/pages/      # 332 pages (88 UI + 200 API proxies)
 ├── apps/web/components/ui/  # 10 CVA + 7 presentational components (Button, Badge, ResourceShell, DetailGrid, Modal, etc.)
 ├── apps/web/lib/
@@ -145,7 +145,7 @@ Maintenance_Agent/
 ├── infra/               # Docker — PostgreSQL 16
 ├── docs/
 │   ├── blueprint.html   # Live architecture blueprint
-│   ├── AUDIT.md         # 94 findings · 91 resolved
+│   ├── AUDIT.md         # 105 findings · 102 resolved
 │   └── FRONTEND_INVENTORY.md
 └── .github/
     └── copilot-instructions.md  # This file
@@ -155,15 +155,15 @@ Maintenance_Agent/
 
 ## Known Open Issues (check `docs/AUDIT.md` for full list)
 
-- **94 findings total, 91 resolved, 3 remaining** (SI-2/3/4 schema doc drift, TC-11 partial)
-- **Multi-org** — `Request` has no `orgId`; `DEFAULT_ORG_ID` still in `authz.ts` fallback (dev only)
+- **105 findings total, 102 resolved, 3 open** (SI-2/3/4 schema doc drift, TC-11 partial)
+- **Multi-org** — `Request` now has a direct `orgId`; `DEFAULT_ORG_ID` still in `authz.ts` fallback (dev only)
 - **Legal DSL** — `LegalVariable` values not wired into DSL condition evaluation
 
 ---
 
 ## Key Schema Gotchas
 
-- `Request` — no `orgId` (scoped via unit→building FK chain)
+- `Request` — has a direct `orgId` column (DT-114); scope via `requestOrgScopeWhere(orgId)`. `Request.unitId` is nullable (building-level COMPLAINT/ADMINISTRATIVE requests)
 - `Job` — no `description` (use `Request.description`)
 - `Appliance` — no `category` (lives on `AssetModel`)
 - `Job.contractorId` — required, not optional

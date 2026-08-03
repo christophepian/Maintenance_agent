@@ -1,0 +1,63 @@
+import { Meta, Title, Canvas } from "@storybook/addon-docs/blocks";
+import * as DialogStories from "./Dialog.stories";
+
+<Meta of={DialogStories} />
+
+<Title />
+
+A modal dialog built on **Radix** (`@radix-ui/react-dialog`) — focus trap, `Esc`
+to close, scroll-lock, and correct ARIA roles all handled for you. This is the
+**canonical** overlay; prefer it over the legacy [Modal](?path=/docs/ui-modal--docs).
+
+```jsx
+import { Dialog, DialogTrigger, DialogContent, DialogHeader } from "@/components/ui/Dialog";
+import { ModalFooter } from "@/components/ui/Modal";
+
+<Dialog open={open} onOpenChange={setOpen}>
+  <DialogTrigger><Button>Open</Button></DialogTrigger>
+  <DialogContent maxWidth="max-w-lg">
+    <DialogHeader title="Confirm lease termination" />
+    …body…
+    <ModalFooter>…actions…</ModalFooter>
+  </DialogContent>
+</Dialog>
+```
+
+## Anatomy
+
+| Part | Role |
+|---|---|
+| `Dialog` | Root — controlled via `open` / `onOpenChange` |
+| `DialogTrigger` | Wraps the opener (`asChild`, so it uses your `<Button>`) |
+| `DialogContent` | The panel — centered, `max-h-[90vh]`, scrollable; sized via `maxWidth` |
+| `DialogHeader` | Title row + a built-in close `×` |
+
+## Live
+
+Click to open — focus moves into the dialog and returns to the trigger on close.
+(See also the **Open By Default** story.)
+
+<Canvas of={DialogStories.Default} />
+
+## Sizes
+
+Set `maxWidth` with a Tailwind max-width class — `max-w-md` / `max-w-lg` (default)
+for confirmations and forms, `max-w-2xl`+ for documents and tables.
+
+## When to use
+
+- ✅ **Use a Dialog** for focused tasks that interrupt the flow — confirmations,
+  short forms, destructive confirms.
+- ⛔ **Don't** nest dialogs, and don't use one for content that belongs on its own
+  page.
+- For lightweight menus / secondary content anchored to a trigger, use
+  [Popover](?path=/docs/ui-popover--docs) instead.
+
+## Accessibility
+
+- Radix provides the focus trap, `Esc`-to-close, `aria-modal`, and focus return —
+  don't reimplement these.
+- Always render a `DialogHeader` (or set an accessible title) so the dialog has an
+  accessible name.
+- Destructive confirmations: make the destructive button explicit
+  (`variant="destructive"`) and keep Cancel first.

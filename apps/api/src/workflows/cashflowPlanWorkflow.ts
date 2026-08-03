@@ -32,6 +32,10 @@ export interface CreatePlanInput {
   incomeGrowthRatePct?: number;
   openingBalanceCents?: bigint | null;
   horizonMonths?: number;
+  discountRatePct?: number;
+  capRatePct?: number;
+  deferYears?: number;
+  propertyValueChf?: number | null;
 }
 
 export interface UpdatePlanInput {
@@ -39,6 +43,10 @@ export interface UpdatePlanInput {
   name?: string;
   incomeGrowthRatePct?: number;
   openingBalanceCents?: bigint | null;
+  discountRatePct?: number;
+  capRatePct?: number;
+  deferYears?: number;
+  propertyValueChf?: number | null;
 }
 
 export interface AddOverrideInput {
@@ -46,6 +54,11 @@ export interface AddOverrideInput {
   assetId: string;
   originalYear: number;
   overriddenYear: number;
+  costChf?: number | null;
+  rentUpliftChfPerMonth?: number | null;
+  riskAvoidedChfPerYear?: number | null;
+  vacancyDays?: number | null;
+  oblfPassthroughPct?: number | null;
 }
 
 export interface RemoveOverrideInput {
@@ -72,6 +85,10 @@ export async function createPlanWorkflow(
     incomeGrowthRatePct: input.incomeGrowthRatePct,
     openingBalanceCents: input.openingBalanceCents,
     horizonMonths: input.horizonMonths,
+    discountRatePct: input.discountRatePct,
+    capRatePct: input.capRatePct,
+    deferYears: input.deferYears,
+    propertyValueChf: input.propertyValueChf,
   });
 
   emit<"CASHFLOW_PLAN_CREATED">({
@@ -136,6 +153,11 @@ export async function addOverrideWorkflow(
     assetId: input.assetId,
     originalYear: input.originalYear,
     overriddenYear: input.overriddenYear,
+    costChf: input.costChf,
+    rentUpliftChfPerMonth: input.rentUpliftChfPerMonth,
+    riskAvoidedChfPerYear: input.riskAvoidedChfPerYear,
+    vacancyDays: input.vacancyDays,
+    oblfPassthroughPct: input.oblfPassthroughPct,
   });
   if (!override) {
     throw Object.assign(new Error("CashflowPlan not found"), { code: "NOT_FOUND" });

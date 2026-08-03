@@ -37,7 +37,7 @@ describe('G10: API Contract Tests', () => {
 
   beforeAll(async () => {
     proc = await startTestServer(PORT, { AUTH_OPTIONAL: "true", NODE_ENV: "test" });
-  }, 20000);
+  }, 60000); // cold ts-node server spawn on CI can exceed 20 s
 
   afterAll(() => stopTestServer(proc));
   // ── Requests ──
@@ -366,8 +366,8 @@ describe('G10: API Contract Tests', () => {
         'buildingName',
         'from',
         'to',
-        'earnedIncomeCents',
-        'projectedIncomeCents',
+        'collectedIncomeCents',
+        'accruedIncomeCents',
         'expensesTotalCents',
         'maintenanceTotalCents',
         'capexTotalCents',
@@ -380,12 +380,14 @@ describe('G10: API Contract Tests', () => {
         'activeUnitsCount',
         'expensesByCategory',
         'topContractorsBySpend',
+        'source',
       ], 'BuildingFinancialsDTO');
+      expect(['operational', 'imported']).toContain(dto.source);
 
       // All numeric totals must be numbers (never undefined/null)
       for (const key of [
-        'earnedIncomeCents',
-        'projectedIncomeCents',
+        'collectedIncomeCents',
+        'accruedIncomeCents',
         'expensesTotalCents',
         'maintenanceTotalCents',
         'capexTotalCents',
@@ -435,6 +437,87 @@ describe('G10: API Contract Tests', () => {
         `${API_BASE}/buildings/00000000-0000-0000-0000-000000000000/financials?from=2025-01-01&to=2026-01-01`,
       );
       expect(res.status).toBe(404);
+    });
+  });
+
+  describe('GET /buildings/:id/kpis', () => {
+    it('returns BuildingKpisDTO with integer open counts', async () => {
+      const buildings = await fetchJson('/buildings?limit=1');
+      if (buildings.data.length === 0) {
+        console.log('⚠️  Skipping kpis test: no buildings in database');
+        return;
+      }
+      const buildingId = buildings.data[0].id;
+      const body = await fetchJson(`/buildings/${buildingId}/kpis`);
+
+      expect(body).toHaveProperty('data');
+      const dto = body.data;
+      expectKeys(dto, ['openRequests', 'openJobs'], 'BuildingKpisDTO');
+      expect(Number.isInteger(dto.openRequests)).toBe(true);
+      expect(Number.isInteger(dto.openJobs)).toBe(true);
+      expect(dto.openRequests).toBeGreaterThanOrEqual(0);
+      expect(dto.openJobs).toBeGreaterThanOrEqual(0);
+    });
+
+    it('returns 404 for non-existent building', async () => {
+      const res = await fetch(
+        `${API_BASE}/buildings/00000000-0000-0000-0000-000000000000/kpis`,
+      );
+      expect(res.status).toBe(404);
+    });
+  });
+
+  describe('GET /financials/portfolio-timeseries', () => {
+    it('returns PortfolioTimeSeriesDTO with points array and range', async () => {
+      const body = await fetchJson('/financials/portfolio-timeseries?range=1Y');
+      expect(body).toHaveProperty('data');
+      const dto = body.data;
+      expectKeys(dto, ['range', 'points'], 'PortfolioTimeSeriesDTO');
+      expect(dto.range).toBe('1Y');
+      expect(Array.isArray(dto.points)).toBe(true);
+      if (dto.points.length > 0) {
+        const pt = dto.points[0];
+        expectKeys(pt, [
+          'periodStart', 'periodEnd', 'label',
+          'noiCents', 'collectedIncomeCents', 'expensesCents', 'collectionRate',
+        ], 'TimeSeriesPoint');
+        expect(typeof pt.noiCents).toBe('number');
+        expect(typeof pt.collectionRate).toBe('number');
+      }
+    }, 60000);
+
+    it('returns 400 for invalid range', async () => {
+      const res = await fetch(`${API_BASE}/financials/portfolio-timeseries?range=INVALID`);
+      expect(res.status).toBe(400);
+    });
+  });
+
+  describe('GET /buildings/:id/timeseries', () => {
+    it('returns BuildingTimeSeriesDTO with points array and range', async () => {
+      const buildings = await fetchJson('/buildings?limit=1');
+      if (!buildings.data?.length) return;
+      const buildingId = buildings.data[0].id;
+      const body = await fetchJson(`/buildings/${buildingId}/timeseries?range=1Y`);
+      expect(body).toHaveProperty('data');
+      const dto = body.data;
+      expectKeys(dto, ['buildingId', 'range', 'points'], 'BuildingTimeSeriesDTO');
+      expect(dto.range).toBe('1Y');
+      expect(Array.isArray(dto.points)).toBe(true);
+      if (dto.points.length > 0) {
+        const pt = dto.points[0];
+        expectKeys(pt, [
+          'periodStart', 'periodEnd', 'label',
+          'noiCents', 'collectedIncomeCents', 'expensesCents', 'collectionRate',
+        ], 'TimeSeriesPoint');
+      }
+    });
+
+    it('returns 400 for invalid range', async () => {
+      const buildings = await fetchJson('/buildings?limit=1');
+      if (!buildings.data?.length) return;
+      const buildingId = buildings.data[0].id;
+      const res = await fetch(`${API_BASE}/buildings/${buildingId}/timeseries?range=INVALID`);
+      expect(res.status).toBe(400);
     });
   });
 
@@ -641,7 +724,7 @@ describe('G10: API Contract Tests', () => {
       expect(Array.isArray(cashflow.buckets)).toBe(true);
       if (cashflow.buckets.length > 0) {
         const bucket = cashflow.buckets[0];
-        expectKeys(bucket, ['year', 'month', 'isActual', 'projectedIncomeCents', 'projectedOpexCents', 'scheduledCapexCents', 'netCents', 'cumulativeBalanceCents'], 'MonthlyBucket');
+        expectKeys(bucket, ['year', 'month', 'isActual', 'accruedIncomeCents', 'projectedOpexCents', 'scheduledCapexCents', 'netCents', 'cumulativeBalanceCents'], 'MonthlyBucket');
       }
     });
   });
@@ -800,5 +883,344 @@ describe('G10: API Contract Tests', () => {
       const res = await fetch(`${API_BASE}/tenant/conversation/history`);
       expect(res.status).toBe(401);
     });
+  });
+
+  // ── Inventory CSV import (buildings & units) ──
+  describe('Inventory CSV import', () => {
+    it('uploads → previews → commits a buildings CSV with the expected DTO shape', async () => {
+      const uniq = `CSVTest ${Date.now()}`;
+      const csv = `name,address,yearBuilt,hasElevator\n${uniq},Rue du Test 1,1990,true\n,,,\n`;
+      const form = new FormData();
+      form.append('file', new Blob([csv], { type: 'text/csv' }), 'buildings.csv');
+      form.append('entityType', 'BUILDING');
+
+      const uploadRes = await fetch(`${API_BASE}/imports/inventory`, { method: 'POST', body: form });
+      expect(uploadRes.status).toBe(201);
+      const { data: batch } = await uploadRes.json();
+      expectKeys(
+        batch,
+        ['id', 'entityType', 'fileName', 'status', 'rowCount', 'validCount', 'errorCount', 'createdAt', 'rows'],
+        'ImportBatch',
+      );
+      expect(batch.entityType).toBe('BUILDING');
+      expect(batch.status).toBe('PENDING_REVIEW');
+      expect(batch.validCount).toBe(1); // blank row skipped
+      expect(Array.isArray(batch.rows)).toBe(true);
+      const row = batch.rows[0];
+      expectKeys(row, ['id', 'rowIndex', 'status', 'errorMessage', 'createdEntityId', 'data'], 'ImportRow');
+      expect(row.status).toBe('VALID');
+
+      // list
+      const listRes = await fetch(`${API_BASE}/imports/inventory?entityType=BUILDING&limit=5`);
+      expect(listRes.status).toBe(200);
+      const listBody = await listRes.json();
+      expect(Array.isArray(listBody.data)).toBe(true);
+      expect(listBody).toHaveProperty('pagination');
+
+      // commit
+      const commitRes = await fetch(`${API_BASE}/imports/inventory/${batch.id}/commit`, { method: 'POST' });
+      expect(commitRes.status).toBe(200);
+      const { data: result } = await commitRes.json();
+      expectKeys(result, ['batch', 'committed', 'errors'], 'CommitResult');
+      expect(result.committed).toBe(1);
+      expect(result.batch.status).toBe('COMMITTED');
+      const committedRow = result.batch.rows.find((r: any) => r.status === 'COMMITTED');
+      expect(committedRow).toBeTruthy();
+      expect(committedRow.createdEntityId).toBeTruthy();
+    }, 30000);
+
+    it('rejects an unknown entityType', async () => {
+      const form = new FormData();
+      form.append('file', new Blob(['name\nFoo'], { type: 'text/csv' }), 'x.csv');
+      form.append('entityType', 'WIDGET');
+      const res = await fetch(`${API_BASE}/imports/inventory`, { method: 'POST', body: form });
+      expect(res.status).toBe(400);
+    });
+  });
+
+  // ── Building onboarding preview (rent roll) ──
+  describe('Building onboarding preview', () => {
+    it('previews Units/Tenants/Leases from a rent roll with the expected DTO shape', async () => {
+      const buildings = await fetchJson('/buildings?limit=1');
+      if (!Array.isArray(buildings.data) || buildings.data.length === 0) {
+        console.log('⚠️  Skipping onboarding preview test: no buildings');
+        return;
+      }
+      const buildingId = buildings.data[0].id;
+      const csv =
+        'objet\tlocataire_principal\ttype_objet\tetage\tpieces\tm2\tentree\tsortie\tloyer_net_mensuel_chf\tcharges_acompte_chf\n' +
+        '531100.01.0001\tJACCARD Jacques-Henri\tAppartement\trez\t4.5\t96\t01.12.2016\t\t2646\t190\n' +
+        '531100.01.9001\tJACCARD Jacques-Henri\tGarage\trez\t\t0\t01.12.2016\t\t150\t0\n' +
+        '531100.01.9003\tVacant\tGarage\trez\t\t0\t01.06.2020\t\t280\t0\n' +
+        'Total\t\t\t\t\t\t\t\t\t\n';
+      const form = new FormData();
+      form.append('file', new Blob([csv], { type: 'text/csv' }), 'rentroll.csv');
+
+      const res = await fetch(`${API_BASE}/buildings/${buildingId}/onboarding/preview`, { method: 'POST', body: form });
+      expect(res.status).toBe(200);
+      const { data } = await res.json();
+      expectKeys(data, ['buildingId', 'buildingName', 'summary', 'units', 'warnings'], 'OnboardingPreviewDTO');
+      expectKeys(data.summary, ['totalObjects', 'apartments', 'garages', 'vacant', 'tenants', 'leases', 'annualNetRentChf', 'matchedExistingUnits'], 'summary');
+      expect(data.summary.totalObjects).toBe(3); // Total row dropped
+      expect(data.summary.apartments).toBe(1);
+      expect(data.summary.garages).toBe(2);
+      expect(data.summary.vacant).toBe(1);
+      // the garage is linked to the apartment (same tenant)
+      const garage = data.units.find((u: any) => u.objet === '531100.01.9001');
+      expect(garage.linkedApartmentObjet).toBe('531100.01.0001');
+      // annual net rent = (2646 + 150) × 12
+      expect(data.summary.annualNetRentChf).toBe((2646 + 150) * 12);
+    }, 30000);
+
+    it('404s for an unknown building', async () => {
+      const form = new FormData();
+      form.append('file', new Blob(['objet\n531100.01.0001'], { type: 'text/csv' }), 'r.csv');
+      const res = await fetch(`${API_BASE}/buildings/00000000-0000-0000-0000-000000000000/onboarding/preview`, { method: 'POST', body: form });
+      expect(res.status).toBe(404);
+    });
+
+    it('matches an existing unit by floor + net rent across different numbering', async () => {
+      // Fresh building + one existing unit "RdC" (rez, net rent 2646) — the older-style numbering.
+      const cr = await fetch(`${API_BASE}/buildings`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-dev-role': 'MANAGER' },
+        body: JSON.stringify({ name: `Match Test ${Date.now()}` }),
+      });
+      const buildingId = (await cr.json()).data.id;
+      const ur = await fetch(`${API_BASE}/buildings/${buildingId}/units`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-dev-role': 'MANAGER' },
+        body: JSON.stringify({ unitNumber: 'RdC', floor: 'Rez de Chaussée', type: 'RESIDENTIAL' }),
+      });
+      const unit = (await ur.json()).data ?? (await ur.json());
+      // set its net rent so floor+rent matching can key on it
+      await fetch(`${API_BASE}/units/${unit.id}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json', 'x-dev-role': 'MANAGER' },
+        body: JSON.stringify({ monthlyRentChf: 2646 }),
+      });
+
+      // rent roll uses a different number (0001, rez-de-chaussée, net 2646) → should match "RdC"
+      const csv = 'objet\tlocataire_principal\ttype_objet\tetage\tloyer_net_mensuel_chf\n531100.01.0001\tJACCARD\tAppartement\trez-de-chaussée\t2646\n';
+      const form = new FormData();
+      form.append('file', new Blob([csv], { type: 'text/csv' }), 'r.csv');
+      const res = await fetch(`${API_BASE}/buildings/${buildingId}/onboarding/preview`, { method: 'POST', body: form });
+      expect(res.status).toBe(200);
+      const { data } = await res.json();
+      const obj = data.units.find((u: any) => u.objet === '531100.01.0001');
+      expect(obj.matchedUnitNumber).toBe('RdC'); // matched the existing unit, not a new one
+      expect(data.summary.matchedExistingUnits).toBe(1);
+    }, 30000);
+  });
+
+  // ── Building onboarding commit (snapshot mode — no billing side effects) ──
+  describe('Building onboarding commit', () => {
+    const RENT_ROLL =
+      'objet\tlocataire_principal\ttype_objet\tm2\tentree\tloyer_net_mensuel_chf\n' +
+      '531100.01.0001\tJACCARD Jacques-Henri\tAppartement\t96\t01.12.2016\t2646\n' +
+      '531100.01.9001\tJACCARD Jacques-Henri\tGarage\t0\t01.12.2016\t150\n' +
+      '531100.01.9003\tVacant\tGarage\t0\t01.06.2020\t280\n' +
+      'Total\t\t\t\t\t\n';
+
+    it('creates Units/Tenants/Leases for a fresh building (snapshot)', async () => {
+      // Fresh, empty building so onboarding isn't blocked.
+      const created = await fetch(`${API_BASE}/buildings`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-dev-role': 'MANAGER' },
+        body: JSON.stringify({ name: `Onboarding Test ${Date.now()}` }),
+      });
+      expect(created.status).toBe(201);
+      const cb = await created.json();
+      const buildingId = cb?.data?.id ?? cb?.id;
+      expect(buildingId).toBeTruthy();
+
+      const form = new FormData();
+      form.append('file', new Blob([RENT_ROLL], { type: 'text/csv' }), 'rentroll.csv');
+      form.append('billingMode', 'snapshot');
+      const res = await fetch(`${API_BASE}/buildings/${buildingId}/onboarding/commit`, {
+        method: 'POST',
+        headers: { 'x-dev-role': 'MANAGER' },
+        body: form,
+      });
+      expect(res.status).toBe(201);
+      const { data } = await res.json();
+      expectKeys(data, ['buildingId', 'billingMode', 'created', 'skippedExistingUnits', 'errors'], 'OnboardingCommitResult');
+      expect(data.billingMode).toBe('snapshot');
+      expect(data.created.units).toBe(3); // 1 apartment + 2 garages
+      expect(data.created.tenants).toBe(1); // JACCARD (occupies apt + garage); 9003 vacant
+      expect(data.created.leases).toBe(2); // apt + occupied garage (both have rent)
+      expect(data.created.activated).toBe(0); // snapshot — no billing
+      expect(data.skippedExistingUnits).toBe(0);
+      expect(data.errors).toEqual([]);
+
+      // A second commit MERGES: all units already exist → nothing new created.
+      const form2 = new FormData();
+      form2.append('file', new Blob([RENT_ROLL], { type: 'text/csv' }), 'rentroll.csv');
+      form2.append('billingMode', 'snapshot');
+      const res2 = await fetch(`${API_BASE}/buildings/${buildingId}/onboarding/commit`, {
+        method: 'POST', headers: { 'x-dev-role': 'MANAGER' }, body: form2,
+      });
+      expect(res2.status).toBe(201);
+      const { data: data2 } = await res2.json();
+      expect(data2.created.units).toBe(0); // no duplicates
+      expect(data2.created.leases).toBe(0); // existing active/draft leases not duplicated
+      expect(data2.skippedExistingUnits).toBe(3);
+    }, 30000);
+
+    it('rejects a bad billingMode', async () => {
+      const buildings = await fetchJson('/buildings?limit=1');
+      if (!buildings.data?.length) return;
+      const form = new FormData();
+      form.append('file', new Blob(['objet\n531100.01.0001'], { type: 'text/csv' }), 'r.csv');
+      form.append('billingMode', 'nope');
+      const res = await fetch(`${API_BASE}/buildings/${buildings.data[0].id}/onboarding/commit`, {
+        method: 'POST', headers: { 'x-dev-role': 'MANAGER' }, body: form,
+      });
+      expect(res.status).toBe(400);
+    });
+  });
+
+  // ── Contractor-invoice onboarding from a régie general ledger ──
+  describe('Invoice onboarding (general ledger)', () => {
+    const LEDGER =
+      'groupe\tcompte\tlibelle_compte\tdate_valeur\tno_piece\ttexte_ecriture\tmontant_chf\n' +
+      '3000\t30000\tLoyer net\t01.01.2025\t\t\t-13556\n' + // revenue → skipped
+      '4110\t41100\tEntretien de l’immeuble\t21.05.2025\t1073348\tG. BURGOS Sàrl / Infiltration\t2964\n' +
+      '4120\t41200\tEntretien des appartements\t17.01.2025\t1065720\t531100.01.0001: DVM Carrelage / Muret\t451\n' +
+      '4600\t46000\tHonoraires de gestion\t31.01.2025\t48700\tRILSA SA / Honoraires\t609.95\n' + // mgmt fee → skipped
+      '6900\t69000\tImpôts et taxes\t01.12.2025\t1087133\tCOMMUNE DE LUTRY / Impôt foncier\t1957.9\n';
+
+    it('previews contractor invoices with the expected DTO shape', async () => {
+      const buildings = await fetchJson('/buildings?limit=1');
+      if (!buildings.data?.length) { console.log('⚠️  Skipping invoice onboarding preview: no buildings'); return; }
+      const form = new FormData();
+      form.append('file', new Blob([LEDGER], { type: 'text/csv' }), 'gl.csv');
+      const res = await fetch(`${API_BASE}/buildings/${buildings.data[0].id}/onboarding/invoices/preview`, {
+        method: 'POST', headers: { 'x-dev-role': 'MANAGER' }, body: form,
+      });
+      expect(res.status).toBe(200);
+      const { data } = await res.json();
+      expectKeys(data, ['buildingId', 'buildingName', 'summary', 'invoices', 'warnings'], 'InvoiceOnboardingPreviewDTO');
+      expectKeys(data.summary, ['total', 'newInvoices', 'alreadyImported', 'unitAttributed', 'totalChf', 'byAccount'], 'summary');
+      expect(data.summary.total).toBe(3); // BURGOS + DVM + COMMUNE; rent + mgmt fee skipped
+      const line = data.invoices[0];
+      expectKeys(line, ['compte', 'accountName', 'noPiece', 'vendorName', 'description', 'amountChf', 'unitNumber', 'matchedUnitNumber', 'alreadyImported'], 'InvoiceOnboardingPreviewLineDTO');
+    }, 30000);
+
+    it('commits invoices to a fresh building and is idempotent on re-commit', async () => {
+      const created = await fetch(`${API_BASE}/buildings`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-dev-role': 'MANAGER' },
+        body: JSON.stringify({ name: `Invoice Onboarding ${Date.now()}` }),
+      });
+      const buildingId = (await created.json()).data.id;
+
+      const form = new FormData();
+      form.append('file', new Blob([LEDGER], { type: 'text/csv' }), 'gl.csv');
+      const res = await fetch(`${API_BASE}/buildings/${buildingId}/onboarding/invoices/commit`, {
+        method: 'POST', headers: { 'x-dev-role': 'MANAGER' }, body: form,
+      });
+      expect(res.status).toBe(201);
+      const { data } = await res.json();
+      expectKeys(data, ['buildingId', 'created', 'vendorsLinked', 'reversedLedgerEntries', 'skippedAlreadyImported', 'errors'], 'InvoiceOnboardingCommitResult');
+      expect(data.created).toBe(3);
+      expect(data.vendorsLinked).toBe(3); // each invoice linked to a deduped vendor
+      expect(data.skippedAlreadyImported).toBe(0);
+
+      // Second commit skips everything already imported (piece-number idempotency).
+      const form2 = new FormData();
+      form2.append('file', new Blob([LEDGER], { type: 'text/csv' }), 'gl.csv');
+      const res2 = await fetch(`${API_BASE}/buildings/${buildingId}/onboarding/invoices/commit`, {
+        method: 'POST', headers: { 'x-dev-role': 'MANAGER' }, body: form2,
+      });
+      expect(res2.status).toBe(201);
+      const { data: data2 } = await res2.json();
+      expect(data2.created).toBe(0);
+      expect(data2.skippedAlreadyImported).toBe(3);
+
+      // Vendor-spend reporting reflects the imported invoices (reference-only).
+      const vs = await fetch(`${API_BASE}/buildings/${buildingId}/vendor-spend?from=2025-01-01&to=2025-12-31`, {
+        headers: { 'x-dev-role': 'MANAGER' },
+      });
+      expect(vs.status).toBe(200);
+      const { data: vsData } = await vs.json();
+      expect(Array.isArray(vsData)).toBe(true);
+      expect(vsData.length).toBe(3);
+      expectKeys(vsData[0], ['contractorId', 'vendorName', 'totalCents', 'invoiceCount'], 'VendorSpendDTO');
+      // sorted by spend desc — COMMUNE DE LUTRY (1957.90) is the largest
+      expect(vsData[0].totalCents).toBeGreaterThanOrEqual(vsData[1].totalCents);
+
+      // Expense breakdown splits the same spend by month → vendor + account.
+      const eb = await fetch(`${API_BASE}/buildings/${buildingId}/expense-breakdown?from=2025-01-01&to=2025-12-31`, {
+        headers: { 'x-dev-role': 'MANAGER' },
+      });
+      expect(eb.status).toBe(200);
+      const { data: ebData } = await eb.json();
+      expect(Array.isArray(ebData)).toBe(true);
+      expect(ebData.length).toBeGreaterThan(0);
+      expectKeys(ebData[0], ['month', 'totalCents', 'vendors', 'accounts'], 'ExpenseBreakdownMonthDTO');
+      expect(ebData[0].month).toMatch(/^\d{4}-\d{2}$/);
+      expectKeys(ebData[0].vendors[0], ['contractorId', 'vendorName', 'totalCents', 'invoiceCount'], 'ExpenseBreakdownVendorDTO');
+      // Months are chronological; the total across months ties to the vendor-spend grand total.
+      const ebGrand = ebData.reduce((s: number, m: any) => s + m.totalCents, 0);
+      const vsGrand = vsData.reduce((s: number, v: any) => s + v.totalCents, 0);
+      expect(ebGrand).toBe(vsGrand);
+    }, 30000);
+  });
+
+  // ── Whole-package onboarding (detect + reconcile) ──
+  describe('Package onboarding', () => {
+    const RENT_ROLL = 'objet\tlocataire_principal\ttype_objet\tloyer_net_mensuel_chf\n531100.01.0001\tJACCARD\tAppartement\t2646\n';
+    const LEDGER = 'groupe\tcompte\tlibelle_compte\tdate_valeur\tno_piece\ttexte_ecriture\tmontant_chf\n4110\t41100\tEntretien\t21.05.2025\t1073348\tBURGOS / Infiltration\t2964\n3000\t30000\tLoyer net\t01.01.2025\t\t\t-2646\n';
+    // Includes the document's own stated section totals (total_section rows) so it
+    // reconciles → GREEN → auto-approves under graduated autonomy. Without them a
+    // statement is UNVERIFIED → AMBER → held for review (see computeConfidenceTier).
+    const INCOME = 'section\tcompte\tdesignation\tmontant_chf\ttype\nProduits\t30000\tLoyer net\t-2646\tcompte\nCharges\t41100\tEntretien\t2964\tcompte\nProduits\t\tTotal Produits\t-2646\ttotal_section\nCharges\t\tTotal Charges\t2964\ttotal_section\n';
+
+    it('detects each file, reconciles, and reports the expected DTO shape', async () => {
+      const buildings = await fetchJson('/buildings?limit=1');
+      if (!buildings.data?.length) { console.log('⚠️  Skipping package analyze: no buildings'); return; }
+      const form = new FormData();
+      form.append('file', new Blob([RENT_ROLL], { type: 'text/csv' }), 'rentroll.csv');
+      form.append('file', new Blob([LEDGER], { type: 'text/csv' }), 'grandlivre.csv');
+      form.append('file', new Blob([INCOME], { type: 'text/csv' }), 'resultat.csv');
+      const res = await fetch(`${API_BASE}/buildings/${buildings.data[0].id}/onboarding/package/analyze`, {
+        method: 'POST', headers: { 'x-dev-role': 'MANAGER' }, body: form,
+      });
+      expect(res.status).toBe(200);
+      const { data } = await res.json();
+      expectKeys(data, ['buildingId', 'buildingName', 'fiscalYear', 'documents', 'reconciliation', 'warnings'], 'PackageAnalysisDTO');
+      const types = data.documents.map((d: any) => d.type).sort();
+      expect(types).toEqual(['GENERAL_LEDGER', 'INCOME_STATEMENT', 'RENT_ROLL']);
+      expect(data.fiscalYear).toBe(2025); // from the ledger dates
+      expect(data.reconciliation.length).toBeGreaterThan(0);
+      expectKeys(data.reconciliation[0], ['label', 'expectedChf', 'actualChf', 'deltaChf', 'ok', 'note'], 'ReconciliationCheckDTO');
+    }, 30000);
+
+    it('commits a package to a fresh building in dependency order', async () => {
+      const created = await fetch(`${API_BASE}/buildings`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-dev-role': 'MANAGER' },
+        body: JSON.stringify({ name: `Package Onboarding ${Date.now()}` }),
+      });
+      const buildingId = (await created.json()).data.id;
+      const form = new FormData();
+      form.append('file', new Blob([RENT_ROLL], { type: 'text/csv' }), 'rentroll.csv');
+      form.append('file', new Blob([LEDGER], { type: 'text/csv' }), 'grandlivre.csv');
+      form.append('file', new Blob([INCOME], { type: 'text/csv' }), 'resultat.csv');
+      form.append('billingMode', 'snapshot');
+      form.append('fiscalYear', '2025');
+      const res = await fetch(`${API_BASE}/buildings/${buildingId}/onboarding/package/commit`, {
+        method: 'POST', headers: { 'x-dev-role': 'MANAGER' }, body: form,
+      });
+      expect(res.status).toBe(201);
+      const { data } = await res.json();
+      expectKeys(data, ['buildingId', 'fiscalYear', 'results', 'warnings'], 'PackageCommitResultDTO');
+      expect(data.results.length).toBe(3);
+      const rr = data.results.find((r: any) => r.type === 'RENT_ROLL');
+      expect(rr.outcome).toMatch(/unit/);
+      // Income statement is approved → reporting substitutes it (positive income).
+      const is = data.results.find((r: any) => r.type === 'INCOME_STATEMENT');
+      expect(is.outcome).toBe('imported + approved');
+      const fin = await fetch(`${API_BASE}/buildings/${buildingId}/financials?from=2025-01-01&to=2025-12-31`, { headers: { 'x-dev-role': 'MANAGER' } });
+      const { data: finData } = await fin.json();
+      expect(finData.source).toBe('imported');
+      expect(finData.collectedIncomeCents).toBe(264600); // 2646 CHF, sign-normalised
+    }, 45000);
   });
 });

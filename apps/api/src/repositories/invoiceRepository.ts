@@ -21,6 +21,7 @@ export const INVOICE_FULL_INCLUDE = {
   lineItems: true,
   classifiedExpenseType: true,
   classifiedAccount: true,
+  ancillaryCategory: { select: { id: true, code: true, name: true } },
   job: { select: { requestId: true } },
 } as const;
 
@@ -44,6 +45,20 @@ export const INVOICE_SUMMARY_INCLUDE = {
       },
     },
   },
+  // Rent invoices carry the unit/building via the lease; ingested/manual invoices
+  // may be directly attributed. Include all paths so the Building/Unit column
+  // resolves regardless of how the invoice is linked.
+  lease: {
+    select: {
+      unit: {
+        select: { unitNumber: true, building: { select: { name: true } } },
+      },
+    },
+  },
+  attributedUnit: {
+    select: { unitNumber: true, building: { select: { name: true } } },
+  },
+  attributedBuilding: { select: { name: true } },
 } as const;
 
 // ─── Query Functions ───────────────────────────────────────────
@@ -380,5 +395,163 @@ export async function sumInvoiceTotals(
 ): Promise<number> {
   const result = await prisma.invoice.aggregate({ where, _sum: { totalAmount: true } });
   return result._sum.totalAmount ?? 0;
+}
+
+/**
+ * A building's INCOMING invoices whose paymentReference starts with a given
+ * prefix — used by régie-ledger onboarding to skip invoices already imported
+ * (idempotent re-commit) and to heal/reverse prior postings on re-run.
+ */
+export async function findBuildingImportedInvoices(
+  prisma: PrismaClient,
+  orgId: string,
+  buildingId: string,
+  refPrefix: string,
+): Promise<{ id: string; paymentReference: string | null; contractorId: string | null }[]> {
+  return prisma.invoice.findMany({
+    where: {
+      orgId,
+      buildingId,
+      direction: "INCOMING",
+      paymentReference: { startsWith: refPrefix },
+    },
+    select: { id: true, paymentReference: true, contractorId: true },
+  });
+}
+
+/**
+ * Reset the issuance stamping on onboarded invoices back to reference-only:
+ * clears the (org) issuer billing entity, the system invoice number and the
+ * lock, and returns them to DRAFT. Used to heal invoices that an earlier
+ * (posting) régie-ledger import issued as if outgoing — so they display the
+ * vendor (issuerName) as issuer instead of our org. Returns the count updated.
+ */
+export async function resetImportedInvoiceIssuance(
+  prisma: PrismaClient,
+  orgId: string,
+  invoiceIds: string[],
+): Promise<number> {
+  if (invoiceIds.length === 0) return 0;
+  const result = await prisma.invoice.updateMany({
+    where: {
+      orgId,
+      id: { in: invoiceIds },
+      OR: [{ issuerBillingEntityId: { not: null } }, { invoiceNumber: { not: null } }, { lockedAt: { not: null } }],
+    },
+    data: { issuerBillingEntityId: null, invoiceNumber: null, lockedAt: null, status: "DRAFT" },
+  });
+  return result.count;
+}
+
+/**
+ * Sum INCOMING-invoice totals for a building grouped by contractor over a date
+ * window (by issueDate) — powers the "top vendors by spend" reporting card.
+ * Uncontractored invoices are grouped under a null contractorId.
+ */
+export async function aggregateBuildingSpendByVendor(
+  prisma: PrismaClient,
+  orgId: string,
+  buildingId: string,
+  from: Date,
+  to: Date,
+): Promise<{ contractorId: string | null; issuerName: string | null; totalCents: number; count: number }[]> {
+  const rows = await prisma.invoice.findMany({
+    where: {
+      orgId,
+      buildingId,
+      direction: "INCOMING",
+      issueDate: { gte: from, lte: to },
+    },
+    select: { contractorId: true, issuerName: true, totalAmount: true, contractor: { select: { name: true } } },
+  });
+  const byVendor = new Map<string, { contractorId: string | null; issuerName: string | null; totalCents: number; count: number }>();
+  for (const r of rows) {
+    const key = r.contractorId ?? `name:${r.issuerName ?? "Unknown"}`;
+    const name = r.contractor?.name ?? r.issuerName ?? "Unknown";
+    const cur = byVendor.get(key) ?? { contractorId: r.contractorId ?? null, issuerName: name, totalCents: 0, count: 0 };
+    cur.totalCents += r.totalAmount;
+    cur.count += 1;
+    byVendor.set(key, cur);
+  }
+  return [...byVendor.values()].sort((a, b) => b.totalCents - a.totalCents);
+}
+
+export interface ExpenseBreakdownMonthRow {
+  month: string; // YYYY-MM
+  totalCents: number;
+  vendors: { contractorId: string | null; vendorName: string; totalCents: number; invoiceCount: number }[];
+  accounts: { accountId: string | null; accountCode: string | null; accountName: string | null; totalCents: number }[];
+}
+
+/**
+ * Break a building's INCOMING-invoice spend (by issueDate) into months, and
+ * within each month by vendor and by ledger account — powers the reporting
+ * "expenses by month" drill-down. Invoice-based (like vendor-spend), so it works
+ * for imported/reference-only invoices as well as operational ones. Months are
+ * returned chronologically; vendors/accounts within a month sorted desc by spend.
+ */
+export async function aggregateBuildingExpenseBreakdown(
+  prisma: PrismaClient,
+  orgId: string,
+  buildingId: string,
+  from: Date,
+  to: Date,
+): Promise<ExpenseBreakdownMonthRow[]> {
+  const rows = await prisma.invoice.findMany({
+    where: {
+      orgId,
+      buildingId,
+      direction: "INCOMING",
+      issueDate: { gte: from, lte: to },
+    },
+    select: {
+      issueDate: true,
+      totalAmount: true,
+      contractorId: true,
+      issuerName: true,
+      contractor: { select: { name: true } },
+      accountId: true,
+      classifiedAccount: { select: { code: true, name: true } },
+    },
+  });
+
+  type VendorAgg = { contractorId: string | null; vendorName: string; totalCents: number; invoiceCount: number };
+  type AccountAgg = { accountId: string | null; accountCode: string | null; accountName: string | null; totalCents: number };
+  const byMonth = new Map<string, { totalCents: number; vendors: Map<string, VendorAgg>; accounts: Map<string, AccountAgg> }>();
+
+  for (const r of rows) {
+    if (!r.issueDate) continue;
+    const month = r.issueDate.toISOString().slice(0, 7); // YYYY-MM
+    const m = byMonth.get(month) ?? { totalCents: 0, vendors: new Map(), accounts: new Map() };
+    m.totalCents += r.totalAmount;
+
+    const vKey = r.contractorId ?? `name:${r.issuerName ?? "Unknown"}`;
+    const vName = r.contractor?.name ?? r.issuerName ?? "Unknown";
+    const v = m.vendors.get(vKey) ?? { contractorId: r.contractorId ?? null, vendorName: vName, totalCents: 0, invoiceCount: 0 };
+    v.totalCents += r.totalAmount;
+    v.invoiceCount += 1;
+    m.vendors.set(vKey, v);
+
+    const aKey = r.accountId ?? "none";
+    const a = m.accounts.get(aKey) ?? {
+      accountId: r.accountId ?? null,
+      accountCode: r.classifiedAccount?.code ?? null,
+      accountName: r.classifiedAccount?.name ?? null,
+      totalCents: 0,
+    };
+    a.totalCents += r.totalAmount;
+    m.accounts.set(aKey, a);
+
+    byMonth.set(month, m);
+  }
+
+  return [...byMonth.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([month, m]) => ({
+      month,
+      totalCents: m.totalCents,
+      vendors: [...m.vendors.values()].sort((x, y) => y.totalCents - x.totalCents),
+      accounts: [...m.accounts.values()].sort((x, y) => y.totalCents - x.totalCents),
+    }));
 }
 

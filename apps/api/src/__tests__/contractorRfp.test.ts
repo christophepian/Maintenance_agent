@@ -410,7 +410,7 @@ describe("Contractor RFP Marketplace", () => {
 
     // 2. Start server
     proc = await startTestServer(PORT, { AUTH_OPTIONAL: "false", NODE_ENV: "test" });
-  }, 30000);
+  }, 60000); // cold ts-node server spawn on CI can exceed 30 s
 
   afterAll(async () => {
     await stopTestServer(proc);

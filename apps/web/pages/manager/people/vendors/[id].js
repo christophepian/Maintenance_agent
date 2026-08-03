@@ -546,7 +546,7 @@ export default function ContractorDetailPage() {
                   ) : jobs.length === 0 ? (
                     <p className="text-sm text-muted">{t("manager:peopleVendorsId.text.noJobsFoundForThisContractor")}</p>
                   ) : (
-                    <div className="overflow-x-auto rounded-lg border border-table-border">
+                    <div className="overflow-x-auto rounded-lg border border-surface-border">
                       <table className="data-table">
                         <thead>
                           <tr>
@@ -596,7 +596,7 @@ export default function ContractorDetailPage() {
                   ) : contractorInvoices.length === 0 ? (
                     <p className="text-sm text-muted">{t("manager:peopleVendorsId.text.noInvoicesFoundForThisContractor")}</p>
                   ) : (
-                    <div className="overflow-x-auto rounded-lg border border-table-border">
+                    <div className="overflow-x-auto rounded-lg border border-surface-border">
                       <table className="data-table">
                         <thead>
                           <tr>

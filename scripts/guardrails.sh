@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Guardrail Enforcement Script
-# Runs locally (pre-commit) and in CI. Checks G8, F-UI4, F-UI4a, G9, G3.
+# Runs locally (pre-commit) and in CI. Checks G8, F-UI4, F-UI4a, G23, G9, G20,
+# G22, G3, F-UI9, G18, G16, G17, G19, G21.
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 set -euo pipefail
 
@@ -90,6 +91,34 @@ else
   pass "No inline status color maps"
 fi
 
+# ─── G23: Raw color tokens / inline styles ratchet ───────────────────────
+# Styling rule: color comes from semantic tokens (bg-surface, text-foreground,
+# border-surface-border, …), never raw slate-*/bg-white; no inline style={{}}.
+# Grandfathered debt (CRITICAL_AUDIT_2026-06-23): ~50 raw-token lines + ~44
+# inline-style lines across apps/web JSX. Ratchet blocks any increase; lines
+# carrying a `/* no-token: <reason> */` marker are excluded, so documenting a
+# real exception lowers the count. Lower the baselines as debt is migrated.
+echo ""
+echo "━━━ G23: Checking raw color tokens / inline styles (ratchet) ━━━"
+G23_BASELINE_RAW=38
+G23_BASELINE_INLINE=43
+G23_CUR_RAW=$(grep -rhnE 'bg-white|text-slate-[0-9]|bg-slate-[0-9]|border-slate-[0-9]' \
+  "$ROOT/apps/web/pages" "$ROOT/apps/web/components" \
+  --include='*.js' --include='*.jsx' --exclude='*.stories.js' --exclude='*.stories.jsx' 2>/dev/null | grep -v 'no-token' | wc -l | tr -d ' ')
+G23_CUR_INLINE=$(grep -rhnE 'style=\{\{' \
+  "$ROOT/apps/web/pages" "$ROOT/apps/web/components" \
+  --include='*.js' --include='*.jsx' --exclude='*.stories.js' --exclude='*.stories.jsx' 2>/dev/null | grep -v 'no-token' | wc -l | tr -d ' ')
+if [ "$G23_CUR_RAW" -gt "$G23_BASELINE_RAW" ] || [ "$G23_CUR_INLINE" -gt "$G23_BASELINE_INLINE" ]; then
+  fail "G23: styling debt increased (raw tokens $G23_CUR_RAW vs baseline $G23_BASELINE_RAW, inline styles $G23_CUR_INLINE vs baseline $G23_BASELINE_INLINE)."
+  echo "    Use semantic token classes (bg-surface/text-foreground/border-surface-border) instead of raw"
+  echo "    slate-*/bg-white, and Tailwind classes instead of style={{}}. Genuine exceptions: add a"
+  echo "    /* no-token: <reason> */ marker on the line. If you REMOVED debt, lower the G23 baselines."
+elif [ "$G23_CUR_RAW" -lt "$G23_BASELINE_RAW" ] || [ "$G23_CUR_INLINE" -lt "$G23_BASELINE_INLINE" ]; then
+  warn "G23: styling debt decreased (raw ${G23_CUR_RAW}≤${G23_BASELINE_RAW}, inline ${G23_CUR_INLINE}≤${G23_BASELINE_INLINE}) — lower the baselines in scripts/guardrails.sh to lock in the win."
+else
+  pass "G23: no new raw tokens / inline styles (baseline $G23_BASELINE_RAW raw / $G23_BASELINE_INLINE inline held)"
+fi
+
 # ─── G9: Detect ad-hoc Prisma include trees ──────────────────────────────
 echo ""
 echo "━━━ G9: Checking for ad-hoc Prisma include trees ━━━"
@@ -109,6 +138,55 @@ if [ -n "$G9_HITS" ]; then
   fi
 else
   pass "No ad-hoc include trees in routes"
+fi
+
+# ─── G20: No NEW direct Prisma access in services (ARCH-1 enforcement) ────
+# Architecture rule: services contain domain logic only; all DB access routes
+# through repositories. ~219 direct `prisma.*` calls across 28 service files
+# remain as grandfathered debt (the ARCH-1 epic was declared complete but
+# regressed — see CRITICAL_AUDIT_2026-06-23). This ratchet BLOCKS any increase:
+# no new prisma-using service file AND no new prisma.* call in an existing one.
+# Burndown: when you remove calls, LOWER the baselines below so the ratchet
+# tightens. Goal: both → 0, at which point flip this to a zero-tolerance check.
+echo ""
+echo "━━━ G20: Checking for new direct Prisma access in services ━━━"
+G20_BASELINE_FILES=24
+G20_BASELINE_LINES=212
+G20_CUR_FILES=$(grep -rl 'prisma\.' "$ROOT/apps/api/src/services" --include="*.ts" 2>/dev/null | wc -l | tr -d ' ')
+G20_CUR_LINES=$(grep -rho 'prisma\.' "$ROOT/apps/api/src/services" --include="*.ts" 2>/dev/null | wc -l | tr -d ' ')
+if [ "$G20_CUR_FILES" -gt "$G20_BASELINE_FILES" ] || [ "$G20_CUR_LINES" -gt "$G20_BASELINE_LINES" ]; then
+  fail "G20: direct Prisma access in services increased (files $G20_CUR_FILES vs baseline $G20_BASELINE_FILES, calls $G20_CUR_LINES vs baseline $G20_BASELINE_LINES)."
+  echo "    Services must not call Prisma directly — add the query to a repository (apps/api/src/repositories/)"
+  echo "    and call it from the service. If you legitimately REMOVED calls, lower G20_BASELINE_FILES /"
+  echo "    G20_BASELINE_LINES in scripts/guardrails.sh to match the new (lower) count."
+elif [ "$G20_CUR_FILES" -lt "$G20_BASELINE_FILES" ] || [ "$G20_CUR_LINES" -lt "$G20_BASELINE_LINES" ]; then
+  warn "G20: service Prisma debt decreased (files $G20_CUR_FILES≤$G20_BASELINE_FILES, calls $G20_CUR_LINES≤$G20_BASELINE_LINES) — lower the baselines in scripts/guardrails.sh to lock in the win."
+else
+  pass "G20: no new direct Prisma access in services (baseline $G20_BASELINE_FILES files / $G20_BASELINE_LINES calls held)"
+fi
+
+# ─── G22: No NEW direct Prisma access in routes (layer-rule enforcement) ──
+# Architecture rule: routes are thin HTTP handlers — DB access goes through
+# workflows/services → repositories, never `prisma.*` directly (incl. the
+# router-injected `prisma` context param). ~41 calls across 5 files remain as
+# grandfathered debt (auth/cashflowPlans/conditionReports/correspondence/
+# sandbox). Same ratchet as G20: blocks any increase; lower the baselines as
+# routes are cleaned up. Goal: both → 0.
+echo ""
+echo "━━━ G22: Checking for new direct Prisma access in routes ━━━"
+G22_BASELINE_FILES=5
+G22_BASELINE_LINES=41
+G22_CUR_FILES=$(grep -rl 'prisma\.' "$ROOT/apps/api/src/routes" --include="*.ts" 2>/dev/null | wc -l | tr -d ' ')
+G22_CUR_LINES=$(grep -rho 'prisma\.' "$ROOT/apps/api/src/routes" --include="*.ts" 2>/dev/null | wc -l | tr -d ' ')
+if [ "$G22_CUR_FILES" -gt "$G22_BASELINE_FILES" ] || [ "$G22_CUR_LINES" -gt "$G22_BASELINE_LINES" ]; then
+  fail "G22: direct Prisma access in routes increased (files $G22_CUR_FILES vs baseline $G22_BASELINE_FILES, calls $G22_CUR_LINES vs baseline $G22_BASELINE_LINES)."
+  echo "    Routes must not call Prisma directly — move the query into a repository and reach it via a"
+  echo "    workflow/service. If you legitimately REMOVED calls, lower G22_BASELINE_FILES / G22_BASELINE_LINES"
+  echo "    in scripts/guardrails.sh to match."
+elif [ "$G22_CUR_FILES" -lt "$G22_BASELINE_FILES" ] || [ "$G22_CUR_LINES" -lt "$G22_BASELINE_LINES" ]; then
+  warn "G22: route Prisma debt decreased (files $G22_CUR_FILES≤$G22_BASELINE_FILES, calls $G22_CUR_LINES≤$G22_BASELINE_LINES) — lower the baselines in scripts/guardrails.sh to lock in the win."
+else
+  pass "G22: no new direct Prisma access in routes (baseline $G22_BASELINE_FILES files / $G22_BASELINE_LINES calls held)"
 fi
 
 # ─── G3 (light): Detect likely DTO/include mismatches ────────────────────
@@ -159,6 +237,7 @@ FUI9_WHITELIST="
   chart-of-accounts.js  -- Account-tree tables are structural sub-panels, not hub tables
   BuildingFinancialsView.jsx  -- Component: financial sub-tables inside building detail context
   BillingEntityManager.js     -- Component: billing entity sub-tables, used inside detail context
+  tenants/[id].js       -- Contracts / Invoices sub-tables in tenant detail panel (same pattern as leases/[id].js)
 "
 
 FUI9_HITS=""
@@ -284,6 +363,60 @@ else
   else
     pass "G17: No obvious hardcoded labels detected"
   fi
+fi
+
+# ─── G19: Mirrored docs must stay byte-identical ─────────────────────────
+# Every doc that exists in BOTH docs/ (root) and apps/web/public/docs/ (the
+# copy actually SERVED at /docs/...) must be byte-identical — they are two
+# copies of the same page. Auto-discovers the shared set (top-level files in
+# both dirs); root-only dev docs (AUDIT.md, *.sql, etc.) are ignored.
+# On 2026-06-18 a commit "re-synced" pitchdeck.html from the STALE root copy,
+# silently reverting ~2,100 lines of committed content inside an unrelated
+# feature commit. This guard blocks any commit where a shared doc diverges,
+# so a stale-source overwrite can never ship unnoticed. Always edit BOTH
+# copies in the same commit.
+echo ""
+echo "━━━ G19: Checking mirrored docs (docs/ vs apps/web/public/docs/) are in sync ━━━"
+
+G19_DIR_A="$ROOT/docs"
+G19_DIR_B="$ROOT/apps/web/public/docs"
+G19_VIOL=""
+if [ -d "$G19_DIR_A" ] && [ -d "$G19_DIR_B" ]; then
+  while IFS= read -r rel; do
+    [ -z "$rel" ] && continue
+    cmp -s "$G19_DIR_A/$rel" "$G19_DIR_B/$rel" || G19_VIOL="${G19_VIOL}\n    $rel — docs/ and apps/web/public/docs/ differ"
+  done < <(comm -12 \
+    <(find "$G19_DIR_A" -maxdepth 1 -type f -exec basename {} \; | sort) \
+    <(find "$G19_DIR_B" -maxdepth 1 -type f -exec basename {} \; | sort))
+fi
+
+if [ -n "$G19_VIOL" ]; then
+  fail "G19 VIOLATION: mirrored doc(s) out of sync — update BOTH copies in the same commit:"
+  echo -e "$G19_VIOL"
+  echo "    Fix: copy the INTENDED-newer file over the other, then re-stage both."
+  echo "    (2026-06-18 incident: a stale-source re-sync silently reverted committed content.)"
+else
+  pass "G19: all mirrored docs are identical"
+fi
+
+# ─── G21: Documentation freshness (counts consistent, links valid) ───────
+# Wires scripts/check-docs.js into the gate (was previously only run by hand via
+# `npm run blueprint`). Blocks if model/enum/migration counts disagree across
+# the canonical docs, a doc link is broken, or the "Do NOT" lists drift — the
+# exact staleness CRITICAL_AUDIT_2026-06-23 flagged. Fix: `npm run blueprint`
+# (auto-syncs PROJECT_STATE derived counts) then update the remaining docs.
+echo ""
+echo "━━━ G21: Checking documentation freshness (scripts/check-docs.js) ━━━"
+if [ -f "$ROOT/scripts/check-docs.js" ]; then
+  if node "$ROOT/scripts/check-docs.js" >/tmp/g21_check_docs.log 2>&1; then
+    pass "G21: docs consistent (counts + links + Do-NOT parity)"
+  else
+    fail "G21: documentation freshness check failed:"
+    grep -E '❌|inconsistent|broken|mismatch' /tmp/g21_check_docs.log | head -10 | while read -r line; do echo "    $line"; done
+    echo "    Run \`npm run blueprint\` then reconcile remaining docs; full output: node scripts/check-docs.js"
+  fi
+else
+  warn "G21: scripts/check-docs.js not found — skipping doc freshness check"
 fi
 
 # ─── Summary ─────────────────────────────────────────────────────────────

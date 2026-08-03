@@ -5,14 +5,14 @@
  * G9: all DB access for this domain goes through this file.
  */
 
-import { ImportedStatementStatus, MatchConfidence, PrismaClient } from "@prisma/client";
+import { ImportedStatementStatus, MatchConfidence, StatementSectionType, Prisma, PrismaClient } from "@prisma/client";
 
 /* ── statement includes ─────────────────────────────────────── */
 
 const STATEMENT_INCLUDE = {
   building: { select: { id: true, name: true } },
   accountBalances: {
-    include: { account: { select: { id: true, code: true, name: true } } },
+    include: { account: { select: { id: true, code: true, name: true, costCategory: true } } },
     orderBy: { rawAccountCode: "asc" as const },
   },
 } as const;
@@ -48,6 +48,94 @@ export async function findStatementsByOrg(
     prisma.importedStatement.count({ where }),
   ]);
   return { rows, total };
+}
+
+/**
+ * The approved INCOME_STATEMENT for a building + fiscal year, with its account
+ * balances. Used by reporting to substitute imported actuals for a covered year.
+ * Returns the most recently approved one if several exist.
+ */
+export async function findApprovedIncomeStatementForYear(
+  prisma: PrismaClient,
+  orgId: string,
+  buildingId: string,
+  fiscalYear: number,
+) {
+  return prisma.importedStatement.findFirst({
+    where: {
+      orgId,
+      buildingId,
+      fiscalYear,
+      status: ImportedStatementStatus.APPROVED,
+      sectionType: StatementSectionType.INCOME_STATEMENT,
+    },
+    include: STATEMENT_INCLUDE,
+    orderBy: { approvedAt: "desc" },
+  });
+}
+
+/**
+ * The sibling statement of a given section type for the same building + fiscal
+ * year (any non-rejected status), preferring the same upload batch — used to
+ * cross-reconcile a P&L result against the balance sheet's result line.
+ */
+export async function findSiblingStatement(
+  prisma: PrismaClient,
+  orgId: string,
+  buildingId: string,
+  fiscalYear: number,
+  sectionType: StatementSectionType,
+  preferBatchId?: string | null,
+) {
+  const base = { orgId, buildingId, fiscalYear, sectionType, status: { not: ImportedStatementStatus.REJECTED } };
+  if (preferBatchId) {
+    const inBatch = await prisma.importedStatement.findFirst({
+      where: { ...base, uploadBatchId: preferBatchId },
+      include: STATEMENT_INCLUDE,
+      orderBy: { updatedAt: "desc" },
+    });
+    if (inBatch) return inBatch;
+  }
+  return prisma.importedStatement.findFirst({
+    where: base,
+    include: STATEMENT_INCLUDE,
+    orderBy: [{ status: "asc" }, { updatedAt: "desc" }],
+  });
+}
+
+/* ── extraction cache (vision-reuse) ─────────────────────────── */
+
+/**
+ * Look up a prior vision extraction for the identical file (cacheKey embeds the
+ * content hash + extractor version + kind). Lets a re-upload skip the expensive
+ * scanDocument()/extractPackageFromPdf() call. Org-scoped for tenant isolation.
+ * Returns the cached payload (ScanResult or PackageExtractionFile[]) or null.
+ */
+export async function findExtractionCache(
+  prisma: PrismaClient,
+  orgId: string,
+  cacheKey: string,
+): Promise<unknown | null> {
+  const hit = await prisma.extractionCache.findUnique({
+    where: { orgId_cacheKey: { orgId, cacheKey } },
+    select: { payload: true },
+  });
+  return hit?.payload ?? null;
+}
+
+/** Persist a vision extraction so future identical uploads reuse it (upsert). */
+export async function putExtractionCache(
+  prisma: PrismaClient,
+  orgId: string,
+  cacheKey: string,
+  payload: unknown,
+): Promise<void> {
+  const data = payload as Prisma.InputJsonValue;
+  await prisma.extractionCache.upsert({
+    where: { orgId_cacheKey: { orgId, cacheKey } },
+    create: { orgId, cacheKey, payload: data },
+    update: { payload: data },
+  });
 }
 
 /* ── single ─────────────────────────────────────────────────── */

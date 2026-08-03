@@ -482,10 +482,14 @@
   "reporting": {
     "heading": {
       "whatDrovePerformance": "What drove performance",
+      "whatToWatch": "What to watch",
+      "periodNotes": "Period notes",
+      "monthlyNoi": "Monthly NOI",
       "byProperty": "By property",
       "tenantMovements": "Tenant movements",
       "periodInsights": "Period insights",
-      "fullFinancialDetail": "Full financial detail"
+      "fullFinancialDetail": "Full financial detail",
+      "rentArrearsAging": "Rent arrears aging"
     },
     "ariaLabel": {
       "previousYear": "Previous year",
@@ -493,9 +497,14 @@
     },
     "prop": {
       "netIncome": "Net Income",
-      "rentCollected": "Rent Collected",
+      "netOperatingIncome": "Net Operating Income",
+      "rentCollected": "Cash received",
       "totalExpenses": "Total Expenses",
-      "collectionRate": "Collection Rate"
+      "collectionRate": "On-time collection",
+      "noiMargin": "NOI Margin",
+      "opexRatio": "OpEx Ratio",
+      "occupancy": "Occupancy",
+      "rentOutstanding": "Rent Outstanding"
     },
     "text": {
       "income": "Income",
@@ -517,23 +526,150 @@
       "backToMonths": "← Months",
       "movingIn": "Moving in",
       "movingOut": "Moving out",
+      "viewDetails": "View details",
+      "hideDetails": "Hide details",
       "loadingReport": "Loading your report…",
       "strongMonth": "Your portfolio had a strong month.",
       "mixedMonth": "Your portfolio had a mixed month.",
       "portfolioSummary": "Here's your portfolio summary.",
-      "unitsLeased_one": "{{units}} unit leased this period across {{buildings}} building.",
-      "unitsLeased_other": "{{units}} units leased this period across {{buildings}} buildings.",
+      "unitsLeased_one": "{{units}} of {{allUnits}} units occupied across {{buildings}} building.",
+      "unitsLeased_other": "{{units}} of {{allUnits}} units occupied across {{buildings}} buildings.",
       "netResultForPeriod": "Net result per building for {{period}}.",
       "moveInsAndMoveoutsIn": "Move-ins and move-outs in {{period}}.",
       "moveIns": "Move-ins",
       "moveOuts": "Move-outs",
       "financeDetail": "Drill into ledger entries, trial balance, and per-building financials in the Finance section.",
       "monthlyReport": "Monthly Owner Report",
-      "vsPrevMonth": "{{delta}}% vs prev month"
+      "yearButton": "Year",
+      "yearToDateReport": "Year-to-Date Summary",
+      "fullYearReport": "Full Year Summary",
+      "theMainForcesBehindThisYearsNumbers": "The main forces behind this year's performance.",
+      "fullYearComparison": "Full year {{year}} vs {{prevYear}}",
+      "noiPerMonth": "Net operating income per month, {{year}}",
+      "bestMonth": "Best month",
+      "flagsAndActionItems": "Flags and action items for this period",
+      "unpaidInvoicesByDaysOverdue": "Unpaid outgoing invoices by days overdue",
+      "rentInvoicesNotReconciled": "{{amount}} in rent invoices not yet reconciled",
+      "rentInvoicesMarkPaidInstruction": "Rent invoices have been sent to tenants but no payment has been recorded. Once the rent arrives in your bank, open the invoice in Finance → Outgoing and click Mark Paid.",
+      "goToInvoices": "Go to invoices →",
+      "noFlags": "No flags this period — collection on track, occupancy healthy, no overdue invoices.",
+      "observationsOverPeriod": "Observations and analytics for this period.",
+      "noPeriodNotes": "No notable events this period.",
+      "collapseProps": "Collapse ↑",
+      "showAllProps": "Show all {{count}} ↓",
+      "arrearsCurrentLabel": "Current",
+      "arrears1to30Label": "1–30 days",
+      "arrears31to60Label": "31–60 days",
+      "arrears61plusLabel": "61+ days",
+      "overdueLabel": "overdue"
+    },
+    "watch": {
+      "arrears61plus": "{{amount}} in rent is over 60 days overdue — consider initiating a formal debt collection notice.",
+      "arrears31to60": "{{amount}} in rent is 31–60 days overdue. Send a formal payment reminder to the tenants concerned.",
+      "collectionRate": "Collection rate is {{rate}}, {{shortfall}} below the 95% target.",
+      "vacancy": "{{vacantCount}} of {{allUnits}} units are currently vacant ({{rate}} occupancy). Each empty unit represents forgone rental income.",
+      "awaitingPayment": "{{amount}} in rent invoices for this period are awaiting payment — all expected income has been invoiced but not yet marked paid.",
+      "awaitingAndUninvoiced": "{{awaitingPayment}} awaiting payment; {{uninvoiced}} in expected rent was not invoiced this period (likely a mid-month move-in).",
+      "notInvoiced": "{{amount}} in expected rent was not invoiced this period.",
+      "buildingsInRedSingle": "{{names}} is running at a net loss this period.",
+      "buildingsInRedMultiple": "{{names}} are running at a net loss this period.",
+      "payablesConcentration": "{{amount}} in contractor invoices remain unpaid — more than half of this period's expense spend.",
+      "expenseSpike": "Operating costs are {{pct}} higher than last period — review the expense breakdown to identify the driver.",
+      "tenantChurn_one": "{{count}} tenant movement this period — check for any gap between a move-out and the next lease start to minimise vacancy loss.",
+      "tenantChurn_other": "{{count}} tenant movements this period — check for any gap between a move-out and the next lease start to minimise vacancy loss."
+    },
+    "note": {
+      "arrears61plus": "{{amount}} in rent was over 60 days overdue at period end.",
+      "arrears31to60": "{{amount}} in rent was 31–60 days overdue at period end.",
+      "collectionRate": "Collection averaged {{rate}} this period — {{shortfall}} below the 95% benchmark.",
+      "vacancy": "Occupancy was {{rate}} — {{vacantCount}} of {{allUnits}} units were unoccupied.",
+      "awaitingPayment": "{{amount}} in rent invoices for this period closed unpaid.",
+      "awaitingAndUninvoiced": "{{awaitingPayment}} closed unpaid; {{uninvoiced}} in expected rent was never invoiced.",
+      "notInvoiced": "{{amount}} in expected rent was not invoiced.",
+      "buildingsInRedSingle": "{{names}} posted a net loss.",
+      "buildingsInRedMultiple": "{{names}} posted net losses.",
+      "payablesConcentration": "{{amount}} in contractor invoices remained unpaid at period end.",
+      "expenseSpike": "Operating costs were {{pct}} higher than the prior period.",
+      "tenantChurn_one": "{{count}} tenant movement recorded this period.",
+      "tenantChurn_other": "{{count}} tenant movements recorded this period."
+    },
+    "action": {
+      "viewOverdueInvoices": "View overdue invoices",
+      "viewUnpaidInvoices": "View unpaid invoices",
+      "viewFinanceOverview": "View finance overview",
+      "viewExpenses": "View expenses"
+    },
+    "appraisalFullYear": {
+      "ahead": "A strong year.",
+      "onpar": "A steady year.",
+      "behind": "A difficult year.",
+      "reason": {
+        "noiAhead": "NOI finished {{pct}}% ahead of the prior year.",
+        "noiBehind": "NOI finished {{pct}}% below the prior year.",
+        "noiOnPar": "NOI and collection ({{rate}}) were broadly in line with the prior year."
+      }
+    },
+    "appraisalYtd": {
+      "ahead": "Ahead of last year.",
+      "onpar": "On par with last year.",
+      "behind": "Behind last year's pace.",
+      "reason": {
+        "noiAhead": "NOI is up {{pct}}% vs the same period last year.",
+        "noiBehind": "NOI is down {{pct}}% vs the same period last year.",
+        "noiOnPar": "NOI and collection ({{rate}}) are in line with last year."
+      }
+    },
+    "appraisal": {
+      "strong": {
+        "improving": "Your portfolio is on a roll.",
+        "stable": "A strong month.",
+        "declining": "A strong month — but watch the trend."
+      },
+      "mixed": {
+        "improving": "A mixed period, trending in the right direction.",
+        "stable": "A mixed month.",
+        "declining": "A mixed month — some metrics are slipping."
+      },
+      "challenging": {
+        "improving": "A difficult period, but improving.",
+        "stable": "A challenging month — action needed.",
+        "declining": "A difficult month — immediate attention required."
+      },
+      "reason": {
+        "strongCollectionAllGreen": "Collection came in at {{rate}} — all properties in the black.",
+        "strongCollectionSomeRed_one": "Collection came in at {{rate}} — {{count}} property posted a loss.",
+        "strongCollectionSomeRed_other": "Collection came in at {{rate}} — {{count}} properties posted losses.",
+        "mixedCollection": "Collection at {{rate}} — some invoices remain outstanding.",
+        "buildingsInRed_one": "{{count}} property posted a net loss this period.",
+        "buildingsInRed_other": "{{count}} properties posted a net loss this period.",
+        "hardArrears": "{{amount}} in rent arrears is more than 60 days overdue.",
+        "lowCollection": "Collection fell to {{rate}} this period.",
+        "negativeNoi": "The portfolio posted a net loss of {{amount}}."
+      }
     },
     "cta": {
       "financeOverview": "Finance overview",
       "openLedger": "Open ledger"
+    },
+    "canvas": {
+      "tab": {
+        "periodAnalysis": "Period Analysis",
+        "performanceCanvas": "Performance Canvas"
+      },
+      "heading": "Portfolio Performance",
+      "subheading": "{{range}} time-series — all key metrics",
+      "noData": "No data for this range yet. Snapshots are computed nightly.",
+      "chfPanel": "CHF Performance",
+      "pctPanel": "Portfolio Health %",
+      "metric": {
+        "noiCents": "NOI",
+        "collectedIncomeCents": "Cash received",
+        "expensesCents": "Total Expenses",
+        "collectionRate": "On-time collection",
+        "noiMarginPct": "NOI Margin",
+        "opexRatioPct": "OpEx Ratio",
+        "occupancyRate": "Occupancy"
+      }
     },
     "highlight": {
       "allGreen": {

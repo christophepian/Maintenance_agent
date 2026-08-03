@@ -41,6 +41,17 @@ export async function findLeaseRaw(
   return prisma.lease.findUnique({ where: { id } });
 }
 
+export async function findActiveLeaseWithUnit(
+  prisma: PrismaClient,
+  id: string,
+  orgId: string,
+) {
+  return prisma.lease.findFirst({
+    where: { id, orgId, status: "ACTIVE" },
+    include: { unit: { select: { id: true, unitNumber: true } } },
+  });
+}
+
 /** List leases for an org with optional filters. */
 export async function listLeases(
   prisma: PrismaClient,
@@ -81,6 +92,31 @@ export async function listLeases(
     orderBy: { createdAt: "desc" },
     take: filters.limit ?? 50,
     skip: filters.offset ?? 0,
+  });
+}
+
+/**
+ * Live leases on a set of units whose fixed term ends within a window — powers
+ * the reporting "leases expiring soon" outlook. Open-ended (null endDate) leases
+ * are naturally excluded by the endDate range.
+ */
+export async function findLeasesExpiringForUnits(
+  prisma: PrismaClient,
+  unitIds: string[],
+  from: Date,
+  to: Date,
+) {
+  if (unitIds.length === 0) return [];
+  return prisma.lease.findMany({
+    where: {
+      unitId: { in: unitIds },
+      status: { in: ["ACTIVE", "SIGNED"] },
+      deletedAt: null,
+      isTemplate: false,
+      endDate: { gte: from, lte: to },
+    },
+    orderBy: { endDate: "asc" },
+    select: { id: true, unitId: true, tenantName: true, endDate: true, netRentChf: true },
   });
 }
 
@@ -279,6 +315,34 @@ export async function listInvoicesByLease(
   });
 }
 
+/** Soft-delete a lease (org-scoped) — sets deletedAt so it drops out of the
+ *  active views (the building/tenant list filters `status: ACTIVE, deletedAt: null`).
+ *  Returns the number of rows affected (0 if not found / already deleted). */
+export async function softDeleteLeaseInOrg(
+  prisma: PrismaClient,
+  leaseId: string,
+  orgId: string,
+) {
+  const r = await prisma.lease.updateMany({
+    where: { id: leaseId, orgId, deletedAt: null },
+    data: { deletedAt: new Date() },
+  });
+  return r.count;
+}
+
+/** Active, non-deleted leases on a unit matching a tenant phone (org-scoped). */
+export async function findActiveLeasesForUnitPhone(
+  prisma: PrismaClient,
+  orgId: string,
+  unitId: string,
+  phone: string,
+) {
+  return prisma.lease.findMany({
+    where: { orgId, unitId, status: "ACTIVE", deletedAt: null, tenantPhone: phone },
+    select: { id: true },
+  });
+}
+
 // ─── Rent Reduction / Legal Engine Lease Lookups ──────────────
 
 /** Select fields needed for rent reduction calculation. */
@@ -319,6 +383,22 @@ export async function findActiveLeaseForUnit(
 }
 
 /**
+ * Any live lease on a unit (DRAFT/READY_TO_SIGN/SIGNED/ACTIVE — i.e. not
+ * terminated/cancelled/deleted). Used by onboarding-merge to avoid duplicating
+ * a lease on a unit that already has one (DRAFT snapshot leases included).
+ */
+export async function findAnyLiveLeaseForUnit(
+  prisma: PrismaClient,
+  unitId: string,
+) {
+  return prisma.lease.findFirst({
+    where: { unitId, deletedAt: null, status: { notIn: ["TERMINATED", "CANCELLED"] } },
+    orderBy: { startDate: "desc" },
+    select: { id: true, status: true },
+  });
+}
+
+/**
  * Find active leases for a building (via unit relation).
  * Returns rentTotalChf for income projection fallback.
  */
@@ -328,7 +408,7 @@ export async function findActiveLeasesByBuilding(
 ) {
   return prisma.lease.findMany({
     where: { unit: { buildingId }, status: "ACTIVE" },
-    select: { rentTotalChf: true },
+    select: { rentTotalChf: true, endDate: true },
   });
 }
 
@@ -546,7 +626,9 @@ export async function findActiveLeasesForProjection(
     where: {
       orgId,
       unitId: { in: unitIds },
-      status: { in: ["ACTIVE", "SIGNED"] },
+      // Include TERMINATED leases whose tenure overlapped the period — required for
+      // correct historical projection (otherwise terminated leases collapse projected = 0)
+      status: { in: ["ACTIVE", "SIGNED", "TERMINATED"] },
       startDate: { lt: to },
       OR: [{ endDate: null }, { endDate: { gte: from } }],
       deletedAt: null,

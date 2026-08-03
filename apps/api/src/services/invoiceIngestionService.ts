@@ -143,9 +143,9 @@ export async function ingestInvoice(
     if (parsed) params.dueDate = parsed;
   }
 
-  // Set vendor as recipient for incoming invoices
+  // Store vendor as raw issuer text (not recipient — vendor is the party who issued the invoice)
   if (typeof fields.vendorName === "string" && fields.vendorName) {
-    params.recipientName = fields.vendorName;
+    params.issuerName = fields.vendorName;
   }
 
   // Map extracted payment details
@@ -163,7 +163,7 @@ export async function ingestInvoice(
 
   // Map vendor address fields
   if (typeof fields.vendorAddress === "string" && fields.vendorAddress) {
-    params.recipientAddressLine1 = fields.vendorAddress;
+    params.issuerAddressLine1 = fields.vendorAddress;
   }
   if (typeof fields.billToName === "string" && fields.billToName) {
     // billToName is the customer; for incoming invoices the vendor is the issuer

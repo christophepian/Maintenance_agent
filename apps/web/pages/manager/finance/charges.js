@@ -365,7 +365,7 @@ export default function ManagerChargesPage() {
             /* Summary view */
             <>
                 {/* Mobile card list — sm:hidden */}
-                <div className="sm:hidden overflow-hidden divide-y divide-table-divider">
+                <div className="sm:hidden overflow-hidden divide-y divide-surface-divider">
                   {sortedCharges.map((l) => (
                     <div key={l.id} className="table-card">
                       <p className="table-card-head">{l.tenantName}</p>
@@ -380,7 +380,7 @@ export default function ManagerChargesPage() {
                 </div>
 
                 {/* Wide table — hidden sm:block */}
-                <div className="hidden sm:block overflow-x-auto rounded-lg border border-table-border">
+                <div className="hidden sm:block overflow-x-auto rounded-lg border border-surface-border">
                   <table className="data-table">
                     <thead>
                       <tr>
@@ -420,7 +420,7 @@ export default function ManagerChargesPage() {
             ) : (
               <>
                   {/* Mobile card list — sm:hidden */}
-                  <div className="sm:hidden overflow-hidden divide-y divide-table-divider">
+                  <div className="sm:hidden overflow-hidden divide-y divide-surface-divider">
                     {sortedItemizedRows.map((row, idx) => (
                       <div key={`${row.leaseId}-${idx}`} className="table-card">
                         <p className="table-card-head">{row.tenantName}</p>
@@ -441,7 +441,7 @@ export default function ManagerChargesPage() {
                   </div>
 
                   {/* Wide table — hidden sm:block */}
-                  <div className="hidden sm:block overflow-x-auto rounded-lg border border-table-border">
+                  <div className="hidden sm:block overflow-x-auto rounded-lg border border-surface-border">
                     <table className="data-table">
                       <thead>
                         <tr>

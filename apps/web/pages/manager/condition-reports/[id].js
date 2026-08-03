@@ -15,8 +15,8 @@ import { cn } from "../../../lib/utils";
 import { AlertTriangle, CheckCircle2, Image } from "lucide-react";
 
 const STATUS_VARIANT = { PENDING: "warning", SUBMITTED: "info", APPROVED: "success" };
-const CONDITION_VARIANT = { GOOD: "success", FAIR: "warning", POOR: "warning", DAMAGED: "destructive" };
-const CONDITION_LABEL = { GOOD: "Good", FAIR: "Fair", POOR: "Poor", DAMAGED: "Damaged" };
+const CONDITION_VARIANT = { GOOD: "success", FAIR: "warning", POOR: "warning", DAMAGED: "destructive", NOT_INSPECTED: "neutral" };
+const CONDITION_LABEL = { GOOD: "Good", FAIR: "Fair", POOR: "Poor", DAMAGED: "Damaged", NOT_INSPECTED: "Uninspected" };
 
 function ConditionPill({ condition }) {
   return (
@@ -111,7 +111,6 @@ export default function ManagerConditionReportDetail() {
 
   const { data, loading, error, refresh } = useDetailResource(
     id ? `/api/condition-reports/${id}` : null,
-    (url) => fetch(url, { headers: authHeaders() }),
   );
 
   // useDetailResource already unwraps .data — report is the full object directly

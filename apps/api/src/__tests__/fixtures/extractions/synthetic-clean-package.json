@@ -1,0 +1,24 @@
+{
+  "name": "synthetic-clean-package",
+  "source": "synthetic — a minimal balanced balance sheet + a P&L whose result ties to the BS result line, with a plausible management fee and no dominant expense. Exercises the GREEN path.",
+  "documents": [
+    {
+      "type": "BALANCE_SHEET",
+      "csv": "row_type;accountCode;accountName;balanceChf;section\n;1020;Banque;10000.00;ACTIF\n;1100;Débiteurs;5000.00;ACTIF\n;2000;Créanciers;3000.00;PASSIF\n;2900;Report du bénéfice;10000.00;PASSIF\n;2979;Résultat de l'exercice;2000.00;PASSIF\ntotal_section;;Total ACTIF;15000.00;ACTIF\ntotal_section;;Total PASSIF;15000.00;PASSIF"
+    },
+    {
+      "type": "INCOME_STATEMENT",
+      "csv": "row_type;accountCode;accountName;balanceChf;section\n;3000;Produits locatifs;20000.00;REVENUE\n;4000;Charges d'exploitation;8000.00;EXPENSE\n;4110;Entretien de l'immeuble;5000.00;EXPENSE\n;4300;Primes d'assurances;4200.00;EXPENSE\n;4600;Honoraires de gestion;800.00;EXPENSE\ntotal_section;;Total REVENUE;20000.00;REVENUE\ntotal_section;;Total EXPENSE;18000.00;EXPENSE"
+    }
+  ],
+  "expect": {
+    "BALANCE_SHEET": {
+      "reconciliation": "PASS",
+      "tier": "GREEN"
+    },
+    "INCOME_STATEMENT": {
+      "reconciliation": "PASS",
+      "tier": "GREEN"
+    }
+  }
+}

@@ -227,7 +227,7 @@ export default function UnitApplicationsPage() {
             {!loading && sorted.length > 0 && (
               <>
                 {/* Mobile card list — sm:hidden */}
-                <div className="sm:hidden overflow-hidden rounded-lg border border-table-border divide-y divide-table-divider">
+                <div className="sm:hidden overflow-hidden rounded-lg border border-surface-border divide-y divide-surface-divider">
                   {sorted.map((row, idx) => {
                     const conf = confidenceBadge(row.confidence || 0);
                     const isDocExpanded = expandedDocApp === row.id;
@@ -294,7 +294,7 @@ export default function UnitApplicationsPage() {
                 </div>
 
                 {/* Wide table — hidden sm:block */}
-                <div className="hidden sm:block overflow-x-auto rounded-lg border border-table-border">
+                <div className="hidden sm:block overflow-x-auto rounded-lg border border-surface-border">
                   <table className="data-table">
                     <thead>
                       <tr>

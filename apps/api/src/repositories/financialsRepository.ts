@@ -20,6 +20,142 @@ function endOfDayUTC(d: Date): Date {
   return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 23, 59, 59, 999));
 }
 
+/**
+ * Net opening balance for one account (by code) sourced from the imported
+ * balance sheet, as of a date. Scoped to `sourceType: "BALANCE_SHEET_IMPORT"`
+ * so only the imported opening position is counted — operational invoice
+ * activity (a different sourceType) is excluded, making de-dup automatic.
+ *
+ * Returns signed cents (debit − credit). For a receivable account (1100) a
+ * positive result = outstanding receivable; for a payable account (2000) a
+ * negative result = outstanding payable (caller negates).
+ */
+export async function aggregateOpeningBalanceFromImport(
+  prisma: PrismaClient,
+  orgId: string,
+  buildingId: string,
+  accountCode: string,
+  asOf: Date,
+  sourceTypes: string[] = ["BALANCE_SHEET_IMPORT"],
+): Promise<number> {
+  const agg = await prisma.ledgerEntry.aggregate({
+    where: {
+      orgId,
+      buildingId,
+      sourceType: { in: sourceTypes },
+      date: { lte: endOfDayUTC(asOf) },
+      account: { code: accountCode },
+    },
+    _sum: { debitCents: true, creditCents: true },
+  });
+  return (agg._sum.debitCents ?? 0) - (agg._sum.creditCents ?? 0);
+}
+
+/** One account's movement over a period (WS-C analytical view). Signed = Dr − Cr. */
+export interface AccountMovement {
+  accountId: string;
+  code: string | null;
+  name: string;
+  accountType: string;
+  openingCents: number;
+  debitCents: number;
+  creditCents: number;
+  closingCents: number;
+}
+
+/**
+ * Per-account opening balance (before periodStart) + period debits/credits +
+ * closing balance, for a building. The accountant's trial-balance-with-opening.
+ */
+export async function aggregateAccountMovements(
+  prisma: PrismaClient,
+  orgId: string,
+  buildingId: string,
+  periodStart: Date,
+  periodEnd: Date,
+): Promise<AccountMovement[]> {
+  const [opening, period] = await Promise.all([
+    prisma.ledgerEntry.groupBy({
+      by: ["accountId"],
+      where: { orgId, buildingId, date: { lt: periodStart } },
+      _sum: { debitCents: true, creditCents: true },
+    }),
+    prisma.ledgerEntry.groupBy({
+      by: ["accountId"],
+      where: { orgId, buildingId, date: { gte: periodStart, lte: periodEnd } },
+      _sum: { debitCents: true, creditCents: true },
+    }),
+  ]);
+
+  const ids = new Set<string>([...opening.map((g) => g.accountId), ...period.map((g) => g.accountId)]);
+  if (ids.size === 0) return [];
+
+  const accounts = await prisma.account.findMany({
+    where: { id: { in: [...ids] } },
+    select: { id: true, code: true, name: true, accountType: true },
+  });
+  const accMap = new Map(accounts.map((a) => [a.id, a]));
+  const openMap = new Map(opening.map((g) => [g.accountId, (g._sum.debitCents ?? 0) - (g._sum.creditCents ?? 0)]));
+  const perMap = new Map(period.map((g) => [g.accountId, { d: g._sum.debitCents ?? 0, c: g._sum.creditCents ?? 0 }]));
+
+  const rows: AccountMovement[] = [];
+  for (const id of ids) {
+    const a = accMap.get(id);
+    if (!a) continue;
+    const openingCents = openMap.get(id) ?? 0;
+    const p = perMap.get(id) ?? { d: 0, c: 0 };
+    rows.push({
+      accountId: id,
+      code: a.code,
+      name: a.name,
+      accountType: a.accountType,
+      openingCents,
+      debitCents: p.d,
+      creditCents: p.c,
+      closingCents: openingCents + p.d - p.c,
+    });
+  }
+  rows.sort((x, y) => (x.code ?? "").localeCompare(y.code ?? ""));
+  return rows;
+}
+
+/**
+ * Capex adjustments on EXPENSE accounts for a building in [from, to] (WS-D):
+ * - capitalizedCents: CAPITALIZATION credits (capex moved off the P&L to 1500)
+ * - depreciationCents: DEPRECIATION debits (the new P&L expense)
+ * Used to net capex out of, and add depreciation into, period expenses.
+ */
+export async function aggregateCapexAdjustments(
+  prisma: PrismaClient,
+  orgId: string,
+  buildingId: string,
+  from: Date,
+  to: Date,
+): Promise<{ capitalizedCents: number; depreciationCents: number }> {
+  const [cap, dep] = await Promise.all([
+    prisma.ledgerEntry.aggregate({
+      where: {
+        orgId, buildingId, sourceType: "CAPITALIZATION",
+        date: { gte: from, lte: endOfDayUTC(to) },
+        account: { accountType: "EXPENSE" },
+      },
+      _sum: { creditCents: true },
+    }),
+    prisma.ledgerEntry.aggregate({
+      where: {
+        orgId, buildingId, sourceType: "DEPRECIATION",
+        date: { gte: from, lte: endOfDayUTC(to) },
+        account: { accountType: "EXPENSE" },
+      },
+      _sum: { debitCents: true },
+    }),
+  ]);
+  return {
+    capitalizedCents: cap._sum.creditCents ?? 0,
+    depreciationCents: dep._sum.debitCents ?? 0,
+  };
+}
+
 /** Find all INVOICE_ISSUED expense debit ledger entries for a building in a period. */
 export async function findExpenseLedgerEntries(
   prisma: PrismaClient,
@@ -47,6 +183,114 @@ export async function findExpenseLedgerEntries(
   return rows as ExpenseLedgerRow[];
 }
 
+/**
+ * Collection rate helpers — invoice-based, scoped to billing period.
+ *
+ * Using billing period (not payment date) prevents backlog catch-up payments
+ * from inflating the rate above 100 %.
+ *
+ * Returns totals in cents (Invoice.totalAmount stores cents).
+ */
+export async function aggregateInvoicedRentForPeriod(
+  prisma: PrismaClient,
+  orgId: string,
+  buildingId: string,
+  from: Date,
+  to: Date,
+): Promise<number> {
+  const agg = await prisma.invoice.aggregate({
+    where: {
+      orgId,
+      direction: "OUTGOING",
+      leaseId: { not: null },
+      billingPeriodStart: { gte: from, lte: endOfDayUTC(to) },
+      status: { not: "DRAFT" }, // exclude invoices that were never issued
+      lease: { unit: { buildingId } },
+    },
+    _sum: { totalAmount: true },
+  });
+  return agg._sum.totalAmount ?? 0;
+}
+
+export async function aggregatePaidRentForPeriod(
+  prisma: PrismaClient,
+  orgId: string,
+  buildingId: string,
+  from: Date,
+  to: Date,
+): Promise<number> {
+  const agg = await prisma.invoice.aggregate({
+    where: {
+      orgId,
+      direction: "OUTGOING",
+      leaseId: { not: null },
+      billingPeriodStart: { gte: from, lte: endOfDayUTC(to) },
+      status: "PAID",
+      lease: { unit: { buildingId } },
+    },
+    _sum: { totalAmount: true },
+  });
+  return agg._sum.totalAmount ?? 0;
+}
+
+/**
+ * Arrears aging for a portfolio (all buildings in org).
+ *
+ * Returns OUTGOING rent invoices that are ISSUED (unpaid), grouped into
+ * aging buckets based on how many days past their dueDate they are.
+ * Invoices with no dueDate are treated as current.
+ */
+export interface ArrearsAgingDTO {
+  currentCents: number;      // not yet due
+  overdue1to30Cents: number;
+  overdue31to60Cents: number;
+  overdue61plusCents: number;
+  totalOverdueCents: number;
+}
+
+export async function getArrearsAging(
+  prisma: PrismaClient,
+  orgId: string,
+  today: Date = new Date(),
+): Promise<ArrearsAgingDTO> {
+  const invoices = await prisma.invoice.findMany({
+    where: {
+      orgId,
+      direction: "OUTGOING",
+      leaseId: { not: null },
+      status: "ISSUED",
+    },
+    select: { totalAmount: true, dueDate: true },
+  });
+
+  let currentCents = 0;
+  let overdue1to30Cents = 0;
+  let overdue31to60Cents = 0;
+  let overdue61plusCents = 0;
+
+  const todayMs = today.getTime();
+  for (const inv of invoices) {
+    const amount = inv.totalAmount ?? 0;
+    if (!inv.dueDate) {
+      currentCents += amount;
+      continue;
+    }
+    const daysOverdue = Math.floor((todayMs - inv.dueDate.getTime()) / (1000 * 60 * 60 * 24));
+    if (daysOverdue <= 0) currentCents += amount;
+    else if (daysOverdue <= 30) overdue1to30Cents += amount;
+    else if (daysOverdue <= 60) overdue31to60Cents += amount;
+    else overdue61plusCents += amount;
+  }
+
+  return {
+    currentCents,
+    overdue1to30Cents,
+    overdue31to60Cents,
+    overdue61plusCents,
+    totalOverdueCents: overdue1to30Cents + overdue31to60Cents + overdue61plusCents,
+  };
+}
+
 /** Sum of rent payments received (bank debit on INVOICE_PAID) for a building in a period. */
 export async function aggregateLedgerIncome(
   prisma: PrismaClient,
@@ -67,4 +311,161 @@ export async function aggregateLedgerIncome(
     _sum: { debitCents: true },
   });
   return agg._sum.debitCents ?? 0;
+}
+
+/**
+ * Reference-only per-unit expenses: INCOMING invoices attributed to a unit
+ * alongside the set of invoice ids already posted to the ledger as
+ * INVOICE_ISSUED, so the caller can add only the un-posted (onboarded) ones
+ * without double-counting operational invoices.
+ */
+export async function findUnitAttributedInvoices(
+  prisma: PrismaClient,
+  orgId: string,
+  unitIds: string[],
+  from: Date,
+  to: Date,
+): Promise<{
+  postedInvoiceIds: string[];
+  incoming: { id: string; unitId: string | null; totalAmount: number; accountCode: string | null; accountName: string | null }[];
+}> {
+  const [postedEntries, incoming] = await Promise.all([
+    prisma.ledgerEntry.findMany({
+      where: { orgId, unitId: { in: unitIds }, sourceType: "INVOICE_ISSUED", date: { gte: from, lte: to } },
+      select: { sourceId: true },
+    }),
+    prisma.invoice.findMany({
+      where: { orgId, direction: "INCOMING", unitId: { in: unitIds }, issueDate: { gte: from, lte: to } },
+      select: { id: true, unitId: true, totalAmount: true, classifiedAccount: { select: { code: true, name: true } }, description: true },
+    }),
+  ]);
+  const incomingMapped = incoming.map((inv) => ({
+    id: inv.id,
+    unitId: inv.unitId,
+    totalAmount: inv.totalAmount,
+    accountCode: inv.classifiedAccount?.code ?? null,
+    accountName: inv.classifiedAccount?.name ?? inv.description ?? null,
+  }));
+  return {
+    postedInvoiceIds: postedEntries.map((e) => e.sourceId).filter((s): s is string => !!s),
+    incoming: incomingMapped,
+  };
+}
+
+/** Line-level data behind a single unit's direct-cost figure for a window. */
+export interface UnitExpenseLineData {
+  unit: { id: string; buildingId: string | null } | null;
+  ledgerEntries: {
+    id: string;
+    date: Date;
+    debitCents: number;
+    description: string;
+    reference: string | null;
+    sourceId: string | null;
+    account: { code: string | null; name: string } | null;
+  }[];
+  ledgerInvoiceMeta: { id: string; issuerName: string | null; invoiceNumber: string | null }[];
+  postedInvoiceIds: string[];
+  incoming: {
+    id: string;
+    issuerName: string | null;
+    invoiceNumber: string | null;
+    description: string;
+    issueDate: Date | null;
+    totalAmount: number;
+    classifiedAccount: { code: string | null; name: string } | null;
+  }[];
+  activeLeaseId: string | null;
+}
+
+/**
+ * All DB reads behind `getUnitExpenseLines` — the posted expense entries booked
+ * to the unit, the invoices they originate from, the reference-only INCOMING
+ * régie invoices attributed to the unit (with the posted-invoice ids for de-dup),
+ * and the unit's active lease (for the apportioned-charge share). The service
+ * composes these into the itemised line list.
+ */
+export async function findUnitExpenseLineData(
+  prisma: PrismaClient,
+  orgId: string,
+  unitId: string,
+  from: Date,
+  to: Date,
+): Promise<UnitExpenseLineData> {
+  const [unit, ledgerEntries, postedEntries, incoming, lease] = await Promise.all([
+    prisma.unit.findFirst({
+      where: { id: unitId, orgId },
+      select: { id: true, buildingId: true },
+    }),
+    prisma.ledgerEntry.findMany({
+      where: {
+        orgId, unitId,
+        sourceType: "INVOICE_ISSUED",
+        date: { gte: from, lte: to },
+        debitCents: { gt: 0 },
+        account: { accountType: "EXPENSE" },
+      },
+      orderBy: { date: "asc" },
+      select: {
+        id: true, date: true, debitCents: true, description: true, reference: true, sourceId: true,
+        account: { select: { code: true, name: true } },
+      },
+    }),
+    prisma.ledgerEntry.findMany({
+      where: { orgId, unitId, sourceType: "INVOICE_ISSUED", date: { gte: from, lte: to } },
+      select: { sourceId: true },
+    }),
+    prisma.invoice.findMany({
+      where: { orgId, direction: "INCOMING", unitId, issueDate: { gte: from, lte: to } },
+      orderBy: { issueDate: "asc" },
+      select: {
+        id: true, issuerName: true, invoiceNumber: true, description: true, issueDate: true, totalAmount: true,
+        classifiedAccount: { select: { code: true, name: true } },
+      },
+    }),
+    prisma.lease.findFirst({
+      where: {
+        unitId,
+        status: { in: ["ACTIVE", "SIGNED"] },
+        startDate: { lte: to },
+        OR: [{ endDate: null }, { endDate: { gte: from } }],
+      },
+      select: { id: true },
+    }),
+  ]);
+
+  const ledgerInvoiceIds = ledgerEntries.map((e) => e.sourceId).filter((s): s is string => !!s);
+  const ledgerInvoiceMeta = ledgerInvoiceIds.length > 0
+    ? await prisma.invoice.findMany({
+        where: { orgId, id: { in: ledgerInvoiceIds } },
+        select: { id: true, issuerName: true, invoiceNumber: true },
+      })
+    : [];
+
+  return {
+    unit,
+    ledgerEntries,
+    ledgerInvoiceMeta,
+    postedInvoiceIds: postedEntries.map((e) => e.sourceId).filter((s): s is string => !!s),
+    incoming,
+    activeLeaseId: lease?.id ?? null,
+  };
+}
+
+/**
+ * Attributed INCOMING invoices for a building over a window (issueDate + amount
+ * in cents), for distributing an imported year's expenses across the months when
+ * they were actually dated rather than smearing the annual total evenly.
+ */
+export async function findBuildingIncomingInvoiceDates(
+  prisma: PrismaClient,
+  orgId: string,
+  buildingId: string,
+  from: Date,
+  to: Date,
+): Promise<{ issueDate: Date | null; totalAmount: number }[]> {
+  return prisma.invoice.findMany({
+    where: { orgId, buildingId, direction: "INCOMING", issueDate: { gte: from, lte: to } },
+    select: { issueDate: true, totalAmount: true },
+  });
 }

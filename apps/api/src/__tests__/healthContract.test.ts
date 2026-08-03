@@ -1,12 +1,12 @@
 /**
- * GET /health Contract Test (T-03)
+ * GET /health + /readyz Contract Test (T-03)
  *
- * Asserts the unauthenticated health probe used by Render & Vercel:
- *   - reachable WITHOUT Authorization header
- *   - returns status:"ok" + db:"connected" when DB up
- *   - returns 503 when shutting down (cannot test gracefully without
- *     spawning two servers; the boolean field shape is asserted here)
- *   - includes uptimeSeconds, version, dbLatencyMs
+ * Two distinct probes (split so the deploy health check never gates on the DB):
+ *   - /health + /healthz — LIVENESS: reachable WITHOUT auth, 200 as soon as the
+ *     HTTP server is up, NO DB dependency. Shape: status:"ok", shuttingDown:false,
+ *     uptimeSeconds, version. (503 + status:"shutting_down" while draining.)
+ *   - /readyz — READINESS: includes the DB check. Shape: status:"ready",
+ *     db:"connected", dbLatencyMs, checkedInMs, uptimeSeconds, shuttingDown.
  *
  * Port: 3271 (unique)
  */
@@ -49,25 +49,37 @@ describe("GET /health (T-03 contract)", () => {
     await stopTestServer(serverProc);
   });
 
-  it("returns 200 + ok shape WITHOUT auth header", async () => {
+  it("/health returns 200 + liveness shape WITHOUT auth header (no DB dependency)", async () => {
     const { status, data } = await get("/health");
 
     expect(status).toBe(200);
     expect(data).toMatchObject({
       status: "ok",
-      db: "connected",
       shuttingDown: false,
     });
     expect(typeof data.uptimeSeconds).toBe("number");
     expect(typeof data.version).toBe("string");
-    expect(typeof data.checkedInMs).toBe("number");
-    expect(data.dbLatencyMs === null || typeof data.dbLatencyMs === "number").toBe(true);
+    // Liveness is DB-independent — the db/latency fields live on /readyz, not here.
+    expect(data.db).toBeUndefined();
   });
 
   it("/healthz alias also works", async () => {
     const { status, data } = await get("/healthz");
     expect(status).toBe(200);
     expect(data.status).toBe("ok");
+  });
+
+  it("/readyz returns 200 + readiness shape incl. DB check when DB is up", async () => {
+    const { status, data } = await get("/readyz");
+    expect(status).toBe(200);
+    expect(data).toMatchObject({
+      status: "ready",
+      db: "connected",
+      shuttingDown: false,
+    });
+    expect(typeof data.uptimeSeconds).toBe("number");
+    expect(typeof data.checkedInMs).toBe("number");
+    expect(data.dbLatencyMs === null || typeof data.dbLatencyMs === "number").toBe(true);
   });
 
   it("rejects non-GET methods via standard 404 (not registered for POST)", async () => {

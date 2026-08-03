@@ -7,6 +7,17 @@ import { requireRole, requireAuth, getAuthUser } from "../authz";
 import {
   getBuildingFinancials,
   getPortfolioSummary,
+  getPortfolioMonthlyBreakdown,
+  getPortfolioTimeSeries,
+  getBuildingTimeSeries,
+  getUnitFinancialSummaries,
+  getUnitExpenseLines,
+  getUnitProfitability,
+  getYieldGoalSeek,
+  getBuildingVendorSpend,
+  getBuildingExpenseBreakdown,
+  getBuildingPeriodReport,
+  getUnitPeriodReport,
   setInvoiceExpenseCategory,
   listBuildingSnapshots,
   computeAnnualSnapshots,
@@ -14,6 +25,7 @@ import {
   ValidationError,
   ConflictError,
 } from "../services/financials";
+import type { TimeSeriesRange } from "../services/financials";
 import {
   GetBuildingFinancialsSchema,
   PortfolioSummarySchema,
@@ -105,6 +117,54 @@ export function registerFinancialRoutes(router: Router) {
         }
         console.error("[GET /buildings/:id/financial-summary]", e);
         sendError(res, 500, "INTERNAL_ERROR", "Failed to load financial summary");
+      }
+    },
+  );
+
+  // ── GET /buildings/:id/vendor-spend ───────────────────────
+  router.get(
+    "/buildings/:id/vendor-spend",
+    async ({ req, res, params, query, orgId }) => {
+      if (!requireAuth(req, res)) return;
+      if (!requireOrgViewer(req, res)) return;
+
+      const from = first(query, "from");
+      const to = first(query, "to");
+      if (!from || !to) {
+        return sendError(res, 400, "VALIDATION_ERROR", "from and to (YYYY-MM-DD) are required");
+      }
+
+      try {
+        const data = await getBuildingVendorSpend(orgId, params.id, { from, to });
+        sendJson(res, 200, { data });
+      } catch (e) {
+        if (e instanceof NotFoundError) return sendError(res, 404, "NOT_FOUND", e.message);
+        console.error("[GET /buildings/:id/vendor-spend]", e);
+        sendError(res, 500, "INTERNAL_ERROR", "Failed to load vendor spend");
+      }
+    },
+  );
+
+  // ── GET /buildings/:id/expense-breakdown ──────────────────
+  router.get(
+    "/buildings/:id/expense-breakdown",
+    async ({ req, res, params, query, orgId }) => {
+      if (!requireAuth(req, res)) return;
+      if (!requireOrgViewer(req, res)) return;
+
+      const from = first(query, "from");
+      const to = first(query, "to");
+      if (!from || !to) {
+        return sendError(res, 400, "VALIDATION_ERROR", "from and to (YYYY-MM-DD) are required");
+      }
+
+      try {
+        const data = await getBuildingExpenseBreakdown(orgId, params.id, { from, to });
+        sendJson(res, 200, { data });
+      } catch (e) {
+        if (e instanceof NotFoundError) return sendError(res, 404, "NOT_FOUND", e.message);
+        console.error("[GET /buildings/:id/expense-breakdown]", e);
+        sendError(res, 500, "INTERNAL_ERROR", "Failed to load expense breakdown");
       }
     },
   );
@@ -217,6 +277,236 @@ export function registerFinancialRoutes(router: Router) {
         }
         console.error("[POST /buildings/:id/financial-snapshots/refresh]", e);
         sendError(res, 500, "INTERNAL_ERROR", "Failed to refresh snapshots");
+      }
+    },
+  );
+
+  // ── GET /financials/portfolio-monthly ──────────────────────
+  router.get(
+    "/financials/portfolio-monthly",
+    async ({ req, res, query, orgId }) => {
+      if (!requireAuth(req, res)) return;
+      if (!requireOrgViewer(req, res)) return;
+
+      const yearRaw = first(query, "year");
+      const year = yearRaw ? parseInt(yearRaw, 10) : new Date().getFullYear();
+
+      if (isNaN(year) || year < 2000 || year > 2100) {
+        return sendError(res, 400, "VALIDATION_ERROR", "Invalid year parameter");
+      }
+
+      try {
+        const user = getAuthUser(req);
+        const ownerId = (user?.role === "OWNER" || user?.ownerId) ? (user.ownerId || user.userId) : undefined;
+        const data = await getPortfolioMonthlyBreakdown(orgId, year, ownerId);
+        sendJson(res, 200, { data });
+      } catch (e: any) {
+        console.error("[GET /financials/portfolio-monthly]", e);
+        sendError(res, 500, "INTERNAL_ERROR", "Failed to load monthly breakdown");
+      }
+    },
+  );
+
+  // ── GET /financials/portfolio-timeseries ───────────────────
+  router.get(
+    "/financials/portfolio-timeseries",
+    async ({ req, res, query, orgId }) => {
+      if (!requireAuth(req, res)) return;
+      if (!requireOrgViewer(req, res)) return;
+
+      const VALID_RANGES = ["1W", "1M", "6M", "1Y", "2Y", "5Y", "10Y"] as const;
+      const rangeRaw = first(query, "range") ?? "1Y";
+      if (!VALID_RANGES.includes(rangeRaw as TimeSeriesRange)) {
+        return sendError(res, 400, "VALIDATION_ERROR", `range must be one of: ${VALID_RANGES.join(", ")}`);
+      }
+      const range = rangeRaw as TimeSeriesRange;
+
+      try {
+        const user = getAuthUser(req);
+        const ownerId = (user?.role === "OWNER" || user?.ownerId) ? (user.ownerId || user.userId) : undefined;
+        const data = await getPortfolioTimeSeries(orgId, range, ownerId);
+        sendJson(res, 200, { data });
+      } catch (e: any) {
+        console.error("[GET /financials/portfolio-timeseries]", e);
+        sendError(res, 500, "INTERNAL_ERROR", "Failed to load portfolio time series");
+      }
+    },
+  );
+
+  // ── GET /buildings/:id/timeseries ──────────────────────────
+  router.get(
+    "/buildings/:id/timeseries",
+    async ({ req, res, params, query, orgId }) => {
+      if (!requireAuth(req, res)) return;
+      if (!requireOrgViewer(req, res)) return;
+
+      const VALID_RANGES = ["1W", "1M", "6M", "1Y", "2Y", "5Y", "10Y"] as const;
+      const rangeRaw = first(query, "range") ?? "1Y";
+      if (!VALID_RANGES.includes(rangeRaw as TimeSeriesRange)) {
+        return sendError(res, 400, "VALIDATION_ERROR", `range must be one of: ${VALID_RANGES.join(", ")}`);
+      }
+      const range = rangeRaw as TimeSeriesRange;
+
+      try {
+        const data = await getBuildingTimeSeries(orgId, params.id, range);
+        sendJson(res, 200, { data });
+      } catch (e: any) {
+        if (e instanceof NotFoundError) return sendError(res, 404, "NOT_FOUND", e.message);
+        console.error("[GET /buildings/:id/timeseries]", e);
+        sendError(res, 500, "INTERNAL_ERROR", "Failed to load building time series");
+      }
+    },
+  );
+
+  // ── GET /buildings/:id/period-report ───────────────────────
+  router.get(
+    "/buildings/:id/period-report",
+    async ({ req, res, params, query, orgId }) => {
+      if (!requireAuth(req, res)) return;
+      if (!requireOrgViewer(req, res)) return;
+
+      const from = first(query, "from");
+      const to   = first(query, "to");
+      const includeMonthly = first(query, "includeMonthly") === "true";
+      if (!from || !to) return sendError(res, 400, "VALIDATION_ERROR", "from and to are required");
+
+      try {
+        const data = await getBuildingPeriodReport(orgId, params.id, from, to, includeMonthly);
+        sendJson(res, 200, { data });
+      } catch (e: any) {
+        if (e instanceof NotFoundError) return sendError(res, 404, "NOT_FOUND", e.message);
+        console.error("[GET /buildings/:id/period-report]", e);
+        sendError(res, 500, "INTERNAL_ERROR", "Failed to load building period report");
+      }
+    },
+  );
+
+  // ── GET /units/:id/period-report ───────────────────────────
+  router.get(
+    "/units/:id/period-report",
+    async ({ req, res, params, query, orgId }) => {
+      if (!requireAuth(req, res)) return;
+      if (!requireOrgViewer(req, res)) return;
+
+      const from = first(query, "from");
+      const to   = first(query, "to");
+      const includeMonthly = first(query, "includeMonthly") === "true";
+      if (!from || !to) return sendError(res, 400, "VALIDATION_ERROR", "from and to are required");
+
+      try {
+        const data = await getUnitPeriodReport(orgId, params.id, from, to, includeMonthly);
+        sendJson(res, 200, { data });
+      } catch (e: any) {
+        if (e instanceof NotFoundError) return sendError(res, 404, "NOT_FOUND", e.message);
+        console.error("[GET /units/:id/period-report]", e);
+        sendError(res, 500, "INTERNAL_ERROR", "Failed to load unit period report");
+      }
+    },
+  );
+
+  // ── GET /units/:id/expense-lines ───────────────────────────
+  // The individual costs that make up a unit's "Direct costs" figure for a window,
+  // so a manager can verify the number. Sums to the unit summary's expensesCents.
+  router.get(
+    "/units/:id/expense-lines",
+    async ({ req, res, params, query, orgId }) => {
+      if (!requireAuth(req, res)) return;
+      if (!requireOrgViewer(req, res)) return;
+
+      const from = first(query, "from");
+      const to   = first(query, "to");
+      if (!from || !to) return sendError(res, 400, "VALIDATION_ERROR", "from and to are required");
+
+      try {
+        const data = await getUnitExpenseLines(orgId, params.id, from, to);
+        sendJson(res, 200, { data });
+      } catch (e) {
+        if (e instanceof NotFoundError) return sendError(res, 404, "NOT_FOUND", e.message);
+        console.error("[GET /units/:id/expense-lines]", e);
+        sendError(res, 500, "INTERNAL_ERROR", "Failed to load unit expense lines");
+      }
+    },
+  );
+
+  // ── GET /buildings/:id/unit-financials ─────────────────────
+  router.get(
+    "/buildings/:id/unit-financials",
+    async ({ req, res, params, query, orgId }) => {
+      if (!requireAuth(req, res)) return;
+      if (!requireOrgViewer(req, res)) return;
+
+      const from = first(query, "from");
+      const to   = first(query, "to");
+      if (!from || !to) return sendError(res, 400, "VALIDATION_ERROR", "from and to are required");
+
+      try {
+        // Direct costing: per-unit expenses are only those booked to the unit;
+        // shared building costs are surfaced separately by the reporting view.
+        const data = await getUnitFinancialSummaries(orgId, params.id, from, to);
+        sendJson(res, 200, { data });
+      } catch (e: any) {
+        if (e instanceof NotFoundError) return sendError(res, 404, "NOT_FOUND", e.message);
+        console.error("[GET /buildings/:id/unit-financials]", e);
+        sendError(res, 500, "INTERNAL_ERROR", "Failed to load unit financials");
+      }
+    },
+  );
+
+  // ── GET /buildings/:id/unit-profitability ──────────────────
+  router.get(
+    "/buildings/:id/unit-profitability",
+    async ({ req, res, params, query, orgId }) => {
+      if (!requireAuth(req, res)) return;
+      if (!requireOrgViewer(req, res)) return;
+
+      const from = first(query, "from");
+      const to   = first(query, "to");
+      if (!from || !to) return sendError(res, 400, "VALIDATION_ERROR", "from and to are required");
+
+      try {
+        const data = await getUnitProfitability(orgId, params.id, from, to);
+        sendJson(res, 200, { data });
+      } catch (e) {
+        const err = e as { message?: string };
+        if (e instanceof NotFoundError || String(err?.message).includes("not found")) {
+          return sendError(res, 404, "NOT_FOUND", String(err?.message ?? "Building not found"));
+        }
+        console.error("[GET /buildings/:id/unit-profitability]", e);
+        sendError(res, 500, "INTERNAL_ERROR", "Failed to load unit profitability");
+      }
+    },
+  );
+
+  // ── GET /buildings/:id/yield-goalseek ──────────────────────
+  router.get(
+    "/buildings/:id/yield-goalseek",
+    async ({ req, res, params, query, orgId }) => {
+      if (!requireAuth(req, res)) return;
+      if (!requireOrgViewer(req, res)) return;
+
+      const from = first(query, "from");
+      const to   = first(query, "to");
+      if (!from || !to) return sendError(res, 400, "VALIDATION_ERROR", "from and to are required");
+
+      const target = Number(first(query, "target"));
+      if (!Number.isFinite(target) || target <= 0 || target > 100) {
+        return sendError(res, 400, "VALIDATION_ERROR", "target (yield %) must be between 0 and 100");
+      }
+      const feeRaw = Number(first(query, "mgmtFeePct"));
+      const mgmtFeePct = Number.isFinite(feeRaw) && feeRaw >= 0 && feeRaw <= 100 ? feeRaw : 0;
+      const ptRaw = Number(first(query, "oblfPassthroughPct"));
+      const oblfPassthroughPct = Number.isFinite(ptRaw) && ptRaw > 0 && ptRaw <= 100 ? ptRaw : undefined;
+
+      try {
+        const data = await getYieldGoalSeek(orgId, params.id, from, to, { targetYieldPct: target, mgmtFeePct, oblfPassthroughPct });
+        sendJson(res, 200, { data });
+      } catch (e) {
+        const err = e as { message?: string };
+        if (e instanceof NotFoundError || String(err?.message).includes("not found")) {
+          return sendError(res, 404, "NOT_FOUND", String(err?.message ?? "Building not found"));
+        }
+        console.error("[GET /buildings/:id/yield-goalseek]", e);
+        sendError(res, 500, "INTERNAL_ERROR", "Failed to compute yield goal-seek");
       }
     },
   );

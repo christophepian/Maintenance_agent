@@ -46,8 +46,8 @@ export async function upsertBuildingFinancialSnapshot(
   periodStart: Date,
   periodEnd: Date,
   data: {
-    earnedIncomeCents: number;
-    projectedIncomeCents: number;
+    collectedIncomeCents: number;
+    accruedIncomeCents: number;
     expensesTotalCents: number;
     maintenanceTotalCents: number;
     capexTotalCents: number;
@@ -93,6 +93,21 @@ export async function findAllSnapshotsForBuilding(
   });
 }
 
+/**
+ * Delete all snapshots for a building.
+ * Called when an invoice is paid so stale cached income figures are recomputed
+ * on the next reporting page load.
+ */
+export async function deleteSnapshotsForBuilding(
+  prisma: PrismaClient,
+  orgId: string,
+  buildingId: string,
+): Promise<void> {
+  await prisma.buildingFinancialSnapshot.deleteMany({
+    where: { orgId, buildingId },
+  });
+}
+
 export async function findSnapshotsByBuildingAndPeriod(
   prisma: PrismaClient,
   orgId: string,
@@ -107,7 +122,7 @@ export async function findSnapshotsByBuildingAndPeriod(
       periodStart: { gte: fromDate },
       periodEnd: { lte: toDate },
     },
-    select: { periodStart: true, projectedIncomeCents: true },
+    select: { periodStart: true, accruedIncomeCents: true },
     orderBy: { periodStart: "asc" },
   });
 }

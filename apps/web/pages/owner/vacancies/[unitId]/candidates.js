@@ -357,7 +357,7 @@ export default function OwnerCandidatesPage() {
               {!loading && rows.length > 0 && (
                 <>
                   {/* Mobile card list — sm:hidden */}
-                  <div className="sm:hidden overflow-hidden rounded-lg border border-table-border divide-y divide-table-divider">
+                  <div className="sm:hidden overflow-hidden rounded-lg border border-surface-border divide-y divide-surface-divider">
                     {rows.map((row, idx) => {
                       const conf = confidenceBadge(row.confidence || 0);
                       const currentRole = roleOf(row.applicationUnitId);

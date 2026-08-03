@@ -14,11 +14,9 @@ import { authHeaders } from "../../../lib/api";
 import { InvoicesContent } from "./invoices";
 import ImportedStatementsPanel from "../../../components/ImportedStatementsPanel";
 import BillingEntityManager from "../../../components/BillingEntityManager";
-import { CapExSummaryBridge } from "../../../components/RenovationTaxPlanning";
 import CashflowPlansList from "../../../components/CashflowPlansList";
-import NOITrendPanel from "../../../components/NOITrendPanel";
-import CapexSchedulePanel from "../../../components/CapexSchedulePanel";
-import NPVScenariosPanel from "../../../components/NPVScenariosPanel";
+import PlanningWorkspace from "../../../components/PlanningWorkspace";
+import { BuildingBalanceSheet, OpeningReceivablesPanel, BuildingAnalytical } from "../../../components/reporting/BuildingStatements";
 import { cn } from "../../../lib/utils";
 import { FilterToggle, FilterPanelBody, FilterSection, FilterSectionClear, DateField } from "../../../components/ui/FilterPanel";
 import ScrollableTabs from "../../../components/mobile/ScrollableTabs";
@@ -63,7 +61,7 @@ function HealthDot({ health }) {
   return (
     <span
       title={health}
-      className={cn("inline-block w-2.5 h-2.5 rounded-full shrink-0", HEALTH_DOT_CLASS[health] || "bg-slate-400")}
+      className={cn("inline-block w-2.5 h-2.5 rounded-full shrink-0", HEALTH_DOT_CLASS[health] || "bg-foreground-dim")}
     />
   );
 }
@@ -74,6 +72,7 @@ const FINANCE_TABS = [
   { key: "overview" },
   { key: "invoices" },
   { key: "imports" },
+  { key: "cost-pool" },
   { key: "billing-entities" },
   { key: "accounting" },
   { key: "planning" },
@@ -91,13 +90,15 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
     router.push({ pathname: router.pathname, query: { ...router.query, tab: key } }, undefined, { shallow: true });
   }, [router]);
 
-  const [planningBuildingId, setPlanningBuildingId] = useState("");
+  const [allBuildings, setAllBuildings] = useState([]);
+  const [acctBuildingId, setAcctBuildingId] = useState("");
   const [range, setRange] = useState(defaultRange);
   const [portfolio, setPortfolio] = useState(null);
   const [portfolioLoading, setPortfolioLoading] = useState(true);
   const [portfolioError, setPortfolioError] = useState("");
   const [buildingsExpanded, setBuildingsExpanded] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
+  const [planningView, setPlanningView] = useState("opps"); // Planning sub-tab: opps | plans
 
   const fetchPortfolio = useCallback(async () => {
     setPortfolioLoading(true);
@@ -117,6 +118,19 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
 
   useEffect(() => { fetchPortfolio(); }, [fetchPortfolio]);
 
+  // Fetch building list once for the Planning tab building selector
+  useEffect(() => {
+    fetch("/api/buildings", { headers: authHeaders() })
+      .then((r) => r.json())
+      .then((d) => {
+        if (d?.data) {
+          const list = d.data.map((b) => ({ id: b.id, name: b.name }));
+          setAllBuildings(list);
+        }
+      })
+      .catch(() => {/* non-critical */});
+  }, []);
+
   const { sortField: bSortField, sortDir: bSortDir, handleSort: handleBuildingSort } = useLocalSort("name", "asc");
   const sortedBuildings = useMemo(() => {
     const buildings = portfolio?.buildings ?? [];
@@ -125,7 +139,7 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
       if (f === "net") return b.netIncomeCents ?? 0;
       if (f === "collection") return b.collectionRate ?? 0;
       if (f === "receivables") return b.receivablesCents ?? 0;
-      if (f === "earned") return b.earnedIncomeCents ?? 0;
+      if (f === "earned") return b.collectedIncomeCents ?? 0;
       if (f === "expenses") return b.expensesTotalCents ?? 0;
       return "";
     });
@@ -199,7 +213,7 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
                     <div className="sm:hidden mb-3">
                       <KpiInlineGrid
                         items={[
-                          { label: "Earned Income",  value: formatChfCents(p.totalEarnedIncomeCents), tone: "good" },
+                          { label: "Earned Income",  value: formatChfCents(p.totalCollectedIncomeCents), tone: "good" },
                           { label: "Total Expenses", value: formatChfCents(p.totalExpensesCents) },
                           { label: "Net Result",     value: formatChfCents(p.totalNetIncomeCents), tone: p.totalNetIncomeCents >= 0 ? "good" : "warn" },
                           { label: "Receivables",    value: formatChfCents(p.totalReceivablesCents), tone: p.totalReceivablesCents > 0 ? "warn" : undefined },
@@ -209,7 +223,7 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
                     </div>
                     {/* Desktop: card grid */}
                     <div className="hidden sm:grid grid-cols-2 md:grid-cols-5 gap-3">
-                      <SummaryCard label={t("manager:financeIndex.prop.earnedIncome")}  value={formatChfCents(p.totalEarnedIncomeCents)} accent="green" />
+                      <SummaryCard label={t("manager:financeIndex.prop.earnedIncome")}  value={formatChfCents(p.totalCollectedIncomeCents)} accent="green" />
                       <SummaryCard label={t("manager:financeIndex.prop.totalExpenses")} value={formatChfCents(p.totalExpensesCents)} />
                       <SummaryCard label={t("manager:financeIndex.prop.netResult")}     value={formatChfCents(p.totalNetIncomeCents)} accent={netAccent} sub="Income − Expenses" />
                       <SummaryCard label={t("manager:financeIndex.prop.receivables")}    value={formatChfCents(p.totalReceivablesCents)} accent={p.totalReceivablesCents > 0 ? "amber" : ""} sub="Unpaid rent invoices" />
@@ -235,7 +249,7 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
                       ) : (
                         <>
                           {/* Mobile card list — md:hidden (financial table needs more width) */}
-                          <div className="md:hidden overflow-hidden rounded-lg border border-table-border divide-y divide-table-divider">
+                          <div className="md:hidden overflow-hidden rounded-lg border border-surface-border divide-y divide-surface-divider">
                             {(buildingsExpanded ? sortedBuildings : sortedBuildings.slice(0, 5)).map((b) => (
                               <div
                                 key={b.buildingId}
@@ -260,7 +274,7 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
                           </div>
 
                           {/* Wide table — hidden md:block */}
-                          <div className="hidden md:block overflow-hidden rounded-lg border border-table-border">
+                          <div className="hidden md:block overflow-hidden rounded-lg border border-surface-border">
                           <div className="overflow-x-auto">
                             <table className="data-table">
                               <thead>
@@ -283,7 +297,7 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
                                         <span className="cell-bold">{b.buildingName}</span>
                                       </span>
                                     </td>
-                                    <td className="text-right font-mono">{formatChfCents(b.earnedIncomeCents)}</td>
+                                    <td className="text-right font-mono">{formatChfCents(b.collectedIncomeCents)}</td>
                                     <td className="text-right font-mono">{formatChfCents(b.expensesTotalCents)}</td>
                                     <td className={cn("text-right font-mono font-semibold", b.netIncomeCents >= 0 ? "text-success-text" : "text-destructive-text")}>
                                       {formatChfCents(b.netIncomeCents)}
@@ -336,38 +350,96 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
           {/* ── Imports ── */}
           {activeTabKey === "imports" && <ImportedStatementsPanel />}
 
+          {/* ── Cost pool (Nebenkosten / ancillary cost reconciliation) ── */}
+          {activeTabKey === "cost-pool" && (
+            <Panel title={t("costPool.title.costPool")}>
+              <p className="text-sm text-muted-text mb-4">{t("manager:financeIndex.costPool.blurb")}</p>
+              <Link href="/manager/finance/billing-periods" className="inline-flex items-center rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:opacity-90">
+                {t("manager:financeIndex.costPool.open")} →
+              </Link>
+            </Panel>
+          )}
+
           {/* ── Billing Entities ── */}
           {activeTabKey === "billing-entities" && <BillingEntityManager />}
 
           {/* ── Accounting ── */}
           {activeTabKey === "accounting" && (
-            <Panel>
-              <div className="flex flex-col gap-4">
-                <p className="text-sm text-muted-text">
-                  Double-entry ledger and account structure for your portfolio.
-                </p>
-                <div className="flex flex-wrap gap-3">
-                  <Link href="/manager/finance/ledger" className="button-secondary text-sm">
-                    General Ledger
-                  </Link>
-                  <Link href="/manager/finance/chart-of-accounts" className="button-secondary text-sm">
-                    Chart of Accounts
-                  </Link>
+            <div className="space-y-6">
+              <Panel>
+                <div className="flex flex-col gap-4">
+                  <p className="text-sm text-muted-text">
+                    Double-entry ledger and account structure for your portfolio.
+                  </p>
+                  <div className="flex flex-wrap gap-3">
+                    <Link href="/manager/finance/ledger" className="button-secondary text-sm">
+                      General Ledger
+                    </Link>
+                    <Link href="/manager/finance/chart-of-accounts" className="button-secondary text-sm">
+                      Chart of Accounts
+                    </Link>
+                  </div>
                 </div>
-              </div>
-            </Panel>
+              </Panel>
+
+              {/* Per-building financial statements (relocated from building reporting). */}
+              {allBuildings.length > 0 && (() => {
+                const effId = acctBuildingId || allBuildings[0]?.id || "";
+                return (
+                  <>
+                    <div className="flex items-center gap-2">
+                      <label htmlFor="acct-building" className="text-sm text-muted-text">Building</label>
+                      <select
+                        id="acct-building"
+                        value={effId}
+                        onChange={(e) => setAcctBuildingId(e.target.value)}
+                        className="rounded-lg border border-surface-border bg-surface px-3 py-1.5 text-sm text-foreground"
+                      >
+                        {allBuildings.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+                      </select>
+                    </div>
+                    {effId && (
+                      <div className="space-y-6">
+                        <Section title={t("financeIndex.accounting.financialPosition", { defaultValue: "Financial position" })}>
+                          <BuildingBalanceSheet buildingId={effId} />
+                          <OpeningReceivablesPanel buildingId={effId} />
+                        </Section>
+                        <Section title={t("financeIndex.accounting.analytical", { defaultValue: "Analytical" })}>
+                          <BuildingAnalytical buildingId={effId} />
+                        </Section>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+            </div>
           )}
 
           {/* ── Planning ── */}
           {activeTabKey === "planning" && (
             <div className="space-y-4">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <NOITrendPanel onBuildingChange={setPlanningBuildingId} />
-                <CapexSchedulePanel buildingId={planningBuildingId} />
+              {/* Segmented control — a view toggle, deliberately not the underline
+                  tabs used by the finance nav above (two tab rows read as one
+                  confused hierarchy). Keeps committed plans off the main scroll. */}
+              <div className="inline-flex gap-0.5 rounded-lg border border-surface-border bg-surface-subtle p-0.5">
+                {[["opps", t("planning.subtab.opportunities", { defaultValue: "Opportunities" })], ["plans", t("planning.subtab.recordedPlans", { defaultValue: "Recorded Plans" })]].map(([k, label]) => (
+                  <button key={k} onClick={() => setPlanningView(k)} aria-pressed={planningView === k}
+                    className={cn("rounded-md px-3.5 py-1.5 text-sm font-semibold transition-colors", planningView === k ? "bg-surface text-foreground shadow-sm" : "text-muted hover:text-foreground")}>
+                    {label}
+                  </button>
+                ))}
               </div>
-              <NPVScenariosPanel buildingId={planningBuildingId} />
-              <CapExSummaryBridge />
-              <CashflowPlansList />
+
+              {planningView === "opps" && <PlanningWorkspace buildings={allBuildings} />}
+
+              {planningView === "plans" && (
+                <div>
+                  <p className="mb-3 text-xs text-foreground-dim">
+                    {t("planning.plansHint", { defaultValue: "Open a plan to review its NPV verdict and assumptions, or to generate RFPs." })}
+                  </p>
+                  <CashflowPlansList />
+                </div>
+              )}
             </div>
           )}
 

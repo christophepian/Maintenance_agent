@@ -23,6 +23,7 @@ import {
   CaptureSessionError,
 } from "../services/captureSessionService";
 import { requireTenantSession } from "../authz";
+import { checkRateLimit } from "../http/rateLimiter";
 import * as crypto from "crypto";
 import type { IncomingHttpHeaders } from "http";
 
@@ -42,20 +43,13 @@ function deriveFrontendUrl(headers: IncomingHttpHeaders): string | undefined {
   return undefined;
 }
 
-// SA-21: In-memory rate limiter for public capture session endpoints (20 calls/IP/minute)
-const captureRateMap = new Map<string, { count: number; resetAt: number }>();
+// SA-21: rate limiter for public capture session endpoints (20 calls/IP/minute)
+// via shared apps/api/src/http/rateLimiter.ts (see its Redis note).
 const CAPTURE_RATE_LIMIT = 20;
 const CAPTURE_RATE_WINDOW_MS = 60_000;
 
 function checkCaptureRateLimit(ip: string): boolean {
-  const now = Date.now();
-  const entry = captureRateMap.get(ip);
-  if (!entry || now >= entry.resetAt) {
-    captureRateMap.set(ip, { count: 1, resetAt: now + CAPTURE_RATE_WINDOW_MS });
-    return true;
-  }
-  entry.count++;
-  return entry.count <= CAPTURE_RATE_LIMIT;
+  return checkRateLimit("capture", ip, CAPTURE_RATE_LIMIT, CAPTURE_RATE_WINDOW_MS);
 }
 
 export function registerCaptureSessionRoutes(router: Router) {

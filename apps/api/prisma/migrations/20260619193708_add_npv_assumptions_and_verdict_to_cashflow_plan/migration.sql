@@ -1,0 +1,7 @@
+-- AlterTable
+ALTER TABLE "CashflowPlan" ADD COLUMN     "capRatePct" DOUBLE PRECISION NOT NULL DEFAULT 5,
+ADD COLUMN     "deferYears" INTEGER NOT NULL DEFAULT 3,
+ADD COLUMN     "discountRatePct" DOUBLE PRECISION NOT NULL DEFAULT 4,
+ADD COLUMN     "lastVerdictAt" TIMESTAMP(3),
+ADD COLUMN     "lastVerdictScenario" TEXT,
+ADD COLUMN     "propertyValueChf" DOUBLE PRECISION;

@@ -19,13 +19,7 @@
  */
 
 import { createApiClient, createAdminClient } from "../../../lib/supabase/server";
-
-const ROLE_HOME = {
-  MANAGER: "/manager",
-  CONTRACTOR: "/contractor",
-  OWNER: "/owner",
-  TENANT: "/tenant/inbox",
-};
+import { resolveLandingPath } from "../../../lib/roleRouting";
 
 export default async function handler(req, res) {
   const { code, next } = req.query;
@@ -48,7 +42,6 @@ export default async function handler(req, res) {
   const meta = session.user?.app_metadata ?? {};
   const userMeta = session.user?.user_metadata ?? {};
   const accessLevel = meta.accessLevel;
-  const appRole = meta.appRole;
 
   // SANDBOX: validate beta tester status after every magic link click.
   // This is a second line of defence — the login form already calls beta-check
@@ -78,25 +71,16 @@ export default async function handler(req, res) {
   // there is no password to set. Go straight to the app.
   const isFirstLogin = !userMeta.password_set;
 
-  if (isFirstLogin && process.env.NEXT_PUBLIC_SANDBOX !== "true") {
+  // DOCS_INVESTOR never sets a password — skip straight to the pitchdeck.
+  if (isFirstLogin && process.env.NEXT_PUBLIC_SANDBOX !== "true" && accessLevel !== "DOCS_INVESTOR") {
     const dest = next ? `/set-password?next=${encodeURIComponent(next)}` : "/set-password";
     return res.redirect(302, dest);
   }
 
-  // Determine redirect target
-  let target = next || null;
-
-  if (!target) {
-    if (accessLevel === "DOCS_INVESTOR") {
-      target = "/docs/pitchdeck.html";
-    } else if (appRole && ROLE_HOME[appRole]) {
-      target = ROLE_HOME[appRole];
-    } else if (accessLevel === "ADMIN") {
-      target = "/manager";
-    } else {
-      target = "/";
-    }
-  }
+  // Determine redirect target — shared with login.js / set-password.js, and
+  // applies the first-login onboarding gate for returning users who set a
+  // password but haven't yet completed onboarding.
+  const target = resolveLandingPath({ appMeta: meta, userMeta, next });
 
   return res.redirect(302, target);
 }

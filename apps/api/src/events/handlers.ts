@@ -222,10 +222,17 @@ export function registerEventHandlers(prisma: PrismaClient): void {
               nextStart,
             );
 
-            console.log(
-              `[BILLING] Generated first invoice ${result.invoiceId} for lease ${leaseId} ` +
-                `(amount=${result.totalAmountCents} cents, pro-rata=${result.isProRata})`,
-            );
+            if (result) {
+              console.log(
+                `[BILLING] Generated first invoice ${result.invoiceId} for lease ${leaseId} ` +
+                  `(amount=${result.totalAmountCents} cents, pro-rata=${result.isProRata})`,
+              );
+            } else {
+              console.log(
+                `[BILLING] Lease ${leaseId} is a co-billed parking spot — no standalone ` +
+                  `invoice; rent rides on the linked flat's invoice.`,
+              );
+            }
           } catch (err) {
             console.error(
               `[BILLING] Failed to generate first invoice for lease ${leaseId}:`,

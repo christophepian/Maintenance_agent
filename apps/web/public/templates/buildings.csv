@@ -1,0 +1,3 @@
+name,address,yearBuilt,hasElevator,hasConcierge,parcelNumber,ecaVolumeM3,netAreaSqm,lotsApartments,lotsGarages,lotsExteriorParking,fiscalValueChf,insuranceValueChf,ppeEstimateChf
+Résidence du Lac,Avenue de la Gare 12,1985,true,false,PN-1234,4200,1850,8,4,2,3200000,4100000,3800000
+Immeuble Central,Rue du Marché 3,2003,true,true,PN-5678,3100,1400,6,6,0,2600000,3500000,3200000

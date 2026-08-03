@@ -44,14 +44,14 @@ function buildCrfpColumns(t) {
         <span className="font-medium text-foreground">#{rfp.request.requestNumber}</span>
         <span className="block text-xs text-muted max-w-[200px] truncate">{rfp.request.description}</span>
       </span>
-    ) : <span className="text-xs text-foreground-dim">\u2014</span>,
+    ) : <span className="text-xs text-foreground-dim">—</span>,
   },
   {
     id: "category",
     label: t("contractor:rfps.col.category"),
     sortable: true,
     defaultVisible: true,
-    render: (rfp) => <span className="text-sm text-muted-dark">{rfp.category || "\u2014"}</span>,
+    render: (rfp) => <span className="text-sm text-muted-dark">{rfp.category || "—"}</span>,
   },
   {
     id: "location",
@@ -59,7 +59,7 @@ function buildCrfpColumns(t) {
     defaultVisible: true,
     render: (rfp) => (
       <span className="text-sm text-muted-dark">
-        {rfp.buildingName || "\u2014"}
+        {rfp.buildingName || "—"}
         {rfp.postalCode && <span className="text-foreground-dim text-xs ml-1">({rfp.postalCode})</span>}
         {rfp.unitNumber && <span className="text-foreground-dim"> / {rfp.unitNumber}</span>}
       </span>
@@ -85,7 +85,7 @@ function buildCrfpColumns(t) {
       <Badge variant={quoteVariant(rfp.myQuote.status)} size="sm">
         {rfp.myQuote.status === "AWARDED" ? "Won" : rfp.myQuote.status === "REJECTED" ? "Not selected" : "Submitted"}
       </Badge>
-    ) : <span className="text-xs text-foreground-dim">\u2014</span>,
+    ) : <span className="text-xs text-foreground-dim">—</span>,
   },
   {
     id: "invites",

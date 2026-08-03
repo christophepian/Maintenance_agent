@@ -181,6 +181,7 @@ export const CreateExpenseItemSchema = z.object({
   mode: z.enum(["ACOMPTE", "FORFAIT"]).optional(),
   expenseTypeId: z.string().uuid().optional(),
   accountId: z.string().uuid().optional(),
+  categoryId: z.string().uuid().optional(),
 });
 
 export const UpdateExpenseItemSchema = z.object({
@@ -189,6 +190,7 @@ export const UpdateExpenseItemSchema = z.object({
   mode: z.enum(["ACOMPTE", "FORFAIT"]).optional(),
   expenseTypeId: z.string().uuid().nullable().optional(),
   accountId: z.string().uuid().nullable().optional(),
+  categoryId: z.string().uuid().nullable().optional(),
   isActive: z.boolean().optional(),
 });
 

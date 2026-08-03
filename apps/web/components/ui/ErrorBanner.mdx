@@ -1,0 +1,52 @@
+import { Meta, Title, Canvas, Controls } from "@storybook/addon-docs/blocks";
+import * as ErrorBannerStories from "./ErrorBanner.stories";
+
+<Meta of={ErrorBannerStories} />
+
+<Title />
+
+An inline error message for a form or view. Built on `.error-banner`
+(destructive-light background, destructive-ring border, destructive-text) and
+carries `role="alert"` so assistive tech announces it.
+
+```jsx
+import ErrorBanner from "@/components/ui/ErrorBanner";
+
+<ErrorBanner error={error} onDismiss={() => setError(null)} />
+```
+
+`ErrorBanner` renders nothing when both `error` and `children` are falsy, so you
+can leave it mounted and just pass the current error.
+
+<Canvas of={ErrorBannerStories.Playground} />
+
+## Dismissible
+
+Pass `onDismiss` to add a close button.
+
+<Canvas of={ErrorBannerStories.Dismissible} />
+
+## Anatomy
+
+| Prop | Role |
+|---|---|
+| `error` | Error string (renders nothing if falsy) |
+| `children` | Optional — richer content instead of `error` |
+| `onDismiss` | Optional — shows a dismiss button |
+
+## When to use
+
+- ✅ **Use ErrorBanner** for errors tied to the current form/view (failed save,
+  validation summary).
+- For transient, non-blocking feedback prefer a toast (`UndoToast`/`ToastProvider`).
+- Keep the message actionable — say what failed and what to try.
+
+## Accessibility
+
+- `role="alert"` announces the message when it appears — don't wrap it in another
+  live region (double announcements).
+- The dismiss button has `aria-label="Dismiss error"`.
+
+## Props
+
+<Controls of={ErrorBannerStories.Playground} />

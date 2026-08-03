@@ -7,7 +7,7 @@ import { requireOrgViewer, logEvent } from "./helpers";
 import { requireAnyRole } from "../authz";
 import { getJob, listJobs } from "../services/jobs";
 import { createInvoice, getInvoice, listInvoices, getOrCreateInvoiceForJob } from "../services/invoices";
-import { CreateInvoiceSchema } from "../validation/invoices";
+import { CreateInvoiceSchema, UpdateInvoiceSchema } from "../validation/invoices";
 import { generateInvoiceQRBill, getInvoiceQRCodePNG } from "../services/invoiceQRBill";
 import { generateInvoicePDF } from "../services/invoicePDF";
 import { completeJobWorkflow } from "../workflows/completeJobWorkflow";
@@ -29,7 +29,13 @@ export function registerInvoiceRoutes(router: Router) {
       const contractorId = first(query, "contractorId") || undefined;
       const status = first(query, "status") || undefined;
       const view = first(query, "view") as "summary" | "full" | undefined;
-      const result = await listJobs(orgId, { contractorId, status: status as any, view });
+      // Pagination is opt-in: only bound the query when the caller passes limit/offset.
+      // Absent params preserve the historical full-list behaviour list pages rely on.
+      const hasLimit = (first(query, "limit") ?? "") !== "";
+      const hasOffset = (first(query, "offset") ?? "") !== "";
+      const limit = hasLimit ? getIntParam(query, "limit", { defaultValue: 200, min: 1, max: 2000 }) : undefined;
+      const offset = hasOffset ? getIntParam(query, "offset", { defaultValue: 0, min: 0, max: 1_000_000 }) : undefined;
+      const result = await listJobs(orgId, { contractorId, status: status as any, view, limit, offset });
       sendJson(res, 200, { data: result.data, total: result.total });
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to load jobs", String(e));
@@ -75,11 +81,17 @@ export function registerInvoiceRoutes(router: Router) {
     try {
       const jobId = first(query, "jobId") || undefined;
       const status = first(query, "status") || undefined;
+      const statusInRaw = first(query, "statusIn") || undefined;
+      const statusIn = statusInRaw ? statusInRaw.split(",").map((s) => s.trim()).filter(Boolean) as any[] : undefined;
       const contractorId = first(query, "contractorId") || undefined;
       const expenseCategory = first(query, "expenseCategory") || undefined;
       const buildingId = first(query, "buildingId") || undefined;
       const paidAfter = first(query, "paidAfter") || undefined;
       const paidBefore = first(query, "paidBefore") || undefined;
+      const issueDateFrom = first(query, "issueDateFrom") || undefined;
+      const issueDateTo = first(query, "issueDateTo") || undefined;
+      const issuerName = first(query, "issuerName") || undefined;
+      const vendorContractorId = first(query, "vendorContractorId") || undefined;
       const expenseTypeId = first(query, "expenseTypeId") || undefined;
       const accountId = first(query, "accountId") || undefined;
       const direction = first(query, "direction") || undefined;
@@ -92,7 +104,7 @@ export function registerInvoiceRoutes(router: Router) {
       const categorized = first(query, "categorized") === "true" ? true : undefined;
       const limit = getIntParam(query, "limit", { defaultValue: 50, min: 1, max: 200 });
       const offset = getIntParam(query, "offset", { defaultValue: 0, min: 0, max: 1_000_000 });
-      const result = await listInvoices(orgId, { jobId, status: status as any, view, contractorId, expenseCategory, buildingId, paidAfter, paidBefore, expenseTypeId, accountId, direction, ingestionStatus, unitId, search, sortField, sortDir, categorized, limit, offset });
+      const result = await listInvoices(orgId, { jobId, status: status as any, statusIn, view, contractorId, expenseCategory, buildingId, paidAfter, paidBefore, issueDateFrom, issueDateTo, issuerName, vendorContractorId, expenseTypeId, accountId, direction, ingestionStatus, unitId, search, sortField, sortDir, categorized, limit, offset });
       sendJson(res, 200, { data: result.data, total: result.total });
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to load invoices", String(e));
@@ -176,11 +188,31 @@ export function registerInvoiceRoutes(router: Router) {
     if (!requireAnyRole(req, res, ["MANAGER", "OWNER"])) return;
     try {
       const body = await readJson(req);
+      const parsed = UpdateInvoiceSchema.safeParse(body);
+      if (!parsed.success) {
+        return sendError(res, 400, "VALIDATION_ERROR", "Invalid invoice update", parsed.error.flatten());
+      }
+      const v = parsed.data;
+      // Org guard before mutation: updateInvoice resolves by bare id, so confirm
+      // the invoice belongs to the caller's org first (org is immutable → no TOCTOU).
+      const existing = await getInvoice(params.id);
+      if (!existing || existing.orgId !== orgId) return sendError(res, 404, "NOT_FOUND", "Invoice not found");
       const { updateInvoice } = await import("../services/invoices");
       const updated = await updateInvoice(params.id, {
-        ...(body.issuerBillingEntityId !== undefined ? { issuerBillingEntityId: body.issuerBillingEntityId } : {}),
-        ...(body.recipientName !== undefined ? { recipientName: body.recipientName } : {}),
-        ...(body.description !== undefined ? { description: body.description } : {}),
+        ...(v.issuerBillingEntityId !== undefined ? { issuerBillingEntityId: v.issuerBillingEntityId } : {}),
+        ...(v.issuerName !== undefined ? { issuerName: v.issuerName } : {}),
+        ...(v.issuerAddressLine1 !== undefined ? { issuerAddressLine1: v.issuerAddressLine1 } : {}),
+        ...(v.issuerPostalCode !== undefined ? { issuerPostalCode: v.issuerPostalCode } : {}),
+        ...(v.issuerCity !== undefined ? { issuerCity: v.issuerCity } : {}),
+        ...(v.issuerCountry !== undefined ? { issuerCountry: v.issuerCountry } : {}),
+        ...(v.recipientName !== undefined ? { recipientName: v.recipientName } : {}),
+        ...(v.description !== undefined ? { description: v.description } : {}),
+        ...(v.buildingId !== undefined ? { buildingId: v.buildingId } : {}),
+        ...(v.unitId !== undefined ? { unitId: v.unitId } : {}),
+        ...(v.expenseTypeId !== undefined ? { expenseTypeId: v.expenseTypeId } : {}),
+        ...(v.accountId !== undefined ? { accountId: v.accountId } : {}),
+        ...(v.costNature !== undefined ? { costNature: v.costNature } : {}),
+        ...(v.ancillaryCategoryId !== undefined ? { ancillaryCategoryId: v.ancillaryCategoryId } : {}),
       });
       sendJson(res, 200, { data: updated });
     } catch (e: any) {
@@ -277,6 +309,20 @@ export function registerInvoiceRoutes(router: Router) {
       if (e instanceof InvalidTransitionError) return sendError(res, 409, "INVALID_TRANSITION", e.message);
       if (e.code === "NOT_FOUND") return sendError(res, 404, "NOT_FOUND", e.message);
       sendError(res, 500, "DB_ERROR", "Failed to dispute invoice", String(e));
+    }
+  });
+
+  // POST /invoices/:id/swap-parties — swap issuer ↔ recipient text fields
+  router.post("/invoices/:id/swap-parties", async ({ req, res, params, orgId }) => {
+    if (!requireAnyRole(req, res, ["MANAGER", "OWNER"])) return;
+    try {
+      const { swapInvoiceParties } = await import("../services/invoices");
+      const invoice = await swapInvoiceParties(params.id, orgId);
+      sendJson(res, 200, { data: invoice });
+    } catch (e: any) {
+      const msg = String(e?.message || e);
+      if (msg === "INVOICE_NOT_FOUND") return sendError(res, 404, "NOT_FOUND", "Invoice not found");
+      sendError(res, 500, "DB_ERROR", "Failed to swap invoice parties", String(e));
     }
   });
 
@@ -385,18 +431,22 @@ export function registerInvoiceRoutes(router: Router) {
       const sourceKey = (invoice as any).sourceFileUrl as string | null;
       const isPdfSource = sourceKey?.toLowerCase().endsWith(".pdf");
       if (isPdfSource && sourceKey) {
-        const exists = await storage.exists(sourceKey);
-        if (exists) {
-          const buffer = await storage.get(sourceKey);
-          const fileName = sourceKey.split("/").pop() || "invoice.pdf";
-          res.writeHead(200, {
-            "Content-Type": "application/pdf",
-            "Content-Length": buffer.length,
-            "Content-Disposition": `inline; filename="${encodeURIComponent(fileName)}"`,
-            "Cache-Control": "private, max-age=3600",
-          });
-          res.end(buffer);
-          return;
+        try {
+          const exists = await storage.exists(sourceKey);
+          if (exists) {
+            const buffer = await storage.get(sourceKey);
+            const fileName = sourceKey.split("/").pop() || "invoice.pdf";
+            res.writeHead(200, {
+              "Content-Type": "application/pdf",
+              "Content-Length": buffer.length,
+              "Content-Disposition": `inline; filename="${encodeURIComponent(fileName)}"`,
+              "Cache-Control": "private, max-age=3600",
+            });
+            res.end(buffer);
+            return;
+          }
+        } catch (storageErr) {
+          console.warn(`[PDF] Storage check failed for ${sourceKey}, falling back to generated PDF:`, storageErr);
         }
       }
 

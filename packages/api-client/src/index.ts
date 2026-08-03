@@ -615,6 +615,182 @@ export interface BillingEntityDTO {
   updatedAt: string;
 }
 
+export type ImportEntityType = "BUILDING" | "UNIT";
+export type ImportBatchStatus = "PENDING_REVIEW" | "COMMITTED" | "REJECTED";
+export type ImportRowStatus = "VALID" | "ERROR" | "COMMITTED";
+
+export interface ImportRowDTO {
+  id: string;
+  rowIndex: number;
+  status: ImportRowStatus;
+  errorMessage: string | null;
+  createdEntityId: string | null;
+  data: Record<string, unknown>;
+}
+
+export interface OnboardingUnitPreviewDTO {
+  objet: string;
+  unitNumber: string;
+  unitType: "RESIDENTIAL" | "PARKING";
+  parkingKind: "GARAGE" | null;
+  floor: string | null;
+  rooms: number | null;
+  areaSqm: number | null;
+  tenantName: string | null;
+  isVacant: boolean;
+  startDate: string | null;
+  endDate: string | null;
+  netRentChf: number | null;
+  chargesChf: number | null;
+  linkedApartmentObjet: string | null;
+  willCreateLease: boolean;
+  matchedUnitNumber: string | null;
+}
+
+export interface OnboardingPreviewDTO {
+  buildingId: string;
+  buildingName: string;
+  summary: {
+    totalObjects: number;
+    apartments: number;
+    garages: number;
+    vacant: number;
+    tenants: number;
+    leases: number;
+    annualNetRentChf: number;
+    matchedExistingUnits: number;
+  };
+  units: OnboardingUnitPreviewDTO[];
+  warnings: string[];
+}
+
+export interface OnboardingCommitResultDTO {
+  buildingId: string;
+  billingMode: "activate" | "snapshot";
+  created: { units: number; tenants: number; leases: number; activated: number };
+  /** Objects whose unit already existed and were merged (not duplicated). */
+  skippedExistingUnits: number;
+  errors: string[];
+}
+
+export interface InvoiceOnboardingPreviewLineDTO {
+  compte: string;
+  accountName: string;
+  date: string | null;
+  noPiece: string;
+  vendorName: string;
+  description: string;
+  amountChf: number;
+  unitNumber: string | null;
+  /** Existing unit this invoice attributes to; null = building-level. */
+  matchedUnitNumber: string | null;
+  alreadyImported: boolean;
+}
+
+export interface InvoiceOnboardingPreviewDTO {
+  buildingId: string;
+  buildingName: string;
+  summary: {
+    total: number;
+    newInvoices: number;
+    alreadyImported: number;
+    unitAttributed: number;
+    totalChf: number;
+    byAccount: { compte: string; accountName: string; count: number; totalChf: number }[];
+  };
+  invoices: InvoiceOnboardingPreviewLineDTO[];
+  warnings: string[];
+}
+
+export interface InvoiceOnboardingCommitResultDTO {
+  buildingId: string;
+  created: number;
+  /** Invoices linked to a deduplicated vendor Contractor. */
+  vendorsLinked: number;
+  /** Ledger accrual entries a prior (posting) import left behind, now reversed. */
+  reversedLedgerEntries: number;
+  /** Piece numbers already imported on a prior commit (idempotent). */
+  skippedAlreadyImported: number;
+  errors: string[];
+}
+
+export interface VendorSpendDTO {
+  contractorId: string | null;
+  vendorName: string;
+  totalCents: number;
+  invoiceCount: number;
+}
+
+export interface ExpenseBreakdownMonthDTO {
+  month: string; // YYYY-MM
+  totalCents: number;
+  vendors: {
+    contractorId: string | null;
+    vendorName: string;
+    totalCents: number;
+    invoiceCount: number;
+  }[];
+  accounts: {
+    accountId: string | null;
+    accountCode: string | null;
+    accountName: string | null;
+    totalCents: number;
+  }[];
+}
+
+export type PackageDocType =
+  | "RENT_ROLL"
+  | "GENERAL_LEDGER"
+  | "BALANCE_SHEET"
+  | "INCOME_STATEMENT"
+  | "UNKNOWN";
+
+export interface PackageDocumentDTO {
+  fileName: string;
+  type: PackageDocType;
+  summary: Record<string, number>;
+  detail: string;
+}
+
+export interface ReconciliationCheckDTO {
+  label: string;
+  expectedChf: number;
+  actualChf: number;
+  deltaChf: number;
+  ok: boolean;
+  note: string;
+}
+
+export interface PackageAnalysisDTO {
+  buildingId: string;
+  buildingName: string;
+  fiscalYear: number;
+  documents: PackageDocumentDTO[];
+  reconciliation: ReconciliationCheckDTO[];
+  warnings: string[];
+}
+
+export interface PackageCommitResultDTO {
+  buildingId: string;
+  fiscalYear: number;
+  results: { fileName: string; type: PackageDocType; outcome: string; detail: string }[];
+  warnings: string[];
+}
+
+export interface ImportBatchDTO {
+  id: string;
+  entityType: ImportEntityType;
+  fileName: string;
+  uploadedBy: string;
+  status: ImportBatchStatus;
+  rowCount: number;
+  validCount: number;
+  errorCount: number;
+  createdAt: string;
+  committedAt: string | null;
+  rows: ImportRowDTO[];
+}
+
 export interface BuildingDTO {
   id: string;
   orgId: string;
@@ -1842,6 +2018,9 @@ function buildInventoryApi(opts: ClientOptions) {
     getBuilding: (id: string) =>
       request<BuildingDTO>(opts, "GET", `/buildings/${id}`),
 
+    getBuildingKpis: (id: string) =>
+      request<{ data: { openRequests: number; openJobs: number } }>(opts, "GET", `/buildings/${id}/kpis`),
+
     createBuilding: (body: { name: string; address: string; city?: string; postalCode?: string }) =>
       request<BuildingDTO>(opts, "POST", "/buildings", body),
 
@@ -1920,6 +2099,21 @@ function buildInventoryApi(opts: ClientOptions) {
 
     addAssetIntervention: (assetId: string, body: AddInterventionBody) =>
       request<unknown>(opts, "POST", `/assets/${assetId}/interventions`, body),
+
+    /* Bulk CSV import (buildings & units) */
+    listInventoryImports: (params?: { entityType?: ImportEntityType; limit?: number; offset?: number }) =>
+      request<{ data: ImportBatchDTO[]; pagination: { total: number; limit: number; offset: number } }>(
+        opts, "GET", "/imports/inventory", undefined, params as Record<string, string | number | boolean | undefined>),
+
+    getInventoryImport: (id: string) =>
+      request<{ data: ImportBatchDTO }>(opts, "GET", `/imports/inventory/${id}`),
+
+    commitInventoryImport: (id: string) =>
+      request<{ data: { batch: ImportBatchDTO; committed: number; errors: number } }>(
+        opts, "POST", `/imports/inventory/${id}/commit`),
+
+    deleteInventoryImport: (id: string) =>
+      request<{ data: { deleted: number } }>(opts, "DELETE", `/imports/inventory/${id}`),
   };
 }
 
@@ -2196,6 +2390,8 @@ export interface BuildingFinancialsDTO {
   expensesByCategory: ExpenseCategoryTotalDTO[];
   topContractorsBySpend: ContractorSpendDTO[];
   expensesByAccount?: AccountTotalDTO[];
+  /** "operational" = live leases/invoices; "imported" = from an approved imported income statement for this FY */
+  source: "operational" | "imported";
 }
 
 export interface BuildingSummaryDTO {
@@ -2246,6 +2442,26 @@ function buildFinancialsApi(opts: ClientOptions) {
           ...(params.forceRefresh ? { forceRefresh: "true" } : {}),
           ...(params.groupByAccount ? { groupByAccount: "true" } : {}),
         },
+      ),
+
+    /** Top vendors by expenditure for a building over a period (from INCOMING invoices). */
+    getBuildingVendorSpend: (buildingId: string, params: { from: string; to: string }) =>
+      request<{ data: VendorSpendDTO[] }>(
+        opts,
+        "GET",
+        `/buildings/${buildingId}/vendor-spend`,
+        undefined,
+        { from: params.from, to: params.to },
+      ),
+
+    /** Building expenses by month, broken down by vendor and ledger account. */
+    getBuildingExpenseBreakdown: (buildingId: string, params: { from: string; to: string }) =>
+      request<{ data: ExpenseBreakdownMonthDTO[] }>(
+        opts,
+        "GET",
+        `/buildings/${buildingId}/expense-breakdown`,
+        undefined,
+        { from: params.from, to: params.to },
       ),
 
     /** Get building financial summary including income breakdown, receivables, and payables. */

@@ -28,10 +28,24 @@ import Tooltip from "./Tooltip";
 // ─── FCI colour helper ─────────────────────────────────────────
 
 function fciColor(pct) {
-  if (pct < 5)  return "text-emerald-700";
-  if (pct < 10) return "text-amber-600";
-  if (pct < 30) return "text-orange-600";
-  return "text-red-700";
+  if (pct < 5)  return "text-success-text";
+  if (pct < 10) return "text-warning-text";
+  if (pct < 30) return "text-orange-text";
+  return "text-destructive-text";
+}
+
+// Traffic-light colour for loan-to-value: lower is safer.
+function ltvColor(pct) {
+  if (pct < 60) return "text-success-text";
+  if (pct <= 80) return "text-warning-text";
+  return "text-destructive-text";
+}
+
+// Traffic-light colour for DSCR: ≥1.5 comfortable, 1.2–1.5 ok, below tight.
+function dscrColor(d) {
+  if (d >= 1.5) return "text-success-text";
+  if (d >= 1.2) return "text-warning-text";
+  return "text-destructive-text";
 }
 
 // ─── Mini cumulative-PV sparkbar ──────────────────────────────
@@ -52,7 +66,7 @@ function CumulativeBars({ flows, highlighted }) {
               className={cn(
                 "rounded-sm",
                 positive
-                  ? (highlighted ? "bg-slate-700" : "bg-slate-400")
+                  ? (highlighted ? "bg-foreground" : "bg-muted")
                   : "bg-track",
               )}
               style={{ height: `${Math.max(pct, 4)}%` }}
@@ -61,6 +75,20 @@ function CumulativeBars({ flows, highlighted }) {
         );
       })}
     </div>
+  );
+}
+
+// ─── Debt stat (leverage strip) ───────────────────────────────
+
+function DebtStat({ label, value, tooltip, valueClass }) {
+  return (
+    <span className="flex items-center gap-1">
+      <span className="text-foreground-dim flex items-center gap-0.5">
+        {label}
+        {tooltip && <Tooltip content={tooltip} />}
+      </span>
+      <span className={cn("font-mono font-semibold tabular-nums", valueClass || "text-foreground")}>{value}</span>
+    </span>
   );
 }
 
@@ -75,19 +103,19 @@ function ScenarioCard({ label, hint, data, t, isHighlighted, isRecommended, summ
       className={cn(
         "rounded-lg p-4 space-y-2 relative bg-surface",
         isHighlighted
-          ? "border-2 border-slate-800 shadow-sm"
+          ? "border-2 border-brand shadow-sm ring-1 ring-brand-ring"
           : "border border-surface-border",
       )}
     >
       {/* Strategy recommendation badge */}
       {isRecommended && (
-        <span className="absolute -top-2.5 left-3 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-800 text-white">
+        <span className="absolute -top-2.5 left-3 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-brand text-white shadow-sm">
           {t("manager:npvScenarios.recommendation.badge")}
         </span>
       )}
       {/* Best-NPV chip (shown when highlighted by NPV alone, not strategy) */}
       {isHighlighted && !isRecommended && (
-        <span className="absolute -top-2.5 left-3 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-700 text-white">
+        <span className="absolute -top-2.5 left-3 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-brand text-white shadow-sm">
           {t("manager:npvScenarios.recommendation.bestNpv")}
         </span>
       )}
@@ -127,9 +155,44 @@ function ScenarioCard({ label, hint, data, t, isHighlighted, isRecommended, summ
             {t("manager:npvScenarios.text.taxShield")}
             <Tooltip content={t("manager:npvScenarios.tooltip.taxShield")} />
           </span>
-          <p className="font-mono font-medium text-emerald-600">
+          <p className="font-mono font-medium text-success-text">
             +{formatChf(totalTaxShieldChf)}
           </p>
+        </div>
+      )}
+
+      {/* Levered (FCFE) metrics — shown when debt/value configured */}
+      {data.levered && (data.levered.equityNpvChf != null || data.levered.minDscr != null) && (
+        <div className="grid grid-cols-2 gap-1 text-xs border-t border-surface-divider pt-1.5">
+          {data.levered.equityNpvChf != null && (
+            <div>
+              <span className="text-foreground-dim flex items-center gap-0.5">
+                {t("manager:npvScenarios.debt.equityNpv")}
+                <Tooltip content={t("manager:npvScenarios.tooltip.equityNpv")} />
+              </span>
+              <p className="font-mono font-medium">{formatChf(data.levered.equityNpvChf)}</p>
+            </div>
+          )}
+          {data.levered.equityIrrPct != null && (
+            <div>
+              <span className="text-foreground-dim flex items-center gap-0.5">
+                {t("manager:npvScenarios.debt.equityIrr")}
+                <Tooltip content={t("manager:npvScenarios.tooltip.equityIrr")} />
+              </span>
+              <p className="font-mono font-medium tabular-nums">{data.levered.equityIrrPct}%</p>
+            </div>
+          )}
+          {data.levered.minDscr != null && (
+            <div>
+              <span className="text-foreground-dim flex items-center gap-0.5">
+                {t("manager:npvScenarios.debt.minDscr")}
+                <Tooltip content={t("manager:npvScenarios.tooltip.dscr")} />
+              </span>
+              <p className={cn("font-mono font-medium tabular-nums", dscrColor(data.levered.minDscr))}>
+                {data.levered.minDscr.toFixed(2)}×
+              </p>
+            </div>
+          )}
         </div>
       )}
 
@@ -149,7 +212,7 @@ function ScenarioCard({ label, hint, data, t, isHighlighted, isRecommended, summ
 
       {/* Identical-scenario notice (Defer only) */}
       {identicalNotice && (
-        <div className="rounded border border-amber-300 bg-amber-50 px-2 py-1.5 text-xs text-amber-800">
+        <div className="rounded border border-warning-ring bg-warning-light px-2 py-1.5 text-xs text-warning-text">
           {identicalNotice}
         </div>
       )}
@@ -182,8 +245,11 @@ function SliderRow({ label, value, min, max, step, onChange, format, tooltip }) 
 
 // ─── Main component ───────────────────────────────────────────
 
-export default function NPVScenariosPanel({ buildingId }) {
+// mode="interactive": building endpoint, sliders visible (default, used on Planning tab)
+// mode="plan":        plan endpoint via fetchUrl, sliders hidden, manual recalculate button
+export default function NPVScenariosPanel({ buildingId, fetchUrl, mode = "interactive" }) {
   const { t } = useTranslation("manager");
+  const isPlanMode = mode === "plan";
 
   const [discountRatePct, setDiscountRatePct] = useState(4);
   const [incomeGrowthRatePct, setIncomeGrowthRatePct] = useState(2);
@@ -196,20 +262,24 @@ export default function NPVScenariosPanel({ buildingId }) {
   const [error, setError] = useState("");
 
   const fetchScenarios = useCallback(async (id, discount, growth, horizon, deferYrs, propertyValue) => {
-    if (!id) return;
+    if (!id && !fetchUrl) return;
     setLoading(true);
     setError("");
     try {
-      const qs = new URLSearchParams({
-        discountRatePct: String(discount),
-        incomeGrowthRatePct: String(growth),
-        horizonYears: String(horizon),
-        deferYears: String(deferYrs),
-        ...(propertyValue > 0 ? { propertyValueChf: String(propertyValue) } : {}),
-      }).toString();
-      const res = await fetch(`/api/buildings/${id}/npv-scenarios?${qs}`, {
-        headers: authHeaders(),
-      });
+      let url;
+      if (isPlanMode && fetchUrl) {
+        url = fetchUrl;
+      } else {
+        const qs = new URLSearchParams({
+          discountRatePct: String(discount),
+          incomeGrowthRatePct: String(growth),
+          horizonYears: String(horizon),
+          deferYears: String(deferYrs),
+          ...(propertyValue > 0 ? { propertyValueChf: String(propertyValue) } : {}),
+        }).toString();
+        url = `/api/buildings/${id}/npv-scenarios?${qs}`;
+      }
+      const res = await fetch(url, { headers: authHeaders() });
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error?.message || "Failed to load NPV scenarios");
       setData(json.data);
@@ -218,16 +288,21 @@ export default function NPVScenariosPanel({ buildingId }) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isPlanMode, fetchUrl]);
 
-  // Re-fetch whenever building or any control changes
+  // Re-fetch whenever building or any control changes (interactive mode)
+  // In plan mode, only auto-fetch once on mount; manual recalculate thereafter
   useEffect(() => {
-    if (buildingId) {
+    if (isPlanMode && fetchUrl) {
+      setData(null);
+      fetchScenarios(null, discountRatePct, incomeGrowthRatePct, horizonYears, deferYears, 0);
+    } else if (!isPlanMode && buildingId) {
       setData(null);
       const parsed = Number(propertyValueChf);
       fetchScenarios(buildingId, discountRatePct, incomeGrowthRatePct, horizonYears, deferYears, isFinite(parsed) ? parsed : 0);
     }
-  }, [buildingId, discountRatePct, incomeGrowthRatePct, horizonYears, deferYears, propertyValueChf, fetchScenarios]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [buildingId, fetchUrl, ...(!isPlanMode ? [discountRatePct, incomeGrowthRatePct, horizonYears, deferYears, propertyValueChf] : [])]);
 
   // ── Derived values ────────────────────────────────────────────
 
@@ -313,13 +388,54 @@ export default function NPVScenariosPanel({ buildingId }) {
   // Highlighted = strategy recommendation when profile exists, best NPV otherwise
   const highlightedScenario = strategyContext?.hasProfile ? recommendedScenario : bestScenarioKey;
 
+  // ── Plain-language verdict (novice hand-holding) ──────────────
+  const plainVerdict = (() => {
+    if (!data) return "";
+    if (bestScenarioKey === "invest") {
+      return t("manager:npvScenarios.plain.verdictInvest", { delta: formatChf(Math.abs(bestVsNeglectDelta)) });
+    }
+    if (bestScenarioKey === "defer") {
+      const vsInvest = data.scenarios.defer.npvChf - data.scenarios.invest.npvChf;
+      return t("manager:npvScenarios.plain.verdictDefer", { years: data.deferYears, delta: formatChf(Math.abs(vsInvest)) });
+    }
+    return t("manager:npvScenarios.plain.verdictNeglect");
+  })();
+
+  const bestLevered = bestScenario?.levered ?? null;
+  const coverageLine = (() => {
+    if (!data?.debt) return null;
+    if (data.debt.totalDebtChf <= 0) return t("manager:npvScenarios.plain.noDebt");
+    const dscr = bestLevered?.minDscr;
+    if (dscr == null) return null;
+    const key = dscr >= 1.5 ? "coverageComfortable" : dscr >= 1.2 ? "coverageOk" : "coverageTight";
+    let line = t(`manager:npvScenarios.plain.${key}`, { dscr: dscr.toFixed(2) });
+    if (bestLevered?.equityIrrPct != null) {
+      line += " " + t("manager:npvScenarios.plain.returnNote", { irr: bestLevered.equityIrrPct });
+    }
+    return line;
+  })();
+
   return (
     <Panel title={t("manager:npvScenarios.title.npvScenarios")}>
       <div className="space-y-4">
         {subtitle && <p className="text-xs text-muted">{subtitle}</p>}
 
-        {/* Controls */}
-        <div className="space-y-2 p-3 bg-surface-subtle rounded-md border border-surface-border">
+        {/* Plan mode: recalculate button (assumptions live in Assumptions panel above) */}
+        {isPlanMode && (
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => fetchScenarios(null, discountRatePct, incomeGrowthRatePct, horizonYears, deferYears, 0)}
+              disabled={loading}
+              className="text-xs font-medium text-brand-dark hover:underline disabled:opacity-50"
+            >
+              {loading ? "Computing…" : "↻ Recalculate"}
+            </button>
+            <span className="text-xs text-foreground-dim">Assumptions are set in the panel above.</span>
+          </div>
+        )}
+
+        {/* Controls (interactive mode only) */}
+        {!isPlanMode && <div className="space-y-2 p-3 bg-surface-subtle rounded-md border border-surface-border">
           <SliderRow
             label={t("manager:npvScenarios.controls.discountRate")}
             value={discountRatePct}
@@ -350,8 +466,8 @@ export default function NPVScenariosPanel({ buildingId }) {
                   className={cn(
                     "px-2 py-0.5 rounded text-xs font-medium border",
                     horizonYears === y
-                      ? "bg-slate-700 text-white border-slate-700"
-                      : "bg-surface text-muted-text border-muted-ring hover:border-slate-500",
+                      ? "bg-brand text-white border-brand"
+                      : "bg-surface text-muted-text border-muted-ring hover:border-brand-ring",
                   )}
                 >
                   {y}yr
@@ -374,8 +490,8 @@ export default function NPVScenariosPanel({ buildingId }) {
                   className={cn(
                     "px-2 py-0.5 rounded text-xs font-medium border",
                     deferYears === y
-                      ? "bg-amber-600 text-white border-amber-600"
-                      : "bg-surface text-muted-text border-muted-ring hover:border-slate-500",
+                      ? "bg-warning text-white border-warning"
+                      : "bg-surface text-muted-text border-muted-ring hover:border-brand-ring",
                   )}
                 >
                   {y}yr
@@ -398,18 +514,18 @@ export default function NPVScenariosPanel({ buildingId }) {
                 value={propertyValueChf}
                 onChange={(e) => setPropertyValueChf(e.target.value)}
                 placeholder={t("manager:npvScenarios.controls.propertyValuePlaceholder")}
-                className="flex-1 text-xs border border-muted-ring rounded px-2 py-0.5 font-mono text-muted-dark focus:outline-none focus:border-slate-500"
+                className="flex-1 text-xs border border-muted-ring rounded px-2 py-0.5 font-mono text-muted-dark focus:outline-none focus:border-brand-ring"
               />
             </div>
           </div>
-        </div>
+        </div>}
 
         {/* Error */}
         {error && <div className="notice notice-err">{error}</div>}
 
         {/* No income data warning */}
         {!loading && data?.noIncomeData && (
-          <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          <div className="flex items-start gap-2 rounded-md border border-warning-ring bg-warning-light px-3 py-2 text-xs text-warning-text">
             <span className="mt-0.5 shrink-0">⚠</span>
             <span>
               No income history found for this building — NOI is shown as CHF 0.
@@ -421,8 +537,8 @@ export default function NPVScenariosPanel({ buildingId }) {
         {/* Loading */}
         {loading && <p className="loading-text">{t("manager:npvScenarios.text.loading")}</p>}
 
-        {/* Empty — no building selected */}
-        {!buildingId && !loading && (
+        {/* Empty — no building selected (interactive mode only) */}
+        {!isPlanMode && !buildingId && !loading && (
           <p className="text-sm text-foreground-dim">{t("manager:npvScenarios.text.selectBuilding")}</p>
         )}
 
@@ -462,16 +578,37 @@ export default function NPVScenariosPanel({ buildingId }) {
           </div>
         )}
 
+        {/* Leverage strip — building-level debt summary */}
+        {!loading && data?.debt && (
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 rounded-md border border-surface-border bg-surface-subtle px-3 py-2 text-xs">
+            <span className="text-muted font-medium shrink-0">{t("manager:npvScenarios.debt.title")}</span>
+            <DebtStat label={t("manager:npvScenarios.debt.totalDebt")} value={formatChf(data.debt.totalDebtChf)} tooltip={t("manager:npvScenarios.tooltip.totalDebt")} />
+            {data.debt.ltvPct != null && <DebtStat label={t("manager:npvScenarios.debt.ltv")} value={`${data.debt.ltvPct}%`} tooltip={t("manager:npvScenarios.tooltip.ltv")} valueClass={ltvColor(data.debt.ltvPct)} />}
+            {data.debt.weightedCostOfDebtPct != null && <DebtStat label={t("manager:npvScenarios.debt.costOfDebt")} value={`${data.debt.weightedCostOfDebtPct}%`} tooltip={t("manager:npvScenarios.tooltip.costOfDebt")} />}
+            {data.debt.waccPct != null && <DebtStat label={t("manager:npvScenarios.debt.wacc")} value={`${data.debt.waccPct}%`} tooltip={t("manager:npvScenarios.tooltip.wacc")} />}
+            {data.debt.currentEquityChf != null && <DebtStat label={t("manager:npvScenarios.debt.equity")} value={formatChf(data.debt.currentEquityChf)} tooltip={t("manager:npvScenarios.tooltip.equity")} />}
+          </div>
+        )}
+
         {/* Scenario cards */}
         {!loading && data && (
           <>
+            {/* Plain-language verdict — what this means & what to do */}
+            <div className="rounded-md border border-surface-border bg-surface-subtle px-3 py-2.5">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted mb-1">
+                {t("manager:npvScenarios.plain.whatThisMeans")}
+              </p>
+              <p className="text-sm text-foreground leading-relaxed">{plainVerdict}</p>
+              {coverageLine && <p className="text-xs text-muted-text mt-1 leading-relaxed">{coverageLine}</p>}
+            </div>
+
             {/* Delta callout with breakdown */}
             {bestVsNeglectDelta !== 0 && bestScenarioKey !== "neglect" && (
               <div className={cn(
                 "rounded-md border px-3 py-2 space-y-1.5",
                 bestVsNeglectDelta > 0
-                  ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-                  : "border-red-200 bg-red-50 text-red-800",
+                  ? "border-success-ring bg-success-light text-success-text"
+                  : "border-destructive-ring bg-destructive-light text-destructive-text",
               )}>
                 <p className="text-xs font-semibold">
                   {t(`manager:npvScenarios.delta.${bestScenarioKey}Wins`, {
@@ -513,8 +650,23 @@ export default function NPVScenariosPanel({ buildingId }) {
               </div>
             )}
 
-            {/* Strategy recommendation strip */}
-            {strategyContext?.hasProfile && strategyContext.rationale && (
+            {/* Strategy recommendation strip — owner-portfolio fallback (a default, not building-specific) */}
+            {strategyContext?.hasProfile && strategyContext.source === "owner-portfolio" && strategyContext.rationale && (
+              <div className="rounded-md border border-surface-border bg-surface-subtle px-3 py-2 text-xs text-muted flex items-start justify-between gap-2">
+                <span className="flex items-start gap-2 min-w-0">
+                  <span className="shrink-0 mt-px text-foreground-dim">ⓘ</span>
+                  <span>{strategyContext.rationale}</span>
+                </span>
+                <a
+                  href="/owner/strategy"
+                  className="shrink-0 text-muted-dark font-medium underline hover:text-foreground"
+                >
+                  {t("manager:npvScenarios.strategy.setBuildingLink")}
+                </a>
+              </div>
+            )}
+            {/* Strategy recommendation strip — authoritative building profile */}
+            {strategyContext?.hasProfile && strategyContext.source !== "owner-portfolio" && strategyContext.rationale && (
               <div className="rounded-md border border-surface-border bg-surface-subtle px-3 py-2 text-xs text-muted-dark flex items-start gap-2">
                 <span className="shrink-0 mt-px text-foreground-dim">★</span>
                 <span>{strategyContext.rationale}</span>

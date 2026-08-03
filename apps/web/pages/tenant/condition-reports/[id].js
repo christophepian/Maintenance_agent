@@ -16,7 +16,7 @@ import { Camera, Trash2, Image } from "lucide-react";
 
 const CONDITIONS = ["GOOD", "FAIR", "POOR", "DAMAGED"];
 const STATUS_VARIANT = { PENDING: "warning", SUBMITTED: "info", APPROVED: "success" };
-const CONDITION_VARIANT = { GOOD: "success", FAIR: "warning", POOR: "warning", DAMAGED: "destructive" };
+const CONDITION_VARIANT = { GOOD: "success", FAIR: "warning", POOR: "warning", DAMAGED: "destructive", NOT_INSPECTED: "neutral" };
 
 // ── Photo strip for a single item ─────────────────────────────────────────────
 
@@ -206,13 +206,16 @@ function ItemForm({ reportId, onSaved, t }) {
 
 function ItemRow({ item, reportId, editable, onDeleted, onUpdated, t }) {
   const { pending, run } = useAction();
-  const [expanded, setExpanded] = useState(false);
+  const notInspected = item.condition === "NOT_INSPECTED";
+  const isAssetItem = !!item.assetId;            // baselined from the unit inventory — locked
+  const [expanded, setExpanded] = useState(editable && notInspected); // open the rater for un-rated items
   const [editCondition, setEditCondition] = useState(item.condition);
   const [editNotes, setEditNotes] = useState(item.notes ?? "");
   const [error, setError] = useState("");
 
   // Flag: POOR or DAMAGED items should have photos
   const photosAdvisory = editable && (editCondition === "POOR" || editCondition === "DAMAGED");
+  const ratingMissing = !CONDITIONS.includes(editCondition); // still NOT_INSPECTED → must pick
 
   const del = () => run("del", async () => {
     const res = await tenantFetch(`/api/tenant/condition-reports/${reportId}/items/${item.id}`, { method: "DELETE" });
@@ -239,6 +242,7 @@ function ItemRow({ item, reportId, editable, onDeleted, onUpdated, t }) {
     <div className={cn(
       "card border p-3 space-y-2",
       (item.condition === "POOR" || item.condition === "DAMAGED") && "border-warning-ring",
+      notInspected && "border-dashed border-surface-border",
     )}>
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
@@ -254,12 +258,15 @@ function ItemRow({ item, reportId, editable, onDeleted, onUpdated, t }) {
         {editable && (
           <div className="flex gap-1 shrink-0">
             <button onClick={() => setExpanded(!expanded)} className="text-xs text-brand hover:underline">
-              {t("conditionReport.edit")}
+              {notInspected ? t("conditionReport.rate") : t("conditionReport.edit")}
             </button>
-            <button onClick={del} disabled={pending === "del"}
-              className="text-xs text-destructive-text hover:underline disabled:opacity-50">
-              {t("conditionReport.deleteItem")}
-            </button>
+            {/* Asset items are part of the inventory baseline and cannot be removed */}
+            {!isAssetItem && (
+              <button onClick={del} disabled={pending === "del"}
+                className="text-xs text-destructive-text hover:underline disabled:opacity-50">
+                {t("conditionReport.deleteItem")}
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -294,8 +301,11 @@ function ItemRow({ item, reportId, editable, onDeleted, onUpdated, t }) {
           </div>
           <textarea value={editNotes} onChange={(e) => setEditNotes(e.target.value)} rows={2}
             placeholder={t("conditionReport.notesPlaceholder")} className="input mb-0 resize-none text-sm" />
+          {ratingMissing && (
+            <p className="text-xs text-foreground-dim">{t("conditionReport.pickRating")}</p>
+          )}
           <div className="flex gap-2">
-            <Button variant="primary" onClick={update} disabled={!!pending} className="text-xs">
+            <Button variant="primary" onClick={update} disabled={!!pending || ratingMissing} className="text-xs">
               {pending === "update" ? t("conditionReport.saving") : t("conditionReport.saveItem")}
             </Button>
             <Button variant="ghost" onClick={() => setExpanded(false)} className="text-xs">
@@ -328,6 +338,7 @@ export default function TenantConditionReportDetail() {
 
   const displayItems = items ?? report?.items ?? [];
   const editable = report?.status === "PENDING";
+  const notInspectedCount = displayItems.filter((i) => i.condition === "NOT_INSPECTED").length;
 
   const handleItemSaved = useCallback(() => { refresh(); setItems(null); }, [refresh]);
   const handleItemDeleted = useCallback((itemId) => {
@@ -361,7 +372,7 @@ export default function TenantConditionReportDetail() {
             : t("conditionReport.title")}
           backLink={{ href: "/tenant/condition-reports", label: t("conditionReport.title") }}
           actions={editable ? (
-            <Button variant="primary" onClick={submit} disabled={!!submitting}>
+            <Button variant="primary" onClick={submit} disabled={!!submitting || notInspectedCount > 0}>
               {submitting ? t("conditionReport.submitting") : t("conditionReport.submit")}
             </Button>
           ) : null}
@@ -371,6 +382,14 @@ export default function TenantConditionReportDetail() {
             {report && (
               <div className="space-y-6 max-w-2xl">
                 {submitError && <ErrorBanner error={submitError} />}
+
+                {editable && notInspectedCount > 0 && (
+                  <div className="rounded-xl border border-warning-ring bg-warning-light p-3">
+                    <p className="text-sm text-warning-text">
+                      {t("conditionReport.coverageReminder", { count: notInspectedCount })}
+                    </p>
+                  </div>
+                )}
 
                 <div className="flex items-center gap-3 flex-wrap text-xs text-foreground-dim">
                   <Badge variant={STATUS_VARIANT[report.status] || "neutral"} size="sm">

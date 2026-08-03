@@ -8,6 +8,12 @@ export const InvoiceStatusEnum = z.enum([
   InvoiceStatus.DISPUTED,
 ]);
 
+/** Optional, nullable UUID that also accepts "" (coerced to null). */
+const EmptyToNullUuid = z.preprocess(
+  (v) => (v === '' ? null : v),
+  z.string().uuid().nullable().optional(),
+);
+
 const LineItemSchema = z.object({
   description: z.string().min(1).max(500),
   quantity: z.number().int().min(1).optional(),
@@ -51,6 +57,11 @@ export const UpdateInvoiceSchema = z.object({
   amount: z.number().min(0).max(100000).optional(),
   description: z.string().max(500).optional(),
   issuerBillingEntityId: z.string().uuid().nullable().optional(),
+  issuerName: z.string().max(255).nullable().optional(),
+  issuerAddressLine1: z.string().max(255).nullable().optional(),
+  issuerPostalCode: z.string().max(20).nullable().optional(),
+  issuerCity: z.string().max(100).nullable().optional(),
+  issuerCountry: z.string().max(10).nullable().optional(),
   recipientName: z.string().min(1).optional(),
   recipientAddressLine1: z.string().min(1).optional(),
   recipientAddressLine2: z.string().nullable().optional(),
@@ -63,6 +74,13 @@ export const UpdateInvoiceSchema = z.object({
   expenseTypeId: z.string().uuid().nullable().optional(),
   accountId: z.string().uuid().nullable().optional(),
   lineItems: z.array(LineItemSchema).optional(),
+  // Empty string → null: the invoice page sends "" when no building/unit/category
+  // is chosen; an empty string is an invalid FK and must be coerced before .uuid().
+  buildingId: EmptyToNullUuid,
+  unitId: EmptyToNullUuid,
+  // Ancillary cost classification (v3 remediation)
+  costNature: z.enum(['CHARGE', 'DIRECT']).nullable().optional(),
+  ancillaryCategoryId: EmptyToNullUuid,
 });
 
 export type CreateInvoicePayload = z.infer<typeof CreateInvoiceSchema>;

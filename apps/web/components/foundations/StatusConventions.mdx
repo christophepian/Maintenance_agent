@@ -1,0 +1,50 @@
+import { Meta } from "@storybook/addon-docs/blocks";
+
+<Meta title="Guide/Status Conventions" />
+
+# Status Conventions
+
+Domain status (request state, invoice state, urgency, …) never carries color
+logic in a page. It maps to a semantic **Badge** variant through a canonical
+mapper in `lib/statusVariants.js`.
+
+## The pattern — every status indicator follows this shape
+
+```jsx
+import Badge from "../../components/ui/Badge";
+import { requestVariant } from "../../lib/statusVariants";
+
+<Badge variant={requestVariant(request.status)}>{request.status}</Badge>
+```
+
+```jsx
+// Never do this — inline color logic bypasses the token system and F-UI4a:
+<span style={{ color: status === "PAID" ? "#16a34a" : "#dc2626" }}>{status}</span>
+```
+
+Adding a new status domain? Add a mapper function in `statusVariants.js`. Never
+define `STATUS_COLORS` / `URGENCY_COLORS` objects in individual page files.
+
+## Semantic bands
+
+Each Badge variant maps to a meaning, not a raw color:
+
+| Band | Variant | Use for |
+|------|---------|---------|
+| Neutral | `default` / `muted` | draft, new, low, inactive |
+| Info | `info` | active, in progress, open, issued |
+| Warning | `warning` | pending, awaiting action |
+| Success | `success` | completed, approved, paid, signed |
+| Danger | `destructive` | rejected, cancelled, emergency |
+| Brand | `brand` | highlighted / primary emphasis |
+
+## Available mappers (`lib/statusVariants.js`)
+
+`invoiceVariant` · `jobVariant` · `requestVariant` · `rfpVariant` ·
+`quoteVariant` · `urgencyVariant` · `leaseVariant` · `legalVariant` ·
+`ingestionVariant` · `billingEntityVariant` · `reconciliationVariant` ·
+`rentAdjustmentVariant` · `planVariant` … (one per domain entity).
+
+See the [Badge](?path=/docs/ui-badge--docs) and
+[StatusPill](?path=/docs/ui-statuspill--docs) components for the rendered
+variants.

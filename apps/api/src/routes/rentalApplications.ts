@@ -1,6 +1,7 @@
 import { Router } from "../http/router";
 import { sendError, sendJson } from "../http/json";
 import { readJson } from "../http/body";
+import { checkRateLimit } from "../http/rateLimiter";
 import { parseBody } from "../http/body";
 import { first, getIntParam, getEnumParam } from "../http/query";
 import { withRole, withAuthRequired } from "../http/routeProtection";
@@ -57,36 +58,18 @@ import { listManagerSelections, listOwnerSelections } from "../services/rentalSe
    ══════════════════════════════════════════════════════════════ */
 
 // ── Rate limiters for unauthenticated public endpoints ──────────────────────
+// Shared limiter (apps/api/src/http/rateLimiter.ts) — see its Redis note.
 // document-scan hits Azure OCR (costs money) — tight limit
-const docScanRateMap = new Map<string, { count: number; resetAt: number }>();
 const DOC_SCAN_LIMIT = 5;
 const DOC_SCAN_WINDOW_MS = 60_000; // 5 req/IP/min
 
 // Rental application creation — prevent DB flooding
-const rentalCreateRateMap = new Map<string, { count: number; resetAt: number }>();
 const RENTAL_CREATE_LIMIT = 10;
 const RENTAL_CREATE_WINDOW_MS = 10 * 60_000; // 10 req/IP/10 min
 
 // Attachment upload — prevent S3 storage abuse
-const rentalAttachRateMap = new Map<string, { count: number; resetAt: number }>();
 const RENTAL_ATTACH_LIMIT = 20;
 const RENTAL_ATTACH_WINDOW_MS = 10 * 60_000; // 20 req/IP/10 min
-
-function checkRateLimit(
-  map: Map<string, { count: number; resetAt: number }>,
-  ip: string,
-  limit: number,
-  windowMs: number,
-): boolean {
-  const now = Date.now();
-  const entry = map.get(ip);
-  if (!entry || now >= entry.resetAt) {
-    map.set(ip, { count: 1, resetAt: now + windowMs });
-    return true;
-  }
-  entry.count++;
-  return entry.count <= limit;
-}
 
 export function registerRentalRoutes(router: Router) {
 
@@ -101,7 +84,12 @@ export function registerRentalRoutes(router: Router) {
   router.get("/vacant-units", async ({ req, res, orgId }) => {
     try {
       const user = getAuthUser(req);
-      const ownerId = (user?.role === "OWNER" || user?.ownerId) ? (user.ownerId || user.userId) : undefined;
+      // Owner-scope ONLY for real owners (role OWNER). The owner vacancies page
+      // (VacanciesPanel role="OWNER") relies on this. A manager/admin who merely
+      // carries an ownerId (admin-granted owner preview) must NOT be scoped here —
+      // otherwise /manager/vacancies hides vacant units in buildings they manage
+      // but don't own.
+      const ownerId = user?.role === "OWNER" ? (user.ownerId || user.userId) : undefined;
       const units = await listVacantUnits(orgId, ownerId);
       sendJson(res, 200, { data: units });
     } catch (e: any) {
@@ -132,7 +120,7 @@ export function registerRentalRoutes(router: Router) {
   router.post("/document-scan", async ({ req, res }) => {
     // Public endpoint — no auth required (used by unauthenticated apply wizard)
     const ip = req.socket?.remoteAddress ?? "unknown";
-    if (!checkRateLimit(docScanRateMap, ip, DOC_SCAN_LIMIT, DOC_SCAN_WINDOW_MS)) {
+    if (!checkRateLimit("rental:docScan", ip, DOC_SCAN_LIMIT, DOC_SCAN_WINDOW_MS)) {
       sendError(res, 429, "RATE_LIMITED", "Too many scan requests. Please wait a moment and try again.");
       return;
     }
@@ -182,7 +170,7 @@ export function registerRentalRoutes(router: Router) {
    */
   router.post("/rental-applications", async ({ req, res, orgId }) => {
     const ip = req.socket?.remoteAddress ?? "unknown";
-    if (!checkRateLimit(rentalCreateRateMap, ip, RENTAL_CREATE_LIMIT, RENTAL_CREATE_WINDOW_MS)) {
+    if (!checkRateLimit("rental:create", ip, RENTAL_CREATE_LIMIT, RENTAL_CREATE_WINDOW_MS)) {
       sendError(res, 429, "RATE_LIMITED", "Too many applications from this address. Please try again later.");
       return;
     }
@@ -247,7 +235,7 @@ export function registerRentalRoutes(router: Router) {
    */
   router.post("/rental-applications/:id/attachments", async ({ req, res, params }) => {
     const ip = req.socket?.remoteAddress ?? "unknown";
-    if (!checkRateLimit(rentalAttachRateMap, ip, RENTAL_ATTACH_LIMIT, RENTAL_ATTACH_WINDOW_MS)) {
+    if (!checkRateLimit("rental:attach", ip, RENTAL_ATTACH_LIMIT, RENTAL_ATTACH_WINDOW_MS)) {
       sendError(res, 429, "RATE_LIMITED", "Too many uploads from this address. Please try again later.");
       return;
     }
@@ -350,9 +338,9 @@ export function registerRentalRoutes(router: Router) {
    */
   router.get(
     "/manager/rental-applications/:id",
-    withRole("MANAGER", async ({ res, params }) => {
+    withRole("MANAGER", async ({ res, params, orgId }) => {
       try {
-        const dto = await getApplication(params.id);
+        const dto = await getApplication(params.id, orgId);
         if (!dto) {
           sendError(res, 404, "NOT_FOUND", "Application not found");
           return;
@@ -371,10 +359,10 @@ export function registerRentalRoutes(router: Router) {
    */
   router.post(
     "/manager/rental-application-units/:id/adjust-score",
-    withRole("MANAGER", async ({ req, res, params }) => {
+    withRole("MANAGER", async ({ req, res, params, orgId }) => {
       try {
         const input = await parseBody(req, AdjustScoreSchema);
-        const dto = await adjustEvaluation(params.id, input);
+        const dto = await adjustEvaluation(params.id, input, orgId);
         sendJson(res, 200, { data: dto });
       } catch (e: any) {
         if (e.name === "ValidationError" || e.code === "VALIDATION_ERROR") {
@@ -397,10 +385,10 @@ export function registerRentalRoutes(router: Router) {
    */
   router.post(
     "/manager/rental-application-units/:id/override-disqualification",
-    withRole("MANAGER", async ({ req, res, params }) => {
+    withRole("MANAGER", async ({ req, res, params, orgId }) => {
       try {
         const input = await parseBody(req, OverrideDisqualificationSchema);
-        const dto = await overrideDisqualification(params.id, input.reason);
+        const dto = await overrideDisqualification(params.id, input.reason, orgId);
         sendJson(res, 200, { data: dto });
       } catch (e: any) {
         if (e.name === "ValidationError" || e.code === "VALIDATION_ERROR") {
@@ -499,10 +487,10 @@ export function registerRentalRoutes(router: Router) {
    */
   router.post(
     "/owner/rental-application-units/:id/override-disqualification",
-    withRole("OWNER", async ({ req, res, params }) => {
+    withRole("OWNER", async ({ req, res, params, orgId }) => {
       try {
         const input = await parseBody(req, OverrideDisqualificationSchema);
-        const dto = await overrideDisqualification(params.id, input.reason);
+        const dto = await overrideDisqualification(params.id, input.reason, orgId);
         sendJson(res, 200, { data: dto });
       } catch (e: any) {
         if (e.name === "ValidationError" || e.code === "VALIDATION_ERROR") {
@@ -549,10 +537,10 @@ export function registerRentalRoutes(router: Router) {
    * Download a rental attachment file by its ID.
    * Accessible to MANAGER and OWNER roles.
    */
-  router.get("/rental-attachments/:attachmentId/download", async ({ req, res, params }) => {
+  router.get("/rental-attachments/:attachmentId/download", async ({ req, res, params, orgId }) => {
     if (!maybeRequireManager(req, res)) return;
     try {
-      const attachment = await rentalApplicationRepo.findAttachmentById(prisma, params.attachmentId);
+      const attachment = await rentalApplicationRepo.findAttachmentById(prisma, params.attachmentId, orgId);
       if (!attachment) {
         sendError(res, 404, "NOT_FOUND", "Attachment not found");
         return;
@@ -582,10 +570,10 @@ export function registerRentalRoutes(router: Router) {
    * List documents (applicants + their attachments) for a rental application.
    * Returns applicant names, doc types, and attachment metadata.
    */
-  router.get("/rental-applications/:id/documents", async ({ req, res, params }) => {
+  router.get("/rental-applications/:id/documents", async ({ req, res, params, orgId }) => {
     if (!requireAnyRole(req, res, ["MANAGER", "OWNER"])) return;
     try {
-      const application = await rentalApplicationRepo.findApplicationDocuments(prisma, params.id);
+      const application = await rentalApplicationRepo.findApplicationDocuments(prisma, params.id, orgId);
       if (!application) {
         sendError(res, 404, "NOT_FOUND", "Application not found");
         return;

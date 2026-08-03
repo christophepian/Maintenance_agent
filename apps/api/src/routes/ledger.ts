@@ -17,7 +17,7 @@ import { Router } from "../http/router";
 import { sendError, sendJson } from "../http/json";
 import { readJson } from "../http/body";
 import { parseQuery, first, getIntParam } from "../http/query";
-import { requireAuth, requireAnyRole } from "../authz";
+import { requireAuth, requireAnyRole, getAuthUser } from "../authz";
 import { requireOrgViewer } from "./helpers";
 import {
   listLedgerEntries,
@@ -32,6 +32,12 @@ import {
 } from "../services/ledgerService";
 import { getInvoice } from "../services/invoices";
 import { seedSwissTaxonomy } from "../services/coaService";
+import {
+  closeFiscalYear,
+  reopenFiscalYear,
+  listFiscalCloses,
+} from "../services/fiscalCloseService";
+import { getAnalyticalReport } from "../services/analyticalAccountingService";
 import { issueInvoiceWorkflow } from "../workflows/issueInvoiceWorkflow";
 
 export function registerLedgerRoutes(router: Router) {
@@ -60,7 +66,7 @@ export function registerLedgerRoutes(router: Router) {
         data: result.data,
         pagination: { total: result.total, limit: filters.limit, offset: filters.offset },
       });
-    } catch (e: any) {
+    } catch (e) {
       console.error("[GET /ledger]", e);
       sendError(res, 500, "INTERNAL_ERROR", "Failed to load ledger");
     }
@@ -82,7 +88,7 @@ export function registerLedgerRoutes(router: Router) {
     try {
       const data = await getTrialBalance(prisma, orgId, periodFilter);
       sendJson(res, 200, { data });
-    } catch (e: any) {
+    } catch (e) {
       console.error("[GET /ledger/trial-balance]", e);
       sendError(res, 500, "INTERNAL_ERROR", "Failed to load trial balance");
     }
@@ -106,7 +112,7 @@ export function registerLedgerRoutes(router: Router) {
     try {
       const data = await getBalanceSheet(prisma, orgId, buildingId, asOf);
       sendJson(res, 200, { data });
-    } catch (e: any) {
+    } catch (e) {
       console.error("[GET /ledger/balance-sheet]", e);
       sendError(res, 500, "INTERNAL_ERROR", "Failed to load balance sheet");
     }
@@ -132,7 +138,7 @@ export function registerLedgerRoutes(router: Router) {
         return;
       }
       sendJson(res, 200, { data });
-    } catch (e: any) {
+    } catch (e) {
       console.error("[GET /ledger/accounts/:accountId/balance]", e);
       sendError(res, 500, "INTERNAL_ERROR", "Failed to load account balance");
     }
@@ -167,7 +173,7 @@ export function registerLedgerRoutes(router: Router) {
               { invoiceId: invId },
             );
             invoicesIssued++;
-          } catch (e: any) {
+          } catch (e) {
             // Missing billing entity, already issued, etc. — skip gracefully
             console.warn(`[BACKFILL] Skipping DRAFT invoice ${invId}: ${e.message}`);
             invoicesIssuedErrors++;
@@ -207,9 +213,58 @@ export function registerLedgerRoutes(router: Router) {
           ledgerPaidSkipped,
         },
       });
-    } catch (e: any) {
+    } catch (e) {
       console.error("[POST /ledger/backfill]", e);
       sendError(res, 500, "INTERNAL_ERROR", "Backfill failed");
     }
+  });
+
+  /* ── GET /ledger/analytical ───────────────────────────────── */
+  router.get("/ledger/analytical", async ({ req, res, orgId, prisma }) => {
+    if (!requireAuth(req, res)) return;
+    if (!requireOrgViewer(req, res)) return;
+    const { query } = parseQuery(req.url);
+    const buildingId = first(query, "buildingId");
+    const fiscalYear = Number(first(query, "fiscalYear"));
+    if (!buildingId) return sendError(res, 400, "MISSING_PARAM", "buildingId is required");
+    if (!Number.isInteger(fiscalYear)) return sendError(res, 400, "VALIDATION_ERROR", "fiscalYear is required");
+    const data = await getAnalyticalReport(prisma, orgId, buildingId, fiscalYear);
+    sendJson(res, 200, { data });
+  });
+
+  /* ── GET /ledger/closes ───────────────────────────────────── */
+  router.get("/ledger/closes", async ({ req, res, orgId, prisma }) => {
+    if (!requireAuth(req, res)) return;
+    if (!requireOrgViewer(req, res)) return;
+    const { query } = parseQuery(req.url);
+    const buildingId = first(query, "buildingId");
+    const data = await listFiscalCloses(prisma, orgId, buildingId);
+    sendJson(res, 200, { data });
+  });
+
+  /* ── POST /ledger/close-year ──────────────────────────────── */
+  router.post("/ledger/close-year", async ({ req, res, orgId, prisma }) => {
+    if (!requireAuth(req, res)) return;
+    if (!requireAnyRole(req, res, ["MANAGER"])) return;
+    const body = await readJson(req);
+    const buildingId = body?.buildingId;
+    const fiscalYear = Number(body?.fiscalYear);
+    if (!buildingId) return sendError(res, 400, "MISSING_PARAM", "buildingId is required");
+    const userId = getAuthUser(req)?.userId ?? null;
+    const data = await closeFiscalYear(prisma, orgId, buildingId, fiscalYear, userId);
+    sendJson(res, 200, { data });
+  });
+
+  /* ── POST /ledger/reopen-year ─────────────────────────────── */
+  router.post("/ledger/reopen-year", async ({ req, res, orgId, prisma }) => {
+    if (!requireAuth(req, res)) return;
+    if (!requireAnyRole(req, res, ["MANAGER"])) return;
+    const body = await readJson(req);
+    const buildingId = body?.buildingId;
+    const fiscalYear = Number(body?.fiscalYear);
+    if (!buildingId) return sendError(res, 400, "MISSING_PARAM", "buildingId is required");
+    const userId = getAuthUser(req)?.userId ?? null;
+    const data = await reopenFiscalYear(prisma, orgId, buildingId, fiscalYear, userId);
+    sendJson(res, 200, { data });
   });
 }

@@ -1,5 +1,17 @@
 import { useRouter } from "next/router";
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
+import {
+  fmtChf as rFmtChf,
+  fmtPct as rFmtPct,
+  KpiTable,
+  DriverItem,
+  WatchItem,
+  OccupancyRow,
+} from "../../../components/reporting/ReportingShared";
+// Statically imported (SSR-safe: all canvas work is in useEffect). Previously a
+// dynamic(ssr:false) import, which created a Suspense boundary that — under React
+// 19's stylesheet handling in the pages router — dropped the global Tailwind
+// stylesheet on subsequent client-side navigations. See fix/unit-css-regression.
 
 function CorrespondenceTab({ buildingId }) {
   const [letters, setLetters] = useState([]);
@@ -39,17 +51,1487 @@ import Panel from "../../../components/layout/Panel";
 import UndoToast, { useUndoToast } from "../../../components/ui/UndoToast";
 import Badge from "../../../components/ui/Badge";
 import AssetInventoryPanel from "../../../components/AssetInventoryPanel";
-import BuildingFinancialsView from "../../../components/BuildingFinancialsView";
 import { authHeaders } from "../../../lib/api";
 import ScrollableTabs from "../../../components/mobile/ScrollableTabs";
+import PackageOnboardingPanel from "../../../components/PackageOnboardingPanel";
+import UnitProfitabilityPanel from "../../../components/reporting/UnitProfitabilityPanel";
+import YieldGoalSeekPanel from "../../../components/YieldGoalSeekPanel";
 import SortableHeader from "../../../components/SortableHeader";
 import { useLocalSort, clientSort } from "../../../lib/tableUtils";
-import { formatDate, formatChfCents, formatPercent } from "../../../lib/format";
+import { formatDate, formatChfCents, formatPercent, formatChf, formatNumber } from "../../../lib/format";
 import { cn } from "../../../lib/utils";
 import { ARCHETYPE_LABELS, ARCHETYPE_EXPLANATION_COPY } from "../../../lib/archetypes";
 import KpiInlineGrid from "../../../components/ui/KpiInlineGrid";
 import { withServerTranslations } from "../../../lib/i18n";
 import { useTranslation } from "next-i18next";
+
+/* ── Building reporting helpers ─────────────────────────── */
+
+const PREVIEW_UNITS = 5;
+const INCOME_PREVIEW = 5; // revex income column: units shown before "Show all"
+const EXPENSE_PREVIEW = 6; // revex expense column: rows shown before "Show all"
+
+// The invoices / entries behind a unit's "Direct costs" figure — lazily fetched
+// when the row is expanded, so a manager can verify the number line by line.
+function UnitCostDetail({ detail, expenses, t, buildingId, from, to }) {
+  if (!detail || detail.loading) return <p className="px-4 py-3 text-xs text-foreground-dim">{t("buildingsId.reporting.unitCosts.loading")}</p>;
+  if (detail.error || !detail.data) return <p className="px-4 py-3 text-xs text-destructive-text">{t("buildingsId.reporting.unitCosts.error")}</p>;
+  const { lines = [], totalCents = 0 } = detail.data;
+  if (lines.length === 0) return <p className="px-4 py-3 text-xs text-foreground-dim">{t("buildingsId.reporting.unitCosts.none")}</p>;
+  const reconciles = Math.abs(totalCents - (expenses ?? 0)) <= 1; // cents rounding tolerance
+  const kindLabel = (k) => k === "charges" ? t("buildingsId.reporting.unitCosts.kindCharges")
+    : k === "invoice" ? t("buildingsId.reporting.unitCosts.kindInvoice")
+    : t("buildingsId.reporting.unitCosts.kindLedger");
+  return (
+    <div className="border-t border-surface-border px-4 py-3">
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="text-[10px] uppercase tracking-wide text-foreground-dim">
+              <th className="py-1 pr-2 text-left font-semibold">{t("buildingsId.reporting.unitCosts.date")}</th>
+              <th className="py-1 px-2 text-left font-semibold">{t("buildingsId.reporting.unitCosts.item")}</th>
+              <th className="py-1 px-2 text-left font-semibold">{t("buildingsId.reporting.unitCosts.account")}</th>
+              <th className="py-1 pl-2 text-right font-semibold">{t("buildingsId.reporting.unitCosts.amount")}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {lines.map((l) => {
+              const name = l.vendor || l.description || kindLabel(l.kind);
+              // Drill to the incoming-invoices list filtered to this vendor + window
+              // (same params the Revenue & expenses vendor lens uses).
+              const invHref = l.invoiceId && l.vendor
+                ? `/manager/finance?${new URLSearchParams({ tab: "invoices", direction: "incoming", buildingId, issueDateFrom: from, issueDateTo: to, issuerName: l.vendor }).toString()}`
+                : null;
+              return (
+                <tr key={l.id} className="border-t border-surface-divider align-top">
+                  <td className="py-1.5 pr-2 whitespace-nowrap text-foreground-dim tabular-nums">{l.date ?? "—"}</td>
+                  <td className="py-1.5 px-2">
+                    <span className="text-foreground">{invHref ? <a href={invHref} className="text-brand no-underline hover:underline">{name}</a> : name}</span>
+                    {l.reference ? <span className="text-foreground-dim"> · {l.reference}</span> : null}
+                    {l.vendor && l.description && l.description !== l.vendor
+                      ? <div className="truncate text-foreground-dim">{l.description}</div> : null}
+                    {l.kind !== "ledger" && <span className="ml-1 rounded bg-surface-hover px-1 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-muted">{kindLabel(l.kind)}</span>}
+                  </td>
+                  <td className="py-1.5 px-2 text-foreground-dim">{l.accountCode ? <span className="tabular-nums">{l.accountCode} </span> : null}{l.accountName ?? (l.accountCode ? "" : "—")}</td>
+                  <td className="py-1.5 pl-2 text-right font-medium tabular-nums text-foreground">{rFmtChf(l.amountCents)}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+          <tfoot>
+            <tr className="border-t-2 border-surface-border">
+              <td colSpan={3} className="py-1.5 pr-2 text-right font-semibold text-foreground">{t("buildingsId.reporting.unitCosts.total")}</td>
+              <td className="py-1.5 pl-2 text-right font-bold tabular-nums text-foreground">{rFmtChf(totalCents)}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      <p className={cn("mt-2 flex items-center gap-1.5 text-[11px]", reconciles ? "text-success-text" : "text-warning-text")}>
+        <span aria-hidden>{reconciles ? "✓" : "⚠"}</span>
+        <span>{reconciles
+          ? t("buildingsId.reporting.unitCosts.reconciles")
+          : t("buildingsId.reporting.unitCosts.mismatch", { total: rFmtChf(totalCents), figure: rFmtChf(expenses ?? 0) })}</span>
+      </p>
+    </div>
+  );
+}
+
+function UnitRow({ unitNumber, floor, tenantName, earned, expenses, charges, net, collectionRate, occupancyRate, expandable, expanded, onToggle, detail, buildingId, from, to }) {
+  const { t } = useTranslation("manager");
+  const netPositive = net >= 0;
+  const label = floor
+    ? t("buildingsId.reporting.unitLabelFloor", { number: unitNumber, floor })
+    : t("buildingsId.reporting.unitLabel", { number: unitNumber });
+  const sub   = tenantName || (occupancyRate === 1 ? t("buildingsId.reporting.occupied") : t("buildingsId.reporting.vacant"));
+  const RowTag = expandable ? "button" : "div";
+  return (
+    <div className="overflow-hidden rounded-2xl border border-surface-border bg-surface-subtle">
+      <RowTag
+        {...(expandable ? { type: "button", onClick: onToggle, "aria-expanded": expanded } : {})}
+        className={cn("flex w-full items-center justify-between px-4 py-3 text-left", expandable && "transition-colors hover:bg-surface-hover")}>
+        <div className="mr-4 flex min-w-0 items-center gap-2">
+          {expandable && <span className={cn("shrink-0 text-foreground-dim transition-transform", expanded && "rotate-90")} aria-hidden>▸</span>}
+          <div className="min-w-0">
+            <div className="text-sm font-medium text-foreground truncate">{label}</div>
+            <div className="text-xs text-foreground-dim truncate">{sub}</div>
+          </div>
+        </div>
+        <div className="flex items-center gap-4 shrink-0 text-right">
+          <div className="hidden sm:block">
+            <div className="text-xs text-foreground-dim">{t("buildingsId.reporting.income")}</div>
+            <div className="text-sm font-medium text-muted-dark">{rFmtChf(earned)}</div>
+          </div>
+          <div className="hidden sm:block">
+            <div className="text-xs text-foreground-dim">{t("buildingsId.reporting.directCosts")}</div>
+            <div className="text-sm font-medium text-muted-dark">{rFmtChf(expenses)}</div>
+          </div>
+          {charges > 0 && (
+            <div className="hidden md:block">
+              <div className="text-xs text-foreground-dim">{t("buildingsId.reporting.charges")}</div>
+              <div className="text-sm font-medium text-muted-dark" title={t("buildingsId.reporting.chargesTooltip")}>{rFmtChf(charges)}</div>
+            </div>
+          )}
+          <div>
+            <div className="text-xs text-foreground-dim">{t("buildingsId.reporting.contribution")}</div>
+            <div className={cn("text-sm font-semibold", netPositive ? "text-success-text" : "text-destructive-text")}>{rFmtChf(net)}</div>
+          </div>
+          <div className="hidden md:block">
+            <div className="text-xs text-foreground-dim">{t("buildingsId.reporting.collection")}</div>
+            <div className="text-sm text-muted-dark">{rFmtPct(collectionRate)}</div>
+          </div>
+          <div className="hidden lg:block">
+            <div className="text-xs text-foreground-dim">{t("buildingsId.reporting.occupancy")}</div>
+            <div className={cn("text-sm font-medium", occupancyRate < 1 ? "text-amber-600" : "text-muted-dark")}>{rFmtPct(occupancyRate)}</div>
+          </div>
+        </div>
+      </RowTag>
+      {expandable && expanded && <UnitCostDetail detail={detail} expenses={expenses} t={t} buildingId={buildingId} from={from} to={to} />}
+    </div>
+  );
+}
+
+function buildingDelta(curr, prev) {
+  if (!Number.isFinite(curr) || !Number.isFinite(prev) || curr === prev) return null;
+  const diff = curr - prev;
+  const tone = diff > 0 ? "text-green-600" : "text-red-500";
+  return { tone };
+}
+
+// KPI-strip deltas vs the prior period. `better` (+1/−1) says which direction is
+// good, so the colour reflects meaning (lower expenses = green). Null when there's
+// no prior value or no change.
+function kpiDeltaChf(cur, prev, better) {
+  if (!Number.isFinite(cur) || !Number.isFinite(prev) || cur === prev) return null;
+  const d = cur - prev;
+  const good = better > 0 ? d > 0 : d < 0;
+  return { txt: `${d > 0 ? "▲ " : "▼ "}${rFmtChf(Math.abs(d))}`, cls: good ? "text-success-text" : "text-destructive-text" };
+}
+function kpiDeltaPp(cur, prev, better) {
+  if (!Number.isFinite(cur) || !Number.isFinite(prev)) return null;
+  const pp = Math.round((cur - prev) * 100);
+  if (pp === 0) return null;
+  const good = better > 0 ? pp > 0 : pp < 0;
+  return { txt: `${pp > 0 ? "▲ +" : "▼ "}${Math.abs(pp)}pp`, cls: good ? "text-success-text" : "text-destructive-text" };
+}
+
+function buildingHeadline(bf, t) {
+  if (!bf) return t("buildingsId.reporting.headline.loading");
+  const noi = bf.netOperatingIncomeCents;
+  const coll = bf.collectionRate;
+  const occ  = bf.totalUnitsCount > 0 ? bf.activeUnitsCount / bf.totalUnitsCount : 0;
+  if (noi > 0 && coll >= 0.95 && occ >= 0.9) return t("buildingsId.reporting.headline.strong");
+  if (noi > 0 && coll >= 0.8)  return t("buildingsId.reporting.headline.solid");
+  if (coll < 0.6)               return t("buildingsId.reporting.headline.collectionAttention");
+  if (noi <= 0 && bf.collectedIncomeCents > 0) return t("buildingsId.reporting.headline.expensesOutpaced");
+  if (bf.collectedIncomeCents === 0) return t("buildingsId.reporting.headline.noIncome");
+  return t("buildingsId.reporting.headline.closed");
+}
+
+function buildBuildingDrivers(bf, prevBf, benchmark, t) {
+  const drivers = [];
+  if (!bf) return drivers;
+  if (prevBf) {
+    const netDiff = bf.collectedIncomeCents - prevBf.collectedIncomeCents;
+    if (netDiff > 0) drivers.push({ title: t("buildingsId.reporting.driver.incomeUp.title"), body: t("buildingsId.reporting.driver.incomeUp.body", { amount: rFmtChf(netDiff) }), impact: `+${rFmtChf(netDiff)}`, positive: true });
+    else if (netDiff < 0) drivers.push({ title: t("buildingsId.reporting.driver.incomeDown.title"), body: t("buildingsId.reporting.driver.incomeDown.body", { amount: rFmtChf(Math.abs(netDiff)) }), impact: `-${rFmtChf(Math.abs(netDiff))}`, positive: false });
+    const expDiff = bf.expensesTotalCents - prevBf.expensesTotalCents;
+    if (expDiff > 0) drivers.push({ title: t("buildingsId.reporting.driver.costsUp.title"), body: t("buildingsId.reporting.driver.costsUp.body", { amount: rFmtChf(expDiff) }), impact: `-${rFmtChf(expDiff)}`, positive: false });
+    else if (expDiff < 0) drivers.push({ title: t("buildingsId.reporting.driver.costsDown.title"), body: t("buildingsId.reporting.driver.costsDown.body", { amount: rFmtChf(Math.abs(expDiff)) }), impact: `+${rFmtChf(Math.abs(expDiff))}`, positive: true });
+  }
+  // Portfolio position — outperformance reads as a positive driver (folded in
+  // from the retired executive summary's benchmark clause).
+  if (benchmark && benchmark.count >= 2 && bf.collectedIncomeCents > 0) {
+    const margin = bf.netOperatingIncomeCents / bf.collectedIncomeCents;
+    if (margin > benchmark.noiMarginMedian + 0.03) {
+      drivers.push({ title: t("buildingsId.reporting.driver.benchmark.title"), body: t("buildingsId.reporting.summary.benchmark.above", { margin: rFmtPct(margin), median: rFmtPct(benchmark.noiMarginMedian) }), impact: "", positive: true });
+    }
+  }
+  if (bf.expensesTotalCents > 0 && drivers.length < 3) {
+    drivers.push({ title: t("buildingsId.reporting.driver.spend.title"), body: t("buildingsId.reporting.driver.spend.body", { amount: rFmtChf(bf.expensesTotalCents) }), impact: rFmtChf(bf.expensesTotalCents) });
+  }
+  if (!drivers.length) drivers.push({ title: t("buildingsId.reporting.driver.stable.title"), body: t("buildingsId.reporting.driver.stable.body"), impact: "" });
+  return drivers;
+}
+
+function buildBuildingWatchItems(bf, arrears, unitData, moveIns, moveOuts, benchmark, leaseExpiries, t) {
+  const items = [];
+  if (!bf) return items;
+  const viewInvoices = { label: t("buildingsId.reporting.viewInvoices"), href: "/manager/finance/invoices" };
+  if (arrears?.overdue61plusCents > 0) items.push({ text: t("buildingsId.reporting.watch.overdue61", { amount: rFmtChf(arrears.overdue61plusCents) }), severity: "red", action: viewInvoices });
+  if (arrears?.overdue31to60Cents > 0) items.push({ text: t("buildingsId.reporting.watch.overdue31", { amount: rFmtChf(arrears.overdue31to60Cents) }), severity: "amber" });
+  if (bf.collectionRate < 0.8 && bf.accruedIncomeCents > 0) items.push({ text: t("buildingsId.reporting.watch.collectionRate", { rate: rFmtPct(bf.collectionRate) }), severity: "amber", action: viewInvoices });
+  // Unbilled rent = recognized (lease terms) − invoiced this period. Flag only a
+  // material gap (>10% and >CHF 200) so proration noise doesn't trigger it. This
+  // is the "earned but not yet invoiced" signal — distinct from arrears (invoiced
+  // but unpaid), which the collection-rate item above covers.
+  const unbilledCents = (bf.accruedIncomeCents ?? 0) - (bf.invoicedForPeriodCents ?? 0);
+  if (bf.accruedIncomeCents > 0 && unbilledCents > Math.max(20000, bf.accruedIncomeCents * 0.1)) {
+    items.push({ text: t("buildingsId.reporting.watch.unbilled", { amount: rFmtChf(unbilledCents) }), severity: "amber", action: { label: t("buildingsId.reporting.reviewBilling"), href: "/manager/finance/invoices" } });
+  }
+  const vacantUnits = (unitData ?? []).filter((u) => u.occupancyRate === 0);
+  if (vacantUnits.length > 0) items.push({ text: t("buildingsId.reporting.watch.vacant", { count: vacantUnits.length, units: vacantUnits.map((u) => t("buildingsId.reporting.unitLabel", { number: u.unitNumber })).join(", ") }), severity: "amber" });
+  if (moveOuts?.length > 0) items.push({ text: t("buildingsId.reporting.watch.movedOut", { count: moveOuts.length }), severity: "violet" });
+  // Folded in from the retired executive summary: below-median position + the
+  // forward outlook's lease-expiry signal.
+  if (benchmark && benchmark.count >= 2 && bf.collectedIncomeCents > 0) {
+    const margin = bf.netOperatingIncomeCents / bf.collectedIncomeCents;
+    if (margin < benchmark.noiMarginMedian - 0.03) {
+      items.push({ text: t("buildingsId.reporting.summary.benchmark.below", { margin: rFmtPct(margin), median: rFmtPct(benchmark.noiMarginMedian) }), severity: "amber" });
+    }
+  }
+  if (leaseExpiries?.length > 0) items.push({ text: t("buildingsId.reporting.summary.expiries", { count: leaseExpiries.length, units: leaseExpiries.map((e) => e.unitNumber).join(", ") }), severity: "amber" });
+  if (!items.length) items.push({ text: t("buildingsId.reporting.watch.allClear"), severity: "violet" });
+  return items;
+}
+
+const catLabel = (cat, t) => t(`buildingFinancials.category.${cat}`, { defaultValue: cat.charAt(0) + cat.slice(1).toLowerCase() });
+
+// Biggest expense-account moves between two periods (current vs benchmark),
+// signed (d>0 = cost rose), ≥ CHF 200, top 5 by magnitude. Shared by the
+// prior/last-year comparison and the multi-period card's narrative.
+function computeExpenseMovers(bf, benchBf) {
+  if (!bf || !benchBf) return [];
+  const beMap = new Map((benchBf.expensesByAccount ?? []).map((a) => [a.accountId ?? a.accountName, a]));
+  const seen = new Set();
+  const rows = (bf.expensesByAccount ?? []).map((a) => { const k = a.accountId ?? a.accountName; seen.add(k); return { name: a.accountName ?? a.accountCode ?? "—", d: a.totalCents - (beMap.get(k)?.totalCents ?? 0) }; });
+  for (const a of (benchBf.expensesByAccount ?? [])) { const k = a.accountId ?? a.accountName; if (!seen.has(k)) rows.push({ name: a.accountName ?? a.accountCode ?? "—", d: -a.totalCents }); }
+  return rows.filter((x) => Math.abs(x.d) >= 20000).sort((x, y) => Math.abs(y.d) - Math.abs(x.d)).slice(0, 5);
+}
+
+// Plain-language read of a period-over-period comparison: what happened to NOI,
+// what drove it (income vs costs, then the biggest cost movers), the effect on
+// the building's net yield, and what to monitor next. Deterministic — every
+// number comes straight from the compared DTOs; each sentence is a standalone
+// i18n string (no fragment concatenation). Empty until a benchmark is loaded.
+function buildComparisonNarrative({ curNoi, beNoi, curIncome, beIncome, curExp, beExp, curColl, beColl, curOcc, beOcc, movers, curYield, beYield, periodLabel, cmpPeriodLabel, t }) {
+  const s = [];
+  if (!Number.isFinite(curNoi) || !Number.isFinite(beNoi)) return s;
+  const K = "buildingsId.reporting.compare.narrative";
+  const noiDelta = curNoi - beNoi;
+  const noiPct = beNoi ? `${Math.abs(Math.round((noiDelta / Math.abs(beNoi)) * 100))}%` : "—";
+  const flatThreshold = Math.max(20000, Math.abs(beNoi) * 0.02);
+
+  if (Math.abs(noiDelta) < flatThreshold) {
+    s.push(t(`${K}.noiFlat`, { prevPeriod: cmpPeriodLabel, period: periodLabel, to: rFmtChf(curNoi) }));
+  } else {
+    s.push(t(`${K}.${noiDelta > 0 ? "noiRose" : "noiFell"}`, {
+      from: rFmtChf(beNoi), to: rFmtChf(curNoi), prevPeriod: cmpPeriodLabel, period: periodLabel,
+      delta: rFmtChf(Math.abs(noiDelta)), pct: noiPct,
+    }));
+    // Decompose the NOI move: income lifts NOI by +incomeΔ, expenses by −expΔ.
+    // Attribute to whichever contribution actually pushed NOI in the direction it
+    // moved (largest magnitude) — so the driver never contradicts the headline.
+    const incomeDelta = curIncome - beIncome;
+    const expDelta = curExp - beExp;
+    const aligned = (contrib) => (noiDelta > 0 ? contrib > 0 : contrib < 0);
+    const candidates = [];
+    if (aligned(incomeDelta)) candidates.push({ kind: "income", mag: Math.abs(incomeDelta), up: incomeDelta > 0 });
+    if (aligned(-expDelta)) candidates.push({ kind: "cost", mag: Math.abs(expDelta), up: expDelta > 0 });
+    candidates.sort((a, b) => b.mag - a.mag);
+    const drv = candidates[0];
+    if (drv?.kind === "cost") {
+      s.push(t(`${K}.driverCosts${drv.up ? "Up" : "Down"}`, { amount: rFmtChf(drv.mag) }));
+      const rising = (movers ?? []).filter((m) => m.d > 0).slice(0, 3).map((m) => m.name);
+      if (drv.up && rising.length) s.push(t(`${K}.movers`, { items: rising.join(", ") }));
+    } else if (drv?.kind === "income") {
+      s.push(t(`${K}.driverIncome${drv.up ? "Up" : "Down"}`, { amount: rFmtChf(drv.mag) }));
+    }
+  }
+
+  if (curYield != null && beYield != null) {
+    const yd = Math.round((curYield - beYield) * 10) / 10;
+    s.push(t(`${K}.yieldMoved`, { from: `${beYield.toFixed(1)}%`, to: `${curYield.toFixed(1)}%`, delta: `${yd > 0 ? "+" : ""}${yd.toFixed(1)}` }));
+  } else if (curYield != null) {
+    s.push(t(`${K}.yieldStands`, { value: `${curYield.toFixed(1)}%` }));
+  }
+
+  const monitor = [];
+  const rising = (movers ?? []).filter((m) => m.d > 0);
+  if (curExp - beExp > 0 && rising.length) monitor.push(rising[0].name);
+  if (curColl != null && beColl != null && curColl < beColl - 0.02) monitor.push(t(`${K}.monitorCollection`));
+  if (curOcc != null && beOcc != null && curOcc < beOcc - 0.001) monitor.push(t(`${K}.monitorVacancy`));
+  if (monitor.length) s.push(t(`${K}.monitor`, { items: monitor.join(", ") }));
+
+  return s;
+}
+
+// The "What this means" read-out shown under the comparison table — a friendly
+// explainer callout (icon + heading + plain-language sentences). Styled to stand
+// out as the hand-holding layer for non-financial owners: this is the part that
+// says, in words, what the numbers above mean.
+function ComparisonNarrative({ lines, t }) {
+  if (!lines?.length) return null;
+  return (
+    <div className="rounded-xl border border-info-ring bg-info-light px-5 py-4">
+      <div className="mb-2.5 flex items-center gap-2.5">
+        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-info text-sm font-bold text-white">i</span>
+        <p className="text-sm font-semibold text-info-text">{t("buildingsId.reporting.compare.narrative.heading")}</p>
+      </div>
+      <div className="space-y-2 pl-[38px]">
+        {lines.map((line, i) => <p key={i} className="text-sm leading-6 text-foreground">{line}</p>)}
+      </div>
+    </div>
+  );
+}
+
+// The reporting detail for one period. The period ([from,to] + its label) is
+// chosen by the period navigator above (BuildingReportingView); the time-series
+// points + focus are passed in so the Revenue & expenses slide can render the
+// histogram and let a bar click/brush re-drive the period.
+function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLabel }) {
+  const { t } = useTranslation("manager");
+  const router = useRouter();
+  const [unitsExpanded, setUnitsExpanded] = useState(false);
+  const [insExpanded, setInsExpanded]     = useState(false);
+  const [outsExpanded, setOutsExpanded]   = useState(false);
+  const [whyOpen, setWhyOpen]             = useState(false); // exec-summary narrative disclosure
+  const [reclassMode, setReclassMode]     = useState(false); // reclassify cost-centre categories
+  const [refreshKey, setRefreshKey]       = useState(0);     // bumps to refetch after a reclassify
+  const [report, setReport]   = useState(null);
+  const [unitData, setUnitData] = useState([]);
+  const [vendors, setVendors] = useState([]);
+  const [profit, setProfit]   = useState(null);   // building value + net yield (for the KPI strip)
+  const [movesOpen, setMovesOpen] = useState(false); // tenant-movements disclosure
+  const [expView, setExpView] = useState("acc"); // Revenue & expenses: cost-center | vendor
+  const [incomeExpanded, setIncomeExpanded] = useState(false); // revex income column: show all units
+  const [expExpanded, setExpExpanded] = useState(false);       // revex expense column: show all rows
+  const [expandedUnitId, setExpandedUnitId] = useState(null);  // by-unit: which row's cost detail is open
+  const [unitLines, setUnitLines] = useState({});              // by-unit: unitId → { loading, error, data }
+  const [breakdownView, setBreakdownView] = useState("ie"); // breakdown sub-view: ie | unit | prof
+  const [metricsOpen, setMetricsOpen] = useState(false);    // "All financial metrics" disclosure
+  const [benchmark, setBenchmark] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError]     = useState("");
+
+  // Display bits derived from the focused window's end.
+  const toDate = new Date(to);
+  const year = toDate.getFullYear();
+  const month = toDate.getMonth();
+
+  useEffect(() => {
+    if (!buildingId) return;
+    setLoading(true);
+    setError("");
+    setExpandedUnitId(null);   // per-unit drill-down cache is window-scoped
+    setUnitLines({});
+    const q = new URLSearchParams({ from, to }).toString();
+    Promise.all([
+      fetch(`/api/buildings/${buildingId}/period-report?${q}`, { headers: authHeaders() }).then((r) => r.json()),
+      fetch(`/api/buildings/${buildingId}/unit-financials?from=${from}&to=${to}`, { headers: authHeaders() }).then((r) => r.json()),
+      fetch(`/api/buildings/${buildingId}/vendor-spend?from=${from}&to=${to}`, { headers: authHeaders() }).then((r) => r.json()).catch(() => null),
+      fetch(`/api/financials/portfolio-summary?from=${from}&to=${to}`, { headers: authHeaders() }).then((r) => r.json()).catch(() => null),
+      fetch(`/api/buildings/${buildingId}/unit-profitability?from=${from}&to=${to}`, { headers: authHeaders() }).then((r) => r.json()).catch(() => null),
+    ])
+      .then(([rpt, uf, vs, ps, pr]) => {
+        setReport(rpt?.data ?? null); setUnitData(uf?.data ?? []); setVendors(vs?.data ?? []); setProfit(pr?.data ?? null);
+        // Portfolio benchmark: median NOI margin / OpEx ratio across the org's buildings.
+        const bs = (ps?.data?.buildings ?? []).filter((b) => b.collectedIncomeCents > 0);
+        const median = (arr) => { const s = [...arr].sort((a, b) => a - b); return s.length ? s[Math.floor((s.length - 1) / 2)] : 0; };
+        setBenchmark(bs.length >= 2
+          ? { count: bs.length, noiMarginMedian: median(bs.map((b) => b.netOperatingIncomeCents / b.collectedIncomeCents)), opexRatioMedian: median(bs.map((b) => b.operatingTotalCents / b.collectedIncomeCents)) }
+          : null);
+      })
+      .catch(() => setError(t("buildingsId.reporting.failedToLoad")))
+      .finally(() => setLoading(false));
+  }, [buildingId, from, to, t, refreshKey]);
+
+  // Persist a manager's cost-category override on the account, then refetch.
+  async function reclassifyAccount(accountId, category) {
+    if (!accountId) return;
+    try {
+      await fetch(`/api/coa/accounts/${accountId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ costCategory: category }),
+      });
+      setRefreshKey((k) => k + 1);
+    } catch { /* leave numbers as-is on failure */ }
+  }
+
+  // Lazily load the invoices behind a unit's "Direct costs" figure (drill-down).
+  // Cached per unit for the focused window; the cache is cleared when from/to change.
+  function toggleUnitLines(unitId) {
+    setExpandedUnitId((cur) => (cur === unitId ? null : unitId));
+    if (unitLines[unitId]) return;
+    setUnitLines((m) => ({ ...m, [unitId]: { loading: true } }));
+    fetch(`/api/units/${unitId}/expense-lines?from=${from}&to=${to}`, { headers: authHeaders() })
+      .then((r) => r.json())
+      .then((d) => setUnitLines((m) => ({ ...m, [unitId]: { loading: false, data: d?.data ?? null } })))
+      .catch(() => setUnitLines((m) => ({ ...m, [unitId]: { loading: false, error: true } })));
+  }
+
+  const bf   = report?.financials ?? null;
+  const prev = report?.prevFinancials ?? null;
+  const arrears   = report?.arrears ?? null;
+  const moveIns   = report?.moveIns  ?? [];
+  const moveOuts  = report?.moveOuts ?? [];
+
+  const noi      = bf?.netOperatingIncomeCents ?? 0;
+  const earned   = bf?.collectedIncomeCents       ?? 0;
+  const expenses = bf?.expensesTotalCents       ?? 0;
+  const coll     = bf?.collectionRate           ?? 0;
+  const occ      = bf && bf.totalUnitsCount > 0 ? bf.activeUnitsCount / bf.totalUnitsCount : null;
+  // Operating basis: NOI excludes capex + financing (régie P&Ls bundle them in).
+  const operatingCents  = bf?.operatingTotalCents ?? expenses;
+  const capexCents      = bf?.capexTotalCents ?? 0;
+  const financingCents  = bf?.financingTotalCents ?? 0;
+  const recoverableCents = bf?.recoverableAncillaryCents ?? 0;
+  const tenantRechargeCents = bf?.tenantRechargeCents ?? 0;
+  const netResultCents  = bf?.netIncomeCents ?? noi; // after capex + financing
+  const noiMargin = earned > 0 ? noi / earned : null;
+  const opexRatio = earned > 0 ? operatingCents / earned : null;
+
+  // ── Owner-first headline metrics ──
+  // Net yield + LTV both need a valuation (from the profitability endpoint); "—" without one.
+  const yieldPct = profit?.buildingNetYieldPct ?? null;
+  const buildingValueChf = profit?.buildingIntrinsicValueChf ?? null;
+  const totalDebtChf = profit?.totalDebtChf ?? null;   // Σ mortgage balances (0 = unlevered)
+  // Loan-to-value = mortgage debt ÷ building value. Distinct from yield/NOI; 0% when
+  // unlevered. (Free cash flow returns as a true FCFE once per-period debt service —
+  // interest + principal — is wired; NOI − capex alone just duplicates NOI here.)
+  const ltvPct = buildingValueChf && totalDebtChf != null ? (totalDebtChf / buildingValueChf) * 100 : null;
+  const prevOcc = prev && prev.totalUnitsCount > 0 ? prev.activeUnitsCount / prev.totalUnitsCount : null;
+  const prevYieldFrac = buildingValueChf && prev ? (prev.netOperatingIncomeCents / 100) / buildingValueChf : null;
+
+  // Net rent roll (contractual potential income), scaled to the selected period so
+  // it's comparable to the period's actuals. etatLocatifNet is the ANNUAL figure (CHF).
+  // Months spanned by the focused window (inclusive), for scaling the rent roll.
+  const fromDate = new Date(from);
+  const periodMonths = Math.max(1, (year - fromDate.getFullYear()) * 12 + (month - fromDate.getMonth()) + 1);
+  const rentRollCents = etatLocatifNet != null
+    ? Math.round(etatLocatifNet * 100 * periodMonths / 12)
+    : null;
+
+  // No P&L for the period: not an approved imported statement, and no posted
+  // ledger actuals (revenue / expense / accrual all zero). Occupancy + rent roll
+  // still render from lease/unit data, so the financial cards would sit silently
+  // blank — surface a CTA to import/approve an income statement instead.
+  const noPnlData = !!bf
+    && bf.source !== "imported"
+    && earned === 0
+    && expenses === 0
+    && (bf.accruedIncomeCents ?? 0) === 0
+    && noi === 0;
+
+  const headline  = buildingHeadline(bf, t);
+  // "What drove it" + "What to watch" — the merged panel that the header's Why?
+  // disclosure now expands (the separate executive-summary prose + Drivers tab
+  // were consolidated here: benchmark → driver/watch, lease expiries → watch).
+  const drivers   = buildBuildingDrivers(bf, prev, benchmark, t);
+  const watchItems = buildBuildingWatchItems(bf, arrears, unitData, moveIns, moveOuts, benchmark, report?.leaseExpiries ?? [], t);
+
+  const visibleUnits = unitsExpanded ? unitData : unitData.slice(0, PREVIEW_UNITS);
+
+  return (
+    <div>
+      {error && <p className="text-sm text-red-600 p-4">{error}</p>}
+      {/* First load only — once we have data we keep it on screen during refetch
+          (stale-while-revalidate) so period changes don't blank/reset the tab. */}
+      {!bf && loading && <div className="space-y-3">{[1,2,3].map((i) => <div key={i} className="h-24 rounded-3xl animate-pulse bg-surface-hover" />)}</div>}
+
+      {bf && (() => {
+        // ── Result — a calm header (verdict + Why?), an always-visible KPI strip,
+        //    and a single consolidated flags row (arrears · opening balances). The
+        //    gradient hero and the three separate alert blocks are retired here. ──
+        const topSection = (
+          <header className="p-5 sm:p-6 border-b border-surface-border">
+            {/* Period pill removed — the period lives in the selector above this card.
+                The Imported-actuals badge stays (it's data provenance, not a repeat). */}
+            {bf.source === "imported" && (
+              <div className="mb-2.5">
+                <span className="inline-flex items-center rounded-full border border-brand-ring bg-brand-light px-3 py-1 text-xs font-medium text-brand-dark" title={t("buildingsId.reporting.importedActualsTooltip")}>
+                  {t("buildingsId.reporting.importedActuals", { year })}
+                </span>
+              </div>
+            )}
+            <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
+              <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-foreground">{headline}</h1>
+              <button onClick={() => setWhyOpen((v) => !v)} aria-expanded={whyOpen} className="text-sm font-semibold text-brand hover:underline">
+                {whyOpen ? t("buildingsId.reporting.why.hide") : t("buildingsId.reporting.why.show")}
+              </button>
+            </div>
+          </header>
+        );
+
+        // 5 owner-first headline KPIs — return, cash, operating result, health.
+        const kpiStripItems = [
+          { k: t("buildingsId.reporting.kpi.netYield", { defaultValue: "Net yield" }),
+            v: yieldPct != null ? `${yieldPct.toFixed(2)}%` : "—",
+            tip: yieldPct != null && buildingValueChf ? t("buildingsId.reporting.kpi.netYieldTip", { defaultValue: "NOI ÷ building value ({{val}})", val: rFmtChf(buildingValueChf * 100) }) : t("buildingsId.reporting.kpi.netYieldNoVal", { defaultValue: "Add a valuation to compute yield" }),
+            flag: yieldPct != null && yieldPct < 3,
+            d: prevYieldFrac != null ? kpiDeltaPp(yieldPct / 100, prevYieldFrac, 1) : null },
+          { k: t("buildingsId.reporting.kpi.ltv", { defaultValue: "LTV" }),
+            v: ltvPct != null ? `${ltvPct.toFixed(0)}%` : "—",
+            tip: ltvPct != null
+              ? t("buildingsId.reporting.kpi.ltvTip", { defaultValue: "Mortgage debt ({{debt}}) ÷ building value. 0% = unlevered.", debt: rFmtChf(totalDebtChf * 100) })
+              : t("buildingsId.reporting.kpi.ltvNoVal", { defaultValue: "Add a valuation to compute leverage" }),
+            flag: ltvPct != null && ltvPct > 80,   // above the ~80% Swiss residential ceiling
+            d: null },
+          { k: t("buildingsId.reporting.kpi.noi"),              v: rFmtChf(noi),                     d: prev ? kpiDeltaChf(noi, prev.netOperatingIncomeCents, 1) : null },
+          { k: t("buildingsId.reporting.kpi.occupancy"),        v: occ != null ? rFmtPct(occ) : "—", d: prevOcc != null ? kpiDeltaPp(occ, prevOcc, 1) : null },
+          { k: t("buildingsId.reporting.kpi.onTimeCollection"), v: rFmtPct(coll),                    d: prev ? kpiDeltaPp(coll, prev.collectionRate, 1) : null },
+        ];
+        const kpiStripEl = (
+          <div className="grid grid-cols-2 gap-px border-b border-surface-border bg-surface-border sm:grid-cols-3 lg:grid-cols-5">
+            {kpiStripItems.map((x, i) => (
+              <div key={i} className="bg-surface p-3">
+                <div className="text-[10.5px] font-medium uppercase tracking-wide text-foreground-dim" title={x.tip || undefined}>
+                  {x.tip ? <span className="cursor-help underline decoration-dotted decoration-foreground-dim underline-offset-2">{x.k}</span> : x.k}
+                </div>
+                <div className={cn("mt-1 text-lg font-semibold tabular-nums tracking-tight", x.flag ? "text-warning-text" : "text-foreground")}>{x.v}</div>
+                {x.d
+                  ? <div className={cn("mt-0.5 text-[11px] font-medium tabular-nums", x.d.cls)}>{x.d.txt}</div>
+                  : <div className="mt-0.5 text-[11px] text-foreground-dim">—</div>}
+              </div>
+            ))}
+          </div>
+        );
+
+        // Consolidated flags — arrears + opening-balance carry-in, one quiet row.
+        const flags = [];
+        if (bf.receivablesCents > 0) flags.push({
+          tone: "warn",
+          text: t("buildingsId.reporting.arrears.uncollectedShort", { amount: rFmtChf(bf.receivablesCents) })
+            + (arrears && arrears.totalOverdueCents > 0 ? " · " + t("buildingsId.reporting.arrears.overdueShort", { amount: rFmtChf(arrears.totalOverdueCents) }) : ""),
+        });
+        if (bf.openingReceivablesCents > 0 || bf.openingPayablesCents > 0) flags.push({
+          tone: "info",
+          text: [
+            bf.openingReceivablesCents > 0 ? t("buildingsId.reporting.openingReceivable", { amount: rFmtChf(bf.openingReceivablesCents) }) : null,
+            bf.openingPayablesCents > 0 ? t("buildingsId.reporting.openingPayable", { amount: rFmtChf(bf.openingPayablesCents) }) : null,
+          ].filter(Boolean).join(" · "),
+        });
+        // Ledger integrity: a non-zero trial-balance means unbalanced entries were
+        // posted (typically an imported opening balance that didn't tie out).
+        const ledgerImbalanceCents = report?.ledgerImbalanceCents ?? 0;
+        if (Math.abs(ledgerImbalanceCents) >= 100) flags.push({
+          tone: "danger",
+          text: t("buildingsId.reporting.ledgerImbalance", { amount: rFmtChf(Math.abs(ledgerImbalanceCents)) }),
+        });
+        const flagsRow = flags.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 border-b border-surface-border bg-surface-subtle px-5 py-3">
+            {flags.map((f, i) => (
+              <span key={i} className={cn("inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold",
+                f.tone === "danger" ? "border-destructive-ring bg-destructive-light text-destructive-text"
+                  : f.tone === "warn" ? "border-warning-ring bg-warning-light text-warning-text"
+                    : "border-info-ring bg-info-light text-info-text")}>
+                {f.tone === "danger" ? "⛔" : f.tone === "warn" ? "⚠" : "↪"} {f.text}
+              </span>
+            ))}
+            {bf.receivablesCents > 0 && (
+              <a href="/manager/finance/invoices" className="ml-auto text-xs font-semibold text-brand no-underline hover:underline">{t("buildingsId.reporting.viewInvoices")} →</a>
+            )}
+          </div>
+        );
+
+        // No P&L for the period — occupancy/rent roll are lease-derived, but income
+        // & expenses need an approved statement or ledger actuals. Calm empty state.
+        const noPnlBlock = (
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-surface-border bg-info-light px-5 py-4">
+            <span className="shrink-0 text-info-text">ℹ</span>
+            <span className="text-sm font-medium text-foreground">{t("buildingsId.reporting.noPnl.message", { year })}</span>
+            <a href="/manager/finance" className="ml-auto shrink-0 rounded-lg border border-info-ring px-3 py-1.5 text-xs font-semibold text-info-text transition-colors hover:bg-info hover:text-white no-underline">
+              {t("buildingsId.reporting.noPnl.cta")} →
+            </a>
+          </div>
+        );
+
+        // Grouped detail — everything the 5-KPI headline strip doesn't show: the
+        // secondary performance ratios/figures, income, costs and balances.
+        const kpiGroups = [
+          { label: t("buildingsId.reporting.kpiGroup.performance", { defaultValue: "Performance" }),
+            left: [
+              { label: t("buildingsId.reporting.kpi.noiMargin"), value: noiMargin != null ? rFmtPct(noiMargin) : "—", delta: prev && prev.collectedIncomeCents > 0 ? kpiDeltaPp(noiMargin, prev.netOperatingIncomeCents / prev.collectedIncomeCents, 1) : null },
+              { label: t("buildingsId.reporting.kpi.opexRatio"), value: opexRatio != null ? rFmtPct(opexRatio) : "—", delta: prev && prev.collectedIncomeCents > 0 ? kpiDeltaPp(opexRatio, prev.expensesTotalCents / prev.collectedIncomeCents, -1) : null },
+            ],
+            right: [
+              { label: t("buildingsId.reporting.kpi.cashReceived"), value: rFmtChf(earned), delta: prev ? kpiDeltaChf(earned, prev.collectedIncomeCents, 1) : null },
+              { label: t("buildingsId.reporting.revex.operating"),  value: rFmtChf(operatingCents), delta: prev ? kpiDeltaChf(operatingCents, prev.operatingTotalCents ?? prev.expensesTotalCents, -1) : null },
+            ] },
+          { label: t("buildingsId.reporting.kpiGroup.income"),
+            left: [
+              { label: t("buildingsId.reporting.kpi.accruedIncome"), value: rFmtChf(bf.accruedIncomeCents), delta: null },
+              { label: t("buildingsId.reporting.kpi.rentalIncome"),  value: rFmtChf(bf.rentalIncomeCents), delta: null },
+            ],
+            right: [
+              { label: t("buildingsId.reporting.kpi.serviceCharges"), value: rFmtChf(bf.serviceChargeIncomeCents), delta: null },
+              { label: t("buildingsId.reporting.kpi.netIncome"), value: rFmtChf(netResultCents), delta: null },
+            ] },
+          { label: t("buildingsId.reporting.kpiGroup.costs"),
+            left: [
+              { label: t("buildingsId.reporting.kpi.totalExpenses"),    value: rFmtChf(expenses), delta: prev ? buildingDelta(-expenses, -prev.expensesTotalCents) : null },
+              { label: t("buildingsId.reporting.kpi.maintenance"),      value: rFmtChf(bf.maintenanceTotalCents), delta: null },
+              { label: t("buildingsId.reporting.kpi.maintenanceRatio"), value: bf.maintenanceRatio != null ? rFmtPct(bf.maintenanceRatio) : "—", delta: null },
+            ],
+            right: [
+              ...(financingCents > 0 ? [{ label: t("buildingsId.reporting.kpi.mortgageInterest", { defaultValue: "Mortgage interest" }), value: rFmtChf(financingCents), delta: null }] : []),
+              { label: t("buildingsId.reporting.kpi.capex"),       value: rFmtChf(bf.capexTotalCents), delta: null },
+              { label: t("buildingsId.reporting.kpi.costPerUnit"), value: rFmtChf(bf.costPerUnitCents), delta: null },
+            ] },
+          { label: t("buildingsId.reporting.kpiGroup.balances"),
+            left: [
+              { label: t("buildingsId.reporting.kpi.receivables"), value: bf.receivablesCents > 0 ? rFmtChf(bf.receivablesCents) : "—", delta: null },
+              { label: t("buildingsId.reporting.kpi.payables"),    value: bf.payablesCents > 0 ? rFmtChf(bf.payablesCents) : "—", delta: null },
+            ],
+            right: [
+              { label: t("buildingsId.reporting.kpi.rentRoll"), value: rentRollCents != null ? rFmtChf(rentRollCents) : "—", delta: null },
+              ...(totalDebtChf != null && totalDebtChf > 0 ? [{ label: t("buildingsId.reporting.kpi.mortgageDebt", { defaultValue: "Mortgage debt" }), value: rFmtChf(totalDebtChf * 100), delta: null }] : []),
+            ] },
+        ];
+        const normalKpis = (
+          <div className="space-y-4">
+            {kpiGroups.map((g) => (
+              <div key={g.label}>
+                <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-foreground-dim">{g.label}</p>
+                <KpiTable flush isLoading={false} left={g.left} right={g.right} />
+              </div>
+            ))}
+            <div className="flex flex-wrap gap-x-4 gap-y-1 pt-1 text-xs">
+              <a href="/manager/finance/ledger" className="text-brand no-underline hover:underline">{t("buildingsId.reporting.generalLedger")} →</a>
+              <a href="/manager/finance/chart-of-accounts" className="text-brand no-underline hover:underline">{t("buildingsId.reporting.chartOfAccounts")} →</a>
+            </div>
+          </div>
+        );
+        // The income/cost/balance detail disclosure under the KPI strip — the
+        // metrics the strip doesn't already show (no longer a duplicating superset).
+        const metricsCollapsible = (
+          <div className="border-b border-surface-border">
+            <button onClick={() => setMetricsOpen((v) => !v)} aria-expanded={metricsOpen}
+              className="flex w-full items-center justify-center gap-1.5 px-5 py-3 text-sm font-semibold text-brand hover:underline">
+              <span>{t("buildingsId.reporting.moreMetrics", { defaultValue: "More metrics" })}</span>
+              <span className="text-xs">{metricsOpen ? "▾" : "▸"}</span>
+            </button>
+            {metricsOpen && <div className="px-5 pb-5">{normalKpis}</div>}
+          </div>
+        );
+
+
+        // ── Slide 2: What drove it / What to watch ──
+        const driversSlide = (
+          <div className="overflow-hidden">
+            <div className="grid lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-surface-border">
+              <div className="flex flex-col">
+                <div className="px-7 py-4 bg-surface-subtle border-b border-surface-border">
+                  <div className="flex items-center gap-2.5 mb-0.5">
+                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-surface-hover text-xs font-bold text-muted">⇅</div>
+                    <h2 className="text-sm font-semibold text-foreground">{t("buildingsId.reporting.whatDrove")}</h2>
+                  </div>
+                  <p className="text-xs text-foreground-dim ml-[34px]">{t("buildingsId.reporting.whatDroveSub")}</p>
+                </div>
+                <div className="px-7 py-5 flex-1">
+                  {drivers.map((d, i) => <DriverItem key={i} number={i + 1} title={d.title} body={d.body} impact={d.impact} positive={d.positive} />)}
+                </div>
+              </div>
+              <div className="flex flex-col">
+                <div className="px-7 py-4 bg-warning-light border-b border-warning-ring">
+                  <div className="flex items-center gap-2.5 mb-0.5">
+                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-warning-light text-xs font-bold text-warning-text">!</div>
+                    <h2 className="text-sm font-semibold text-warning-text">{t("buildingsId.reporting.whatToWatch")}</h2>
+                  </div>
+                  <p className="text-xs text-warning-text/80 ml-[34px]">{t("buildingsId.reporting.whatToWatchSub")}</p>
+                </div>
+                <div className="px-7 py-5 flex-1">
+                  {watchItems.length > 0
+                    ? watchItems.map((item, i) => <WatchItem key={i} number={i + 1} text={item.text} severity={item.severity} action={item.action} />)
+                    : <div className="flex items-start gap-4 pt-2"><div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-success-light text-success-text">✓</div><p className="text-sm text-muted-text leading-relaxed self-center">{t("buildingsId.reporting.noFlags")}</p></div>}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+
+        // ── Slide 3: By unit ──
+        const byUnitSlide = (
+          <div className="p-5">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-base font-semibold text-foreground">{t("buildingsId.reporting.byUnit")}</h2>
+                <p className="text-xs text-foreground-dim mt-0.5">{t("buildingsId.reporting.byUnitSub", { period: periodLabel })}</p>
+              </div>
+              {unitData.length > PREVIEW_UNITS && (
+                <button onClick={() => setUnitsExpanded((v) => !v)} className="text-xs font-medium text-muted-dark hover:text-foreground transition-colors">
+                  {unitsExpanded ? `${t("buildingsId.reporting.collapse")} ↑` : `${t("buildingsId.reporting.showAll", { count: unitData.length })} ↓`}
+                </button>
+              )}
+            </div>
+            {unitData.length === 0
+              ? <p className="text-sm text-muted italic">{t("buildingsId.reporting.noUnits")}</p>
+              : <>
+                <div className="space-y-2">{visibleUnits.map((u) => <UnitRow key={u.unitId} unitNumber={u.unitNumber} floor={u.floor} tenantName={u.tenantName} earned={u.collectedIncomeCents} expenses={u.expensesCents} charges={u.apportionedChargesCents} net={u.netIncomeCents} collectionRate={u.collectionRate} occupancyRate={u.occupancyRate} expandable={u.expensesCents > 0} expanded={expandedUnitId === u.unitId} onToggle={() => toggleUnitLines(u.unitId)} detail={unitLines[u.unitId]} buildingId={buildingId} from={from} to={to} />)}</div>
+                <p className="mt-3 flex items-start gap-1.5 text-xs text-foreground-dim">
+                  <span aria-hidden>ℹ</span>
+                  <span>{t("buildingsId.reporting.byUnitDirectNote")}</span>
+                </p>
+              </>}
+          </div>
+        );
+
+        // ── Revenue & expenses (P&L): trend histogram + income vs expense attribution ──
+        // Drill from a row into the invoices view, filtered to this period + vendor/account.
+        const drillHref = ({ contractorId, issuerName, accountId, ctxVendor }) => {
+          const p = new URLSearchParams({ tab: "invoices", direction: "incoming", buildingId, issueDateFrom: from, issueDateTo: to, ctxPeriod: periodLabel });
+          if (ctxVendor) p.set("ctxVendor", ctxVendor);
+          if (contractorId) p.set("vendorContractorId", contractorId);
+          else if (issuerName) p.set("issuerName", issuerName);
+          if (accountId) p.set("accountId", accountId);
+          return `/manager/finance?${p.toString()}`;
+        };
+        // Cost-centers come from the financials' ledger decomposition (reconciles to
+        // the expense total), NOT invoices — so they're populated even when a period's
+        // expenses are ledger-only. Any gap to the total lands in an "Other" row.
+        // Capital works + financing are excluded here (they're shown below NOI), so
+        // the cost-centre list sums to OPERATING, matching the bridge above.
+        const allAcctRows = (bf.expensesByAccount ?? [])
+          .map((a) => ({ accountId: a.accountId, accountCode: a.accountCode, accountName: a.accountName, totalCents: a.totalCents, category: a.category }));
+        const acctRows = allAcctRows.filter((a) => a.category !== "CAPEX" && a.category !== "FINANCING" && a.category !== "TENANT_RECHARGE");
+        const acctSum = acctRows.reduce((s, a) => s + a.totalCents, 0);
+        const otherCents = operatingCents - acctSum;
+        const periodAccounts = otherCents > 5000
+          ? [...acctRows, { accountId: null, accountCode: null, accountName: t("buildingsId.reporting.revex.otherExpenses"), totalCents: otherCents }]
+          : acctRows;
+        // Vendor lens is invoice-based and may cover only part of the total.
+        const vendItemised = vendors.reduce((s, v) => s + v.totalCents, 0);
+        const uncoveredCents = expenses - vendItemised;
+        const incomeUnits = [...unitData].sort((a, b) => (b.collectedIncomeCents ?? 0) - (a.collectedIncomeCents ?? 0));
+        const incMax = Math.max(1, ...incomeUnits.map((u) => u.collectedIncomeCents ?? 0));
+        const categoryRows = (bf.expensesByCategory ?? []).map((c) => ({ name: catLabel(c.category, t), totalCents: c.totalCents })).sort((a, b) => b.totalCents - a.totalCents);
+        // In reclassify mode the cost-centre view shows EVERY account (incl. the
+        // capex/financing ones filtered out above) so any can be re-categorised.
+        const expRows = expView === "vend" ? vendors : expView === "cat" ? categoryRows : (reclassMode && expView === "acc" ? allAcctRows : periodAccounts);
+        const catShort = (c) => c === "RECOVERABLE" ? t("buildingsId.reporting.revex.catRecoverable")
+          : c === "TENANT_RECHARGE" ? t("buildingsId.reporting.revex.catTenantRecharge")
+          : c === "CAPEX" ? t("buildingsId.reporting.kpi.capex")
+          : c === "FINANCING" ? t("buildingsId.reporting.revex.financing")
+          : t("buildingsId.reporting.revex.catOwner");
+        const CAT_CHIP = { OWNER_OPEX: "bg-surface-hover text-muted", RECOVERABLE: "bg-warning-light text-warning-text", TENANT_RECHARGE: "bg-success-light text-success-text", CAPEX: "bg-brand-light text-brand-dark", FINANCING: "bg-info-light text-info-text" };
+
+        const revexSlide = (
+          <div className="p-5 space-y-4">
+            <div>
+              <h2 className="text-base font-semibold text-foreground mb-1">{t("buildingsId.reporting.revex.title")}</h2>
+              <p className="text-xs text-foreground-dim">{t("buildingsId.reporting.revex.sub")}</p>
+            </div>
+
+            {/* Income − Operating = NOI (capex + financing are pulled out, below) */}
+            <div className="flex items-stretch overflow-hidden rounded-2xl border border-surface-border text-center">
+              <div className="flex-1 px-3 py-2.5">
+                <div className="text-[10px] font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.histogram.income")}</div>
+                <div className="text-base font-bold tabular-nums text-foreground">{rFmtChf(earned)}</div>
+              </div>
+              <div className="grid w-7 place-items-center bg-surface-hover text-foreground-dim">−</div>
+              <div className="flex-1 px-3 py-2.5">
+                <div className="text-[10px] font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.revex.operating")}</div>
+                <div className="text-base font-bold tabular-nums text-foreground">{rFmtChf(operatingCents)}</div>
+              </div>
+              <div className="grid w-7 place-items-center bg-surface-hover text-foreground-dim">=</div>
+              <div className="flex-1 bg-surface-hover px-3 py-2.5">
+                <div className="text-[10px] font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.histogram.noi")}</div>
+                <div className={cn("text-base font-bold tabular-nums", noi >= 0 ? "text-success-text" : "text-destructive-text")}>{rFmtChf(noi)}</div>
+              </div>
+            </div>
+
+            {/* Below operating NOI: capital works + financing + tenant recharges, and the net result */}
+            {(capexCents > 0 || financingCents > 0 || tenantRechargeCents > 0) && (
+              <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 rounded-xl border border-surface-border bg-surface-subtle px-4 py-2.5 text-sm">
+                <span className="text-[10px] font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.revex.belowNoi")}</span>
+                {capexCents > 0 && <span className="text-muted">{t("buildingsId.reporting.kpi.capex")} <b className="tabular-nums text-foreground">{rFmtChf(capexCents)}</b></span>}
+                {financingCents > 0 && <span className="text-muted">{t("buildingsId.reporting.revex.financing")} <b className="tabular-nums text-foreground">{rFmtChf(financingCents)}</b></span>}
+                {tenantRechargeCents > 0 && <span className="text-muted">{t("buildingsId.reporting.revex.catTenantRecharge")} <b className="tabular-nums text-foreground">{rFmtChf(tenantRechargeCents)}</b></span>}
+                <span className="ml-auto text-muted">{t("buildingsId.reporting.revex.netResult")} <b className={cn("tabular-nums", netResultCents >= 0 ? "text-success-text" : "text-destructive-text")}>{rFmtChf(netResultCents)}</b></span>
+              </div>
+            )}
+            {tenantRechargeCents > 0 && (
+              <p className="flex items-start gap-1.5 text-xs text-foreground-dim">
+                <span aria-hidden>ℹ</span>
+                <span>{t("buildingsId.reporting.revex.tenantRechargeNote", { amount: rFmtChf(tenantRechargeCents) })}</span>
+              </p>
+            )}
+            {recoverableCents > 0 && (
+              <p className="flex items-start gap-1.5 text-xs text-foreground-dim">
+                <span aria-hidden>ℹ</span>
+                <span>{t("buildingsId.reporting.revex.recoverableNote", { amount: rFmtChf(recoverableCents) })}</span>
+              </p>
+            )}
+
+            {/* Income sources (units) | Expense sinks (vendors / cost centers) */}
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+              <div>
+                <div className="mb-2 flex items-center justify-between gap-2 px-1">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.revex.income")}</p>
+                  {incomeUnits.length > INCOME_PREVIEW && (
+                    <button onClick={() => setIncomeExpanded((v) => !v)} className="text-xs font-medium text-muted-dark hover:text-foreground transition-colors">
+                      {incomeExpanded ? `${t("buildingsId.reporting.collapse")} ↑` : `${t("buildingsId.reporting.showAll", { count: incomeUnits.length })} ↓`}
+                    </button>
+                  )}
+                </div>
+                {incomeUnits.length === 0
+                  ? <p className="text-sm text-muted italic px-1">{t("buildingsId.reporting.noUnits")}</p>
+                  : <div className="space-y-1">
+                      {(incomeExpanded ? incomeUnits : incomeUnits.slice(0, INCOME_PREVIEW)).map((u) => {
+                        const vacant = !u.collectedIncomeCents;
+                        return (
+                          <div key={u.unitId} className="min-w-0 px-2 py-1">
+                            <div className="flex items-baseline justify-between gap-2">
+                              <span className="truncate text-sm text-foreground">{u.unitNumber}{u.tenantName ? <span className="text-foreground-dim"> · {u.tenantName}</span> : null}</span>
+                              <span className={cn("shrink-0 text-sm font-medium tabular-nums", vacant ? "text-destructive-text" : "text-foreground")}>{vacant ? t("buildingsId.reporting.revex.vacant") : rFmtChf(u.collectedIncomeCents)}</span>
+                            </div>
+                            {!vacant && <div className="mt-1 h-1 overflow-hidden rounded-full bg-surface-hover"><div className="h-full rounded-full bg-brand" style={{ width: `${Math.max(4, Math.round((u.collectedIncomeCents / incMax) * 100))}%` /* no-token: dynamic income-bar width */ }} /></div>}
+                          </div>
+                        );
+                      })}
+                    </div>}
+              </div>
+              <div>
+                <div className="mb-2 flex items-center justify-between gap-2 px-1">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.histogram.expenses")}</p>
+                  <div className="flex items-center gap-2">
+                    {bf.source === "imported" && expView === "acc" && (
+                      <button onClick={() => setReclassMode((v) => !v)} aria-pressed={reclassMode}
+                        className={cn("rounded-md border px-2 py-0.5 text-xs font-medium transition-colors", reclassMode ? "border-brand bg-brand-light text-brand-dark" : "border-surface-border text-muted hover:border-brand hover:text-brand")}>
+                        {reclassMode ? `✓ ${t("buildingsId.reporting.revex.reclassifyDone")}` : t("buildingsId.reporting.revex.reclassify")}
+                      </button>
+                    )}
+                    <div className="inline-flex rounded-lg border border-surface-border bg-surface-hover p-0.5 gap-0.5">
+                      {[["acc", t("buildingsId.reporting.revex.byCostCenter")], ["cat", t("buildingsId.reporting.revex.byCategory")], ["vend", t("buildingsId.reporting.revex.byVendor")]].map(([k, l]) => (
+                        <button key={k} onClick={() => setExpView(k)} aria-pressed={expView === k}
+                          className={cn("rounded-md px-2 py-0.5 text-xs font-medium transition-colors", expView === k ? "bg-surface text-foreground shadow-sm" : "text-muted hover:text-muted-dark")}>{l}</button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                {expRows.length === 0
+                  ? <p className="text-sm text-muted italic px-1">{t("buildingsId.reporting.revex.noExpenses")}</p>
+                  : <div className="space-y-1">
+                      {expRows.slice(0, reclassMode && expView === "acc" ? 40 : (expExpanded ? expRows.length : EXPENSE_PREVIEW)).map((r, i) => {
+                        const isVend = expView === "vend";
+                        const isCat = expView === "cat";
+                        const isAcc = !isVend && !isCat;
+                        const name = isVend ? r.vendorName : isCat ? r.name : (r.accountName ?? t("buildingsId.reporting.expenseBreakdown.unclassified"));
+                        const drillable = isVend ? true : isCat ? false : !!r.accountId; // category isn't an invoice filter; "Other" remainder isn't either
+                        // Reclassify mode: a category picker instead of a drill link.
+                        if (isAcc && reclassMode && r.accountId) {
+                          return (
+                            <div key={r.accountId} className="flex items-center gap-2 px-2 py-1">
+                              <span className="min-w-0 flex-1 truncate text-sm text-foreground">{r.accountCode ? <span className="text-foreground-dim tabular-nums">{r.accountCode} </span> : null}{name}</span>
+                              <select value={r.category ?? "OWNER_OPEX"} onChange={(e) => reclassifyAccount(r.accountId, e.target.value)}
+                                className="rounded-md border border-surface-border bg-surface px-1.5 py-0.5 text-xs text-foreground">
+                                {["OWNER_OPEX", "RECOVERABLE", "TENANT_RECHARGE", "CAPEX", "FINANCING"].map((c) => <option key={c} value={c}>{catShort(c)}</option>)}
+                              </select>
+                              <span className="w-20 shrink-0 text-right text-sm font-medium tabular-nums text-foreground">{rFmtChf(r.totalCents)}</span>
+                            </div>
+                          );
+                        }
+                        const catTag = isAcc && r.category ? <span className={cn("shrink-0 rounded px-1.5 py-0.5 text-[9.5px] font-semibold uppercase tracking-wide", CAT_CHIP[r.category] ?? CAT_CHIP.OWNER_OPEX)}>{catShort(r.category)}</span> : null;
+                        const inner = (
+                          <>
+                            <span className="min-w-0 flex-1 truncate text-sm text-foreground">{isAcc && r.accountCode ? <span className="text-foreground-dim tabular-nums">{r.accountCode} </span> : null}{name}{isVend && r.invoiceCount ? <span className="text-xs text-foreground-dim"> · {r.invoiceCount}×</span> : null}</span>
+                            {catTag}
+                            <span className="flex shrink-0 items-center gap-1.5 text-sm font-medium tabular-nums text-foreground">{rFmtChf(r.totalCents)}{drillable && <span className="text-foreground-dim opacity-0 group-hover:opacity-100 transition-opacity">→</span>}</span>
+                          </>
+                        );
+                        return drillable ? (
+                          <a key={(isVend ? r.contractorId : r.accountId) || `${name}-${i}`}
+                            href={drillHref(isVend ? { contractorId: r.contractorId, issuerName: r.vendorName, ctxVendor: r.vendorName } : { accountId: r.accountId, ctxVendor: r.accountCode ? `${r.accountCode} · ${r.accountName ?? ""}`.trim() : name })}
+                            className="flex items-center justify-between gap-2 rounded-lg px-2 py-1 hover:bg-surface-hover no-underline group">{inner}</a>
+                        ) : (
+                          <div key={`${name}-${i}`} className="flex items-center justify-between gap-2 px-2 py-1">{inner}</div>
+                        );
+                      })}
+                    </div>}
+                {!(reclassMode && expView === "acc") && expRows.length > EXPENSE_PREVIEW && (
+                  <button onClick={() => setExpExpanded((v) => !v)} className="mt-1.5 px-2 text-xs font-medium text-muted-dark hover:text-foreground transition-colors">
+                    {expExpanded ? `${t("buildingsId.reporting.collapse")} ↑` : `${t("buildingsId.reporting.showAll", { count: expRows.length })} ↓`}
+                  </button>
+                )}
+                {/* Vendor lens is invoice-based — flag when it covers only part of the ledger total. */}
+                {expView === "vend" && uncoveredCents > 5000 && (
+                  <p className="mt-2 flex items-start gap-1.5 px-1 text-[11.5px] text-warning-text">
+                    <span aria-hidden>⚠</span>
+                    <span>{t("buildingsId.reporting.revex.itemisedNote", { itemised: rFmtChf(vendItemised), total: rFmtChf(expenses) })}</span>
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+
+        const unitProfitSlide = (
+          <UnitProfitabilityPanel buildingId={buildingId} from={from} to={to} />
+        );
+
+        // The three "numbers sliced" views behind one sub-switch. (Comparison used
+        // to be a sibling tab here; it's now the page-level Compare mode.)
+        const breakdownPanel = breakdownView === "unit" ? byUnitSlide
+          : breakdownView === "prof" ? unitProfitSlide
+          : revexSlide;
+        return (
+          <>
+            {/* ── Result: calm header + (Why? → drivers/watch) + KPI strip + flags ── */}
+            {topSection}
+            {whyOpen && <div className="border-b border-surface-border">{driversSlide}</div>}
+            {noPnlData ? noPnlBlock : (<>{kpiStripEl}{metricsCollapsible}{flagsRow}</>)}
+
+            {/* ── Detail: Income & expenses · By unit · Profitability — a full-width,
+                   edge-to-edge segmented band (highlight fill only); its top/bottom
+                   borders separate the KPI area above from the pane below. ── */}
+            <div className="flex border-t border-b border-surface-border">
+              {[["ie", t("buildingsId.reporting.revex.title")], ["unit", t("buildingsId.reporting.byUnit")], ["prof", t("buildingsId.reporting.unitProfitTab")]].map(([k, l]) => (
+                <button key={k} onClick={() => setBreakdownView(k)} aria-pressed={breakdownView === k}
+                  className={cn("flex-1 px-2 py-3 text-center text-[13px] leading-tight transition-colors",
+                    breakdownView === k ? "bg-brand-light font-bold text-brand-dark" : "bg-surface-subtle font-semibold text-muted hover:bg-surface-hover hover:text-foreground")}>{l}</button>
+              ))}
+            </div>
+            <div className={cn(loading && "opacity-60 transition-opacity")}>{breakdownPanel}</div>
+
+            {/* ── How it can perform better — the prospective companion to the figures
+                   above. Ranked for the owner's mandate; hands off to Planning. ── */}
+            <div className="border-t border-surface-border p-4">
+              <p className="mb-2.5 text-[13px] italic text-muted">{t("buildingsId.reporting.valueCreation.retro", { defaultValue: "These figures tell you how the asset performed." })}</p>
+              <div id="yield-goalseek" className="scroll-mt-20">
+                <YieldGoalSeekPanel
+                  building={{ id: buildingId }}
+                  onPlanImprovements={(opts) => {
+                    const p = new URLSearchParams({ tab: "planning", buildingId });
+                    if (opts?.simulate) p.set("simulate", "accretive");
+                    router.push(`/manager/finance?${p.toString()}`);
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* ── Occupancy movements — one-line summary that expands ── */}
+            {(moveIns.length > 0 || moveOuts.length > 0) && (
+              <div className="border-t border-surface-border">
+                <button onClick={() => setMovesOpen((v) => !v)} aria-expanded={movesOpen}
+                  className="flex w-full items-center gap-2 px-5 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-surface-hover">
+                  <span>{t("buildingsId.reporting.tenantMovements")}</span>
+                  <span className="font-normal text-muted">· {t("buildingsId.reporting.movesSummary", { defaultValue: "{{in}} in · {{out}} out", in: moveIns.length, out: moveOuts.length })}</span>
+                  <span className="ml-auto text-foreground-dim">{movesOpen ? "▾" : "▸"}</span>
+                </button>
+                {movesOpen && (
+                <div className="grid gap-4 px-5 pb-5 sm:grid-cols-2">
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-success-light text-xs font-semibold text-success-text">↓</span>
+                      <span className="text-sm font-semibold text-foreground">{t("buildingsId.reporting.moveIns")} <span className="ml-1 text-foreground-dim font-normal">({moveIns.length})</span></span>
+                    </div>
+                    {moveIns.length === 0
+                      ? <p className="text-sm text-foreground-dim">{t("buildingsId.reporting.noMoveIns")}</p>
+                      : (insExpanded ? moveIns : moveIns.slice(0, 3)).map((l) => <OccupancyRow key={l.id} type="in" tenantName={l.tenantName} unitLabel={l.unitNumber} date={l.startDate} />)}
+                    {moveIns.length > 3 && <button onClick={() => setInsExpanded((v) => !v)} className="mt-2 text-xs font-medium text-muted-dark hover:text-foreground">{insExpanded ? t("buildingsId.reporting.showLess") : t("buildingsId.reporting.moreCount", { count: moveIns.length - 3 })}</button>}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-surface-hover text-xs font-semibold text-muted">↑</span>
+                      <span className="text-sm font-semibold text-foreground">{t("buildingsId.reporting.moveOuts")} <span className="ml-1 text-foreground-dim font-normal">({moveOuts.length})</span></span>
+                    </div>
+                    {moveOuts.length === 0
+                      ? <p className="text-sm text-foreground-dim">{t("buildingsId.reporting.noMoveOuts")}</p>
+                      : (outsExpanded ? moveOuts : moveOuts.slice(0, 3)).map((l) => <OccupancyRow key={l.id} type="out" tenantName={l.tenantName} unitLabel={l.unitNumber} date={l.endDate} />)}
+                    {moveOuts.length > 3 && <button onClick={() => setOutsExpanded((v) => !v)} className="mt-2 text-xs font-medium text-muted-dark hover:text-foreground">{outsExpanded ? t("buildingsId.reporting.showLess") : t("buildingsId.reporting.moreCount", { count: moveOuts.length - 3 })}</button>}
+                  </div>
+                </div>
+                )}
+              </div>
+            )}
+          </>
+        );
+      })()}
+    </div>
+  );
+}
+
+const REPORTING_GRANS = ["month", "quarter", "year"];
+// Compare mode adds half-year (the extra grain the old multi-period card offered).
+const COMPARE_GRANS = ["month", "quarter", "half", "year"];
+const COMPARE_MAX = 5; // anchor + up to 4 comparison periods
+// Period type → the backend time-series range that yields that granularity.
+const GRAN_RANGE = { month: "2Y", quarter: "5Y", year: "10Y" };
+
+// The KPI rows shared by the compare table, ordered as an income-statement story
+// so the numbers read top-to-bottom: income in → operating expenses out → the
+// resulting NOI (a subtotal) → the ratios that explain it → operational drivers →
+// balances. (The net-yield row is appended by the caller.)
+const multiKpis = (t) => [
+  { label: t("buildingsId.reporting.kpi.cashReceived"),     type: "chf", better: 1,  get: (f) => f.collectedIncomeCents },
+  { label: t("buildingsId.reporting.kpi.operatingExpenses"),type: "chf", better: -1, get: (f) => f.operatingTotalCents ?? f.expensesTotalCents },
+  { label: t("buildingsId.reporting.kpi.noi"),              type: "chf", better: 1,  subtotal: true, get: (f) => f.netOperatingIncomeCents },
+  { label: t("buildingsId.reporting.kpi.noiMargin"),        type: "pct", better: 1,  get: (f) => (f.collectedIncomeCents > 0 ? f.netOperatingIncomeCents / f.collectedIncomeCents : null) },
+  { label: t("buildingsId.reporting.kpi.opexRatio"),        type: "pct", better: -1, get: (f) => (f.collectedIncomeCents > 0 ? (f.operatingTotalCents ?? f.expensesTotalCents) / f.collectedIncomeCents : null) },
+  { label: t("buildingsId.reporting.kpi.onTimeCollection"), type: "pct", better: 1,  get: (f) => f.collectionRate },
+  { label: t("buildingsId.reporting.kpi.occupancy"),        type: "pct", better: 1,  get: (f) => (f.totalUnitsCount > 0 ? f.activeUnitsCount / f.totalUnitsCount : null) },
+  { label: t("buildingsId.reporting.kpi.receivables"),      type: "chf", better: -1, get: (f) => f.receivablesCents },
+];
+
+// ── Client-side period model for the reporting navigator ─────────────────────
+// The navigator only needs the *list of selectable periods* and the current
+// window's [from,to]+label — never the per-bucket financials (the detail panel
+// fetches its own numbers). So we derive everything from a single anchor date
+// on the client: switching Month/Quarter/Year is instant, and the selected
+// position is preserved across switches and never reset by a background fetch.
+function reportingPeriodStart(gran, d) {
+  const y = d.getFullYear(), m = d.getMonth();
+  if (gran === "year") return new Date(y, 0, 1);
+  if (gran === "half") return new Date(y, m < 6 ? 0 : 6, 1);
+  if (gran === "quarter") return new Date(y, Math.floor(m / 3) * 3, 1);
+  return new Date(y, m, 1);
+}
+function reportingPeriodEnd(gran, start) {
+  const y = start.getFullYear(), m = start.getMonth();
+  if (gran === "year") return new Date(y, 11, 31);
+  if (gran === "half") return new Date(y, m + 6, 0);
+  if (gran === "quarter") return new Date(y, m + 3, 0);
+  return new Date(y, m + 1, 0);
+}
+function reportingIsoDay(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+function reportingStepStart(gran, start, dir) {
+  const d = new Date(start);
+  if (gran === "year") d.setFullYear(d.getFullYear() + dir);
+  else if (gran === "half") d.setMonth(d.getMonth() + 6 * dir);
+  else if (gran === "quarter") d.setMonth(d.getMonth() + 3 * dir);
+  else d.setMonth(d.getMonth() + dir);
+  return reportingPeriodStart(gran, d);
+}
+function reportingLabel(gran, start, locale, qp) {
+  const y = start.getFullYear();
+  if (gran === "year") return String(y);
+  if (gran === "half") return `H${start.getMonth() < 6 ? 1 : 2} ${y}`;
+  if (gran === "quarter") return `${qp}${Math.floor(start.getMonth() / 3) + 1} ${y}`;
+  return start.toLocaleDateString(locale, { month: "long", year: "numeric" });
+}
+
+// ── Compare mode body — 2–5 periods side by side. ────────────────────────────
+// The periods (anchor first, then the hand-picked comparisons) are assembled in
+// the top bar; this component just fetches each period's financials + net yield,
+// then renders the side-by-side table, the plain-language explainer, and the
+// biggest cost-centre moves between the earliest and latest period. It replaces
+// both the old prior/last-year table and the multi-period card — one renderer.
+function BuildingCompareView({ buildingId, periods }) {
+  const { t } = useTranslation("manager");
+  const [data, setData] = useState({ key: "", cols: [] });
+
+  const periodsKey = periods.map((p) => `${p.from}_${p.to}`).join("|");
+  useEffect(() => {
+    if (periods.length === 0) return undefined;
+    let cancelled = false;
+    Promise.all(periods.map((p) =>
+      Promise.all([
+        fetch(`/api/buildings/${buildingId}/period-report?from=${p.from}&to=${p.to}`, { headers: authHeaders() })
+          .then((r) => r.json()).then((d) => d?.data?.financials ?? null).catch(() => null),
+        fetch(`/api/buildings/${buildingId}/unit-profitability?from=${p.from}&to=${p.to}`, { headers: authHeaders() })
+          .then((r) => r.json()).then((d) => d?.data?.buildingNetYieldPct ?? null).catch(() => null),
+      ]).then(([financials, yieldPct]) => ({ from: p.from, financials, yieldPct })),
+    )).then((res) => { if (!cancelled) setData({ key: periodsKey, cols: res }); });
+    return () => { cancelled = true; };
+  }, [buildingId, periodsKey, periods]);
+
+  const loaded = data.key === periodsKey;
+  const loading = periods.length > 0 && !loaded;
+  const financialsAt = (i) => (loaded ? data.cols[i]?.financials ?? null : null);
+
+  // KPI rows (the income-statement-ordered set) + the net-yield row.
+  const rows = [
+    ...multiKpis(t).map((k) => ({ label: k.label, type: k.type, better: k.better, subtotal: k.subtotal, valAt: (i) => { const f = financialsAt(i); return f ? k.get(f) : null; } })),
+    { label: t("buildingsId.reporting.unitProfit.buildingYield"), type: "yieldpct", better: 1, valAt: (i) => (loaded ? data.cols[i]?.yieldPct ?? null : null) },
+  ];
+  const fmt = (type, v) => (v == null ? "—" : type === "yieldpct" ? `${v.toFixed(1)}%` : type === "pct" ? rFmtPct(v) : rFmtChf(v));
+
+  // Narrative + movers read the trend across the selection: earliest → latest.
+  const occOf = (f) => (f && f.totalUnitsCount > 0 ? f.activeUnitsCount / f.totalUnitsCount : null);
+  const be = loaded ? data.cols[0]?.financials : null;
+  const cur = loaded ? data.cols[periods.length - 1]?.financials : null;
+  const movers = be && cur ? computeExpenseMovers(cur, be) : [];
+  const narrative = (be && cur && periods.length >= 2) ? buildComparisonNarrative({
+    curNoi: cur.netOperatingIncomeCents, beNoi: be.netOperatingIncomeCents,
+    curIncome: cur.collectedIncomeCents, beIncome: be.collectedIncomeCents,
+    curExp: cur.expensesTotalCents, beExp: be.expensesTotalCents,
+    curColl: cur.collectionRate, beColl: be.collectionRate,
+    curOcc: occOf(cur), beOcc: occOf(be),
+    movers, curYield: data.cols[periods.length - 1]?.yieldPct ?? null, beYield: data.cols[0]?.yieldPct ?? null,
+    periodLabel: periods[periods.length - 1].label, cmpPeriodLabel: periods[0].label, t,
+  }) : [];
+
+  if (periods.length < 2) {
+    return (
+      <div className="p-8 text-center">
+        <p className="text-sm text-muted">{t("buildingsId.reporting.compare.emptyPrompt", { period: periods[0]?.label ?? "" })}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-5 p-5">
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-surface-border">
+              <th className="py-2 pr-3 text-left text-xs font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.compare.metric")}</th>
+              {periods.map((p, i) => (
+                <th key={p.key} className={cn("px-3 py-2 text-right text-xs font-semibold whitespace-nowrap", i === periods.length - 1 ? "text-brand" : "text-foreground")}>{p.label}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((k) => {
+              const vals = periods.map((_, i) => k.valAt(i));
+              const nums = vals.filter((v) => v != null);
+              const best = nums.length >= 2 ? (k.better >= 0 ? Math.max(...nums) : Math.min(...nums)) : null;
+              const worst = nums.length >= 2 ? (k.better >= 0 ? Math.min(...nums) : Math.max(...nums)) : null;
+              return (
+                <tr key={k.label} className={cn(k.subtotal ? "border-t-2 border-surface-border" : "border-b border-surface-border/60")}>
+                  <td className={cn("py-2 pr-3 text-left", k.subtotal ? "font-semibold text-foreground" : "text-muted-dark")}>{k.label}</td>
+                  {vals.map((v, ci) => (
+                    <td key={`${k.label}-${periods[ci].key}`} className={cn("px-3 py-2 text-right tabular-nums whitespace-nowrap",
+                      k.subtotal && "font-semibold",
+                      !loaded ? "text-foreground-dim"
+                        : v != null && best !== worst && v === best ? "font-semibold text-success-text"
+                          : v != null && best !== worst && v === worst ? "text-destructive-text"
+                            : "text-foreground")}>{!loaded ? "…" : fmt(k.type, v)}</td>
+                  ))}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+        {loading && <p className="mt-2 text-xs text-muted">{t("buildingsId.reporting.compare.loading")}</p>}
+      </div>
+
+      <ComparisonNarrative lines={narrative} t={t} />
+
+      {movers.length > 0 && (
+        <div>
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.compare.whatChanged")}</p>
+          <div className="space-y-1">
+            {movers.map((x, i) => (
+              <div key={i} className="flex items-center justify-between gap-2 rounded-lg px-2 py-1 odd:bg-surface-subtle">
+                <span className="truncate text-sm text-foreground">{x.name}</span>
+                <span className={cn("shrink-0 text-sm font-semibold tabular-nums", x.d > 0 ? "text-destructive-text" : "text-success-text")}>{x.d > 0 ? "▲ +" : "▼ "}{rFmtChf(Math.abs(x.d))}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// The building reporting surface. A period bar (Month/Quarter/Year + stepper +
+// presets) chooses the period the HERO reports on. Period navigation is fully
+// client-side; a single background fetch only learns how far back real data
+// goes so the navigator doesn't offer years of empty buckets.
+function BuildingReportingView({ buildingId, etatLocatifNet }) {
+  const { t, i18n } = useTranslation("manager");
+  const locale = i18n?.language;
+  const qp = locale && locale.startsWith("fr") ? "T" : "Q";
+
+  const [mode, setMode]   = useState("single"); // "single" | "compare"
+  const [gran, setGran]   = useState("month");
+  const [anchor, setAnchor] = useState(() => reportingIsoDay(reportingPeriodStart("month", new Date())));
+  const [ytd, setYtd]   = useState(false);
+  const [customRange, setCustomRange] = useState(null); // { from, to } | null — arbitrary date range
+  const [extras, setExtras] = useState([]); // compare mode: comparison periods added to the anchor (≤ COMPARE_MAX-1)
+  const [spanStart, setSpanStart] = useState(null);     // Date | null — earliest period that has data
+  const [tsError, setTsError]     = useState("");
+  const [pickerOpen, setPickerOpen] = useState(true);   // anchor-period picker popover — open by default (saves a click)
+  const [pkYear, setPkYear] = useState(new Date().getFullYear());
+  const [addOpen, setAddOpen] = useState(false);        // compare mode: "add period" picker popover
+  const [addYear, setAddYear] = useState(new Date().getFullYear());
+  const pickerRef = useRef(null);
+  const addRef = useRef(null);
+  const tRef = useRef(t); tRef.current = t;
+  const spanFetched = useRef(false);
+
+  // One non-blocking fetch: learn how far back real data goes. It only sets the
+  // lower bound of the period list — it never touches the selected period, so it
+  // can never "snap" the user back the way the old gran-keyed refetch did.
+  useEffect(() => {
+    if (!buildingId || spanFetched.current) return;
+    spanFetched.current = true;
+    fetch(`/api/buildings/${buildingId}/timeseries?range=${GRAN_RANGE.year}`, { headers: authHeaders() })
+      .then((r) => r.json())
+      .then((d) => {
+        const pts = d?.data?.points ?? [];
+        if (pts.length) {
+          const earliest = pts.reduce((min, p) => (p.periodStart < min ? p.periodStart : min), pts[0].periodStart);
+          setSpanStart(new Date(`${earliest}T00:00:00`));
+        }
+        if (!d?.data) setTsError(d?.error?.message || tRef.current("buildingsId.reporting.failedToLoad"));
+      })
+      .catch(() => setTsError(tRef.current("buildingsId.reporting.failedToLoad")));
+  }, [buildingId]);
+
+  useEffect(() => {
+    if (!pickerOpen && !addOpen) return undefined;
+    const onDown = (e) => {
+      if (pickerOpen && pickerRef.current && !pickerRef.current.contains(e.target)) setPickerOpen(false);
+      if (addOpen && addRef.current && !addRef.current.contains(e.target)) setAddOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [pickerOpen, addOpen]);
+
+  // The current bucket start, re-derived from the anchor date under the active
+  // granularity — this is what makes a Month→Year→Month round-trip land you back
+  // on the same period instead of resetting.
+  const anchorStart = useMemo(() => reportingPeriodStart(gran, new Date(`${anchor}T00:00:00`)), [gran, anchor]);
+  // The period grid is inline (always visible), so keep its year on the selected
+  // period; navigating the grid's own ‹/› still moves freely (anchor unchanged).
+  useEffect(() => { setPkYear(anchorStart.getFullYear()); }, [anchorStart]);
+
+  // Selectable bucket-starts, ascending — pure client-side, no network.
+  const periods = useMemo(() => {
+    const now = new Date();
+    const fallback = new Date(now.getFullYear() - 2, 0, 1); // sensible default until span loads
+    const rawStart = spanStart && spanStart < now ? spanStart : fallback;
+    const endStart = reportingPeriodStart(gran, now);
+    const out = [];
+    let cur = reportingPeriodStart(gran, rawStart);
+    for (let guard = 0; cur <= endStart && guard < 600; guard++) {
+      out.push(cur);
+      cur = reportingStepStart(gran, cur, 1);
+    }
+    return out;
+  }, [gran, spanStart]);
+
+  // The selected window → [from,to] + label fed to the period detail + hero.
+  const { from, to, periodLabel } = useMemo(() => {
+    if (customRange?.from && customRange?.to) {
+      return { from: customRange.from, to: customRange.to, periodLabel: `${customRange.from} → ${customRange.to}` };
+    }
+    if (ytd) {
+      const y = anchorStart.getFullYear();
+      return { from: `${y}-01-01`, to: reportingIsoDay(new Date()), periodLabel: `${t("buildingsId.reporting.histogram.jumpYtd")} ${y}` };
+    }
+    return {
+      from: reportingIsoDay(anchorStart),
+      to: reportingIsoDay(reportingPeriodEnd(gran, anchorStart)),
+      periodLabel: reportingLabel(gran, anchorStart, locale, qp),
+    };
+  }, [gran, anchorStart, customRange, ytd, t, locale, qp]);
+
+  const atStart = !periods.length || +anchorStart <= +periods[0];
+  const atEnd   = !periods.length || +anchorStart >= +periods[periods.length - 1];
+
+  function step(dir) {
+    if (!periods.length) return;
+    const next = reportingStepStart(gran, anchorStart, dir);
+    if (+next < +periods[0] || +next > +periods[periods.length - 1]) return;
+    setYtd(false);
+    setAnchor(reportingIsoDay(next));
+  }
+  function changeGran(g) { setPickerOpen(false); setAddOpen(false); setYtd(false); setCustomRange(null); setExtras([]); setGran(g); }
+  function selectStart(d) { setYtd(false); setCustomRange(null); setAnchor(reportingIsoDay(reportingPeriodStart(gran, d))); setPickerOpen(false); }
+  function preset(kind) {
+    setPickerOpen(false); setCustomRange(null);
+    const now = new Date();
+    if (kind === "latest") { setYtd(false); setGran("month"); setAnchor(reportingIsoDay(reportingPeriodStart("month", now))); }
+    else if (kind === "year") { setYtd(false); setGran("year"); setAnchor(reportingIsoDay(reportingPeriodStart("year", now))); }
+    else { setGran("month"); setAnchor(reportingIsoDay(reportingPeriodStart("month", now))); setYtd(true); }
+  }
+
+  // ── Single ⇄ Compare mode ──────────────────────────────────────────────────
+  // Compare mode deals only in discrete grain-aligned periods, so it drops YTD /
+  // custom range; leaving it drops the comparisons. Half-year is compare-only, so
+  // snap an anchor on "half" back to a single-mode grain when switching to single.
+  function switchMode(m) {
+    setPickerOpen(false); setAddOpen(false);
+    if (m === "compare") { setYtd(false); setCustomRange(null); }
+    else { setExtras([]); if (gran === "half") setGran("quarter"); }
+    setMode(m);
+  }
+
+  // A grain-aligned window object for a bucket start, labelled under the current grain.
+  const winFromStart = (s) => {
+    const wf = reportingIsoDay(s);
+    const wt = reportingIsoDay(reportingPeriodEnd(gran, s));
+    return { from: wf, to: wt, label: reportingLabel(gran, s, locale, qp), key: `${wf}_${wt}` };
+  };
+  function addExtra(win) {
+    setExtras((prev) => {
+      if (win.key === `${from}_${to}` || prev.some((p) => p.key === win.key)) return prev; // dup of anchor / existing
+      if (prev.length >= COMPARE_MAX - 1) return prev;
+      return [...prev, win];
+    });
+  }
+  function addPrior() { addExtra(winFromStart(reportingStepStart(gran, anchorStart, -1))); }
+  function addLastYear() { const d = new Date(anchorStart); d.setFullYear(d.getFullYear() - 1); addExtra(winFromStart(reportingPeriodStart(gran, d))); }
+  function addPeriodAt(d) { addExtra(winFromStart(reportingPeriodStart(gran, d))); }
+  const removeExtra = (key) => setExtras((prev) => prev.filter((p) => p.key !== key));
+
+  // Anchor (column 1) + the added comparisons, deduped and ordered earliest→latest.
+  const comparePeriods = useMemo(() => {
+    const anchorWin = { from, to, label: periodLabel, key: `${from}_${to}` };
+    const seen = new Set();
+    return [anchorWin, ...extras]
+      .filter((p) => (seen.has(p.key) ? false : (seen.add(p.key), true)))
+      .sort((a, b) => (a.from < b.from ? -1 : 1))
+      .slice(0, COMPARE_MAX);
+  }, [from, to, periodLabel, extras]);
+
+  const pickerYears = [...new Set(periods.map((p) => p.getFullYear()))];
+  const monShort = Array.from({ length: 12 }, (_, mi) => new Intl.DateTimeFormat(locale, { month: "short" }).format(new Date(2024, mi, 1)));
+  function openPicker() { setPkYear(anchorStart.getFullYear()); setAddOpen(false); setPickerOpen((v) => !v); }
+  function openAdd() { setAddYear(anchorStart.getFullYear()); setPickerOpen(false); setAddOpen((v) => !v); }
+  const isCur = (d) => !ytd && !customRange && d != null && +d === +anchorStart;
+  const isExtra = (d) => { if (!d) return false; const s = reportingPeriodStart(gran, d); return extras.some((p) => p.key === `${reportingIsoDay(s)}_${reportingIsoDay(reportingPeriodEnd(gran, s))}`); };
+  const findPeriod = (pred) => periods.find(pred) || null;
+  const gridBtn = (label, d, key, pressed, onClick) => (
+    <button key={key} disabled={!d} aria-pressed={pressed} onClick={() => d && onClick(d)}
+      className={cn("rounded-md border px-2 py-1.5 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-30",
+        pressed ? "border-brand bg-brand text-white" : "border-surface-border text-foreground hover:border-brand hover:text-brand")}>{label}</button>
+  );
+  // The year/quarter/half/month grid shared by the anchor picker and the "add
+  // period" picker — only the onPick action and the pressed predicate differ.
+  const pickerGrid = ({ pkYr, setPkYr, onPick, selPred }) => (
+    gran === "year" ? (
+      <div className="grid grid-cols-3 gap-1.5">{periods.map((p) => gridBtn(String(p.getFullYear()), p, p.getFullYear(), selPred(p), onPick))}</div>
+    ) : (
+      <>
+        <div className="mb-2 flex items-center justify-between">
+          <button onClick={() => setPkYr((y) => y - 1)} disabled={pkYr <= pickerYears[0]} className="grid h-6 w-6 place-items-center rounded-md border border-surface-border text-muted hover:border-brand hover:text-brand disabled:opacity-30">‹</button>
+          <span className="text-sm font-semibold text-foreground tabular-nums">{pkYr}</span>
+          <button onClick={() => setPkYr((y) => y + 1)} disabled={pkYr >= pickerYears[pickerYears.length - 1]} className="grid h-6 w-6 place-items-center rounded-md border border-surface-border text-muted hover:border-brand hover:text-brand disabled:opacity-30">›</button>
+        </div>
+        <div className={cn("grid gap-1.5", gran === "half" ? "grid-cols-2" : "grid-cols-4")}>
+          {gran === "quarter"
+            ? [1, 2, 3, 4].map((q) => { const d = findPeriod((p) => p.getFullYear() === pkYr && Math.floor(p.getMonth() / 3) + 1 === q); return gridBtn(`${qp}${q}`, d, q, selPred(d), onPick); })
+            : gran === "half"
+              ? [1, 2].map((h) => { const d = findPeriod((p) => p.getFullYear() === pkYr && (p.getMonth() < 6 ? 1 : 2) === h); return gridBtn(`H${h}`, d, h, selPred(d), onPick); })
+              : monShort.map((mm, mi) => { const d = findPeriod((p) => p.getFullYear() === pkYr && p.getMonth() === mi); return gridBtn(mm, d, mi, selPred(d), onPick); })}
+        </div>
+      </>
+    )
+  );
+
+  return (
+    <div>
+      {/* ── Reporting card — the period selector is blended into the SAME card as its
+          content: a flush mode control, a compact period peek row whose details
+          (grain + presets / compare builder) collapse behind "Adjust", then the hero
+          (One period) or the comparison table (Compare) flowing straight out. ── */}
+      {/* No overflow-hidden here: the period-picker popovers (top-full) must be
+          able to escape the card when the body below is short (e.g. Compare mode
+          before periods are added). Bottom-corner clipping is delegated to the
+          content wrapper below instead. */}
+      <div className="rounded-2xl border border-surface-border bg-surface shadow-sm">
+        {/* Mode switch — full-width segmented control, highlight-only. */}
+        <div className="flex border-b border-surface-border">
+          {[["single", t("buildingsId.reporting.mode.single")], ["compare", t("buildingsId.reporting.mode.compare")]].map(([k, l], i) => (
+            <button key={k} onClick={() => switchMode(k)} aria-pressed={mode === k}
+              className={cn("flex-1 px-3 py-3 text-sm transition-colors",
+                i === 0 ? "rounded-tl-2xl" : "rounded-tr-2xl",
+                mode === k
+                  ? "bg-brand-light font-bold text-brand-dark"
+                  : "bg-surface-subtle font-semibold text-muted hover:bg-surface-hover hover:text-foreground")}>{l}</button>
+          ))}
+        </div>
+
+        {/* Period — one flat row: grain, then the stepper whose label opens the
+            date-picker popover (open by default, so it saves a click), then the
+            presets (One period) / comparison builder (Compare). */}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-surface-border px-4 py-2.5">
+          {!customRange && (
+            <>
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-semibold uppercase tracking-wide text-foreground-dim">{mode === "compare" ? t("buildingsId.reporting.compare.base") : t("buildingsId.reporting.period.label")}</span>
+                <div className="inline-flex rounded-lg border border-surface-border bg-surface p-0.5 gap-0.5">
+                  {(mode === "compare" ? COMPARE_GRANS : REPORTING_GRANS).map((g) => (
+                    <button key={g} onClick={() => changeGran(g)} aria-pressed={!ytd && gran === g}
+                      className={cn("rounded-md px-3 py-1 text-sm font-medium transition-colors", !ytd && gran === g ? "bg-brand text-white" : "text-muted hover:text-muted-dark")}>{t(`buildingsId.reporting.period.${g}`)}</button>
+                  ))}
+                </div>
+              </div>
+              <div className="relative flex items-center gap-1.5" ref={pickerRef}>
+                <button onClick={() => step(-1)} disabled={atStart} aria-label={t("buildingsId.reporting.period.prev")}
+                  className="grid h-7 w-7 place-items-center rounded-lg border border-surface-border bg-surface text-muted transition-colors hover:border-brand hover:text-brand disabled:opacity-40 disabled:cursor-not-allowed">‹</button>
+                <button onClick={openPicker} aria-expanded={pickerOpen}
+                  className="min-w-[120px] rounded-lg border border-transparent px-2 py-1 text-center text-[15px] font-bold text-foreground transition-colors hover:border-surface-border hover:bg-surface-subtle">
+                  {periodLabel} <span className={cn("inline-block text-xs text-foreground-dim transition-transform", pickerOpen && "rotate-180")}>▾</span>
+                </button>
+                <button onClick={() => step(1)} disabled={atEnd} aria-label={t("buildingsId.reporting.period.next")}
+                  className="grid h-7 w-7 place-items-center rounded-lg border border-surface-border bg-surface text-muted transition-colors hover:border-brand hover:text-brand disabled:opacity-40 disabled:cursor-not-allowed">›</button>
+                {pickerOpen && periods.length > 0 && (
+                  <div className="absolute left-1/2 top-full z-30 mt-2 w-64 -translate-x-1/2 rounded-xl border border-surface-border bg-surface p-3 shadow-lg">
+                    {pickerGrid({ pkYr: pkYear, setPkYr: setPkYear, onPick: selectStart, selPred: isCur })}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+          {customRange && (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[11px] font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.period.custom")}</span>
+              <input type="date" value={customRange.from} onChange={(e) => setCustomRange((r) => ({ ...r, from: e.target.value }))} className="rounded-lg border border-surface-border bg-surface px-2 py-1 text-sm text-foreground" />
+              <span className="text-foreground-dim">→</span>
+              <input type="date" value={customRange.to} onChange={(e) => setCustomRange((r) => ({ ...r, to: e.target.value }))} className="rounded-lg border border-surface-border bg-surface px-2 py-1 text-sm text-foreground" />
+              <button onClick={() => setCustomRange(null)} aria-label={t("buildingsId.reporting.compare.clear")} className="rounded-lg border border-surface-border px-2 py-1 text-xs text-muted transition-colors hover:border-brand hover:text-brand">✕</button>
+            </div>
+          )}
+          {mode === "single" && (
+            <div className="flex gap-1.5">
+              {[["latest", t("buildingsId.reporting.histogram.jumpMonth")], ["ytd", t("buildingsId.reporting.histogram.jumpYtd")], ["year", t("buildingsId.reporting.histogram.jumpYear")]].map(([k, l]) => (
+                <button key={k} onClick={() => preset(k)} aria-pressed={k === "ytd" && ytd}
+                  className={cn("rounded-lg border px-2.5 py-1 text-xs transition-colors", k === "ytd" && ytd ? "border-brand bg-brand-light text-brand-dark" : "border-surface-border bg-surface text-muted hover:border-brand hover:text-brand")}>{l}</button>
+              ))}
+              <button onClick={() => setCustomRange((r) => (r ? null : { from, to }))} aria-pressed={!!customRange}
+                className={cn("rounded-lg border px-2.5 py-1 text-xs transition-colors", customRange ? "border-brand bg-brand-light text-brand-dark" : "border-surface-border bg-surface text-muted hover:border-brand hover:text-brand")}>{t("buildingsId.reporting.period.custom")}</button>
+            </div>
+          )}
+          {mode === "compare" && (
+            <>
+              {extras.length > 0 && (
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-xs font-semibold text-foreground-dim">{t("buildingsId.reporting.compare.vs", { defaultValue: "vs" })}</span>
+                  {extras.map((p) => (
+                    <span key={p.key} className="inline-flex items-center gap-1.5 rounded-lg border border-brand bg-brand-light px-2.5 py-1 text-xs font-medium text-brand-dark">
+                      {p.label}
+                      <button onClick={() => removeExtra(p.key)} aria-label={t("buildingsId.reporting.compare.clear")} className="text-brand-dark/60 transition-colors hover:text-brand-dark">✕</button>
+                    </span>
+                  ))}
+                </div>
+              )}
+              {(() => {
+                const full = extras.length >= COMPARE_MAX - 1;
+                const addBtn = "rounded-lg border border-surface-border bg-surface px-2.5 py-1 text-xs text-muted transition-colors hover:border-brand hover:text-brand disabled:opacity-40 disabled:cursor-not-allowed";
+                return (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-[11px] font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.compare.against")}</span>
+                    <button onClick={addPrior} disabled={full} className={addBtn}>+ {t("buildingsId.reporting.compare.prior")}</button>
+                    <button onClick={addLastYear} disabled={full} className={addBtn}>+ {t("buildingsId.reporting.compare.lastYear")}</button>
+                    <div className="relative" ref={addRef}>
+                      <button onClick={openAdd} aria-expanded={addOpen} disabled={full} className={addBtn}>+ {t("buildingsId.reporting.compare.addPeriod")} <span className="text-foreground-dim">▾</span></button>
+                      {addOpen && periods.length > 0 && (
+                        <div className="absolute right-0 top-full z-30 mt-2 w-64 rounded-xl border border-surface-border bg-surface p-3 shadow-lg">
+                          {pickerGrid({ pkYr: addYear, setPkYr: setAddYear, onPick: addPeriodAt, selPred: isExtra })}
+                        </div>
+                      )}
+                    </div>
+                    {extras.length > 0 && (
+                      <button onClick={() => setExtras([])} className="rounded-lg border border-surface-border px-2 py-1 text-xs text-muted transition-colors hover:border-destructive-ring hover:text-destructive-text">{t("buildingsId.reporting.compare.clear")}</button>
+                    )}
+                  </div>
+                );
+              })()}
+            </>
+          )}
+        </div>
+
+        {tsError && <p className="px-4 py-2 text-sm text-destructive-text">{tsError}</p>}
+
+        {/* Rounds the card's bottom corners now that the root no longer clips.
+            The picker popovers live above this block, so they aren't clipped. */}
+        <div className="overflow-hidden rounded-b-2xl">
+          {mode === "single"
+            ? <BuildingPeriodAnalysis buildingId={buildingId} etatLocatifNet={etatLocatifNet} from={from} to={to} periodLabel={periodLabel} />
+            : <BuildingCompareView buildingId={buildingId} periods={comparePeriods} />}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function displayDate(iso) {
   if (!iso) return "—";
   const d = new Date(iso);
@@ -59,13 +1541,86 @@ function displayDate(iso) {
   return `${dd}.${mm}.${d.getFullYear()}`;
 }
 
+// Role-intent choices an owner can assign to a building (excludes "unspecified").
+const ROLE_INTENT_OPTIONS = ["income", "long_term_quality", "stable_hold", "reposition", "sell"];
+
+// Cadastral / valuation fields editable on the Overview tab. `type` drives both
+// the input rendering and the form↔PATCH conversion below. Labels come from
+// manager:buildingsId.fields.* (en/fr).
+const BUILDING_CADASTRAL_FIELDS = [
+  { key: "parcelNumber", type: "text" },
+  { key: "easementsText", type: "textarea" },
+  { key: "constructionDate", type: "date" },
+  { key: "lastRenovationDate", type: "date" },
+  { key: "ecaVolumeM3", type: "number", unit: "m³" },
+  { key: "netAreaSqm", type: "number", unit: "m²" },
+  { key: "weightedAreaSqm", type: "number", unit: "m²" },
+  { key: "lotsApartments", type: "int" },
+  { key: "lotsGarages", type: "int" },
+  { key: "lotsExteriorParking", type: "int" },
+  { key: "fiscalValueChf", type: "chf" },
+  { key: "insuranceValueChf", type: "chf" },
+  { key: "ppeEstimateChf", type: "chf" },
+];
+
+// Seed the edit-form object (all string values) from a loaded building.
+function buildingToExtraForm(b) {
+  const out = {};
+  for (const f of BUILDING_CADASTRAL_FIELDS) {
+    const v = b?.[f.key];
+    out[f.key] = v == null ? "" : f.type === "date" ? String(v).slice(0, 10) : String(v);
+  }
+  return out;
+}
+
+// Convert the edit-form object back into a PATCH body (typed; "" → null).
+function extraFormToPatch(extra) {
+  const out = {};
+  for (const f of BUILDING_CADASTRAL_FIELDS) {
+    const raw = (extra?.[f.key] ?? "").toString().trim();
+    if (raw === "") { out[f.key] = null; continue; }
+    if (f.type === "int") out[f.key] = parseInt(raw, 10);
+    else if (f.type === "number" || f.type === "chf") out[f.key] = Number(raw);
+    else if (f.type === "date") out[f.key] = new Date(raw).toISOString();
+    else out[f.key] = raw;
+  }
+  return out;
+}
+
+// Read-only display of a stored cadastral value.
+function formatCadastralValue(field, value) {
+  if (value == null || value === "") return "—";
+  if (field.type === "chf") return formatChf(value);
+  if (field.type === "date") return formatDate(value);
+  if (field.type === "number") return `${formatNumber(value)}${field.unit ? ` ${field.unit}` : ""}`;
+  return String(value);
+}
+
 export default function BuildingDetail() {
   const { t } = useTranslation("manager");
   const router = useRouter();
   const { id, from, role } = router.query;
   const isOwner = role === "owner";
   const backHref = from || (isOwner ? "/owner/properties" : "/manager/inventory?tab=buildings");
-  const [activeTab, setActiveTab] = useState("Building information");
+  const VALID_TABS = ["Building information", "Units", "Tenants", "Assets", "Documents", "Policies", "Reporting", "Requests", "Correspondence"];
+  const initialTab = typeof router.query.tab === "string" && VALID_TABS.includes(router.query.tab)
+    ? router.query.tab
+    : "Building information";
+  const [activeTab, setActiveTab] = useState(initialTab);
+  const [showPackageOnboard, setShowPackageOnboard] = useState(false);
+
+  // Auto-open the importer when arriving from the inventory "Import" flow.
+  useEffect(() => {
+    if (!router.isReady) return;
+    if (router.query.onboard === "package") {
+      setShowPackageOnboard(true);
+      const rest = { ...router.query }; delete rest.onboard;
+      router.replace({ pathname: router.pathname, query: rest }, undefined, { shallow: true });
+    }
+  }, [router.isReady, router.query.onboard]);
+  // Tracks tabs whose (tab-specific) data has been loaded, so config/rules/lease
+  // templates are fetched once on first tab open rather than on every mount.
+  const loadedTabsRef = useRef(new Set());
 
   // ui object removed — all styles now use Tailwind className
 
@@ -80,8 +1635,13 @@ export default function BuildingDetail() {
   const [editElevator, setEditElevator] = useState(false);
   const [editConcierge, setEditConcierge] = useState(false);
   const [editManagedSince, setEditManagedSince] = useState("");
+  const [editExtra, setEditExtra] = useState({}); // cadastral/valuation fields
+  const [marketPrice, setMarketPrice] = useState(null); // MarketPricePerZip record for this zip
+  const [editMarketPrice, setEditMarketPrice] = useState(""); // CHF/m² input
   const [createUnitName, setCreateUnitName] = useState("");
   const [createUnitType, setCreateUnitType] = useState("RESIDENTIAL");
+  const [createParkingKind, setCreateParkingKind] = useState("EXTERIOR");
+  const [createLinkedFlatId, setCreateLinkedFlatId] = useState("");
   const [unitAction, setUnitAction] = useState(null);
   const [configMode, setConfigMode] = useState(null);
   const [configAutoApprove, setConfigAutoApprove] = useState("");
@@ -105,8 +1665,18 @@ export default function BuildingDetail() {
   const [ownerCandidates, setOwnerCandidates] = useState([]);
   const [selectedCandidateId, setSelectedCandidateId] = useState("");
   const [ownerLoading, setOwnerLoading] = useState(false);
+  // ─── Invite-owner form (scopes a new owner to THIS building) ───
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteName, setInviteName] = useState("");
+  const [inviteSent, setInviteSent] = useState(false);
   const [ownerStrategyProfiles, setOwnerStrategyProfiles] = useState({});
   const [buildingStrategyProfile, setBuildingStrategyProfile] = useState(null);
+  // ─── Owner-facing building-strategy editor (sets roleIntent on this building) ───
+  const [ownerProfile, setOwnerProfile] = useState(null); // current owner's portfolio profile
+  const [stratEditOpen, setStratEditOpen] = useState(false);
+  const [stratRoleIntent, setStratRoleIntent] = useState("");
+  const [stratSaving, setStratSaving] = useState(false);
+  const [stratError, setStratError] = useState("");
 
   // ─── Asset inventory state ───
   const [assetInventory, setAssetInventory] = useState([]);
@@ -122,6 +1692,9 @@ export default function BuildingDetail() {
   const [buildingRequests, setBuildingRequests] = useState([]);
   const [requestsLoading, setRequestsLoading] = useState(false);
   const [requestsLoaded, setRequestsLoaded] = useState(false);
+  const [buildingInvoices, setBuildingInvoices] = useState([]);
+  const [invoicesLoading, setInvoicesLoading] = useState(false);
+  const [invoicesLoaded, setInvoicesLoaded] = useState(false);
 
   // ─── House rules state ───
   const [houseRulesText, setHouseRulesText] = useState("");
@@ -130,6 +1703,13 @@ export default function BuildingDetail() {
   const [houseRulesPreviewUrl, setHouseRulesPreviewUrl] = useState(null);
   const [legalSources, setLegalSources] = useState([]);
   const [legalSourcesLoading, setLegalSourcesLoading] = useState(false);
+
+  // ─── Tenant batch-selection (for batch delete) ───
+  const [selTenantIds, setSelTenantIds] = useState(() => new Set());
+  const [tenantDeleting, setTenantDeleting] = useState(false);
+  const toggleTenant = (tid) => setSelTenantIds((s) => { const n = new Set(s); n.has(tid) ? n.delete(tid) : n.add(tid); return n; });
+  // Clear the selection when the tab or building changes.
+  useEffect(() => { setSelTenantIds(new Set()); }, [activeTab, id]);
 
   // ─── Sort state for Tenants + Requests tabs (must be here, before early returns) ───
   const { sortField: tenSF, sortDir: tenSD, handleSort: handleTenSort } = useLocalSort("name", "asc");
@@ -162,6 +1742,25 @@ export default function BuildingDetail() {
   useEffect(() => {
     if (activeTab === "Requests" && !requestsLoaded && !requestsLoading) {
       loadBuildingRequests();
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (activeTab === "Invoices" && !invoicesLoaded && !invoicesLoading) {
+      loadBuildingInvoices();
+    }
+  }, [activeTab]);
+
+  // Load-once, tab-specific datasets deferred out of loadBuilding.
+  useEffect(() => {
+    if (activeTab === "Policies" && !loadedTabsRef.current.has("Policies")) {
+      loadedTabsRef.current.add("Policies");
+      loadBuildingConfig();
+      loadApprovalRules();
+    }
+    if (activeTab === "Documents" && !loadedTabsRef.current.has("Documents")) {
+      loadedTabsRef.current.add("Documents");
+      loadLeaseTemplates();
     }
   }, [activeTab]);
 
@@ -204,17 +1803,31 @@ export default function BuildingDetail() {
       setEditElevator(!!b.hasElevator);
       setEditConcierge(!!b.hasConcierge);
       setEditManagedSince(b.managedSince ? b.managedSince.slice(0, 10) : "");
+      setEditExtra(buildingToExtraForm(b));
       setHouseRulesText(b.houseRulesText || "");
+      // Reference market price for this building's postal code (zip-scoped table).
+      if (b.postalCode) {
+        try {
+          const mp = await fetchJSON(`/market-prices/${encodeURIComponent(b.postalCode)}`);
+          const rec = mp?.data ?? null;
+          setMarketPrice(rec);
+          setEditMarketPrice(rec?.pricePerSqmChf != null ? String(rec.pricePerSqmChf) : "");
+        } catch { /* non-blocking */ }
+      } else {
+        setMarketPrice(null);
+        setEditMarketPrice("");
+      }
       await loadUnits();
-      await loadBuildingConfig();
-      await loadApprovalRules();
-      await loadLeaseTemplates();
+      // buildingConfig + approvalRules (Policies tab) and leaseTemplates
+      // (Documents tab) are deferred to their tabs — see the activeTab effects
+      // below. Previously they were awaited serially on every building mount.
       loadLegalSources();
       loadBuildingKpis();
       if (b.owners && b.owners.length > 0) {
         loadOwnerStrategyProfiles(b.owners.map((o) => o.id));
       }
       loadBuildingStrategyProfile();
+      if (isOwner) loadOwnerProfileCurrent();
     } catch (e) {
       setErr(`Failed to load building: ${e.message}`);
     } finally {
@@ -225,50 +1838,56 @@ export default function BuildingDetail() {
   async function loadBuildingKpis() {
     if (!id) return;
     setKpisLoading(true);
-    try {
-      const now = new Date();
-      const from = `${now.getFullYear()}-01-01`;
-      const to = now.toISOString().slice(0, 10);
-      const [reqRes, jobRes, finRes, portRes] = await Promise.all([
-        fetch("/api/requests?limit=2000&order=desc", { headers: authHeaders() }),
-        fetch("/api/jobs?limit=2000", { headers: authHeaders() }),
-        fetch(`/api/buildings/${id}/financial-summary?from=${from}&to=${to}`, { headers: authHeaders() }),
-        fetch(`/api/financials/portfolio-summary?from=${from}&to=${to}`, { headers: authHeaders() }),
-      ]);
-      const [reqData, jobData, finData, portData] = await Promise.all([
-        reqRes.json(), jobRes.json(), finRes.json(), portRes.json(),
-      ]);
-      const allRequests = reqData?.data || [];
-      const allJobs = jobData?.data || [];
-      const openRequests = allRequests.filter(
-        (r) => r.unit?.building?.id === id && ["PENDING_REVIEW", "PENDING_OWNER_APPROVAL", "RFP_PENDING", "APPROVED", "ASSIGNED"].includes(r.status)
-      ).length;
-      const openJobs = allJobs.filter(
-        (j) => j.request?.unit?.building?.id === id && ["PENDING", "IN_PROGRESS"].includes(j.status)
-      ).length;
-      const financials = finData?.data || null;
-      const portfolio = portData?.data || null;
-      let portfolioComparison = null;
-      if (portfolio && portfolio.buildingCount > 0 && financials) {
-        const buildingNoi = financials.netIncomeCents ?? 0;
-        const portfolioBuildings = portfolio.buildings || [];
-        if (portfolioBuildings.length > 1) {
-          const otherBuildings = portfolioBuildings.filter((b) => b.buildingId !== id);
-          if (otherBuildings.length > 0) {
-            const avgOtherNoi = otherBuildings.reduce((sum, b) => sum + (b.netIncomeCents ?? 0), 0) / otherBuildings.length;
-            if (avgOtherNoi !== 0) {
-              const pct = ((buildingNoi - avgOtherNoi) / Math.abs(avgOtherNoi)) * 100;
-              portfolioComparison = { pct: Math.round(pct), better: pct >= 0 };
-            }
+    const now = new Date();
+    const from = `${now.getFullYear()}-01-01`;
+    const to = now.toISOString().slice(0, 10);
+
+    // Parse each endpoint independently. A single slow/failing call — e.g. the
+    // portfolio fan-out timing out behind a gateway that returns an HTML 504,
+    // which makes res.json() throw — must NOT blank every card. In particular
+    // the cheap open-requests/open-jobs counts (GET /buildings/:id/kpis) should
+    // still render even when the heavier financial endpoints are unavailable.
+    // (These counts are scalar DB counts server-side; the page used to fetch up
+    // to 2,000 requests + 2,000 jobs org-wide and filter them in the browser.)
+    async function safeJson(url) {
+      try {
+        const res = await fetch(url, { headers: authHeaders() });
+        if (!res.ok) return null;
+        return await res.json();
+      } catch {
+        return null;
+      }
+    }
+
+    const [kpiData, finData, portData] = await Promise.all([
+      safeJson(`/api/buildings/${id}/kpis`),
+      safeJson(`/api/buildings/${id}/financial-summary?from=${from}&to=${to}`),
+      safeJson(`/api/financials/portfolio-summary?from=${from}&to=${to}`),
+    ]);
+
+    // null (not 0) when the counts endpoint itself failed, so the card shows
+    // "—" (unknown) rather than a misleading "0".
+    const openRequests = kpiData?.data?.openRequests ?? null;
+    const openJobs = kpiData?.data?.openJobs ?? null;
+    const financials = finData?.data || null;
+    const portfolio = portData?.data || null;
+    let portfolioComparison = null;
+    if (portfolio && portfolio.buildingCount > 0 && financials) {
+      const buildingNoi = financials.netIncomeCents ?? 0;
+      const portfolioBuildings = portfolio.buildings || [];
+      if (portfolioBuildings.length > 1) {
+        const otherBuildings = portfolioBuildings.filter((b) => b.buildingId !== id);
+        if (otherBuildings.length > 0) {
+          const avgOtherNoi = otherBuildings.reduce((sum, b) => sum + (b.netIncomeCents ?? 0), 0) / otherBuildings.length;
+          if (avgOtherNoi !== 0) {
+            const pct = ((buildingNoi - avgOtherNoi) / Math.abs(avgOtherNoi)) * 100;
+            portfolioComparison = { pct: Math.round(pct), better: pct >= 0 };
           }
         }
       }
-      setBuildingKpis({ openRequests, openJobs, financials, portfolioComparison });
-    } catch (e) {
-      // non-fatal — KPIs just won't show
-    } finally {
-      setKpisLoading(false);
     }
+    setBuildingKpis({ openRequests, openJobs, financials, portfolioComparison });
+    setKpisLoading(false);
   }
 
   async function loadOwnerStrategyProfiles(ownerIds) {
@@ -299,6 +1918,62 @@ export default function BuildingDetail() {
       }
     } catch {
       // non-fatal
+    }
+  }
+
+  // Current owner's portfolio strategy profile — anchors the building-strategy editor.
+  async function loadOwnerProfileCurrent() {
+    try {
+      const res = await fetch(`/api/strategy/owner-profile-current`, { headers: authHeaders() });
+      if (res.ok) {
+        const json = await res.json();
+        setOwnerProfile(json?.profile ?? null);
+      }
+    } catch {
+      // non-fatal
+    }
+  }
+
+  // Owner sets/edits this building's role intent → upserts the BuildingStrategyProfile,
+  // anchored to the editing owner's portfolio profile.
+  async function saveBuildingStrategy() {
+    if (!id || !ownerProfile?.id || !stratRoleIntent) return;
+    setStratSaving(true);
+    setStratError("");
+    try {
+      const res = await fetch(`/api/strategy/building-profile`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({
+          buildingId: id,
+          ownerProfileId: ownerProfile.id,
+          roleIntent: stratRoleIntent,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error?.message || json?.error || "Failed to save strategy");
+      setStratEditOpen(false);
+      await loadBuildingStrategyProfile();
+    } catch (e) {
+      setStratError(e.message);
+    } finally {
+      setStratSaving(false);
+    }
+  }
+
+  async function loadBuildingInvoices() {
+    if (!id) return;
+    setInvoicesLoading(true);
+    try {
+      const res = await fetch(`/api/invoices?buildingId=${id}&limit=200&view=summary`, { headers: authHeaders() });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error?.message || "Failed to load invoices");
+      setBuildingInvoices(json?.data || []);
+      setInvoicesLoaded(true);
+    } catch (e) {
+      setBuildingInvoices([]);
+    } finally {
+      setInvoicesLoading(false);
     }
   }
 
@@ -461,7 +2136,74 @@ export default function BuildingDetail() {
     }
   }
 
+  // Invite a brand-new owner scoped to THIS building: provisions a Supabase login
+  // (appRole=OWNER) and links exactly this one building, so the owner surface shows
+  // them only this property.
+  async function onInviteOwner() {
+    const email = inviteEmail.trim();
+    if (!email) return;
+    try {
+      setOwnerLoading(true);
+      setInviteSent(false);
+      const res = await fetch(`/api/buildings/${id}/owners/invite`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ email, name: inviteName.trim() }),
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(json?.error?.message || json?.error || `Failed (${res.status})`);
+      setInviteEmail("");
+      setInviteName("");
+      setInviteSent(true);
+      await loadBuilding();
+      await loadOwnerCandidates();
+      setOk(json?.invited === false
+        ? t("manager:buildingsId.msg.ownerLinkedExisting", { defaultValue: "Owner linked to this building (they already had an account)." })
+        : t("manager:buildingsId.msg.inviteSent", { defaultValue: "Invite sent and owner linked to this building." }));
+    } catch (e) {
+      setErr(`Failed to invite owner: ${e.message}`);
+    } finally {
+      setOwnerLoading(false);
+    }
+  }
+
+  // Batch-remove the selected building-tenant entries (import-junk cleanup). Each
+  // selection key is `${tenantId}|${unitId}`; the server soft-deletes the lease,
+  // deletes the occupancy, and deactivates the tenant if orphaned — keeping any entry
+  // whose lease has real billing.
+  async function batchDeleteTenants() {
+    const keys = [...selTenantIds];
+    if (keys.length === 0 || tenantDeleting) return;
+    if (typeof window !== "undefined" && !window.confirm(t("manager:buildingsId.tenants.confirmDelete", { defaultValue: "Remove {{count}} tenant entry(ies) from this building? This clears their occupancy and lease. Entries with real billing history are kept.", count: keys.length }))) return;
+    setTenantDeleting(true);
+    try {
+      const entries = keys.map((k) => { const i = k.indexOf("|"); return { tenantId: k.slice(0, i), unitId: k.slice(i + 1) }; });
+      const res = await fetch(`/api/buildings/${id}/tenants/remove`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ entries }),
+      });
+      const json = await res.json().catch(() => null);
+      const d = json?.data;
+      await loadBuilding();
+      setSelTenantIds(new Set());
+      if (!res.ok || !d) { setErr(t("manager:buildingsId.tenants.error", { defaultValue: "Couldn't remove the selected entries." })); return; }
+      const removed = d.removed || 0, kept = d.keptBilling || 0, missing = d.notFound || 0;
+      const tail = (kept ? ` · ${kept} ${t("manager:buildingsId.tenants.keptTail", { defaultValue: "kept (billing history)" })}` : "") + (missing ? ` · ${missing} ${t("manager:buildingsId.tenants.notFoundTail", { defaultValue: "not found" })}` : "");
+      if (removed > 0) setOk(t("manager:buildingsId.tenants.removed", { defaultValue: "{{count}} entry(ies) removed", count: removed }) + tail);
+      else if (kept > 0) setErr(t("manager:buildingsId.tenants.keptAll", { defaultValue: "Nothing removed — {{count}} have real billing history and need a proper lease termination.", count: kept }));
+      else setErr(t("manager:buildingsId.tenants.error", { defaultValue: "Couldn't remove the selected entries." }));
+    } catch (e) {
+      setErr(`Failed to remove tenants: ${e.message}`);
+    } finally {
+      setTenantDeleting(false);
+    }
+  }
+
   useEffect(() => {
+    // New building → reset lazy-tab load guards (page component is reused across
+    // /buildings/[id] navigations).
+    loadedTabsRef.current = new Set();
     if (id) loadBuilding();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
@@ -480,8 +2222,23 @@ export default function BuildingDetail() {
           hasElevator: editElevator,
           hasConcierge: editConcierge,
           managedSince: editManagedSince ? new Date(editManagedSince).toISOString() : null,
+          ...extraFormToPatch(editExtra),
         }),
       });
+      // Persist the zip-scoped market price separately (not a Building column).
+      const trimmedMp = editMarketPrice.toString().trim();
+      const currentMp = marketPrice?.pricePerSqmChf != null ? String(marketPrice.pricePerSqmChf) : "";
+      if (building?.postalCode && trimmedMp !== "" && trimmedMp !== currentMp) {
+        await fetchJSON(`/market-prices`, {
+          method: "PUT",
+          body: JSON.stringify({
+            postalCode: building.postalCode,
+            city: building.city || null,
+            pricePerSqmChf: Number(trimmedMp),
+            source: "manual",
+          }),
+        });
+      }
       await loadBuilding();
       setEditMode(false);
       setOk("Building updated.");
@@ -540,12 +2297,20 @@ export default function BuildingDetail() {
     if (!createUnitName.trim()) return setErr("Unit name is required.");
     try {
       setLoading(true);
+      const body = { unitNumber: createUnitName, type: createUnitType };
+      if (createUnitType === "PARKING") {
+        body.parkingKind = createParkingKind;
+        if (createLinkedFlatId) body.linkedFlatId = createLinkedFlatId;
+      }
       await fetchJSON(`/buildings/${id}/units`, {
         method: "POST",
-        body: JSON.stringify({ unitNumber: createUnitName, type: createUnitType }),
+        body: JSON.stringify(body),
       });
       await loadUnits();
       setCreateUnitName("");
+      setCreateUnitType("RESIDENTIAL");
+      setCreateParkingKind("EXTERIOR");
+      setCreateLinkedFlatId("");
       setUnitAction(null);
       setOk("Unit created.");
     } catch (e) {
@@ -706,19 +2471,20 @@ export default function BuildingDetail() {
 
   const residentialUnits = units.filter((u) => u.type === "RESIDENTIAL" || !u.type);
   const commonUnits = units.filter((u) => u.type === "COMMON_AREA");
+  const parkingUnits = units.filter((u) => u.type === "PARKING");
+  const flatLabelById = Object.fromEntries(units.map((u) => [u.id, u.unitNumber || u.name || "Unit"]));
 
   // ─── Occupancy counts (always across ALL units) ───
+  // Occupancy (OCCUPIED/VACANT) and "listed" are independent axes — a vacant
+  // unit may also be listed, so listedCount is not part of the occupied/vacant split.
   const occupiedCount = units.filter((u) => u.occupancyStatus === "OCCUPIED").length;
   const vacantCount = units.filter((u) => u.occupancyStatus === "VACANT").length;
-  const listedCount = units.filter((u) => u.occupancyStatus === "LISTED").length;
+  const listedCount = units.filter((u) => u.listed).length;
 
-  // ─── Filter units by occupancy status ───
-  const filteredResidential = unitFilter === "ALL"
-    ? residentialUnits
-    : residentialUnits.filter((u) => u.occupancyStatus === unitFilter);
-  const filteredCommon = unitFilter === "ALL"
-    ? commonUnits
-    : commonUnits.filter((u) => u.occupancyStatus === unitFilter);
+  // ─── Filter units by occupancy status (LISTED filters the marketing tag) ───
+  const matchUnitFilter = (u) => unitFilter === "ALL" || (unitFilter === "LISTED" ? u.listed : u.occupancyStatus === unitFilter);
+  const filteredResidential = residentialUnits.filter(matchUnitFilter);
+  const filteredCommon = commonUnits.filter(matchUnitFilter);
 
   return (
     <AppShell role={isOwner ? "OWNER" : "MANAGER"}>
@@ -735,6 +2501,13 @@ export default function BuildingDetail() {
               <ChevronLeft className="h-5 w-5" />
             </button>
           }
+          actions={
+            !isOwner ? (
+              <button className="button-secondary text-sm" onClick={() => setShowPackageOnboard((v) => !v)}>
+                {showPackageOnboard ? t("buildingsId.hideImport") : t("buildingsId.importData")}
+              </button>
+            ) : null
+          }
         />
         <PageContent>
           {notice && (
@@ -745,9 +2518,15 @@ export default function BuildingDetail() {
             </Panel>
           )}
 
+          {showPackageOnboard && !isOwner && (
+            <div className="mb-4">
+              <PackageOnboardingPanel buildingId={id} onClose={() => setShowPackageOnboard(false)} onCommitted={loadUnits} />
+            </div>
+          )}
+
           {/* Tabs Navigation */}
           {(() => {
-            const TAB_KEYS = ["Building information", "Units", "Tenants", "Assets", "Documents", "Policies", "Financials", "Requests", "Correspondence"];
+            const TAB_KEYS = ["Building information", "Units", "Tenants", "Assets", "Documents", "Policies", "Reporting", "Requests", "Correspondence"];
             const TAB_I18N = {
               "Building information": t("manager:buildingsId.tabs.buildingInformation"),
               "Units":                t("manager:buildingsId.tabs.units"),
@@ -755,7 +2534,7 @@ export default function BuildingDetail() {
               "Assets":               t("manager:buildingsId.tabs.assets"),
               "Documents":            t("manager:buildingsId.tabs.documents"),
               "Policies":             t("manager:buildingsId.tabs.policies"),
-              "Financials":           t("manager:buildingsId.tabs.financials"),
+              "Reporting":            "Reporting",
               "Requests":             t("manager:buildingsId.tabs.requests"),
               "Correspondence":       t("manager:buildingsId.tabs.correspondence"),
             };
@@ -881,6 +2660,7 @@ export default function BuildingDetail() {
                       setEditElevator(!!building?.hasElevator);
                       setEditConcierge(!!building?.hasConcierge);
                       setEditManagedSince(building?.managedSince ? building.managedSince.slice(0, 10) : "");
+                      setEditExtra(buildingToExtraForm(building));
                     }}
                   >
                     {t("manager:buildingsId.btn.cancel")}
@@ -995,6 +2775,91 @@ export default function BuildingDetail() {
                   </div>
                 </>
               )}
+
+              {/* Cadastre & estimations — always visible; per-field editing in edit mode */}
+              <div className="mt-6 pt-4 border-t border-surface-border">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-semibold text-foreground">{t("manager:buildingsId.heading.cadastralValuation")}</h3>
+                </div>
+
+                {/* État locatif net — computed (annual net rent roll), read-only */}
+                <div className="mb-4 rounded-xl border border-surface-border bg-surface-muted/40 p-4">
+                  <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:buildingsId.fields.etatLocatifNetChf")}</div>
+                  <div className="mt-1 text-lg font-semibold text-foreground">{building?.etatLocatifNetChf != null ? formatChf(building.etatLocatifNetChf) : "—"}</div>
+                  <div className="text-xs text-muted-text mt-0.5">{t("manager:buildingsId.fields.etatLocatifNetHint")}</div>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {BUILDING_CADASTRAL_FIELDS.map((f) => (
+                    <label key={f.key} className={cn("grid gap-2", f.type === "textarea" && "sm:col-span-2")}>
+                      <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t(`manager:buildingsId.fields.${f.key}`)}</span>
+                      {editMode ? (
+                        f.type === "textarea" ? (
+                          <textarea
+                            className="input text-sm text-muted-dark"
+                            rows={2}
+                            name={f.key}
+                            autoComplete="off"
+                            data-lpignore="true"
+                            data-1p-ignore="true"
+                            data-form-type="other"
+                            value={editExtra[f.key] ?? ""}
+                            onChange={(e) => setEditExtra((s) => ({ ...s, [f.key]: e.target.value }))}
+                          />
+                        ) : (
+                          <input
+                            className="input text-sm text-muted-dark"
+                            type={f.type === "date" ? "date" : f.type === "text" ? "text" : "number"}
+                            name={f.key}
+                            inputMode={f.type === "int" || f.type === "chf" || f.type === "number" ? "decimal" : undefined}
+                            autoComplete="off"
+                            data-lpignore="true"
+                            data-1p-ignore="true"
+                            data-form-type="other"
+                            step={f.type === "int" ? "1" : f.type === "chf" || f.type === "number" ? "any" : undefined}
+                            min={f.type === "int" || f.type === "chf" || f.type === "number" ? "0" : undefined}
+                            value={editExtra[f.key] ?? ""}
+                            onChange={(e) => setEditExtra((s) => ({ ...s, [f.key]: e.target.value }))}
+                          />
+                        )
+                      ) : (
+                        <span className="text-sm text-muted-dark">{formatCadastralValue(f, building?.[f.key])}</span>
+                      )}
+                    </label>
+                  ))}
+                </div>
+
+                {/* Market price reference (zip-scoped; NOT part of valeur intrinsèque) */}
+                <div className="mt-4 grid gap-2">
+                  <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:buildingsId.fields.marketPricePerSqm")}</span>
+                  {editMode ? (
+                    <>
+                      <input
+                        className="input text-sm text-muted-dark sm:max-w-xs"
+                        type="number"
+                        name="marketPricePerSqm"
+                        inputMode="decimal"
+                        autoComplete="off"
+                        data-lpignore="true"
+                        data-1p-ignore="true"
+                        data-form-type="other"
+                        step="any"
+                        min="0"
+                        value={editMarketPrice}
+                        onChange={(e) => setEditMarketPrice(e.target.value)}
+                        disabled={!building?.postalCode}
+                        placeholder={building?.postalCode ? "" : t("manager:buildingsId.fields.marketPriceNoZip")}
+                      />
+                      <span className="text-xs text-muted-text">{t("manager:buildingsId.fields.marketPriceHint", { zip: building?.postalCode || "—" })}</span>
+                    </>
+                  ) : (
+                    <div className="text-sm text-muted-dark">
+                      {marketPrice?.pricePerSqmChf != null ? formatChf(marketPrice.pricePerSqmChf) : "—"}
+                      {marketPrice?.asOf && <span className="text-xs text-muted-text ml-2">({formatDate(marketPrice.asOf)})</span>}
+                    </div>
+                  )}
+                </div>
+              </div>
 
               {/* Ownership & Management — always visible regardless of edit mode */}
               <div className="mt-6 pt-4 border-t border-surface-border">
@@ -1144,14 +3009,60 @@ export default function BuildingDetail() {
                         </button>
                       </div>
                     )}
+
+                    {/* Invite a NEW owner scoped to this building (email login via Supabase) */}
+                    {editMode && (
+                      <div className="mt-4 border-t border-surface-border pt-3">
+                        <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim mb-1">
+                          {t("manager:buildingsId.label.inviteOwner", { defaultValue: "Invite a new owner" })}
+                        </div>
+                        <p className="text-xs text-muted mb-2">
+                          {t("manager:buildingsId.help.inviteOwner", { defaultValue: "Sends an email invite and grants owner access to this building only." })}
+                        </p>
+                        <div className="flex flex-wrap items-end gap-2">
+                          <div className="flex-1 min-w-[180px]">
+                            <input
+                              type="email"
+                              className="input text-sm w-full"
+                              placeholder={t("manager:buildingsId.placeholder.ownerEmail", { defaultValue: "owner@email.com" })}
+                              value={inviteEmail}
+                              onChange={(e) => { setInviteEmail(e.target.value); setInviteSent(false); }}
+                            />
+                          </div>
+                          <div className="flex-1 min-w-[140px]">
+                            <input
+                              type="text"
+                              className="input text-sm w-full"
+                              placeholder={t("manager:buildingsId.placeholder.ownerName", { defaultValue: "Name (optional)" })}
+                              value={inviteName}
+                              onChange={(e) => setInviteName(e.target.value)}
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            className="button-primary text-sm"
+                            disabled={!inviteEmail.trim() || ownerLoading}
+                            onClick={onInviteOwner}
+                          >
+                            {t("manager:buildingsId.btn.sendInvite", { defaultValue: "Send invite" })}
+                          </button>
+                        </div>
+                        {inviteSent && (
+                          <p className="text-xs text-green-600 mt-1.5">
+                            {t("manager:buildingsId.msg.inviteConfirm", { defaultValue: "✓ Invite sent." })}
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </div>
 
-              {/* Building Strategy Profile */}
-              {buildingStrategyProfile && (() => {
+              {/* Building Strategy Profile — read-only guidelines; owners can set/edit the role intent */}
+              {(buildingStrategyProfile || (isOwner && ownerProfile)) && (() => {
                 const bp = buildingStrategyProfile;
-                const archLabel = bp.primaryArchetype ? ARCHETYPE_LABELS[bp.primaryArchetype] : null;
-                const copy = bp.primaryArchetype ? ARCHETYPE_EXPLANATION_COPY[bp.primaryArchetype] : null;
-                const secLabel = bp.secondaryArchetype ? ARCHETYPE_LABELS[bp.secondaryArchetype] : null;
+                const archLabel = bp?.primaryArchetype ? ARCHETYPE_LABELS[bp.primaryArchetype] : null;
+                const copy = bp?.primaryArchetype ? ARCHETYPE_EXPLANATION_COPY[bp.primaryArchetype] : null;
+                const secLabel = bp?.secondaryArchetype ? ARCHETYPE_LABELS[bp.secondaryArchetype] : null;
+                const canEdit = isOwner && ownerProfile;
                 return (
                   <div className="mt-6 pt-4 border-t border-surface-border">
                     <div className="flex items-center justify-between mb-3">
@@ -1159,34 +3070,91 @@ export default function BuildingDetail() {
                       <div className="flex items-center gap-1.5">
                         {archLabel && <Badge variant="brand" size="sm">{archLabel}</Badge>}
                         {secLabel && <Badge variant="info" size="sm">{secLabel}</Badge>}
+                        {canEdit && !stratEditOpen && (
+                          <button
+                            type="button"
+                            className="text-xs font-medium text-indigo-600 hover:text-indigo-800 transition-colors ml-1"
+                            onClick={() => {
+                              setStratRoleIntent(bp?.roleIntent && bp.roleIntent !== "unspecified" ? bp.roleIntent : "");
+                              setStratError("");
+                              setStratEditOpen(true);
+                            }}
+                          >
+                            {bp ? t("manager:buildingsId.btn.edit") : t("manager:buildingsId.btn.setStrategy")}
+                          </button>
+                        )}
                       </div>
                     </div>
-                    <KpiInlineGrid
-                      items={[
-                        { label: t("manager:buildingsId.label.roleIntent"), value: bp.roleIntent ? bp.roleIntent.replace(/_/g, " ") : "—" },
-                        { label: t("manager:buildingsId.label.buildingType"), value: bp.buildingType ? bp.buildingType.replace(/_/g, " ") : "—" },
-                        { label: t("manager:buildingsId.label.condition"), value: bp.conditionRating != null ? `${bp.conditionRating}/10` : "—" },
-                        { label: t("manager:buildingsId.label.approxUnits"), value: bp.approxUnits != null ? String(bp.approxUnits) : "—" },
-                      ]}
-                    />
-                    {copy && (
-                      <div className="mt-3">
-                        <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim mb-1.5">{t("manager:buildingsId.label.guidelines")}</div>
-                        <ul className="space-y-1">
-                          {copy.bullets.map((b, i) => (
-                            <li key={i} className="text-xs text-muted-text flex gap-1.5">
-                              <span className="text-foreground-dim flex-shrink-0">·</span>
-                              <span>{b}</span>
-                            </li>
-                          ))}
-                          {copy.deprioritize && (
-                            <li className="text-xs text-foreground-dim flex gap-1.5 mt-1">
-                              <span className="flex-shrink-0">↓ {t("manager:buildingsId.label.guidelines")}:</span>
-                              <span>{copy.deprioritize}</span>
-                            </li>
-                          )}
-                        </ul>
+
+                    {canEdit && stratEditOpen ? (
+                      <div className="space-y-3">
+                        <p className="text-xs text-muted">{t("manager:buildingsId.strategyEditor.intro")}</p>
+                        <div>
+                          <label className="block text-xs font-medium uppercase tracking-wide text-foreground-dim mb-1">
+                            {t("manager:buildingsId.label.roleIntent")}
+                          </label>
+                          <select
+                            className="input text-sm w-full max-w-xs"
+                            value={stratRoleIntent}
+                            onChange={(e) => setStratRoleIntent(e.target.value)}
+                          >
+                            <option value="">{t("manager:buildingsId.select.roleIntent")}</option>
+                            {ROLE_INTENT_OPTIONS.map((v) => (
+                              <option key={v} value={v}>{v.replace(/_/g, " ")}</option>
+                            ))}
+                          </select>
+                        </div>
+                        {stratError && <p className="text-xs text-red-500">{stratError}</p>}
+                        <div className="flex items-center gap-3">
+                          <button
+                            type="button"
+                            className="button-primary text-sm"
+                            disabled={!stratRoleIntent || stratSaving}
+                            onClick={saveBuildingStrategy}
+                          >
+                            {stratSaving ? t("manager:buildingsId.btn.saving") : t("manager:buildingsId.btn.save")}
+                          </button>
+                          <button
+                            type="button"
+                            className="text-sm font-medium text-muted-dark hover:text-foreground transition-colors"
+                            onClick={() => setStratEditOpen(false)}
+                          >
+                            {t("manager:buildingsId.btn.cancel")}
+                          </button>
+                        </div>
                       </div>
+                    ) : bp ? (
+                      <>
+                        <KpiInlineGrid
+                          items={[
+                            { label: t("manager:buildingsId.label.roleIntent"), value: bp.roleIntent ? bp.roleIntent.replace(/_/g, " ") : "—" },
+                            { label: t("manager:buildingsId.label.buildingType"), value: bp.buildingType ? bp.buildingType.replace(/_/g, " ") : "—" },
+                            { label: t("manager:buildingsId.label.condition"), value: bp.conditionRating != null ? `${bp.conditionRating}/10` : "—" },
+                            { label: t("manager:buildingsId.label.approxUnits"), value: bp.approxUnits != null ? String(bp.approxUnits) : "—" },
+                          ]}
+                        />
+                        {copy && (
+                          <div className="mt-3">
+                            <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim mb-1.5">{t("manager:buildingsId.label.guidelines")}</div>
+                            <ul className="space-y-1">
+                              {copy.bullets.map((b, i) => (
+                                <li key={i} className="text-xs text-muted-text flex gap-1.5">
+                                  <span className="text-foreground-dim flex-shrink-0">·</span>
+                                  <span>{b}</span>
+                                </li>
+                              ))}
+                              {copy.deprioritize && (
+                                <li className="text-xs text-foreground-dim flex gap-1.5 mt-1">
+                                  <span className="flex-shrink-0">↓ {t("manager:buildingsId.label.guidelines")}:</span>
+                                  <span>{copy.deprioritize}</span>
+                                </li>
+                              )}
+                            </ul>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <p className="text-xs text-muted italic">{t("manager:buildingsId.strategyEditor.notSet")}</p>
                     )}
                   </div>
                 );
@@ -1230,8 +3198,29 @@ export default function BuildingDetail() {
                       >
                         <option value="RESIDENTIAL">{t("manager:buildingsId.select.residential")}</option>
                         <option value="COMMON_AREA">{t("manager:buildingsId.select.commonArea")}</option>
+                        <option value="PARKING">{t("manager:buildingsId.select.parking")}</option>
                       </select>
                     </label>
+                    {createUnitType === "PARKING" && (
+                      <>
+                        <label className="grid gap-2">
+                          <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:buildingsId.parking.kindLabel")}</span>
+                          <select className="input text-sm text-muted-dark" value={createParkingKind} onChange={(e) => setCreateParkingKind(e.target.value)}>
+                            <option value="EXTERIOR">{t("manager:buildingsId.parking.exteriorSpot")}</option>
+                            <option value="GARAGE">{t("manager:buildingsId.parking.garageBox")}</option>
+                          </select>
+                        </label>
+                        <label className="grid gap-2">
+                          <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:buildingsId.parking.assignedToFlat")}</span>
+                          <select className="input text-sm text-muted-dark" value={createLinkedFlatId} onChange={(e) => setCreateLinkedFlatId(e.target.value)}>
+                            <option value="">{t("manager:buildingsId.parking.none")}</option>
+                            {residentialUnits.map((f) => (
+                              <option key={f.id} value={f.id}>{f.unitNumber || f.name || "Unit"}</option>
+                            ))}
+                          </select>
+                        </label>
+                      </>
+                    )}
                   </div>
                   <button type="submit" className="button-primary" disabled={loading}>
                     {loading ? t("manager:buildingsId.btn.creating") : t("manager:buildingsId.btn.createUnit")}
@@ -1288,7 +3277,7 @@ export default function BuildingDetail() {
                               {u.occupancyStatus === "VACANT" && (
                                 <Badge variant="destructive" size="sm">{t("manager:buildingsId.text.vacant")}</Badge>
                               )}
-                              {u.occupancyStatus === "LISTED" && (
+                              {u.listed && (
                                 <Badge variant="warning" size="sm">{t("manager:buildingsId.text.listed")}</Badge>
                               )}
                             </div>
@@ -1304,7 +3293,7 @@ export default function BuildingDetail() {
                               </div>
                             )}
                             {/* ─── Listed note ─── */}
-                            {u.occupancyStatus === "LISTED" && (
+                            {u.listed && u.occupancyStatus === "VACANT" && (
                               <div className="text-xs text-yellow-600 mt-1">{t("manager:buildingsId.text.acceptingApplications")}</div>
                             )}
                             {(u.monthlyRentChf != null || u.monthlyChargesChf != null) && (
@@ -1344,10 +3333,43 @@ export default function BuildingDetail() {
                               {u.occupancyStatus === "VACANT" && (
                                 <Badge variant="destructive" size="sm">{t("manager:buildingsId.text.vacant")}</Badge>
                               )}
-                              {u.occupancyStatus === "LISTED" && (
+                              {u.listed && (
                                 <Badge variant="warning" size="sm">{t("manager:buildingsId.text.listed")}</Badge>
                               )}
                             </div>
+                          </div>
+                          <span className="text-blue-600 ml-2 flex-shrink-0">→</span>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {parkingUnits.filter(matchUnitFilter).length > 0 && (
+                <>
+                  <h3 className="font-semibold text-foreground mt-4 mb-3">{t("manager:buildingsId.heading.parking")}</h3>
+                  <div className="space-y-2 mb-4">
+                    {parkingUnits.filter(matchUnitFilter).map((u) => (
+                      <Link key={u.id} href={`/admin-inventory/units/${u.id}${isOwner ? "?role=owner" : ""}`} className="block border border-surface-border rounded-lg p-3 hover:bg-surface-subtle transition">
+                        <div className="flex justify-between items-center">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-semibold text-foreground">{u.unitNumber || u.name || t("manager:buildingsId.heading.parking")}</span>
+                              <Badge variant="info" size="sm">{u.parkingKind === "GARAGE" ? t("manager:buildingsId.parking.garage") : t("manager:buildingsId.parking.exterior")}</Badge>
+                              {u.linkedFlatId && flatLabelById[u.linkedFlatId] && (
+                                <span className="text-xs text-foreground-dim">{t("manager:buildingsId.parking.linkedFlat", { label: flatLabelById[u.linkedFlatId] })}</span>
+                              )}
+                              {u.occupancyStatus === "OCCUPIED" && <Badge variant="success" size="sm">{t("manager:buildingsId.text.occupied")}</Badge>}
+                              {u.occupancyStatus === "VACANT" && <Badge variant="destructive" size="sm">{t("manager:buildingsId.text.vacant")}</Badge>}
+                              {u.listed && <Badge variant="warning" size="sm">{t("manager:buildingsId.text.listed")}</Badge>}
+                            </div>
+                            {(u.monthlyRentChf != null || u.monthlyChargesChf != null) && (
+                              <div className="text-xs text-muted mt-1">
+                                {u.monthlyRentChf != null && <span className="font-medium text-muted-dark">CHF {u.monthlyRentChf}.-</span>}
+                                {u.monthlyChargesChf != null && <span className="ml-1 text-foreground-dim">+ {u.monthlyChargesChf} charges</span>}
+                              </div>
+                            )}
                           </div>
                           <span className="text-blue-600 ml-2 flex-shrink-0">→</span>
                         </div>
@@ -1362,23 +3384,49 @@ export default function BuildingDetail() {
           )}
 
           {/* Tenants tab */}
-          {activeTab === "Tenants" && (
+          {activeTab === "Tenants" && (() => {
+            const rowKeyOf = (x) => `${x.tenantId}|${x.unitId}`;
+            const selectableIds = sortedBuildingTenants.filter((x) => x.tenantId).map(rowKeyOf);
+            const allSelected = selectableIds.length > 0 && selectableIds.every((k) => selTenantIds.has(k));
+            const someSelected = selectableIds.some((k) => selTenantIds.has(k));
+            const toggleAll = () => setSelTenantIds(allSelected ? new Set() : new Set(selectableIds));
+            return (
             <Panel title={t("manager:buildingsId.title.tenants")}>
               {building?.tenants && building.tenants.length > 0 ? (
                 <>
+                {/* Batch-action bar — appears once a tenant is selected. */}
+                {selTenantIds.size > 0 && (
+                  <div className="mb-3 flex flex-wrap items-center gap-3 rounded-lg border border-brand-ring bg-brand-light px-3 py-2">
+                    <span className="text-sm font-semibold text-brand-dark">{t("manager:buildingsId.tenants.selectedCount", { defaultValue: "{{count}} selected", count: selTenantIds.size })}</span>
+                    <button type="button" onClick={batchDeleteTenants} disabled={tenantDeleting} className="button-danger text-sm disabled:opacity-50">
+                      {tenantDeleting ? t("manager:buildingsId.tenants.removing", { defaultValue: "Removing…" }) : t("manager:buildingsId.tenants.removeSelected", { defaultValue: "Remove selected" })}
+                    </button>
+                    <button type="button" onClick={() => setSelTenantIds(new Set())} className="text-xs font-medium text-muted hover:text-foreground">{t("manager:buildingsId.tenants.clear", { defaultValue: "Clear" })}</button>
+                  </div>
+                )}
                 {/* Mobile: card list */}
                 <div className="sm:hidden space-y-2">
                   {sortedBuildingTenants.map((ten, idx) => (
-                    <div key={ten.tenantId || idx} className="rounded-lg border border-surface-border bg-surface-subtle px-3 py-2.5">
-                      <p className="text-sm font-medium text-foreground">{ten.name}</p>
-                      <p className="text-xs text-muted mt-0.5">Unit {ten.unitNumber}{ten.phone ? ` · ${ten.phone}` : ""}</p>
-                    </div>
+                    <label key={ten.tenantId ? rowKeyOf(ten) : idx} className={cn("flex items-start gap-2.5 rounded-lg border px-3 py-2.5", ten.tenantId && selTenantIds.has(rowKeyOf(ten)) ? "border-brand-ring bg-brand-light" : "border-surface-border bg-surface-subtle")}>
+                      {ten.tenantId && (
+                        <input type="checkbox" className="mt-0.5 h-4 w-4 shrink-0 accent-brand" checked={selTenantIds.has(rowKeyOf(ten))} onChange={() => toggleTenant(rowKeyOf(ten))} aria-label={ten.name} />
+                      )}
+                      <span className="min-w-0">
+                        <span className="block text-sm font-medium text-foreground">{ten.name}</span>
+                        <span className="block text-xs text-muted mt-0.5">Unit {ten.unitNumber}{ten.phone ? ` · ${ten.phone}` : ""}</span>
+                      </span>
+                    </label>
                   ))}
                 </div>
                 {/* Desktop: table */}
                 <table className="hidden sm:table data-table">
                   <thead>
                     <tr>
+                      <th className="w-8">
+                        <input type="checkbox" className="h-4 w-4 accent-brand" checked={allSelected} disabled={selectableIds.length === 0}
+                          ref={(el) => { if (el) el.indeterminate = someSelected && !allSelected; }}
+                          onChange={toggleAll} aria-label={t("manager:buildingsId.tenants.selectAll", { defaultValue: "Select all" })} />
+                      </th>
                       <SortableHeader label={t("manager:buildingsId.col.name")} field="name" sortField={tenSF} sortDir={tenSD} onSort={handleTenSort} />
                       <SortableHeader label={t("manager:buildingsId.col.unit")} field="unit" sortField={tenSF} sortDir={tenSD} onSort={handleTenSort} />
                       <SortableHeader label={t("manager:buildingsId.col.phone")} field="phone" sortField={tenSF} sortDir={tenSD} onSort={handleTenSort} />
@@ -1395,8 +3443,14 @@ export default function BuildingDetail() {
                           : ten.source === "LEASE"
                           ? "info"
                           : "muted";
+                      const sel = ten.tenantId && selTenantIds.has(rowKeyOf(ten));
                       return (
-                        <tr key={ten.tenantId || idx} className="border-b border-surface-divider">
+                        <tr key={ten.tenantId ? rowKeyOf(ten) : idx} className={cn("border-b border-surface-divider", sel && "bg-brand-light")}>
+                          <td>
+                            {ten.tenantId && (
+                              <input type="checkbox" className="h-4 w-4 accent-brand" checked={sel} onChange={() => toggleTenant(rowKeyOf(ten))} aria-label={ten.name} />
+                            )}
+                          </td>
                           <td className="text-foreground font-medium">{ten.name}</td>
                           <td className="text-muted-dark">{ten.unitNumber}</td>
                           <td className="text-muted-dark">{ten.phone || "—"}</td>
@@ -1417,7 +3471,8 @@ export default function BuildingDetail() {
                 <div className="text-center text-muted italic text-sm py-6">{t("manager:buildingsId.text.noTenantsYet")}</div>
               )}
             </Panel>
-          )}
+            );
+          })()}
 
           {/* Assets tab */}
           {activeTab === "Assets" && (
@@ -1998,9 +4053,9 @@ export default function BuildingDetail() {
             </Panel>
           )}
 
-          {/* Financials tab */}
-          {activeTab === "Financials" && id && (
-            <BuildingFinancialsView buildingId={id} variant="embedded" />
+          {/* Reporting tab (the Financials tab was folded in here) */}
+          {activeTab === "Reporting" && id && (
+            <BuildingReportingView buildingId={id} etatLocatifNet={building?.etatLocatifNetChf} />
           )}
 
           {/* Correspondence tab — read-only view of letters sent to this building's tenants */}

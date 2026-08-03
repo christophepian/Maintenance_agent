@@ -5,21 +5,21 @@
 
 ## Database Schema (Prisma)
 
-**Status: ACTIVE AND IN USE — 99 migrations** (shadow DB replay verified clean 2026-03-30)
+**Status: ACTIVE AND IN USE — 137 migrations** (shadow DB replay verified clean 2026-03-30)
 
-**Last verified:** 2026-05-04
+**Last verified:** 2026-06-29
 
-### Models (70 total)
+### Models (99 total)
 
 | Model | Key Fields | Relations |
 |-------|-----------|-----------|
 | **Org** | id, name, mode (MANAGED/OWNER_DIRECT) | → OrgConfig, Users, Buildings, Contractors, ... |
 | **OrgConfig** | orgId, autoApproveLimit, **autoLegalRouting** (Boolean, default false), landlord fields | → Org |
 | **User** | orgId, role (TENANT/CONTRACTOR/MANAGER/OWNER), email, passwordHash | → Org, BuildingOwners |
-| **Building** | orgId, name, address, isActive, managedSince?, canton?, cantonDerivedAt?, yearBuilt?, hasElevator, hasConcierge | → Units, BuildingConfig, ApprovalRules, Notifications, BuildingOwners |
+| **Building** | orgId, name, address, city?, postalCode?, isActive, managedSince?, canton?, cantonDerivedAt?, yearBuilt?, hasElevator, hasConcierge, marketValueChf? (valeur vénale), **cadastral/valuation:** parcelNumber?, easementsText?, ecaVolumeM3?, netAreaSqm?, weightedAreaSqm?, lotsApartments?/lotsGarages?/lotsExteriorParking?, constructionDate?, lastRenovationDate?, fiscalValueChf?, insuranceValueChf?, ppeEstimateChf? (état locatif net = COMPUTED Σ active-lease netRentChf×12) | → Units, BuildingConfig, ApprovalRules, Notifications, BuildingOwners |
 | **BuildingOwner** | id, buildingId, userId, createdAt; @@unique([buildingId, userId]), @@index([buildingId]), @@index([userId]) | → Building, User |
 | **BuildingConfig** | buildingId, orgId, autoApproveLimit, emergencyAutoDispatch, requireOwnerApprovalAbove?, rfpDefaultInviteCount?, rentalIncomeMultiplier?, rentalSignatureDeadlineDays?, rentalManualReviewConfidenceThreshold? | → Building, Org |
-| **Unit** | buildingId, orgId, unitNumber, floor, type (RESIDENTIAL/COMMON_AREA), isActive, isVacant, monthlyRentChf?, monthlyChargesChf?, livingAreaSqm?, rooms?, hasBalcony, hasTerrace, hasParking, locationSegment?, lastRenovationYear?, insulationQuality?, energyLabel?, heatingType? | → Building, Occupancies, Appliances, Requests, Leases, UnitConfig, Assets, Rfps |
+| **Unit** | buildingId, orgId, unitNumber, floor, type (RESIDENTIAL/COMMON_AREA), isActive, isVacant, monthlyRentChf?, monthlyChargesChf?, livingAreaSqm?, rooms?, hasBalcony, hasTerrace, hasParking, locationSegment?, lastRenovationYear?, insulationQuality?, energyLabel?, heatingType?, **valeur intrinsèque inputs:** intrinsicPricePerSqmChf?, vetustePct?, gardenAreaSqm?, gardenWeightPct?, extParkingValueChf?, garageValueChf? (intrinsic value = COMPUTED, services/unitValuation.ts) | → Building, Occupancies, Appliances, Requests, Leases, UnitConfig, Assets, Rfps |
 | **UnitConfig** | unitId, orgId, autoApproveLimit, emergencyAutoDispatch, requireOwnerApprovalAbove? | → Unit, Org |
 | **Tenant** | orgId, name, phone (E.164), email, isActive | → Occupancies, Requests |
 | **Occupancy** | tenantId, unitId (unique pair) | → Tenant, Unit |
@@ -31,7 +31,7 @@
 | **RequestEvent** | requestId, type (RequestEventType), contractorId (required), message | → Request, Contractor |
 | **Event** | orgId, type, actorUserId?, requestId?, payload (JSON) | (standalone) |
 | **Job** | orgId, requestId (unique), **contractorId** (required), status, actualCost, startedAt?, completedAt? | → Request, Contractor, Invoices |
-| **Invoice** | orgId, **jobId** (required), leaseId?, issuer fields, recipient fields, amounts in cents, status, lineItems, **expenseTypeId?**, **accountId?**, direction (InvoiceDirection), sourceChannel (InvoiceSourceChannel), ingestionStatus (IngestionStatus)?, ocrConfidence?, rawOcrText?, sourceFileUrl?, **contractorId?**, **contractorBillingScheduleId?** | → Job, Lease, BillingEntity, InvoiceLineItems, ExpenseType?, Account?, Contractor?, ContractorBillingSchedule? |
+| **Invoice** | orgId, **jobId** (required), leaseId?, issuer fields, recipient fields, amounts in cents, status, lineItems, **expenseTypeId?**, **accountId?**, direction (InvoiceDirection), sourceChannel (InvoiceSourceChannel), ingestionStatus (IngestionStatus)?, ocrConfidence?, rawOcrText?, sourceFileUrl?, **contractorId?**, **contractorBillingScheduleId?**, buildingId?, unitId?, **costNature? (CostNature)**, **ancillaryCategoryId?** | → Job, Lease, BillingEntity, InvoiceLineItems, ExpenseType?, Account?, Contractor?, ContractorBillingSchedule?, AncillaryCostCategory? |
 | **InvoiceLineItem** | invoiceId, description, quantity, unitPrice (cents), vatRate, lineTotal | → Invoice |
 | **BillingEntity** | orgId, type, contractorId?, name, address, iban, vatNumber | → Org, Contractor |
 | **ApprovalRule** | orgId, buildingId?, name, priority, conditions (JSON), action, isActive | → Org, Building |
@@ -44,8 +44,9 @@
 | **RentalApplicationUnit** | applicationId, unitId, status (RentalApplicationUnitStatus), evaluationJson, scoreTotal, confidenceScore, disqualified, disqualifiedReasons (Json?), rank, managerScoreDelta, managerOverrideJson, managerOverrideReason | → RentalApplication, Unit |
 | **RentalOwnerSelection** | unitId, status (RentalOwnerSelectionStatus), primaryApplicationUnitId, backup1ApplicationUnitId?, backup2ApplicationUnitId?, deadlineAt, decidedAt? | → Unit, RentalApplicationUnits |
 | **EmailOutbox** | orgId, template (EmailTemplate), toEmail, subject, bodyText, status (EmailOutboxStatus), metaJson? | → Org |
-| **BuildingFinancialSnapshot** | orgId, buildingId, periodStart, periodEnd, earnedIncomeCents, projectedIncomeCents, expensesTotalCents, maintenanceTotalCents, capexTotalCents, operatingTotalCents, netIncomeCents, netOperatingIncomeCents, activeUnitsCount, computedAt | → Org, Building |
+| **BuildingFinancialSnapshot** | orgId, buildingId, periodStart, periodEnd, **collectedIncomeCents** (cash; was earnedIncomeCents), **accruedIncomeCents** (accrual; was projectedIncomeCents), expensesTotalCents, maintenanceTotalCents, capexTotalCents, operatingTotalCents, netIncomeCents, netOperatingIncomeCents, activeUnitsCount, computedAt | → Org, Building |
 | **RentEstimationConfig** | orgId, canton?, baseRentPerSqmChfMonthly, locationCoefs (prime/standard/periphery), ageCoefs (new/mid/old/veryOld), energyCoefJson (Json), chargesBase (optimistic/pessimistic), heatingChargeAdjJson (Json), serviceChargeAdj (elevator/concierge), chargesMinClamp, chargesMaxClamp | → Org |
+| **MarketPricePerZip** | orgId, postalCode, city?, pricePerSqmChf, source?, asOf? — manual/seeded reference market price (NOT scraped); unique (orgId, postalCode); drives unit "market estimate" reference distinct from valeur intrinsèque | → Org |
 | **LegalSource** | name, jurisdiction, **scope** (LegalSourceScope, default FEDERAL), url?, updateFrequency?, fetcherType?, parserType?, status (LegalSourceStatus), lastCheckedAt?, lastSuccessAt?, lastError? | → LegalVariableVersions, DepreciationStandards |
 | **LegalVariable** | key (unique per jurisdiction+canton), jurisdiction, canton?, unit?, description? | → LegalVariableVersions |
 | **LegalVariableVersion** | variableId, effectiveFrom, effectiveTo?, valueJson (Json), sourceId?, fetchedAt? | → LegalVariable, LegalSource |
@@ -67,6 +68,10 @@
 | **LeaseExpenseItem** | leaseId, expenseTypeId?, accountId?, description, mode (ChargeMode: ACOMPTE/FORFAIT), amountChf, isActive | → Lease, ExpenseType?, Account? |
 | **CaptureSession** | orgId, createdBy (userId), token (unique), status (CaptureSessionStatus), expiresAt, sourceChannel, targetType, uploadedFileUrls (String[]), createdInvoiceId? | → Org |
 | **LedgerEntry** | orgId, date, accountId, debitCents, creditCents, description, reference?, sourceType?, sourceId?, journalId (groups posting legs), buildingId?, unitId?, createdBy? | → Org, Account, Building?, Unit? |
+| **FiscalPeriodClose** | orgId, buildingId, fiscalYear, periodStart/End, status (CLOSED\|REVERSED), closingJournalId, reversalJournalId?, retainedEarningsCents (WS-E year-end close → 2900) | → Org, Building. Unique [orgId,buildingId,fiscalYear] |
+| **FixedAsset** | orgId, buildingId, unitId?, name, sourceInvoiceId? (unique), acquisitionDate, costCents, salvageCents, usefulLifeYears, method, accumulatedDepreciationCents, status (WS-D capitalized capex + depreciation) | → Org, Building, Unit? |
+| **OpeningReceivable** | orgId, buildingId, unitId?, tenantName, amountCents, dueDate?, status (OPEN\|SETTLED), settlementJournalId? (WS-F per-tenant opening AR, sub-ledger of the imported 1100 lump) | → Org, Building, Unit? |
+| **ExtractionCache** | orgId, cacheKey (`${EXTRACTOR_VERSION}\|${kind}\|sha256(file)`), payload (Json — cached ScanResult or PackageExtractionFile[]), createdAt. Content-addressed reuse of expensive vision extractions across both the single-statement and régie-package paths (2026-07-29). Unique [orgId, cacheKey] | → Org |
 | **CashflowPlan** | orgId, buildingId?, name, status (CashflowPlanStatus), incomeGrowthRatePct, openingBalanceCents (BigInt?), horizonMonths, lastComputedAt? | → Org, Building?, CashflowOverride[], Rfp[] |
 | **CashflowOverride** | planId, assetId, originalYear, overriddenYear | → CashflowPlan, Asset |
 | **TaxRule** | jurisdiction, canton?, assetType, topic, scope (LegalRuleScope), isActive | → TaxRuleVersion[] |
@@ -79,8 +84,11 @@
 | **ContractorBillingSchedule** | orgId, contractorId, status (BillingScheduleStatus), description, frequency (BillingFrequency), anchorDay, nextPeriodStart, lastGeneratedPeriod?, amountCents, vatRate, buildingId?, completedAt?, completionReason? | → Org, Contractor, Building?, Invoice[] |
 | **ConversationThread** | orgId, tenantId, channel (ConversationChannel, default IN_APP), createdAt, updatedAt; @@unique([tenantId, channel]), @@index([orgId]) | → Tenant, ConversationMessage[] |
 | **ConversationMessage** | threadId, role (ConversationRole), content (Text), intent (String?), createdAt; @@index([threadId, createdAt]) | → ConversationThread |
+| **WhatsAppOutbox** | orgId, toPhone (E.164), body (Text), status (OutboxStatus, default PENDING), retryCount (default 0), errorMessage?, createdAt, sentAt?; @@index([status, createdAt]) | — |
 
-### Key Enums (64 total) <!-- 55 prior + ConversationChannel + ConversationRole + (existing 7 BillingScheduleStatus/IndexClauseType/RentAdjustmentType/RentAdjustmentStatus/ChargeReconciliationStatus/BillingFrequency counted separately) -->
+### Key Enums (82 total)
+- `CostNature`: CHARGE, DIRECT — set once at the invoice review gate. CHARGE = recoverable Nebenkosten → building cost pool, ventilated to units; DIRECT = repair/maintenance/capex/insurance/tax → ledger/billing flow.
+- `CostBillability`: BILLABLE, NON_BILLABLE · `DistributionKey`: SURFACE_AREA, UNIT_COUNT, CONSUMPTION, OCCUPANT_COUNT, FIXED_SHARE (ancillary-cost taxonomy)
 - `RequestStatus`: PENDING_REVIEW, AUTO_APPROVED, APPROVED, **RFP_PENDING**, ASSIGNED, IN_PROGRESS, COMPLETED, PENDING_OWNER_APPROVAL, **OWNER_REJECTED**
 - `ApprovalSource`: SYSTEM_AUTO, OWNER_APPROVED, OWNER_REJECTED, LEGAL_OBLIGATION
 - `PayingParty`: LANDLORD, TENANT
@@ -138,8 +146,10 @@
 - `BillingFrequency`: MONTHLY, QUARTERLY, SEMI_ANNUAL, ANNUAL
 - `ConversationChannel`: IN_APP, WHATSAPP, VOICE
 - `ConversationRole`: TENANT, ASSISTANT
+- `OutboxStatus`: PENDING, SENT, FAILED — used by `WhatsAppOutbox`
 
 ### ⚠️ Schema Gotchas (fields that DON'T exist where you'd expect)
+- **Income fields renamed 2026-06-23** — `earnedIncomeCents → collectedIncomeCents` (cash received, ledger `INVOICE_PAID`) and `projectedIncomeCents → accruedIncomeCents` (accrual-recognized rent from lease terms). Old names were backwards. Applies to `BuildingFinancialSnapshot`, `BuildingDailySnapshot`, `PortfolioDailySnapshot` columns and all reporting DTOs (migration `20260623030000`).
 - **`Job` has NO `description`** — use `Request.description` via the relation
 - **`Appliance` has NO `category`** — category lives on `AssetModel`, accessed via `appliance.assetModel.category`
 - **`Job.contractorId` is REQUIRED** — every Job must reference an active Contractor

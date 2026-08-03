@@ -85,7 +85,7 @@ describe("NOI Snapshots — Phase 1", () => {
     expect(typeof snap.periodStart).toBe("string");
     expect(typeof snap.periodEnd).toBe("string");
     expect(typeof snap.netOperatingIncomeCents).toBe("number");
-    expect(typeof snap.earnedIncomeCents).toBe("number");
+    expect(typeof snap.collectedIncomeCents).toBe("number");
     expect(typeof snap.expensesTotalCents).toBe("number");
     expect(typeof snap.computedAt).toBe("string");
   });

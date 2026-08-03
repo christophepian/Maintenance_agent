@@ -24,14 +24,18 @@ import {
   InvoiceDirection,
   InvoiceStatus,
   IngestionStatus,
+  Prisma,
 } from "@prisma/client";
 import type { ExtractedAccountBalance, ExtractedInvoiceLine, ScanResult } from "./documentScanner";
 import { scanDocument } from "./documentScan";
 import { storage } from "../storage/attachments";
 import { getAnthropicClient } from "./aiClient";
+import { writeAuditLog } from "./auditLog";
 import { createInvoice } from "./invoices";
 import { postJournalEntries } from "./ledgerService";
+import { mapCsvToAccountBalances, mapCsvToInvoiceLines, ReconciliationLine, CsvMapResult, reconcileBalances, StatedTotalsCents, ReconciliationStatus, RESULT_ACCOUNT_CODE, isResultDesignation } from "./csvAccountingMapper";
 import * as accountRepo from "../repositories/accountRepository";
+import { updateStatementStatus, findApprovedIncomeStatementForYear, findSiblingStatement, findExtractionCache, putExtractionCache } from "../repositories/importedStatementRepository";
 import * as crypto from "crypto";
 
 /* ══════════════════════════════════════════════════════════════
@@ -75,10 +79,152 @@ export interface ImportedStatementDTO {
    * Null when no account balances have been extracted yet.
    */
   balanceImbalanceCents: number | null;
+  /**
+   * Reconciliation of the extracted line items against the document's own stated
+   * section totals — recomputed from current balances. PASS = ties out; FAIL =
+   * doesn't (blocks approval); UNVERIFIED = no stated totals to check against.
+   */
+  reconciliation: { status: ReconciliationStatus; lines: ReconciliationLine[] } | null;
+  /** Domain smell-tests (implausible ratios) — non-blocking warnings for review. */
+  sanityFlags: SanityFlagDTO[];
+  /** One-click fixes derived when a section doesn't tie out (detail view only). */
+  suggestedCorrections: SuggestedCorrectionDTO[];
+  /** P&L result vs balance-sheet result-line agreement (detail view only). */
+  crossCheck: CrossStatementCheckDTO | null;
+  /**
+   * Graduated-autonomy verdict derived from the checks above — GREEN (every
+   * verifiable invariant passed → safe to auto-post), AMBER (ties but something
+   * couldn't be fully verified → post but review), RED (an invariant failed → block).
+   */
+  confidence: ConfidenceDTO;
   /** Invoices created from this statement (matched by sourceFileUrl) */
   linkedInvoices: LinkedInvoiceDTO[];
   createdAt: string;
   updatedAt: string;
+}
+
+export interface SanityFlagDTO {
+  code: string;
+  severity: "warn" | "info";
+  message: string;
+}
+
+export interface SuggestedCorrectionDTO {
+  balanceId: string;
+  accountName: string;
+  currentCents: number;
+  suggestedCents: number;
+  reason: string;
+}
+
+export interface CrossStatementCheckDTO {
+  /** PASS = P&L result agrees with the balance sheet's result line · FAIL = they
+   *  disagree (extraction error on one side) · NA = the sibling/result line is absent. */
+  status: "PASS" | "FAIL" | "NA";
+  plResultCents: number | null;   // income statement: revenue − expenses
+  bsResultCents: number | null;   // balance sheet's "Résultat de l'exercice" line (magnitude)
+  diffCents: number | null;
+}
+
+export type ConfidenceTier = "GREEN" | "AMBER" | "RED";
+
+export interface ConfidenceDTO {
+  tier: ConfidenceTier;
+  reasons: string[];
+}
+
+/** Below this OCR/extraction confidence a statement can't earn GREEN on its own. */
+export const OCR_CONFIDENCE_FLOOR = 70;
+
+/**
+ * Graduated autonomy: collapse the independent checks into one verdict that decides
+ * how much a statement can be trusted without a human. Format-agnostic — it reads
+ * only the invariant results (which hold for any régie layout), never the layout.
+ *   RED   — a hard invariant failed (totals don't reconcile, or the P&L result
+ *           disagrees with the balance sheet). Never auto-post; a human must fix it.
+ *   AMBER — everything that could be checked ties, but something couldn't be fully
+ *           verified (no printed totals to check against, a plausibility warning, or
+ *           low extraction confidence). Safe to post, but flag for a human's eyes.
+ *   GREEN — every verifiable invariant passed. Safe to auto-post out of the box.
+ */
+export function computeConfidenceTier(input: {
+  reconciliation: { status: ReconciliationStatus } | null;
+  crossCheck: { status: "PASS" | "FAIL" | "NA" } | null;
+  sanityFlags: { severity: "warn" | "info" }[];
+  ocrConfidence: number | null;
+}): ConfidenceDTO {
+  // RED — hard invariant failure.
+  const red: string[] = [];
+  if (input.reconciliation?.status === "FAIL") red.push("Totals don't reconcile — line sums don't match the document's own stated totals (or Actif ≠ Passif).");
+  if (input.crossCheck?.status === "FAIL") red.push("The P&L result disagrees with the balance sheet's result-of-the-year line.");
+  if (red.length > 0) return { tier: "RED", reasons: red };
+
+  // AMBER — ties, but not everything could be verified.
+  const amber: string[] = [];
+  if (!input.reconciliation || input.reconciliation.status === "UNVERIFIED") amber.push("No printed section totals to reconcile against — couldn't fully verify the extraction.");
+  const warn = input.sanityFlags.filter((f) => f.severity === "warn").length;
+  if (warn > 0) amber.push(`${warn} plausibility warning${warn > 1 ? "s" : ""} to eyeball (e.g. an implausible ratio).`);
+  if (input.ocrConfidence != null && input.ocrConfidence < OCR_CONFIDENCE_FLOOR) amber.push(`Low extraction confidence (${input.ocrConfidence}%, floor ${OCR_CONFIDENCE_FLOOR}%).`);
+  if (amber.length > 0) return { tier: "AMBER", reasons: amber };
+
+  // GREEN — everything verifiable passed.
+  const green = ["Section totals reconcile to the document's own stated figures."];
+  if (input.crossCheck?.status === "PASS") green.push("The P&L result agrees with the balance sheet.");
+  return { tier: "GREEN", reasons: green };
+}
+
+/**
+ * Cross-statement invariant: an income statement's net result (revenue − expenses)
+ * must equal the balance sheet's own result-of-the-year equity line. They're
+ * extracted separately, so a mis-read on one side (e.g. gérance 9 vs 7'134) makes
+ * them disagree even when each statement is internally consistent — the tell that
+ * a within-statement check can't see. Compares magnitudes (sign conventions vary
+ * per régie); NA when the sibling or the result line is missing.
+ */
+export function computeCrossStatementResult(
+  incomeBalances: { documentSection: string; balanceCents: number }[],
+  bsBalances: { documentSection: string; balanceCents: number; rawAccountCode?: string | null; rawAccountName?: string | null; account?: { code?: string | null; name?: string | null } | null }[],
+): CrossStatementCheckDTO {
+  const TOL = 500; // CHF 5
+  const rev = Math.abs(incomeBalances.filter((b) => b.documentSection === "REVENUE").reduce((s, b) => s + b.balanceCents, 0));
+  const exp = Math.abs(incomeBalances.filter((b) => b.documentSection === "EXPENSE").reduce((s, b) => s + b.balanceCents, 0));
+  if (rev === 0 && exp === 0) return { status: "NA", plResultCents: null, bsResultCents: null, diffCents: null };
+  const plResult = rev - exp;
+
+  const codeOf = (b: { rawAccountCode?: string | null; account?: { code?: string | null } | null }) => (b.account?.code ?? b.rawAccountCode ?? "").replace(/\D/g, "");
+  const nameOf = (b: { rawAccountName?: string | null; account?: { name?: string | null } | null }) => (b.account?.name ?? b.rawAccountName ?? "");
+  let resultLine = bsBalances.find((b) => codeOf(b) === RESULT_ACCOUNT_CODE);
+  if (!resultLine) {
+    const named = bsBalances.filter((b) => isResultDesignation(nameOf(b)));
+    if (named.length === 1) resultLine = named[0]; // unambiguous only
+  }
+  if (!resultLine) return { status: "NA", plResultCents: plResult, bsResultCents: null, diffCents: null };
+
+  const bsResult = Math.abs(resultLine.balanceCents);
+  const diff = Math.abs(plResult) - bsResult;
+  return { status: Math.abs(diff) <= TOL ? "PASS" : "FAIL", plResultCents: plResult, bsResultCents: bsResult, diffCents: diff };
+}
+
+type StatementForCrossCheck = {
+  buildingId: string | null;
+  sectionType: StatementSectionType;
+  fiscalYear: number;
+  uploadBatchId: string | null;
+  accountBalances: { documentSection: string; balanceCents: number; rawAccountCode?: string | null; rawAccountName?: string | null; account?: { code?: string | null; name?: string | null } | null }[];
+};
+
+/** Fetch the sibling statement and cross-reconcile P&L result vs BS result line. */
+async function getCrossStatementCheck(prisma: PrismaClient, orgId: string, s: StatementForCrossCheck): Promise<CrossStatementCheckDTO | null> {
+  if (!s.buildingId) return null;
+  const isIncome = s.sectionType === StatementSectionType.INCOME_STATEMENT;
+  const isBs = s.sectionType === StatementSectionType.BALANCE_SHEET;
+  if (!isIncome && !isBs) return null;
+  const siblingType = isIncome ? StatementSectionType.BALANCE_SHEET : StatementSectionType.INCOME_STATEMENT;
+  const sibling = await findSiblingStatement(prisma, orgId, s.buildingId, s.fiscalYear, siblingType, s.uploadBatchId);
+  if (!sibling) return null;
+  const income = isIncome ? s.accountBalances : sibling.accountBalances;
+  const bs = isIncome ? sibling.accountBalances : s.accountBalances;
+  return computeCrossStatementResult(income, bs);
 }
 
 export interface LinkedInvoiceDTO {
@@ -123,6 +269,8 @@ export interface IngestStatementInput {
   uploadedBy: string;
   /** Manager-supplied document type hint — bypasses auto-detection */
   hintDocType?: string;
+  /** True when the uploaded file is a CSV — routes to deterministic CSV parsing instead of OCR */
+  isCsv?: boolean;
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -209,19 +357,37 @@ interface AccountRow {
 
 /**
  * Match a single extracted account balance row to an Account in the org's COA.
- * Order: exact code → name fuzzy → Claude Haiku classification → UNMATCHED.
+ * Order: exact code (only if the name agrees) → name fuzzy → Claude Haiku
+ * classification → UNMATCHED. Code alone is NOT authoritative: régie charts reuse
+ * our canonical numbers for different accounts, so a name check guards the code step.
  */
 async function matchAccount(
   orgAccounts: AccountRow[],
   rawCode: string,
   rawName: string,
   balanceCents: number,
+  allowClaude = true,
 ): Promise<{ accountId: string | null; confidence: MatchConfidence }> {
-  // 1. Exact code match — always authoritative regardless of account type
+  // 1. Exact code match — trusted ONLY when the account NAME is also consistent.
+  //    Régie charts use their own (French/German) numbering that COLLIDES with our
+  //    canonical COA while meaning something entirely different — e.g. this régie's
+  //    "4500 Electricité" is our "4500 Property Management Fee", their "4600 Honoraires
+  //    de gestion" (the real management fee) is our "4600 Property Tax", and their
+  //    "4100 Contrats d'entretien" is our "4100 Mortgage Interest" (FINANCING!).
+  //    A bare code collision therefore mislabels AND miscategorises the line. When the
+  //    code matches but the name disagrees, fall through to name / cross-language
+  //    semantic matching (fuzzy → Claude) below instead of trusting the number.
+  const nameNorm = rawName.toLowerCase().trim();
+  const nameConsistent = (a: AccountRow) => {
+    const an = a.name.toLowerCase().trim();
+    return !nameNorm || !an || an.includes(nameNorm) || nameNorm.includes(an);
+  };
   const exactCode = orgAccounts.find(
     (a) => a.code && a.code.trim() === rawCode.trim(),
   );
-  if (exactCode) return { accountId: exactCode.id, confidence: MatchConfidence.AUTO };
+  if (exactCode && nameConsistent(exactCode)) {
+    return { accountId: exactCode.id, confidence: MatchConfidence.AUTO };
+  }
 
   // Narrow the candidate pool to accounts whose code starts with the same digit as
   // the raw code.  This prevents a 2xxx liability row (e.g. "2210 Compte courant
@@ -240,13 +406,17 @@ async function matchAccount(
     : orgAccounts;
 
   // 2. Name fuzzy match (case-insensitive substring) — same account type only
-  const nameNorm = rawName.toLowerCase().trim();
   const fuzzy = sameTypeAccounts.find(
     (a) =>
       a.name.toLowerCase().includes(nameNorm) ||
       nameNorm.includes(a.name.toLowerCase()),
   );
   if (fuzzy) return { accountId: fuzzy.id, confidence: MatchConfidence.FUZZY };
+
+  // Skip the PAID Claude step when the caller opts out (income statements: they are
+  // reference-only, never posted, and display the régie's own name — a free exact/
+  // fuzzy hit above still links; otherwise leave UNMATCHED rather than pay per row).
+  if (!allowClaude) return { accountId: null, confidence: MatchConfidence.UNMATCHED };
 
   // 3. Claude Haiku classification — same account type only.
   //    If there are no same-type candidates, skip Claude and return UNMATCHED so
@@ -399,6 +569,13 @@ async function resolveContractorFromLine(
    Main ingest pipeline
    ══════════════════════════════════════════════════════════════ */
 
+/**
+ * Bump when the extraction logic (scanner prompts / parsing) changes, so cached
+ * extractions from the old logic are no longer reused. The cache key embeds this.
+ * Shared by the single-statement path here and the régie-package wizard path.
+ */
+export const EXTRACTOR_VERSION = "v1";
+
 export async function ingestStatement(
   prisma: PrismaClient,
   input: IngestStatementInput,
@@ -478,10 +655,18 @@ export async function ingestStatement(
   //    the extraction always completes before the client gets a response.
   //    Trade-off: the upload takes 20–40 s instead of <1 s, but the returned
   //    statement is PENDING_REVIEW (not stuck in PROCESSING).
-  await runIngestionBackground(
-    prisma, batch.id, placeholder.id, orgId, buffer, fileName, mimeType,
-    fiscalYear, buildingId, fileKey, hintDocType,
-  );
+  if (input.isCsv) {
+    // CSV path — deterministic parsing, no OCR. Fast (<1 s).
+    await ingestCsvSections(
+      prisma, batch.id, placeholder.id, orgId, buffer, fileName,
+      fiscalYear, buildingId, fileKey, hintDocType,
+    );
+  } else {
+    await runIngestionBackground(
+      prisma, batch.id, placeholder.id, orgId, buffer, fileName, mimeType,
+      fiscalYear, buildingId, fileKey, hintDocType,
+    );
+  }
 
   // Re-fetch the batch so the response includes all sections created by the run
   // (placeholder now PENDING_REVIEW, and any IS / INVOICES siblings).
@@ -525,9 +710,27 @@ async function runIngestionBackground(
   };
 
   try {
-    // 1. Scan document (OCR + Claude extraction)
-    console.log(`[IMPORT] [bg] batch=${batchId} Scanning "${fileName}" size=${buffer.length}${hintDocType ? ` hint=${hintDocType}` : ""}`);
-    const scanResult: ScanResult = await scanDocument(buffer, fileName, mimeType, hintDocType);
+    // 1. Scan document (OCR + Claude extraction) — but first try to reuse a prior
+    //    extraction of the IDENTICAL file (same content hash + extractor version) so
+    //    re-uploads skip the costly vision pass. Cache is org-scoped for isolation.
+    const cacheKey = `${EXTRACTOR_VERSION}|doc|${hintDocType ?? ""}|${crypto.createHash("sha256").update(buffer).digest("hex")}`;
+    let scanResult: ScanResult | null = null;
+    try {
+      scanResult = (await findExtractionCache(prisma, orgId, cacheKey)) as ScanResult | null;
+    } catch (e) {
+      console.error(`[IMPORT] [bg] batch=${batchId} extraction cache lookup failed (continuing without cache):`, e);
+    }
+    if (scanResult) {
+      console.log(`[IMPORT] [bg] batch=${batchId} extraction cache HIT — skipped vision for "${fileName}"`);
+    } else {
+      console.log(`[IMPORT] [bg] batch=${batchId} Scanning "${fileName}" size=${buffer.length}${hintDocType ? ` hint=${hintDocType}` : ""}`);
+      scanResult = await scanDocument(buffer, fileName, mimeType, hintDocType);
+      try {
+        await putExtractionCache(prisma, orgId, cacheKey, scanResult);
+      } catch (e) {
+        console.error(`[IMPORT] [bg] batch=${batchId} extraction cache store failed (continuing):`, e);
+      }
+    }
     console.log(
       `[IMPORT] [bg] Scan complete: docType=${scanResult.docType} confidence=${scanResult.confidence} ` +
       `balances=${scanResult.accountBalances?.length ?? 0} invoices=${scanResult.invoiceLines?.length ?? 0}`,
@@ -574,135 +777,325 @@ async function runIngestionBackground(
       rawOcrText,
     };
 
-    const orgAccounts = await accountRepo.findAccountsByOrg(prisma, orgId);
-
-    // 4. Classify accounts into balance-sheet vs income-statement by account code prefix.
-    //    Swiss chart of accounts: 1xxx–2xxx = balance sheet, 3xxx–8xxx = income statement.
-    const allBalances = scanResult.accountBalances ?? [];
-    const bsBalances = allBalances.filter((b) => isBalanceSheetAccount(b.rawAccountCode));
-    const isBalances = allBalances.filter((b) => !isBalanceSheetAccount(b.rawAccountCode));
-
-    // 5. Populate the placeholder statement as BALANCE_SHEET (or INCOME_STATEMENT if no BS rows).
-    //    Persist balances BEFORE flipping status to PENDING_REVIEW so the UI never sees
-    //    a PENDING_REVIEW statement with an empty accountBalances array.
-    const firstSectionType = bsBalances.length > 0 || isBalances.length === 0
-      ? StatementSectionType.BALANCE_SHEET
-      : StatementSectionType.INCOME_STATEMENT;
-    const firstSectionBalances = firstSectionType === StatementSectionType.BALANCE_SHEET ? bsBalances : isBalances;
-
-    await prisma.importedStatement.update({
-      where: { id: placeholderStatementId },
-      data: { ...metadataUpdate, sectionType: firstSectionType },
+    // 4–7. Classify balances into sections, persist, and create invoices.
+    //       Shared with the CSV import path (ingestCsvSections) so both sources
+    //       produce identical review-gate section shapes.
+    await persistExtractedSections(prisma, {
+      batchId,
+      placeholderStatementId,
+      orgId,
+      fileKey,
+      metadata: metadataUpdate,
+      accountBalances: scanResult.accountBalances ?? [],
+      invoiceLines: scanResult.invoiceLines ?? [],
+      logPrefix: "[IMPORT] [bg]",
     });
-
-    if (firstSectionBalances.length > 0) {
-      await persistBalances(prisma, orgId, placeholderStatementId, firstSectionBalances, orgAccounts);
-    }
-
-    // Status flip happens last — after balances are committed
-    await prisma.importedStatement.update({
-      where: { id: placeholderStatementId },
-      data: { status: ImportedStatementStatus.PENDING_REVIEW },
-    });
-
-    // 6. Create a separate INCOME_STATEMENT record if we have both section types.
-    //    Same ordering: persist balances, then set PENDING_REVIEW.
-    if (bsBalances.length > 0 && isBalances.length > 0) {
-      const uploader = (await prisma.uploadBatch.findFirst({ where: { id: batchId }, select: { uploadedBy: true } }))?.uploadedBy ?? "";
-      const isStatement = await prisma.importedStatement.create({
-        data: {
-          orgId,
-          uploadBatchId: batchId,
-          sectionType: StatementSectionType.INCOME_STATEMENT,
-          sourceFileUrl: fileKey,
-          uploadedBy: uploader,
-          status: ImportedStatementStatus.PROCESSING,
-          ...metadataUpdate,
-        },
-      });
-      await persistBalances(prisma, orgId, isStatement.id, isBalances, orgAccounts);
-      await prisma.importedStatement.update({
-        where: { id: isStatement.id },
-        data: { status: ImportedStatementStatus.PENDING_REVIEW },
-      });
-      console.log(`[IMPORT] [bg] Created INCOME_STATEMENT section: id=${isStatement.id} rows=${isBalances.length}`);
-    }
-
-    // 7. Create Invoice records from extracted invoice lines
-    const invoiceLines = scanResult.invoiceLines ?? [];
-    if (invoiceLines.length > 0) {
-      // Create a dedicated INVOICES section statement to group them
-      let invoiceStatementId: string | null = null;
-      if (finalBuildingId) {
-        const uploader = (await prisma.uploadBatch.findFirst({ where: { id: batchId }, select: { uploadedBy: true } }))?.uploadedBy ?? "";
-        const invStatement = await prisma.importedStatement.create({
-          data: {
-            orgId,
-            uploadBatchId: batchId,
-            sectionType: StatementSectionType.INVOICES,
-            sourceFileUrl: fileKey,
-            uploadedBy: uploader,
-            status: ImportedStatementStatus.PROCESSING,
-            ...metadataUpdate,
-          },
-        });
-        invoiceStatementId = invStatement.id;
-        console.log(`[IMPORT] [bg] Created INVOICES section: id=${invStatement.id}`);
-      }
-
-      for (const line of invoiceLines) {
-        try {
-          await resolveUnitFromLine(prisma, orgId, finalBuildingId ?? "", line.unitHint, line.tenantHint);
-          await resolveContractorFromLine(prisma, orgId, line.vendorName);
-
-          const totalChf    = line.totalAmount ?? null;
-          const vatChf      = line.vatAmount   ?? null;
-          const subtotalChf = line.subtotal    ?? null;
-          let netAmount: number | undefined;
-          if (subtotalChf != null)                     netAmount = subtotalChf;
-          else if (totalChf != null && vatChf != null) netAmount = totalChf - vatChf;
-          else                                          netAmount = totalChf ?? undefined;
-
-          await createInvoice({
-            orgId,
-            direction: InvoiceDirection.INCOMING,
-            sourceChannel: InvoiceSourceChannel.BROWSER_UPLOAD,
-            ingestionStatus: IngestionStatus.PENDING_REVIEW,
-            rawOcrText: truncate(JSON.stringify(line), 4000),
-            ocrConfidence: scanResult.confidence,
-            sourceFileUrl: fileKey,
-            amount: netAmount,
-            description: line.description ?? `[Imported] ${line.vendorName ?? "Invoice"}`,
-            recipientName: line.vendorName ?? undefined,
-            iban: line.iban ?? undefined,
-            paymentReference: line.paymentReference ?? undefined,
-            currency: line.currency ?? undefined,
-            vatRate: vatChf != null && netAmount ? Math.round((vatChf / netAmount) * 10000) / 100 : 0,
-            issueDate: line.invoiceDate ? parseDateField(line.invoiceDate) : undefined,
-            dueDate:   line.dueDate     ? parseDateField(line.dueDate)     : undefined,
-            matchedJobId:      undefined,
-            matchedLeaseId:    undefined,
-            matchedBuildingId: finalBuildingId ?? undefined,
-          });
-        } catch (lineErr) {
-          console.warn(`[IMPORT] [bg] Failed to create invoice for "${line.vendorName}":`, lineErr);
-        }
-      }
-
-      // Mark the INVOICES section as PENDING_REVIEW if created
-      if (invoiceStatementId) {
-        await prisma.importedStatement.update({
-          where: { id: invoiceStatementId },
-          data: { status: ImportedStatementStatus.PENDING_REVIEW },
-        });
-      }
-      console.log(`[IMPORT] [bg] Processed ${invoiceLines.length} invoice line(s)`);
-    }
 
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : String(err);
     console.error(`[IMPORT] [bg] Processing failed for batch ${batchId}: ${errorMsg}`);
     await markPlaceholderFailed(errorMsg);
+  }
+}
+
+/** Shared metadata applied to every section statement in a batch. */
+interface SectionMetadata {
+  buildingId: string | null;
+  buildingMatchConfidence: MatchConfidence | null;
+  fiscalYear: number;
+  periodStart: Date | null;
+  periodEnd: Date | null;
+  ocrConfidence: number | null;
+  rawOcrText: string | null;
+}
+
+interface PersistSectionsInput {
+  batchId: string;
+  placeholderStatementId: string;
+  orgId: string;
+  fileKey: string;
+  metadata: SectionMetadata;
+  accountBalances: ExtractedAccountBalance[];
+  invoiceLines: ExtractedInvoiceLine[];
+  logPrefix: string;
+  /** Document's own declared section grand-totals (CHF cents), for the approval gate. */
+  statedTotals?: StatedTotalsCents;
+}
+
+/** The stated totals relevant to one statement's section type (BS → Actif/Passif,
+ *  IS → Produits/Charges), so a balance-sheet statement isn't flagged for missing
+ *  income totals and vice-versa. Returns undefined when none apply. */
+function statedTotalsForSection(
+  all: StatedTotalsCents | undefined,
+  type: StatementSectionType,
+): StatedTotalsCents | undefined {
+  if (!all) return undefined;
+  const keys: (keyof StatedTotalsCents)[] = type === StatementSectionType.BALANCE_SHEET ? ["ACTIF", "PASSIF"] : ["REVENUE", "EXPENSE"];
+  const out: StatedTotalsCents = {};
+  for (const k of keys) if (all[k] != null) out[k] = all[k];
+  return Object.keys(out).length > 0 ? out : undefined;
+}
+
+/**
+ * Classify extracted account balances into BALANCE_SHEET / INCOME_STATEMENT
+ * sections, persist them, then create Invoice records from extracted invoice
+ * lines — all behind the review gate (status flips to PENDING_REVIEW only after
+ * balances are committed, to avoid the empty-balances polling race).
+ *
+ * Shared by the OCR path (runIngestionBackground) and the CSV path
+ * (ingestCsvSections) so both produce identical section shapes.
+ */
+async function persistExtractedSections(
+  prisma: PrismaClient,
+  input: PersistSectionsInput,
+): Promise<void> {
+  const { batchId, placeholderStatementId, orgId, fileKey, metadata, logPrefix } = input;
+  const finalBuildingId = metadata.buildingId;
+  const orgAccounts = await accountRepo.findAccountsByOrg(prisma, orgId);
+
+  // 4. Classify accounts into balance-sheet vs income-statement. The extracted
+  //    documentSection (from the printed section header) is authoritative — a régie
+  //    can use non-standard codes (e.g. 9900 "c/c régie" is a balance-sheet current
+  //    account, or an asset-range code placed under Passifs). Only fall back to the
+  //    code prefix (1xxx–2xxx = balance sheet) when the section is unknown.
+  const isBalanceSheetRow = (b: ExtractedAccountBalance) =>
+    b.documentSection === "ACTIF" || b.documentSection === "PASSIF" ? true
+      : b.documentSection === "REVENUE" || b.documentSection === "EXPENSE" ? false
+        : isBalanceSheetAccount(b.rawAccountCode);
+  const allBalances = input.accountBalances;
+  const bsBalances = allBalances.filter(isBalanceSheetRow);
+  const isBalances = allBalances.filter((b) => !isBalanceSheetRow(b));
+
+  // 5. Populate the placeholder statement as BALANCE_SHEET (or INCOME_STATEMENT if no BS rows).
+  //    Persist balances BEFORE flipping status to PENDING_REVIEW so the UI never sees
+  //    a PENDING_REVIEW statement with an empty accountBalances array.
+  const firstSectionType = bsBalances.length > 0 || isBalances.length === 0
+    ? StatementSectionType.BALANCE_SHEET
+    : StatementSectionType.INCOME_STATEMENT;
+  const firstSectionBalances = firstSectionType === StatementSectionType.BALANCE_SHEET ? bsBalances : isBalances;
+
+  await prisma.importedStatement.update({
+    where: { id: placeholderStatementId },
+    data: {
+      ...metadata,
+      sectionType: firstSectionType,
+      statedTotals: (statedTotalsForSection(input.statedTotals, firstSectionType) ?? Prisma.JsonNull) as Prisma.InputJsonValue,
+    },
+  });
+
+  if (firstSectionBalances.length > 0) {
+    await persistBalances(prisma, orgId, placeholderStatementId, firstSectionBalances, orgAccounts, firstSectionType);
+  }
+
+  // Status flip happens last — after balances are committed
+  await prisma.importedStatement.update({
+    where: { id: placeholderStatementId },
+    data: { status: ImportedStatementStatus.PENDING_REVIEW },
+  });
+
+  // 6. Create a separate INCOME_STATEMENT record if we have both section types.
+  //    Same ordering: persist balances, then set PENDING_REVIEW.
+  if (bsBalances.length > 0 && isBalances.length > 0) {
+    const uploader = (await prisma.uploadBatch.findFirst({ where: { id: batchId }, select: { uploadedBy: true } }))?.uploadedBy ?? "";
+    const isStatement = await prisma.importedStatement.create({
+      data: {
+        orgId,
+        uploadBatchId: batchId,
+        sectionType: StatementSectionType.INCOME_STATEMENT,
+        sourceFileUrl: fileKey,
+        uploadedBy: uploader,
+        status: ImportedStatementStatus.PROCESSING,
+        ...metadata,
+        statedTotals: (statedTotalsForSection(input.statedTotals, StatementSectionType.INCOME_STATEMENT) ?? Prisma.JsonNull) as Prisma.InputJsonValue,
+      },
+    });
+    await persistBalances(prisma, orgId, isStatement.id, isBalances, orgAccounts, StatementSectionType.INCOME_STATEMENT);
+    await prisma.importedStatement.update({
+      where: { id: isStatement.id },
+      data: { status: ImportedStatementStatus.PENDING_REVIEW },
+    });
+    console.log(`${logPrefix} Created INCOME_STATEMENT section: id=${isStatement.id} rows=${isBalances.length}`);
+  }
+
+  // 7. Create Invoice records from extracted invoice lines
+  const invoiceLines = input.invoiceLines;
+  if (invoiceLines.length > 0) {
+    // Create a dedicated INVOICES section statement to group them
+    let invoiceStatementId: string | null = null;
+    if (finalBuildingId) {
+      const uploader = (await prisma.uploadBatch.findFirst({ where: { id: batchId }, select: { uploadedBy: true } }))?.uploadedBy ?? "";
+      const invStatement = await prisma.importedStatement.create({
+        data: {
+          orgId,
+          uploadBatchId: batchId,
+          sectionType: StatementSectionType.INVOICES,
+          sourceFileUrl: fileKey,
+          uploadedBy: uploader,
+          status: ImportedStatementStatus.PROCESSING,
+          ...metadata,
+        },
+      });
+      invoiceStatementId = invStatement.id;
+      console.log(`${logPrefix} Created INVOICES section: id=${invStatement.id}`);
+    }
+
+    for (const line of invoiceLines) {
+      try {
+        await resolveUnitFromLine(prisma, orgId, finalBuildingId ?? "", line.unitHint, line.tenantHint);
+        await resolveContractorFromLine(prisma, orgId, line.vendorName);
+
+        const totalChf    = line.totalAmount ?? null;
+        const vatChf      = line.vatAmount   ?? null;
+        const subtotalChf = line.subtotal    ?? null;
+        let netAmount: number | undefined;
+        if (subtotalChf != null)                     netAmount = subtotalChf;
+        else if (totalChf != null && vatChf != null) netAmount = totalChf - vatChf;
+        else                                          netAmount = totalChf ?? undefined;
+
+        await createInvoice({
+          orgId,
+          direction: InvoiceDirection.INCOMING,
+          sourceChannel: InvoiceSourceChannel.BROWSER_UPLOAD,
+          ingestionStatus: IngestionStatus.PENDING_REVIEW,
+          rawOcrText: truncate(JSON.stringify(line), 4000),
+          ocrConfidence: metadata.ocrConfidence ?? undefined,
+          sourceFileUrl: fileKey,
+          amount: netAmount,
+          description: line.description ?? `[Imported] ${line.vendorName ?? "Invoice"}`,
+          recipientName: line.vendorName ?? undefined,
+          iban: line.iban ?? undefined,
+          paymentReference: line.paymentReference ?? undefined,
+          currency: line.currency ?? undefined,
+          vatRate: vatChf != null && netAmount ? Math.round((vatChf / netAmount) * 10000) / 100 : 0,
+          issueDate: line.invoiceDate ? parseDateField(line.invoiceDate) : undefined,
+          dueDate:   line.dueDate     ? parseDateField(line.dueDate)     : undefined,
+          matchedJobId:      undefined,
+          matchedLeaseId:    undefined,
+          matchedBuildingId: finalBuildingId ?? undefined,
+        });
+      } catch (lineErr) {
+        console.warn(`${logPrefix} Failed to create invoice for "${line.vendorName}":`, lineErr);
+      }
+    }
+
+    // Mark the INVOICES section as PENDING_REVIEW if created
+    if (invoiceStatementId) {
+      await prisma.importedStatement.update({
+        where: { id: invoiceStatementId },
+        data: { status: ImportedStatementStatus.PENDING_REVIEW },
+      });
+    }
+    console.log(`${logPrefix} Processed ${invoiceLines.length} invoice line(s)`);
+  }
+}
+
+/**
+ * CSV ingestion — deterministic alternative to OCR extraction.
+ *
+ * Parses the uploaded CSV into the same ExtractedAccountBalance /
+ * ExtractedInvoiceLine shapes the scanner produces, then reuses
+ * persistExtractedSections so the review gate + ledger posting are identical.
+ *
+ *   hintDocType === "INVOICE"  → invoices CSV
+ *   otherwise                  → account-balance CSV (auto-classified BS/IS)
+ */
+/**
+ * Render the balance reconciliation as a human-readable block for the review
+ * gate: shows, per section and for the Actif=Passif identity, whether the
+ * extracted totals tie out to the document's own declared totals.
+ */
+function formatReconciliation(recon: ReconciliationLine[]): string {
+  if (!recon.length) return "";
+  const fmt = (n: number) => n.toLocaleString("de-CH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const allOk = recon.every((r) => r.ok);
+  const header = allOk
+    ? "✓ Reconciliation passed — extracted totals tie out to the document."
+    : "⚠ Reconciliation: extracted totals differ from the document —";
+  const lines = recon.map((r) => {
+    const mark = r.ok ? "✓" : "⚠";
+    const cmp =
+      r.statedChf == null
+        ? fmt(r.computedChf)
+        : `${fmt(r.computedChf)} vs ${fmt(r.statedChf)}` + (r.ok ? "" : ` (off by ${fmt(r.diffChf)})`);
+    return `  ${mark} ${r.scope}: ${cmp}`;
+  });
+  return [header, ...lines].join("\n");
+}
+
+async function ingestCsvSections(
+  prisma: PrismaClient,
+  batchId: string,
+  placeholderStatementId: string,
+  orgId: string,
+  buffer: Buffer,
+  fileName: string,
+  fiscalYear: number,
+  buildingId: string | null,
+  fileKey: string,
+  hintDocType: string | undefined,
+): Promise<void> {
+  try {
+    const text = buffer.toString("utf8");
+    const isInvoices = hintDocType === "INVOICE";
+
+    const emptyBalance: CsvMapResult<ExtractedAccountBalance> = { items: [], skipped: [] };
+    const balanceResult = isInvoices ? emptyBalance : mapCsvToAccountBalances(text);
+    const invoiceResult = isInvoices ? mapCsvToInvoiceLines(text) : { items: [], skipped: [] };
+    const skipped = [...balanceResult.skipped, ...invoiceResult.skipped];
+    const reconSummary = formatReconciliation(balanceResult.reconciliation ?? []);
+
+    console.log(
+      `${"[CSV IMPORT]"} batch=${batchId} file="${fileName}" ` +
+      `balances=${balanceResult.items.length} invoices=${invoiceResult.items.length} skipped=${skipped.length}`,
+    );
+
+    const metadata: SectionMetadata = {
+      buildingId,
+      buildingMatchConfidence: buildingId ? MatchConfidence.MANUAL : null,
+      fiscalYear,
+      periodStart: new Date(`${fiscalYear}-01-01T00:00:00Z`),
+      periodEnd: new Date(`${fiscalYear}-12-31T00:00:00Z`),
+      ocrConfidence: null, // deterministic parse — no OCR uncertainty (≠ a low OCR score)
+      rawOcrText:
+        `CSV import — ${fileName}\n` +
+        `${balanceResult.items.length} balance row(s), ${invoiceResult.items.length} invoice row(s)` +
+        (reconSummary ? `\n\n${reconSummary}` : "") +
+        (skipped.length ? `\nSkipped rows:\n- ${skipped.join("\n- ")}` : ""),
+    };
+
+    const statedTotalsCents = balanceResult.statedTotals
+      ? Object.fromEntries(Object.entries(balanceResult.statedTotals).map(([k, v]) => [k, Math.round((v as number) * 100)]))
+      : undefined;
+    await persistExtractedSections(prisma, {
+      batchId,
+      placeholderStatementId,
+      orgId,
+      fileKey,
+      metadata,
+      accountBalances: balanceResult.items,
+      invoiceLines: invoiceResult.items,
+      logPrefix: "[CSV IMPORT]",
+      statedTotals: statedTotalsCents,
+    });
+
+    // Surface the reconciliation status + any skipped rows on the placeholder so
+    // the manager sees, up front, whether the extracted totals tie out.
+    const noteParts: string[] = [];
+    if (reconSummary) noteParts.push(reconSummary);
+    if (skipped.length > 0) noteParts.push(`Skipped ${skipped.length} row(s):\n- ${skipped.join("\n- ")}`);
+    if (noteParts.length > 0) {
+      await updateStatementStatus(prisma, placeholderStatementId, orgId, {
+        status: ImportedStatementStatus.PENDING_REVIEW,
+        notes: noteParts.join("\n\n"),
+      }).catch(() => { /* best-effort */ });
+    }
+  } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    console.error(`[CSV IMPORT] Processing failed for batch ${batchId}: ${errorMsg}`);
+    await updateStatementStatus(prisma, placeholderStatementId, orgId, {
+      status: ImportedStatementStatus.PENDING_REVIEW,
+      notes: `CSV import error: ${errorMsg}`,
+    }).catch(() => { /* best-effort */ });
   }
 }
 
@@ -731,12 +1124,16 @@ async function persistBalances(
   statementId: string,
   balances: ExtractedAccountBalance[],
   orgAccounts: Awaited<ReturnType<typeof accountRepo.findAccountsByOrg>>,
+  sectionType: StatementSectionType,
 ): Promise<void> {
+  // Income statements are reference-only + display the régie's own name, so we don't
+  // pay for Claude account matching on them (free exact/fuzzy still applies).
+  const allowClaude = sectionType !== StatementSectionType.INCOME_STATEMENT;
   const rows = await Promise.all(
     balances.map(async (ab) => {
       // Preserve sign — negative values are contra-accounts / deductions within their section
       const balanceCents = Math.round(ab.balanceChf * 100);
-      const match = await matchAccount(orgAccounts, ab.rawAccountCode, ab.rawAccountName, Math.abs(balanceCents));
+      const match = await matchAccount(orgAccounts, ab.rawAccountCode, ab.rawAccountName, Math.abs(balanceCents), allowClaude);
       return {
         orgId,
         statementId,
@@ -763,6 +1160,7 @@ export async function approveStatement(
   statementId: string,
   orgId: string,
   approvedBy: string,
+  opts?: { override?: boolean; overrideReason?: string },
 ): Promise<ImportedStatementDTO> {
   const statement = await prisma.importedStatement.findFirst({
     where: { id: statementId, orgId },
@@ -779,6 +1177,34 @@ export async function approveStatement(
   if (!statement.buildingId) {
     throw new ImportedStatementError("BUILDING_REQUIRED", "A building must be assigned before this statement can be approved");
   }
+
+  // Reconciliation gate: the extracted line items must tie out to the document's
+  // own stated section totals before a statement can feed client-facing reporting.
+  // Recomputed here from the CURRENT balances so manager corrections are reflected.
+  // FAIL (stated totals exist but the extraction doesn't match them — e.g. the
+  // 7'134→9 gérance misread) HARD-BLOCKS unless the manager overrides with a
+  // reason. UNVERIFIED (no stated totals to check against) is surfaced as a
+  // caution but does not block — capturing those totals across every extraction
+  // path is Phase 2; until then it would block legitimate imports.
+  const recon = reconcileBalances(statement.accountBalances, (statement.statedTotals ?? null) as StatedTotalsCents | null);
+  if (recon.status === "FAIL" && !opts?.override) {
+    const failing = recon.lines.filter((l) => !l.ok).map((l) => `${l.scope}: extracted ${l.computedChf} vs stated ${l.statedChf} (off by ${l.diffChf})`);
+    throw new ImportedStatementError("RECONCILIATION_FAILED", `Extracted totals don't tie out to the document — ${failing.join("; ")}. Correct the flagged balances, or approve with override.`);
+  }
+  // Cross-statement result reconciliation — the P&L result must equal the balance
+  // sheet's result line. Catches a mis-read on one side even when each statement is
+  // internally consistent. Blocks (like the within-statement gate) unless overridden.
+  const cross = await getCrossStatementCheck(prisma, orgId, statement);
+  if (cross?.status === "FAIL" && !opts?.override) {
+    throw new ImportedStatementError(
+      "CROSS_STATEMENT_MISMATCH",
+      `The income statement's result (${(cross.plResultCents! / 100).toLocaleString("de-CH")}) doesn't match the balance sheet's result line (${(cross.bsResultCents! / 100).toLocaleString("de-CH")}) — off by ${(Math.abs(cross.diffCents!) / 100).toLocaleString("de-CH")}. Fix the mis-read figure, or approve with override.`,
+    );
+  }
+
+  const overrideNote = (recon.status === "FAIL" || cross?.status === "FAIL") && opts?.override
+    ? `⚠ Approved despite failed reconciliation${opts.overrideReason ? `: ${opts.overrideReason}` : ""} (by ${approvedBy})`
+    : null;
 
   const isIncomeStatement = statement.sectionType === StatementSectionType.INCOME_STATEMENT;
 
@@ -920,10 +1346,12 @@ export async function approveStatement(
     });
   }
 
-  // Mark statement approved; record whether this was reference-only
-  const approvalNotes = referenceOnly
-    ? `Approved as reference only — existing ledger activity found for FY${statement.fiscalYear}. No journal entries posted.`
-    : null;
+  // Mark statement approved; record whether this was reference-only + any
+  // reconciliation override so the audit trail shows the numbers weren't blindly trusted.
+  const approvalNotes = [
+    referenceOnly ? `Approved as reference only — existing ledger activity found for FY${statement.fiscalYear}. No journal entries posted.` : null,
+    overrideNote,
+  ].filter(Boolean).join("\n") || null;
 
   const updated = await prisma.importedStatement.update({
     where: { id: statementId },
@@ -936,6 +1364,20 @@ export async function approveStatement(
     include: {
       building: { select: { name: true } },
       accountBalances: { include: { account: { select: { name: true, code: true } } } },
+    },
+  });
+
+  await writeAuditLog(prisma, {
+    action: "STATEMENT_APPROVED",
+    orgId,
+    actorUserId: approvedBy,
+    entityType: "ImportedStatement",
+    entityId: statementId,
+    metadata: {
+      buildingId: statement.buildingId,
+      sectionType: statement.sectionType,
+      fiscalYear: statement.fiscalYear,
+      referenceOnly,
     },
   });
 
@@ -1069,7 +1511,28 @@ export async function getStatement(
         })
       : [];
 
-  return mapDTO(s, linkedInvoices);
+  const dto = mapDTO(s, linkedInvoices);
+
+  let sanityFlags = dto.sanityFlags;
+  let suggestedCorrections = dto.suggestedCorrections;
+
+  // Year-over-year continuity + one-click corrections — income statements only,
+  // against the prior year's APPROVED statement (the trusted baseline).
+  if (s.buildingId && s.sectionType === StatementSectionType.INCOME_STATEMENT) {
+    const prior = await findApprovedIncomeStatementForYear(prisma, orgId, s.buildingId, s.fiscalYear - 1);
+    if (prior) {
+      sanityFlags = [...sanityFlags, ...computeContinuityFlags(s.accountBalances, prior.accountBalances, s.fiscalYear - 1)];
+      suggestedCorrections = computeSuggestedCorrections(s.accountBalances, prior.accountBalances, (s.statedTotals ?? null) as StatedTotalsCents | null, s.fiscalYear - 1);
+    }
+  }
+
+  // Cross-statement result reconciliation (P&L result ↔ balance-sheet result line).
+  const crossCheck = await getCrossStatementCheck(prisma, orgId, s);
+
+  // Final verdict, now that the cross-check and continuity flags are known.
+  const confidence = computeConfidenceTier({ reconciliation: dto.reconciliation, crossCheck, sanityFlags, ocrConfidence: dto.ocrConfidence });
+
+  return { ...dto, sanityFlags, suggestedCorrections, crossCheck, confidence };
 }
 
 /** Assign (or reassign) the building for a PENDING_REVIEW statement. */
@@ -1121,7 +1584,7 @@ export async function deleteStatementBatch(
   );
   for (const s of toDelete) {
     await prisma.ledgerEntry.deleteMany({
-      where: { orgId, sourceType: "IMPORTED_STATEMENT", sourceId: s.id },
+      where: { orgId, sourceType: { in: ["BALANCE_SHEET_IMPORT", "INCOME_STATEMENT_IMPORT", "IMPORTED_STATEMENT"] }, sourceId: s.id },
     });
     await prisma.importedAccountBalance.deleteMany({ where: { statementId: s.id } });
     await prisma.importedStatement.delete({ where: { id: s.id } });
@@ -1148,7 +1611,7 @@ export async function deleteStatement(
   if (!statement) throw new ImportedStatementError("NOT_FOUND", "Statement not found");
   // LedgerEntry has no FK cascade to ImportedStatement — delete orphans first.
   await prisma.ledgerEntry.deleteMany({
-    where: { orgId, sourceType: "IMPORTED_STATEMENT", sourceId: statementId },
+    where: { orgId, sourceType: { in: ["BALANCE_SHEET_IMPORT", "INCOME_STATEMENT_IMPORT", "IMPORTED_STATEMENT"] }, sourceId: statementId },
   });
   // Deletes statement + cascades to ImportedAccountBalance.
   await prisma.importedStatement.delete({ where: { id: statementId } });
@@ -1166,7 +1629,7 @@ export async function deleteAllStatements(
   if (rows.length === 0) return 0;
   const ids = rows.map((r) => r.id);
   await prisma.ledgerEntry.deleteMany({
-    where: { orgId, sourceType: "IMPORTED_STATEMENT", sourceId: { in: ids } },
+    where: { orgId, sourceType: { in: ["BALANCE_SHEET_IMPORT", "INCOME_STATEMENT_IMPORT", "IMPORTED_STATEMENT"] }, sourceId: { in: ids } },
   });
   await prisma.importedStatement.deleteMany({ where: { orgId } });
   return ids.length;
@@ -1485,42 +1948,183 @@ export function mapBatchDTO(batch: any, statements: any[]): UploadBatchDTO {
   };
 }
 
-function mapDTO(s: any, linkedInvoices: any[] = []): ImportedStatementDTO {
-  const balances: any[] = s.accountBalances ?? [];
+export interface BalanceRowForCheck {
+  rawAccountCode: string | null;
+  balanceCents: number;
+  balanceType: string;
+  documentSection: string | null;
+}
 
-  // Accounting equation check.
-  // Uses account code prefix as the authoritative section indicator:
-  //   1xxx → ACTIF (assets)       2xxx → PASSIF (liabilities + equity)
-  //   3xxx → REVENUE              4xxx–9xxx → EXPENSE
-  // This overrides Claude's documentSection label, which can be wrong for
-  // equity accounts like 2900 Bénéfice that Claude may call REVENUE.
-  // Signed amounts: negative within a section = contra-account / deduction.
-  let balanceImbalanceCents: number | null = null;
-  if (balances.length > 0) {
-    let actifTotal = 0, passifTotal = 0, revenueTotal = 0, expenseTotal = 0;
-    for (const ab of balances) {
-      const code = ((ab.rawAccountCode ?? "") as string).trim().replace(/\D/g, "");
-      const first = code ? parseInt(code[0], 10) : NaN;
-      if (first === 1) actifTotal  += ab.balanceCents;
-      else if (first === 2) passifTotal += ab.balanceCents;
-      else if (first === 3) revenueTotal += ab.balanceCents;
-      else if (first >= 4 && first <= 9) expenseTotal += ab.balanceCents;
-      else {
-        // No recognised code — fall back to stored balanceType
-        if (ab.balanceType === "DEBIT") actifTotal  += Math.abs(ab.balanceCents);
-        else                            passifTotal += Math.abs(ab.balanceCents);
-      }
-    }
-    if (actifTotal !== 0 || passifTotal !== 0) {
-      // Balance sheet: Total Actifs must equal Total Passifs
-      balanceImbalanceCents = actifTotal - passifTotal;
-    } else if (revenueTotal !== 0 || expenseTotal !== 0) {
-      // P&L: show net income (Revenue − Expenses). Not expected to be zero.
-      balanceImbalanceCents = revenueTotal - expenseTotal;
-    } else {
-      balanceImbalanceCents = 0;
+/**
+ * Accounting-equation check. For a balance sheet returns Total Actifs − Total
+ * Passifs (0 when balanced); for a P&L returns net income (Revenue − Expenses,
+ * not expected to be zero); null when there are no balances.
+ *
+ * The document's own section (documentSection) is authoritative for the
+ * Actif/Passif split — an account may be presented under any section the
+ * accountant chose, regardless of its code (e.g. receivable 11200 "Créances
+ * diverses" placed under Passifs). The CSV import sets this from the file's
+ * section column. Only when documentSection is NOT a definite balance-sheet
+ * side (REVENUE / EXPENSE / OTHER / UNKNOWN — e.g. Claude mislabelling equity
+ * 2900 Bénéfice as REVENUE on the OCR path) do we fall back to the account-code
+ * prefix: 1xxx → ACTIF, 2xxx → PASSIF, 3xxx → REVENUE, 4xxx–9xxx → EXPENSE.
+ * Signed amounts: negative within a section = contra-account / deduction.
+ */
+export function computeBalanceImbalanceCents(balances: BalanceRowForCheck[]): number | null {
+  if (!balances.length) return null;
+  let actifTotal = 0, passifTotal = 0, revenueTotal = 0, expenseTotal = 0;
+  for (const ab of balances) {
+    const ds = ab.documentSection;
+    if (ds === "ACTIF") { actifTotal += ab.balanceCents; continue; }
+    if (ds === "PASSIF") { passifTotal += ab.balanceCents; continue; }
+
+    const code = ((ab.rawAccountCode ?? "") as string).trim().replace(/\D/g, "");
+    const first = code ? parseInt(code[0], 10) : NaN;
+    if (first === 1) actifTotal += ab.balanceCents;
+    else if (first === 2) passifTotal += ab.balanceCents;
+    else if (first === 3) revenueTotal += ab.balanceCents;
+    else if (first >= 4 && first <= 9) expenseTotal += ab.balanceCents;
+    else {
+      // No recognised code — fall back to stored balanceType
+      if (ab.balanceType === "DEBIT") actifTotal += Math.abs(ab.balanceCents);
+      else passifTotal += Math.abs(ab.balanceCents);
     }
   }
+  if (actifTotal !== 0 || passifTotal !== 0) return actifTotal - passifTotal;
+  if (revenueTotal !== 0 || expenseTotal !== 0) return revenueTotal - expenseTotal;
+  return 0;
+}
+
+/**
+ * Domain smell-tests on an income statement's figures — the layer that catches
+ * implausible-but-arithmetically-consistent values the reconciliation gate can't
+ * (e.g. a management fee mis-read as CHF 9 when it should be ~7'000). Non-blocking
+ * warnings surfaced in the review UI. Income statements only (needs P&L rows).
+ */
+export function computeStatementSanityFlags(
+  balances: { documentSection: string; balanceCents: number; rawAccountName?: string | null; account?: { name?: string | null } | null }[],
+): SanityFlagDTO[] {
+  const flags: SanityFlagDTO[] = [];
+  const nameOf = (b: { rawAccountName?: string | null; account?: { name?: string | null } | null }) => (b.account?.name ?? b.rawAccountName ?? "");
+  const norm = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  const chf = (cents: number) => `CHF ${(Math.abs(cents) / 100).toLocaleString("de-CH", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+
+  const revenue = balances.filter((b) => b.documentSection === "REVENUE");
+  const expenses = balances.filter((b) => b.documentSection === "EXPENSE");
+  if (expenses.length === 0 && revenue.length === 0) return flags; // balance sheet — no P&L ratios
+  const revTotal = Math.abs(revenue.reduce((s, b) => s + b.balanceCents, 0));
+  const expTotal = expenses.reduce((s, b) => s + Math.abs(b.balanceCents), 0);
+
+  // 1) Management-fee plausibility — honoraires de gérance run ~2–8% of rental income.
+  const fee = expenses.find((b) => /gerance|honoraires|gestion|verwaltung|management|administration des immeubles/.test(norm(nameOf(b))));
+  if (fee && revTotal > 0) {
+    const pct = Math.abs(fee.balanceCents) / revTotal;
+    if (pct < 0.005) flags.push({ code: "FEE_IMPLAUSIBLY_LOW", severity: "warn", message: `Management fee ${chf(fee.balanceCents)} is only ${(pct * 100).toFixed(2)}% of rental income (${chf(revTotal)}) — implausibly low; likely a mis-read of "${nameOf(fee)}".` });
+    else if (pct > 0.12) flags.push({ code: "FEE_IMPLAUSIBLY_HIGH", severity: "warn", message: `Management fee ${chf(fee.balanceCents)} is ${(pct * 100).toFixed(0)}% of rental income — unusually high; double-check "${nameOf(fee)}".` });
+  }
+
+  // 2) One expense account dominating the total — a possible mis-mapped subtotal or double-count.
+  if (expTotal > 0 && expenses.length > 2) {
+    const top = expenses.reduce((m, b) => (Math.abs(b.balanceCents) > Math.abs(m.balanceCents) ? b : m), expenses[0]);
+    const share = Math.abs(top.balanceCents) / expTotal;
+    if (share > 0.6) flags.push({ code: "DOMINANT_EXPENSE", severity: "info", message: `"${nameOf(top)}" (${chf(top.balanceCents)}) is ${(share * 100).toFixed(0)}% of total expenses — check it isn't a mis-mapped subtotal.` });
+  }
+
+  return flags;
+}
+
+type ContinuityRow = { id?: string; documentSection: string; balanceCents: number; rawAccountCode?: string | null; rawAccountName?: string | null; account?: { name?: string | null; code?: string | null } | null };
+
+/**
+ * Year-over-year continuity on a P&L: flag account lines that swing materially,
+ * vanish, or appear vs the prior year's approved statement — the check that
+ * catches the 7'134→9 mis-read (a 99.9% drop) even though the year in isolation
+ * reconciles. Matched by account code (Swiss charts are stable across years).
+ * Non-blocking. Balance sheets are excluded (asset values swing legitimately).
+ */
+export function computeContinuityFlags(current: ContinuityRow[], prior: ContinuityRow[], priorYear: number): SanityFlagDTO[] {
+  const MATERIAL = 200000; // CHF 2'000
+  const codeOf = (b: ContinuityRow) => (b.account?.code ?? b.rawAccountCode ?? "").replace(/\D/g, "");
+  const nameOf = (b: ContinuityRow) => (b.account?.name ?? b.rawAccountName ?? "");
+  const chf = (cents: number) => `CHF ${(Math.abs(cents) / 100).toLocaleString("de-CH", { maximumFractionDigits: 0 })}`;
+  const isPnl = (b: ContinuityRow) => b.documentSection === "REVENUE" || b.documentSection === "EXPENSE";
+
+  const cur = current.filter(isPnl);
+  const pri = prior.filter(isPnl);
+  if (cur.length === 0 || pri.length === 0) return [];
+
+  const priByCode = new Map<string, { amt: number; name: string }>();
+  for (const b of pri) {
+    const c = codeOf(b); if (!c) continue;
+    const e = priByCode.get(c);
+    priByCode.set(c, { amt: (e?.amt ?? 0) + Math.abs(b.balanceCents), name: e?.name ?? nameOf(b) });
+  }
+  const flags: SanityFlagDTO[] = [];
+  const seen = new Set<string>();
+  for (const b of cur) {
+    const c = codeOf(b); if (!c) continue;
+    seen.add(c);
+    const curAmt = Math.abs(b.balanceCents);
+    const p = priByCode.get(c);
+    if (!p) {
+      if (curAmt >= MATERIAL) flags.push({ code: "YOY_NEW", severity: "info", message: `New this year: "${nameOf(b)}" ${chf(curAmt)} (no such line in ${priorYear}).` });
+      continue;
+    }
+    const delta = curAmt - p.amt;
+    const rel = p.amt > 0 ? Math.abs(delta) / p.amt : (curAmt > 0 ? Infinity : 0);
+    if (Math.abs(delta) >= MATERIAL && rel > 0.6) {
+      flags.push({ code: "YOY_SWING", severity: "warn", message: `"${nameOf(b)}" moved ${delta > 0 ? "up" : "down"} from ${chf(p.amt)} (${priorYear}) to ${chf(curAmt)} — ${(rel * 100).toFixed(0)}% change; verify.` });
+    }
+  }
+  for (const [c, p] of priByCode) {
+    if (!seen.has(c) && p.amt >= MATERIAL) flags.push({ code: "YOY_VANISHED", severity: "warn", message: `"${p.name}" was ${chf(p.amt)} in ${priorYear} but has no line this year — check it wasn't dropped.` });
+  }
+  return flags.sort((a, b) => (a.severity === b.severity ? 0 : a.severity === "warn" ? -1 : 1)).slice(0, 8);
+}
+
+/**
+ * When a section doesn't tie out to its stated total, derive a one-click fix:
+ * a line whose replacement by its prior-year value RESTORES the section total.
+ * That's the reconciliation residual + YoY signal converging on a single line and
+ * value (e.g. gérance 9 → 7'134). The manager confirms; we never silently rewrite.
+ * Only proposes non-negative values (the balance-edit endpoint requires ≥0).
+ */
+export function computeSuggestedCorrections(current: ContinuityRow[], prior: ContinuityRow[], statedTotalsCents: StatedTotalsCents | null | undefined, priorYear: number): SuggestedCorrectionDTO[] {
+  const stated = statedTotalsCents ?? {};
+  if (Object.keys(stated).length === 0) return [];
+  const TOL = 100; // CHF 1
+  const codeOf = (b: ContinuityRow) => (b.account?.code ?? b.rawAccountCode ?? "").replace(/\D/g, "");
+  const nameOf = (b: ContinuityRow) => (b.account?.name ?? b.rawAccountName ?? "");
+  const secLabel: Record<string, string> = { EXPENSE: "Charges", REVENUE: "Produits", ACTIF: "Actifs", PASSIF: "Passifs" };
+  const priorByCode = new Map<string, number>();
+  for (const b of prior) { const c = codeOf(b); if (c) priorByCode.set(c, (priorByCode.get(c) ?? 0) + b.balanceCents); }
+
+  const out: SuggestedCorrectionDTO[] = [];
+  for (const sec of ["EXPENSE", "REVENUE", "ACTIF", "PASSIF"] as const) {
+    const target = stated[sec];
+    if (target == null) continue;
+    const secBal = current.filter((b) => b.documentSection === sec);
+    const sum = secBal.reduce((s, b) => s + b.balanceCents, 0);
+    if (Math.abs(sum - target) <= TOL) continue; // ties out — nothing to fix
+    for (const b of secBal) {
+      const c = codeOf(b); if (!c || !b.id) continue;
+      const p = priorByCode.get(c);
+      if (p == null || p < 0 || p === b.balanceCents) continue;
+      if (Math.abs((sum - b.balanceCents + p) - target) <= TOL) {
+        out.push({ balanceId: b.id, accountName: nameOf(b), currentCents: b.balanceCents, suggestedCents: p, reason: `matches ${priorYear} and makes the ${secLabel[sec] ?? sec} total tie out` });
+      }
+    }
+  }
+  return out.slice(0, 5);
+}
+
+function mapDTO(s: any, linkedInvoices: any[] = []): ImportedStatementDTO {
+  const balances: any[] = s.accountBalances ?? [];
+  const balanceImbalanceCents = computeBalanceImbalanceCents(balances);
+  const sanityFlags = computeStatementSanityFlags(balances);
+  const reconciliation = balances.length > 0
+    ? reconcileBalances(balances, (s.statedTotals ?? null) as StatedTotalsCents | null)
+    : null;
 
   return {
     id: s.id,
@@ -1554,6 +2158,13 @@ function mapDTO(s: any, linkedInvoices: any[] = []): ImportedStatementDTO {
       accountCode: ab.account?.code ?? null,
     })),
     balanceImbalanceCents,
+    reconciliation,
+    sanityFlags,
+    suggestedCorrections: [],
+    crossCheck: null,
+    // Base verdict without the cross-statement check; getStatement recomputes it
+    // once the sibling statement has been fetched.
+    confidence: computeConfidenceTier({ reconciliation, crossCheck: null, sanityFlags, ocrConfidence: s.ocrConfidence ?? null }),
     linkedInvoices: linkedInvoices.map((inv: any) => ({
       id: inv.id,
       description: inv.description ?? null,

@@ -212,3 +212,26 @@ export async function findJobRequestUnitBuilding(
   });
 }
 
+
+// ─── Building KPI counts ───────────────────────────────────────
+
+/** "Open" job statuses used for building/portfolio KPI counts. */
+export const OPEN_JOB_STATUSES: JobStatus[] = [JobStatus.PENDING, JobStatus.IN_PROGRESS];
+
+/**
+ * Count open jobs attributed to a building, scoped by org.
+ * Attribution is via request → unit → building.
+ */
+export async function countOpenJobsForBuilding(
+  prisma: PrismaClient,
+  orgId: string,
+  buildingId: string,
+): Promise<number> {
+  return prisma.job.count({
+    where: {
+      orgId,
+      status: { in: OPEN_JOB_STATUSES },
+      request: { unit: { buildingId } },
+    },
+  });
+}

@@ -88,6 +88,25 @@ export function fetchWithAuth(url, opts = {}) {
 }
 
 /**
+ * SWR fetcher: fetch with auth, unwrap `.data`, throw on non-2xx.
+ *
+ * Shared by the global SWRConfig (see _app.js) and useDetailResource so the
+ * cache key (the URL) always resolves to the same unwrapped resource shape.
+ * Mirrors useDetailResource's historical unwrap: `json.data` when present,
+ * otherwise the whole body.
+ */
+export async function swrFetcher(url, fetchFn = fetchWithAuth) {
+  const res = await fetchFn(url);
+  const json = await res.json();
+  if (!res.ok) {
+    const err = new Error(json.error?.message || json.message || "Failed to load");
+    err.status = res.status;
+    throw err;
+  }
+  return json.data !== undefined ? json.data : json;
+}
+
+/**
  * Fetch JSON with auth, parse response, return { data, error, status, ok }.
  */
 export async function apiFetch(url, opts = {}) {

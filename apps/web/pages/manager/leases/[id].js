@@ -861,7 +861,7 @@ export default function LeaseEditorPage() {
           {sigRequests.length > 0 && (
             <div>
               <h2 className="mb-3 text-sm font-semibold text-muted-dark">{t("manager:leasesId.heading.signatureRequests")}</h2>
-              <div className="overflow-x-auto rounded-lg border border-table-border">
+              <div className="overflow-x-auto rounded-lg border border-surface-border">
                 <table className="data-table">
                   <thead>
                     <tr>
@@ -1049,7 +1049,7 @@ export default function LeaseEditorPage() {
               ) : (
                 <div>
                   {reconciliations.length > 0 && (
-                    <div className="overflow-x-auto rounded-lg border border-table-border mb-4">
+                    <div className="overflow-x-auto rounded-lg border border-surface-border mb-4">
                       <table className="data-table">
                         <thead>
                           <tr>
@@ -1121,7 +1121,7 @@ export default function LeaseEditorPage() {
             <Panel title={t("manager:leasesId.prop.rentAdjustments")}>
               <div className="space-y-3">
                 {rentAdjustments.length > 0 && (
-                  <div className="overflow-x-auto rounded-lg border border-table-border">
+                  <div className="overflow-x-auto rounded-lg border border-surface-border">
                     <table className="data-table">
                       <thead>
                         <tr>
@@ -1223,7 +1223,7 @@ export default function LeaseEditorPage() {
               {invoices.length === 0 ? (
                 <p className="text-sm text-muted">{t("manager:leasesId.text.noInvoicesLinkedToThisLeaseYet")}</p>
               ) : (
-                  <div className="overflow-x-auto rounded-lg border border-table-border">
+                  <div className="overflow-x-auto rounded-lg border border-surface-border">
                   <table className="data-table">
                     <thead>
                       <tr>

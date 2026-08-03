@@ -4,6 +4,7 @@ import * as repo from "../repositories/conditionReportRepository";
 // ── Condition ordering (lower = better) ───────────────────────────────────────
 
 const CONDITION_ORDINAL: Record<ItemCondition, number> = {
+  NOT_INSPECTED: -1,
   GOOD: 0,
   FAIR: 1,
   POOR: 2,
@@ -11,6 +12,9 @@ const CONDITION_ORDINAL: Record<ItemCondition, number> = {
 };
 
 export function isWorse(a: ItemCondition, b: ItemCondition): boolean {
+  // NOT_INSPECTED is the seeded default, not a quality grade — without a rating
+  // on both sides we can't claim deterioration, so never flag it as a delta.
+  if (a === "NOT_INSPECTED" || b === "NOT_INSPECTED") return false;
   return CONDITION_ORDINAL[a] > CONDITION_ORDINAL[b];
 }
 
@@ -87,6 +91,7 @@ export async function attachDelta(
 
 export type SubmitValidationError =
   | { code: "WRONG_STATUS"; current: ConditionReportStatus }
+  | { code: "NOT_INSPECTED_ITEMS"; items: string[] }
   | { code: "UNPHOTOED_DELTAS"; items: string[] };
 
 export async function validateSubmit(
@@ -95,6 +100,14 @@ export async function validateSubmit(
 ): Promise<SubmitValidationError | null> {
   if (report.status !== ConditionReportStatus.PENDING) {
     return { code: "WRONG_STATUS", current: report.status };
+  }
+
+  // Coverage gate: every asset-baselined item must be rated before submit.
+  const notInspected = report.items
+    .filter((it) => it.condition === ItemCondition.NOT_INSPECTED)
+    .map((it) => `${it.roomLabel} — ${it.itemLabel}`);
+  if (notInspected.length > 0) {
+    return { code: "NOT_INSPECTED_ITEMS", items: notInspected };
   }
 
   if (report.type === ConditionReportType.MOVE_OUT) {
@@ -119,22 +132,7 @@ export async function createReportFromLease(
   leaseId: string,
   type: ConditionReportType,
 ): Promise<void> {
-  const lease = await prisma.lease.findUnique({
-    where: { id: leaseId },
-    include: {
-      unit: {
-        include: {
-          building: {
-            include: { config: { select: { conditionReportDeadlineDays: true } } },
-          },
-          occupancies: {
-            select: { tenantId: true },
-            take: 1,
-          },
-        },
-      },
-    },
-  });
+  const lease = await repo.findLeaseForReportCreation(prisma, leaseId);
 
   if (!lease || !lease.unitId) {
     console.warn(`[CONDITION-REPORT] Skipping — lease ${leaseId} has no unit`);
@@ -148,16 +146,14 @@ export async function createReportFromLease(
   }
 
   // Guard: don't create duplicate (idempotent)
-  const existing = await prisma.unitConditionReport.findFirst({
-    where: { leaseId, type },
-  });
+  const existing = await repo.findReportByLeaseAndType(prisma, leaseId, type);
   if (existing) return;
 
   const deadlineDays = lease.unit?.building?.config?.conditionReportDeadlineDays ?? 7;
   const dueAt = new Date();
   dueAt.setDate(dueAt.getDate() + deadlineDays);
 
-  await repo.createReport(prisma, {
+  const report = await repo.createReport(prisma, {
     orgId: lease.orgId,
     unitId: lease.unitId,
     tenantId,
@@ -166,7 +162,10 @@ export async function createReportFromLease(
     dueAt,
   });
 
+  // Baseline against the unit's asset inventory so every asset is reported on.
+  const seeded = await repo.seedAssetItems(prisma, report.id, lease.orgId, lease.unitId);
+
   console.log(
-    `[CONDITION-REPORT] Created ${type} report for lease ${leaseId}, due ${dueAt.toISOString()}`,
+    `[CONDITION-REPORT] Created ${type} report for lease ${leaseId}, due ${dueAt.toISOString()}, seeded ${seeded} asset item(s)`,
   );
 }

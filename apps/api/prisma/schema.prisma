@@ -134,56 +134,67 @@ model RequestEvent {
 }
 
 model Org {
-  id                    String                      @id @default(uuid())
-  name                  String
-  mode                  OrgMode                     @default(MANAGED)
-  approvalRules         ApprovalRule[]
-  assetModels           AssetModel[]
-  billingEntities       BillingEntity[]
-  buildings             Building[]
-  buildingConfigs       BuildingConfig[]
-  contractors           Contractor[]
-  invoices              Invoice[]
-  jobs                  Job[]
-  notifications         Notification[]
-  notificationPrefs     NotificationPreference[]
-  config                OrgConfig?
-  tenants               Tenant[]
-  units                 Unit[]
-  unitConfigs           UnitConfig[]
-  users                 User[]
-  leases                Lease[]
-  signatureRequests     SignatureRequest[]
-  rentalApplications    RentalApplication[]
-  emailOutbox           EmailOutbox[]
-  rentEstimationConfigs RentEstimationConfig[]
-  financialSnapshots    BuildingFinancialSnapshot[]
-  requests              Request[]
+  id                          String                       @id @default(uuid())
+  name                        String
+  mode                        OrgMode                      @default(MANAGED)
+  approvalRules               ApprovalRule[]
+  assetModels                 AssetModel[]
+  billingEntities             BillingEntity[]
+  buildings                   Building[]
+  buildingConfigs             BuildingConfig[]
+  contractors                 Contractor[]
+  invoices                    Invoice[]
+  jobs                        Job[]
+  notifications               Notification[]
+  notificationPrefs           NotificationPreference[]
+  config                      OrgConfig?
+  tenants                     Tenant[]
+  units                       Unit[]
+  unitConfigs                 UnitConfig[]
+  users                       User[]
+  leases                      Lease[]
+  signatureRequests           SignatureRequest[]
+  rentalApplications          RentalApplication[]
+  emailOutbox                 EmailOutbox[]
+  rentEstimationConfigs       RentEstimationConfig[]
+  marketPricesPerZip          MarketPricePerZip[]
+  financialSnapshots          BuildingFinancialSnapshot[]
+  portfolioDailySnapshots     PortfolioDailySnapshot[]
+  buildingDailySnapshots      BuildingDailySnapshot[]
+  requests                    Request[]
   // Legal engine relations
-  legalEvaluationLogs   LegalEvaluationLog[]
-  legalCategoryMappings LegalCategoryMapping[]
-  assets                Asset[]
-  rfps                  Rfp[]
-  appointmentSlots      AppointmentSlot[]
-  jobRatings             JobRating[]
+  legalEvaluationLogs         LegalEvaluationLog[]
+  legalCategoryMappings       LegalCategoryMapping[]
+  assets                      Asset[]
+  rfps                        Rfp[]
+  appointmentSlots            AppointmentSlot[]
+  jobRatings                  JobRating[]
   // Chart-of-Accounts (FIN-COA)
-  expenseTypes          ExpenseType[]
-  accounts              Account[]
-  expenseMappings       ExpenseMapping[]
+  expenseTypes                ExpenseType[]
+  accounts                    Account[]
+  expenseMappings             ExpenseMapping[]
   // Ledger
-  ledgerEntries         LedgerEntry[]
+  ledgerEntries               LedgerEntry[]
   // Capture Sessions (INV-HUB)
-  captureSessions       CaptureSession[]
+  captureSessions             CaptureSession[]
   // Cashflow Planning
-  cashflowPlans         CashflowPlan[]
+  cashflowPlans               CashflowPlan[]
+  // Mortgages / Debt
+  mortgages                   Mortgage[]
   // Recurring Billing
-  billingSchedules      RecurringBillingSchedule[]
+  billingSchedules            RecurringBillingSchedule[]
   // Charge Reconciliation
-  chargeReconciliations ChargeReconciliation[]
+  chargeReconciliations       ChargeReconciliation[]
+  // Ancillary cost taxonomy (Nebenkosten categories)
+  ancillaryCostCategories     AncillaryCostCategory[]
+  billingPeriods              BillingPeriod[]
+  creditNotes                 CreditNote[]
+  statementDocRequests        StatementDocRequest[]
+  buildingChargeDistributions BuildingChargeDistribution[]
   // Rent Adjustments
-  rentAdjustments       RentAdjustment[]
+  rentAdjustments             RentAdjustment[]
   // Contractor Billing
-  contractorBillingSchedules ContractorBillingSchedule[]
+  contractorBillingSchedules  ContractorBillingSchedule[]
   // Property Manager Statement Import
   uploadBatches               UploadBatch[]
   importedStatements          ImportedStatement[]
@@ -192,11 +203,20 @@ model Org {
   letters                     Letter[]
   // Condition reports
   conditionReports            UnitConditionReport[]
+  // Year-end closing (accounting bridge WS-E)
+  fiscalPeriodCloses          FiscalPeriodClose[]
+  // Fixed assets (accounting bridge WS-D)
+  fixedAssets                 FixedAsset[]
+  // Per-tenant opening receivables (accounting bridge WS-F)
+  openingReceivables          OpeningReceivable[]
+  // Bulk CSV import (buildings & units)
+  importBatches               ImportBatch[]
+  extractionCaches            ExtractionCache[]
 }
 
 model OrgConfig {
-  id               String  @id @default(uuid())
-  orgId            String  @unique
+  id                  String  @id @default(uuid())
+  orgId               String  @unique
   autoApproveLimit    Int     @default(200)
   autoLegalRouting    Boolean @default(false)
   invoiceLeadTimeDays Int     @default(20) /// Days before due date to generate recurring invoices
@@ -213,21 +233,21 @@ model OrgConfig {
 }
 
 model User {
-  id           String   @id @default(uuid())
-  orgId        String
-  role         Role
-  name         String
-  createdAt    DateTime @default(now())
-  email          String?
-  passwordHash   String?
-  supabaseId     String?  @unique  /// Supabase auth.users UUID — set on first Supabase login
-  updatedAt      DateTime        @updatedAt
-  org            Org             @relation(fields: [orgId], references: [id])
-  ownedBuildings   BuildingOwner[]
-  managedBuildings Building[]      @relation("BuildingManager")
-  billingEntity    BillingEntity?
-  marginalTaxRate Float?         /// User's marginal income tax rate (0–1) for CapEx tax impact
-  strategyProfile OwnerStrategyProfile?
+  id                       String                @id @default(uuid())
+  orgId                    String
+  role                     Role
+  name                     String
+  createdAt                DateTime              @default(now())
+  email                    String?
+  passwordHash             String?
+  supabaseId               String?               @unique /// Supabase auth.users UUID — set on first Supabase login
+  updatedAt                DateTime              @updatedAt
+  org                      Org                   @relation(fields: [orgId], references: [id])
+  ownedBuildings           BuildingOwner[]
+  managedBuildings         Building[]            @relation("BuildingManager")
+  billingEntity            BillingEntity?
+  marginalTaxRate          Float? /// User's marginal income tax rate (0–1) for CapEx tax impact
+  strategyProfile          OwnerStrategyProfile?
   approvedConditionReports UnitConditionReport[]
 
   @@unique([orgId, email], name: "user_org_email_unique")
@@ -235,45 +255,45 @@ model User {
 }
 
 model Contractor {
-  id                String         @id @default(uuid())
+  id                String                      @id @default(uuid())
   orgId             String
   name              String
   phone             String
   email             String
-  hourlyRate        Int            @default(50)
+  hourlyRate        Int                         @default(50)
   serviceCategories String
-  isActive          Boolean        @default(true)
-  createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @updatedAt
+  isActive          Boolean                     @default(true)
+  createdAt         DateTime                    @default(now())
+  updatedAt         DateTime                    @updatedAt
   addressLine1      String?
   addressLine2      String?
   postalCode        String?
   city              String?
-  country           String?        @default("CH")
+  country           String?                     @default("CH")
   iban              String?
   vatNumber         String?
-  defaultVatRate    Float?         @default(7.7)
+  defaultVatRate    Float?                      @default(7.7)
   billingEntities   BillingEntity?
-  org               Org            @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  org               Org                         @relation(fields: [orgId], references: [id], onDelete: Cascade)
   jobs              Job[]
   requests          Request[]
   events            RequestEvent[]
   rfpInvites        RfpInvite[]
   rfpQuotes         RfpQuote[]
-  awardedRfps       Rfp[]          @relation("AwardedContractor")
+  awardedRfps       Rfp[]                       @relation("AwardedContractor")
   invoices          Invoice[]
   billingSchedules  ContractorBillingSchedule[]
 }
 
 model Request {
-  id                   String         @id @default(uuid())
+  id                   String                      @id @default(uuid())
   orgId                String
-  requestNumber        Int            @default(autoincrement()) @unique
+  requestNumber        Int                         @unique @default(autoincrement())
   description          String
   category             String?
-  createdAt            DateTime       @default(now())
+  createdAt            DateTime                    @default(now())
   estimatedCost        Int?
-  status               RequestStatus  @default(PENDING_REVIEW)
+  status               RequestStatus               @default(PENDING_REVIEW)
   assignedContractorId String?
   assetId              String?
   tenantId             String?
@@ -282,23 +302,23 @@ model Request {
   completedAt          DateTime?
   contractorNotes      String?
   startedAt            DateTime?
-  updatedAt            DateTime       @default(now()) @updatedAt
+  updatedAt            DateTime                    @default(now()) @updatedAt
   approvalSource       ApprovalSource?
   rejectionReason      String?
-  payingParty          PayingParty     @default(LANDLORD)
-  urgency              RequestUrgency  @default(MEDIUM)
-  triageContractorIds  String[]        @default([])
+  payingParty          PayingParty                 @default(LANDLORD)
+  urgency              RequestUrgency              @default(MEDIUM)
+  triageContractorIds  String[]                    @default([])
   triageBudgetMin      Int?
   triageBudgetMax      Int?
   triageCompletedAt    DateTime?
-  requestType          RequestType     @default(MAINTENANCE)
+  requestType          RequestType                 @default(MAINTENANCE)
   resolutionNote       String?
-  org                  Org            @relation(fields: [orgId], references: [id])
+  org                  Org                         @relation(fields: [orgId], references: [id])
   job                  Job?
-  asset                Asset?         @relation(fields: [assetId], references: [id], onDelete: SetNull)
-  assignedContractor   Contractor?    @relation(fields: [assignedContractorId], references: [id])
-  tenant               Tenant?        @relation(fields: [tenantId], references: [id])
-  unit                 Unit?          @relation(fields: [unitId], references: [id])
+  asset                Asset?                      @relation(fields: [assetId], references: [id], onDelete: SetNull)
+  assignedContractor   Contractor?                 @relation(fields: [assignedContractorId], references: [id])
+  tenant               Tenant?                     @relation(fields: [tenantId], references: [id])
+  unit                 Unit?                       @relation(fields: [unitId], references: [id])
   events               RequestEvent[]
   attachments          MaintenanceAttachment[]
   rfps                 Rfp[]
@@ -306,18 +326,19 @@ model Request {
   recommendations      RecommendationResult[]
 
   @@index([orgId])
+  @@index([orgId, status])
 }
 
 model MaintenanceAttachment {
-  id          String   @id @default(uuid())
-  requestId   String
-  fileName    String
-  mimeType    String
-  storageKey  String
-  sizeBytes   Int
-  uploadedBy  String?
-  createdAt   DateTime @default(now())
-  request     Request  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  id         String   @id @default(uuid())
+  requestId  String
+  fileName   String
+  mimeType   String
+  storageKey String
+  sizeBytes  Int
+  uploadedBy String?
+  createdAt  DateTime @default(now())
+  request    Request  @relation(fields: [requestId], references: [id], onDelete: Cascade)
 
   @@index([requestId])
 }
@@ -336,31 +357,31 @@ model Event {
 }
 
 model Tenant {
-  id          String      @id @default(uuid())
-  orgId       String
-  name        String?
-  phone       String
-  email       String?
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  isActive    Boolean     @default(true)
-  occupancies           Occupancy[]
-  requests              Request[]
-  conversationThreads   ConversationThread[]
-  letterRecipients      LetterRecipient[]
-  letterResponses       LetterResponse[]
-  conditionReports      UnitConditionReport[]
-  org                   Org         @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  id                  String                @id @default(uuid())
+  orgId               String
+  name                String?
+  phone               String
+  email               String?
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  isActive            Boolean               @default(true)
+  occupancies         Occupancy[]
+  requests            Request[]
+  conversationThreads ConversationThread[]
+  letterRecipients    LetterRecipient[]
+  letterResponses     LetterResponse[]
+  conditionReports    UnitConditionReport[]
+  org                 Org                   @relation(fields: [orgId], references: [id], onDelete: Cascade)
 
   @@unique([orgId, phone])
   @@index([orgId, phone])
 }
 
 model Building {
-  id      String @id @default(uuid())
-  orgId   String
-  name    String
-  address String
+  id         String  @id @default(uuid())
+  orgId      String
+  name       String
+  address    String
   city       String?
   postalCode String?
 
@@ -372,33 +393,68 @@ model Building {
   // Management
   managedSince DateTime?
   managerId    String?
-  manager      User?    @relation("BuildingManager", fields: [managerId], references: [id], onDelete: SetNull)
+  manager      User?     @relation("BuildingManager", fields: [managerId], references: [id], onDelete: SetNull)
 
   // Legal engine: canton derivation
   canton          String?
   cantonDerivedAt DateTime?
 
-  // House rules
-  houseRulesText  String?
+  // Valuation — enables LTV, WACC equity weight, terminal equity value
+  marketValueChf Float? /// Current market / appraisal value of the building, CHF
+  marketValueAt  DateTime? /// Effective date of the market value estimate
 
-  createdAt          DateTime                    @default(now())
-  updatedAt          DateTime                    @updatedAt
-  isActive           Boolean                     @default(true)
-  approvalRules      ApprovalRule[]
-  org                Org                         @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  config             BuildingConfig?
-  notifications      Notification[]
-  units              Unit[]
-  financialSnapshots BuildingFinancialSnapshot[]
-  rfps               Rfp[]
-  owners             BuildingOwner[]
-  expenseMappings    ExpenseMapping[]
-  ledgerEntries      LedgerEntry[]
-  cashflowPlans      CashflowPlan[]
+  // House rules
+  houseRulesText String?
+
+  // Cadastral / legal
+  parcelNumber  String? /// Parcelle — land-registry parcel number
+  easementsText String? /// Servitudes actives et passives — easements, active & passive
+
+  // Physical dimensions
+  ecaVolumeM3      Float? /// Volume ECA, m³ (cantonal insurance volume)
+  netAreaSqm       Float? /// Surface nette, m² — net floor area (selon état locatif)
+  weightedAreaSqm  Float? /// Surface pondérée, m² (terraces weighted 1/3, garden 1/10)
+
+  // Lot counts (PPE / cadastral lots)
+  lotsApartments      Int? /// Nombre de lots — appartements
+  lotsGarages         Int? /// Nombre de lots — garages
+  lotsExteriorParking Int? /// Nombre de lots — places extérieures
+
+  // Build / renovation dates
+  constructionDate   DateTime? /// Date de construction
+  lastRenovationDate DateTime? /// Date de rénovation
+
+  // Valuations, CHF (marketValueChf above = valeur vénale)
+  fiscalValueChf    Float? /// Estimation fiscale
+  insuranceValueChf Float? /// Valeur d'assurance
+  ppeEstimateChf    Float? /// Estimation en PPE
+
+  createdAt                  DateTime                     @default(now())
+  updatedAt                  DateTime                     @updatedAt
+  isActive                   Boolean                      @default(true)
+  approvalRules              ApprovalRule[]
+  org                        Org                          @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  config                     BuildingConfig?
+  notifications              Notification[]
+  units                      Unit[]
+  financialSnapshots         BuildingFinancialSnapshot[]
+  rfps                       Rfp[]
+  owners                     BuildingOwner[]
+  expenseMappings            ExpenseMapping[]
+  ledgerEntries              LedgerEntry[]
+  cashflowPlans              CashflowPlan[]
   contractorBillingSchedules ContractorBillingSchedule[]
-  strategyProfile    BuildingStrategyProfile?
-  importedStatements ImportedStatement[]
-  assets             Asset[]
+  strategyProfile            BuildingStrategyProfile?
+  importedStatements         ImportedStatement[]
+  assets                     Asset[]
+  mortgages                  Mortgage[]
+  attributedInvoices         Invoice[]                    @relation("InvoiceBuildingAttribution")
+  dailySnapshots             BuildingDailySnapshot[]
+  billingPeriods             BillingPeriod[]
+  chargeDistributions        BuildingChargeDistribution[]
+  fiscalPeriodCloses         FiscalPeriodClose[]
+  fixedAssets                FixedAsset[]
+  openingReceivables         OpeningReceivable[]
 
   @@index([orgId])
   @@index([managerId])
@@ -434,7 +490,7 @@ model BuildingConfig {
   rentalManualReviewConfidenceThreshold Int?   @default(60)
 
   // Condition report policy
-  conditionReportDeadlineDays           Int?   @default(7)
+  conditionReportDeadlineDays Int? @default(7)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -471,10 +527,16 @@ model Unit {
   type       UnitType @default(RESIDENTIAL)
 
   // Vacancy fields (rental applications)
-  isVacant            Boolean @default(false)
-  isListedPublicly    Boolean @default(false)
-  monthlyRentChf      Int?
-  monthlyChargesChf   Int?
+  isVacant          Boolean @default(false)
+  isListedPublicly  Boolean @default(false)
+  monthlyRentChf    Int?
+  monthlyChargesChf Int?
+
+  // Parking units (type = PARKING). parkingKind distinguishes exterior spot vs
+  // garage/box. linkedFlatId is the flat this spot is by default assigned to —
+  // drives default-tenant + co-billing. A flat can have many linked parking spots.
+  parkingKind  ParkingKind?
+  linkedFlatId String?
 
   // Rent estimation fields
   livingAreaSqm      Float?
@@ -488,10 +550,21 @@ model Unit {
   energyLabel        EnergyLabel?
   heatingType        HeatingType?
 
+  // Valeur intrinsèque worksheet — habitation/garden valued from livingAreaSqm,
+  // parking/garage as flat lines; intrinsic value computed, not stored.
+  intrinsicPricePerSqmChf Float? /// Prix au m² — base price for habitation & garden
+  vetustePct              Float? /// Vétusté — obsolescence discount, % of habitation value
+  gardenAreaSqm           Float? /// Jardin, m²
+  gardenWeightPct         Float? /// Pondération du jardin, % (defaults to 10 when null)
+  extParkingValueChf      Float? /// Parking extérieur — flat value, CHF
+  garageValueChf          Float? /// Garage — flat value, CHF
+
   occupancies            Occupancy[]
   requests               Request[]
   building               Building                @relation(fields: [buildingId], references: [id], onDelete: Cascade)
   org                    Org                     @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  linkedFlat             Unit?                   @relation("FlatParking", fields: [linkedFlatId], references: [id], onDelete: SetNull)
+  parkingSpots           Unit[]                  @relation("FlatParking")
   config                 UnitConfig?
   leases                 Lease[]
   rentalApplicationUnits RentalApplicationUnit[]
@@ -500,11 +573,16 @@ model Unit {
   rfps                   Rfp[]
   ledgerEntries          LedgerEntry[]
   conditionReports       UnitConditionReport[]
+  attributedInvoices     Invoice[]               @relation("InvoiceUnitAttribution")
+  fixedAssets            FixedAsset[]
+  openingReceivables     OpeningReceivable[]
 
   @@unique([buildingId, unitNumber])
   @@index([buildingId])
   @@index([orgId])
+  @@index([orgId, isVacant])
   @@index([isVacant])
+  @@index([linkedFlatId])
 }
 
 model RentEstimationConfig {
@@ -547,19 +625,39 @@ model RentEstimationConfig {
   @@index([orgId])
 }
 
+/// Reference market purchase price per m² for a postal code (e.g. homegate aggregate).
+/// Manually maintained / seeded — NOT live-scraped. Surfaces as a "market estimate"
+/// alongside (not inside) the unit valeur intrinsèque worksheet.
+model MarketPricePerZip {
+  id             String    @id @default(uuid())
+  orgId          String
+  postalCode     String
+  city           String?
+  pricePerSqmChf Float /// Market purchase price, CHF/m²
+  source         String? /// e.g. "homegate", "manual"
+  asOf           DateTime? /// Effective date of the figure
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  org Org @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, postalCode])
+  @@index([orgId])
+}
+
 model AssetModel {
-  id           String      @id @default(uuid())
-  orgId        String?
-  manufacturer String
-  model        String
-  category     String
-  specs        String?
-  defaultUsefulLifeMonths Int?      /// Default useful life for assets linked to this model (tier 2 in depreciation resolution)
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
-  isActive     Boolean     @default(true)
-  assets       Asset[]
-  org          Org?        @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  id                      String   @id @default(uuid())
+  orgId                   String?
+  manufacturer            String
+  model                   String
+  category                String
+  specs                   String?
+  defaultUsefulLifeMonths Int? /// Default useful life for assets linked to this model (tier 2 in depreciation resolution)
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+  isActive                Boolean  @default(true)
+  assets                  Asset[]
+  org                     Org?     @relation(fields: [orgId], references: [id], onDelete: Cascade)
 
   @@unique([orgId, manufacturer, model])
   @@index([orgId, category])
@@ -579,121 +677,143 @@ model Occupancy {
 }
 
 model Job {
-  id                  String     @id @default(uuid())
+  id                  String              @id @default(uuid())
   orgId               String
-  requestId           String     @unique
+  requestId           String              @unique
   contractorId        String
-  status              JobStatus  @default(PENDING)
+  status              JobStatus           @default(PENDING)
   actualCost          Int?
   startedAt           DateTime?
   completedAt         DateTime?
   schedulingExpiresAt DateTime?
   confirmedAt         DateTime?
-  createdAt           DateTime   @default(now())
-  updatedAt           DateTime   @updatedAt
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
   invoices            Invoice[]
   interventions       AssetIntervention[]
   appointmentSlots    AppointmentSlot[]
   ratings             JobRating[]
-  contractor          Contractor @relation(fields: [contractorId], references: [id], onDelete: Cascade)
-  org                 Org        @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  request             Request    @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  contractor          Contractor          @relation(fields: [contractorId], references: [id], onDelete: Cascade)
+  org                 Org                 @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  request             Request             @relation(fields: [requestId], references: [id], onDelete: Cascade)
 
   @@index([orgId])
+  @@index([orgId, status])
   @@index([contractorId])
   @@index([requestId])
 }
 
 model BillingEntity {
-  id                  String            @id @default(uuid())
-  orgId               String
-  type                BillingEntityType
-  name                String
-  addressLine1        String
-  addressLine2        String?
-  postalCode          String
-  city                String
-  country             String            @default("CH")
-  iban                String
-  vatNumber           String?
-  defaultVatRate      Float             @default(7.7)
-  nextInvoiceSequence Int               @default(1)
-  createdAt           DateTime          @default(now())
-  updatedAt           DateTime          @updatedAt
-  contractorId        String?           @unique
-  userId              String?           @unique
-  contractor          Contractor?       @relation(fields: [contractorId], references: [id])
-  user                User?             @relation(fields: [userId], references: [id])
-  org                 Org               @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  invoices            Invoice[]
+  id                     String            @id @default(uuid())
+  orgId                  String
+  type                   BillingEntityType
+  name                   String
+  addressLine1           String
+  addressLine2           String?
+  postalCode             String
+  city                   String
+  country                String            @default("CH")
+  iban                   String
+  vatNumber              String?
+  defaultVatRate         Float             @default(7.7)
+  nextInvoiceSequence    Int               @default(1)
+  nextCreditNoteSequence Int               @default(1)
+  createdAt              DateTime          @default(now())
+  updatedAt              DateTime          @updatedAt
+  contractorId           String?           @unique
+  userId                 String?           @unique
+  contractor             Contractor?       @relation(fields: [contractorId], references: [id])
+  user                   User?             @relation(fields: [userId], references: [id])
+  org                    Org               @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  invoices               Invoice[]
+  creditNotes            CreditNote[]
 
   @@index([orgId])
 }
 
 model Invoice {
-  id                    String                @id @default(uuid())
-  orgId                 String
-  jobId                 String?
-  leaseId               String?
-  amount                Int
-  description           String
-  status                InvoiceStatus         @default(DRAFT)
-  submittedAt           DateTime?
-  approvedAt            DateTime?
-  paidAt                DateTime?
-  createdAt             DateTime              @default(now())
-  updatedAt             DateTime              @updatedAt
-  issuerBillingEntityId String?
-  recipientName         String                @default("Unknown")
-  recipientAddressLine1 String                @default("Unknown")
-  recipientAddressLine2 String?
-  recipientPostalCode   String                @default("0000")
-  recipientCity         String                @default("Unknown")
-  recipientCountry      String                @default("CH")
-  issueDate             DateTime?
-  dueDate               DateTime?
-  invoiceNumber         String?
-  invoiceNumberFormat   String                @default("YYYY-NNN")
-  subtotalAmount        Int                   @default(0)
-  vatAmount             Int                   @default(0)
-  totalAmount           Int                   @default(0)
-  currency              String                @default("CHF")
-  vatRate               Float                 @default(7.7)
-  paymentReference      String?
-  iban                  String?
-  lockedAt              DateTime?
-  expenseTypeId         String?
-  accountId             String?
+  id                          String                     @id @default(uuid())
+  orgId                       String
+  jobId                       String?
+  leaseId                     String?
+  amount                      Int
+  description                 String
+  status                      InvoiceStatus              @default(DRAFT)
+  submittedAt                 DateTime?
+  approvedAt                  DateTime?
+  paidAt                      DateTime?
+  createdAt                   DateTime                   @default(now())
+  updatedAt                   DateTime                   @updatedAt
+  issuerBillingEntityId       String?
+  recipientName               String                     @default("Unknown")
+  recipientAddressLine1       String                     @default("Unknown")
+  recipientAddressLine2       String?
+  recipientPostalCode         String                     @default("0000")
+  recipientCity               String                     @default("Unknown")
+  recipientCountry            String                     @default("CH")
+  issueDate                   DateTime?
+  dueDate                     DateTime?
+  invoiceNumber               String?
+  invoiceNumberFormat         String                     @default("YYYY-NNN")
+  subtotalAmount              Int                        @default(0)
+  vatAmount                   Int                        @default(0)
+  totalAmount                 Int                        @default(0)
+  currency                    String                     @default("CHF")
+  vatRate                     Float                      @default(7.7)
+  paymentReference            String?
+  iban                        String?
+  lockedAt                    DateTime?
+  expenseTypeId               String?
+  accountId                   String?
   // ── Ingestion / Hub fields (INV-HUB epic) ────────────────
-  direction             InvoiceDirection      @default(OUTGOING)
-  sourceChannel         InvoiceSourceChannel  @default(MANUAL)
-  ingestionStatus       IngestionStatus?
-  rawOcrText            String?
-  ocrConfidence         Int?
-  sourceFileUrl         String?
-  matchedJobId          String?
-  matchedLeaseId        String?
-  matchedBuildingId     String?
+  direction                   InvoiceDirection           @default(OUTGOING)
+  sourceChannel               InvoiceSourceChannel       @default(MANUAL)
+  ingestionStatus             IngestionStatus?
+  rawOcrText                  String?
+  ocrConfidence               Int?
+  sourceFileUrl               String?
+  matchedJobId                String?
+  matchedLeaseId              String?
+  matchedBuildingId           String?
   // ── Recurring billing fields ────────────────────────────
-  isBackfilled          Boolean               @default(false)  /// True if invoice was generated retroactively
-  billingPeriodStart    DateTime?             /// Start of the billing period this invoice covers
-  billingPeriodEnd      DateTime?             /// End of the billing period this invoice covers
-  billingScheduleId     String?               /// FK to the lease billing schedule that generated this invoice
-  contractorId          String?               /// FK to contractor (for recurring contractor invoices)
-  contractorBillingScheduleId String?          /// FK to contractor billing schedule
+  isBackfilled                Boolean                    @default(false) /// True if invoice was generated retroactively
+  billingPeriodStart          DateTime? /// Start of the billing period this invoice covers
+  billingPeriodEnd            DateTime? /// End of the billing period this invoice covers
+  billingScheduleId           String? /// FK to the lease billing schedule that generated this invoice
+  contractorId                String? /// FK to contractor (for recurring contractor invoices)
+  contractorBillingScheduleId String? /// FK to contractor billing schedule
+  // ── Building/unit attribution (manual) ──────────────────
+  buildingId                  String?
+  unitId                      String?
+  // ── Ancillary cost classification (v3 remediation) ──────
+  // costNature is set once at the review gate: CHARGE → cost pool (building +
+  // ancillaryCategory, no unit); DIRECT → ledger/billing flow. Nullable until
+  // an incoming invoice is classified. See docs/ANCILLARY_COSTS_RECONCILIATION.md.
+  costNature                  CostNature?
+  ancillaryCategoryId         String?
+  // ── Raw issuer text (OCR-extracted; editable for swap) ──
+  issuerName                  String?
+  issuerAddressLine1          String?
+  issuerPostalCode            String?
+  issuerCity                  String?
+  issuerCountry               String?
   // ── Relations ────────────────────────────────────────────
-  issuer                BillingEntity?        @relation(fields: [issuerBillingEntityId], references: [id])
-  job                   Job?                  @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  org                   Org                   @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  lease                 Lease?                @relation(fields: [leaseId], references: [id], onDelete: SetNull)
-  contractor            Contractor?           @relation(fields: [contractorId], references: [id], onDelete: SetNull)
-  classifiedExpenseType ExpenseType?          @relation(fields: [expenseTypeId], references: [id], onDelete: SetNull)
-  classifiedAccount     Account?              @relation(fields: [accountId], references: [id], onDelete: SetNull)
-  billingSchedule       RecurringBillingSchedule? @relation(fields: [billingScheduleId], references: [id], onDelete: SetNull)
-  contractorBillingSchedule ContractorBillingSchedule? @relation(fields: [contractorBillingScheduleId], references: [id], onDelete: SetNull)
-  expenseCategory       ExpenseCategory?
-  lineItems             InvoiceLineItem[]
-  chargeReconciliation  ChargeReconciliation?  /// Back-reference if this invoice is a charge settlement
+  issuer                      BillingEntity?             @relation(fields: [issuerBillingEntityId], references: [id])
+  job                         Job?                       @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  org                         Org                        @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  lease                       Lease?                     @relation(fields: [leaseId], references: [id], onDelete: SetNull)
+  contractor                  Contractor?                @relation(fields: [contractorId], references: [id], onDelete: SetNull)
+  attributedBuilding          Building?                  @relation("InvoiceBuildingAttribution", fields: [buildingId], references: [id], onDelete: SetNull)
+  attributedUnit              Unit?                      @relation("InvoiceUnitAttribution", fields: [unitId], references: [id], onDelete: SetNull)
+  classifiedExpenseType       ExpenseType?               @relation(fields: [expenseTypeId], references: [id], onDelete: SetNull)
+  classifiedAccount           Account?                   @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  ancillaryCategory           AncillaryCostCategory?     @relation("InvoiceAncillaryCategory", fields: [ancillaryCategoryId], references: [id], onDelete: SetNull)
+  billingSchedule             RecurringBillingSchedule?  @relation(fields: [billingScheduleId], references: [id], onDelete: SetNull)
+  contractorBillingSchedule   ContractorBillingSchedule? @relation(fields: [contractorBillingScheduleId], references: [id], onDelete: SetNull)
+  expenseCategory             ExpenseCategory?
+  lineItems                   InvoiceLineItem[]
+  chargeReconciliation        ChargeReconciliation? /// Back-reference if this invoice is a charge settlement
+  costEntries                 CostEntry[]                @relation("CostEntrySource")
 
   @@unique([orgId, invoiceNumber])
   @@index([orgId])
@@ -706,20 +826,32 @@ model Invoice {
   @@index([billingScheduleId])
   @@index([contractorId])
   @@index([contractorBillingScheduleId])
+  @@index([buildingId])
+  @@index([unitId])
+  @@index([ancillaryCategoryId])
+  @@index([orgId, status])
 }
 
 model InvoiceLineItem {
-  id          String   @id @default(uuid())
-  invoiceId   String
-  description String
-  quantity    Float    @default(1.0)
-  unitPrice   Int
-  vatRate     Float    @default(7.7)
-  lineTotal   Int
-  createdAt   DateTime @default(now())
-  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  id              String                 @id @default(uuid())
+  invoiceId       String
+  description     String
+  quantity        Float                  @default(1.0)
+  unitPrice       Int
+  vatRate         Float                  @default(7.7)
+  lineTotal       Int
+  // Canonical ancillary-cost category (stamped on recurring rent lines) so
+  // advances-paid can be summed per category without description matching.
+  categoryId      String?
+  // True for the charges (acompte) portion of a rent invoice — lets advances be
+  // summed over a period for the reconciliation (vs net rent).
+  isChargeAdvance Boolean                @default(false)
+  createdAt       DateTime               @default(now())
+  invoice         Invoice                @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  category        AncillaryCostCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
   @@index([invoiceId])
+  @@index([categoryId])
 }
 
 model ApprovalRule {
@@ -781,14 +913,14 @@ model NotificationPreference {
 model CaptureSession {
   id               String               @id @default(cuid())
   orgId            String
-  createdBy        String               // userId of the manager who created the session
+  createdBy        String // userId of the manager who created the session
   token            String               @unique // signed JWT for token-gated access
   status           CaptureSessionStatus @default(CREATED)
   expiresAt        DateTime
   sourceChannel    InvoiceSourceChannel @default(MOBILE_CAPTURE)
   targetType       String               @default("INVOICE") // extensible for future doc types
   uploadedFileUrls String[]             @default([])
-  createdInvoiceId String?              // FK to Invoice created from this session
+  createdInvoiceId String? // FK to Invoice created from this session
   createdAt        DateTime             @default(now())
   updatedAt        DateTime             @updatedAt
   org              Org                  @relation(fields: [orgId], references: [id], onDelete: Cascade)
@@ -920,6 +1052,13 @@ enum RequestType {
 enum UnitType {
   RESIDENTIAL
   COMMON_AREA
+  PARKING
+}
+
+// Sub-kind for PARKING units (exterior spot vs enclosed garage/box).
+enum ParkingKind {
+  EXTERIOR
+  GARAGE
 }
 
 enum OrgMode {
@@ -1090,7 +1229,7 @@ model Lease {
   status LeaseStatus @default(DRAFT)
 
   applicationId String?
-  unitId        String?   /// Null for building-level templates; always set for real leases
+  unitId        String? /// Null for building-level templates; always set for real leases
 
   // Template support (building-level lease templates)
   isTemplate         Boolean @default(false)
@@ -1140,6 +1279,11 @@ model Lease {
   chargesTotalChf     Int?
   rentTotalChf        Int?
 
+  // Distribution-key inputs for ancillary-cost apportionment (clés de répartition).
+  // SURFACE_AREA uses Unit.livingAreaSqm; these cover OCCUPANT_COUNT and FIXED_SHARE.
+  occupantCount      Int?
+  fixedSharePermille Int? /// PPE/contract fixed share in ‰ (0–1000)
+
   chargesSettlementDate String?
 
   paymentDueDayOfMonth Int?
@@ -1151,10 +1295,10 @@ model Lease {
   referenceRateDate    String?
 
   // Indexation
-  indexClauseType      IndexClauseType @default(NONE)  /// How this lease is indexed
-  cpiBaseIndex         Decimal?                         /// CPI value at lease signing (baseline for % change)
-  initialNetRentChf    Int?                             /// Original rent before any indexation adjustments
-  lastIndexationDate   DateTime?                        /// When rent was last adjusted via indexation
+  indexClauseType    IndexClauseType @default(NONE) /// How this lease is indexed
+  cpiBaseIndex       Decimal? /// CPI value at lease signing (baseline for % change)
+  initialNetRentChf  Int? /// Original rent before any indexation adjustments
+  lastIndexationDate DateTime? /// When rent was last adjusted via indexation
 
   // Deposit
   depositChf     Int?
@@ -1193,17 +1337,19 @@ model Lease {
   updatedAt DateTime @updatedAt
 
   // Relations
-  org               Org                @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  unit              Unit?              @relation(fields: [unitId], references: [id], onDelete: Restrict)
-  signatureRequests SignatureRequest[]
-  invoices          Invoice[]
-  expenseItems      LeaseExpenseItem[]
-  billingSchedule   RecurringBillingSchedule?
+  org                   Org                       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  unit                  Unit?                     @relation(fields: [unitId], references: [id], onDelete: Restrict)
+  signatureRequests     SignatureRequest[]
+  invoices              Invoice[]
+  expenseItems          LeaseExpenseItem[]
+  billingSchedule       RecurringBillingSchedule?
   chargeReconciliations ChargeReconciliation[]
-  rentAdjustments   RentAdjustment[]
-  conditionReports  UnitConditionReport[]
+  creditNotes           CreditNote[]
+  rentAdjustments       RentAdjustment[]
+  conditionReports      UnitConditionReport[]
 
   @@index([orgId])
+  @@index([orgId, status])
   @@index([unitId])
   @@index([applicationId])
   @@index([status])
@@ -1228,18 +1374,224 @@ model LeaseExpenseItem {
 
   expenseTypeId String?
   accountId     String?
+  // Canonical ancillary-cost category (replaces fragile description matching).
+  categoryId    String?
 
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  lease       Lease        @relation(fields: [leaseId], references: [id], onDelete: Cascade)
-  expenseType ExpenseType? @relation(fields: [expenseTypeId], references: [id], onDelete: SetNull)
-  account     Account?     @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  lease       Lease                  @relation(fields: [leaseId], references: [id], onDelete: Cascade)
+  expenseType ExpenseType?           @relation(fields: [expenseTypeId], references: [id], onDelete: SetNull)
+  account     Account?               @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  category    AncillaryCostCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
   @@index([leaseId])
   @@index([expenseTypeId])
   @@index([accountId])
+  @@index([categoryId])
+}
+
+// ─── Ancillary cost taxonomy (Nebenkosten / charges) ────────────
+// Canonical, org-seeded categories. The `billability` gate ensures non-billable
+// landlord costs (mortgage, insurance, property tax, major repairs, building
+// management) can never be apportioned to a tenant. See
+// docs/ANCILLARY_COSTS_RECONCILIATION.md.
+enum CostBillability {
+  BILLABLE
+  NON_BILLABLE
+}
+
+/// The nature of an incoming invoice, decided once at the review gate. CHARGE =
+/// recoverable Nebenkosten → building-level cost pool, ventilated to units.
+/// DIRECT = repair/maintenance/capex/insurance/tax → ledger/billing flow, never
+/// in the cost pool or the décompte. See docs/ANCILLARY_COSTS_RECONCILIATION.md.
+enum CostNature {
+  CHARGE
+  DIRECT
+}
+
+/// How a building-level cost is apportioned across leases (clé de répartition).
+enum DistributionKey {
+  SURFACE_AREA
+  UNIT_COUNT
+  CONSUMPTION
+  OCCUPANT_COUNT
+  FIXED_SHARE
+}
+
+model AncillaryCostCategory {
+  id            String          @id @default(uuid())
+  orgId         String
+  code          String /// Stable key, e.g. HEATING_HOTWATER, WATER_WASTEWATER, ADMIN_FEE
+  name          String
+  billability   CostBillability @default(BILLABLE)
+  defaultKey    DistributionKey @default(SURFACE_AREA)
+  isAdminFee    Boolean         @default(false) /// The décompte admin fee category (cap ~3%)
+  expenseTypeId String? /// Bridge to the existing chart of accounts
+  accountId     String?
+  isActive      Boolean         @default(true)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @default(now()) @updatedAt
+
+  org                 Org                          @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  expenseType         ExpenseType?                 @relation(fields: [expenseTypeId], references: [id], onDelete: SetNull)
+  account             Account?                     @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  leaseExpenseItems   LeaseExpenseItem[]
+  costEntries         CostEntry[]
+  invoiceLineItems    InvoiceLineItem[]
+  reconciliationLines ChargeReconciliationLine[]
+  distributions       BuildingChargeDistribution[]
+  invoices            Invoice[]                    @relation("InvoiceAncillaryCategory")
+
+  @@unique([orgId, code])
+  @@index([orgId])
+}
+
+// ─── Per-building per-category distribution config (v2 C2) ──────
+// How each ancillary cost category is ventilated to units in a given building
+// (overrides AncillaryCostCategory.defaultKey). See docs/ANCILLARY_COSTS_RECONCILIATION.md.
+model BuildingChargeDistribution {
+  id         String          @id @default(uuid())
+  orgId      String
+  buildingId String
+  categoryId String
+  key        DistributionKey
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @default(now()) @updatedAt
+
+  org      Org                   @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  building Building              @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  category AncillaryCostCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([buildingId, categoryId])
+  @@index([orgId])
+  @@index([buildingId])
+}
+
+// ─── Building cost pool (Phase 2) ───────────────────────────────
+// A billing period collects the actual incurred ancillary costs for a building,
+// which are then apportioned across leases via distribution keys at reconciliation.
+// See docs/ANCILLARY_COSTS_RECONCILIATION.md.
+model BillingPeriod {
+  id                   String   @id @default(uuid())
+  orgId                String
+  buildingId           String
+  startDate            DateTime
+  endDate              DateTime
+  status               String   @default("OPEN") /// OPEN | CLOSED
+  adminFeeRatePermille Int      @default(0) /// ≤30 (3%) enforced in code
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @default(now()) @updatedAt
+
+  org             Org                    @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  building        Building               @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  costEntries     CostEntry[]
+  reconciliations ChargeReconciliation[]
+
+  @@unique([buildingId, startDate, endDate])
+  @@index([orgId])
+  @@index([buildingId])
+}
+
+/// Year-end closing of a building's books (accounting bridge WS-E). One row per
+/// building per fiscal year. Records the YEAR_END_CLOSE journal that moves the
+/// net P&L result into retained earnings (2900); reversible to reopen the year.
+model FiscalPeriodClose {
+  id                    String    @id @default(uuid())
+  orgId                 String
+  buildingId            String
+  fiscalYear            Int /// calendar year (Dec-31 close)
+  periodStart           DateTime
+  periodEnd             DateTime
+  status                String    @default("CLOSED") /// CLOSED | REVERSED
+  closingJournalId      String /// journalId of the YEAR_END_CLOSE legs
+  reversalJournalId     String? /// journalId of the reversing legs (set when reopened)
+  retainedEarningsCents Int /// net result posted to 2900 (positive = profit credited to equity)
+  closedAt              DateTime  @default(now())
+  closedBy              String?
+  reversedAt            DateTime?
+  reversedBy            String?
+
+  org      Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  building Building @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, buildingId, fiscalYear])
+  @@index([orgId])
+  @@index([buildingId])
+}
+
+/// Capitalized fixed asset (accounting bridge WS-D). Created when a CAPEX invoice
+/// is capitalized: cost moves from the P&L to the balance sheet (account 1500),
+/// then straight-line depreciates over usefulLifeYears (Dr 4700 / Cr 1509).
+model FixedAsset {
+  id                           String   @id @default(uuid())
+  orgId                        String
+  buildingId                   String
+  unitId                       String?
+  name                         String
+  sourceInvoiceId              String?  @unique /// idempotency: one asset per CAPEX invoice
+  acquisitionDate              DateTime
+  costCents                    Int
+  salvageCents                 Int      @default(0)
+  usefulLifeYears              Int
+  method                       String   @default("STRAIGHT_LINE")
+  accumulatedDepreciationCents Int      @default(0)
+  status                       String   @default("ACTIVE") /// ACTIVE | DISPOSED
+  createdAt                    DateTime @default(now())
+  updatedAt                    DateTime @updatedAt
+
+  org      Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  building Building @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  unit     Unit?    @relation(fields: [unitId], references: [id], onDelete: SetNull)
+
+  @@index([orgId])
+  @@index([buildingId])
+}
+
+/// Per-tenant opening receivable carried in at switchover (accounting bridge WS-F).
+/// A sub-ledger breakdown of the imported account-level AR lump (account 1100):
+/// the sum of these is reconciled to that lump (control total). Settling one posts
+/// Dr Bank (1020) / Cr Receivables (1100) — recording the collection.
+model OpeningReceivable {
+  id                  String    @id @default(uuid())
+  orgId               String
+  buildingId          String
+  unitId              String?
+  tenantName          String
+  amountCents         Int
+  dueDate             DateTime?
+  status              String    @default("OPEN") /// OPEN | SETTLED
+  settlementJournalId String?
+  settledAt           DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  org      Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  building Building @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  unit     Unit?    @relation(fields: [unitId], references: [id], onDelete: SetNull)
+
+  @@index([orgId])
+  @@index([buildingId])
+}
+
+/// One actual incurred cost booked to a category within a billing period.
+/// Only BILLABLE categories may be apportioned to tenants (enforced in service).
+model CostEntry {
+  id              String   @id @default(uuid())
+  billingPeriodId String
+  categoryId      String
+  amountCents     Int
+  sourceInvoiceId String? /// INCOMING utility bill, for the tenant's inspection right
+  note            String?
+  createdAt       DateTime @default(now())
+
+  billingPeriod BillingPeriod         @relation(fields: [billingPeriodId], references: [id], onDelete: Cascade)
+  category      AncillaryCostCategory @relation(fields: [categoryId], references: [id])
+  sourceInvoice Invoice?              @relation("CostEntrySource", fields: [sourceInvoiceId], references: [id], onDelete: SetNull)
+
+  @@index([billingPeriodId])
+  @@index([categoryId])
 }
 
 // ==========================================
@@ -1513,8 +1865,8 @@ model BuildingFinancialSnapshot {
   periodStart DateTime
   periodEnd   DateTime
 
-  earnedIncomeCents    Int
-  projectedIncomeCents Int
+  collectedIncomeCents Int
+  accruedIncomeCents   Int
 
   expensesTotalCents    Int
   maintenanceTotalCents Int
@@ -1673,33 +2025,33 @@ model LegalCategoryMapping {
 // ==========================================
 
 model Asset {
-  id              String        @id @default(uuid())
-  orgId           String
-  unitId          String?       /// null for building-level assets
-  buildingId      String?       /// set for building-level assets; mutually exclusive with unitId
-  type            AssetType
-  category        AssetCategory @default(EQUIPMENT)
-  topic           String
-  name            String
-  assetModelId    String?
-  installedAt     DateTime?
-  lastRenovatedAt DateTime?
-  replacedAt      DateTime?
-  brand           String?
-  modelNumber     String?
-  serialNumber    String?
-  notes           String?
-  usefulLifeOverrideMonths Int?      /// Per-asset override; highest priority in depreciation resolution
-  isPresent       Boolean   @default(true)
-  isActive        Boolean   @default(true)
-  legacyApplianceId String? @unique  /// TEMP: Phase 2 backfill mapping — links to Appliance.id for idempotent migration
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id                       String        @id @default(uuid())
+  orgId                    String
+  unitId                   String? /// null for building-level assets
+  buildingId               String? /// set for building-level assets; mutually exclusive with unitId
+  type                     AssetType
+  category                 AssetCategory @default(EQUIPMENT)
+  topic                    String
+  name                     String
+  assetModelId             String?
+  installedAt              DateTime?
+  lastRenovatedAt          DateTime?
+  replacedAt               DateTime?
+  brand                    String?
+  modelNumber              String?
+  serialNumber             String?
+  notes                    String?
+  usefulLifeOverrideMonths Int? /// Per-asset override; highest priority in depreciation resolution
+  isPresent                Boolean       @default(true)
+  isActive                 Boolean       @default(true)
+  legacyApplianceId        String?       @unique /// TEMP: Phase 2 backfill mapping — links to Appliance.id for idempotent migration
+  createdAt                DateTime      @default(now())
+  updatedAt                DateTime      @updatedAt
 
-  org               Org                  @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  unit              Unit?                @relation(fields: [unitId], references: [id], onDelete: Cascade)
-  building          Building?            @relation(fields: [buildingId], references: [id], onDelete: Cascade)
-  assetModel        AssetModel?          @relation(fields: [assetModelId], references: [id], onDelete: SetNull)
+  org               Org                       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  unit              Unit?                     @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  building          Building?                 @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  assetModel        AssetModel?               @relation(fields: [assetModelId], references: [id], onDelete: SetNull)
   interventions     AssetIntervention[]
   cashflowOverrides CashflowOverride[]
   requests          Request[]
@@ -1718,14 +2070,14 @@ enum AssetInterventionType {
 }
 
 model AssetIntervention {
-  id               String                  @id @default(cuid())
+  id               String                @id @default(cuid())
   assetId          String
   type             AssetInterventionType
   interventionDate DateTime
   costChf          Float?
   jobId            String?
   notes            String?
-  createdAt        DateTime                @default(now())
+  createdAt        DateTime              @default(now())
 
   asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
   job   Job?  @relation(fields: [jobId], references: [id], onDelete: SetNull)
@@ -1763,8 +2115,8 @@ model Rfp {
   buildingId          String
   unitId              String?
   requestId           String?
-  cashflowPlanId      String?         /// Links RFP back to the originating cashflow plan
-  cashflowGroupKey    String?         /// Stable group key for idempotency check (e.g. "2026-Plumbing")
+  cashflowPlanId      String? /// Links RFP back to the originating cashflow plan
+  cashflowGroupKey    String? /// Stable group key for idempotency check (e.g. "2026-Plumbing")
   category            String
   legalObligation     LegalObligation @default(UNKNOWN)
   status              RfpStatus       @default(DRAFT)
@@ -1807,22 +2159,22 @@ model RfpInvite {
 }
 
 model RfpQuote {
-  id                    String    @id @default(uuid())
+  id                    String         @id @default(uuid())
   rfpId                 String
   contractorId          String
   amountCents           Int
-  currency              String    @default("CHF")
-  vatIncluded           Boolean   @default(true)
+  currency              String         @default("CHF")
+  vatIncluded           Boolean        @default(true)
   estimatedDurationDays Int?
   earliestAvailability  DateTime?
-  lineItems             Json?     // Array of { description, amountCents }
-  workPlan              String?   // Narrative work plan
-  assumptions           String?   // Assumptions / exclusions
+  lineItems             Json? // Array of { description, amountCents }
+  workPlan              String? // Narrative work plan
+  assumptions           String? // Assumptions / exclusions
   validUntil            DateTime?
   notes                 String?
   status                RfpQuoteStatus @default(SUBMITTED)
-  submittedAt           DateTime  @default(now())
-  createdAt             DateTime  @default(now())
+  submittedAt           DateTime       @default(now())
+  createdAt             DateTime       @default(now())
 
   rfp        Rfp        @relation(fields: [rfpId], references: [id], onDelete: Cascade)
   contractor Contractor @relation(fields: [contractorId], references: [id], onDelete: Cascade)
@@ -1850,18 +2202,18 @@ model AppointmentSlot {
 }
 
 model JobRating {
-  id        String    @id @default(uuid())
-  orgId     String
-  jobId     String
-  raterRole RaterRole
+  id               String    @id @default(uuid())
+  orgId            String
+  jobId            String
+  raterRole        RaterRole
   /// Overall / average score (1–5). Computed from criteria fields when submitted via UI.
   score            Int
   /// Per-criterion scores (1–5 each). Null on legacy single-score ratings.
   scorePunctuality Int?
   scoreAccuracy    Int?
   scoreCourtesy    Int?
-  comment   String?
-  createdAt DateTime  @default(now())
+  comment          String?
+  createdAt        DateTime  @default(now())
 
   job Job @relation(fields: [jobId], references: [id], onDelete: Cascade)
   org Org @relation(fields: [orgId], references: [id], onDelete: Cascade)
@@ -1881,15 +2233,16 @@ model ExpenseType {
   orgId       String
   name        String
   description String?
-  code        String?  /// Optional short code like "ELEC-CA"
+  code        String? /// Optional short code like "ELEC-CA"
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  org      Org              @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  mappings ExpenseMapping[]
-  invoices Invoice[]
-  leaseExpenseItems LeaseExpenseItem[]
+  org                     Org                     @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  mappings                ExpenseMapping[]
+  invoices                Invoice[]
+  leaseExpenseItems       LeaseExpenseItem[]
+  ancillaryCostCategories AncillaryCostCategory[]
 
   @@unique([orgId, name])
   @@index([orgId])
@@ -1900,18 +2253,22 @@ model Account {
   id          String   @id @default(uuid())
   orgId       String
   name        String
-  code        String?  /// e.g. "4000"
+  code        String? /// e.g. "4000"
   accountType String   @default("EXPENSE") /// EXPENSE | REVENUE | ASSET | LIABILITY — standard double-entry account classes
+  /// Reporting cost taxonomy override for imported régie P&Ls: OWNER_OPEX |
+  /// RECOVERABLE | CAPEX | FINANCING. Null = fall back to the name heuristic.
+  costCategory String?
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  org      Org              @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  mappings              ExpenseMapping[]
-  invoices              Invoice[]
-  ledgerEntries         LedgerEntry[]
-  leaseExpenseItems     LeaseExpenseItem[]
-  importedBalances      ImportedAccountBalance[]
+  org                     Org                      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  mappings                ExpenseMapping[]
+  invoices                Invoice[]
+  ledgerEntries           LedgerEntry[]
+  leaseExpenseItems       LeaseExpenseItem[]
+  importedBalances        ImportedAccountBalance[]
+  ancillaryCostCategories AncillaryCostCategory[]
 
   @@unique([orgId, name])
   @@index([orgId])
@@ -1923,7 +2280,7 @@ model ExpenseMapping {
   orgId         String
   expenseTypeId String
   accountId     String
-  buildingId    String?  /// null = org-wide default; non-null = building override
+  buildingId    String? /// null = org-wide default; non-null = building override
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -1954,14 +2311,14 @@ model LedgerEntry {
   accountId   String
   debitCents  Int      @default(0) /// Amount debited in CHF cents (increases ASSET/EXPENSE accounts)
   creditCents Int      @default(0) /// Amount credited in CHF cents (increases LIABILITY/REVENUE accounts)
-  description String   /// Human-readable posting description
-  reference   String?  /// Invoice number, payment reference, or other external identifier
-  sourceType  String?  /// "INVOICE_ISSUED" | "INVOICE_PAID" | "RENT_RECEIPT" | "MANUAL"
-  sourceId    String?  /// UUID of the originating domain record
-  journalId   String   /// UUID grouping all legs of one posting (generated per transaction)
-  buildingId  String?  /// Optional building scope for per-building reporting
-  unitId      String?  /// Optional unit scope for per-unit attribution
-  createdBy   String?  /// userId for manual entries; null for auto-posted entries
+  description String /// Human-readable posting description
+  reference   String? /// Invoice number, payment reference, or other external identifier
+  sourceType  String? /// "INVOICE_ISSUED" | "INVOICE_PAID" | "RENT_RECEIPT" | "MANUAL"
+  sourceId    String? /// UUID of the originating domain record
+  journalId   String /// UUID grouping all legs of one posting (generated per transaction)
+  buildingId  String? /// Optional building scope for per-building reporting
+  unitId      String? /// Optional unit scope for per-unit attribution
+  createdBy   String? /// userId for manual entries; null for auto-posted entries
   createdAt   DateTime @default(now())
 
   org      Org       @relation(fields: [orgId], references: [id], onDelete: Cascade)
@@ -1991,18 +2348,24 @@ enum CashflowPlanStatus {
 model CashflowPlan {
   id                  String             @id @default(uuid())
   orgId               String
-  buildingId          String?            /// null = portfolio-level plan
+  buildingId          String? /// null = portfolio-level plan
   name                String
   status              CashflowPlanStatus @default(DRAFT)
   incomeGrowthRatePct Float              @default(0) /// Annual % applied to projected lease income, compounded
-  openingBalanceCents BigInt?            /// Optional starting cash balance; if null, show net flows only
+  openingBalanceCents BigInt? /// Optional starting cash balance; if null, show net flows only
   horizonMonths       Int                @default(60) /// Forward projection window in months
-  lastComputedAt      DateTime?          /// Stamped on GET; stale if underlying forecast changed since
+  lastComputedAt      DateTime? /// Stamped on GET; stale if underlying forecast changed since
+  discountRatePct     Float              @default(4) /// DCF discount rate for NPV computation
+  capRatePct          Float              @default(5) /// Terminal value cap rate
+  deferYears          Int                @default(3) /// Defer scenario: push near-term capex by N years
+  propertyValueChf    Float? /// Optional market value for terminal value modelling
+  lastVerdictScenario String? /// Cached NPV result: "invest" | "defer" | "neglect"
+  lastVerdictAt       DateTime? /// When the verdict was last computed
   createdAt           DateTime           @default(now())
   updatedAt           DateTime           @updatedAt
 
-  org       Org              @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  building  Building?        @relation(fields: [buildingId], references: [id], onDelete: SetNull)
+  org       Org                @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  building  Building?          @relation(fields: [buildingId], references: [id], onDelete: SetNull)
   overrides CashflowOverride[]
   rfps      Rfp[]
 
@@ -2011,18 +2374,60 @@ model CashflowPlan {
 }
 
 model CashflowOverride {
-  id             String   @id @default(uuid())
-  planId         String
-  assetId        String
-  originalYear   Int      /// The raw depreciation-schedule year (baseline)
-  overriddenYear Int      /// The year the user has shifted the replacement to
-  createdAt      DateTime @default(now())
+  id                    String   @id @default(uuid())
+  planId                String
+  assetId               String
+  originalYear          Int /// The raw depreciation-schedule year (baseline)
+  overriddenYear        Int /// The year the user has shifted the replacement to
+  // Renovation economics (set by the simulator's "Plan this work") — make the
+  // plan NPV consistent with the simulator: Invest credits the rent uplift,
+  // Neglect bears the avoided risk. Null for manual year-shifts.
+  costChf               Float? /// Renovation cost the simulator used
+  rentUpliftChfPerMonth Float? /// OBLF rent uplift captured after the work completes
+  riskAvoidedChfPerYear Float? /// Expected failure + CO 259d risk avoided by renovating
+  vacancyDays           Int? /// Days the unit sits empty during works → one-time lost rent in the NPV (0 = stays rentable)
+  oblfPassthroughPct    Float? /// OBLF Art. 14 passthrough % the uplift was derived from (audit/reproduction)
+  createdAt             DateTime @default(now())
 
   plan  CashflowPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
   asset Asset        @relation(fields: [assetId], references: [id], onDelete: Cascade)
 
   @@index([planId])
   @@index([assetId])
+}
+
+// ==========================================
+// Mortgage / Debt — enables FCFE levered NPV, DSCR, LTV, WACC
+// ==========================================
+
+enum AmortizationType {
+  INTEREST_ONLY /// No principal repayment (typical Swiss 1st rank)
+  LINEAR /// Fixed principal repaid per year
+  ANNUITY /// Constant total payment; principal share grows over time
+}
+
+model Mortgage {
+  id                    String           @id @default(uuid())
+  orgId                 String
+  buildingId            String
+  lenderName            String?
+  originalPrincipalChf  Float /// Loan amount at origination
+  currentBalanceChf     Float /// Outstanding principal today
+  interestRatePct       Float /// Nominal annual interest rate, %
+  amortizationType      AmortizationType @default(ANNUITY)
+  /// LINEAR: principal repaid per year. ANNUITY: derived from term if null. INTEREST_ONLY: ignored.
+  annualAmortizationChf Float?
+  startDate             DateTime?
+  fixedUntil            DateTime? /// End of the fixed-rate period (refinancing exposure)
+  maturityDate          DateTime? /// Final repayment date (annuity term anchor)
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @default(now()) @updatedAt
+
+  org      Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  building Building @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+
+  @@index([orgId])
+  @@index([buildingId])
 }
 
 // ==========================================
@@ -2093,30 +2498,30 @@ model ReplacementBenchmark {
 // ==========================================
 
 model RecurringBillingSchedule {
-  id                  String                @id @default(uuid())
-  orgId               String
-  leaseId             String                @unique /// One schedule per lease
-  status              BillingScheduleStatus @default(ACTIVE)
+  id      String                @id @default(uuid())
+  orgId   String
+  leaseId String                @unique /// One schedule per lease
+  status  BillingScheduleStatus @default(ACTIVE)
 
   // Generation timing
-  anchorDay           Int                   @default(1)  /// Day of month rent covers (always 1 for calendar-month billing)
-  nextPeriodStart     DateTime              /// Start of the next period to generate an invoice for
-  lastGeneratedPeriod DateTime?             /// Start of the most recently generated period
+  anchorDay           Int       @default(1) /// Day of month rent covers (always 1 for calendar-month billing)
+  nextPeriodStart     DateTime /// Start of the next period to generate an invoice for
+  lastGeneratedPeriod DateTime? /// Start of the most recently generated period
 
   // Amounts snapshot (cents) — updated when lease terms change
-  baseRentCents       Int                   /// Net rent in cents
-  totalChargesCents   Int                   @default(0) /// Sum of active LeaseExpenseItems
+  baseRentCents     Int /// Net rent in cents
+  totalChargesCents Int @default(0) /// Sum of active LeaseExpenseItems
 
   // Metadata
-  createdAt           DateTime              @default(now())
-  updatedAt           DateTime              @updatedAt
-  completedAt         DateTime?             /// When schedule was stopped (termination)
-  completionReason    String?               /// e.g. "LEASE_TERMINATED", "REPLACED_BY_NEW_LEASE"
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  completedAt      DateTime? /// When schedule was stopped (termination)
+  completionReason String? /// e.g. "LEASE_TERMINATED", "REPLACED_BY_NEW_LEASE"
 
   // Relations
-  org                 Org                   @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  lease               Lease                 @relation(fields: [leaseId], references: [id], onDelete: Cascade)
-  generatedInvoices   Invoice[]
+  org               Org       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  lease             Lease     @relation(fields: [leaseId], references: [id], onDelete: Cascade)
+  generatedInvoices Invoice[]
 
   @@index([orgId])
   @@index([status, nextPeriodStart])
@@ -2127,61 +2532,61 @@ model RecurringBillingSchedule {
 // ==========================================
 
 enum IndexClauseType {
-  NONE              /// Lease is not indexed
-  CPI_100           /// 100% CPI-indexed (full consumer price index)
+  NONE /// Lease is not indexed
+  CPI_100 /// 100% CPI-indexed (full consumer price index)
   CPI_40_REFRATE_60 /// 40% CPI + 60% reference interest rate (Swiss standard mixed formula)
 }
 
 enum RentAdjustmentType {
-  CPI_INDEXATION         /// Automatic CPI-based rent adjustment
-  REFERENCE_RATE_CHANGE  /// Adjustment due to reference interest rate change
-  MANUAL                 /// Manual adjustment by manager
+  CPI_INDEXATION /// Automatic CPI-based rent adjustment
+  REFERENCE_RATE_CHANGE /// Adjustment due to reference interest rate change
+  MANUAL /// Manual adjustment by manager
 }
 
 enum RentAdjustmentStatus {
-  DRAFT     /// Computed but not yet approved
-  APPROVED  /// Manager approved — ready to apply
-  APPLIED   /// Rent updated on lease + billing schedule
-  REJECTED  /// Manager rejected the adjustment
+  DRAFT /// Computed but not yet approved
+  APPROVED /// Manager approved — ready to apply
+  APPLIED /// Rent updated on lease + billing schedule
+  REJECTED /// Manager rejected the adjustment
 }
 
 /// Historical record of every rent adjustment event for a lease.
 model RentAdjustment {
-  id                  String               @id @default(uuid())
-  orgId               String
-  leaseId             String
-  adjustmentType      RentAdjustmentType
-  status              RentAdjustmentStatus @default(DRAFT)
-  effectiveDate       DateTime             /// When the new rent takes effect
+  id             String               @id @default(uuid())
+  orgId          String
+  leaseId        String
+  adjustmentType RentAdjustmentType
+  status         RentAdjustmentStatus @default(DRAFT)
+  effectiveDate  DateTime /// When the new rent takes effect
 
   // Rent amounts (cents)
-  previousRentCents   Int                  /// Rent before adjustment
-  newRentCents        Int                  /// Computed new rent
-  adjustmentCents     Int                  /// newRent − previousRent (can be negative)
+  previousRentCents Int /// Rent before adjustment
+  newRentCents      Int /// Computed new rent
+  adjustmentCents   Int /// newRent − previousRent (can be negative)
 
   // CPI data
-  cpiOldIndex         Decimal?             /// CPI at previous indexation / lease start
-  cpiNewIndex         Decimal?             /// Current CPI triggering the adjustment
+  cpiOldIndex Decimal? /// CPI at previous indexation / lease start
+  cpiNewIndex Decimal? /// Current CPI triggering the adjustment
 
   // Reference rate data
-  referenceRateOld    String?              /// e.g. "1.75"
-  referenceRateNew    String?              /// e.g. "1.50"
+  referenceRateOld String? /// e.g. "1.75"
+  referenceRateNew String? /// e.g. "1.50"
 
   // Calculation details (JSON for flexibility)
-  calculationDetails  Json?                /// Formula breakdown, intermediate values
+  calculationDetails Json? /// Formula breakdown, intermediate values
 
   // Lifecycle
-  approvedAt          DateTime?
-  appliedAt           DateTime?
-  rejectedAt          DateTime?
-  rejectionReason     String?
+  approvedAt      DateTime?
+  appliedAt       DateTime?
+  rejectedAt      DateTime?
+  rejectionReason String?
 
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  org                 Org                  @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  lease               Lease                @relation(fields: [leaseId], references: [id], onDelete: Cascade)
+  org   Org   @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  lease Lease @relation(fields: [leaseId], references: [id], onDelete: Cascade)
 
   @@index([orgId])
   @@index([leaseId])
@@ -2193,59 +2598,139 @@ model RentAdjustment {
 // ==========================================
 
 enum ChargeReconciliationStatus {
-  DRAFT       /// Manager is entering actual costs
-  FINALIZED   /// Actual costs confirmed, balance calculated
-  SETTLED     /// Settlement invoice generated
+  DRAFT /// Manager is entering actual costs
+  FINALIZED /// Actual costs confirmed, balance calculated
+  SETTLED /// Settlement invoice generated
 }
 
 /// Annual reconciliation of ACOMPTE charges for a lease.
 /// Compares total advance payments (acompte) to actual costs,
 /// then generates a settlement invoice (debit or credit).
 model ChargeReconciliation {
-  id                    String                       @id @default(uuid())
-  orgId                 String
-  leaseId               String
-  fiscalYear            Int                          /// e.g. 2026
-  status                ChargeReconciliationStatus   @default(DRAFT)
+  id         String                     @id @default(uuid())
+  orgId      String
+  leaseId    String
+  fiscalYear Int /// e.g. 2026
+  status     ChargeReconciliationStatus @default(DRAFT)
 
   // Summary amounts (cents)
-  totalAcomptePaidCents Int      @default(0) /// Sum of ACOMPTE charges invoiced to tenant
-  totalActualCostsCents Int      @default(0) /// Sum of actual costs entered by manager
-  balanceCents          Int      @default(0) /// actual − acompte (positive = tenant owes more)
+  totalAcomptePaidCents Int @default(0) /// Sum of ACOMPTE charges invoiced to tenant
+  totalActualCostsCents Int @default(0) /// Sum of actual costs (incl. admin fee)
+  adminFeeCents         Int @default(0) /// Décompte admin fee (≤3% of recoverable actuals)
+  balanceCents          Int @default(0) /// actual − acompte (positive = tenant owes more)
+
+  // Optional link to the building cost pool the actual costs were apportioned from
+  billingPeriodId String?
 
   // Settlement
-  settlementInvoiceId   String?  @unique    /// FK to the generated credit/debit invoice
-  settledAt             DateTime?
+  settlementInvoiceId    String?   @unique /// FK to the generated debit invoice (tenant owes)
+  settlementCreditNoteId String?   @unique /// FK to the generated credit note (refund to tenant)
+  settledAt              DateTime?
 
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  // Inspection right (P4): tenant may request supporting documents within ~30
+  // days of the statement being issued (at settle time).
+  issuedAt           DateTime?
+  inspectionDeadline DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  org                   Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  lease                 Lease    @relation(fields: [leaseId], references: [id], onDelete: Cascade)
-  settlementInvoice     Invoice? @relation(fields: [settlementInvoiceId], references: [id], onDelete: SetNull)
-  lineItems             ChargeReconciliationLine[]
+  org                  Org                        @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  lease                Lease                      @relation(fields: [leaseId], references: [id], onDelete: Cascade)
+  billingPeriod        BillingPeriod?             @relation(fields: [billingPeriodId], references: [id], onDelete: SetNull)
+  settlementInvoice    Invoice?                   @relation(fields: [settlementInvoiceId], references: [id], onDelete: SetNull)
+  settlementCreditNote CreditNote?                @relation("ReconCreditNote", fields: [settlementCreditNoteId], references: [id], onDelete: SetNull)
+  lineItems            ChargeReconciliationLine[]
+  docRequests          StatementDocRequest[]
 
   @@unique([leaseId, fiscalYear])
   @@index([orgId])
   @@index([status])
 }
 
+/// A tenant's request to inspect the supporting documents behind a charge
+/// statement (factures, relevés, clés de répartition). Inspection-rights workflow.
+model StatementDocRequest {
+  id               String    @id @default(uuid())
+  orgId            String
+  reconciliationId String
+  status           String    @default("OPEN") /// OPEN | FULFILLED
+  note             String?
+  requestedAt      DateTime  @default(now())
+  fulfilledAt      DateTime?
+
+  org            Org                  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  reconciliation ChargeReconciliation @relation(fields: [reconciliationId], references: [id], onDelete: Cascade)
+
+  @@index([orgId])
+  @@index([reconciliationId])
+}
+
 /// Per-expense-item reconciliation line within a ChargeReconciliation.
 model ChargeReconciliationLine {
-  id                String   @id @default(uuid())
-  reconciliationId  String
-  description       String                /// Expense item label (e.g. "Heating", "Water")
-  chargeMode        ChargeMode            /// ACOMPTE or FORFAIT — only ACOMPTE lines are reconciled
-  acomptePaidCents  Int      @default(0)  /// What the tenant paid as advance for this category
-  actualCostCents   Int      @default(0)  /// Actual cost entered by manager
-  balanceCents      Int      @default(0)  /// actual − acompte
+  id               String     @id @default(uuid())
+  reconciliationId String
+  description      String /// Expense item label (e.g. "Heating", "Water")
+  chargeMode       ChargeMode /// ACOMPTE or FORFAIT — only ACOMPTE lines are reconciled
+  acomptePaidCents Int        @default(0) /// What the tenant paid as advance for this category
+  actualCostCents  Int        @default(0) /// Actual cost (apportioned from the cost pool or entered manually)
+  balanceCents     Int        @default(0) /// actual − acompte
+  categoryId       String? /// Canonical category — links the line to the cost pool for auto-fill
 
-  createdAt         DateTime @default(now())
+  createdAt DateTime @default(now())
 
-  reconciliation    ChargeReconciliation @relation(fields: [reconciliationId], references: [id], onDelete: Cascade)
+  reconciliation ChargeReconciliation   @relation(fields: [reconciliationId], references: [id], onDelete: Cascade)
+  category       AncillaryCostCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
   @@index([reconciliationId])
+  @@index([categoryId])
+}
+
+/// Credit note (note de crédit / avoir) — a refund document issued to a tenant,
+/// e.g. when a charge reconciliation shows the tenant overpaid. Distinct legal
+/// document with its own numbering sequence. See docs/ANCILLARY_COSTS_RECONCILIATION.md.
+model CreditNote {
+  id                    String    @id @default(uuid())
+  orgId                 String
+  creditNoteNumber      String? /// e.g. CN-2026-001 (assigned on issue)
+  leaseId               String?
+  issuerBillingEntityId String?
+  recipientName         String?
+  recipientAddressLine1 String?
+  recipientPostalCode   String?
+  recipientCity         String?
+  recipientCountry      String    @default("CH")
+  amountCents           Int /// positive magnitude of the credit
+  currency              String    @default("CHF")
+  status                String    @default("ISSUED") /// DRAFT | ISSUED
+  issueDate             DateTime?
+  description           String?
+  lockedAt              DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @default(now()) @updatedAt
+
+  org            Org                   @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  lease          Lease?                @relation(fields: [leaseId], references: [id], onDelete: SetNull)
+  issuer         BillingEntity?        @relation(fields: [issuerBillingEntityId], references: [id], onDelete: SetNull)
+  reconciliation ChargeReconciliation? @relation("ReconCreditNote")
+  lineItems      CreditNoteLine[]
+
+  @@unique([orgId, creditNoteNumber])
+  @@index([orgId])
+  @@index([leaseId])
+}
+
+model CreditNoteLine {
+  id           String   @id @default(uuid())
+  creditNoteId String
+  description  String
+  amountCents  Int
+  createdAt    DateTime @default(now())
+
+  creditNote CreditNote @relation(fields: [creditNoteId], references: [id], onDelete: Cascade)
+
+  @@index([creditNoteId])
 }
 
 // ==========================================
@@ -2261,36 +2746,36 @@ enum BillingFrequency {
 
 /// Recurring billing schedule for contractor services (cleaning, maintenance, etc.)
 model ContractorBillingSchedule {
-  id                  String                @id @default(uuid())
-  orgId               String
-  contractorId        String
-  status              BillingScheduleStatus @default(ACTIVE)
-  description         String                /// e.g. "Monthly cleaning — Building A"
-  frequency           BillingFrequency      @default(MONTHLY)
+  id           String                @id @default(uuid())
+  orgId        String
+  contractorId String
+  status       BillingScheduleStatus @default(ACTIVE)
+  description  String /// e.g. "Monthly cleaning — Building A"
+  frequency    BillingFrequency      @default(MONTHLY)
 
   // Generation timing
-  anchorDay           Int                   @default(1)  /// Day of month
-  nextPeriodStart     DateTime              /// Start of the next period to generate
-  lastGeneratedPeriod DateTime?             /// Start of the most recently generated period
+  anchorDay           Int       @default(1) /// Day of month
+  nextPeriodStart     DateTime /// Start of the next period to generate
+  lastGeneratedPeriod DateTime? /// Start of the most recently generated period
 
   // Amount
-  amountCents         Int                   /// Invoice amount in cents (excl. VAT)
-  vatRate             Float                 @default(7.7) /// VAT rate %
+  amountCents Int /// Invoice amount in cents (excl. VAT)
+  vatRate     Float @default(7.7) /// VAT rate %
 
   // Optional building linkage for cost attribution
-  buildingId          String?
+  buildingId String?
 
   // Metadata
-  createdAt           DateTime              @default(now())
-  updatedAt           DateTime              @updatedAt
-  completedAt         DateTime?             /// When schedule was stopped
-  completionReason    String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  completedAt      DateTime? /// When schedule was stopped
+  completionReason String?
 
   // Relations
-  org                 Org                   @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  contractor          Contractor            @relation(fields: [contractorId], references: [id], onDelete: Cascade)
-  building            Building?             @relation(fields: [buildingId], references: [id], onDelete: SetNull)
-  generatedInvoices   Invoice[]
+  org               Org        @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  contractor        Contractor @relation(fields: [contractorId], references: [id], onDelete: Cascade)
+  building          Building?  @relation(fields: [buildingId], references: [id], onDelete: SetNull)
+  generatedInvoices Invoice[]
 
   @@index([orgId])
   @@index([contractorId])
@@ -2348,22 +2833,22 @@ enum DecisionOptionType {
 // ── Strategy Engine models ─────────────────────────────────────
 
 model OwnerStrategyProfile {
-  id                   String            @id @default(uuid())
-  orgId                String
-  ownerId              String
-  onboardingVersion    String            @default("1")
-  source               StrategySource    @default(questionnaire)
-  userFacingGoalLabel  String
-  dimensionsJson       String            /// JSON-serialized StrategyDimensions
-  archetypeScoresJson  String            /// JSON-serialized ArchetypeScores
-  primaryArchetype     StrategyArchetype
-  secondaryArchetype   StrategyArchetype?
-  confidence           String            @default("medium") /// low | medium | high
-  contradictionScore   Float             @default(0)
-  createdAt            DateTime          @default(now())
-  updatedAt            DateTime          @updatedAt
+  id                  String             @id @default(uuid())
+  orgId               String
+  ownerId             String
+  onboardingVersion   String             @default("1")
+  source              StrategySource     @default(questionnaire)
+  userFacingGoalLabel String
+  dimensionsJson      String /// JSON-serialized StrategyDimensions
+  archetypeScoresJson String /// JSON-serialized ArchetypeScores
+  primaryArchetype    StrategyArchetype
+  secondaryArchetype  StrategyArchetype?
+  confidence          String             @default("medium") /// low | medium | high
+  contradictionScore  Float              @default(0)
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
 
-  owner                User              @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  owner                User                          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   buildingProfiles     BuildingStrategyProfile[]
   questionnaireAnswers StrategyQuestionnaireAnswer[]
 
@@ -2372,27 +2857,27 @@ model OwnerStrategyProfile {
 }
 
 model BuildingStrategyProfile {
-  id                     String                  @id @default(uuid())
-  orgId                  String
-  buildingId             String
-  ownerProfileId         String
-  roleIntent             RoleIntent              @default(unspecified)
-  buildingType           String?                 /// residential | mixed | commercial
-  approxUnits            Int?
-  conditionRating        BuildingConditionRating?
-  buildingDimensionsJson String?                 /// JSON-serialized Partial<StrategyDimensions>
-  effectiveDimensionsJson String                 /// JSON-serialized StrategyDimensions
-  archetypeScoresJson    String                  /// JSON-serialized ArchetypeScores
-  primaryArchetype       StrategyArchetype
-  secondaryArchetype     StrategyArchetype?
-  confidence             String                  @default("medium")
-  overridesJson          String?                 /// JSON-serialized BuildingStrategyOverrides
-  createdAt              DateTime                @default(now())
-  updatedAt              DateTime                @updatedAt
+  id                      String                   @id @default(uuid())
+  orgId                   String
+  buildingId              String
+  ownerProfileId          String
+  roleIntent              RoleIntent               @default(unspecified)
+  buildingType            String? /// residential | mixed | commercial
+  approxUnits             Int?
+  conditionRating         BuildingConditionRating?
+  buildingDimensionsJson  String? /// JSON-serialized Partial<StrategyDimensions>
+  effectiveDimensionsJson String /// JSON-serialized StrategyDimensions
+  archetypeScoresJson     String /// JSON-serialized ArchetypeScores
+  primaryArchetype        StrategyArchetype
+  secondaryArchetype      StrategyArchetype?
+  confidence              String                   @default("medium")
+  overridesJson           String? /// JSON-serialized BuildingStrategyOverrides
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
 
-  building               Building                @relation(fields: [buildingId], references: [id], onDelete: Cascade)
-  ownerProfile           OwnerStrategyProfile    @relation(fields: [ownerProfileId], references: [id], onDelete: Cascade)
-  recommendations        RecommendationResult[]
+  building        Building               @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  ownerProfile    OwnerStrategyProfile   @relation(fields: [ownerProfileId], references: [id], onDelete: Cascade)
+  recommendations RecommendationResult[]
 
   @@unique([buildingId])
   @@index([orgId])
@@ -2400,14 +2885,14 @@ model BuildingStrategyProfile {
 }
 
 model StrategyQuestionnaireAnswer {
-  id              String               @id @default(uuid())
-  orgId           String
-  ownerProfileId  String
-  answersJson     String               /// JSON-serialized StrategyQuestionnaireAnswers
-  version         String               @default("1")
-  createdAt       DateTime             @default(now())
+  id             String   @id @default(uuid())
+  orgId          String
+  ownerProfileId String
+  answersJson    String /// JSON-serialized StrategyQuestionnaireAnswers
+  version        String   @default("1")
+  createdAt      DateTime @default(now())
 
-  ownerProfile    OwnerStrategyProfile @relation(fields: [ownerProfileId], references: [id], onDelete: Cascade)
+  ownerProfile OwnerStrategyProfile @relation(fields: [ownerProfileId], references: [id], onDelete: Cascade)
 
   @@index([orgId])
   @@index([ownerProfileId])
@@ -2416,55 +2901,55 @@ model StrategyQuestionnaireAnswer {
 // ─── Phase 2: Decision Scoring ────────────────────────────────────
 
 model MaintenanceDecisionOption {
-  id                        String             @id @default(uuid())
-  orgId                     String
-  opportunityId             String             /// = Request.id
-  optionType                DecisionOptionType
-  title                     String
-  description               String?
-  estimatedCost             Float              @default(0)
-  estimatedUsefulLifeYears  Float              @default(0)
-  implementationMonths      Float              @default(0)
-  tenantDisruptionScore     Float              @default(0)
-  riskReductionScore        Float              @default(0)
-  complianceCoverageScore   Float              @default(0)
-  saleAttractivenessScore   Float              @default(0)
-  rentUpliftScore           Float              @default(0)
-  opexReductionScore        Float              @default(0)
-  lifecycleExtensionScore   Float              @default(0)
-  modernizationImpactScore  Float              @default(0)
-  totalValueCreationScore   Float              @default(0)
-  uncertaintyScore          Float              @default(0)
-  taxProfileJson            String?            /// JSON-serialized DecisionTaxProfile
-  financialProjectionJson   String?            /// JSON-serialized FinancialProjection
-  createdAt                 DateTime           @default(now())
-  updatedAt                 DateTime           @updatedAt
+  id                       String             @id @default(uuid())
+  orgId                    String
+  opportunityId            String /// = Request.id
+  optionType               DecisionOptionType
+  title                    String
+  description              String?
+  estimatedCost            Float              @default(0)
+  estimatedUsefulLifeYears Float              @default(0)
+  implementationMonths     Float              @default(0)
+  tenantDisruptionScore    Float              @default(0)
+  riskReductionScore       Float              @default(0)
+  complianceCoverageScore  Float              @default(0)
+  saleAttractivenessScore  Float              @default(0)
+  rentUpliftScore          Float              @default(0)
+  opexReductionScore       Float              @default(0)
+  lifecycleExtensionScore  Float              @default(0)
+  modernizationImpactScore Float              @default(0)
+  totalValueCreationScore  Float              @default(0)
+  uncertaintyScore         Float              @default(0)
+  taxProfileJson           String? /// JSON-serialized DecisionTaxProfile
+  financialProjectionJson  String? /// JSON-serialized FinancialProjection
+  createdAt                DateTime           @default(now())
+  updatedAt                DateTime           @updatedAt
 
-  request                   Request            @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
-  selectedByResults         RecommendationResult[] @relation("SelectedOption")
+  request           Request                @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  selectedByResults RecommendationResult[] @relation("SelectedOption")
 
   @@index([orgId])
   @@index([opportunityId])
 }
 
 model RecommendationResult {
-  id                  String              @id @default(uuid())
-  orgId               String
-  opportunityId       String              /// = Request.id
-  buildingProfileId   String              /// FK → BuildingStrategyProfile.id
-  evaluatedAt         DateTime            @default(now())
-  selectedOptionId    String              /// FK → MaintenanceDecisionOption.id
-  rankedOptionsJson   String              /// JSON-serialized RankedDecisionOption[]
-  explanationJson     String              /// JSON-serialized RecommendationExplanation
-  userDecision        UserDecisionStatus  @default(pending)
-  userDecidedAt       DateTime?
-  userFeedback        String?
-  createdAt           DateTime            @default(now())
-  updatedAt           DateTime            @updatedAt
+  id                String             @id @default(uuid())
+  orgId             String
+  opportunityId     String /// = Request.id
+  buildingProfileId String /// FK → BuildingStrategyProfile.id
+  evaluatedAt       DateTime           @default(now())
+  selectedOptionId  String /// FK → MaintenanceDecisionOption.id
+  rankedOptionsJson String /// JSON-serialized RankedDecisionOption[]
+  explanationJson   String /// JSON-serialized RecommendationExplanation
+  userDecision      UserDecisionStatus @default(pending)
+  userDecidedAt     DateTime?
+  userFeedback      String?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
 
-  request             Request             @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
-  selectedOption      MaintenanceDecisionOption @relation("SelectedOption", fields: [selectedOptionId], references: [id])
-  buildingProfile     BuildingStrategyProfile   @relation(fields: [buildingProfileId], references: [id])
+  request         Request                   @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  selectedOption  MaintenanceDecisionOption @relation("SelectedOption", fields: [selectedOptionId], references: [id])
+  buildingProfile BuildingStrategyProfile   @relation(fields: [buildingProfileId], references: [id])
 
   @@index([orgId])
   @@index([opportunityId])
@@ -2485,12 +2970,12 @@ enum ConversationRole {
 }
 
 model ConversationThread {
-  id           String              @id @default(uuid())
-  orgId        String
-  tenantId     String
-  channel      ConversationChannel @default(IN_APP)
-  createdAt    DateTime            @default(now())
-  updatedAt    DateTime            @updatedAt
+  id        String              @id @default(uuid())
+  orgId     String
+  tenantId  String
+  channel   ConversationChannel @default(IN_APP)
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
 
   tenant   Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   messages ConversationMessage[]
@@ -2500,12 +2985,12 @@ model ConversationThread {
 }
 
 model ConversationMessage {
-  id        String              @id @default(uuid())
+  id        String           @id @default(uuid())
   threadId  String
   role      ConversationRole
-  content   String              @db.Text
+  content   String           @db.Text
   intent    String?
-  createdAt DateTime            @default(now())
+  createdAt DateTime         @default(now())
 
   thread ConversationThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
 
@@ -2518,25 +3003,25 @@ model ConversationMessage {
 
 /// Processing / review lifecycle for an imported PDF statement.
 enum ImportedStatementStatus {
-  PROCESSING    /// Azure + Claude extraction in progress (async)
+  PROCESSING /// Azure + Claude extraction in progress (async)
   PENDING_REVIEW /// Extraction complete; awaiting manager approval
-  APPROVED      /// Manager approved; ledger entries posted; visible to owner
-  REJECTED      /// Manager rejected; no ledger entries posted
+  APPROVED /// Manager approved; ledger entries posted; visible to owner
+  REJECTED /// Manager rejected; no ledger entries posted
 }
 
 /// Which accounting section a statement represents within its source PDF.
 enum StatementSectionType {
-  BALANCE_SHEET     /// Bilan — closing positions for ASSET/LIABILITY/EQUITY accounts; posted to ledger on approval
-  INCOME_STATEMENT  /// Compte de résultat — revenue/expense flows; posted only when building has no prior ledger activity for the period
-  INVOICES          /// One or more vendor invoices embedded in the PDF; creates Invoice records, no ledger posting on approval
+  BALANCE_SHEET /// Bilan — closing positions for ASSET/LIABILITY/EQUITY accounts; posted to ledger on approval
+  INCOME_STATEMENT /// Compte de résultat — revenue/expense flows; posted only when building has no prior ledger activity for the period
+  INVOICES /// One or more vendor invoices embedded in the PDF; creates Invoice records, no ledger posting on approval
 }
 
 /// How confidently an extracted account code was matched to a COA Account.
 enum MatchConfidence {
-  AUTO      /// Exact account code match
-  FUZZY     /// Name-based substring / Levenshtein match
-  CLAUDE    /// Claude Haiku classification (≥ 0.85 confidence)
-  MANUAL    /// Manager manually resolved via the review UI
+  AUTO /// Exact account code match
+  FUZZY /// Name-based substring / Levenshtein match
+  CLAUDE /// Claude Haiku classification (≥ 0.85 confidence)
+  MANUAL /// Manager manually resolved via the review UI
   UNMATCHED /// No match found; accountId is null
 }
 
@@ -2544,9 +3029,9 @@ enum MatchConfidence {
 model UploadBatch {
   id            String   @id @default(uuid())
   orgId         String
-  sourceFileUrl String   /// S3 key to original uploaded PDF
-  fileName      String   /// Original file name for display
-  uploadedBy    String   /// userId of the manager who uploaded
+  sourceFileUrl String /// S3 key to original uploaded PDF
+  fileName      String /// Original file name for display
+  uploadedBy    String /// userId of the manager who uploaded
   createdAt     DateTime @default(now())
 
   org        Org                 @relation(fields: [orgId], references: [id], onDelete: Cascade)
@@ -2555,33 +3040,50 @@ model UploadBatch {
   @@index([orgId])
 }
 
+/// Content-addressed cache of expensive vision extractions. Keyed by
+/// `${EXTRACTOR_VERSION}|${kind}|sha256(file)` (kind = doc | pkg), org-scoped for
+/// tenant isolation. A re-upload of the byte-identical file reuses the stored
+/// payload (ScanResult or PackageExtractionFile[]) and skips the ~$0.45 vision pass.
+model ExtractionCache {
+  id        String   @id @default(uuid())
+  orgId     String
+  cacheKey  String
+  payload   Json
+  createdAt DateTime @default(now())
+
+  org Org @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, cacheKey])
+}
+
 /// One section extracted from a PDF upload — one record per section type per PDF.
 /// Data only becomes visible on the owner surface when status = APPROVED.
 model ImportedStatement {
-  id            String                  @id @default(uuid())
-  orgId         String
-  uploadBatchId String?                 /// FK to UploadBatch — groups all sections from one PDF
-  sectionType   StatementSectionType    @default(BALANCE_SHEET) /// Which section of the PDF this represents
-  buildingId    String?                 /// Nullable — may be unset if building not yet in the system; must be set before approval
-  fiscalYear    Int                     /// e.g. 2024
-  periodStart   DateTime?               /// Extracted or user-supplied period start
-  periodEnd     DateTime?               /// Extracted or user-supplied period end
-  status        ImportedStatementStatus @default(PROCESSING)
-  sourceFileUrl String                  /// S3 key to original uploaded PDF (same as UploadBatch.sourceFileUrl)
-  uploadedBy    String                  /// userId of the manager who uploaded
-  approvedBy    String?                 /// userId of the manager who approved
-  approvedAt    DateTime?
-  rawOcrText    String?                 @db.Text /// Truncated OCR dump stored for audit
-  ocrConfidence Int?                    /// 0–100 overall extraction confidence
+  id                      String                  @id @default(uuid())
+  orgId                   String
+  uploadBatchId           String? /// FK to UploadBatch — groups all sections from one PDF
+  sectionType             StatementSectionType    @default(BALANCE_SHEET) /// Which section of the PDF this represents
+  buildingId              String? /// Nullable — may be unset if building not yet in the system; must be set before approval
+  fiscalYear              Int /// e.g. 2024
+  periodStart             DateTime? /// Extracted or user-supplied period start
+  periodEnd               DateTime? /// Extracted or user-supplied period end
+  status                  ImportedStatementStatus @default(PROCESSING)
+  sourceFileUrl           String /// S3 key to original uploaded PDF (same as UploadBatch.sourceFileUrl)
+  uploadedBy              String /// userId of the manager who uploaded
+  approvedBy              String? /// userId of the manager who approved
+  approvedAt              DateTime?
+  rawOcrText              String?                 @db.Text /// Truncated OCR dump stored for audit
+  ocrConfidence           Int? /// 0–100 overall extraction confidence
+  statedTotals            Json? /// Document's own declared section grand-totals in CHF cents ({ ACTIF, PASSIF, REVENUE, EXPENSE, RESULT }) — ground truth for the approval reconciliation gate. Null = none extractable (unverified).
   buildingMatchConfidence MatchConfidence? /// How the building was identified from the PDF
-  notes         String?                 /// Manager annotation (visible in review UI)
-  createdAt     DateTime                @default(now())
-  updatedAt     DateTime                @updatedAt
+  notes                   String? /// Manager annotation (visible in review UI)
+  createdAt               DateTime                @default(now())
+  updatedAt               DateTime                @updatedAt
 
-  org              Org                      @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  uploadBatch      UploadBatch?             @relation(fields: [uploadBatchId], references: [id], onDelete: SetNull)
-  building         Building?                @relation(fields: [buildingId], references: [id], onDelete: SetNull)
-  accountBalances  ImportedAccountBalance[]
+  org             Org                      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  uploadBatch     UploadBatch?             @relation(fields: [uploadBatchId], references: [id], onDelete: SetNull)
+  building        Building?                @relation(fields: [buildingId], references: [id], onDelete: SetNull)
+  accountBalances ImportedAccountBalance[]
 
   @@index([orgId])
   @@index([uploadBatchId])
@@ -2595,22 +3097,22 @@ model ImportedStatement {
 /// Maps to a COA Account when a match can be found; otherwise preserved
 /// with rawAccountCode/rawAccountName for manual resolution.
 model ImportedAccountBalance {
-  id               String          @id @default(uuid())
-  orgId            String
-  statementId      String
-  accountId        String?         /// FK to Account — null when match confidence = UNMATCHED
-  rawAccountCode   String          /// As extracted from the PDF, e.g. "1020"
-  rawAccountName   String          /// As extracted from the PDF, e.g. "Bank account"
-  balanceCents     Int             /// Signed closing balance in CHF cents (negative = contra-account / deduction within section)
-  balanceType      String          @default("DEBIT") /// Ledger direction: "DEBIT" | "CREDIT" — derived from documentSection + sign
-  documentSection  String          @default("UNKNOWN") /// Document section: "ACTIF" | "PASSIF" | "REVENUE" | "EXPENSE" | "OTHER" | "UNKNOWN"
-  matchConfidence  MatchConfidence @default(UNMATCHED)
-  createdAt        DateTime        @default(now())
-  updatedAt        DateTime        @updatedAt
+  id              String          @id @default(uuid())
+  orgId           String
+  statementId     String
+  accountId       String? /// FK to Account — null when match confidence = UNMATCHED
+  rawAccountCode  String /// As extracted from the PDF, e.g. "1020"
+  rawAccountName  String /// As extracted from the PDF, e.g. "Bank account"
+  balanceCents    Int /// Signed closing balance in CHF cents (negative = contra-account / deduction within section)
+  balanceType     String          @default("DEBIT") /// Ledger direction: "DEBIT" | "CREDIT" — derived from documentSection + sign
+  documentSection String          @default("UNKNOWN") /// Document section: "ACTIF" | "PASSIF" | "REVENUE" | "EXPENSE" | "OTHER" | "UNKNOWN"
+  matchConfidence MatchConfidence @default(UNMATCHED)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
 
-  org       Org              @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  org       Org               @relation(fields: [orgId], references: [id], onDelete: Cascade)
   statement ImportedStatement @relation(fields: [statementId], references: [id], onDelete: Cascade)
-  account   Account?         @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  account   Account?          @relation(fields: [accountId], references: [id], onDelete: SetNull)
 
   @@index([orgId])
   @@index([statementId])
@@ -2632,8 +3134,8 @@ model Letter {
   createdByUserId String?
 
   sentAt    DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   org        Org               @relation(fields: [orgId], references: [id], onDelete: Cascade)
   recipients LetterRecipient[]
@@ -2692,6 +3194,7 @@ enum ItemCondition {
   FAIR
   POOR
   DAMAGED
+  NOT_INSPECTED /// seeded default for asset-baselined items; must be rated before submit
 }
 
 model UnitConditionReport {
@@ -2710,11 +3213,11 @@ model UnitConditionReport {
   createdAt        DateTime              @default(now())
   updatedAt        DateTime              @updatedAt
 
-  org        Org                      @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  unit       Unit                     @relation(fields: [unitId], references: [id], onDelete: Cascade)
-  tenant     Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  lease      Lease                    @relation(fields: [leaseId], references: [id], onDelete: Cascade)
-  approvedBy User?                    @relation(fields: [approvedByUserId], references: [id], onDelete: SetNull)
+  org        Org                       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  unit       Unit                      @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  tenant     Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  lease      Lease                     @relation(fields: [leaseId], references: [id], onDelete: Cascade)
+  approvedBy User?                     @relation(fields: [approvedByUserId], references: [id], onDelete: SetNull)
   items      UnitConditionReportItem[]
 
   @@index([orgId])
@@ -2733,7 +3236,7 @@ model UnitConditionReportItem {
   notes     String?
 
   report UnitConditionReport        @relation(fields: [reportId], references: [id], onDelete: Cascade)
-  asset  Asset?                    @relation(fields: [assetId], references: [id], onDelete: SetNull)
+  asset  Asset?                     @relation(fields: [assetId], references: [id], onDelete: SetNull)
   photos UnitConditionReportPhoto[]
 
   @@index([reportId])
@@ -2750,4 +3253,156 @@ model UnitConditionReportPhoto {
   item UnitConditionReportItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
 
   @@index([itemId])
+}
+
+// ── WhatsApp Outbox ──────────────────────────────────────────
+// Async delivery queue for outbound WhatsApp messages.
+// Mirrors the EmailOutbox pattern — a drain job processes PENDING
+// records every 30 seconds and marks them SENT or FAILED (max 3 retries).
+
+enum OutboxStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+model WhatsAppOutbox {
+  id           String       @id @default(cuid())
+  orgId        String
+  toPhone      String // E.164, e.g. +41791234567
+  body         String       @db.Text
+  status       OutboxStatus @default(PENDING)
+  retryCount   Int          @default(0)
+  errorMessage String?
+  createdAt    DateTime     @default(now())
+  sentAt       DateTime?
+
+  @@index([status, createdAt])
+}
+
+// ── Portfolio Daily Snapshot ─────────────────────────────────
+// Pre-computed daily portfolio rollup for short-range (1W / 1M)
+// Per-building daily snapshot for building-level time-series reporting.
+// Written once per day by the hourly background job.
+
+model BuildingDailySnapshot {
+  id                String   @id @default(cuid())
+  orgId             String
+  buildingId        String
+  date              DateTime @db.Date
+  noiCents          Int
+  collectedIncomeCents Int
+  expensesCents     Int
+  collectionRate    Float
+  noiMarginPct      Float?
+  opexRatioPct      Float?
+  occupancyRate     Float?
+  activeUnitsCount  Int
+  computedAt        DateTime @default(now())
+
+  org      Org      @relation(fields: [orgId], references: [id])
+  building Building @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, buildingId, date])
+  @@index([orgId, buildingId, date])
+}
+
+// time-series charts in owner reporting. Written once per day by
+// the hourly background job (skipped if today's row already exists).
+
+model PortfolioDailySnapshot {
+  id                String   @id @default(cuid())
+  orgId             String
+  date              DateTime @db.Date
+  noiCents          Int
+  collectedIncomeCents Int
+  expensesCents     Int
+  collectionRate    Float
+  noiMarginPct      Float?
+  opexRatioPct      Float?
+  occupancyRate     Float?
+  activeUnitsCount  Int
+  computedAt        DateTime @default(now())
+
+  org Org @relation(fields: [orgId], references: [id])
+
+  @@unique([orgId, date])
+  @@index([orgId, date])
+}
+
+/// Append-only audit trail for auth-sensitive and data-mutating actions
+/// (DSG/GDPR pre-GA requirement). Standalone (no FK relations) so entries
+/// survive deletion of their subjects; write via services/auditLog.ts.
+model AuditLog {
+  id          String   @id @default(uuid())
+  orgId       String?
+  actorUserId String?
+  action      String
+  entityType  String?
+  entityId    String?
+  ip          String?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  @@index([orgId, createdAt])
+  @@index([action, createdAt])
+  @@index([entityType, entityId])
+}
+
+// ── Bulk CSV Import (buildings & units) ──────────────────────
+// Generic staging + review gate: uploaded CSV rows are parsed and validated
+// into ImportRow records, then written to the real Building/Unit tables only
+// when the manager commits the batch.
+
+enum ImportEntityType {
+  BUILDING
+  UNIT
+}
+
+enum ImportBatchStatus {
+  PENDING_REVIEW /// Parsed & validated; awaiting manager commit
+  COMMITTED /// Valid rows written to their real tables
+  REJECTED /// Discarded without writing
+}
+
+enum ImportRowStatus {
+  VALID /// Passed validation; will be created on commit
+  ERROR /// Failed validation; skipped on commit
+  COMMITTED /// Successfully written to a real table
+}
+
+/// One CSV bulk-import upload (buildings or units).
+model ImportBatch {
+  id          String            @id @default(uuid())
+  orgId       String
+  entityType  ImportEntityType
+  fileName    String
+  uploadedBy  String /// userId of the manager who uploaded
+  status      ImportBatchStatus @default(PENDING_REVIEW)
+  rowCount    Int               @default(0) /// total data rows parsed
+  validCount  Int               @default(0) /// rows that passed validation
+  errorCount  Int               @default(0) /// rows that failed validation
+  createdAt   DateTime          @default(now())
+  committedAt DateTime?
+
+  org  Org         @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  rows ImportRow[]
+
+  @@index([orgId])
+  @@index([orgId, status])
+}
+
+/// One parsed CSV row within an ImportBatch.
+model ImportRow {
+  id              String          @id @default(uuid())
+  batchId         String
+  rowIndex        Int /// 1-based data-row number (excludes the header line)
+  rawJson         Json /// The parsed, normalized row payload
+  status          ImportRowStatus @default(VALID)
+  errorMessage    String? /// Validation error message when status = ERROR
+  createdEntityId String? /// id of the Building/Unit created on commit
+
+  batch ImportBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+  @@index([batchId])
 }

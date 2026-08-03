@@ -33,7 +33,7 @@ export interface MonthlyBucket {
   year: number;
   month: number;           // 1–12
   isActual: boolean;       // true for historical months with snapshot data
-  projectedIncomeCents: number;
+  accruedIncomeCents: number;
   projectedOpexCents: number;
   scheduledCapexCents: number;
   netCents: number;
@@ -101,7 +101,7 @@ export async function computeMonthlyCashflow(
   // Aggregate snapshots by year-month (sum across buildings for portfolio plans)
   const snapshotByMonth = new Map<
     string,
-    { earnedIncomeCents: number; opexCents: number; capexCents: number }
+    { collectedIncomeCents: number; opexCents: number; capexCents: number }
   >();
 
   for (const snap of snapshots) {
@@ -109,12 +109,12 @@ export async function computeMonthlyCashflow(
     const m = snap.periodStart.getMonth() + 1;
     const key = yearMonthKey(y, m);
     const existing = snapshotByMonth.get(key) ?? {
-      earnedIncomeCents: 0,
+      collectedIncomeCents: 0,
       opexCents: 0,
       capexCents: 0,
     };
     snapshotByMonth.set(key, {
-      earnedIncomeCents: existing.earnedIncomeCents + snap.earnedIncomeCents,
+      collectedIncomeCents: existing.collectedIncomeCents + snap.collectedIncomeCents,
       opexCents: existing.opexCents + snap.operatingTotalCents,
       capexCents: existing.capexCents + snap.capexTotalCents,
     });
@@ -147,7 +147,7 @@ export async function computeMonthlyCashflow(
     const d = addMonths(now, -i);
     const key = yearMonthKey(d.getFullYear(), d.getMonth() + 1);
     const snap = snapshotByMonth.get(key);
-    if (snap) recentIncomeValues.push(snap.earnedIncomeCents);
+    if (snap) recentIncomeValues.push(snap.collectedIncomeCents);
   }
   const fallbackIncomeCents =
     recentIncomeValues.length > 0
@@ -288,13 +288,13 @@ export async function computeMonthlyCashflow(
     const snap = snapshotByMonth.get(key);
     const isActual = isPast && snap !== undefined;
 
-    let projectedIncomeCents: number;
+    let accruedIncomeCents: number;
     let projectedOpexCents: number;
     let scheduledCapexCents: number;
     const capexItemsRaw = capexByMonth.get(key) ?? [];
 
     if (isActual && snap) {
-      projectedIncomeCents = snap.earnedIncomeCents;
+      accruedIncomeCents = snap.collectedIncomeCents;
       projectedOpexCents = snap.opexCents;
       scheduledCapexCents = snap.capexCents;
     } else {
@@ -304,7 +304,7 @@ export async function computeMonthlyCashflow(
         plan.incomeGrowthRatePct,
         Math.max(0, monthsAhead),
       );
-      projectedIncomeCents = Math.round(baseProjectedIncomeCents * growthFactor);
+      accruedIncomeCents = Math.round(baseProjectedIncomeCents * growthFactor);
       projectedOpexCents = trailingAvgOpexCents;
       scheduledCapexCents = capexItemsRaw.reduce(
         (sum, ev) => sum + ev.estimatedCostCents,
@@ -312,14 +312,14 @@ export async function computeMonthlyCashflow(
       );
     }
 
-    const netCents = projectedIncomeCents - projectedOpexCents - scheduledCapexCents;
+    const netCents = accruedIncomeCents - projectedOpexCents - scheduledCapexCents;
     cumulativeBalance += netCents;
 
     buckets.push({
       year,
       month,
       isActual,
-      projectedIncomeCents,
+      accruedIncomeCents,
       projectedOpexCents,
       scheduledCapexCents,
       netCents,

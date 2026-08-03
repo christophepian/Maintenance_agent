@@ -92,7 +92,7 @@ export function canTransitionJob(from: JobStatus, to: JobStatus): boolean {
 
 const VALID_INVOICE_TRANSITIONS: Record<string, InvoiceStatus[]> = {
   [InvoiceStatus.DRAFT]: [InvoiceStatus.ISSUED, InvoiceStatus.APPROVED],
-  [InvoiceStatus.ISSUED]: [InvoiceStatus.APPROVED, InvoiceStatus.DISPUTED],
+  [InvoiceStatus.ISSUED]: [InvoiceStatus.APPROVED, InvoiceStatus.PAID, InvoiceStatus.DISPUTED],
   [InvoiceStatus.APPROVED]: [InvoiceStatus.PAID, InvoiceStatus.DISPUTED],
   [InvoiceStatus.DISPUTED]: [InvoiceStatus.APPROVED, InvoiceStatus.DRAFT],
   [InvoiceStatus.PAID]: [],

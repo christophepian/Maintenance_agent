@@ -179,7 +179,7 @@ describe("Financial Performance Engine", () => {
 
     // Result should contain our expense data
     expect(result.expensesTotalCents).toBe(53850);
-    expect(result.earnedIncomeCents).toBe(0); // lease invoices are separate from job invoices
+    expect(result.collectedIncomeCents).toBe(0); // lease invoices are separate from job invoices
   });
 
   // ── Second request uses cached snapshot ──
@@ -277,7 +277,7 @@ describe("Financial Performance Engine", () => {
     });
 
     // 2200 CHF × 1 month = 220000 cents
-    expect(fullMonth.projectedIncomeCents).toBe(220000);
+    expect(fullMonth.accruedIncomeCents).toBe(220000);
 
     // Now query half of January (15 days out of 31)
     const halfMonth = await getBuildingFinancials(orgId, buildingId, {
@@ -296,7 +296,7 @@ describe("Financial Performance Engine", () => {
     // So projected = 220000 × 1.0 = 220000 for this micro-bucket.
     // That's the correct proration: for this 15-day window, expected rent is full monthly rent
     // scaled by (overlapDays / periodDays).
-    expect(halfMonth.projectedIncomeCents).toBe(220000);
+    expect(halfMonth.accruedIncomeCents).toBe(220000);
 
     // Now query a period where lease only partially overlaps: Dec 15 2025 to Jan 15 2026
     // Lease ends Dec 31 2025. So overlap with Dec bucket = Dec 15-31 (16 days) out of 17 days (Dec 15-Jan 1)
@@ -312,8 +312,8 @@ describe("Financial Performance Engine", () => {
     // projected ≈ 220000 × 0.9412 ≈ 207059 (rounded)
     // Jan bucket: [Jan 1, Jan 15) = 14 days. Lease ended → 0.
     // Total projected should be ≈ 207059
-    expect(partialOverlap.projectedIncomeCents).toBeGreaterThan(0);
-    expect(partialOverlap.projectedIncomeCents).toBeLessThan(220000);
+    expect(partialOverlap.accruedIncomeCents).toBeGreaterThan(0);
+    expect(partialOverlap.accruedIncomeCents).toBeLessThan(220000);
   });
 
   // ── Category breakdown sums equal expensesTotal ──
@@ -371,9 +371,9 @@ describe("Financial Performance Engine", () => {
 
     expect(result.rentalIncomeCents).toBe(200000);
     expect(result.serviceChargeIncomeCents).toBe(20000);
-    // Together they match projectedIncomeCents
+    // Together they match accruedIncomeCents
     expect(result.rentalIncomeCents + result.serviceChargeIncomeCents).toBe(
-      result.projectedIncomeCents,
+      result.accruedIncomeCents,
     );
   });
 
@@ -449,5 +449,37 @@ describe("Financial Performance Engine", () => {
         to: "2025-01-01",
       }),
     ).rejects.toThrow("'from' must be before 'to'");
+  });
+
+  // ── Imported opening balances (WS-A) ──
+  // BALANCE_SHEET_IMPORT entries on 1100/2000 surface as un-aged opening
+  // receivables/payables and must NOT leak into invoice-based receivablesCents.
+  it("surfaces imported opening AR/AP and keeps them out of invoice receivables", async () => {
+    const arAcc = await prisma.account.create({
+      data: { orgId, name: "Debtors (opening test)", code: "1100", accountType: "ASSET" },
+    });
+    const apAcc = await prisma.account.create({
+      data: { orgId, name: "Creditors (opening test)", code: "2000", accountType: "LIABILITY" },
+    });
+    // Self-balancing opening journal dated before the report window.
+    await prisma.ledgerEntry.createMany({
+      data: [
+        { orgId, buildingId, accountId: arAcc.id, debitCents: 500_00, creditCents: 0,
+          description: "Opening AR", sourceType: "BALANCE_SHEET_IMPORT", journalId: "open-j1", date: new Date("2024-12-31T00:00:00Z") },
+        { orgId, buildingId, accountId: apAcc.id, debitCents: 0, creditCents: 500_00,
+          description: "Opening AP", sourceType: "BALANCE_SHEET_IMPORT", journalId: "open-j1", date: new Date("2024-12-31T00:00:00Z") },
+      ],
+    });
+
+    const dto = await getBuildingFinancials(orgId, buildingId, {
+      from: "2025-01-01",
+      to: "2025-02-01",
+      forceRefresh: true,
+    });
+
+    expect(dto.openingReceivablesCents).toBe(500_00);
+    expect(dto.openingPayablesCents).toBe(500_00);
+    // Opening lumps are not invoices → invoice-based receivables stay 0.
+    expect(dto.receivablesCents).toBe(0);
   });
 });

@@ -18,6 +18,7 @@ export async function generateInvoicePDF(
 ): Promise<Buffer> {
   // Fetch invoice with all related data
   const invoice = await findInvoiceWithLineItemsAndIssuer(prisma, invoiceId);
+  console.log(`[PDF] invoice lookup id=${invoiceId} found=${!!invoice}`);
 
   if (!invoice) {
     throw new Error(`Invoice not found: ${invoiceId}`);
@@ -27,6 +28,8 @@ export async function generateInvoicePDF(
   if (invoice.orgId !== orgId) {
     throw new Error('Unauthorized: Invoice does not belong to this org');
   }
+
+  console.log(`[PDF] lineItems=${invoice.lineItems?.length ?? 0} iban=${!!invoice.iban} issuer=${!!invoice.issuer}`);
 
   // Generate QR-bill if requested
   let qrCodePNG: Buffer | null = null;
@@ -38,7 +41,7 @@ export async function generateInvoicePDF(
       qrPayload = qrBillData.qrPayload;
     } catch (e) {
       // QR-bill generation failed, continue without it
-      console.warn(`Failed to generate QR-bill for invoice ${invoiceId}:`, e);
+      console.warn(`[PDF] QR-bill generation failed for ${invoiceId}:`, e);
     }
   }
 

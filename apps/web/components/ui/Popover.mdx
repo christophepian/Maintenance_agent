@@ -1,0 +1,49 @@
+import { Meta, Title, Canvas } from "@storybook/addon-docs/blocks";
+import * as PopoverStories from "./Popover.stories";
+
+<Meta of={PopoverStories} />
+
+<Title />
+
+A floating panel anchored to a trigger, built on **Radix**
+(`@radix-ui/react-popover`) — positioning, collision handling, click-outside, and
+`Esc` are handled for you. Use it for action menus and small bits of secondary
+content.
+
+```jsx
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/Popover";
+
+<Popover>
+  <PopoverTrigger asChild><Button variant="secondary">Actions ▾</Button></PopoverTrigger>
+  <PopoverContent align="start">
+    …menu items…
+  </PopoverContent>
+</Popover>
+```
+
+## Anatomy
+
+| Part | Role |
+|---|---|
+| `Popover` | Root — optional controlled `open` / `onOpenChange` |
+| `PopoverTrigger` | The anchor (`asChild` → uses your button) |
+| `PopoverContent` | The floating panel; `align` (default `end`), `sideOffset` (default `4`) |
+
+## Live
+
+<Canvas of={PopoverStories.Default} />
+
+## When to use
+
+- ✅ **Use a Popover** for action menus (row actions, "⋮" menus), filters, or a
+  short bit of contextual content.
+- ⛔ **Don't** put long forms or primary flows in a popover — use
+  [Dialog](?path=/docs/ui-dialog--docs).
+- ⛔ **Don't** use it for critical messages that must not be dismissed by clicking
+  away.
+
+## Accessibility
+
+- Radix manages focus, `Esc`, click-outside, and `aria-*` wiring.
+- Give interactive items real `<button>`s (as in the example) so they're keyboard-
+  reachable; the panel roves focus for you.

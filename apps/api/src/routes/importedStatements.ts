@@ -21,6 +21,7 @@ import { requireOrgViewer } from "./helpers";
 import {
   readRawBody,
   parseMultipart,
+  storage,
 } from "../storage/attachments";
 import {
   ingestStatement,
@@ -90,8 +91,14 @@ export function registerImportedStatementRoutes(router: Router) {
     const hintDocType = hintDocTypePart?.data.toString("utf8").trim() || undefined;
 
     const mimeType = filePart.contentType ?? "application/octet-stream";
+    // CSV is detected by extension because browsers report it inconsistently
+    // (text/csv, application/vnd.ms-excel, application/octet-stream, or empty).
+    const isCsv =
+      /\.csv$/i.test(filePart.filename) ||
+      mimeType === "text/csv" ||
+      mimeType === "application/csv";
     const allowedTypes = ["application/pdf", "image/jpeg", "image/png", "image/tiff"];
-    if (!allowedTypes.includes(mimeType)) {
+    if (!isCsv && !allowedTypes.includes(mimeType)) {
       return sendError(res, 415, "UNSUPPORTED_MEDIA_TYPE", `Unsupported file type: ${mimeType}`);
     }
 
@@ -105,6 +112,7 @@ export function registerImportedStatementRoutes(router: Router) {
         fiscalYear,
         buildingId: hintBuildingId,
         hintDocType,
+        isCsv,
       });
       sendJson(res, 202, { data: statement });
     } catch (e: any) {
@@ -237,8 +245,16 @@ export function registerImportedStatementRoutes(router: Router) {
     const user = requireAnyRole(req, res, ["MANAGER"]);
     if (!user) return;
 
+    let override = false;
+    let overrideReason: string | undefined;
     try {
-      const statement = await approveStatement(prisma, params.id, orgId, user.userId);
+      const body = JSON.parse((await readRawBody(req, 4096)).toString("utf8"));
+      override = body.override === true;
+      overrideReason = typeof body.overrideReason === "string" ? body.overrideReason.slice(0, 500) : undefined;
+    } catch { /* no body → no override */ }
+
+    try {
+      const statement = await approveStatement(prisma, params.id, orgId, user.userId, { override, overrideReason });
       sendJson(res, 200, { data: statement });
     } catch (e: any) {
       if (e instanceof ImportedStatementError) {
@@ -272,6 +288,39 @@ export function registerImportedStatementRoutes(router: Router) {
       }
       console.error("[IMPORT] reject error:", e);
       sendError(res, 500, "INTERNAL_ERROR", "Failed to reject statement", e.message);
+    }
+  });
+
+  // ── GET /imported-statements/:id/source-file ────────────────────────────────
+  // Serve the original uploaded PDF so a reviewer can verify extracted figures
+  // against the source (provenance) before approving.
+  router.get("/imported-statements/:id/source-file", async ({ req, res, orgId, prisma, params }) => {
+    if (!requireOrgViewer(req, res)) return;
+    try {
+      const statement = await getStatement(prisma, params.id, orgId);
+      if (!statement) return sendError(res, 404, "NOT_FOUND", "Statement not found");
+      const fileKey = statement.sourceFileUrl;
+      if (!fileKey || !(await storage.exists(fileKey))) return sendError(res, 404, "NOT_FOUND", "No source file for this statement");
+
+      const buffer = await storage.get(fileKey);
+      const ext = fileKey.split(".").pop()?.toLowerCase() || "";
+      // Package imports store the intermediate CSV (not a PDF) as the source — serve
+      // it as text so "View original" opens it readable instead of downloading a blob.
+      const mime = ext === "pdf" ? "application/pdf"
+        : ext === "png" ? "image/png"
+          : ext === "jpg" || ext === "jpeg" ? "image/jpeg"
+            : ext === "csv" || ext === "txt" ? "text/plain; charset=utf-8"
+              : "application/octet-stream";
+      res.writeHead(200, {
+        "Content-Type": mime,
+        "Content-Length": buffer.length.toString(),
+        "Content-Disposition": `inline; filename="${encodeURIComponent(fileKey.split("/").pop() || "source")}"`,
+        "Cache-Control": "private, max-age=3600",
+      });
+      res.end(buffer);
+    } catch (e) {
+      console.error("[IMPORT] source-file error:", e);
+      sendError(res, 500, "INTERNAL_ERROR", "Failed to serve source file");
     }
   });
 

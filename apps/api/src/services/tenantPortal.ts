@@ -6,6 +6,7 @@
  */
 import { LeaseStatus, SignatureRequestStatus, RentalOwnerSelectionStatus } from '@prisma/client';
 import prisma from './prismaClient';
+import { emit } from '../events/bus';
 import * as tenantPortalRepo from '../repositories/tenantPortalRepository';
 import * as userRepo from '../repositories/userRepository';
 import * as rentalAppRepo from '../repositories/rentalApplicationRepository';
@@ -226,6 +227,23 @@ export async function tenantAcceptLease(
 
   // Auto-activate: READY_TO_SIGN → SIGNED → ACTIVE in one step
   const updatedLease = await tenantPortalRepo.updateLeaseToActive(prisma, leaseId);
+
+  // This path activates the lease directly via the repository, bypassing
+  // activateLeaseWorkflow, so it must emit LEASE_STATUS_CHANGED itself —
+  // otherwise the recurring-billing handler never fires and no
+  // RecurringBillingSchedule (and no monthly rent invoices) is ever created.
+  // Awaited so the generated first invoice exists before
+  // autoActivateLeaseInvoices runs (prevents a duplicate first-rent invoice).
+  await emit({
+    type: 'LEASE_STATUS_CHANGED',
+    orgId,
+    actorUserId: null,
+    payload: {
+      leaseId,
+      fromStatus: lease.status,
+      toStatus: LeaseStatus.ACTIVE,
+    },
+  }).catch((err) => console.error('[EVENT] Failed to emit LEASE_STATUS_CHANGED', err));
 
   // Auto-issue all DRAFT invoices; create first-rent invoice if none exist yet
   try {

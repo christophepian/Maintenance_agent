@@ -594,7 +594,7 @@ function ApproveModal({ preview, onConfirm, onClose, loading }) {
             )}
           </div>
 
-          <div className="overflow-hidden rounded-lg border border-table-border">
+          <div className="overflow-hidden rounded-lg border border-surface-border">
             <div className="overflow-x-auto">
               <table className="data-table text-sm">
                 <thead>
@@ -800,16 +800,29 @@ export default function ImportedStatementReviewPage() {
     setApproveModalOpen(true);
   }
 
-  async function doApprove() {
+  async function doApprove(opts) {
     setActionLoading(true);
     setActionError("");
     try {
       const res = await fetch(`/api/imported-statements/${id}/approve`, {
         method: "POST",
-        headers: authHeaders(),
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify(opts?.override ? { override: true, overrideReason: opts.overrideReason } : {}),
       });
       const json = await res.json().catch(() => null);
-      if (!res.ok || !json) throw new Error(json?.error?.message || "Failed to approve");
+      if (!res.ok || !json) {
+        // Reconciliation gate: extracted figures don't tie out to the document's
+        // own totals. Require an explicit, reasoned override before publishing.
+        if ((json?.error?.code === "RECONCILIATION_FAILED" || json?.error?.code === "CROSS_STATEMENT_MISMATCH") && !opts?.override) {
+          const reason = window.prompt(
+            `${json?.error?.message}\n\n` +
+            "Approving now publishes figures that may be wrong to the owner. If you've verified them against the source, type a reason to approve anyway (or Cancel):",
+          );
+          if (reason && reason.trim()) return doApprove({ override: true, overrideReason: reason.trim() });
+          throw new Error(json?.error?.message || "Reconciliation failed");
+        }
+        throw new Error(json?.error?.message || "Failed to approve");
+      }
       setApproveModalOpen(false);
       setStatement(json.data);
     } catch (e) {
@@ -817,6 +830,33 @@ export default function ImportedStatementReviewPage() {
     } finally {
       setActionLoading(false);
     }
+  }
+
+  // Provenance: open the original uploaded PDF so figures can be verified against
+  // the source. Blob-fetched with auth (a plain link wouldn't send the token).
+  async function viewSource() {
+    setActionError("");
+    try {
+      const res = await fetch(`/api/imported-statements/${id}/source-file`, { headers: authHeaders() });
+      if (!res.ok) throw new Error("no source");
+      window.open(URL.createObjectURL(await res.blob()), "_blank", "noopener");
+    } catch { setActionError("Couldn't load the original source file."); }
+  }
+
+  // One-click apply of a derived correction (reconciliation residual + prior-year
+  // value converge on a line/value). PATCHes the balance, then refetches so the
+  // reconciliation + flags recompute live.
+  async function applyCorrection(c) {
+    setActionError("");
+    try {
+      const res = await fetch(`/api/imported-statements/${id}/balances/${c.balanceId}`, {
+        method: "PATCH",
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ balanceCents: c.suggestedCents }),
+      });
+      if (!res.ok) throw new Error((await res.json().catch(() => null))?.error?.message || "Failed to apply fix");
+      await fetchStatement();
+    } catch (e) { setActionError(String(e?.message || e)); }
   }
 
   async function handleReject() {
@@ -879,6 +919,16 @@ export default function ImportedStatementReviewPage() {
   const isExactlyBalanced = isBalanceSheet ? (imbalanceCents === 0) : true;
   // Show the imbalance warning banner only for balance sheets
   const hasBalanceWarning = isBalanceSheet && imbalanceCents !== null && imbalanceCents !== 0;
+
+  // Reconciliation of extracted lines vs the document's own stated totals (server DTO,
+  // recomputed each fetch). PASS ties out · FAIL doesn't · UNVERIFIED = no totals to check.
+  const recon = s?.reconciliation ?? null;
+  // Domain smell-tests (implausible ratios) — non-blocking review warnings.
+  const sanityFlags = s?.sanityFlags ?? [];
+  // Derived one-click fixes for figures that don't tie out.
+  const suggestedCorrections = s?.suggestedCorrections ?? [];
+  // Cross-statement: P&L result vs the balance sheet's result line.
+  const crossCheck = s?.crossCheck ?? null;
 
   // Approve availability:
   // - INVOICES: building only
@@ -1129,6 +1179,115 @@ export default function ImportedStatementReviewPage() {
                 </div>
               )}
 
+              {/* ── Provenance: verify figures against the original PDF ── */}
+              {s?.sourceFileUrl && (
+                <div className="flex items-center justify-between gap-2 rounded-lg border border-surface-border bg-surface-subtle px-4 py-2 text-sm">
+                  <span className="text-muted">Verify the extracted figures against the original document.</span>
+                  <button onClick={viewSource} className="shrink-0 rounded-md border border-surface-border px-2.5 py-1 text-xs font-medium text-brand hover:border-brand">View original ↗</button>
+                </div>
+              )}
+
+              {/* ── Confidence verdict (graduated autonomy) — headline of the checks below ── */}
+              {s?.confidence && !hasNoBalances && (
+                <div className={cn("rounded-lg border px-4 py-3 text-sm",
+                  s.confidence.tier === "GREEN" ? "border-green-300 bg-green-50 text-green-800"
+                    : s.confidence.tier === "AMBER" ? "border-amber-300 bg-amber-50 text-amber-800"
+                      : "border-red-300 bg-red-50 text-red-800")}>
+                  <p className="font-semibold mb-1">
+                    {s.confidence.tier === "GREEN" ? "🟢 Green — every verifiable check passed; safe to approve"
+                      : s.confidence.tier === "AMBER" ? "🟡 Amber — it ties out, but eyeball it before relying on it"
+                        : "🔴 Red — a check failed; correct it before approving"}
+                  </p>
+                  {s.confidence.reasons?.length > 0 && (
+                    <ul className="mt-1 space-y-0.5 text-xs">
+                      {s.confidence.reasons.map((r, i) => (
+                        <li key={i}>• {r}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
+
+              {/* ── Reconciliation gate — extracted lines vs the document's own totals ── */}
+              {recon && !hasNoBalances && (
+                <div className={cn("rounded-lg border px-4 py-3 text-sm",
+                  recon.status === "PASS" ? "border-green-300 bg-green-50 text-green-800"
+                    : recon.status === "FAIL" ? "border-red-300 bg-red-50 text-red-800"
+                      : "border-amber-300 bg-amber-50 text-amber-800")}>
+                  <p className="font-semibold mb-1">
+                    {recon.status === "PASS" ? "✓ Reconciled — extracted totals tie out to the document"
+                      : recon.status === "FAIL" ? "⚠ Reconciliation failed — extracted totals don’t match the document"
+                        : "⚠ Unverified — the document declared no totals to check the extraction against"}
+                  </p>
+                  {recon.lines.length > 0 && (
+                    <ul className="mt-1 space-y-0.5 font-mono text-xs">
+                      {recon.lines.map((l, i) => (
+                        <li key={i} className={l.ok ? "" : "font-semibold"}>
+                          {l.ok ? "✓" : "✗"} {l.scope}: {l.computedChf.toLocaleString("de-CH")}
+                          {l.statedChf != null && ` vs ${l.statedChf.toLocaleString("de-CH")}`}
+                          {!l.ok && ` (off by ${l.diffChf.toLocaleString("de-CH")})`}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {recon.status === "FAIL" && (
+                    <p className="mt-1">Correct the flagged balances below, or approve with an override reason — the override is recorded on the statement.</p>
+                  )}
+                  {recon.status === "UNVERIFIED" && (
+                    <p className="mt-1">The extraction couldn’t be auto-verified against the source — double-check the figures before approving.</p>
+                  )}
+                </div>
+              )}
+
+              {/* ── Cross-statement: P&L result vs balance-sheet result line ── */}
+              {crossCheck && crossCheck.status !== "NA" && (
+                <div className={cn("rounded-lg border px-4 py-3 text-sm",
+                  crossCheck.status === "PASS" ? "border-green-300 bg-green-50 text-green-800" : "border-red-300 bg-red-50 text-red-800")}>
+                  <p className="font-semibold">
+                    {crossCheck.status === "PASS"
+                      ? "✓ Cross-check — the income statement's result matches the balance sheet"
+                      : "⚠ Cross-check failed — income statement and balance sheet disagree"}
+                  </p>
+                  {crossCheck.status === "FAIL" && (
+                    <p className="mt-1 font-mono text-xs">
+                      P&amp;L result {(crossCheck.plResultCents / 100).toLocaleString("de-CH")} vs balance-sheet result line {(crossCheck.bsResultCents / 100).toLocaleString("de-CH")} (off by {(Math.abs(crossCheck.diffCents) / 100).toLocaleString("de-CH")}) — a figure is mis-read on one of the two statements.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* ── Suggested fixes — one-click corrections that restore the tie-out ── */}
+              {suggestedCorrections.length > 0 && (
+                <div className="rounded-lg border border-blue-300 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+                  <p className="font-semibold mb-1">💡 Suggested fix{suggestedCorrections.length > 1 ? "es" : ""} — verify against the source before applying</p>
+                  <ul className="space-y-1.5">
+                    {suggestedCorrections.map((c) => (
+                      <li key={c.balanceId} className="flex flex-wrap items-center justify-between gap-2">
+                        <span>
+                          Set <b>{c.accountName}</b> from CHF {(c.currentCents / 100).toLocaleString("de-CH")} → <b>CHF {(c.suggestedCents / 100).toLocaleString("de-CH")}</b> — {c.reason}.
+                        </span>
+                        <button onClick={() => applyCorrection(c)} disabled={actionLoading}
+                          className="shrink-0 rounded-md bg-blue-600 px-2.5 py-1 text-xs font-semibold text-white transition-colors hover:bg-blue-700 disabled:opacity-50">
+                          Apply
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* ── Sanity checks — implausible ratios (non-blocking) ── */}
+              {sanityFlags.length > 0 && (
+                <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                  <p className="font-semibold mb-1">⚠ Sanity checks — worth a second look</p>
+                  <ul className="space-y-0.5">
+                    {sanityFlags.map((f, i) => (
+                      <li key={i}>{f.severity === "warn" ? "⚠" : "ℹ"} {f.message}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
               {/* ── Ledger preview — balance sheet only ── */}
               {isPendingReview && isBalanceSheet && !hasNoBalances && (
                 <div className="rounded-lg border border-surface-border bg-surface-subtle">
@@ -1223,7 +1382,7 @@ export default function ImportedStatementReviewPage() {
               {/* ── Linked Invoices ── */}
               {s.linkedInvoices?.length > 0 && (
                 <Section title={t("manager:financeImports.title.linkedInvoices")}>
-                  <div className="overflow-hidden rounded-lg border border-table-border">
+                  <div className="overflow-hidden rounded-lg border border-surface-border">
                     <div className="overflow-x-auto">
                       <table className="data-table">
                         <thead>
@@ -1262,7 +1421,7 @@ export default function ImportedStatementReviewPage() {
               {s.accountBalances?.length > 0 && (
                 <Section title={t("manager:financeImports.title.accountBalances")}>
                   {/* ── Mobile ── */}
-                  <div className="md:hidden overflow-hidden rounded-lg border border-table-border divide-y divide-table-divider">
+                  <div className="md:hidden overflow-hidden rounded-lg border border-surface-border divide-y divide-surface-divider">
                     {s.accountBalances.map((ab) => (
                       <Fragment key={ab.id}>
                         <div className="table-card">
@@ -1333,7 +1492,7 @@ export default function ImportedStatementReviewPage() {
                   </div>
 
                   {/* ── Desktop ── */}
-                  <div className="hidden md:block overflow-hidden rounded-lg border border-table-border">
+                  <div className="hidden md:block overflow-hidden rounded-lg border border-surface-border">
                     <div className="overflow-x-auto">
                       <table className="data-table">
                         <thead>

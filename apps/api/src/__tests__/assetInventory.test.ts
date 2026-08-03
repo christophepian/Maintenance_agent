@@ -14,7 +14,7 @@
 import * as http from "http";
 import { ChildProcessWithoutNullStreams } from 'child_process';
 import { PrismaClient } from "@prisma/client";
-import { computeDepreciation } from "../services/assetInventory";
+import { computeDepreciation, applyConditionToRecommendation } from "../services/assetInventory";
 import { startTestServer, stopTestServer } from './testHelpers';
 
 const prisma = new PrismaClient();
@@ -123,6 +123,39 @@ describe("computeDepreciation (unit)", () => {
     expect(result).not.toBeNull();
     expect(result!.depreciationPct).toBe(100);
     expect(result!.residualPct).toBe(0);
+  });
+});
+
+// ─── Unit: applyConditionToRecommendation ──────────────────────
+
+describe("applyConditionToRecommendation (unit)", () => {
+  test("GOOD condition defers an end-of-life REPLACE by one tier", () => {
+    const r = applyConditionToRecommendation("REPLACE", "Asset has reached end of useful life.", "GOOD");
+    expect(r.recommendation).toBe("PLAN_REPLACEMENT");
+    expect(r.recommendationReason).toContain("rated GOOD");
+  });
+
+  test("POOR condition accelerates a REPAIR by one tier", () => {
+    const r = applyConditionToRecommendation("REPAIR", "Asset is in good condition relative to its useful life.", "POOR");
+    expect(r.recommendation).toBe("MONITOR");
+    expect(r.recommendationReason).toContain("rated POOR");
+  });
+
+  test("DAMAGED cannot exceed REPLACE (clamped)", () => {
+    const r = applyConditionToRecommendation("REPLACE", "x", "DAMAGED");
+    expect(r.recommendation).toBe("REPLACE");
+    expect(r.recommendationReason).toBe("x"); // no tier change → no note appended
+  });
+
+  test("GOOD cannot go below REPAIR (clamped)", () => {
+    const r = applyConditionToRecommendation("REPAIR", "x", "GOOD");
+    expect(r.recommendation).toBe("REPAIR");
+    expect(r.recommendationReason).toBe("x");
+  });
+
+  test("FAIR and null leave the recommendation unchanged", () => {
+    expect(applyConditionToRecommendation("PLAN_REPLACEMENT", "x", "FAIR").recommendation).toBe("PLAN_REPLACEMENT");
+    expect(applyConditionToRecommendation("PLAN_REPLACEMENT", "x", null).recommendation).toBe("PLAN_REPLACEMENT");
   });
 });
 

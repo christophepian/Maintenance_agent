@@ -31,7 +31,7 @@
  *   intended extension path. Today only tiers 3–4 are active.
  */
 
-import { PrismaClient, AssetType, AssetCategory, AssetInterventionType } from "@prisma/client";
+import { PrismaClient, Prisma, AssetType, AssetCategory, AssetInterventionType } from "@prisma/client";
 
 // ─── AssetType → AssetCategory deterministic mapping ───────────
 //
@@ -462,5 +462,16 @@ export async function findReplacementInterventionsByTypeAndTopic(
     select: { costChf: true },
     orderBy: { costChf: "asc" },
   });
+}
+
+/**
+ * Hard-delete assets matching a where filter.
+ * Used by defaultAssets seeding to prune stale legacy default topics.
+ */
+export async function deleteAssetsWhere(
+  prisma: PrismaClient,
+  where: Prisma.AssetWhereInput,
+) {
+  return prisma.asset.deleteMany({ where });
 }
 

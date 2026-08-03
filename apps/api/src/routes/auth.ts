@@ -13,7 +13,7 @@ import { triageIssue } from "../services/triage";
 import { TenantSessionSchema } from "../validation/tenantSession";
 import { TriageSchema } from "../validation/triage";
 import { LoginSchema, RegisterSchema } from "../validation/auth";
-import { LEASE_FULL_INCLUDE } from "../repositories/leaseRepository";
+import { LEASE_FULL_INCLUDE, findActiveLeaseWithUnit } from "../repositories/leaseRepository";
 import { findUserProfile, findUserForCredentialCheck, updateUserProfile } from "../repositories/userRepository";
 import {
   findTenantRequests,
@@ -42,22 +42,15 @@ import {
   submitRatingWorkflow,
   CompletionError,
 } from "../workflows/completionRatingWorkflow";
+import { checkRateLimit } from "../http/rateLimiter";
 
-// SA-18: In-memory rate limiter for POST /triage (10 calls/IP/minute)
-// NOTE: Resets on server restart — replace with Redis-backed limiter before multi-tenant production
-const triageRateMap = new Map<string, { count: number; resetAt: number }>();
+// SA-18: rate limiter for POST /triage (10 calls/IP/minute) via shared
+// apps/api/src/http/rateLimiter.ts (see its Redis note re: multi-instance).
 const TRIAGE_RATE_LIMIT = 10;
 const TRIAGE_RATE_WINDOW_MS = 60_000;
 
 function checkTriageRateLimit(ip: string): boolean {
-  const now = Date.now();
-  const entry = triageRateMap.get(ip);
-  if (!entry || now >= entry.resetAt) {
-    triageRateMap.set(ip, { count: 1, resetAt: now + TRIAGE_RATE_WINDOW_MS });
-    return true;
-  }
-  entry.count++;
-  return entry.count <= TRIAGE_RATE_LIMIT;
+  return checkRateLimit("triage", ip, TRIAGE_RATE_LIMIT, TRIAGE_RATE_WINDOW_MS);
 }
 
 export function registerAuthRoutes(router: Router) {
@@ -134,10 +127,7 @@ export function registerAuthRoutes(router: Router) {
     if (!tenantId) return;
     try {
       // Verify the lease belongs to this tenant and is ACTIVE
-      const lease = await prisma.lease.findFirst({
-        where: { id: params.id, orgId, status: "ACTIVE" },
-        include: { unit: { select: { id: true, unitNumber: true } } },
-      });
+      const lease = await findActiveLeaseWithUnit(prisma, params.id, orgId);
       if (!lease) return sendError(res, 404, "NOT_FOUND", "Active lease not found");
 
       // Verify the tenant occupies the unit

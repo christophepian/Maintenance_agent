@@ -482,10 +482,14 @@
   "reporting": {
     "heading": {
       "whatDrovePerformance": "Ce qui a influencé la performance",
+      "whatToWatch": "Points de vigilance",
+      "periodNotes": "Notes de période",
+      "monthlyNoi": "NOI mensuel",
       "byProperty": "Par bien",
       "tenantMovements": "Mouvements de locataires",
       "periodInsights": "Analyses de la période",
-      "fullFinancialDetail": "Détail financier complet"
+      "fullFinancialDetail": "Détail financier complet",
+      "rentArrearsAging": "Ancienneté des loyers impayés"
     },
     "ariaLabel": {
       "previousYear": "Année précédente",
@@ -493,9 +497,14 @@
     },
     "prop": {
       "netIncome": "Revenu net",
-      "rentCollected": "Loyer encaissé",
+      "netOperatingIncome": "Revenu opérationnel net",
+      "rentCollected": "Encaissements",
       "totalExpenses": "Total des dépenses",
-      "collectionRate": "Taux de recouvrement"
+      "collectionRate": "Recouvrement à échéance",
+      "noiMargin": "Marge NOI",
+      "opexRatio": "Ratio charges d'exploitation",
+      "occupancy": "Taux d'occupation",
+      "rentOutstanding": "Loyers en attente"
     },
     "text": {
       "income": "Revenus",
@@ -517,23 +526,150 @@
       "backToMonths": "← Mois",
       "movingIn": "Entrée",
       "movingOut": "Sortie",
+      "viewDetails": "Voir les détails",
+      "hideDetails": "Masquer les détails",
       "loadingReport": "Chargement du rapport…",
       "strongMonth": "Votre portefeuille a eu un excellent mois.",
       "mixedMonth": "Votre portefeuille a eu un mois mitigé.",
       "portfolioSummary": "Voici le résumé de votre portefeuille.",
-      "unitsLeased_one": "{{units}} unité louée cette période dans {{buildings}} immeuble.",
-      "unitsLeased_other": "{{units}} unités louées cette période dans {{buildings}} immeubles.",
+      "unitsLeased_one": "{{units}} sur {{allUnits}} unités occupées dans {{buildings}} immeuble.",
+      "unitsLeased_other": "{{units}} sur {{allUnits}} unités occupées dans {{buildings}} immeubles.",
       "netResultForPeriod": "Résultat net par immeuble pour {{period}}.",
       "moveInsAndMoveoutsIn": "Entrées et sorties en {{period}}.",
       "moveIns": "Entrées",
       "moveOuts": "Sorties",
       "financeDetail": "Consultez les écritures du grand livre, la balance de vérification et les données financières par immeuble dans la section Finance.",
       "monthlyReport": "Rapport mensuel propriétaire",
-      "vsPrevMonth": "{{delta}}% vs mois préc."
+      "yearButton": "Année",
+      "yearToDateReport": "Résumé annuel en cours",
+      "fullYearReport": "Résumé de l'année complète",
+      "theMainForcesBehindThisYearsNumbers": "Les principaux facteurs de la performance de cette année.",
+      "fullYearComparison": "Année complète {{year}} vs {{prevYear}}",
+      "noiPerMonth": "Résultat opérationnel net par mois, {{year}}",
+      "bestMonth": "Meilleur mois",
+      "flagsAndActionItems": "Alertes et actions pour cette période",
+      "unpaidInvoicesByDaysOverdue": "Factures sortantes impayées par ancienneté",
+      "rentInvoicesNotReconciled": "{{amount}} de factures de loyer non réconciliées",
+      "rentInvoicesMarkPaidInstruction": "Des factures de loyer ont été envoyées aux locataires mais aucun paiement n'a été enregistré. Une fois le loyer reçu sur votre compte, ouvrez la facture dans Finance → Sortant et cliquez sur Marquer comme payé.",
+      "goToInvoices": "Voir les factures →",
+      "noFlags": "Aucune alerte cette période — recouvrement en ordre, occupation saine, aucune facture en retard.",
+      "observationsOverPeriod": "Observations et analyses pour cette période.",
+      "noPeriodNotes": "Aucun événement notable cette période.",
+      "collapseProps": "Réduire ↑",
+      "showAllProps": "Afficher les {{count}} biens ↓",
+      "arrearsCurrentLabel": "En cours",
+      "arrears1to30Label": "1–30 jours",
+      "arrears31to60Label": "31–60 jours",
+      "arrears61plusLabel": "61+ jours",
+      "overdueLabel": "en retard"
+    },
+    "watch": {
+      "arrears61plus": "{{amount}} de loyers sont en retard de plus de 60 jours — envisagez d'entamer une procédure de recouvrement formelle.",
+      "arrears31to60": "{{amount}} de loyers sont en retard de 31 à 60 jours. Envoyez une relance formelle aux locataires concernés.",
+      "collectionRate": "Le taux de recouvrement est de {{rate}}, soit {{shortfall}} en dessous de l'objectif de 95 %.",
+      "vacancy": "{{vacantCount}} logements sur {{allUnits}} sont actuellement vacants ({{rate}} d'occupation). Chaque logement vide représente un manque à gagner.",
+      "awaitingPayment": "{{amount}} de factures de loyer pour cette période sont en attente de paiement — tous les revenus attendus ont été facturés mais pas encore marqués comme payés.",
+      "awaitingAndUninvoiced": "{{awaitingPayment}} en attente de paiement ; {{uninvoiced}} de loyers attendus n'ont pas été facturés cette période (probablement une entrée en cours de mois).",
+      "notInvoiced": "{{amount}} de loyers attendus n'ont pas été facturés cette période.",
+      "buildingsInRedSingle": "{{names}} est en perte nette cette période.",
+      "buildingsInRedMultiple": "{{names}} sont en perte nette cette période.",
+      "payablesConcentration": "{{amount}} de factures prestataires restent impayées — plus de la moitié des dépenses de la période.",
+      "expenseSpike": "Les charges d'exploitation sont {{pct}} plus élevées que la période précédente — vérifiez le détail des dépenses.",
+      "tenantChurn_one": "{{count}} mouvement de locataire cette période — vérifiez les éventuelles périodes de vacance entre une sortie et la prochaine prise de bail.",
+      "tenantChurn_other": "{{count}} mouvements de locataires cette période — vérifiez les éventuelles périodes de vacance entre une sortie et la prochaine prise de bail."
+    },
+    "note": {
+      "arrears61plus": "{{amount}} de loyers étaient en retard de plus de 60 jours en fin de période.",
+      "arrears31to60": "{{amount}} de loyers étaient en retard de 31 à 60 jours en fin de période.",
+      "collectionRate": "Le recouvrement a atteint {{rate}} cette période — {{shortfall}} en dessous du seuil de 95 %.",
+      "vacancy": "Le taux d'occupation était de {{rate}} — {{vacantCount}} logements sur {{allUnits}} étaient inoccupés.",
+      "awaitingPayment": "{{amount}} de factures de loyer ont clôturé impayées cette période.",
+      "awaitingAndUninvoiced": "{{awaitingPayment}} ont clôturé impayées ; {{uninvoiced}} de loyers attendus n'ont pas été facturés.",
+      "notInvoiced": "{{amount}} de loyers attendus n'ont pas été facturés.",
+      "buildingsInRedSingle": "{{names}} a enregistré une perte nette.",
+      "buildingsInRedMultiple": "{{names}} ont enregistré des pertes nettes.",
+      "payablesConcentration": "{{amount}} de factures prestataires sont restées impayées en fin de période.",
+      "expenseSpike": "Les charges d'exploitation étaient {{pct}} plus élevées que la période précédente.",
+      "tenantChurn_one": "{{count}} mouvement de locataire enregistré cette période.",
+      "tenantChurn_other": "{{count}} mouvements de locataires enregistrés cette période."
+    },
+    "action": {
+      "viewOverdueInvoices": "Voir les factures en retard",
+      "viewUnpaidInvoices": "Voir les factures impayées",
+      "viewFinanceOverview": "Voir les finances",
+      "viewExpenses": "Voir les dépenses"
+    },
+    "appraisalFullYear": {
+      "ahead": "Une bonne année.",
+      "onpar": "Une année stable.",
+      "behind": "Une année difficile.",
+      "reason": {
+        "noiAhead": "Le NOI a terminé {{pct}}% au-dessus de l'année précédente.",
+        "noiBehind": "Le NOI a terminé {{pct}}% en dessous de l'année précédente.",
+        "noiOnPar": "Le NOI et le recouvrement ({{rate}}) sont restés globalement en ligne avec l'année précédente."
+      }
+    },
+    "appraisalYtd": {
+      "ahead": "En avance sur l'année précédente.",
+      "onpar": "Dans la lignée de l'année précédente.",
+      "behind": "En retard sur le rythme de l'année précédente.",
+      "reason": {
+        "noiAhead": "Le NOI est en hausse de {{pct}}% par rapport à la même période l'an dernier.",
+        "noiBehind": "Le NOI est en baisse de {{pct}}% par rapport à la même période l'an dernier.",
+        "noiOnPar": "Le NOI et le recouvrement ({{rate}}) sont en ligne avec l'année précédente."
+      }
+    },
+    "appraisal": {
+      "strong": {
+        "improving": "Votre portefeuille est sur une excellente lancée.",
+        "stable": "Un excellent mois.",
+        "declining": "Un bon mois — à surveiller de près."
+      },
+      "mixed": {
+        "improving": "Un mois mitigé, mais la tendance s'améliore.",
+        "stable": "Un mois mitigé.",
+        "declining": "Un mois mitigé — certains indicateurs se dégradent."
+      },
+      "challenging": {
+        "improving": "Une période difficile, mais en amélioration.",
+        "stable": "Un mois difficile — action requise.",
+        "declining": "Un mois difficile — attention immédiate nécessaire."
+      },
+      "reason": {
+        "strongCollectionAllGreen": "Taux de recouvrement à {{rate}} — tous les biens dans le vert.",
+        "strongCollectionSomeRed_one": "Taux de recouvrement à {{rate}} — {{count}} bien en perte.",
+        "strongCollectionSomeRed_other": "Taux de recouvrement à {{rate}} — {{count}} biens en perte.",
+        "mixedCollection": "Taux de recouvrement à {{rate}} — certaines factures restent impayées.",
+        "buildingsInRed_one": "{{count}} bien en perte nette cette période.",
+        "buildingsInRed_other": "{{count}} biens en perte nette cette période.",
+        "hardArrears": "{{amount}} de loyers en retard de plus de 60 jours.",
+        "lowCollection": "Le taux de recouvrement a chuté à {{rate}} cette période.",
+        "negativeNoi": "Le portefeuille a enregistré une perte nette de {{amount}}."
+      }
     },
     "cta": {
       "financeOverview": "Aperçu finances",
       "openLedger": "Ouvrir le grand livre"
+    },
+    "canvas": {
+      "tab": {
+        "periodAnalysis": "Analyse de période",
+        "performanceCanvas": "Canvas de performance"
+      },
+      "heading": "Performance du portefeuille",
+      "subheading": "Série temporelle {{range}} — tous les indicateurs clés",
+      "noData": "Aucune donnée pour cette période. Les instantanés sont calculés chaque nuit.",
+      "chfPanel": "Performance CHF",
+      "pctPanel": "Santé du portefeuille %",
+      "metric": {
+        "noiCents": "RNE",
+        "collectedIncomeCents": "Encaissements",
+        "expensesCents": "Charges totales",
+        "collectionRate": "Recouvrement à échéance",
+        "noiMarginPct": "Marge RNE",
+        "opexRatioPct": "Ratio charges/loyers",
+        "occupancyRate": "Taux d'occupation"
+      }
     },
     "highlight": {
       "allGreen": {

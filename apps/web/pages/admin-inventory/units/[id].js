@@ -1,5 +1,5 @@
 import { useRouter } from "next/router";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import Link from "next/link";
 import AppShell from "../../../components/AppShell";
 import PageShell from "../../../components/layout/PageShell";
@@ -15,11 +15,290 @@ import { cn } from "../../../lib/utils";
 import { invoiceVariant, leaseVariant, reconciliationVariant } from "../../../lib/statusVariants";
 import { formatChf, formatDate, formatChfCents } from "../../../lib/format";
 import { authHeaders } from "../../../lib/api";
+import Button from "../../../components/ui/Button";
 import ScrollableTabs from "../../../components/mobile/ScrollableTabs";
 import SortableHeader from "../../../components/SortableHeader";
 import { useLocalSort, clientSort } from "../../../lib/tableUtils";
 import { withServerTranslations } from "../../../lib/i18n";
 import { useTranslation } from "next-i18next";
+import { ChevronDown, ChevronUp } from "lucide-react";
+import {
+  MONTH_HERO_GRADIENTS, fmtChf, fmtPct,
+  TrendArrow, KpiRow, KpiTable,
+} from "../../../components/reporting/ReportingShared";
+
+// ── Unit Period Analysis component ─────────────────────────────────────────
+
+function delta(curr, prev, invert = false) {
+  if (prev == null || prev === 0) return null;
+  const pct = (curr - prev) / Math.abs(prev);
+  const up = invert ? pct < 0 : pct > 0;
+  return { pct, tone: up ? "text-green-600" : "text-red-500" };
+}
+
+function UnitPeriodAnalysis({ unitId }) {
+  const { t, i18n } = useTranslation("manager");
+  const locale = i18n.language || "en";
+  const monthsShort = useMemo(() => Array.from({ length: 12 }, (_, i) =>
+    new Intl.DateTimeFormat(locale, { month: "short" }).format(new Date(2024, i, 1))), [locale]);
+  const now = new Date();
+  const [year, setYear]   = useState(now.getFullYear());
+  const [ytd,  setYtd]    = useState(true);
+  const [month, setMonth] = useState(now.getMonth() + 1);
+  const [kpiOpen, setKpiOpen] = useState(false);
+  const [report, setReport]   = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [err, setErr]         = useState("");
+
+  const heroGradient = MONTH_HERO_GRADIENTS[(month - 1) % 12];
+
+  const { from, to } = useMemo(() => {
+    if (ytd) {
+      return { from: `${year}-01-01`, to: `${year}-12-31` };
+    }
+    const last = new Date(year, month, 0).getDate();
+    return { from: `${year}-${String(month).padStart(2,"0")}-01`, to: `${year}-${String(month).padStart(2,"0")}-${String(last).padStart(2,"0")}` };
+  }, [year, ytd, month]);
+
+  const load = useCallback(async () => {
+    if (!unitId) return;
+    setLoading(true); setErr("");
+    try {
+      const qs = new URLSearchParams({ from, to });
+      const res = await fetch(`/api/units/${unitId}/period-report?${qs}`, { headers: authHeaders() });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error?.message || t("unitsId.reporting.failed"));
+      setReport(json.data);
+    } catch (e) { setErr(e.message); }
+    finally { setLoading(false); }
+  }, [unitId, from, to, ytd, t]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const c = report?.current;
+  const p = report?.prev;
+  const cl = report?.currentLease;
+  const cond = report?.assetConditionSummary;
+
+  const headline = useMemo(() => {
+    if (!c) return "";
+    if (c.netIncomeCents > 0 && c.collectionRate >= 0.95) return t("unitsId.reporting.headline.strong");
+    if (c.collectionRate < 0.8) return t("unitsId.reporting.headline.collectionAttention");
+    if (c.netIncomeCents < 0) return t("unitsId.reporting.headline.loss");
+    return t("unitsId.reporting.headline.withinRange");
+  }, [c, t]);
+
+  const periodBadge = ytd ? `YTD ${year}` : `${monthsShort[month-1]} ${year}`;
+
+  return (
+    <div className="space-y-6">
+      {/* Date nav */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-1">
+          <button onClick={() => setYear(y => y - 1)} className="rounded border border-surface-border px-2 py-1 text-xs hover:bg-surface-hover">‹</button>
+          <span className="px-2 text-sm font-medium tabular-nums">{year}</span>
+          <button onClick={() => setYear(y => y + 1)} disabled={year >= now.getFullYear()} className="rounded border border-surface-border px-2 py-1 text-xs hover:bg-surface-hover disabled:opacity-40">›</button>
+        </div>
+        <button
+          onClick={() => setYtd(v => !v)}
+          className={cn("rounded-full border px-3 py-1 text-xs font-medium transition-colors", ytd ? "bg-brand border-brand text-white" : "border-surface-border text-foreground-dim hover:bg-surface-hover")}
+        >YTD</button>
+        {!ytd && (
+          <div className="flex gap-1 flex-wrap">
+            {monthsShort.map((m, i) => (
+              <button key={m} onClick={() => setMonth(i+1)}
+                className={cn("rounded border px-2 py-0.5 text-xs transition-colors", month === i+1 ? "bg-brand border-brand text-white" : "border-surface-border text-foreground-dim hover:bg-surface-hover")}>
+                {m}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {err && <p className="text-sm text-destructive-text">{err}</p>}
+
+      {/* Hero */}
+      <div>
+        <header
+          className={cn(
+            "border border-surface-border bg-gradient-to-br p-6 shadow-sm",
+            "dark:from-brand-light dark:via-info-light dark:to-transparent",
+            heroGradient,
+            kpiOpen ? "rounded-t-3xl" : "rounded-3xl",
+          )}
+        >
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap mb-3">
+                <span className="rounded-full border border-black/20 dark:border-white/20 bg-black/5 dark:bg-white/10 px-3 py-1 text-xs font-medium text-foreground/70 backdrop-blur-sm">{periodBadge}</span>
+                {cl && <span className="text-xs text-foreground-dim">{cl.tenantName} · {t("unitsId.reporting.perMonth", { amount: cl.netRentChf })}</span>}
+              </div>
+              <h3 className="text-xl font-bold text-foreground tracking-tight">{loading ? "—" : headline}</h3>
+              {c && !loading && (
+                <p className="mt-1 text-sm text-foreground-dim">
+                  {t("unitsId.reporting.noiCollection", { noi: fmtChf(c.netIncomeCents), rate: fmtPct(c.collectionRate) })}
+                  {cl?.endDate && <span> · {t("unitsId.reporting.leaseEnds", { date: cl.endDate })}{cl.remainingMonths != null ? ` (${t("unitsId.reporting.months", { count: cl.remainingMonths })})` : ""}</span>}
+                </p>
+              )}
+            </div>
+            <div className="flex flex-col items-end gap-2">
+              <div className="text-right">
+                <p className={cn("text-3xl font-bold tabular-nums", loading ? "opacity-30" : "", c?.netIncomeCents >= 0 ? "text-foreground" : "text-red-600")}>
+                  {loading ? "—" : fmtChf(c?.netIncomeCents ?? 0)}
+                </p>
+                <p className="text-xs text-foreground-dim mt-0.5">{t("unitsId.reporting.netOperatingIncome")}</p>
+              </div>
+              <button onClick={() => setKpiOpen(v => !v)} className="flex items-center gap-1 text-xs text-foreground-dim hover:text-foreground transition-colors">
+                {kpiOpen ? <><ChevronUp className="h-3 w-3"/>{t("unitsId.reporting.hideKpis")}</> : <><ChevronDown className="h-3 w-3"/>{t("unitsId.reporting.showKpis")}</>}
+              </button>
+            </div>
+          </div>
+        </header>
+        {kpiOpen && (
+          <KpiTable
+            attached
+            isLoading={loading}
+            left={[
+              { label: t("unitsId.reporting.kpi.cashReceived"),  value: fmtChf(c?.collectedIncomeCents ?? 0),    delta: delta(c?.collectedIncomeCents, p?.collectedIncomeCents) },
+              { label: t("unitsId.reporting.kpi.accruedIncome"),  value: fmtChf(c?.accruedIncomeCents ?? 0), delta: null },
+              { label: t("unitsId.reporting.kpi.expenses"),       value: fmtChf(c?.expensesCents ?? 0),         delta: delta(c?.expensesCents, p?.expensesCents, true) },
+              { label: t("unitsId.reporting.kpi.netIncome"),      value: fmtChf(c?.netIncomeCents ?? 0),        delta: delta(c?.netIncomeCents, p?.netIncomeCents) },
+            ]}
+            right={[
+              { label: t("unitsId.reporting.kpi.onTimeCollection"), value: fmtPct(c?.collectionRate ?? 0),      delta: delta(c?.collectionRate, p?.collectionRate) },
+              { label: t("unitsId.reporting.kpi.monthlyRent"),     value: cl ? `CHF ${cl.netRentChf}` : "—",     delta: null },
+              { label: t("unitsId.reporting.kpi.leaseRemaining"),  value: cl?.remainingMonths != null ? t("unitsId.reporting.months", { count: cl.remainingMonths }) : cl ? t("unitsId.reporting.openEnded") : t("unitsId.reporting.vacant"), delta: null },
+              { label: t("unitsId.reporting.kpi.arrears"),         value: fmtChf(report?.arrearsCents ?? 0),     delta: null },
+            ]}
+          />
+        )}
+      </div>
+
+      {/* Arrears alert */}
+      {(report?.arrearsCents ?? 0) > 0 && (
+        <div className="flex items-start gap-3 rounded-2xl border border-warning-ring bg-warning-light p-4">
+          <span className="mt-0.5 text-warning-text text-lg leading-none">⚠</span>
+          <div>
+            <p className="text-sm font-semibold text-warning-text">{t("unitsId.reporting.outstandingReceivables")}</p>
+            <p className="text-sm text-warning-text/80">{t("unitsId.reporting.unpaidForUnit", { amount: fmtChf(report.arrearsCents) })}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Asset condition summary */}
+      {cond && cond.total > 0 && (
+        <div className="rounded-2xl border border-surface-border bg-surface p-5 shadow-sm">
+          <p className="text-xs font-medium text-foreground-dim uppercase tracking-wide mb-4">{t("unitsId.reporting.assetCondition")}</p>
+          <div className="grid grid-cols-4 gap-3">
+            {[
+              { label: t("unitsId.reporting.condition.good"),    count: cond.good,    bg: "bg-success-light",     text: "text-success-text" },
+              { label: t("unitsId.reporting.condition.fair"),    count: cond.fair,    bg: "bg-warning-light",     text: "text-warning-text" },
+              { label: t("unitsId.reporting.condition.poor"),    count: cond.poor,    bg: "bg-orange-light",      text: "text-orange-text" },
+              { label: t("unitsId.reporting.condition.damaged"), count: cond.damaged, bg: "bg-destructive-light", text: "text-destructive-text" },
+            ].map(({ label, count, bg, text }) => (
+              <div key={label} className={cn("rounded-xl p-3 text-center", bg)}>
+                <p className={cn("text-2xl font-bold", text)}>{count}</p>
+                <p className={cn("text-xs font-medium mt-0.5", text)}>{label}</p>
+              </div>
+            ))}
+          </div>
+          {(cond.poor > 0 || cond.damaged > 0) && (
+            <p className="mt-3 text-xs text-orange-text">
+              {t("unitsId.reporting.poorDamaged", { count: cond.poor + cond.damaged })}
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+// Valeur intrinsèque worksheet — habitation/garden valued from livingAreaSqm × prix/m²,
+// vétusté a % discount, parking/garage flat lines. Mirrors the backend
+// computeUnitIntrinsicValue (apps/api/src/services/unitValuation.ts) — keep in sync.
+const UNIT_VALUATION_FIELDS = [
+  { key: "intrinsicPricePerSqmChf", label: "Price / m² (CHF)" },
+  { key: "vetustePct", label: "Vétusté (%)" },
+  { key: "gardenAreaSqm", label: "Garden area (m²)" },
+  { key: "gardenWeightPct", label: "Garden weighting (%)" },
+  { key: "extParkingValueChf", label: "Exterior parking (CHF)" },
+  { key: "garageValueChf", label: "Garage (CHF)" },
+];
+const DEFAULT_GARDEN_WEIGHT_PCT = 10;
+
+function unitToValuationForm(u) {
+  const out = {};
+  for (const f of UNIT_VALUATION_FIELDS) out[f.key] = u?.[f.key] ?? "";
+  return out;
+}
+
+// Compute the intrinsic-value breakdown from raw (string or number) inputs.
+function computeIntrinsic({ livingAreaSqm, intrinsicPricePerSqmChf, vetustePct, gardenAreaSqm, gardenWeightPct, extParkingValueChf, garageValueChf }) {
+  const n = (v) => (v === "" || v == null || !Number.isFinite(Number(v)) ? 0 : Number(v));
+  const pricePerSqm = n(intrinsicPricePerSqmChf);
+  const habitation = n(livingAreaSqm) * pricePerSqm;
+  const vetuste = habitation * (n(vetustePct) / 100);
+  const gardenWeight = (gardenWeightPct === "" || gardenWeightPct == null ? DEFAULT_GARDEN_WEIGHT_PCT : Number(gardenWeightPct)) / 100;
+  const garden = n(gardenAreaSqm) * pricePerSqm * gardenWeight;
+  const extParking = n(extParkingValueChf);
+  const garage = n(garageValueChf);
+  return { habitation, vetuste, garden, extParking, garage, intrinsic: habitation - vetuste + garden + extParking + garage };
+}
+
+// Renders the valeur intrinsèque line items + total from a computeIntrinsic() result.
+function IntrinsicBreakdown({ b, livingAreaSqm }) {
+  const row = (label, value, sign) => (
+    <div className="flex items-center justify-between py-1 text-sm">
+      <span className="text-muted-dark">{label}</span>
+      <span className="tabular-nums text-foreground">{sign === "-" ? "− " : ""}{formatChf(Math.abs(value))}</span>
+    </div>
+  );
+  return (
+    <div className="rounded-lg border border-surface-border bg-surface-subtle p-4">
+      {row(`Habitation${livingAreaSqm ? ` (${livingAreaSqm} m²)` : ""}`, b.habitation)}
+      {b.vetuste > 0 && row("Vétusté", b.vetuste, "-")}
+      {b.garden > 0 && row("Jardin (pondéré)", b.garden)}
+      {b.extParking > 0 && row("Parking extérieur", b.extParking)}
+      {b.garage > 0 && row("Garage", b.garage)}
+      <div className="flex items-center justify-between border-t border-surface-border mt-2 pt-2">
+        <span className="text-sm font-semibold text-foreground">Valeur intrinsèque</span>
+        <span className="text-base font-bold tabular-nums text-foreground">{formatChf(b.intrinsic)}</span>
+      </div>
+    </div>
+  );
+}
+
+// Market estimate reference (area × zip CHF/m²) — shown alongside, NOT inside,
+// the valeur intrinsèque. Null estimate → renders nothing.
+function MarketEstimateLine({ estimateChf, pricePerSqmChf, asOf }) {
+  if (estimateChf == null) return null;
+  return (
+    <div className="mt-2 flex items-center justify-between rounded-lg border border-dashed border-surface-border px-4 py-2">
+      <div>
+        <span className="text-sm text-muted-dark">Estimation marché</span>
+        <span className="text-xs text-muted-text ml-2">
+          {formatChf(pricePerSqmChf)}/m²{asOf ? ` · ${formatDate(asOf)}` : ""}
+        </span>
+      </div>
+      <span className="text-sm font-semibold tabular-nums text-muted-dark">{formatChf(estimateChf)}</span>
+    </div>
+  );
+}
+
+// Maps each internal unit tab key to its manager:unitsId.tabs.* i18n key.
+// Internal keys stay English (used for activeTab logic); only the label is translated.
+const UNIT_TAB_LABEL_KEYS = {
+  "Details": "overview",
+  "Tenants": "tenants",
+  "Assets": "assets",
+  "Rent Estimate": "rentEstimate",
+  "Documents": "documents",
+  "Financials": "financials",
+  "Contracts": "contracts",
+  "Requests": "requests",
+  "Condition Reports": "conditionReports",
+  "Reporting": "reporting",
+};
+
 export default function UnitDetail() {
   const { t } = useTranslation("manager");
   const router = useRouter();
@@ -44,6 +323,9 @@ export default function UnitDetail() {
   const [editFloor, setEditFloor] = useState("");
   const [editType, setEditType] = useState("");
   const [activeTab, setActiveTab] = useState("Details");
+  // Tracks which tabs have had their (heavier) data loaded, so switching away
+  // and back doesn't refetch the whole-org tenant table / asset inventory.
+  const loadedTabsRef = useRef(new Set());
   const [conditionReports, setConditionReports] = useState([]);
   const [conditionReportsLoading, setConditionReportsLoading] = useState(false);
   const [showCreateReport, setShowCreateReport] = useState(false);
@@ -70,6 +352,10 @@ export default function UnitDetail() {
   const [editHeatingType, setEditHeatingType] = useState("");
   const [editMonthlyRent, setEditMonthlyRent] = useState("");
   const [editMonthlyCharges, setEditMonthlyCharges] = useState("");
+  const [editParkingKind, setEditParkingKind] = useState("EXTERIOR");
+  const [editLinkedFlatId, setEditLinkedFlatId] = useState("");
+  const [siblingFlats, setSiblingFlats] = useState([]); // residential units in the same building (for the assigned-flat picker)
+  const [editValuation, setEditValuation] = useState({}); // valeur intrinsèque inputs
   const [rentEstimate, setRentEstimate] = useState(null);
   const [estimateLoading, setEstimateLoading] = useState(false);
   const [estimateError, setEstimateError] = useState(null);
@@ -205,10 +491,22 @@ export default function UnitDetail() {
       setEditHeatingType(u.heatingType || "");
       setEditMonthlyRent(u.monthlyRentChf ?? "");
       setEditMonthlyCharges(u.monthlyChargesChf ?? "");
+      setEditParkingKind(u.parkingKind || "EXTERIOR");
+      setEditLinkedFlatId(u.linkedFlatId || "");
+      setEditValuation(unitToValuationForm(u));
+      // Sibling residential units (same building) for the parking assigned-flat picker.
+      if (u.building?.id) {
+        try {
+          const bd = await fetchJSON(`/buildings/${u.building.id}/units`);
+          const list = Array.isArray(bd) ? bd : bd?.data || [];
+          setSiblingFlats(list.filter((x) => (x.type === "RESIDENTIAL" || !x.type) && x.id !== u.id));
+        } catch {}
+      }
       await loadTenants();
-      await loadAllTenants();
-      await loadAssetModels();
-      await loadAssetInventory();
+      // loadAllTenants (whole-org tenant table) + asset model/inventory loads
+      // are deferred to their tabs — see the activeTab effect below. They were
+      // previously fetched on every unit page mount even if those tabs were
+      // never opened.
       // Fetch leases for the unit to find linked rental application IDs
       try {
         const leasesData = await fetchJSON(`/leases?unitId=${id}`);
@@ -301,6 +599,13 @@ export default function UnitDetail() {
     }
   }
 
+  async function refreshRecons() {
+    const res = await fetch(`/api/charge-reconciliations`, { headers: authHeaders() });
+    const j = await res.json();
+    const all = Array.isArray(j) ? j : j?.data || [];
+    setUnitReconciliations(all.filter((r) => r.lease?.unitId === id));
+  }
+
   async function loadUnitFinancials() {
     if (!id || financialsLoaded) return;
     try {
@@ -345,6 +650,9 @@ export default function UnitDetail() {
   }
 
   useEffect(() => {
+    // New unit → reset lazy-tab load guards (the page component is reused across
+    // /units/[id] navigations, so the ref would otherwise carry over).
+    loadedTabsRef.current = new Set();
     if (id) loadUnit();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
@@ -366,6 +674,16 @@ export default function UnitDetail() {
     if (id && activeTab === "Contracts") loadLeases();
     if (id && activeTab === "Financials") loadUnitFinancials();
     if (id && activeTab === "Requests") loadUnitRequests();
+    // Lazy, load-once datasets for heavier tabs (deferred out of loadUnit).
+    if (id && activeTab === "Tenants" && !loadedTabsRef.current.has("Tenants")) {
+      loadedTabsRef.current.add("Tenants");
+      loadAllTenants();
+    }
+    if (id && activeTab === "Assets" && !loadedTabsRef.current.has("Assets")) {
+      loadedTabsRef.current.add("Assets");
+      loadAssetModels();
+      loadAssetInventory();
+    }
     if (id && activeTab === "Condition Reports") {
       setConditionReportsLoading(true);
       fetch(`/api/units/${id}/condition-reports`, { headers: authHeaders() })
@@ -428,6 +746,15 @@ export default function UnitDetail() {
         heatingType: editHeatingType || undefined,
         monthlyRentChf: editMonthlyRent !== "" ? Number(editMonthlyRent) : null,
         monthlyChargesChf: editMonthlyCharges !== "" ? Number(editMonthlyCharges) : null,
+        ...(unit?.type === "PARKING"
+          ? { parkingKind: editParkingKind || undefined, linkedFlatId: editLinkedFlatId === "" ? null : editLinkedFlatId }
+          : {}),
+        ...Object.fromEntries(
+          UNIT_VALUATION_FIELDS.map((f) => {
+            const raw = (editValuation[f.key] ?? "").toString().trim();
+            return [f.key, raw === "" ? null : Number(raw)];
+          }),
+        ),
       };
       const data = await fetchJSON(`/units/${id}`, {
         method: "PATCH",
@@ -517,11 +844,49 @@ export default function UnitDetail() {
   }
 
   const assignedTenantIds = new Set(tenants.map((tenant) => tenant.id));
-  const hasActiveLease = (unit?.leases ?? []).length > 0;
-  const occupancyStatus = hasActiveLease ? "OCCUPIED" : unit?.isVacant ? "LISTED" : "VACANT";
-  const occupancyLabel = occupancyStatus === "OCCUPIED" ? "Occupied" : occupancyStatus === "LISTED" ? "Listed" : "Vacant";
-  const occupancyVariant = occupancyStatus === "OCCUPIED" ? "success" : occupancyStatus === "LISTED" ? "info" : "destructive";
+  // unit.leases now includes binding (SIGNED + ACTIVE) leases. Occupancy keeps its
+  // ACTIVE-only meaning; the rent lock uses the wider binding set.
+  const isParking = unit?.type === "PARKING";
+  // Parking spots keep only context-relevant valuation inputs (vétusté + the flat
+  // parking/garage value); the habitation/garden worksheet is hidden.
+  const valuationFields = isParking
+    ? UNIT_VALUATION_FIELDS.filter((f) => ["vetustePct", "extParkingValueChf", "garageValueChf"].includes(f.key))
+    : UNIT_VALUATION_FIELDS;
+  const pageTitle = !unit
+    ? t("manager:unitsId.title.unit")
+    : isParking
+      ? (unit.parkingKind === "GARAGE"
+          ? t("manager:unitsId.title.garage", { n: unit.unitNumber || "" })
+          : t("manager:unitsId.title.parkingSpot", { n: unit.unitNumber || "" }))
+      : unit.type === "COMMON_AREA"
+        ? t("manager:unitsId.title.commonArea", { n: unit.unitNumber || "" })
+        : t("manager:unitsId.title.residential", { n: unit.unitNumber || "" });
+  const bindingLeases = unit?.leases ?? [];
+  const hasActiveLease = bindingLeases.some((l) => l.status === "ACTIVE");
+  // Net rent / charges are governed by a binding lease — mirror it and lock editing.
+  const rentLocked = bindingLeases.length > 0;
+  const rentLease = bindingLeases.length === 1 ? bindingLeases[0] : null;
+  const displayRentChf = rentLease ? rentLease.netRentChf : unit?.monthlyRentChf;
+  const displayChargesChf = rentLease ? rentLease.chargesTotalChf : unit?.monthlyChargesChf;
+  // Two independent axes, computed server-side (occupancy considers the linked
+  // flat + occupancy records, so a rent-0 co-billed parking isn't mislabeled
+  // vacant). Fall back to a lease-based guess for older payloads.
+  const occupancyStatus = unit?.occupancyStatus ?? (hasActiveLease ? "OCCUPIED" : "VACANT");
+  const isListed = unit?.listed ?? (occupancyStatus === "VACANT" && !!unit?.isVacant);
+  const occupancyLabel = occupancyStatus === "OCCUPIED" ? "Occupied" : "Vacant";
+  const occupancyVariant = occupancyStatus === "OCCUPIED" ? "success" : "destructive";
   const orgModels = assetModels.filter((m) => m.orgId);
+
+  // Valeur intrinsèque: live (from edit inputs) while editing, saved (from unit) otherwise.
+  const liveValuation = computeIntrinsic({ livingAreaSqm: editLivingArea, ...editValuation });
+  const savedValuation = computeIntrinsic({ livingAreaSqm: unit?.livingAreaSqm, ...(unit || {}) });
+
+  // Market estimate (reference, from the building's zip) — distinct from intrinsic value.
+  const marketEst = unit?.marketEstimate || null;
+  const marketArea = editMode && editLivingArea !== "" ? Number(editLivingArea) : unit?.livingAreaSqm;
+  const marketEstimateChf = marketEst && marketArea != null && Number.isFinite(Number(marketArea))
+    ? Number(marketArea) * marketEst.pricePerSqmChf
+    : null;
 
   if (loading) {
     return (
@@ -538,12 +903,12 @@ export default function UnitDetail() {
     <AppShell role={isOwner ? "OWNER" : "MANAGER"}>
       <PageShell variant="embedded">
         <div className="mb-3">
-          <Link href={unit?.building?.id ? `/admin-inventory/buildings/${unit.building.id}${isOwner ? "?role=owner" : ""}` : (isOwner ? "/owner/properties" : "/admin-inventory")} className="text-sm font-medium text-muted-text hover:text-foreground">
+          <Link href={unit?.building?.id ? `/admin-inventory/buildings/${unit.building.id}?tab=Units${isOwner ? "&role=owner" : ""}` : (isOwner ? "/owner/properties" : "/admin-inventory")} className="text-sm font-medium text-muted-text hover:text-foreground">
             ← Back
           </Link>
         </div>
         <PageHeader
-          title={`Unit ${unit?.unitNumber || "Detail"}`}
+          title={pageTitle}
           subtitle={unit?.building?.name ? `Building: ${unit.building.name}` : undefined}
         />
         <PageContent>
@@ -553,12 +918,12 @@ export default function UnitDetail() {
             </div>
           )}
 
-          <ScrollableTabs activeIndex={["Details", "Tenants", "Assets", "Rent Estimate", "Documents", "Financials", "Contracts", "Requests", "Condition Reports"].indexOf(activeTab)}>
-            {["Details", "Tenants", "Assets", "Rent Estimate", "Documents", "Financials", "Contracts", "Requests", "Condition Reports"].map((tab) => (
+          <ScrollableTabs activeIndex={["Details", "Tenants", "Assets", "Rent Estimate", "Documents", "Financials", "Contracts", "Requests", "Condition Reports", "Reporting"].indexOf(activeTab)}>
+            {["Details", "Tenants", "Assets", "Rent Estimate", "Documents", "Financials", "Contracts", "Requests", "Condition Reports", "Reporting"].map((tab) => (
               <button key={tab} type="button"
                 className={activeTab === tab ? "tab-btn-active" : "tab-btn"}
                 onClick={() => setActiveTab(tab)}>
-                {tab}
+                {UNIT_TAB_LABEL_KEYS[tab] ? t(`manager:unitsId.tabs.${UNIT_TAB_LABEL_KEYS[tab]}`) : tab}
               </button>
             ))}
           </ScrollableTabs>
@@ -586,6 +951,9 @@ export default function UnitDetail() {
                     setEditHeatingType(unit?.heatingType || "");
                     setEditMonthlyRent(unit?.monthlyRentChf ?? "");
                     setEditMonthlyCharges(unit?.monthlyChargesChf ?? "");
+                    setEditParkingKind(unit?.parkingKind || "EXTERIOR");
+                    setEditLinkedFlatId(unit?.linkedFlatId || "");
+                    setEditValuation(unitToValuationForm(unit));
                   }}>
                   Cancel
                 </button>
@@ -597,6 +965,48 @@ export default function UnitDetail() {
             )}>
             {editMode ? (
               <div className="mb-4">
+                {/* ── Pricing (asking rent — defaults future leases) ── */}
+                {rentLocked ? (
+                  <div className="mb-4 p-4 bg-surface-subtle rounded-lg border border-surface-border">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div>
+                        <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:unitsId.pricing.netRent")}</div>
+                        <div className="text-lg font-bold text-foreground mt-1">{displayRentChf != null ? `CHF ${displayRentChf}.-` : "—"}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:unitsId.pricing.charges")}</div>
+                        <div className="text-lg font-bold text-foreground mt-1">{displayChargesChf != null ? `CHF ${displayChargesChf}.-` : "—"}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:unitsId.pricing.totalInclCharges")}</div>
+                        <div className="text-lg font-bold text-foreground mt-1">{displayRentChf != null || displayChargesChf != null ? `CHF ${(displayRentChf || 0) + (displayChargesChf || 0)}.-` : "—"}</div>
+                      </div>
+                    </div>
+                    <p className="mt-3 text-xs text-foreground-dim">
+                      🔒 {rentLease ? t("manager:unitsId.pricing.lockedSingle") : t("manager:unitsId.pricing.lockedMulti")}{t("manager:unitsId.pricing.lockedNote")}
+                      {rentLease && !isOwner ? (
+                        <Link href={`/manager/leases/${rentLease.id}`} className="text-blue-600 hover:underline">{t("manager:unitsId.pricing.openLease")}</Link>
+                      ) : (
+                        <button type="button" className="underline hover:text-foreground" onClick={() => setActiveTab("Contracts")}>{t("manager:unitsId.pricing.viewLease")}</button>
+                      )}
+                    </p>
+                  </div>
+                ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4 p-4 bg-surface-subtle rounded-lg border border-surface-border">
+                  <div className="grid gap-1.5">
+                    <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:unitsId.pricing.netRentMo")}</span>
+                    <input className="filter-input w-full" type="number" step="1" min="0" value={editMonthlyRent} onChange={(e) => setEditMonthlyRent(e.target.value)} placeholder="e.g. 1800" />
+                  </div>
+                  <div className="grid gap-1.5">
+                    <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:unitsId.pricing.chargesMo")}</span>
+                    <input className="filter-input w-full" type="number" step="1" min="0" value={editMonthlyCharges} onChange={(e) => setEditMonthlyCharges(e.target.value)} placeholder="e.g. 200" />
+                  </div>
+                  <div className="grid gap-1.5">
+                    <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:unitsId.pricing.totalInclCharges")}</span>
+                    <div className="text-lg font-bold text-foreground mt-1">{editMonthlyRent !== "" || editMonthlyCharges !== "" ? `CHF ${(Number(editMonthlyRent) || 0) + (Number(editMonthlyCharges) || 0)}.-` : "—"}</div>
+                  </div>
+                </div>
+                )}
                 <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-1.5">
                 <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Unit number</span>
@@ -606,14 +1016,36 @@ export default function UnitDetail() {
                 <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Floor</span>
                 <input className="filter-input w-full" value={editFloor} onChange={(e) => setEditFloor(e.target.value)} placeholder={t("manager:unitsId.placeholder.eG3")} />
               </div>
-              <div className="grid gap-1.5">
-                <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Type</span>
-                <select className="filter-input w-full" value={editType} onChange={(e) => setEditType(e.target.value)}>
-                  <option value="">— Select type —</option>
-                  <option value="RESIDENTIAL">Residential</option>
-                  <option value="COMMON_AREA">Common area</option>
-                </select>
-              </div>
+              {isParking ? (
+                <>
+                  <div className="grid gap-1.5">
+                    <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:unitsId.parking.kindLabel")}</span>
+                    <select className="filter-input w-full" value={editParkingKind} onChange={(e) => setEditParkingKind(e.target.value)}>
+                      <option value="EXTERIOR">{t("manager:unitsId.parking.exteriorSpot")}</option>
+                      <option value="GARAGE">{t("manager:unitsId.parking.garageBox")}</option>
+                    </select>
+                  </div>
+                  <div className="grid gap-1.5">
+                    <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:unitsId.parking.assignedToFlat")}</span>
+                    <select className="filter-input w-full" value={editLinkedFlatId} onChange={(e) => setEditLinkedFlatId(e.target.value)}>
+                      <option value="">{t("manager:unitsId.parking.none")}</option>
+                      {siblingFlats.map((f) => (
+                        <option key={f.id} value={f.id}>{f.unitNumber || f.name || "Unit"}</option>
+                      ))}
+                    </select>
+                  </div>
+                </>
+              ) : (
+                <div className="grid gap-1.5">
+                  <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Type</span>
+                  <select className="filter-input w-full" value={editType} onChange={(e) => setEditType(e.target.value)}>
+                    <option value="">— Select type —</option>
+                    <option value="RESIDENTIAL">Residential</option>
+                    <option value="COMMON_AREA">Common area</option>
+                  </select>
+                </div>
+              )}
+              {!isParking && (<>
               <div className="grid gap-1.5">
                 <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Living area (m²)</span>
                 <input className="filter-input w-full" type="number" step="0.1" min="0" value={editLivingArea} onChange={(e) => setEditLivingArea(e.target.value)} placeholder={t("manager:unitsId.placeholder.eG75")} />
@@ -622,6 +1054,7 @@ export default function UnitDetail() {
                 <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Rooms</span>
                 <input className="filter-input w-full" type="number" step="0.5" min="0" value={editRooms} onChange={(e) => setEditRooms(e.target.value)} placeholder={t("manager:unitsId.placeholder.eG35")} />
               </div>
+              </>)}
               <div className="grid gap-1.5">
                 <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Location segment</span>
                 <select className="filter-input w-full" value={editLocationSegment} onChange={(e) => setEditLocationSegment(e.target.value)}>
@@ -635,6 +1068,7 @@ export default function UnitDetail() {
                 <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Last renovation year</span>
                 <input className="filter-input w-full" type="number" min="1900" max="2099" value={editLastRenovation} onChange={(e) => setEditLastRenovation(e.target.value)} placeholder={t("manager:unitsId.placeholder.eG2015")} />
               </div>
+              {!isParking && (<>
               <div className="grid gap-1.5">
                 <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Energy label</span>
                 <select className="filter-input w-full" value={editEnergyLabel} onChange={(e) => setEditEnergyLabel(e.target.value)}>
@@ -676,25 +1110,85 @@ export default function UnitDetail() {
                   <input type="checkbox" checked={editParking} onChange={(e) => setEditParking(e.target.checked)} /> Parking
                 </label>
               </div>
+              </>)}
+            </div>
+
+            {/* ── Valeur intrinsèque worksheet ── */}
+            <div className="mt-5 pt-4 border-t border-surface-border">
+              <h3 className="text-sm font-semibold text-foreground mb-3">Valeur intrinsèque</h3>
+              <div className="grid grid-cols-2 gap-4">
+                {valuationFields.map((f) => (
+                  <div key={f.key} className="grid gap-1.5">
+                    <span className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{f.label}</span>
+                    <input
+                      className="filter-input w-full"
+                      type="number"
+                      name={f.key}
+                      inputMode="decimal"
+                      autoComplete="off"
+                      data-lpignore="true"
+                      data-1p-ignore="true"
+                      data-form-type="other"
+                      step="any"
+                      min="0"
+                      value={editValuation[f.key] ?? ""}
+                      onChange={(e) => setEditValuation((s) => ({ ...s, [f.key]: e.target.value }))}
+                      placeholder={f.key === "gardenWeightPct" ? String(DEFAULT_GARDEN_WEIGHT_PCT) : ""}
+                    />
+                  </div>
+                ))}
+              </div>
+              <IntrinsicBreakdown b={liveValuation} livingAreaSqm={editLivingArea} />
+              {marketEst && <MarketEstimateLine estimateChf={marketEstimateChf} pricePerSqmChf={marketEst.pricePerSqmChf} asOf={marketEst.asOf} />}
             </div>
           </div>
         ) : (
           <div className="mb-4">
-            {/* ── Pricing ── */}
+            {/* ── Pricing ── (mirrors the binding lease when occupied) */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4 p-4 bg-surface-subtle rounded-lg border border-surface-border">
               <div>
-                <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Net rent</div>
-                <div className="text-lg font-bold text-foreground mt-1">{unit?.monthlyRentChf != null ? `CHF ${unit.monthlyRentChf}.-` : "—"}</div>
+                <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:unitsId.pricing.netRent")}</div>
+                <div className="text-lg font-bold text-foreground mt-1">{displayRentChf != null ? `CHF ${displayRentChf}.-` : "—"}</div>
               </div>
               <div>
-                <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Charges</div>
-                <div className="text-lg font-bold text-foreground mt-1">{unit?.monthlyChargesChf != null ? `CHF ${unit.monthlyChargesChf}.-` : "—"}</div>
+                <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:unitsId.pricing.charges")}</div>
+                <div className="text-lg font-bold text-foreground mt-1">{displayChargesChf != null ? `CHF ${displayChargesChf}.-` : "—"}</div>
               </div>
               <div>
-                <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Total incl. charges</div>
-                <div className="text-lg font-bold text-foreground mt-1">{unit?.monthlyRentChf != null || unit?.monthlyChargesChf != null ? `CHF ${(unit?.monthlyRentChf || 0) + (unit?.monthlyChargesChf || 0)}.-` : "—"}</div>
+                <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">{t("manager:unitsId.pricing.totalInclCharges")}</div>
+                <div className="text-lg font-bold text-foreground mt-1">{displayRentChf != null || displayChargesChf != null ? `CHF ${(displayRentChf || 0) + (displayChargesChf || 0)}.-` : "—"}</div>
               </div>
+              {rentLocked && (
+                <p className="sm:col-span-3 text-xs text-foreground-dim">{t("manager:unitsId.pricing.fromLeaseNote")}</p>
+              )}
             </div>
+            {/* ── Parking: this spot's link, or a flat's linked spots ── */}
+            {unit?.type === "PARKING" && (
+              <div className="mb-4 p-4 bg-surface-subtle rounded-lg border border-surface-border text-sm">
+                <span className="font-medium text-foreground">🅿 {unit.parkingKind === "GARAGE" ? t("manager:unitsId.parking.garageBox") : t("manager:unitsId.parking.exteriorParking")}</span>
+                {unit.linkedFlat ? (
+                  <span className="ml-2 text-muted-dark">{t("manager:unitsId.parking.followsFlatPrefix")}
+                    <Link href={`/admin-inventory/units/${unit.linkedFlat.id}${isOwner ? "?role=owner" : ""}`} className="text-blue-600 hover:underline">{unit.linkedFlat.unitNumber}</Link>
+                    {t("manager:unitsId.parking.followsFlatSuffix")}
+                  </span>
+                ) : (
+                  <span className="ml-2 text-foreground-dim">{t("manager:unitsId.parking.standalone")}</span>
+                )}
+              </div>
+            )}
+            {unit?.parkingSpots?.length > 0 && (
+              <div className="mb-4 p-4 bg-surface-subtle rounded-lg border border-surface-border">
+                <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim mb-2">{t("manager:unitsId.parking.linkedParking")}</div>
+                <div className="flex flex-wrap gap-2">
+                  {unit.parkingSpots.map((p) => (
+                    <Link key={p.id} href={`/admin-inventory/units/${p.id}${isOwner ? "?role=owner" : ""}`} className="inline-flex items-center gap-1.5 rounded-lg border border-surface-border bg-surface px-2.5 py-1 text-sm hover:bg-surface-hover">
+                      🅿 <span className="font-medium text-foreground">{p.unitNumber}</span>
+                      <span className="text-xs text-foreground-dim">{p.parkingKind === "GARAGE" ? t("manager:unitsId.parking.garage") : t("manager:unitsId.parking.exterior")}{p.monthlyRentChf != null ? ` · CHF ${p.monthlyRentChf}.-` : ""}</span>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
             {/* ── Unit details grid ── */}
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -709,6 +1203,7 @@ export default function UnitDetail() {
                 <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Type</div>
                 <div className="text-sm text-muted-dark mt-1">{unit?.type || "—"}</div>
               </div>
+              {!isParking && (<>
               <div>
                 <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Living area</div>
                 <div className="text-sm text-muted-dark mt-1">{unit?.livingAreaSqm != null ? `${unit.livingAreaSqm} m²` : "—"}</div>
@@ -717,6 +1212,7 @@ export default function UnitDetail() {
                 <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Rooms</div>
                 <div className="text-sm text-muted-dark mt-1">{unit?.rooms ?? "—"}</div>
               </div>
+              </>)}
               <div>
                 <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Location</div>
                 <div className="text-sm text-muted-dark mt-1">{unit?.locationSegment || "—"}</div>
@@ -725,6 +1221,7 @@ export default function UnitDetail() {
                 <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Last renovation</div>
                 <div className="text-sm text-muted-dark mt-1">{unit?.lastRenovationYear || "—"}</div>
               </div>
+              {!isParking && (<>
               <div>
                 <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Energy label</div>
                 <div className="text-sm text-muted-dark mt-1">{unit?.energyLabel || "—"}</div>
@@ -737,10 +1234,12 @@ export default function UnitDetail() {
                 <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Insulation</div>
                 <div className="text-sm text-muted-dark mt-1">{unit?.insulationQuality ? unit.insulationQuality.toLowerCase() : "—"}</div>
               </div>
+              </>)}
               <div>
                 <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Status</div>
-                <div className="text-sm text-muted-dark mt-1"><Badge variant={occupancyVariant} size="sm">{occupancyLabel}</Badge></div>
+                <div className="text-sm text-muted-dark mt-1 flex items-center gap-1"><Badge variant={occupancyVariant} size="sm">{occupancyLabel}</Badge>{isListed && <Badge variant="warning" size="sm">Listed</Badge>}</div>
               </div>
+              {!isParking && (
               <div className="col-span-full">
                 <div className="text-xs font-medium uppercase tracking-wide text-foreground-dim">Features</div>
                 <div className="text-sm text-muted-dark mt-1 flex gap-2">
@@ -750,7 +1249,17 @@ export default function UnitDetail() {
                   {!unit?.hasBalcony && !unit?.hasTerrace && !unit?.hasParking && "—"}
                 </div>
               </div>
+              )}
             </div>
+
+            {/* ── Valeur intrinsèque ── */}
+            {(savedValuation.intrinsic > 0 || marketEst) && (
+              <div className="mt-5 pt-4 border-t border-surface-border">
+                <h3 className="text-sm font-semibold text-foreground mb-3">Valeur intrinsèque</h3>
+                {savedValuation.intrinsic > 0 && <IntrinsicBreakdown b={savedValuation} livingAreaSqm={unit?.livingAreaSqm} />}
+                {marketEst && <MarketEstimateLine estimateChf={marketEstimateChf} pricePerSqmChf={marketEst.pricePerSqmChf} asOf={marketEst.asOf} />}
+              </div>
+            )}
           </div>
         )}
         <button type="button" className="px-4 py-2 rounded-lg border-none bg-red-600 hover:bg-red-700 text-white cursor-pointer font-semibold text-sm" onClick={onDeactivateUnit} disabled={loading}>
@@ -1170,7 +1679,10 @@ export default function UnitDetail() {
               })()}
 
               {financialsSubTab === "reconciliations" && (
-                <Panel title={t("manager:unitsId.title.chargeReconciliationsNebenkosten")}>
+                <UnitChargesReconciliation unit={unit} onSettled={refreshRecons} />
+              )}
+              {financialsSubTab === "reconciliations" && (
+                <Panel title={t("manager:unitsId.title.chargeReconciliationsNebenkosten")} className="mt-6">
                   {unitReconciliations.length === 0 ? (
                     <div className="empty-state-text py-6 text-center italic">No charge reconciliations for this unit.</div>
                   ) : (
@@ -1292,17 +1804,24 @@ export default function UnitDetail() {
             <>
               {/* Mobile: card list */}
               <div className="sm:hidden space-y-2">
-                {sortedUnitLeases.map((lease) => (
-                  <div key={lease.id} className="rounded-lg border border-surface-border bg-surface-subtle px-3 py-2.5 flex items-center justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-foreground truncate">{lease.tenantName || "—"}</p>
-                      <p className="text-xs text-muted mt-0.5">
-                        {formatDate(lease.startDate)} · {formatChf(lease.netRentChf)}/mo
-                      </p>
+                {sortedUnitLeases.map((lease) => {
+                  const card = (
+                    <div className="rounded-lg border border-surface-border bg-surface-subtle px-3 py-2.5 flex items-center justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-foreground truncate">{lease.tenantName || "—"}</p>
+                        <p className="text-xs text-muted mt-0.5">
+                          {formatDate(lease.startDate)} · {formatChf(lease.netRentChf)}/mo
+                        </p>
+                      </div>
+                      <Badge variant={leaseVariant(lease.status)}>{lease.status}</Badge>
                     </div>
-                    <Badge variant={leaseVariant(lease.status)}>{lease.status}</Badge>
-                  </div>
-                ))}
+                  );
+                  return isOwner ? (
+                    <div key={lease.id}>{card}</div>
+                  ) : (
+                    <Link key={lease.id} href={`/manager/leases/${lease.id}`} className="block hover:opacity-80 transition-opacity">{card}</Link>
+                  );
+                })}
               </div>
               {/* Desktop: table */}
               <div className="hidden sm:block overflow-x-auto">
@@ -1317,6 +1836,7 @@ export default function UnitDetail() {
                       <SortableHeader label="End" field="endDate" sortField={lsSF} sortDir={lsSD} onSort={handleLsSort} />
                       <th>{t("manager:unitsId.col.notice")}</th>
                       <SortableHeader label="Created" field="createdAt" sortField={lsSF} sortDir={lsSD} onSort={handleLsSort} />
+                      {!isOwner && <th className="text-right"></th>}
                     </tr>
                   </thead>
                   <tbody>
@@ -1340,6 +1860,11 @@ export default function UnitDetail() {
                         <td className="whitespace-nowrap">{lease.endDate ? formatDate(lease.endDate) : "Open-ended"}</td>
                         <td className="whitespace-nowrap">{lease.noticeRule || "—"}</td>
                         <td className="whitespace-nowrap">{formatDate(lease.createdAt)}</td>
+                        {!isOwner && (
+                          <td className="text-right whitespace-nowrap">
+                            <Link href={`/manager/leases/${lease.id}`} className="text-blue-600 hover:underline">{t("manager:unitsId.actions.openRow")}</Link>
+                          </td>
+                        )}
                       </tr>
                     ))}
                   </tbody>
@@ -1524,9 +2049,123 @@ export default function UnitDetail() {
             </div>
           )}
 
+          {activeTab === "Reporting" && (
+            <UnitPeriodAnalysis unitId={id} />
+          )}
+
       </PageContent>
     </PageShell>
     </AppShell>
+  );
+}
+
+// v2 C4 — per-unit charges reconciliation: advances paid vs apportioned actual
+// for a building cost-pool period, settle to a credit note / extra invoice.
+function UnitChargesReconciliation({ unit, onSettled }) {
+  const [periods, setPeriods] = useState([]);
+  const [periodId, setPeriodId] = useState("");
+  const [preview, setPreview] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [settling, setSettling] = useState(false);
+  const [msg, setMsg] = useState("");
+  const [err, setErr] = useState("");
+
+  useEffect(() => {
+    if (!unit?.buildingId) return;
+    fetch(`/api/billing-periods?buildingId=${unit.buildingId}`, { headers: authHeaders() })
+      .then((r) => r.json())
+      .then((j) => {
+        const ps = j.data || [];
+        setPeriods(ps);
+        // Passively show the latest period's ventilation without forcing a pick.
+        setPeriodId((cur) => cur || ps[0]?.id || "");
+      })
+      .catch(() => {});
+  }, [unit?.buildingId]);
+
+  useEffect(() => {
+    if (!periodId || !unit?.id) { setPreview(null); return; }
+    setLoading(true); setErr(""); setMsg("");
+    fetch(`/api/unit-reconciliation?unitId=${unit.id}&billingPeriodId=${periodId}`, { headers: authHeaders() })
+      .then(async (r) => { const j = await r.json(); if (!r.ok) throw new Error(j.error?.message || "Failed"); setPreview(j.data); })
+      .catch((e) => { setErr(e.message); setPreview(null); })
+      .finally(() => setLoading(false));
+  }, [periodId, unit?.id]);
+
+  async function settle() {
+    setSettling(true); setErr(""); setMsg("");
+    try {
+      const res = await fetch(`/api/unit-reconciliation/settle`, {
+        method: "POST",
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ unitId: unit.id, billingPeriodId: periodId }),
+      });
+      const j = await res.json();
+      if (!res.ok) throw new Error(j.error?.message || "Failed");
+      setMsg(j.data?.settlementCreditNoteId ? "Refund credit note issued." : "Settlement invoice issued.");
+      setPreview(null); setPeriodId("");
+      onSettled && onSettled();
+    } catch (e) { setErr(e.message); } finally { setSettling(false); }
+  }
+
+  return (
+    <Panel title="Charges ventilation & reconciliation">
+      <p className="text-sm text-muted-text mb-3">The unit&apos;s apportioned share of the building&apos;s actual charges for the selected period, shown against what the tenant paid in advance. Settling is an explicit action.</p>
+      {err && <p className="error-banner mb-2">{err}</p>}
+      {msg && <p className="text-sm text-green-700 mb-2">{msg}</p>}
+      <div className="flex items-center gap-2 mb-4">
+        <label className="text-sm font-medium text-muted-text">Period</label>
+        <select className="border border-surface-border rounded-lg px-3 py-1.5 text-sm bg-surface" value={periodId} onChange={(e) => setPeriodId(e.target.value)}>
+          <option value="">Select a period…</option>
+          {periods.map((p) => (
+            <option key={p.id} value={p.id}>{p.startDate?.slice(0, 10)} – {p.endDate?.slice(0, 10)}</option>
+          ))}
+        </select>
+      </div>
+      {loading && <p className="text-sm text-muted-text">Loading…</p>}
+      {preview && (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+            <div className="p-3 rounded-lg bg-surface-subtle">
+              <div className="text-xs text-muted-text">Charges paid (advance)</div>
+              <div className="text-lg font-semibold tabular-nums">{formatChfCents(preview.advancesPaidCents)}</div>
+            </div>
+            <div className="p-3 rounded-lg bg-surface-subtle">
+              <div className="text-xs text-muted-text">Apportioned actual</div>
+              <div className="text-lg font-semibold tabular-nums">{formatChfCents(preview.actualCostsCents)}</div>
+            </div>
+            <div className={cn("p-3 rounded-lg", preview.deltaCents > 0 ? "bg-red-50" : preview.deltaCents < 0 ? "bg-green-50" : "bg-surface-subtle")}>
+              <div className="text-xs text-muted-text">Delta {preview.deltaCents > 0 ? "(tenant owes)" : preview.deltaCents < 0 ? "(refund)" : ""}</div>
+              <div className={cn("text-lg font-semibold tabular-nums", preview.deltaCents > 0 ? "text-red-700" : preview.deltaCents < 0 ? "text-green-700" : "")}>
+                {preview.deltaCents > 0 ? "+" : ""}{formatChfCents(preview.deltaCents)}
+              </div>
+            </div>
+          </div>
+          {preview.lines?.length > 0 && (
+            <div className="overflow-x-auto mb-4">
+              <table className="data-table w-full">
+                <thead>
+                  <tr><th>Category</th><th>Method</th><th className="text-right">Building cost</th><th className="text-right">Unit share</th></tr>
+                </thead>
+                <tbody>
+                  {preview.lines.map((l, i) => (
+                    <tr key={i} className="border-t border-surface-divider">
+                      <td>{l.categoryName}</td>
+                      <td className="text-xs text-muted-text">{l.distributionKey}{l.usedConsumptionFallback ? " (metered → surface)" : ""}{l.requiresManual ? " (manual)" : ""}</td>
+                      <td className="text-right tabular-nums">{formatChfCents(l.buildingActualCents)}</td>
+                      <td className="text-right tabular-nums">{l.actualShareCents != null ? formatChfCents(l.actualShareCents) : "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <Button variant="primary" size="sm" onClick={settle} disabled={settling}>
+            {settling ? "Generating…" : preview.deltaCents < 0 ? "Issue refund (credit note)" : "Issue settlement invoice"}
+          </Button>
+        </>
+      )}
+    </Panel>
   );
 }
 

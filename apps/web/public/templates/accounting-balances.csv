@@ -1,0 +1,9 @@
+accountCode,accountName,balanceChf,documentSection
+1000,Caisse,1250.00,ACTIF
+1020,Banque,84300.55,ACTIF
+1100,Débiteurs,12000.00,ACTIF
+2000,Créanciers,-8400.00,PASSIF
+2800,Capital,-50000.00,PASSIF
+3000,Produits locatifs,-96000.00,REVENUE
+4000,Charges d'entretien,42000.00,EXPENSE
+6000,Charges administratives,7800.00,EXPENSE

@@ -46,3 +46,22 @@ export async function aggregateLedgerBalance(prisma: PrismaClient, where: any) {
     _sum: { debitCents: true, creditCents: true },
   });
 }
+
+/**
+ * Delete all ledger entries posted for a set of source invoices with the given
+ * sourceTypes — used to reverse the accrual postings of onboarded invoices that
+ * should be reference-only (imported-statement years are the source of truth).
+ * Returns the number of entries removed.
+ */
+export async function deleteLedgerEntriesBySource(
+  prisma: PrismaClient,
+  orgId: string,
+  sourceIds: string[],
+  sourceTypes: string[],
+): Promise<number> {
+  if (sourceIds.length === 0) return 0;
+  const result = await prisma.ledgerEntry.deleteMany({
+    where: { orgId, sourceId: { in: sourceIds }, sourceType: { in: sourceTypes } },
+  });
+  return result.count;
+}

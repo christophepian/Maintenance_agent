@@ -1,0 +1,61 @@
+import { Meta, Title, Canvas, Controls } from "@storybook/addon-docs/blocks";
+import * as InputStories from "./Input.stories";
+
+<Meta of={InputStories} />
+
+<Title />
+
+A single-line text field with an optional label. A thin wrapper over the
+`.filter-input` global class, so it stays visually consistent with every filter
+and form across the app.
+
+```jsx
+import Input from "@/components/ui/Input";
+
+<Input label="Tenant name" placeholder="e.g. Dupont SA" value={name} onChange={onChange} />
+```
+
+## Anatomy
+
+| Part | Class | Notes |
+|---|---|---|
+| Label | `.filter-label` | `text-xs font-semibold` — rendered only if `label` is set |
+| Field | `.filter-input` | `border border-surface-border rounded text-sm` |
+| Wrapper | `wrapperClassName` | size the field here (e.g. `w-56`) |
+
+All other props (`type`, `value`, `onChange`, `placeholder`, `disabled`, …) pass
+straight through to the native `<input>`.
+
+## States
+
+<Canvas of={InputStories.States} />
+
+## Without a label
+
+<Canvas of={InputStories.NoLabel} />
+
+## In context
+
+<Canvas of={InputStories.InContext} />
+
+## Do / Don't
+
+- ✅ **Do** size via `wrapperClassName` (`w-56`), not inline styles.
+- ✅ **Do** pair with a controlled `value` / `onChange`.
+- ⛔ **Don't** restyle the border/background ad-hoc — if you need a variant, add it
+  to `.filter-input` (or the component) so every field stays consistent.
+
+## Accessibility
+
+- ⚠️ **Known gaps to address** (surfaced by this doc):
+  - `.filter-input` has **no visible focus ring** — focus relies on the browser
+    default. Consider adding `focus:ring-2 focus:ring-brand-ring` for a consistent,
+    visible focus state.
+  - The `label` is **not associated** with the input (`htmlFor` / `id`). Wire them
+    up so clicking the label focuses the field and screen readers announce it.
+- For invalid fields set `aria-invalid` and describe the error with
+  `aria-describedby` pointing at the message (as sketched in the Error state).
+
+## Props
+
+<Controls of={InputStories.Playground} />

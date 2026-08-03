@@ -169,12 +169,26 @@ export async function generateInvoiceForPeriod(
     /** The org's configured lead-time days — used to compute issue date. */
     leadTimeDays?: number;
   } = {},
-): Promise<GeneratedInvoice> {
+): Promise<GeneratedInvoice | null> {
   if (!schedule || !schedule.lease) {
     throw new Error("Schedule or lease not found");
   }
 
   const lease = schedule.lease;
+  const leaseUnit = (lease as { unit?: { type?: string; linkedFlatId?: string | null; unitNumber?: string; parkingKind?: string | null } }).unit;
+
+  // Co-billed parking spot → do NOT self-bill this period. When the spot's linked
+  // flat has an active lease held by the same tenant, the parking rent rides on the
+  // flat's invoice instead. Returning null lets the caller advance the schedule
+  // without creating an invoice (so it resumes standalone billing if the flat lease
+  // later ends or the tenant differs).
+  if (leaseUnit?.type === "PARKING" && leaseUnit.linkedFlatId) {
+    const coBillingFlat = await billingRepo.findActiveFlatLeaseForParking(
+      prisma, leaseUnit.linkedFlatId, lease.tenantName,
+    );
+    if (coBillingFlat) return null;
+  }
+
   const isFirstDay = periodStart.getDate() === 1;
   const isProRata = !isFirstDay;
 
@@ -185,10 +199,15 @@ export async function generateInvoiceForPeriod(
 
   const fraction = isProRata ? proRataFraction(periodStart) : 1;
 
-  // Compute amounts
+  // Compute amounts. Base rent is a single line so it foots exactly.
   const baseRentCents = Math.round(schedule.baseRentCents * fraction);
-  const chargesCents = Math.round(schedule.totalChargesCents * fraction);
-  const totalCents = baseRentCents + chargesCents;
+  // Charges are accumulated from the actual line items built below rather than
+  // re-rounded from the schedule aggregate, so the invoice total always equals
+  // the sum of its visible charge lines. Re-rounding the aggregate here
+  // (Math.round of totalChargesCents * fraction) diverged from the per-item
+  // rounding by up to ±1 cent per item once a lease had ≥2 itemised charges —
+  // an invoice-footing mismatch between totalAmount and the line items.
+  let chargesCents = 0;
 
   // Compute dates
   const dueDate = computeDueDate(periodStart, isProRata);
@@ -201,6 +220,8 @@ export async function generateInvoiceForPeriod(
     unitPrice: number;
     vatRate: number;
     lineTotal: number;
+    categoryId?: string | null;
+    isChargeAdvance?: boolean;
   }> = [];
 
   // Base rent line
@@ -216,18 +237,41 @@ export async function generateInvoiceForPeriod(
     lineTotal: baseRentCents,
   });
 
-  // Expense item lines (each LeaseExpenseItem → separate line)
-  for (const item of lease.expenseItems) {
-    const itemCents = Math.round(item.amountChf * 100 * fraction);
-    const modeLabel = item.mode === "ACOMPTE" ? "acompte" : "forfait";
+  // Charges: show net rent and charges as separate lines so the tenant sees
+  // gross = net rent + charges. If the lease itemises charges (LeaseExpenseItem),
+  // emit one line per item; otherwise emit a single "Charges (acompte)" line from
+  // the lease's defined charges total. All charge lines are tagged isChargeAdvance
+  // so advances can be summed for the reconciliation.
+  if (lease.expenseItems.length > 0) {
+    for (const item of lease.expenseItems) {
+      const itemCents = Math.round(item.amountChf * 100 * fraction);
+      chargesCents += itemCents;
+      const modeLabel = item.mode === "ACOMPTE" ? "acompte" : "forfait";
+      lineItems.push({
+        description: isProRata
+          ? `${item.description} (${modeLabel}, pro rata)`
+          : `${item.description} (${modeLabel})`,
+        quantity: 1,
+        unitPrice: itemCents,
+        vatRate: 0,
+        lineTotal: itemCents,
+        categoryId: (item as any).categoryId ?? null,
+        isChargeAdvance: item.mode === "ACOMPTE",
+      });
+    }
+  } else if (((lease as any).chargesTotalChf ?? 0) > 0) {
+    const fallbackChargesCents = Math.round((lease as any).chargesTotalChf * 100 * fraction);
+    chargesCents += fallbackChargesCents;
+    const chargesMonth = periodStart.toLocaleString("fr-CH", { month: "long", year: "numeric" });
     lineItems.push({
       description: isProRata
-        ? `${item.description} (${modeLabel}, pro rata)`
-        : `${item.description} (${modeLabel})`,
+        ? `Charges (acompte, pro rata) — ${chargesMonth}`
+        : `Charges (acompte) — ${chargesMonth}`,
       quantity: 1,
-      unitPrice: itemCents,
+      unitPrice: fallbackChargesCents,
       vatRate: 0,
-      lineTotal: itemCents,
+      lineTotal: fallbackChargesCents,
+      isChargeAdvance: true,
     });
   }
 
@@ -236,6 +280,37 @@ export async function generateInvoiceForPeriod(
   const description = isProRata
     ? `Loyer + charges — ${monthYear} (pro rata du ${periodStart.getDate()})`
     : `Loyer + charges — ${monthYear}`;
+
+  // Co-billed parking: parking spots linked to this (flat) unit and rented to the
+  // same tenant ride on this invoice as extra net-rent lines. Their own lease is
+  // skipped above, so there is no double-billing. Only runs for non-parking units.
+  let parkingCents = 0;
+  if (lease.unitId && leaseUnit?.type !== "PARKING") {
+    const parkingLeases = await billingRepo.findActiveParkingLeasesForFlat(
+      prisma, lease.unitId, lease.tenantName,
+    );
+    for (const pl of parkingLeases) {
+      const cents = Math.round((pl.netRentChf ?? 0) * 100 * fraction);
+      if (cents <= 0) continue;
+      parkingCents += cents;
+      const label = pl.unit?.parkingKind === "GARAGE" ? "Garage" : "Place de parc";
+      const num = pl.unit?.unitNumber ? ` ${pl.unit.unitNumber}` : "";
+      lineItems.push({
+        description: isProRata
+          ? `${label}${num} (pro rata) — ${monthYear}`
+          : `${label}${num} — ${monthYear}`,
+        quantity: 1,
+        unitPrice: cents,
+        vatRate: 0,
+        lineTotal: cents,
+      });
+    }
+  }
+
+  // Grand total = base rent + charges (summed from the emitted line items) +
+  // co-billed parking rent. Every component is the exact sum of the line items,
+  // so subtotalAmount/totalAmount always foot to the visible lines.
+  const grandTotalCents = baseRentCents + chargesCents + parkingCents;
 
   // Resolve issuer billing entity (same logic as createLeaseInvoice)
   let issuerBillingEntityId: string | undefined;
@@ -273,10 +348,10 @@ export async function generateInvoiceForPeriod(
       leaseId: lease.id,
       billingScheduleId: schedule.id,
       description,
-      subtotalAmount: totalCents,
+      subtotalAmount: grandTotalCents,
       vatAmount: 0,
-      totalAmount: totalCents,
-      amount: Math.round(totalCents / 100),
+      totalAmount: grandTotalCents,
+      amount: Math.round(grandTotalCents / 100),
       currency: "CHF",
       vatRate: 0,
       status: "DRAFT",
@@ -299,6 +374,8 @@ export async function generateInvoiceForPeriod(
           unitPrice: li.unitPrice,
           vatRate: li.vatRate,
           lineTotal: li.lineTotal,
+          ...(li.categoryId ? { categoryId: li.categoryId } : {}),
+          ...(li.isChargeAdvance ? { isChargeAdvance: true } : {}),
         })),
       },
     },
@@ -330,7 +407,7 @@ export async function generateInvoiceForPeriod(
     invoiceId: invoice.id,
     periodStart,
     periodEnd,
-    totalAmountCents: totalCents,
+    totalAmountCents: grandTotalCents,
     isProRata,
     isBackfilled: options.isBackfilled ?? false,
   };
@@ -399,11 +476,12 @@ export async function processRecurringBilling(
         schedule.lastGeneratedPeriod !== null;
 
       try {
-        await generateInvoiceForPeriod(prisma, schedule, periodStart, {
+        const result = await generateInvoiceForPeriod(prisma, schedule, periodStart, {
           isBackfilled,
           leadTimeDays,
         });
-        generated++;
+        // null = intentionally skipped (co-billed parking); still advance the schedule.
+        if (result) generated++;
 
         // Advance to next period
         const nextStart = periodStart.getDate() === 1

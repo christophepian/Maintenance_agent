@@ -15,7 +15,11 @@ export function getAnthropicClient(): Anthropic {
     if (!apiKey) {
       throw new Error("ANTHROPIC_API_KEY environment variable is not set");
     }
-    _client = new Anthropic({ apiKey });
+    // Ride out transient 429 / 5xx / 529 "overloaded_error" (the API returns
+    // x-should-retry: true) with the SDK's exponential backoff, instead of failing
+    // a whole — expensive — vision extraction on a momentary capacity blip. The
+    // SDK default is only 2 retries; bump it so a brief overload is invisible.
+    _client = new Anthropic({ apiKey, maxRetries: 6 });
   }
   return _client;
 }

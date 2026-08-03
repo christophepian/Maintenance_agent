@@ -72,6 +72,10 @@ export async function createCashflowPlan(
     incomeGrowthRatePct?: number;
     openingBalanceCents?: bigint | null;
     horizonMonths?: number;
+    discountRatePct?: number;
+    capRatePct?: number;
+    deferYears?: number;
+    propertyValueChf?: number | null;
   },
 ) {
   return prisma.cashflowPlan.create({
@@ -82,6 +86,10 @@ export async function createCashflowPlan(
       incomeGrowthRatePct: data.incomeGrowthRatePct ?? 0,
       openingBalanceCents: data.openingBalanceCents ?? null,
       horizonMonths: data.horizonMonths ?? 60,
+      ...(data.discountRatePct  != null ? { discountRatePct:  data.discountRatePct  } : {}),
+      ...(data.capRatePct       != null ? { capRatePct:       data.capRatePct       } : {}),
+      ...(data.deferYears       != null ? { deferYears:       data.deferYears       } : {}),
+      ...(data.propertyValueChf !== undefined ? { propertyValueChf: data.propertyValueChf } : {}),
     },
     include: CASHFLOW_PLAN_INCLUDE,
   });
@@ -97,6 +105,12 @@ export async function updateCashflowPlan(
     openingBalanceCents?: bigint | null;
     status?: CashflowPlanStatus;
     lastComputedAt?: Date | null;
+    discountRatePct?: number;
+    capRatePct?: number;
+    deferYears?: number;
+    propertyValueChf?: number | null;
+    lastVerdictScenario?: string | null;
+    lastVerdictAt?: Date | null;
   },
 ) {
   const existing = await prisma.cashflowPlan.findFirst({ where: { id, orgId } });
@@ -115,7 +129,16 @@ export async function addCashflowOverride(
   prisma: PrismaClient,
   planId: string,
   orgId: string,
-  data: { assetId: string; originalYear: number; overriddenYear: number },
+  data: {
+    assetId: string;
+    originalYear: number;
+    overriddenYear: number;
+    costChf?: number | null;
+    rentUpliftChfPerMonth?: number | null;
+    riskAvoidedChfPerYear?: number | null;
+    vacancyDays?: number | null;
+    oblfPassthroughPct?: number | null;
+  },
 ) {
   const plan = await prisma.cashflowPlan.findFirst({ where: { id: planId, orgId } });
   if (!plan) return null;
@@ -126,6 +149,11 @@ export async function addCashflowOverride(
       assetId: data.assetId,
       originalYear: data.originalYear,
       overriddenYear: data.overriddenYear,
+      costChf: data.costChf ?? null,
+      rentUpliftChfPerMonth: data.rentUpliftChfPerMonth ?? null,
+      riskAvoidedChfPerYear: data.riskAvoidedChfPerYear ?? null,
+      vacancyDays: data.vacancyDays ?? null,
+      oblfPassthroughPct: data.oblfPassthroughPct ?? null,
     },
   });
 
@@ -136,6 +164,28 @@ export async function addCashflowOverride(
   });
 
   return override;
+}
+
+/**
+ * Active-lease monthly net rent per unit — used to value vacancy lost-rent
+ * (months × rent) when reconstructing renovation economics for the plan NPV.
+ */
+export async function findActiveUnitRents(
+  prisma: PrismaClient,
+  orgId: string,
+  unitIds: string[],
+): Promise<Map<string, number>> {
+  if (unitIds.length === 0) return new Map();
+  const leases = await prisma.lease.findMany({
+    where: { orgId, unitId: { in: unitIds }, status: { in: ["ACTIVE", "SIGNED"] }, isTemplate: false },
+    select: { unitId: true, netRentChf: true, startDate: true },
+    orderBy: { startDate: "desc" },
+  });
+  const map = new Map<string, number>();
+  for (const l of leases) {
+    if (l.unitId && !map.has(l.unitId)) map.set(l.unitId, l.netRentChf ?? 0);
+  }
+  return map;
 }
 
 export async function removeCashflowOverride(

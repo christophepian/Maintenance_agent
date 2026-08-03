@@ -9,6 +9,7 @@ import Panel from "../../../../components/layout/Panel";
 import Badge from "../../../../components/ui/Badge";
 import { invoiceVariant, ingestionVariant } from "../../../../lib/statusVariants";
 import { authHeaders } from "../../../../lib/api";
+import { cn } from "../../../../lib/utils";
 import { withServerTranslations } from "../../../../lib/i18n";
 import { useTranslation } from "next-i18next";
 
@@ -90,6 +91,19 @@ export default function InvoiceDetailPage() {
   const [sourceBlobUrl, setSourceBlobUrl] = useState(null);
   const pdfBlobRef = useRef(null);
   const sourceBlobRef = useRef(null);
+  // Building/unit attribution
+  const [buildings, setBuildings] = useState([]);
+  const [units, setUnits] = useState([]);
+  const [selectedBuildingId, setSelectedBuildingId] = useState("");
+  const [selectedUnitId, setSelectedUnitId] = useState("");
+  const [attributionSaving, setAttributionSaving] = useState(false);
+  const [attributionMsg, setAttributionMsg] = useState(null); // { type: "ok"|"err", text }
+  // Cost classification (v3): nature + recoverable-charge category
+  const [costNature, setCostNature] = useState(""); // "" | "CHARGE" | "DIRECT"
+  const [ancillaryCategoryId, setAncillaryCategoryId] = useState("");
+  const [chargeCategories, setChargeCategories] = useState([]);
+  // Swap state
+  const [swapLoading, setSwapLoading] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!id) return;
@@ -113,11 +127,26 @@ export default function InvoiceDetailPage() {
   useEffect(() => {
     fetch("/api/billing-entities", { headers: authHeaders() })
       .then((r) => r.ok ? r.json() : null)
-      .then((d) => {
-        if (d?.data) setBillingEntities(d.data);
-      })
+      .then((d) => { if (d?.data) setBillingEntities(d.data); })
       .catch(() => {});
   }, []);
+
+  // Load buildings
+  useEffect(() => {
+    fetch("/api/buildings", { headers: authHeaders() })
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => { if (d?.data) setBuildings(d.data); })
+      .catch(() => {});
+  }, []);
+
+  // Load units when building changes
+  useEffect(() => {
+    if (!selectedBuildingId) { setUnits([]); setSelectedUnitId(""); return; }
+    fetch(`/api/buildings/${selectedBuildingId}/units`, { headers: authHeaders() })
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => { if (d?.data) setUnits(d.data); })
+      .catch(() => {});
+  }, [selectedBuildingId]);
 
   // Sync selected billing entity when invoice loads
   useEffect(() => {
@@ -125,6 +154,28 @@ export default function InvoiceDetailPage() {
       setSelectedBillingEntityId(invoice.issuerBillingEntityId);
     }
   }, [invoice?.issuerBillingEntityId]);
+
+  // Sync attribution from invoice
+  useEffect(() => {
+    if (invoice?.buildingId) setSelectedBuildingId(invoice.buildingId);
+    if (invoice?.unitId) setSelectedUnitId(invoice.unitId);
+  }, [invoice?.buildingId, invoice?.unitId]);
+
+  // Sync cost classification from invoice
+  useEffect(() => {
+    if (invoice?.costNature) setCostNature(invoice.costNature);
+    if (invoice?.ancillaryCategoryId) setAncillaryCategoryId(invoice.ancillaryCategoryId);
+  }, [invoice?.costNature, invoice?.ancillaryCategoryId]);
+
+  // Load billable charge categories for the recoverable-charge picker
+  useEffect(() => {
+    fetch("/api/ancillary-cost-categories", { headers: authHeaders() })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (d?.data) setChargeCategories(d.data.filter((c) => c.billability === "BILLABLE" && !c.isAdminFee));
+      })
+      .catch(() => {});
+  }, []);
 
   // Fetch PDF + source file with auth headers → blob URLs for iframe/img
   useEffect(() => {
@@ -229,6 +280,54 @@ export default function InvoiceDetailPage() {
     }
   }
 
+  async function saveAttribution() {
+    setAttributionSaving(true);
+    setAttributionMsg(null);
+    try {
+      const isCharge = costNature === "CHARGE";
+      // A charge is building-level only — never carries a unit. A direct cost
+      // keeps the building/unit attribution and no charge category.
+      const payload = {
+        costNature: costNature || null,
+        buildingId: selectedBuildingId || null,
+        unitId: isCharge ? null : selectedUnitId || null,
+        ancillaryCategoryId: isCharge ? ancillaryCategoryId || null : null,
+      };
+      const res = await fetch(`/api/invoices/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const d = await res.json();
+        throw new Error(d?.error?.message || "Failed to save classification");
+      }
+      await loadData();
+      setAttributionMsg({ type: "ok", text: "Classification saved" });
+      setTimeout(() => setAttributionMsg(null), 3000);
+    } catch (e) {
+      setAttributionMsg({ type: "err", text: String(e?.message || e) });
+    } finally {
+      setAttributionSaving(false);
+    }
+  }
+
+  async function swapParties() {
+    setSwapLoading(true);
+    try {
+      const res = await fetch(`/api/invoices/${id}/swap-parties`, {
+        method: "POST",
+        headers: authHeaders(),
+      });
+      if (!res.ok) { const d = await res.json(); throw new Error(d?.error?.message || "Swap failed"); }
+      await loadData();
+    } catch (e) {
+      setError(String(e?.message || e));
+    } finally {
+      setSwapLoading(false);
+    }
+  }
+
   const inv = invoice;
   const isIngested = inv?.sourceChannel && inv.sourceChannel !== "MANUAL";
   const isPendingReview = inv?.ingestionStatus === "PENDING_REVIEW";
@@ -304,31 +403,58 @@ export default function InvoiceDetailPage() {
                           </button>
                         );
                       })()}
-                      {inv.status === "ISSUED" && (
-                        <button
-                          onClick={() => invoiceAction("approve")}
-                          disabled={actionLoading}
-                          className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 transition disabled:opacity-50"
-                        >
-                          ✓ Approve
-                        </button>
+                      {inv.direction === "OUTGOING" ? (
+                        // Outgoing (rent): no approval or dispute — just mark paid when money arrives
+                        ["ISSUED", "APPROVED"].includes(inv.status) && (
+                          <button
+                            onClick={() => invoiceAction("mark-paid")}
+                            disabled={actionLoading}
+                            className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 transition disabled:opacity-50"
+                          >
+                            ✓ Mark Paid
+                          </button>
+                        )
+                      ) : (
+                        // Incoming (contractor/cost): approve → mark paid, with dispute
+                        <>
+                          {inv.status === "ISSUED" && (
+                            <button
+                              onClick={() => invoiceAction("approve")}
+                              disabled={actionLoading}
+                              className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 transition disabled:opacity-50"
+                            >
+                              ✓ Approve
+                            </button>
+                          )}
+                          {inv.status === "APPROVED" && (
+                            <button
+                              onClick={() => invoiceAction("mark-paid")}
+                              disabled={actionLoading}
+                              className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 transition disabled:opacity-50"
+                            >
+                              ✓ Mark Paid
+                            </button>
+                          )}
+                          {["ISSUED", "APPROVED"].includes(inv.status) && (
+                            <button
+                              onClick={() => invoiceAction("dispute")}
+                              disabled={actionLoading}
+                              className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-100 transition disabled:opacity-50"
+                            >
+                              ✗ Dispute
+                            </button>
+                          )}
+                        </>
                       )}
-                      {inv.status === "APPROVED" && (
+                      {(isIngested || inv.issuerName) && (
                         <button
-                          onClick={() => invoiceAction("mark-paid")}
-                          disabled={actionLoading}
-                          className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 transition disabled:opacity-50"
+                          type="button"
+                          onClick={swapParties}
+                          disabled={swapLoading || actionLoading}
+                          title="Swap issuer and recipient if OCR mixed them up"
+                          className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-700 hover:bg-amber-100 transition disabled:opacity-50"
                         >
-                          ✓ Mark Paid
-                        </button>
-                      )}
-                      {["ISSUED", "APPROVED"].includes(inv.status) && (
-                        <button
-                          onClick={() => invoiceAction("dispute")}
-                          disabled={actionLoading}
-                          className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-100 transition disabled:opacity-50"
-                        >
-                          ✗ Dispute
+                          {swapLoading ? "Swapping…" : "⇅ Swap parties"}
                         </button>
                       )}
                       <button
@@ -381,6 +507,20 @@ export default function InvoiceDetailPage() {
                     <Field label={t("manager:financeInvoicesId.prop.country")} value={inv.recipientCountry} />
                   </dl>
                 </Panel>
+
+                {/* Issuer raw text (from OCR) */}
+                {(inv.issuerName || inv.issuerAddressLine1) && (
+                  <Panel title="Issuer (extracted)">
+                    <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-4">
+                      {inv.issuerName && <Field label="Name" value={inv.issuerName} />}
+                      {inv.issuerAddressLine1 && <Field label="Address" value={inv.issuerAddressLine1} />}
+                      {inv.issuerPostalCode && inv.issuerCity && (
+                        <Field label="City" value={`${inv.issuerPostalCode} ${inv.issuerCity}`} />
+                      )}
+                      {inv.issuerCountry && <Field label="Country" value={inv.issuerCountry} />}
+                    </dl>
+                  </Panel>
+                )}
 
                 {/* Issuer / Billing Entity */}
                 <Panel title={t("manager:financeInvoicesId.title.issuerBillingEntity")}>
@@ -588,6 +728,208 @@ export default function InvoiceDetailPage() {
                     <dl className="grid grid-cols-2 gap-x-6 gap-y-4">
                       {inv.expenseType && <Field label={t("manager:financeInvoicesId.prop.expenseType")} value={`${inv.expenseType.name}${inv.expenseType.code ? ` (${inv.expenseType.code})` : ""}`} />}
                       {inv.account && <Field label={t("manager:financeInvoicesId.prop.account")} value={`${inv.account.name}${inv.account.code ? ` (${inv.account.code})` : ""}`} />}
+                    </dl>
+                  </Panel>
+                )}
+
+                {/* Cost classification (incoming) / building-unit attribution */}
+                {inv.status !== "PAID" && inv.direction === "INCOMING" && (
+                  <Panel title="Cost classification">
+                    <div className="space-y-4">
+                      {/* Persistent confirmation of what's recorded on the invoice */}
+                      {inv.costNature && (
+                        <div className="flex items-start gap-2 rounded-lg border border-success-ring bg-success-light px-3 py-2 text-xs text-success-text">
+                          <span aria-hidden>✓</span>
+                          <span>
+                            Saved as <strong>{inv.costNature === "CHARGE" ? "Recoverable charge" : "Direct cost"}</strong>
+                            {inv.costNature === "CHARGE" && inv.ancillaryCategory ? ` · ${inv.ancillaryCategory.name}` : ""}
+                            {inv.buildingId ? ` · ${buildings.find((b) => b.id === inv.buildingId)?.name || "building set"}` : ""}
+                            {inv.costNature === "DIRECT" && inv.unitId ? ` · unit ${units.find((u) => u.id === inv.unitId)?.unitNumber || "set"}` : ""}.
+                          </span>
+                        </div>
+                      )}
+                      {/* Step 1 — nature gates everything below */}
+                      <div>
+                        <label className="block text-xs font-medium text-muted mb-1.5">What is this cost?</label>
+                        <div className="grid grid-cols-2 gap-2">
+                          {[
+                            { v: "CHARGE", label: "Recoverable charge", hint: "Nebenkosten — heating, water, caretaker, elevator…" },
+                            { v: "DIRECT", label: "Direct cost", hint: "Repair, maintenance, capex, insurance, tax…" },
+                          ].map((opt) => (
+                            <button
+                              key={opt.v}
+                              type="button"
+                              onClick={() => setCostNature(opt.v)}
+                              className={cn(
+                                "text-left rounded-lg border px-3 py-2 transition",
+                                costNature === opt.v
+                                  ? "border-brand bg-brand-light ring-1 ring-brand-ring"
+                                  : "border-surface-border bg-surface hover:bg-surface-subtle",
+                              )}
+                            >
+                              <span className={cn("block text-sm font-medium", costNature === opt.v ? "text-brand-dark" : "text-foreground")}>{opt.label}</span>
+                              <span className="block text-xs text-muted mt-0.5">{opt.hint}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Step 2 — conditional fields */}
+                      {costNature === "CHARGE" && (
+                        <div className="space-y-3">
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-xs font-medium text-muted mb-1">Building <span className="text-red-500">*</span></label>
+                              <select
+                                value={selectedBuildingId}
+                                onChange={(e) => setSelectedBuildingId(e.target.value)}
+                                className="w-full rounded-lg border border-muted-ring bg-surface px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              >
+                                <option value="">— Choose —</option>
+                                {buildings.map((b) => (
+                                  <option key={b.id} value={b.id}>{b.name || b.address || b.id.slice(0, 8)}</option>
+                                ))}
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-muted mb-1">Charge category <span className="text-red-500">*</span></label>
+                              <select
+                                value={ancillaryCategoryId}
+                                onChange={(e) => setAncillaryCategoryId(e.target.value)}
+                                className="w-full rounded-lg border border-muted-ring bg-surface px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              >
+                                <option value="">— Choose —</option>
+                                {chargeCategories.map((c) => (
+                                  <option key={c.id} value={c.id}>{c.name}</option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
+                          <p className="text-xs text-muted bg-surface-subtle border border-surface-border rounded-lg px-3 py-2 m-0">
+                            A recoverable charge is building-level. On approval it is booked to the building cost pool and ventilated to units by the building&apos;s distribution preset — no unit is selected here.
+                          </p>
+                        </div>
+                      )}
+
+                      {costNature === "DIRECT" && (
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-xs font-medium text-muted mb-1">Building</label>
+                            <select
+                              value={selectedBuildingId}
+                              onChange={(e) => { setSelectedBuildingId(e.target.value); setSelectedUnitId(""); }}
+                              className="w-full rounded-lg border border-muted-ring bg-surface px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            >
+                              <option value="">— None —</option>
+                              {buildings.map((b) => (
+                                <option key={b.id} value={b.id}>{b.name || b.address || b.id.slice(0, 8)}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-muted mb-1">Unit</label>
+                            <select
+                              value={selectedUnitId}
+                              onChange={(e) => setSelectedUnitId(e.target.value)}
+                              disabled={!selectedBuildingId || units.length === 0}
+                              className="w-full rounded-lg border border-muted-ring bg-surface px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50"
+                            >
+                              <option value="">— None —</option>
+                              {units.map((u) => (
+                                <option key={u.id} value={u.id}>{u.unitNumber}{u.floor ? ` (floor ${u.floor})` : ""}</option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={saveAttribution}
+                          disabled={
+                            attributionSaving ||
+                            !costNature ||
+                            (costNature === "CHARGE" && (!selectedBuildingId || !ancillaryCategoryId))
+                          }
+                          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition disabled:opacity-50"
+                        >
+                          {attributionSaving ? "Saving…" : "Save classification"}
+                        </button>
+                        {attributionMsg && (
+                          <span className={attributionMsg.type === "ok" ? "text-sm text-success-text font-medium" : "text-sm text-destructive-text font-medium"}>
+                            {attributionMsg.type === "ok" ? "✓ " : "✗ "}{attributionMsg.text}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </Panel>
+                )}
+
+                {/* Building / Unit attribution (outgoing/rent invoices) */}
+                {inv.status !== "PAID" && inv.direction !== "INCOMING" && (
+                  <Panel title="Building / Unit Attribution">
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-medium text-muted mb-1">Building</label>
+                          <select
+                            value={selectedBuildingId}
+                            onChange={(e) => { setSelectedBuildingId(e.target.value); setSelectedUnitId(""); }}
+                            className="w-full rounded-lg border border-muted-ring bg-surface px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          >
+                            <option value="">— None —</option>
+                            {buildings.map((b) => (
+                              <option key={b.id} value={b.id}>{b.name || b.address || b.id.slice(0, 8)}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-muted mb-1">Unit</label>
+                          <select
+                            value={selectedUnitId}
+                            onChange={(e) => setSelectedUnitId(e.target.value)}
+                            disabled={!selectedBuildingId || units.length === 0}
+                            className="w-full rounded-lg border border-muted-ring bg-surface px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50"
+                          >
+                            <option value="">— None —</option>
+                            {units.map((u) => (
+                              <option key={u.id} value={u.id}>{u.unitNumber}{u.floor ? ` (floor ${u.floor})` : ""}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={saveAttribution}
+                          disabled={attributionSaving}
+                          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition disabled:opacity-50"
+                        >
+                          {attributionSaving ? "Saving…" : "Save attribution"}
+                        </button>
+                        {attributionMsg && (
+                          <span className={attributionMsg.type === "ok" ? "text-sm text-success-text font-medium" : "text-sm text-destructive-text font-medium"}>
+                            {attributionMsg.type === "ok" ? "✓ " : "✗ "}{attributionMsg.text}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </Panel>
+                )}
+
+                {/* Read-only classification / attribution (paid) */}
+                {inv.status === "PAID" && (inv.costNature || inv.buildingId || inv.unitId) && (
+                  <Panel title={inv.costNature === "CHARGE" ? "Recoverable charge" : "Building / Unit Attribution"}>
+                    <dl className="grid grid-cols-2 gap-x-6 gap-y-4">
+                      {inv.costNature && (
+                        <Field label="Nature" value={inv.costNature === "CHARGE" ? "Recoverable charge" : "Direct cost"} />
+                      )}
+                      {inv.ancillaryCategory && <Field label="Charge category" value={inv.ancillaryCategory.name} />}
+                      {inv.buildingId && (
+                        <Field label="Building" value={buildings.find((b) => b.id === inv.buildingId)?.name || inv.buildingId.slice(0, 8)} />
+                      )}
+                      {inv.unitId && (
+                        <Field label="Unit" value={units.find((u) => u.id === inv.unitId)?.unitNumber || inv.unitId.slice(0, 8)} />
+                      )}
                     </dl>
                   </Panel>
                 )}

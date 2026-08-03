@@ -81,8 +81,28 @@ export async function issueInvoiceWorkflow(
   // ── 4. Notify tenant (best-effort) ────────────────────────
   let tenantNotified = false;
   try {
-    const job = await findJobById(prisma, issued.jobId);
-    const tenantId = (job as any)?.request?.tenantId;
+    let tenantId: string | null = null;
+
+    // For job-linked invoices (maintenance), find tenant via job → request
+    if (issued.jobId) {
+      const job = await findJobById(prisma, issued.jobId);
+      tenantId = (job as any)?.request?.tenantId ?? null;
+    }
+
+    // For rent invoices (leaseId set, no job), find tenant user via lease.tenantEmail
+    if (!tenantId && issued.leaseId) {
+      const lease = await prisma.lease.findUnique({
+        where: { id: issued.leaseId },
+        select: { tenantEmail: true },
+      });
+      if (lease?.tenantEmail) {
+        const tenantUser = await prisma.user.findFirst({
+          where: { orgId, email: lease.tenantEmail, role: "TENANT" },
+          select: { id: true },
+        });
+        tenantId = tenantUser?.id ?? null;
+      }
+    }
 
     if (tenantId) {
       await notifyInvoiceStatusChanged(invoiceId, orgId, tenantId, "INVOICE_CREATED");

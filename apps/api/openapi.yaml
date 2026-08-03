@@ -172,8 +172,8 @@ components:
         - buildingName
         - from
         - to
-        - earnedIncomeCents
-        - projectedIncomeCents
+        - collectedIncomeCents
+        - accruedIncomeCents
         - expensesTotalCents
         - maintenanceTotalCents
         - capexTotalCents
@@ -186,13 +186,14 @@ components:
         - activeUnitsCount
         - expensesByCategory
         - topContractorsBySpend
+        - source
       properties:
         buildingId: { type: string, format: uuid }
         buildingName: { type: string }
         from: { type: string, format: date }
         to: { type: string, format: date }
-        earnedIncomeCents: { type: integer }
-        projectedIncomeCents: { type: integer }
+        collectedIncomeCents: { type: integer }
+        accruedIncomeCents: { type: integer }
         expensesTotalCents: { type: integer }
         maintenanceTotalCents: { type: integer }
         capexTotalCents: { type: integer }
@@ -213,6 +214,13 @@ components:
           type: array
           description: Only present when groupByAccount=true
           items: { $ref: '#/components/schemas/AccountTotalDTO' }
+        source:
+          type: string
+          enum: [operational, imported]
+          description: >
+            Provenance of the figures. "operational" = computed from live
+            leases/invoices; "imported" = substituted from an approved imported
+            income statement covering this fiscal year.
 
     BuildingCapexScheduleDTO:
       type: object
@@ -236,13 +244,460 @@ components:
               capitalizedChf: { type: number }
               assetCount: { type: integer }
 
+    ValueCreationAgendaDTO:
+      type: object
+      required: [strategyContext, opportunities]
+      properties:
+        strategyContext:
+          type: object
+          required: [hasProfile, source]
+          properties:
+            hasProfile: { type: boolean }
+            source: { type: string, enum: [building, owner-portfolio, none] }
+            archetype: { type: string, nullable: true, description: Effective mandate used to rank/frame (what-if override or resolved) }
+            resolvedArchetype: { type: string, nullable: true, description: The building's real resolved mandate }
+            roleIntent: { type: string, nullable: true }
+            isWhatIf: { type: boolean }
+            ownerProfileCount: { type: integer, nullable: true }
+            recommendedScenario: { type: string, enum: [invest, defer, neglect], nullable: true }
+            rationale: { type: string, nullable: true }
+        opportunities:
+          type: array
+          description: Renovation opportunities ranked for the effective mandate (superset of RepairReplaceItem)
+          items:
+            type: object
+            required: [assetId, assetName, recommendation, score, fitReason, oblfUpliftPreviewChfPerYear]
+            properties:
+              assetId: { type: string }
+              assetName: { type: string }
+              unitId: { type: string }
+              unitNumber: { type: string }
+              assetType: { type: string }
+              topic: { type: string }
+              recommendation: { type: string, enum: [REPAIR, MONITOR, PLAN_REPLACEMENT, REPLACE] }
+              recommendationReason: { type: string }
+              depreciationPct: { type: number, nullable: true }
+              remainingLifeMonths: { type: integer, nullable: true }
+              usefulLifeMonths: { type: integer, nullable: true }
+              estimatedReplacementCostChf: { type: number, nullable: true }
+              lastConditionStatus: { type: string, nullable: true, enum: [GOOD, FAIR, POOR, DAMAGED] }
+              score: { type: number }
+              fitReason: { type: string }
+              oblfUpliftPreviewChfPerYear: { type: number }
+
+    UnitProfitabilityDTO:
+      type: object
+      required: [buildingId, from, to, periodDays, rows, allocationKey]
+      properties:
+        buildingId: { type: string }
+        buildingName: { type: string }
+        from: { type: string, format: date }
+        to: { type: string, format: date }
+        periodDays: { type: integer }
+        totalAnnualNoiCents: { type: integer }
+        buildingIntrinsicValueChf: { type: number, nullable: true, description: Bottom-up building value = Σ unit intrinsic value }
+        buildingNetYieldPct: { type: number, nullable: true, description: Annual NOI / bottom-up building value }
+        ppeEstimateChf: { type: number, nullable: true, description: Stored PPE appraisal (reconciliation) }
+        marketValueChf: { type: number, nullable: true, description: Stored market appraisal (reconciliation) }
+        totalDebtChf: { type: number, nullable: true }
+        navChf: { type: number, nullable: true, description: Bottom-up value − debt }
+        buildingLevelCostsCents: { type: integer, description: Shared owner opex not booked to any unit (annualised), shown separately — never spread across units }
+        buildingOperatingNoiCents: { type: integer, description: Building operating NOI (annualised) — income − all operating opex }
+        allocationKey: { type: string, enum: [livingAreaSqm, equal] }
+        reconciliation:
+          type: object
+          description: Footing check of per-unit income vs the building income
+          properties:
+            sumUnitIncomeCents: { type: integer }
+            buildingIncomeCents: { type: integer }
+            buildingNoiCents: { type: integer }
+            incomeDeltaCents: { type: integer }
+            reconciled: { type: boolean }
+        rows:
+          type: array
+          description: Per-unit rows ranked by net yield on intrinsic value (descending; unpriced units last)
+          items:
+            type: object
+            required: [unitId, unitNumber, annualNoiCents, sellCandidate]
+            properties:
+              unitId: { type: string }
+              unitNumber: { type: string }
+              floor: { type: string, nullable: true }
+              tenantName: { type: string, nullable: true }
+              occupancyRate: { type: number }
+              monthlyRentChf: { type: integer, nullable: true }
+              allocatedOverheadCents: { type: integer, description: Deprecated — always 0 under direct costing (no per-unit overhead allocation) }
+              annualNoiCents: { type: integer, description: Direct-costing annualised NOI — accrued income − expenses booked to this unit only }
+              noiContributionPct: { type: number, nullable: true }
+              intrinsicValueChf: { type: number, nullable: true }
+              valueSharePct: { type: number, nullable: true, description: Unit share of the building's intrinsic value }
+              netYieldOnIntrinsicPct: { type: number, nullable: true }
+              sellCandidate: { type: boolean, description: Intrinsic yield materially below the building yield }
+
+    TimeSeriesPoint:
+      type: object
+      required: [periodStart, periodEnd, label, noiCents, collectedIncomeCents, expensesCents, collectionRate]
+      properties:
+        periodStart:       { type: string, format: date }
+        periodEnd:         { type: string, format: date }
+        label:             { type: string }
+        noiCents:          { type: integer }
+        collectedIncomeCents: { type: integer }
+        expensesCents:     { type: integer }
+        collectionRate:    { type: number }
+        noiMarginPct:      { type: number, nullable: true }
+        opexRatioPct:      { type: number, nullable: true }
+        occupancyRate:     { type: number, nullable: true }
+
+    PortfolioTimeSeriesDTO:
+      type: object
+      required: [range, points]
+      properties:
+        range:        { type: string, enum: [1W, 1M, 6M, 1Y, 2Y, 5Y, 10Y] }
+        points:       { type: array, items: { $ref: '#/components/schemas/TimeSeriesPoint' } }
+        earliestDate: { type: string, format: date, nullable: true }
+
+    BuildingKpisDTO:
+      type: object
+      required:
+        - openRequests
+        - openJobs
+      properties:
+        openRequests:
+          type: integer
+          description: Count of open (actionable) requests attributed to the building
+          example: 3
+        openJobs:
+          type: integer
+          description: Count of open (PENDING/IN_PROGRESS) jobs attributed to the building
+          example: 1
+
+    ImportRowDTO:
+      type: object
+      required:
+        - id
+        - rowIndex
+        - status
+      properties:
+        id: { type: string, format: uuid }
+        rowIndex:
+          type: integer
+          description: 1-based data-row number (excludes the header line)
+        status: { type: string, enum: [VALID, ERROR, COMMITTED] }
+        errorMessage: { type: string, nullable: true }
+        createdEntityId:
+          type: string
+          nullable: true
+          description: id of the Building/Unit created on commit
+        data:
+          type: object
+          additionalProperties: true
+          description: The parsed, normalized row payload as uploaded
+
+    ImportBatchDTO:
+      type: object
+      required:
+        - id
+        - entityType
+        - fileName
+        - status
+        - rowCount
+        - validCount
+        - errorCount
+        - createdAt
+        - rows
+      properties:
+        id: { type: string, format: uuid }
+        entityType: { type: string, enum: [BUILDING, UNIT] }
+        fileName: { type: string }
+        uploadedBy: { type: string }
+        status: { type: string, enum: [PENDING_REVIEW, COMMITTED, REJECTED] }
+        rowCount: { type: integer }
+        validCount: { type: integer }
+        errorCount: { type: integer }
+        createdAt: { type: string, format: date-time }
+        committedAt: { type: string, format: date-time, nullable: true }
+        rows:
+          type: array
+          items: { $ref: '#/components/schemas/ImportRowDTO' }
+
+    OnboardingUnitPreviewDTO:
+      type: object
+      required: [objet, unitNumber, unitType, isVacant, willCreateLease]
+      properties:
+        objet: { type: string }
+        unitNumber: { type: string }
+        unitType: { type: string, enum: [RESIDENTIAL, PARKING] }
+        parkingKind: { type: string, enum: [GARAGE], nullable: true }
+        floor: { type: string, nullable: true }
+        rooms: { type: number, nullable: true }
+        areaSqm: { type: number, nullable: true }
+        tenantName: { type: string, nullable: true }
+        isVacant: { type: boolean }
+        startDate: { type: string, format: date-time, nullable: true }
+        endDate: { type: string, format: date-time, nullable: true }
+        netRentChf: { type: integer, nullable: true }
+        chargesChf: { type: integer, nullable: true }
+        linkedApartmentObjet: { type: string, nullable: true }
+        willCreateLease: { type: boolean }
+        matchedUnitNumber:
+          type: string
+          nullable: true
+          description: Existing unit this object matches (merged, not duplicated); null = will be created
+
+    OnboardingPreviewDTO:
+      type: object
+      required: [buildingId, buildingName, summary, units, warnings]
+      properties:
+        buildingId: { type: string, format: uuid }
+        buildingName: { type: string }
+        summary:
+          type: object
+          required: [totalObjects, apartments, garages, vacant, tenants, leases, annualNetRentChf, matchedExistingUnits]
+          properties:
+            totalObjects: { type: integer }
+            apartments: { type: integer }
+            garages: { type: integer }
+            vacant: { type: integer }
+            tenants: { type: integer }
+            leases: { type: integer }
+            annualNetRentChf: { type: integer }
+            matchedExistingUnits: { type: integer }
+            newUnits:
+              type: integer
+              description: Objects matching no existing unit — created only into an empty building, or when new units are confirmed
+        buildingAlreadyPopulated:
+          type: boolean
+          description: True when the building already has ≥1 active unit; new (unmatched) units then require explicit confirmation at commit
+        units:
+          type: array
+          items: { $ref: '#/components/schemas/OnboardingUnitPreviewDTO' }
+        warnings:
+          type: array
+          items: { type: string }
+
+    OnboardingCommitResultDTO:
+      type: object
+      required: [buildingId, billingMode, created, skippedExistingUnits, errors]
+      properties:
+        buildingId: { type: string, format: uuid }
+        billingMode: { type: string, enum: [activate, snapshot] }
+        created:
+          type: object
+          required: [units, tenants, leases, activated]
+          properties:
+            units: { type: integer }
+            tenants: { type: integer }
+            leases: { type: integer }
+            activated: { type: integer }
+        skippedExistingUnits:
+          type: integer
+          description: Objects whose unit already existed and were merged (not duplicated)
+        skippedNewUnits:
+          type: integer
+          description: Unmatched objects NOT created because the building is already populated and new units weren't confirmed
+        errors:
+          type: array
+          items: { type: string }
+
+    InvoiceOnboardingPreviewLineDTO:
+      type: object
+      required: [compte, accountName, noPiece, vendorName, description, amountChf, unitNumber, matchedUnitNumber, alreadyImported]
+      properties:
+        compte: { type: string }
+        accountName: { type: string }
+        date: { type: string, format: date, nullable: true }
+        noPiece: { type: string }
+        vendorName: { type: string }
+        description: { type: string }
+        amountChf: { type: number }
+        unitNumber: { type: string, nullable: true }
+        matchedUnitNumber:
+          type: string
+          nullable: true
+          description: Existing unit this invoice attributes to; null = building-level
+        alreadyImported: { type: boolean }
+
+    InvoiceOnboardingPreviewDTO:
+      type: object
+      required: [buildingId, buildingName, summary, invoices, warnings]
+      properties:
+        buildingId: { type: string, format: uuid }
+        buildingName: { type: string }
+        summary:
+          type: object
+          required: [total, newInvoices, alreadyImported, unitAttributed, totalChf, byAccount]
+          properties:
+            total: { type: integer }
+            newInvoices: { type: integer }
+            alreadyImported: { type: integer }
+            unitAttributed: { type: integer }
+            totalChf: { type: number }
+            byAccount:
+              type: array
+              items:
+                type: object
+                required: [compte, accountName, count, totalChf]
+                properties:
+                  compte: { type: string }
+                  accountName: { type: string }
+                  count: { type: integer }
+                  totalChf: { type: number }
+        invoices:
+          type: array
+          items: { $ref: '#/components/schemas/InvoiceOnboardingPreviewLineDTO' }
+        warnings:
+          type: array
+          items: { type: string }
+
+    InvoiceOnboardingCommitResultDTO:
+      type: object
+      required: [buildingId, created, vendorsLinked, reversedLedgerEntries, skippedAlreadyImported, errors]
+      properties:
+        buildingId: { type: string, format: uuid }
+        created: { type: integer }
+        vendorsLinked:
+          type: integer
+          description: Invoices linked to a deduplicated vendor Contractor
+        reversedLedgerEntries:
+          type: integer
+          description: Ledger accrual entries a prior (posting) import left behind, now reversed
+        skippedAlreadyImported:
+          type: integer
+          description: Piece numbers already imported on a prior commit (idempotent)
+        errors:
+          type: array
+          items: { type: string }
+
+    VendorSpendDTO:
+      type: object
+      required: [contractorId, vendorName, totalCents, invoiceCount]
+      properties:
+        contractorId: { type: string, nullable: true }
+        vendorName: { type: string }
+        totalCents: { type: integer }
+        invoiceCount: { type: integer }
+
+    ExpenseBreakdownMonthDTO:
+      type: object
+      required: [month, totalCents, vendors, accounts]
+      properties:
+        month: { type: string, example: '2025-02', description: YYYY-MM }
+        totalCents: { type: integer }
+        vendors:
+          type: array
+          items:
+            type: object
+            required: [contractorId, vendorName, totalCents, invoiceCount]
+            properties:
+              contractorId: { type: string, nullable: true }
+              vendorName: { type: string }
+              totalCents: { type: integer }
+              invoiceCount: { type: integer }
+        accounts:
+          type: array
+          items:
+            type: object
+            required: [accountId, accountCode, accountName, totalCents]
+            properties:
+              accountId: { type: string, nullable: true }
+              accountCode: { type: string, nullable: true }
+              accountName: { type: string, nullable: true }
+              totalCents: { type: integer }
+
+    PackageDocumentDTO:
+      type: object
+      required: [fileName, type, summary, detail]
+      properties:
+        fileName: { type: string }
+        type: { type: string, enum: [RENT_ROLL, GENERAL_LEDGER, BALANCE_SHEET, INCOME_STATEMENT, GENERAL_INFO, UNKNOWN] }
+        summary:
+          type: object
+          additionalProperties: { type: number }
+        detail: { type: string }
+
+    PackageFileDTO:
+      type: object
+      required: [fileName, text]
+      properties:
+        fileName: { type: string }
+        text: { type: string }
+
+    ReconciliationCheckDTO:
+      type: object
+      required: [label, expectedChf, actualChf, deltaChf, ok, note]
+      properties:
+        label: { type: string }
+        expectedChf: { type: number }
+        actualChf: { type: number }
+        deltaChf: { type: number }
+        ok: { type: boolean }
+        note: { type: string }
+
+    BuildingSplitDTO:
+      type: object
+      required: [multiple, ambiguous, buildings, message]
+      properties:
+        multiple: { type: boolean, description: The upload appears to mix more than one building's reports }
+        ambiguous: { type: boolean, description: Duplicate documents found but distinct building identity couldn't be confirmed — overridable }
+        buildings: { type: array, items: { type: string }, description: Labels of the detected buildings (addresses or object-code groups) }
+        message: { type: string }
+
+    PackageAnalysisDTO:
+      type: object
+      required: [buildingId, buildingName, fiscalYear, documents, reconciliation, warnings]
+      properties:
+        buildingId: { type: string, format: uuid }
+        buildingName: { type: string }
+        fiscalYear: { type: integer }
+        documents:
+          type: array
+          items: { $ref: '#/components/schemas/PackageDocumentDTO' }
+        reconciliation:
+          type: array
+          items: { $ref: '#/components/schemas/ReconciliationCheckDTO' }
+        warnings:
+          type: array
+          items: { type: string }
+        buildingAlreadyPopulated:
+          type: boolean
+          description: True when the building already has ≥1 active unit; unmatched rent-roll objects then require confirmation at commit
+        rentRollNewUnits:
+          type: integer
+          description: Rent-roll objects that match no existing unit and would be created as new units
+        buildingSplit: { $ref: '#/components/schemas/BuildingSplitDTO' }
+        extractedFiles:
+          type: array
+          description: Present only when the upload was a PDF — the canonical CSVs extracted from it, re-submitted verbatim at commit.
+          items: { $ref: '#/components/schemas/PackageFileDTO' }
+
+    PackageCommitResultDTO:
+      type: object
+      required: [buildingId, fiscalYear, results, warnings]
+      properties:
+        buildingId: { type: string, format: uuid }
+        fiscalYear: { type: integer }
+        results:
+          type: array
+          items:
+            type: object
+            required: [fileName, type, outcome, detail]
+            properties:
+              fileName: { type: string }
+              type: { type: string, enum: [RENT_ROLL, GENERAL_LEDGER, BALANCE_SHEET, INCOME_STATEMENT, UNKNOWN] }
+              outcome: { type: string }
+              detail: { type: string }
+        warnings:
+          type: array
+          items: { type: string }
+
     AnnualSnapshotDTO:
       type: object
       required:
         - periodStart
         - periodEnd
-        - earnedIncomeCents
-        - projectedIncomeCents
+        - collectedIncomeCents
+        - accruedIncomeCents
         - expensesTotalCents
         - maintenanceTotalCents
         - capexTotalCents
@@ -254,8 +709,8 @@ components:
       properties:
         periodStart: { type: string, format: date }
         periodEnd: { type: string, format: date }
-        earnedIncomeCents: { type: integer }
-        projectedIncomeCents: { type: integer }
+        collectedIncomeCents: { type: integer }
+        accruedIncomeCents: { type: integer }
         expensesTotalCents: { type: integer }
         maintenanceTotalCents: { type: integer }
         capexTotalCents: { type: integer }
@@ -1444,6 +1899,107 @@ components:
         creditCents: { type: integer }
         balanceCents: { type: integer }
 
+    FiscalClose:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        buildingId: { type: string, format: uuid }
+        fiscalYear: { type: integer }
+        status: { type: string, enum: [CLOSED, REVERSED] }
+        retainedEarningsCents: { type: integer, description: "Net result posted to equity (positive = profit)" }
+        closingJournalId: { type: string, format: uuid }
+        reversalJournalId: { type: string, format: uuid, nullable: true }
+        closedAt: { type: string, format: date-time }
+        reversedAt: { type: string, format: date-time, nullable: true }
+
+    AnalyticalReport:
+      type: object
+      properties:
+        buildingId: { type: string, format: uuid }
+        buildingName: { type: string }
+        fiscalYear: { type: integer }
+        equityBridge:
+          type: object
+          properties:
+            openingEquityCents: { type: integer }
+            periodResultCents: { type: integer }
+            distributionsCents: { type: integer }
+            closingEquityCents: { type: integer }
+        position:
+          type: object
+          properties:
+            totalAssetsCents: { type: integer }
+            liabilitiesCents: { type: integer }
+            equityCents: { type: integer }
+        kpis:
+          type: object
+          properties:
+            navCents: { type: integer }
+            mortgageCents: { type: integer }
+            propertyValueCents: { type: integer, nullable: true }
+            ltvPct: { type: number, nullable: true }
+        accountMovements:
+          type: array
+          items:
+            type: object
+            properties:
+              code: { type: string, nullable: true }
+              name: { type: string }
+              accountType: { type: string }
+              openingCents: { type: integer }
+              debitCents: { type: integer }
+              creditCents: { type: integer }
+              closingCents: { type: integer }
+
+    OpeningReceivable:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        buildingId: { type: string, format: uuid }
+        unitId: { type: string, format: uuid, nullable: true }
+        tenantName: { type: string }
+        amountCents: { type: integer }
+        dueDate: { type: string, format: date-time, nullable: true }
+        status: { type: string, enum: [OPEN, SETTLED] }
+        settledAt: { type: string, format: date-time, nullable: true }
+
+    OpeningReceivableReport:
+      type: object
+      properties:
+        buildingId: { type: string, format: uuid }
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/OpeningReceivable' }
+        control:
+          type: object
+          properties:
+            enteredCents: { type: integer }
+            importLumpCents: { type: integer }
+            varianceCents: { type: integer }
+        aging:
+          type: object
+          properties:
+            currentCents: { type: integer }
+            overdue1to30Cents: { type: integer }
+            overdue31to60Cents: { type: integer }
+            overdue61plusCents: { type: integer }
+
+    FixedAsset:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        buildingId: { type: string, format: uuid }
+        unitId: { type: string, format: uuid, nullable: true }
+        name: { type: string }
+        sourceInvoiceId: { type: string, format: uuid, nullable: true }
+        acquisitionDate: { type: string, format: date-time }
+        costCents: { type: integer }
+        salvageCents: { type: integer }
+        usefulLifeYears: { type: integer }
+        accumulatedDepreciationCents: { type: integer }
+        bookValueCents: { type: integer }
+        status: { type: string, enum: [ACTIVE, DISPOSED] }
+
     Pagination:
       type: object
       properties:
@@ -1674,7 +2230,7 @@ components:
         year: { type: integer }
         month: { type: integer }
         isActual: { type: boolean }
-        projectedIncomeCents: { type: integer }
+        accruedIncomeCents: { type: integer }
         projectedOpexCents: { type: integer }
         scheduledCapexCents: { type: integer }
         netCents: { type: integer }
@@ -1732,11 +2288,93 @@ components:
         estimatedCostChf: { type: number }
         suggestedRfpSendDate: { type: string, format: date }
 
+    CreditNoteLineDTO:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        description: { type: string }
+        amountCents: { type: integer }
+
+    CreditNoteDTO:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        creditNoteNumber: { type: string, nullable: true }
+        leaseId: { type: string, format: uuid, nullable: true }
+        tenantName: { type: string, nullable: true }
+        amountCents: { type: integer }
+        currency: { type: string }
+        status: { type: string }
+        issueDate: { type: string, format: date-time, nullable: true }
+        description: { type: string, nullable: true }
+        lineItems:
+          type: array
+          items: { $ref: '#/components/schemas/CreditNoteLineDTO' }
+
+    MarketPriceDTO:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        orgId: { type: string, format: uuid }
+        postalCode: { type: string }
+        city: { type: string, nullable: true }
+        pricePerSqmChf: { type: number }
+        source: { type: string, nullable: true }
+        asOf: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
 # ──────────────────────────────────────────────────────────────
 # Paths
 # ──────────────────────────────────────────────────────────────
 
 paths:
+  # ═══════════════════════════════════════════════════════════
+  # Credit Notes
+  # ═══════════════════════════════════════════════════════════
+  /credit-notes:
+    get:
+      tags: [Invoices]
+      summary: List credit notes
+      operationId: listCreditNotes
+      parameters:
+        - name: leaseId
+          in: query
+          required: false
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Credit note list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/CreditNoteDTO' }
+  /credit-notes/{id}:
+    get:
+      tags: [Invoices]
+      summary: Get a credit note by id
+      operationId: getCreditNote
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Credit note
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/CreditNoteDTO' }
+        '404':
+          description: Not found
+
   # ═══════════════════════════════════════════════════════════
   # Health (unauthenticated — uptime probes)
   # ═══════════════════════════════════════════════════════════
@@ -2951,6 +3589,22 @@ paths:
           in: query
           schema: { type: string, format: date }
           description: Filter by paidAt ≤ value
+        - name: issueDateFrom
+          in: query
+          schema: { type: string, format: date }
+          description: Filter by issueDate ≥ value (period drill-down)
+        - name: issueDateTo
+          in: query
+          schema: { type: string, format: date }
+          description: Filter by issueDate ≤ value (period drill-down)
+        - name: issuerName
+          in: query
+          schema: { type: string }
+          description: Filter incoming invoices by supplier/issuer name (case-insensitive exact match)
+        - name: vendorContractorId
+          in: query
+          schema: { type: string, format: uuid }
+          description: Filter by the invoice's own resolved vendor Contractor (not the job relation)
       responses:
         '200':
           description: Invoice list
@@ -4253,6 +4907,61 @@ paths:
       responses:
         '204':
           description: Deleted
+
+  /market-prices:
+    put:
+      tags: [Inventory]
+      summary: Upsert the reference market price (CHF/m²) for a postal code
+      description: >
+        Manually maintained / seeded reference market purchase price per m², keyed
+        by postal code (org-scoped). Not scraped. Drives the unit "market estimate"
+        reference shown alongside the valeur intrinsèque.
+      operationId: upsertMarketPrice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [postalCode, pricePerSqmChf]
+              properties:
+                postalCode: { type: string }
+                city: { type: string, nullable: true }
+                pricePerSqmChf: { type: number }
+                source: { type: string, nullable: true }
+                asOf: { type: string, format: date-time, nullable: true }
+      responses:
+        '200':
+          description: Saved market price
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/MarketPriceDTO' }
+
+  /market-prices/{postalCode}:
+    get:
+      tags: [Inventory]
+      summary: Get the reference market price for a postal code
+      operationId: getMarketPriceByZip
+      parameters:
+        - name: postalCode
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Market price (or null if none on file)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: '#/components/schemas/MarketPriceDTO'
+                      - type: 'null'
 
   /units/{id}/repair-replace-analysis:
     get:
@@ -6236,6 +6945,107 @@ paths:
 
   # ── Financial Performance ──────────────────────────────────
 
+  /imported-statements/{id}/source-file:
+    get:
+      tags: [Financials]
+      summary: Serve the original uploaded PDF/image for an imported statement
+      description: Provenance — lets a reviewer verify extracted figures against the source document before approving.
+      operationId: getImportedStatementSourceFile
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: The original file, streamed inline
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+            image/*:
+              schema: { type: string, format: binary }
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /units/{id}/expense-lines:
+    get:
+      tags: [Financials]
+      summary: Itemised direct-cost lines for a unit over a window
+      description: >
+        The individual costs that make up a unit's "Direct costs" figure for the
+        window — posted ledger expense entries, reference-only régie invoices, and
+        the apportioned recoverable-charge share. The sum of `lines` reconciles to
+        the unit summary's `expensesCents` for the same window.
+      operationId: getUnitExpenseLines
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+        - name: from
+          in: query
+          required: true
+          schema: { type: string, format: date, example: '2026-01-01' }
+          description: Period start (inclusive), YYYY-MM-DD
+        - name: to
+          in: query
+          required: true
+          schema: { type: string, format: date, example: '2026-12-31' }
+          description: Period end (inclusive), YYYY-MM-DD
+      responses:
+        '200':
+          description: Itemised per-unit direct-cost lines
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      unitId: { type: string, format: uuid }
+                      totalCents: { type: integer }
+                      lines:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id: { type: string }
+                            kind: { type: string, enum: [ledger, invoice, charges] }
+                            date: { type: string, format: date, nullable: true }
+                            vendor: { type: string, nullable: true }
+                            description: { type: string }
+                            accountCode: { type: string, nullable: true }
+                            accountName: { type: string, nullable: true }
+                            reference: { type: string, nullable: true }
+                            amountCents: { type: integer }
+                            invoiceId: { type: string, format: uuid, nullable: true }
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /financials/portfolio-timeseries:
+    get:
+      tags: [Financials]
+      summary: Get portfolio KPI time series for the Performance Canvas
+      operationId: getPortfolioTimeSeries
+      parameters:
+        - name: range
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [1W, 1M, 6M, 1Y, 2Y, 5Y, 10Y]
+            default: 1Y
+          description: Time window for the series
+      responses:
+        '200':
+          description: Portfolio time-series data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PortfolioTimeSeriesDTO'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+
   /financials/portfolio-summary:
     get:
       tags: [Financials]
@@ -6355,6 +7165,387 @@ paths:
                   data: { $ref: '#/components/schemas/BuildingFinancialsDTO' }
         '400':
           $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /buildings/{id}/vendor-spend:
+    get:
+      tags: [Financials]
+      summary: Top vendors by expenditure for a building over a period
+      description: >
+        Aggregates INCOMING invoices attributed to the building (by issueDate),
+        grouped by vendor Contractor, sorted by total spend descending. Amounts in
+        cents. Independent of the ledger, so it includes imported/reference-only
+        invoices from régie-ledger onboarding.
+      operationId: getBuildingVendorSpend
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+        - name: from
+          in: query
+          required: true
+          schema: { type: string, format: date, example: '2025-01-01' }
+        - name: to
+          in: query
+          required: true
+          schema: { type: string, format: date, example: '2025-12-31' }
+      responses:
+        '200':
+          description: Vendors ranked by spend
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/VendorSpendDTO' }
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /buildings/{id}/expense-breakdown:
+    get:
+      tags: [Financials]
+      summary: Building expenses broken down by month, vendor and ledger account
+      description: >
+        Splits a building's INCOMING-invoice spend (by issueDate) into months, and
+        within each month by vendor and by ledger account. Same source as
+        vendor-spend, so it includes imported/reference-only invoices. Powers the
+        reporting "expenses by month" drill-down into the filtered invoices view.
+        Amounts in cents; months chronological.
+      operationId: getBuildingExpenseBreakdown
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+        - name: from
+          in: query
+          required: true
+          schema: { type: string, format: date, example: '2025-01-01' }
+        - name: to
+          in: query
+          required: true
+          schema: { type: string, format: date, example: '2025-12-31' }
+      responses:
+        '200':
+          description: Expenses by month
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/ExpenseBreakdownMonthDTO' }
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /buildings/{id}/onboarding/preview:
+    post:
+      tags: [Inventory]
+      summary: Preview onboarding an (empty) building from a régie rent roll (no writes)
+      description: >
+        Parses an uploaded rent-roll CSV and returns the Units / Tenants / Leases
+        that would be created, plus warnings. Does not persist anything.
+      operationId: previewBuildingOnboarding
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+      responses:
+        '200':
+          description: Onboarding preview
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/OnboardingPreviewDTO' }
+        '400': { description: Invalid or empty rent roll }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404': { description: Building not found }
+
+  /buildings/{id}/onboarding/commit:
+    post:
+      tags: [Inventory]
+      summary: Commit onboarding — create Units/Tenants/Leases from a rent roll
+      description: >
+        Creates the Units, Tenants and Leases for an empty building from the
+        uploaded rent roll. billingMode "activate" makes leases active and starts
+        recurring billing; "snapshot" leaves them as DRAFT records. Fails if the
+        building already has units.
+      operationId: commitBuildingOnboarding
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, billingMode]
+              properties:
+                file: { type: string, format: binary }
+                billingMode: { type: string, enum: [activate, snapshot] }
+      responses:
+        '201':
+          description: Onboarding committed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/OnboardingCommitResultDTO' }
+        '400': { description: Invalid rent roll, bad billingMode, or building already onboarded }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404': { description: Building not found }
+
+  /buildings/{id}/onboarding/invoices/preview:
+    post:
+      tags: [Inventory]
+      summary: Preview contractor-invoice onboarding from a régie general ledger (no writes)
+      description: >
+        Parses an uploaded régie general-ledger (grand livre) CSV and returns the
+        discrete third-party contractor invoices that would be created, attributed
+        to the building and (where the row is unit-scoped) to a unit. Does not
+        persist anything.
+      operationId: previewInvoiceOnboarding
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+      responses:
+        '200':
+          description: Invoice onboarding preview
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/InvoiceOnboardingPreviewDTO' }
+        '400': { description: Invalid or empty ledger }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404': { description: Building not found }
+
+  /buildings/{id}/onboarding/invoices/commit:
+    post:
+      tags: [Inventory]
+      summary: Commit contractor invoices from a régie general ledger
+      description: >
+        Creates an INCOMING invoice for each contractor invoice in the ledger,
+        attributes it to the building/unit, classifies it under an expense account
+        matching the régie account code, issues it at its historical date and posts
+        the accrual to the ledger so it feeds the building's NOI. Idempotent: piece
+        numbers already imported on a prior commit are skipped.
+      operationId: commitInvoiceOnboarding
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+      responses:
+        '201':
+          description: Invoices committed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/InvoiceOnboardingCommitResultDTO' }
+        '400': { description: Invalid ledger }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404': { description: Building not found }
+
+  /onboarding/package/analyze:
+    post:
+      tags: [Inventory]
+      summary: Analyze a package for a NEW building — detect docs + extract its identity (no writes)
+      description: >
+        Like the building-scoped package analyze, but for a building that doesn't
+        exist yet: detects each document (including a "general info" sheet) and
+        extracts the building's address, reference and fiscal year from it so the
+        UI can pre-fill the create-building step. Accepts either CSVs or a single
+        régie PDF (OCR + Claude extraction into the same canonical CSVs, returned
+        as extractedFiles). Read-only.
+      operationId: analyzePackageForNewBuilding
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: array
+                  items: { type: string, format: binary }
+      responses:
+        '200':
+          description: Package analysis with extracted building identity
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      extractedBuilding:
+                        type: object
+                        nullable: true
+                        properties:
+                          name: { type: string }
+                          address: { type: string }
+                          city: { type: string, nullable: true }
+                          postalCode: { type: string, nullable: true }
+                          reference: { type: string, nullable: true }
+                          fiscalYear: { type: integer, nullable: true }
+                      fiscalYear: { type: integer }
+                      documents: { type: array, items: { $ref: '#/components/schemas/PackageDocumentDTO' } }
+                      reconciliation: { type: array, items: { type: object } }
+                      warnings: { type: array, items: { type: string } }
+                      extractedFiles:
+                        type: array
+                        description: Present only when the upload was a PDF — the canonical CSVs extracted from it.
+                        items: { $ref: '#/components/schemas/PackageFileDTO' }
+        '400': { description: No files or invalid request }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /buildings/{id}/onboarding/package/analyze:
+    post:
+      tags: [Inventory]
+      summary: Detect + reconcile a whole régie year-end package (no writes)
+      description: >
+        Accepts several CSVs (balance sheet, income statement, rent roll, general
+        ledger, in any combination), classifies each, and cross-checks them
+        (rent-roll net × 12 vs income-statement rental income; general-ledger
+        totals vs the income statement; balance-sheet Actif = Passif). Read-only.
+      operationId: analyzePackageOnboarding
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: array
+                  items: { type: string, format: binary }
+      responses:
+        '200':
+          description: Package analysis
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/PackageAnalysisDTO' }
+        '400': { description: No files or invalid request }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404': { description: Building not found }
+
+  /buildings/{id}/onboarding/package/commit:
+    post:
+      tags: [Inventory]
+      summary: Commit a whole régie year-end package
+      description: >
+        Routes each detected file to its onboarder in dependency order: rent roll
+        (units/tenants/leases) → general ledger (contractor invoices) → balance
+        sheet / income statement (sent to the Finance → Imports review gate).
+      operationId: commitPackageOnboarding
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, billingMode, fiscalYear]
+              properties:
+                file:
+                  type: array
+                  items: { type: string, format: binary }
+                billingMode: { type: string, enum: [activate, snapshot] }
+                fiscalYear: { type: integer }
+      responses:
+        '201':
+          description: Package committed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/PackageCommitResultDTO' }
+        '400': { description: No files, bad billingMode or fiscalYear }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404': { description: Building not found }
+
+  /buildings/{id}/kpis:
+    get:
+      tags: [Inventory]
+      summary: Aggregate operational KPIs for a building (open request/job counts)
+      description: >-
+        Returns scalar counts of open (actionable) requests and jobs for the
+        building, computed server-side. Replaces the prior client-side pattern
+        of fetching all requests + jobs and filtering in the browser.
+      operationId: getBuildingKpis
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Building operational KPI counts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/BuildingKpisDTO' }
         '404':
           $ref: '#/components/responses/NotFound'
 
@@ -7525,6 +8716,206 @@ paths:
                       ledgerPaidPosted: { type: integer }
                       ledgerPaidSkipped: { type: integer }
 
+  /ledger/analytical:
+    get:
+      tags: [Ledger]
+      summary: Analytical accounting report for a building + fiscal year (equity bridge, movements, KPIs)
+      operationId: getAnalyticalReport
+      parameters:
+        - { name: buildingId, in: query, required: true, schema: { type: string, format: uuid } }
+        - { name: fiscalYear, in: query, required: true, schema: { type: integer } }
+      responses:
+        '200':
+          description: Analytical report
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/AnalyticalReport' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /ledger/closes:
+    get:
+      tags: [Ledger]
+      summary: List fiscal year-end closes (optionally scoped to a building)
+      operationId: listFiscalCloses
+      parameters:
+        - { name: buildingId, in: query, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Fiscal close records
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/FiscalClose' }
+
+  /ledger/close-year:
+    post:
+      tags: [Ledger]
+      summary: Close a building's fiscal year — post the result to retained earnings (MANAGER)
+      operationId: closeFiscalYear
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [buildingId, fiscalYear]
+              properties:
+                buildingId: { type: string, format: uuid }
+                fiscalYear: { type: integer, example: 2025 }
+      responses:
+        '200':
+          description: The created/updated close record
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/FiscalClose' }
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /ledger/reopen-year:
+    post:
+      tags: [Ledger]
+      summary: Reopen a closed fiscal year by posting a reversing journal (MANAGER)
+      operationId: reopenFiscalYear
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [buildingId, fiscalYear]
+              properties:
+                buildingId: { type: string, format: uuid }
+                fiscalYear: { type: integer, example: 2025 }
+      responses:
+        '200':
+          description: The reversed close record
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/FiscalClose' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /fixed-assets:
+    get:
+      tags: [Ledger]
+      summary: List capitalized fixed assets (optionally scoped to a building)
+      operationId: listFixedAssets
+      parameters:
+        - { name: buildingId, in: query, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Fixed-asset register
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/FixedAsset' }
+
+  /fixed-assets/run-depreciation:
+    post:
+      tags: [Ledger]
+      summary: Post straight-line depreciation due as of a date (MANAGER)
+      operationId: runDepreciation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                asOf: { type: string, format: date, description: "Defaults to today" }
+      responses:
+        '200':
+          description: Depreciation run summary
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      assetsDepreciated: { type: integer }
+                      totalCents: { type: integer }
+
+  /opening-receivables:
+    get:
+      tags: [Ledger]
+      summary: Per-tenant opening receivables for a building (items + control total + aging)
+      operationId: getOpeningReceivables
+      parameters:
+        - { name: buildingId, in: query, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Opening-receivable report
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/OpeningReceivableReport' }
+    post:
+      tags: [Ledger]
+      summary: Add a per-tenant opening receivable (MANAGER)
+      operationId: createOpeningReceivable
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [buildingId, tenantName, amountCents]
+              properties:
+                buildingId: { type: string, format: uuid }
+                unitId: { type: string, format: uuid, nullable: true }
+                tenantName: { type: string }
+                amountCents: { type: integer }
+                dueDate: { type: string, format: date, nullable: true }
+      responses:
+        '201':
+          description: The created item
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/OpeningReceivable' }
+
+  /opening-receivables/{id}/settle:
+    post:
+      tags: [Ledger]
+      summary: Record collection of an opening receivable and mark it settled (MANAGER)
+      operationId: settleOpeningReceivable
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: The settled item
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/OpeningReceivable' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /coa/seed:
     post:
       tags: [ChartOfAccounts]
@@ -8683,6 +10074,134 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /buildings/{id}/value-creation-agenda:
+    get:
+      tags: [Forecasting]
+      summary: Renovation opportunities ranked for the owner's mandate, with an Invest/Defer/Neglect verdict
+      operationId: getBuildingValueCreationAgenda
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+        - name: mandate
+          in: query
+          required: false
+          schema: { type: string, enum: [exit_optimizer, yield_maximizer, value_builder, capital_preserver, opportunistic_repositioner] }
+          description: What-if archetype to re-rank for; defaults to the building's resolved mandate
+      responses:
+        '200':
+          description: Ranked value-creation agenda for the building
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/ValueCreationAgendaDTO' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /buildings/{id}/unit-profitability:
+    get:
+      tags: [Financials]
+      summary: Per-unit profitability — fully-loaded annualised NOI and yield on intrinsic + market value
+      operationId: getBuildingUnitProfitability
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+        - name: from
+          in: query
+          required: true
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          required: true
+          schema: { type: string, format: date }
+      responses:
+        '200':
+          description: Per-unit profitability ranked by market yield
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/UnitProfitabilityDTO' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /buildings/{id}/yield-goalseek:
+    get:
+      tags: [Financials]
+      summary: Yield goal-seek — the NOI gap for a target net yield, translated into each realistic lever (rent · opex · occupancy · management fee · renovation) with feasibility bands, strategy-alignment flags and a tiered synthesis
+      operationId: getBuildingYieldGoalSeek
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+        - name: from
+          in: query
+          required: true
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          required: true
+          schema: { type: string, format: date }
+        - name: target
+          in: query
+          required: true
+          description: Target net yield, in percent
+          schema: { type: number }
+        - name: mgmtFeePct
+          in: query
+          required: false
+          description: Management fee assumption (%); when omitted the fee detected on the statements is used
+          schema: { type: number }
+        - name: oblfPassthroughPct
+          in: query
+          required: false
+          description: OBLF Art. 14 renovation rent passthrough (%)
+          schema: { type: number }
+      responses:
+        '200':
+          description: Per-lever goal-seek result — feasibility bands, strategy flags, tiered synthesis, plus the detected fee, opex drivers and occupancy/rent working
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: object }
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /buildings/{id}/tenants/remove:
+    post:
+      tags: [Tenants]
+      summary: Batch-remove import-junk tenant entries from a building — soft-deletes the underlying lease(s), deletes the occupancy, and deactivates the tenant if orphaned; entries whose lease has real (non-draft) billing are kept
+      operationId: removeBuildingTenantEntries
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [entries]
+              properties:
+                entries:
+                  type: array
+                  items:
+                    type: object
+                    required: [unitId, tenantId]
+                    properties:
+                      unitId: { type: string }
+                      tenantId: { type: string, description: "Building-tenant row key — a Tenant id, or 'lease:<leaseId>' for lease-only rows" }
+      responses:
+        '200':
+          description: Per-entry outcomes with counts (removed / keptBilling / notFound)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: object }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
   /forecasting/renovation-catalog:
     get:
       tags: [Forecasting]
@@ -9097,6 +10616,38 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /webhooks/twilio/whatsapp:
+    post:
+      tags: [Webhooks]
+      summary: Twilio inbound WhatsApp webhook
+      description: >
+        Receives inbound WhatsApp messages from Twilio. Resolves tenant by phone number,
+        calls the conversation workflow (same as in-app chat), and enqueues the reply via
+        WhatsAppOutbox for async delivery. Auth via Twilio signature validation (skipped
+        in non-production). Always returns 200 with empty TwiML <Response/>.
+      operationId: twilioWhatsAppWebhook
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                From: { type: string, example: 'whatsapp:+41787208772' }
+                Body: { type: string }
+                AccountSid: { type: string }
+      responses:
+        '200':
+          description: Empty TwiML response (reply sent asynchronously via WhatsAppOutbox drain job)
+          content:
+            text/xml:
+              schema:
+                type: string
+                example: '<Response/>'
+        '403':
+          description: Invalid Twilio signature
+
   /tenant/conversation/history:
     get:
       tags: [TenantConversation]
@@ -9123,3 +10674,144 @@ paths:
                         createdAt: { type: string, format: date-time }
         '401':
           $ref: '#/components/responses/Unauthorized'
+
+  /imports/inventory:
+    post:
+      tags: [Inventory]
+      summary: Upload a CSV of buildings or units and validate it into a staging batch
+      description: >
+        Parses and validates the CSV without writing to real tables. Returns an
+        ImportBatch with per-row VALID/ERROR status for manager review; commit
+        separately to create the records.
+      operationId: importInventoryUpload
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, entityType]
+              properties:
+                file: { type: string, format: binary }
+                entityType: { type: string, enum: [BUILDING, UNIT] }
+      responses:
+        '201':
+          description: Staging batch created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/ImportBatchDTO' }
+        '400': { description: Invalid CSV, missing file, or bad entityType }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '413': { description: File exceeds size limit }
+    get:
+      tags: [Inventory]
+      summary: List inventory import batches
+      operationId: listInventoryImportBatches
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: entityType
+          in: query
+          required: false
+          schema: { type: string, enum: [BUILDING, UNIT] }
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, default: 50, maximum: 100 }
+        - name: offset
+          in: query
+          required: false
+          schema: { type: integer, default: 0 }
+      responses:
+        '200':
+          description: Paginated list of import batches
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/ImportBatchDTO' }
+                  pagination: { $ref: '#/components/schemas/Pagination' }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /imports/inventory/{id}:
+    get:
+      tags: [Inventory]
+      summary: Get a single inventory import batch with its rows
+      operationId: getInventoryImportBatch
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Import batch
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/ImportBatchDTO' }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404': { description: Import batch not found }
+    delete:
+      tags: [Inventory]
+      summary: Discard an inventory import batch
+      operationId: deleteInventoryImportBatch
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Batch deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      deleted: { type: integer }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404': { description: Import batch not found }
+
+  /imports/inventory/{id}/commit:
+    post:
+      tags: [Inventory]
+      summary: Commit an import batch — create Building/Unit records for valid rows
+      operationId: commitInventoryImport
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Commit result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      batch: { $ref: '#/components/schemas/ImportBatchDTO' }
+                      committed: { type: integer }
+                      errors: { type: integer }
+        '400': { description: Batch already committed or rejected }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404': { description: Import batch not found }

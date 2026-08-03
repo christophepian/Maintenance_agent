@@ -16,6 +16,10 @@ import { useLocalSort, clientSort } from "../../../lib/tableUtils";
 import { cn } from "../../../lib/utils";
 import { withServerTranslations } from "../../../lib/i18n";
 import { useTranslation } from "next-i18next";
+import NPVScenariosPanel from "../../../components/NPVScenariosPanel";
+import AssumptionsPanel from "../../../components/cashflow/AssumptionsPanel";
+import RfpCandidatesPanel from "../../../components/cashflow/RfpCandidatesPanel";
+import CapexEventTable from "../../../components/cashflow/CapexEventTable";
 
 // ─── Strategy alignment helpers ──────────────────────────────────────────────
 
@@ -28,8 +32,8 @@ const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov
 
 const STATUS_BADGE = {
   DRAFT: "bg-surface-hover text-muted-text",
-  SUBMITTED: "bg-blue-100 text-blue-700",
-  APPROVED: "bg-green-100 text-green-700",
+  SUBMITTED: "bg-info-light text-info-text",
+  APPROVED: "bg-success-light text-success-text",
 };
 
 const STALE_THRESHOLD_MS = 7 * 24 * 60 * 60 * 1000;
@@ -44,7 +48,7 @@ function statCards(buckets, hasOpeningBalance) {
   if (!buckets || buckets.length === 0) return {};
   const projected = buckets.filter((b) => !b.isActual);
   const next12 = projected.slice(0, 12);
-  const totalIncome = next12.reduce((s, b) => s + b.projectedIncomeCents, 0);
+  const totalIncome = next12.reduce((s, b) => s + b.accruedIncomeCents, 0);
   const totalCapex = projected.reduce((s, b) => s + b.scheduledCapexCents, 0);
   let peakCapex = { v: 0, b: null };
   let lowestBal = { v: Infinity, b: null };
@@ -78,7 +82,7 @@ function CashflowChart({ buckets, hasOpeningBalance }) {
   const maxVal = Math.max(
     1,
     ...buckets.map((b) =>
-      Math.max(b.projectedIncomeCents, b.projectedOpexCents + b.scheduledCapexCents)
+      Math.max(b.accruedIncomeCents, b.projectedOpexCents + b.scheduledCapexCents)
     )
   );
 
@@ -111,52 +115,52 @@ function CashflowChart({ buckets, hasOpeningBalance }) {
         {/* Y-axis gridlines */}
         {[0.25, 0.5, 0.75, 1].map((frac) => (
           <g key={frac}>
-            <line x1={ML} y1={midY - (ch / 2 - 6) * frac} x2={W - MR} y2={midY - (ch / 2 - 6) * frac} stroke="rgb(241 245 249)" strokeWidth="1" />
-            <line x1={ML} y1={midY + (ch / 2 - 6) * frac} x2={W - MR} y2={midY + (ch / 2 - 6) * frac} stroke="rgb(241 245 249)" strokeWidth="1" />
+            <line x1={ML} y1={midY - (ch / 2 - 6) * frac} x2={W - MR} y2={midY - (ch / 2 - 6) * frac} className="stroke-surface-divider" strokeWidth="1" />
+            <line x1={ML} y1={midY + (ch / 2 - 6) * frac} x2={W - MR} y2={midY + (ch / 2 - 6) * frac} className="stroke-surface-divider" strokeWidth="1" />
           </g>
         ))}
-        <text x={ML - 4} y={MT + 12} textAnchor="end" fontSize="9" fill="rgb(148 163 184)">{formatChfCents(maxVal)}</text>
-        <text x={ML - 4} y={H - MB - 4} textAnchor="end" fontSize="9" fill="rgb(148 163 184)">{formatChfCents(-maxVal)}</text>
+        <text x={ML - 4} y={MT + 12} textAnchor="end" fontSize="9" className="fill-foreground-dim">{formatChfCents(maxVal)}</text>
+        <text x={ML - 4} y={H - MB - 4} textAnchor="end" fontSize="9" className="fill-foreground-dim">{formatChfCents(-maxVal)}</text>
 
         {/* Zero line */}
-        <line x1={ML} y1={midY} x2={W - MR} y2={midY} stroke="rgb(226 232 240)" strokeWidth="1" />
+        <line x1={ML} y1={midY} x2={W - MR} y2={midY} className="stroke-surface-border" strokeWidth="1" />
 
         {/* Historical / projected divider */}
         {lastActualIdx >= 0 && lastActualIdx < buckets.length - 1 && (
           <line
             x1={xSlot(lastActualIdx + 1)} y1={MT}
             x2={xSlot(lastActualIdx + 1)} y2={H - MB}
-            stroke="rgb(148 163 184)" strokeWidth="1" strokeDasharray="4,2"
+            className="stroke-muted" strokeWidth="1" strokeDasharray="4,2"
           />
         )}
 
         {/* Bars */}
         {buckets.map((b, i) => {
           const x = xSlot(i) + barOff;
-          const iH = Math.max(0, toH(b.projectedIncomeCents));
+          const iH = Math.max(0, toH(b.accruedIncomeCents));
           const oH = Math.max(0, toH(b.projectedOpexCents));
           const cH = Math.max(0, toH(b.scheduledCapexCents));
           return (
             <g key={i} onMouseEnter={() => setHovered(i)} onMouseLeave={() => setHovered(null)}>
-              {hovered === i && <rect x={xSlot(i)} y={MT} width={slotW} height={ch} fill="rgb(248 250 252)" />}
-              {iH > 0 && <rect x={x} y={midY - iH} width={barW} height={iH} fill={b.isActual ? "rgb(22 163 74)" : "rgb(134 239 172)"} />}
-              {oH > 0 && <rect x={x} y={midY} width={barW} height={oH} fill={b.isActual ? "rgb(220 38 38)" : "rgb(252 165 165)"} />}
-              {cH > 0 && <rect x={x} y={midY + oH} width={barW} height={cH} fill="rgb(245 158 11)" />}
+              {hovered === i && <rect x={xSlot(i)} y={MT} width={slotW} height={ch} className="fill-surface-hover" />}
+              {iH > 0 && <rect x={x} y={midY - iH} width={barW} height={iH} className={b.isActual ? "fill-green-600" : "fill-green-400"} />}
+              {oH > 0 && <rect x={x} y={midY} width={barW} height={oH} className={b.isActual ? "fill-red-600" : "fill-red-400"} />}
+              {cH > 0 && <rect x={x} y={midY + oH} width={barW} height={cH} className="fill-amber-500" />}
             </g>
           );
         })}
 
         {/* Balance line */}
         {balancePoints && (
-          <polyline points={balancePoints} fill="none" stroke="rgb(59 130 246)" strokeWidth="1.5" strokeLinejoin="round" />
+          <polyline points={balancePoints} fill="none" className="stroke-blue-500" strokeWidth="1.5" strokeLinejoin="round" />
         )}
 
         {/* X-axis */}
-        <line x1={ML} y1={H - MB} x2={W - MR} y2={H - MB} stroke="rgb(226 232 240)" strokeWidth="1" />
+        <line x1={ML} y1={H - MB} x2={W - MR} y2={H - MB} className="stroke-surface-border" strokeWidth="1" />
         {buckets.map((b, i) => {
           if (i % labelEvery !== 0) return null;
           return (
-            <text key={i} x={xSlot(i) + slotW / 2} y={H - MB + 14} textAnchor="middle" fontSize="9" fill="rgb(148 163 184)">
+            <text key={i} x={xSlot(i) + slotW / 2} y={H - MB + 14} textAnchor="middle" fontSize="9" className="fill-foreground-dim">
               {MONTHS[b.month - 1]} {b.year}
             </text>
           );
@@ -170,28 +174,28 @@ function CashflowChart({ buckets, hasOpeningBalance }) {
             {fmtMonth(hovB.year, hovB.month)}
             <span className="ml-2 font-normal text-foreground-dim">{hovB.isActual ? "Actual" : "Projected"}</span>
           </div>
-          <div className="flex justify-between gap-4 text-green-700">
-            <span>{t("manager:cashflowId.text.income")}</span><span className="font-mono">{formatChfCents(hovB.projectedIncomeCents)}</span>
+          <div className="flex justify-between gap-4 text-success-text">
+            <span>{t("manager:cashflowId.text.income")}</span><span className="font-mono">{formatChfCents(hovB.accruedIncomeCents)}</span>
           </div>
-          <div className="flex justify-between gap-4 text-red-600">
+          <div className="flex justify-between gap-4 text-destructive-text">
             <span>{t("manager:cashflowId.text.opEx")}</span><span className="font-mono">{formatChfCents(hovB.projectedOpexCents)}</span>
           </div>
           {hovB.scheduledCapexCents > 0 && (
-            <div className="flex justify-between gap-4 text-amber-600">
+            <div className="flex justify-between gap-4 text-warning-text">
               <span>{t("manager:cashflowId.text.capEx")}</span><span className="font-mono">{formatChfCents(hovB.scheduledCapexCents)}</span>
             </div>
           )}
           <div className="border-t border-surface-divider mt-1.5 pt-1.5 flex justify-between gap-4 font-semibold">
-            <span className={hovB.netCents >= 0 ? "text-green-700" : "text-red-600"}>{t("manager:cashflowId.text.net")}</span>
-            <span className={cn("font-mono", hovB.netCents >= 0 ? "text-green-700" : "text-red-600")}>
+            <span className={hovB.netCents >= 0 ? "text-success-text" : "text-destructive-text"}>{t("manager:cashflowId.text.net")}</span>
+            <span className={cn("font-mono", hovB.netCents >= 0 ? "text-success-text" : "text-destructive-text")}>
               {formatChfCents(hovB.netCents)}
             </span>
           </div>
           {hovB.capexItems?.length > 0 && (
             <div className="mt-1.5 pt-1.5 border-t border-surface-divider space-y-0.5">
               {hovB.capexItems.slice(0, 4).map((ci, j) => (
-                <div key={j} className="flex justify-between gap-4 text-amber-700">
-                  <span className="truncate" className="max-w-[96px]">{ci.assetName}</span>
+                <div key={j} className="flex justify-between gap-4 text-warning-text">
+                  <span className="truncate max-w-[96px]">{ci.assetName}</span>
                   <span className="font-mono">{formatChfCents(ci.costCents)}</span>
                 </div>
               ))}
@@ -204,12 +208,12 @@ function CashflowChart({ buckets, hasOpeningBalance }) {
       {/* Legend */}
       <div className="flex flex-wrap gap-4 mt-3 text-xs text-muted">
         <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-sm bg-green-600" />Income (actual)</span>
-        <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-sm bg-green-300" />Income (projected)</span>
-        <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-sm bg-red-500" />OpEx (actual)</span>
-        <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-sm bg-red-300" />OpEx (projected)</span>
-        <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-sm bg-amber-400" />{t("manager:cashflowId.text.capEx")}</span>
+        <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-sm bg-green-400" />Income (projected)</span>
+        <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-sm bg-red-600" />OpEx (actual)</span>
+        <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-sm bg-red-400" />OpEx (projected)</span>
+        <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-sm bg-amber-500" />{t("manager:cashflowId.text.capEx")}</span>
         {hasOpeningBalance && <span className="flex items-center gap-1.5"><span className="inline-block w-5 h-0.5 bg-blue-500" />{t("manager:cashflowId.text.cumulativeBalance")}</span>}
-        {lastActualIdx >= 0 && <span className="flex items-center gap-1.5"><span className="inline-block w-5 h-px border-t border-dashed border-slate-400" />{t("manager:cashflowId.text.historicalProjected")}</span>}
+        {lastActualIdx >= 0 && <span className="flex items-center gap-1.5"><span className="inline-block w-5 h-px border-t border-dashed border-muted" />{t("manager:cashflowId.text.historicalProjected")}</span>}
       </div>
     </div>
   );
@@ -236,7 +240,7 @@ function StrategyOverlayPanel({ overlay }) {
         <div className="flex items-center gap-3">
           <button
             onClick={() => setExpanded(!expanded)}
-            className="text-xs text-indigo-600 hover:text-indigo-800 font-medium transition-colors"
+            className="text-xs text-brand-dark hover:opacity-80 font-medium transition-colors"
             aria-label={expanded ? "Collapse strategy details" : "Expand strategy details"}
           >
             {expanded ? "Hide details ▴" : "Show details ▾"}
@@ -248,7 +252,7 @@ function StrategyOverlayPanel({ overlay }) {
       </div>
 
       {overlay.deprioritizationNote && (
-        <p className="text-xs text-amber-600 m-0 mt-2 bg-amber-50 rounded px-2 py-1">
+        <p className="text-xs text-warning-text m-0 mt-2 bg-warning-light rounded px-2 py-1">
           💡 {overlay.deprioritizationNote}
         </p>
       )}
@@ -262,8 +266,8 @@ function StrategyOverlayPanel({ overlay }) {
                 key={item.assetId}
                 className={cn(
                   "rounded-lg border px-3 py-2.5",
-                  item.tag === "aligned" ? "border-emerald-200 bg-emerald-50/50" :
-                  item.tag === "review" ? "border-amber-200 bg-amber-50/50" :
+                  item.tag === "aligned" ? "border-success-ring bg-success-light" :
+                  item.tag === "review" ? "border-warning-ring bg-warning-light" :
                   "border-surface-border bg-surface-subtle/50"
                 )}
               >
@@ -290,9 +294,9 @@ function StrategyOverlayPanel({ overlay }) {
                         key={d.name}
                         className={cn(
                           "inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-full font-medium",
-                          d.itemScore >= 60 ? "bg-emerald-100 text-emerald-700" :
-                          d.itemScore >= 40 ? "bg-amber-100 text-amber-700" :
-                          "bg-red-100 text-red-700"
+                          d.itemScore >= 60 ? "bg-success-light text-success-text" :
+                          d.itemScore >= 40 ? "bg-warning-light text-warning-text" :
+                          "bg-destructive-light text-destructive-text"
                         )}
                         title={`${d.label}: item scores ${d.itemScore}/100 (weight: ${Math.round(d.weight * 100)}%)`}
                       >
@@ -307,345 +311,6 @@ function StrategyOverlayPanel({ overlay }) {
         </div>
       )}
     </Panel>
-  );
-}
-
-// ─── CapEx Event Table (interactive for DRAFT) ────────────────────────────────
-
-function CapexEventTable({ buckets, overrides, timingRecommendations, planId, isDraft, onRefresh, alignmentMap }) {
-  const { t } = useTranslation("manager");
-  // Build override lookup: assetId → override record
-  const overrideByAsset = {};
-  for (const ov of (overrides || [])) {
-    overrideByAsset[ov.assetId] = ov;
-  }
-  // Build recommendation lookup: assetId → recommendation
-  const recByAsset = {};
-  for (const r of (timingRecommendations || [])) {
-    recByAsset[r.assetId] = r;
-  }
-
-  // Collect upcoming events from projected buckets
-  const events = [];
-  if (buckets) {
-    for (const b of buckets) {
-      if (!b.isActual && b.capexItems?.length > 0) {
-        for (const ci of b.capexItems) {
-          events.push({ ...ci, year: b.year, month: b.month });
-        }
-      }
-    }
-  }
-
-  const { sortField: evSF, sortDir: evSD, handleSort: handleEvSort } = useLocalSort("scheduled", "asc");
-  const sortedEvents = useMemo(() => clientSort(events, evSF, evSD, (ev, f) => {
-    if (f === "asset") return (ev.assetName || "").toLowerCase();
-    if (f === "scheduled") return ev.year * 100 + (ev.month ?? 0);
-    if (f === "estimatedCost") return ev.estimatedCostCents ?? 0;
-    if (f === "tradeGroup") return (ev.tradeGroup || "").toLowerCase();
-    if (f === "bundle") return (ev.bundle || "").toLowerCase();
-    return "";
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [events, evSF, evSD]);
-
-  if (sortedEvents.length === 0) {
-    return (
-      <div className="empty-state">
-        <p className="empty-state-text">{t("manager:cashflowId.text.noScheduledCapexEventsInTheProjectionHorizon")}</p>
-      </div>
-    );
-  }
-
-  return (
-    <>
-      {/* Mobile cards */}
-      <div className="sm:hidden divide-y divide-slate-100">
-        {sortedEvents.map((ev, i) => {
-          const ov = overrideByAsset[ev.assetId];
-          const rec = recByAsset[ev.assetId];
-          return (
-            <CapexMobileCard
-              key={i}
-              ev={ev}
-              ov={ov}
-              rec={rec}
-              planId={planId}
-              isDraft={isDraft}
-              onRefresh={onRefresh}
-              alignmentMap={alignmentMap}
-            />
-          );
-        })}
-      </div>
-      {/* Desktop table */}
-      <div className="hidden sm:block data-table-wrap">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <SortableHeader label={t("manager:cashflowId.prop.asset")} field="asset" sortField={evSF} sortDir={evSD} onSort={handleEvSort} />
-              <SortableHeader label={t("manager:cashflowId.prop.scheduled")} field="scheduled" sortField={evSF} sortDir={evSD} onSort={handleEvSort} />
-              <SortableHeader label={t("manager:cashflowId.prop.estimatedCost")} field="estimatedCost" sortField={evSF} sortDir={evSD} onSort={handleEvSort} className="text-right" />
-              <SortableHeader label={t("manager:cashflowId.prop.tradeGroup")} field="tradeGroup" sortField={evSF} sortDir={evSD} onSort={handleEvSort} />
-              <SortableHeader label={t("manager:cashflowId.prop.bundle")} field="bundle" sortField={evSF} sortDir={evSD} onSort={handleEvSort} />
-              {isDraft && <th>{t("manager:cashflowId.col.override")}</th>}
-            </tr>
-          </thead>
-          <tbody>
-            {sortedEvents.map((ev, i) => {
-              const ov = overrideByAsset[ev.assetId];
-              const rec = recByAsset[ev.assetId];
-              return (
-                <CapexEventRow
-                  key={i}
-                  ev={ev}
-                  ov={ov}
-                  rec={rec}
-                  planId={planId}
-                  isDraft={isDraft}
-                  onRefresh={onRefresh}
-                  alignmentMap={alignmentMap}
-                />
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-    </>
-  );
-}
-
-function CapexMobileCard({ ev, ov, rec, planId, isDraft, onRefresh, alignmentMap }) {
-  const { t } = useTranslation("manager");
-  const currentYear = new Date().getFullYear();
-  const [shifting, setShifting] = useState(false);
-  const [removing, setRemoving] = useState(false);
-  const [error, setError] = useState("");
-
-  async function handleShiftYear(newYear) {
-    setShifting(true);
-    setError("");
-    try {
-      const res = await fetch(`/api/cashflow-plans/${planId}/overrides`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...authHeaders() },
-        body: JSON.stringify({
-          assetId: ev.assetId,
-          originalYear: ev.isOverridden && ov ? ov.originalYear : ev.year,
-          overriddenYear: newYear,
-        }),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json?.error?.message || "Failed to add override");
-      onRefresh();
-    } catch (e) {
-      setError(String(e?.message || e));
-    } finally {
-      setShifting(false);
-    }
-  }
-
-  async function handleRemoveOverride() {
-    if (!ov) return;
-    setRemoving(true);
-    setError("");
-    try {
-      const res = await fetch(`/api/cashflow-plans/${planId}/overrides/${ov.id}`, {
-        method: "DELETE",
-        headers: authHeaders(),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json?.error?.message || "Failed to remove override");
-      onRefresh();
-    } catch (e) {
-      setError(String(e?.message || e));
-    } finally {
-      setRemoving(false);
-    }
-  }
-
-  const baseYear = ov ? ov.originalYear : ev.year;
-  const minYear = Math.max(currentYear + 1, baseYear - 3);
-  const maxYear = baseYear + 3;
-  const yearOptions = [];
-  for (let y = minYear; y <= maxYear; y++) {
-    if (!ov || y !== ov.overriddenYear) yearOptions.push(y);
-  }
-  const isOverridden = ev.isOverridden || !!ov;
-
-  return (
-    <div className="py-3 flex flex-col gap-1">
-      <div className="flex items-start justify-between gap-2">
-        <span className={cn("text-sm font-medium text-foreground", isOverridden && "italic text-muted")}>
-          {isOverridden && <span className="mr-1 text-amber-500 text-xs">⟳</span>}
-          {ev.assetName}
-        </span>
-        <span className="text-sm font-mono text-muted-dark shrink-0">{formatChfCents(ev.costCents)}</span>
-      </div>
-      <div className="text-xs text-muted">
-        {fmtMonth(ev.year, ev.month)}
-        {isOverridden && ov && <span className="ml-1">(was {ov.originalYear})</span>}
-        {ev.tradeGroup && <span className="ml-2">· {ev.tradeGroup}</span>}
-      </div>
-      {isDraft && (
-        <div className="flex items-center gap-1 mt-1">
-          <select
-            onChange={(e) => e.target.value && handleShiftYear(Number(e.target.value))}
-            value=""
-            disabled={shifting}
-            className="border border-surface-border rounded px-1.5 py-0.5 text-xs text-muted-text disabled:opacity-50"
-          >
-            <option value="">{t("manager:cashflowId.text.shiftYear")}</option>
-            {yearOptions.map((y) => (
-              <option key={y} value={y}>{y}</option>
-            ))}
-          </select>
-          {isOverridden && (
-            <button
-              onClick={handleRemoveOverride}
-              disabled={removing}
-              className="text-xs text-foreground-dim hover:text-red-500 disabled:opacity-50"
-            >
-              {removing ? "…" : "Reset"}
-            </button>
-          )}
-        </div>
-      )}
-      {error && <span className="text-xs text-red-600">{error}</span>}
-    </div>
-  );
-}
-
-function CapexEventRow({ ev, ov, rec, planId, isDraft, onRefresh, alignmentMap }) {
-  const { t } = useTranslation("manager");
-  const currentYear = new Date().getFullYear();
-  const [shifting, setShifting] = useState(false);
-  const [removing, setRemoving] = useState(false);
-  const [error, setError] = useState("");
-
-  async function handleShiftYear(newYear) {
-    setShifting(true);
-    setError("");
-    try {
-      const res = await fetch(`/api/cashflow-plans/${planId}/overrides`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...authHeaders() },
-        body: JSON.stringify({
-          assetId: ev.assetId,
-          originalYear: ev.isOverridden && ov ? ov.originalYear : ev.year,
-          overriddenYear: newYear,
-        }),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json?.error?.message || "Failed to add override");
-      onRefresh();
-    } catch (e) {
-      setError(String(e?.message || e));
-    } finally {
-      setShifting(false);
-    }
-  }
-
-  async function handleRemoveOverride() {
-    if (!ov) return;
-    setRemoving(true);
-    setError("");
-    try {
-      const res = await fetch(`/api/cashflow-plans/${planId}/overrides/${ov.id}`, {
-        method: "DELETE",
-        headers: authHeaders(),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json?.error?.message || "Failed to remove override");
-      onRefresh();
-    } catch (e) {
-      setError(String(e?.message || e));
-    } finally {
-      setRemoving(false);
-    }
-  }
-
-  // Year options: scheduled year ± 3 years, clamped to current+1 min
-  const baseYear = ov ? ov.originalYear : ev.year;
-  const minYear = Math.max(currentYear + 1, baseYear - 3);
-  const maxYear = baseYear + 3;
-  const yearOptions = [];
-  for (let y = minYear; y <= maxYear; y++) {
-    if (!ov || y !== ov.overriddenYear) yearOptions.push(y);
-  }
-
-  const isOverridden = ev.isOverridden || !!ov;
-  const rowClass = isOverridden ? "italic text-muted" : "";
-
-  return (
-    <tr className={rowClass}>
-      <td className="cell-bold">
-        {isOverridden && (
-          <span className="mr-1 text-amber-500 text-xs" title={t("manager:cashflowId.title.yearOverridden")}>⟳</span>
-        )}
-        {ev.assetName}
-        {alignmentMap?.[ev.assetId] && (
-          <span title={alignmentMap[ev.assetId].explanation} className="cursor-help">
-            <Badge variant={ALIGNMENT_TAG_VARIANT[alignmentMap[ev.assetId].tag]} className="ml-1 text-xs px-1 py-0">
-              {ALIGNMENT_TAG_LABEL[alignmentMap[ev.assetId].tag]}
-            </Badge>
-          </span>
-        )}
-      </td>
-      <td>
-        {fmtMonth(ev.year, ev.month)}
-        {isOverridden && ov && (
-          <span className="ml-1 text-xs text-foreground-dim">(was {ov.originalYear})</span>
-        )}
-      </td>
-      <td className="text-right font-mono">{formatChfCents(ev.costCents)}</td>
-      <td>{ev.tradeGroup || "—"}</td>
-      <td>{ev.bundleId ? <span className="status-pill bg-blue-50 text-blue-700">{t("manager:cashflowId.text.bundled")}</span> : <span className="text-foreground-dim text-xs">—</span>}</td>
-      {isDraft && (
-        <td>
-          <div className="flex flex-col gap-1 min-w-48">
-            {/* Advisor recommendation chip */}
-            {rec && rec.recommendedYear !== (ov?.overriddenYear ?? ev.year) && (
-              <button
-                onClick={() => handleShiftYear(rec.recommendedYear)}
-                disabled={shifting}
-                className="text-left text-xs bg-violet-50 text-violet-700 border border-violet-200 rounded px-2 py-0.5 hover:bg-violet-100 disabled:opacity-50 w-fit"
-                title={rec.rationale}
-              >
-                Advisor: {rec.direction} to {rec.recommendedYear}
-                {rec.estimatedTaxSavingChf > 0 && (
-                  <span className="ml-1 text-violet-500">→ save {formatChf(rec.estimatedTaxSavingChf)} tax</span>
-                )}
-              </button>
-            )}
-            {/* Shift year control */}
-            <div className="flex items-center gap-1">
-              <select
-                onChange={(e) => e.target.value && handleShiftYear(Number(e.target.value))}
-                value=""
-                disabled={shifting}
-                className="border border-surface-border rounded px-1.5 py-0.5 text-xs text-muted-text disabled:opacity-50"
-              >
-                <option value="">{t("manager:cashflowId.text.shiftYear")}</option>
-                {yearOptions.map((y) => (
-                  <option key={y} value={y}>{y}</option>
-                ))}
-              </select>
-              {isOverridden && (
-                <button
-                  onClick={handleRemoveOverride}
-                  disabled={removing}
-                  className="text-xs text-foreground-dim hover:text-red-500 disabled:opacity-50"
-                  title={t("manager:cashflowId.title.resetToBaselineYear")}
-                >
-                  {removing ? "…" : "Reset"}
-                </button>
-              )}
-            </div>
-            {error && <span className="text-xs text-red-600">{error}</span>}
-          </div>
-        </td>
-      )}
-    </tr>
   );
 }
 
@@ -701,7 +366,7 @@ function IncomeGrowthRateEditor({ planId, currentRate, onUpdated }) {
     return (
       <button
         onClick={startEdit}
-        className="text-sm text-muted-text hover:text-blue-600 underline underline-offset-2 tabular-nums"
+        className="text-sm text-muted-text hover:text-brand-dark underline underline-offset-2 tabular-nums"
         title={t("manager:cashflowId.title.clickToEditIncomeGrowthRate")}
       >
         Income growth: <span className="font-semibold">{currentRate ?? 0}%</span> / year
@@ -722,12 +387,12 @@ function IncomeGrowthRateEditor({ planId, currentRate, onUpdated }) {
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={handleKeyDown}
         onBlur={save}
-        className="border border-blue-300 rounded px-2 py-0.5 text-sm w-20 tabular-nums"
+        className="border border-muted-ring rounded px-2 py-0.5 text-sm w-20 tabular-nums"
         autoFocus
       />
       <span className="text-sm text-muted">{t("manager:cashflowId.text.year")}</span>
       {saving && <span className="text-xs text-foreground-dim">{t("manager:cashflowId.text.saving")}</span>}
-      {error && <span className="text-xs text-red-600">{error}</span>}
+      {error && <span className="text-xs text-destructive-text">{error}</span>}
     </div>
   );
 }
@@ -771,152 +436,31 @@ function OpeningBalanceBanner({ planId, onUpdated }) {
       {!editing ? (
         <button
           onClick={() => setEditing(true)}
-          className="text-sm font-medium text-amber-700 underline underline-offset-2 whitespace-nowrap"
+          className="text-sm font-medium text-warning-text underline underline-offset-2 whitespace-nowrap"
         >
           Add opening balance
         </button>
       ) : (
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-sm font-medium text-amber-700">CHF</span>
+          <span className="text-sm font-medium text-warning-text">CHF</span>
           <input
             type="number" min="0" step="100" placeholder={t("manager:cashflowId.placeholder.eG50000")}
             value={value} onChange={(e) => setValue(e.target.value)}
-            className="border border-amber-300 rounded px-2 py-1 text-sm w-32"
+            className="border border-warning-ring rounded px-2 py-1 text-sm w-32"
             autoFocus
           />
           <button
             onClick={handleSave} disabled={saving}
-            className="text-sm font-medium bg-amber-600 text-white px-3 py-1 rounded hover:bg-amber-700 disabled:opacity-50"
+            className="text-sm font-medium bg-warning text-white px-3 py-1 rounded hover:opacity-90 disabled:opacity-50"
           >
             {saving ? "Saving…" : "Save"}
           </button>
-          <button onClick={() => { setEditing(false); setError(""); }} className="text-sm text-amber-700 underline">
+          <button onClick={() => { setEditing(false); setError(""); }} className="text-sm text-warning-text underline">
             Cancel
           </button>
-          {error && <span className="text-xs text-red-600">{error}</span>}
+          {error && <span className="text-xs text-destructive-text">{error}</span>}
         </div>
       )}
-    </div>
-  );
-}
-
-// ─── RFP Candidate Panel (APPROVED plans only) ────────────────────────────────
-
-function RfpCandidateCard({ planId, candidate }) {
-  const { t } = useTranslation("manager");
-  const [status, setStatus] = useState("idle"); // idle | creating | done | error
-  const [rfpId, setRfpId] = useState(null);
-  const [errorMsg, setErrorMsg] = useState("");
-
-  async function handleCreate() {
-    setStatus("creating");
-    setErrorMsg("");
-    try {
-      const res = await fetch(
-        `/api/cashflow-plans/${planId}/rfp-candidates/${encodeURIComponent(candidate.groupKey)}/create-rfp`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json", ...authHeaders() },
-          body: JSON.stringify({}),
-        },
-      );
-      const json = await res.json();
-      if (!res.ok) throw new Error(json?.error?.message || "Failed to create RFP");
-      setRfpId(json.data.rfpId);
-      setStatus("done");
-    } catch (e) {
-      setErrorMsg(String(e?.message || e));
-      setStatus("error");
-    }
-  }
-
-  const totalChf = candidate.totalEstimatedCostCents / 100;
-  const sendDate = candidate.suggestedRfpSendDate
-    ? new Date(candidate.suggestedRfpSendDate).toLocaleDateString("de-CH", { month: "long", year: "numeric" })
-    : null;
-
-  return (
-    <div className="card p-4 flex flex-col gap-3">
-      <div className="flex items-start justify-between gap-2">
-        <div>
-          <span className="font-semibold text-foreground text-sm">{candidate.tradeGroup}</span>
-          <span className="text-xs text-foreground-dim ml-2">{candidate.scheduledYear}</span>
-        </div>
-        <span className="text-sm font-semibold text-amber-700 tabular-nums shrink-0">
-          CHF {totalChf.toLocaleString("de-CH")}
-        </span>
-      </div>
-
-      <ul className="text-xs text-muted space-y-0.5">
-        {candidate.assets.map((a) => (
-          <li key={a.assetId} className="flex items-center justify-between gap-2">
-            <span>{a.assetName}{a.isOverridden && <em className="ml-1 text-violet-500">(shifted)</em>}</span>
-            <span className="tabular-nums">CHF {(a.estimatedCostCents / 100).toLocaleString("de-CH")}</span>
-          </li>
-        ))}
-      </ul>
-
-      {sendDate && (
-        <div className="text-xs text-foreground-dim">
-          Send by <strong>{sendDate}</strong>
-        </div>
-      )}
-
-      {errorMsg && <div className="notice notice-err text-xs">{errorMsg}</div>}
-
-      {status === "done" || rfpId ? (
-        <div className="flex items-center gap-2">
-          <span className="status-pill bg-green-100 text-green-700">{t("manager:cashflowId.text.rFPCreated")}</span>
-          <Link href={`/manager/rfps/${rfpId}`} className="text-xs text-blue-600 hover:underline">
-            View RFP →
-          </Link>
-        </div>
-      ) : (
-        <button
-          onClick={handleCreate}
-          disabled={status === "creating"}
-          className="bg-blue-600 text-white text-xs font-medium px-3 py-1.5 rounded hover:bg-blue-700 disabled:opacity-50 self-start"
-        >
-          {status === "creating" ? "Creating…" : "Create RFP"}
-        </button>
-      )}
-    </div>
-  );
-}
-
-function RfpCandidatesPanel({ planId }) {
-  const { t } = useTranslation("manager");
-  const [candidates, setCandidates] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    if (!planId) return;
-    setLoading(true);
-    fetch(`/api/cashflow-plans/${planId}/rfp-candidates`, { headers: authHeaders() })
-      .then((r) => r.json())
-      .then((json) => {
-        if (json?.data) setCandidates(json.data);
-      })
-      .catch((e) => setError(String(e?.message || e)))
-      .finally(() => setLoading(false));
-  }, [planId]);
-
-  if (loading) return <p className="loading-text">{t("manager:cashflowId.text.loadingRfpCandidates")}</p>;
-  if (error) return <div className="notice notice-err text-sm">{error}</div>;
-  if (candidates.length === 0) {
-    return (
-      <div className="empty-state">
-        <p className="empty-state-text">{t("manager:cashflowId.text.noCapexItemsScheduledWithinThePlanHorizon")}</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-      {candidates.map((c) => (
-        <RfpCandidateCard key={c.groupKey} planId={planId} candidate={c} />
-      ))}
     </div>
   );
 }
@@ -933,6 +477,8 @@ export default function CashflowPlanDetailPage() {
   const [error, setError] = useState("");
   const [actionError, setActionError] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
+  // Bumped after financing edits to remount the NPV panel and recompute levered metrics
+  const [npvRefreshKey, setNpvRefreshKey] = useState(0);
 
   const loadPlan = useCallback(async () => {
     if (!id) return;
@@ -987,7 +533,7 @@ export default function CashflowPlanDetailPage() {
         <PageShell>
           <PageContent>
             <div className="notice notice-err">{error || "Plan not found."}</div>
-            <Link href="/manager/cashflow" className="text-sm text-blue-600 hover:underline mt-2 inline-block">
+            <Link href="/manager/cashflow" className="text-sm text-brand-dark hover:underline mt-2 inline-block">
               ← Back to plans
             </Link>
           </PageContent>
@@ -1051,7 +597,7 @@ export default function CashflowPlanDetailPage() {
               <button
                 onClick={loadPlan}
                 disabled={loading}
-                className="text-sm font-medium text-amber-700 underline underline-offset-2 whitespace-nowrap ml-4"
+                className="text-sm font-medium text-warning-text underline underline-offset-2 whitespace-nowrap ml-4"
               >
                 Reload
               </button>
@@ -1082,17 +628,17 @@ export default function CashflowPlanDetailPage() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <div className="card p-4 flex flex-col gap-1">
                 <span className="text-xs font-medium text-muted uppercase tracking-wide">{t("manager:cashflowId.text.12moProjectedIncome")}</span>
-                <span className="text-xl font-bold text-green-700">{formatChfCents(stats.totalIncome)}</span>
+                <span className="text-xl font-bold text-success-text">{formatChfCents(stats.totalIncome)}</span>
                 <span className="text-xs text-foreground-dim">{t("manager:cashflowId.text.next12ProjectedMonths")}</span>
               </div>
               <div className="card p-4 flex flex-col gap-1">
                 <span className="text-xs font-medium text-muted uppercase tracking-wide">{t("manager:cashflowId.text.totalProjectedCapex")}</span>
-                <span className="text-xl font-bold text-amber-700">{formatChfCents(stats.totalCapex)}</span>
+                <span className="text-xl font-bold text-warning-text">{formatChfCents(stats.totalCapex)}</span>
                 <span className="text-xs text-foreground-dim">Over {plan.horizonMonths}-month horizon</span>
               </div>
               <div className="card p-4 flex flex-col gap-1">
                 <span className="text-xs font-medium text-muted uppercase tracking-wide">{t("manager:cashflowId.text.peakMonthlyCapex")}</span>
-                <span className="text-xl font-bold text-amber-700">{formatChfCents(stats.peakCapex?.v)}</span>
+                <span className="text-xl font-bold text-warning-text">{formatChfCents(stats.peakCapex?.v)}</span>
                 <span className="text-xs text-foreground-dim">
                   {stats.peakCapex?.b ? fmtMonth(stats.peakCapex.b.year, stats.peakCapex.b.month) : "—"}
                 </span>
@@ -1101,7 +647,7 @@ export default function CashflowPlanDetailPage() {
                 <span className="text-xs font-medium text-muted uppercase tracking-wide">{t("manager:cashflowId.text.lowestCumulativeBalance")}</span>
                 {hasOpeningBalance ? (
                   <>
-                    <span className={cn("text-xl font-bold", (stats.lowestBal?.v ?? 0) < 0 ? "text-red-600" : "text-foreground")}>
+                    <span className={cn("text-xl font-bold", (stats.lowestBal?.v ?? 0) < 0 ? "text-destructive-text" : "text-foreground")}>
                       {formatChfCents(stats.lowestBal?.v)}
                     </span>
                     <span className="text-xs text-foreground-dim">
@@ -1146,6 +692,16 @@ export default function CashflowPlanDetailPage() {
             />
           </Panel>
 
+          {/* NPV Assumptions — read-only here; edited in the planning workspace (step 1) */}
+          <AssumptionsPanel plan={plan} isDraft={false} onUpdated={loadPlan} />
+
+          {/* NPV Verdict */}
+          <NPVScenariosPanel
+            key={npvRefreshKey}
+            fetchUrl={`/api/cashflow-plans/${plan.id}/npv-scenarios`}
+            mode="plan"
+          />
+
           {/* Actions */}
           {(plan.status === "DRAFT" || plan.status === "SUBMITTED") && (
             <Panel>
@@ -1155,7 +711,7 @@ export default function CashflowPlanDetailPage() {
                   <button
                     onClick={() => handleAction("submit")}
                     disabled={actionLoading}
-                    className="bg-blue-600 text-white text-sm font-medium px-5 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
+                    className="bg-brand text-white text-sm font-medium px-5 py-2 rounded hover:opacity-90 disabled:opacity-50"
                   >
                     {actionLoading ? "Submitting…" : "Submit for approval"}
                   </button>
@@ -1164,7 +720,7 @@ export default function CashflowPlanDetailPage() {
                   <button
                     onClick={() => handleAction("approve")}
                     disabled={actionLoading}
-                    className="bg-green-600 text-white text-sm font-medium px-5 py-2 rounded hover:bg-green-700 disabled:opacity-50"
+                    className="bg-success text-white text-sm font-medium px-5 py-2 rounded hover:opacity-90 disabled:opacity-50"
                   >
                     {actionLoading ? "Approving…" : "Approve plan"}
                   </button>

@@ -1,9 +1,9 @@
 /**
- * Login page — split-screen redesign (Stripe-benchmarked, Sencilo brand).
+ * Login page — split-screen redesign (Stripe-benchmarked, Propfolio brand).
  *
  * Layout:
  *   Left  — immersive dark hero panel reusing the marketing hero photo
- *           (/website/assets/hero-bg.png) with Sencilo branding + tagline.
+ *           (/website/assets/hero-bg.png) with Propfolio branding + tagline.
  *           Hidden below lg; on mobile a compact brand header shows instead.
  *   Right — fixed light card with the auth form (Stripe-minimal).
  *
@@ -34,19 +34,13 @@ import { setAuthToken } from "../lib/api";
 import { withTranslations } from "../lib/i18n";
 import { useTranslation } from "next-i18next";
 import { cn } from "../lib/utils";
+import { resolveLandingPath } from "../lib/roleRouting";
 
 /* Shared input + primary-button styling for the fixed-light card */
 const INPUT_CLASS =
   "w-full px-3.5 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition";
 const PRIMARY_BTN_CLASS =
   "w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-semibold text-white bg-gradient-to-br from-indigo-600 to-violet-600 shadow-sm shadow-indigo-600/25 hover:opacity-95 active:translate-y-px disabled:opacity-60 transition";
-
-const ROLE_HOME = {
-  MANAGER: "/manager",
-  CONTRACTOR: "/contractor",
-  OWNER: "/owner",
-  TENANT: "/tenant/leases",
-};
 
 /* ── Small shared components ──────────────────────────────────── */
 
@@ -88,7 +82,7 @@ function MethodTab({ active, onClick, children }) {
   );
 }
 
-/* Sencilo gradient logo mark — matches the marketing hero */
+/* Propfolio gradient logo mark — matches the marketing hero */
 function BrandMark({ size = "md" }) {
   const dim = size === "lg" ? "w-10 h-10 text-base" : "w-9 h-9 text-sm";
   return (
@@ -99,7 +93,7 @@ function BrandMark({ size = "md" }) {
       )}
       aria-hidden="true"
     >
-      S
+      P
     </div>
   );
 }
@@ -192,8 +186,12 @@ function AuthShell({ children, footer }) {
       {/* ── Brand mark — pinned top-left on desktop ───────────── */}
       <div className="hidden lg:flex absolute z-20 top-12 left-12 xl:top-16 xl:left-16 items-center gap-3 text-white">
         <BrandMark size="lg" />
-        <span className="text-xl font-semibold tracking-tight">
-          {process.env.NEXT_PUBLIC_SANDBOX === "true" ? "Sandbox" : "Sencilo"}
+        <span className="text-2xl">
+          {process.env.NEXT_PUBLIC_SANDBOX === "true" ? (
+            <span className="font-semibold tracking-tight">Sandbox</span>
+          ) : (
+            <span className="brand-wordmark">prop<span className="brand-wordmark-bold">folio</span></span>
+          )}
         </span>
       </div>
 
@@ -222,8 +220,12 @@ function AuthShell({ children, footer }) {
               {/* Mobile brand header (hero hidden below lg) */}
               <div className="flex items-center gap-2.5 mb-8 lg:hidden">
                 <BrandMark />
-                <span className="text-lg font-semibold tracking-tight text-white">
-                  {process.env.NEXT_PUBLIC_SANDBOX === "true" ? "Sandbox" : "Sencilo"}
+                <span className="text-xl text-white">
+                  {process.env.NEXT_PUBLIC_SANDBOX === "true" ? (
+                    <span className="font-semibold tracking-tight">Sandbox</span>
+                  ) : (
+                    <span className="brand-wordmark">prop<span className="brand-wordmark-bold">folio</span></span>
+                  )}
                 </span>
               </div>
 
@@ -373,12 +375,7 @@ export default function LoginPage() {
       return;
     }
 
-    const target =
-      (typeof next === "string" && next.startsWith("/") ? next : null) ||
-      (meta.accessLevel === "DOCS_INVESTOR" ? "/docs/pitchdeck.html" : null) ||
-      (meta.appRole ? ROLE_HOME[meta.appRole] : null) ||
-      "/manager";
-    router.push(target);
+    router.push(resolveLandingPath({ appMeta: meta, userMeta, next }));
   }
 
   /* ── Magic link ─────────────────────────────────────────────── */
@@ -546,7 +543,7 @@ export default function LoginPage() {
             {loading && <Spinner />}
             {loading ? t("login.sending") : t("login.sendSignInLink")}
           </button>
-          <p className="text-xs text-center text-slate-400 mt-4">
+          <p className="text-xs text-center text-foreground-dim mt-4">
             {t("login.oneClickHint")}
           </p>
         </form>

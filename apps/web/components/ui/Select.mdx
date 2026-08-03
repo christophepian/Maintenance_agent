@@ -1,0 +1,69 @@
+import { Meta, Title, Canvas, Controls } from "@storybook/addon-docs/blocks";
+import * as SelectStories from "./Select.stories";
+
+<Meta of={SelectStories} />
+
+<Title />
+
+A styled native `<select>` with an optional label. Uses the platform dropdown
+(great on mobile and for accessibility) wrapped in the `.filter-select` class so it
+matches [Input](?path=/docs/ui-input--docs) across every filter and form.
+
+```jsx
+import Select from "@/components/ui/Select";
+
+<Select
+  label="Building"
+  placeholder="Choose a building…"
+  options={buildings}
+  value={buildingId}
+  onChange={onChange}
+/>
+```
+
+## Options
+
+`options` accepts either **strings** or **`{ value, label }`** objects — use the
+object form when the stored value differs from the visible label.
+
+```jsx
+options={["Active", "Pending"]}
+options={[{ value: "active", label: "Active" }, { value: "pending", label: "Pending" }]}
+```
+
+`placeholder` renders as a leading empty-value `<option>`.
+
+<Canvas of={SelectStories.ObjectOptions} />
+
+## States
+
+<Canvas of={SelectStories.States} />
+
+## In context
+
+<Canvas of={SelectStories.InContext} />
+
+## When to use
+
+- ✅ **Use Select** for choosing one option from a short, known list.
+- For **many** options or search, use a combobox/autocomplete pattern instead.
+- For 2–3 mutually exclusive options where all should be visible, consider
+  segmented controls / radios rather than a dropdown.
+
+## Do / Don't
+
+- ✅ **Do** provide a `placeholder` so the empty state reads clearly.
+- ✅ **Do** keep it native — don't rebuild the dropdown unless you truly need custom
+  option rendering.
+- ⛔ **Don't** put a `Select` and `Input` out of alignment in a filter row — both
+  share the same height via `.filter-*`, so align on `items-end`.
+
+## Accessibility
+
+- Native `<select>` is keyboard- and screen-reader-accessible by default.
+- Same label-association gap as Input: associate the `.filter-label` with the
+  control via `htmlFor` / `id` for the best screen-reader experience.
+
+## Props
+
+<Controls of={SelectStories.Playground} />

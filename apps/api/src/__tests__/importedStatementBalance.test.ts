@@ -1,0 +1,213 @@
+import { computeBalanceImbalanceCents, computeStatementSanityFlags, computeContinuityFlags, computeSuggestedCorrections, computeCrossStatementResult, computeConfidenceTier } from "../services/importedStatementService";
+
+describe("computeConfidenceTier (graduated-autonomy verdict)", () => {
+  const ok = { reconciliation: { status: "PASS" as const }, crossCheck: { status: "PASS" as const }, sanityFlags: [], ocrConfidence: 95 };
+
+  it("GREEN when every verifiable invariant passes", () => {
+    expect(computeConfidenceTier(ok).tier).toBe("GREEN");
+  });
+
+  it("GREEN when reconciliation passes and there's no sibling to cross-check (NA is neutral)", () => {
+    expect(computeConfidenceTier({ ...ok, crossCheck: { status: "NA" } }).tier).toBe("GREEN");
+  });
+
+  it("GREEN tolerates a null OCR confidence (nothing to fail against)", () => {
+    expect(computeConfidenceTier({ ...ok, ocrConfidence: null }).tier).toBe("GREEN");
+  });
+
+  it("RED when section totals don't reconcile", () => {
+    expect(computeConfidenceTier({ ...ok, reconciliation: { status: "FAIL" } }).tier).toBe("RED");
+  });
+
+  it("RED when the P&L result disagrees with the balance sheet, even if reconciliation passes", () => {
+    expect(computeConfidenceTier({ ...ok, crossCheck: { status: "FAIL" } }).tier).toBe("RED");
+  });
+
+  it("RED wins over AMBER conditions (a warn flag can't downgrade a hard failure)", () => {
+    const r = computeConfidenceTier({ reconciliation: { status: "FAIL" }, crossCheck: { status: "NA" }, sanityFlags: [{ severity: "warn" }], ocrConfidence: 10 });
+    expect(r.tier).toBe("RED");
+  });
+
+  it("AMBER when reconciliation is UNVERIFIED (no printed totals to check)", () => {
+    expect(computeConfidenceTier({ ...ok, reconciliation: { status: "UNVERIFIED" } }).tier).toBe("AMBER");
+  });
+
+  it("AMBER when a plausibility warning fires despite ties", () => {
+    const r = computeConfidenceTier({ ...ok, sanityFlags: [{ severity: "warn" }, { severity: "info" }] });
+    expect(r.tier).toBe("AMBER");
+    expect(r.reasons.join(" ")).toMatch(/1 plausibility warning/);
+  });
+
+  it("AMBER when OCR confidence is below the floor", () => {
+    expect(computeConfidenceTier({ ...ok, ocrConfidence: 40 }).tier).toBe("AMBER");
+  });
+
+  it("info-level sanity flags alone do NOT downgrade GREEN", () => {
+    expect(computeConfidenceTier({ ...ok, sanityFlags: [{ severity: "info" }] }).tier).toBe("GREEN");
+  });
+});
+
+describe("computeCrossStatementResult (P&L result vs balance-sheet result line)", () => {
+  const rev = (cents: number) => ({ documentSection: "REVENUE", balanceCents: cents });
+  const exp = (cents: number) => ({ documentSection: "EXPENSE", balanceCents: cents });
+  const bsResult = (code: string, name: string, cents: number) => ({ documentSection: "PASSIF", balanceCents: cents, rawAccountCode: code, rawAccountName: name });
+  const asset = (cents: number) => ({ documentSection: "ACTIF", balanceCents: cents, rawAccountCode: "1000", rawAccountName: "Caisse" });
+
+  it("PASS when the P&L result equals the balance sheet's result line", () => {
+    const income = [rev(200_000_00), exp(155_134_00)]; // result +44'866
+    const bs = [asset(500_000_00), bsResult("2979", "Bénéfice de l'exercice", 44_866_00)];
+    expect(computeCrossStatementResult(income, bs).status).toBe("PASS");
+  });
+
+  it("FAILs when a mis-read (gérance 9) inflates the P&L result vs the balance sheet", () => {
+    // Expenses too low by 7'125 → P&L result overstated by 7'125 vs the BS result line.
+    const income = [rev(200_000_00), exp(148_009_00)]; // result +51'991 (wrong)
+    const bs = [asset(500_000_00), bsResult("2979", "Bénéfice de l'exercice", 44_866_00)]; // true result
+    const r = computeCrossStatementResult(income, bs);
+    expect(r.status).toBe("FAIL");
+    expect(Math.abs(r.diffCents!)).toBe(7_125_00);
+  });
+
+  it("NA when no result line is present on the balance sheet", () => {
+    const income = [rev(100_000_00), exp(60_000_00)];
+    const bs = [asset(500_000_00)];
+    expect(computeCrossStatementResult(income, bs).status).toBe("NA");
+  });
+
+  it("finds the result line by name when the 2979 code is absent", () => {
+    const income = [rev(100_000_00), exp(60_000_00)]; // +40'000
+    const bs = [asset(500_000_00), bsResult("2900", "Résultat de l'exercice", 40_000_00)];
+    expect(computeCrossStatementResult(income, bs).status).toBe("PASS");
+  });
+});
+
+describe("computeSuggestedCorrections", () => {
+  const exp = (id: string, code: string, name: string, cents: number) => ({ id, documentSection: "EXPENSE", balanceCents: cents, rawAccountCode: code, rawAccountName: name });
+
+  it("suggests restoring gérance to its prior value to make Charges tie out (9→7'134)", () => {
+    const current = [exp("b1", "6500", "Honoraires de gérance", 9_00), exp("b2", "6000", "Entretien", 40_000_00), exp("b3", "6200", "Assurances", 8_000_00)];
+    const prior = [exp("p1", "6500", "Honoraires de gérance", 7_134_00), exp("p2", "6000", "Entretien", 40_000_00)];
+    const statedExpenseCents = 7_134_00 + 40_000_00 + 8_000_00; // the document's own Total Charges
+    const s = computeSuggestedCorrections(current, prior, { EXPENSE: statedExpenseCents }, 2023);
+    expect(s).toHaveLength(1);
+    expect(s[0]).toMatchObject({ balanceId: "b1", currentCents: 9_00, suggestedCents: 7_134_00 });
+  });
+
+  it("suggests nothing when the section already ties out", () => {
+    const current = [exp("b1", "6500", "Gérance", 7_100_00), exp("b2", "6000", "Entretien", 40_000_00)];
+    const prior = [exp("p1", "6500", "Gérance", 7_000_00)];
+    expect(computeSuggestedCorrections(current, prior, { EXPENSE: 47_100_00 }, 2023)).toEqual([]);
+  });
+
+  it("suggests nothing without stated totals", () => {
+    const current = [exp("b1", "6500", "Gérance", 9_00)];
+    const prior = [exp("p1", "6500", "Gérance", 7_134_00)];
+    expect(computeSuggestedCorrections(current, prior, null, 2023)).toEqual([]);
+  });
+});
+
+describe("computeContinuityFlags (year-over-year)", () => {
+  const exp = (code: string, name: string, cents: number) => ({ documentSection: "EXPENSE", balanceCents: cents, rawAccountCode: code, rawAccountName: name });
+
+  it("flags the 7'134→9 gérance mis-read as a material swing", () => {
+    const prior = [exp("6500", "Honoraires de gérance", 7_134_00), exp("6000", "Entretien", 40_000_00)];
+    const current = [exp("6500", "Honoraires de gérance", 9_00), exp("6000", "Entretien", 41_000_00)];
+    const flags = computeContinuityFlags(current, prior, 2023);
+    expect(flags.some((f) => f.code === "YOY_SWING" && /gérance/i.test(f.message))).toBe(true);
+  });
+
+  it("flags an account that vanished vs the prior year", () => {
+    const prior = [exp("6500", "Honoraires de gérance", 7_000_00), exp("6800", "Intérêts hypothécaires", 12_000_00)];
+    const current = [exp("6500", "Honoraires de gérance", 7_100_00)];
+    const flags = computeContinuityFlags(current, prior, 2023);
+    expect(flags.some((f) => f.code === "YOY_VANISHED")).toBe(true);
+  });
+
+  it("does not flag stable year-over-year figures", () => {
+    const prior = [exp("6500", "Gérance", 7_000_00), exp("6000", "Entretien", 40_000_00)];
+    const current = [exp("6500", "Gérance", 7_200_00), exp("6000", "Entretien", 41_000_00)];
+    expect(computeContinuityFlags(current, prior, 2023)).toEqual([]);
+  });
+
+  it("returns nothing for balance-sheet rows", () => {
+    const prior = [{ documentSection: "ACTIF", balanceCents: 100_00, rawAccountCode: "1000", rawAccountName: "Caisse" }];
+    const current = [{ documentSection: "ACTIF", balanceCents: 900_00, rawAccountCode: "1000", rawAccountName: "Caisse" }];
+    expect(computeContinuityFlags(current, prior, 2023)).toEqual([]);
+  });
+});
+
+describe("computeStatementSanityFlags", () => {
+  const rev = (name: string, cents: number) => ({ documentSection: "REVENUE", balanceCents: cents, rawAccountName: name });
+  const exp = (name: string, cents: number) => ({ documentSection: "EXPENSE", balanceCents: cents, rawAccountName: name });
+
+  it("flags a management fee mis-read as CHF 9 (the 7'134→9 case)", () => {
+    const flags = computeStatementSanityFlags([
+      rev("Loyers nets", 200_000_00),
+      exp("Honoraires de gérance", 9_00),
+      exp("Entretien", 40_000_00),
+      exp("Assurances", 8_000_00),
+    ]);
+    expect(flags.some((f) => f.code === "FEE_IMPLAUSIBLY_LOW")).toBe(true);
+  });
+
+  it("does not flag a plausible ~4% management fee", () => {
+    const flags = computeStatementSanityFlags([
+      rev("Loyers nets", 200_000_00),
+      exp("Honoraires de gérance", 8_000_00), // 4%
+      exp("Entretien", 40_000_00),
+      exp("Assurances", 8_000_00),
+    ]);
+    expect(flags.some((f) => f.code.startsWith("FEE_"))).toBe(false);
+  });
+
+  it("flags one expense account dominating the total", () => {
+    const flags = computeStatementSanityFlags([
+      rev("Loyers", 100_000_00),
+      exp("Rénovation", 90_000_00),
+      exp("Assurances", 5_000_00),
+      exp("Frais divers", 5_000_00),
+    ]);
+    expect(flags.some((f) => f.code === "DOMINANT_EXPENSE")).toBe(true);
+  });
+
+  it("returns nothing for a balance sheet (no P&L rows)", () => {
+    expect(computeStatementSanityFlags([
+      { documentSection: "ACTIF", balanceCents: 100_00, rawAccountName: "Caisse" },
+      { documentSection: "PASSIF", balanceCents: 100_00, rawAccountName: "Créancier" },
+    ])).toEqual([]);
+  });
+});
+
+describe("computeBalanceImbalanceCents", () => {
+  it("uses documentSection for the Actif/Passif split — an asset-coded account placed in Passifs counts as Passif", () => {
+    // 11200 "Créances diverses" (3.85) has an asset-range code but the régie
+    // placed it under Passifs. By section it balances; by code it would be off
+    // by 2 × 3.85 = 7.70.
+    const balances = [
+      { rawAccountCode: "10200", balanceCents: 10000, balanceType: "DEBIT", documentSection: "ACTIF" },
+      { rawAccountCode: "11200", balanceCents: 385, balanceType: "CREDIT", documentSection: "PASSIF" },
+      { rawAccountCode: "20000", balanceCents: 9615, balanceType: "CREDIT", documentSection: "PASSIF" },
+    ];
+    expect(computeBalanceImbalanceCents(balances)).toBe(0); // was 770 under code-only bucketing
+  });
+
+  it("falls back to the account code when documentSection is not a balance-sheet side (OCR mislabel of equity 2900 as REVENUE)", () => {
+    const balances = [
+      { rawAccountCode: "10000", balanceCents: 10000, balanceType: "DEBIT", documentSection: "ACTIF" },
+      { rawAccountCode: "2900", balanceCents: 10000, balanceType: "CREDIT", documentSection: "REVENUE" },
+    ];
+    expect(computeBalanceImbalanceCents(balances)).toBe(0); // 2900 → code prefix → Passif
+  });
+
+  it("returns net income for a P&L (not zero)", () => {
+    const balances = [
+      { rawAccountCode: "3000", balanceCents: 100000, balanceType: "CREDIT", documentSection: "REVENUE" },
+      { rawAccountCode: "4000", balanceCents: 30000, balanceType: "DEBIT", documentSection: "EXPENSE" },
+    ];
+    expect(computeBalanceImbalanceCents(balances)).toBe(70000);
+  });
+
+  it("returns null when there are no balances", () => {
+    expect(computeBalanceImbalanceCents([])).toBeNull();
+  });
+});

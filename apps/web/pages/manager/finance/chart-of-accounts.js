@@ -304,7 +304,7 @@ export default function ChartOfAccountsPage() {
                   ) : (
                     <>
                       {/* Mobile card list — sm:hidden */}
-                      <div className="sm:hidden overflow-hidden divide-y divide-table-divider">
+                      <div className="sm:hidden overflow-hidden divide-y divide-surface-divider">
                         {expenseTypes.map((et) => (
                           <div key={et.id} className="table-card">
                             <div className="flex items-start justify-between gap-2">
@@ -320,7 +320,7 @@ export default function ChartOfAccountsPage() {
                       </div>
 
                       {/* Wide table — hidden sm:block */}
-                      <div className="hidden sm:block overflow-x-auto rounded-lg border border-table-border">
+                      <div className="hidden sm:block overflow-x-auto rounded-lg border border-surface-border">
                         <table className="data-table">
                           <thead>
                             <tr>
@@ -395,7 +395,7 @@ export default function ChartOfAccountsPage() {
                   ) : (
                     <>
                       {/* Mobile card list — sm:hidden */}
-                      <div className="sm:hidden overflow-hidden divide-y divide-table-divider">
+                      <div className="sm:hidden overflow-hidden divide-y divide-surface-divider">
                         {accounts.map((acc) => (
                           <div key={acc.id} className="table-card">
                             <div className="flex items-start justify-between gap-2">
@@ -411,7 +411,7 @@ export default function ChartOfAccountsPage() {
                       </div>
 
                       {/* Wide table — hidden sm:block */}
-                      <div className="hidden sm:block overflow-x-auto rounded-lg border border-table-border">
+                      <div className="hidden sm:block overflow-x-auto rounded-lg border border-surface-border">
                         <table className="data-table">
                           <thead>
                             <tr>
@@ -494,7 +494,7 @@ export default function ChartOfAccountsPage() {
                   ) : (
                     <>
                       {/* Mobile card list — sm:hidden */}
-                      <div className="sm:hidden overflow-hidden divide-y divide-table-divider">
+                      <div className="sm:hidden overflow-hidden divide-y divide-surface-divider">
                         {sortedMappings.map((m) => (
                           <div key={m.id} className="table-card">
                             <p className="table-card-head">{m.expenseType?.name || m.expenseTypeId}</p>
@@ -512,7 +512,7 @@ export default function ChartOfAccountsPage() {
                       </div>
 
                       {/* Wide table — hidden sm:block */}
-                      <div className="hidden sm:block overflow-x-auto rounded-lg border border-table-border">
+                      <div className="hidden sm:block overflow-x-auto rounded-lg border border-surface-border">
                         <table className="data-table">
                           <thead>
                             <tr>

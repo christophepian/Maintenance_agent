@@ -1,0 +1,47 @@
+import { Meta, Title, Canvas, Controls } from "@storybook/addon-docs/blocks";
+import * as EmptyStateStories from "./EmptyState.stories";
+
+<Meta of={EmptyStateStories} />
+
+<Title />
+
+A centered placeholder shown when a list or view has no data — first-run, no
+results, or an empty collection. Built on the `.empty-state` class.
+
+```jsx
+import EmptyState from "@/components/ui/EmptyState";
+
+<EmptyState icon="📭" title="No maintenance requests"
+  message="When tenants submit requests, they'll appear here." >
+  <Button size="sm">New request</Button>
+</EmptyState>
+```
+
+<Canvas of={EmptyStateStories.Playground} />
+
+## Anatomy
+
+| Prop | Role |
+|---|---|
+| `icon` | Optional glyph/emoji above the title |
+| `title` | Short headline (`text-base font-semibold text-muted-dark`) |
+| `message` | One-line explanation |
+| `children` | Optional action (e.g. a primary Button) |
+
+## With an action
+
+Give the user a way forward when it makes sense — a create action, or a link to
+clear filters.
+
+<Canvas of={EmptyStateStories.WithAction} />
+
+## Do / Don't
+
+- ✅ **Do** explain *why* it's empty and what to do next.
+- ✅ **Do** offer a single clear action when one exists.
+- ⛔ **Don't** use it for errors — use [ErrorBanner](?path=/docs/ui-errorbanner--docs).
+- ⛔ **Don't** overload it with multiple actions.
+
+## Props
+
+<Controls of={EmptyStateStories.Playground} />

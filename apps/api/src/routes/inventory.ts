@@ -16,13 +16,17 @@ import {
   updateUnit,
   deactivateUnit,
   getUnitById,
+  getMarketPriceByZip,
+  upsertMarketPriceByZip,
   listAssetModels,
   createAssetModel,
   updateAssetModel,
   deactivateAssetModel,
   addAssetModelName,
+  getBuildingKpis,
+  BuildingNotFoundError,
 } from "../services/inventory";
-import { getAssetInventoryForUnit, getAssetInventoryForBuilding, getRepairReplaceAnalysis } from "../services/assetInventory";
+import { getAssetInventoryForUnit, getAssetInventoryForBuilding, getRepairReplaceAnalysis, getBuildingRenovationOpportunities } from "../services/assetInventory";
 import { seedDefaultBuildingAssets, seedDefaultUnitAssets } from "../services/defaultAssets";
 import { assetRepo } from "../repositories";
 import { listUnitTenants, linkTenantToUnit, unlinkTenantFromUnit } from "../services/occupancies";
@@ -30,7 +34,7 @@ import { listContractors } from "../services/contractorRequests";
 import { listTenants, createOrGetTenant } from "../services/tenants";
 import { propertyFromBuilding } from "../services/adapters/propertyAdapter";
 import { contactFromTenant, contactFromContractor } from "../services/adapters/contactAdapter";
-import { CreateBuildingSchema, UpdateBuildingSchema } from "../validation/buildings";
+import { CreateBuildingSchema, UpdateBuildingSchema, UpsertMarketPriceSchema } from "../validation/buildings";
 import { CreateUnitSchema, UpdateUnitSchema } from "../validation/units";
 import { CreateAssetModelSchema, UpdateAssetModelSchema } from "../validation/assetModels";
 import { UpsertAssetSchema, AddInterventionSchema, PatchAssetSchema } from "../validation/assets";
@@ -42,7 +46,8 @@ import * as legalSourceRepo from "../repositories/legalSourceRepository";
 import { findDepreciationTopicSuggestions, findAssetTopicSuggestions, findOrgOwnerByIdFull, updateOwnerUser, syncAllBuildingsForOwner } from "../repositories/inventoryRepository";
 import { findUnlinkedJobsByUnit } from "../repositories/jobRepository";
 import { mapBuildingToDetailDTO } from "../dto/buildingDetail";
-import { mapUnitToListDTO } from "../dto/unitList";
+import { mapUnitToListDTO, computeOccupancy } from "../dto/unitList";
+import { computeUnitIntrinsicValue } from "../services/unitValuation";
 import { createBillingEntity } from "../services/billingEntities";
 import { CreateBillingEntitySchema } from "../validation/billingEntities";
 import * as bcrypt from "bcryptjs";
@@ -276,6 +281,18 @@ export function registerInventoryRoutes(router: Router) {
     }
   }));
 
+  // GET /buildings/:id/kpis — aggregate operational counts (open requests/jobs)
+  // as scalar DB counts, replacing the client-side fetch-2000-and-filter pattern.
+  router.get("/buildings/:id/kpis", withAuthRequired(async ({ req, res, orgId, params }) => {
+    try {
+      const data = await getBuildingKpis(orgId, params.id);
+      sendJson(res, 200, { data });
+    } catch (e) {
+      if (e instanceof BuildingNotFoundError) return sendError(res, 404, "NOT_FOUND", "Building not found");
+      sendError(res, 500, "DB_ERROR", "Failed to load building KPIs", String(e));
+    }
+  }));
+
   router.patch("/buildings/:id", async ({ req, res, orgId, params }) => {
     if (!requireRole(req, res, "MANAGER")) return;
     try {
@@ -283,11 +300,17 @@ export function registerInventoryRoutes(router: Router) {
       const parsed = UpdateBuildingSchema.safeParse(raw);
       if (!parsed.success) return sendError(res, 400, "VALIDATION_ERROR", "Invalid building data", parsed.error.flatten());
 
-      // Convert managedSince ISO string → Date | null for Prisma
-      const { managedSince, ...rest } = parsed.data;
+      // Convert ISO date strings → Date | null for Prisma
+      const { managedSince, constructionDate, lastRenovationDate, ...rest } = parsed.data;
       const updateData: Parameters<typeof updateBuilding>[2] = { ...rest };
       if (managedSince !== undefined) {
         updateData.managedSince = managedSince ? new Date(managedSince) : null;
+      }
+      if (constructionDate !== undefined) {
+        updateData.constructionDate = constructionDate ? new Date(constructionDate) : null;
+      }
+      if (lastRenovationDate !== undefined) {
+        updateData.lastRenovationDate = lastRenovationDate ? new Date(lastRenovationDate) : null;
       }
 
       const updated = await updateBuilding(orgId, params.id, updateData);
@@ -381,13 +404,36 @@ export function registerInventoryRoutes(router: Router) {
     }
   }));
 
+  // Attach an owner to a building. Two shapes:
+  //   { userId }        → link an EXISTING org OWNER user.
+  //   { email, name? }  → find-or-create a passwordless OWNER user by email (used
+  //                       by the invite flow, where login is provisioned in Supabase
+  //                       and bridged to this row by email), then link.
+  // Always links exactly ONE building — scoping stays building-level.
   router.post("/buildings/:id/owners", async ({ req, res, orgId, params, prisma }) => {
     if (!requireRole(req, res, "MANAGER")) return;
     try {
       const raw = await readJson(req);
-      const userId = raw?.userId;
-      if (!userId || typeof userId !== "string") {
-        return sendError(res, 400, "VALIDATION_ERROR", "userId is required");
+      const email = typeof raw?.email === "string" ? raw.email.trim().toLowerCase() : "";
+      let userId = typeof raw?.userId === "string" ? raw.userId : "";
+
+      if (!userId && email) {
+        // Find-or-create the OWNER user for this email within the org.
+        const existing = await inventoryRepo.findUserByOrgAndEmail(prisma, orgId, email);
+        if (existing) {
+          if (existing.role !== "OWNER") {
+            return sendError(res, 422, "VALIDATION_ERROR", "A user with this email exists but is not an owner");
+          }
+          userId = existing.id;
+        } else {
+          const name = typeof raw?.name === "string" && raw.name.trim() ? raw.name.trim() : email;
+          const created = await inventoryRepo.createOwnerUser(prisma, { orgId, name, email });
+          userId = created.id;
+        }
+      }
+
+      if (!userId) {
+        return sendError(res, 400, "VALIDATION_ERROR", "userId or email is required");
       }
 
       // Validate user exists, same org, role=OWNER
@@ -460,6 +506,7 @@ export function registerInventoryRoutes(router: Router) {
     } catch (e: any) {
       const msg = String(e?.message || e);
       if (msg === "Invalid JSON") return sendError(res, 400, "INVALID_JSON", "Invalid JSON");
+      if (msg === "INVALID_LINKED_FLAT") return sendError(res, 400, "INVALID_LINKED_FLAT", "The linked flat must be another unit in the same building.");
       sendError(res, 500, "DB_ERROR", "Failed to create unit", String(e));
     }
   });
@@ -478,7 +525,35 @@ export function registerInventoryRoutes(router: Router) {
     try {
       const unit = await getUnitById(orgId, params.id);
       if (!unit) return sendError(res, 404, "NOT_FOUND", "Unit not found");
-      sendJson(res, 200, { data: unit });
+      // Two-axis occupancy, computed server-side so the detail page doesn't
+      // re-derive it (and mis-read a rent-0 co-billed parking as vacant).
+      const u = unit as unknown as {
+        isVacant: boolean;
+        leases?: { tenantName?: string | null; startDate: Date; status: string }[];
+        occupancies?: { tenant?: { name: string | null } }[];
+        linkedFlat?: { leases?: unknown[]; occupancies?: unknown[] } | null;
+      };
+      const activeLease = (u.leases ?? []).find((l) => l.status === "ACTIVE") ?? null;
+      const occupancy = computeOccupancy({
+        isVacant: u.isVacant,
+        activeLease: activeLease ? { tenantName: activeLease.tenantName ?? null, startDate: activeLease.startDate } : null,
+        occupancyTenantName: u.occupancies?.[0]?.tenant?.name ?? null,
+        linkedFlatOccupied: !!u.linkedFlat && (((u.linkedFlat.leases?.length ?? 0) > 0) || ((u.linkedFlat.occupancies?.length ?? 0) > 0)),
+      });
+      const intrinsicValuation = computeUnitIntrinsicValue(unit);
+      // Market estimate (reference only) — zip price × living area, kept distinct
+      // from the intrinsic valuation. Null when no price is on file for the zip.
+      const postalCode = (unit as { building?: { postalCode?: string | null } }).building?.postalCode ?? null;
+      const marketPrice = postalCode ? await getMarketPriceByZip(orgId, postalCode) : null;
+      const marketEstimate = marketPrice
+        ? {
+            pricePerSqmChf: marketPrice.pricePerSqmChf,
+            source: marketPrice.source,
+            asOf: marketPrice.asOf,
+            estimateChf: unit.livingAreaSqm != null ? unit.livingAreaSqm * marketPrice.pricePerSqmChf : null,
+          }
+        : null;
+      sendJson(res, 200, { data: { ...unit, ...occupancy, intrinsicValuation, marketEstimate } });
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to fetch unit", String(e));
     }
@@ -496,6 +571,9 @@ export function registerInventoryRoutes(router: Router) {
     } catch (e: any) {
       const msg = String(e?.message || e);
       if (msg === "Invalid JSON") return sendError(res, 400, "INVALID_JSON", "Invalid JSON");
+      if (msg === "RENT_LOCKED_BY_LEASE")
+        return sendError(res, 409, "RENT_LOCKED_BY_LEASE", "Net rent and charges are set by the active lease and can't be changed here. Edit the lease instead.");
+      if (msg === "INVALID_LINKED_FLAT") return sendError(res, 400, "INVALID_LINKED_FLAT", "The linked flat must be another unit in the same building.");
       sendError(res, 500, "DB_ERROR", "Failed to update unit", String(e));
     }
   });
@@ -508,6 +586,35 @@ export function registerInventoryRoutes(router: Router) {
       sendJson(res, 200, { message: "Unit deactivated" });
     } catch (e) {
       sendError(res, 500, "DB_ERROR", "Failed to deactivate unit", String(e));
+    }
+  });
+
+  // Reference market price per m² for a postal code (manually maintained / seeded).
+  router.get("/market-prices/:postalCode", withAuthRequired(async ({ res, orgId, params }) => {
+    try {
+      const price = await getMarketPriceByZip(orgId, params.postalCode);
+      sendJson(res, 200, { data: price });
+    } catch (e) {
+      sendError(res, 500, "DB_ERROR", "Failed to fetch market price", String(e));
+    }
+  }));
+
+  router.put("/market-prices", async ({ req, res, orgId }) => {
+    if (!requireRole(req, res, "MANAGER")) return;
+    try {
+      const raw = await readJson(req);
+      const parsed = UpsertMarketPriceSchema.safeParse(raw);
+      if (!parsed.success) return sendError(res, 400, "VALIDATION_ERROR", "Invalid market price", parsed.error.flatten());
+      const { asOf, ...rest } = parsed.data;
+      const saved = await upsertMarketPriceByZip(orgId, {
+        ...rest,
+        asOf: asOf ? new Date(asOf) : null,
+      });
+      sendJson(res, 200, { data: saved });
+    } catch (e: any) {
+      const msg = String(e?.message || e);
+      if (msg === "Invalid JSON") return sendError(res, 400, "INVALID_JSON", "Invalid JSON");
+      sendError(res, 500, "DB_ERROR", "Failed to save market price", String(e));
     }
   });
 
@@ -617,6 +724,18 @@ export function registerInventoryRoutes(router: Router) {
   });
 
   /* ── Asset Inventory ───────────────────────────────────────── */
+
+  /* ── Building Renovation Opportunities ─────────────────────── */
+
+  router.get("/buildings/:id/renovation-opportunities", withAuthRequired(async ({ res, orgId, params, prisma }) => {
+    try {
+      const items = await getBuildingRenovationOpportunities(prisma, orgId, params.id);
+      sendJson(res, 200, { data: items });
+    } catch (e: any) {
+      if (String(e?.message).includes("not found")) return sendError(res, 404, "NOT_FOUND", String(e.message));
+      sendError(res, 500, "DB_ERROR", "Failed to fetch renovation opportunities", String(e));
+    }
+  }));
 
   /* ── Repair vs Replace Analysis ────────────────────────────── */
 

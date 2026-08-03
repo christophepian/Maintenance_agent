@@ -9,7 +9,7 @@
  * G9: canonical include constants live here.
  */
 
-import { PrismaClient, UnitType, LocationSegment, InsulationQuality, EnergyLabel, HeatingType, LeaseStatus, RentalOwnerSelectionStatus } from "@prisma/client";
+import { PrismaClient, UnitType, LocationSegment, InsulationQuality, EnergyLabel, HeatingType, LeaseStatus, RentalOwnerSelectionStatus, ParkingKind } from "@prisma/client";
 
 // ─── Canonical Includes (G9) ───────────────────────────────────
 
@@ -121,6 +121,7 @@ export async function findBuildingByIdDeep(
               tenantEmail: true,
               startDate: true,
               unitId: true,
+              netRentChf: true,
             },
           },
         },
@@ -132,7 +133,7 @@ export async function findBuildingByIdDeep(
 export async function createBuilding(
   prisma: PrismaClient,
   orgId: string,
-  data: { name: string; address: string; managerId?: string | null },
+  data: { name: string; address: string; managerId?: string | null; city?: string | null; postalCode?: string | null },
 ) {
   return prisma.building.create({
     data: {
@@ -140,6 +141,8 @@ export async function createBuilding(
       name: data.name,
       address: data.address,
       ...(data.managerId ? { managerId: data.managerId } : {}),
+      ...(data.city ? { city: data.city } : {}),
+      ...(data.postalCode ? { postalCode: data.postalCode } : {}),
     },
   });
 }
@@ -155,6 +158,19 @@ export async function updateBuilding(
     hasConcierge?: boolean;
     managedSince?: Date | null;
     houseRulesText?: string | null;
+    parcelNumber?: string | null;
+    easementsText?: string | null;
+    ecaVolumeM3?: number | null;
+    netAreaSqm?: number | null;
+    weightedAreaSqm?: number | null;
+    lotsApartments?: number | null;
+    lotsGarages?: number | null;
+    lotsExteriorParking?: number | null;
+    constructionDate?: Date | null;
+    lastRenovationDate?: Date | null;
+    fiscalValueChf?: number | null;
+    insuranceValueChf?: number | null;
+    ppeEstimateChf?: number | null;
   },
 ) {
   return prisma.building.update({
@@ -167,6 +183,19 @@ export async function updateBuilding(
       hasConcierge: data.hasConcierge ?? undefined,
       managedSince: data.managedSince !== undefined ? data.managedSince : undefined,
       houseRulesText: data.houseRulesText !== undefined ? data.houseRulesText : undefined,
+      parcelNumber: data.parcelNumber !== undefined ? data.parcelNumber : undefined,
+      easementsText: data.easementsText !== undefined ? data.easementsText : undefined,
+      ecaVolumeM3: data.ecaVolumeM3 !== undefined ? data.ecaVolumeM3 : undefined,
+      netAreaSqm: data.netAreaSqm !== undefined ? data.netAreaSqm : undefined,
+      weightedAreaSqm: data.weightedAreaSqm !== undefined ? data.weightedAreaSqm : undefined,
+      lotsApartments: data.lotsApartments !== undefined ? data.lotsApartments : undefined,
+      lotsGarages: data.lotsGarages !== undefined ? data.lotsGarages : undefined,
+      lotsExteriorParking: data.lotsExteriorParking !== undefined ? data.lotsExteriorParking : undefined,
+      constructionDate: data.constructionDate !== undefined ? data.constructionDate : undefined,
+      lastRenovationDate: data.lastRenovationDate !== undefined ? data.lastRenovationDate : undefined,
+      fiscalValueChf: data.fiscalValueChf !== undefined ? data.fiscalValueChf : undefined,
+      insuranceValueChf: data.insuranceValueChf !== undefined ? data.insuranceValueChf : undefined,
+      ppeEstimateChf: data.ppeEstimateChf !== undefined ? data.ppeEstimateChf : undefined,
     },
   });
 }
@@ -201,6 +230,15 @@ export async function listUnits(
       leases: {
         where: { status: "ACTIVE", deletedAt: null },
         select: { id: true, tenantName: true, startDate: true },
+      },
+      // Occupancy also flows from the join table (a co-billed garage may carry an
+      // occupancy without its own lease) and, for parking, from the linked flat.
+      occupancies: { select: { tenant: { select: { name: true } } } },
+      linkedFlat: {
+        select: {
+          leases: { where: { status: "ACTIVE", deletedAt: null }, select: { id: true } },
+          occupancies: { select: { id: true } },
+        },
       },
     },
     orderBy: { unitNumber: "asc" },
@@ -256,9 +294,38 @@ export async function findUnitByIdAndOrg(
     where: { id: unitId, orgId },
     include: {
       building: true,
+      // SIGNED + ACTIVE = binding leases. Rent/charges are exposed so callers can
+      // mirror the contractual figure and block divergent unit-level edits.
       leases: {
-        where: { status: "ACTIVE" },
-        select: { id: true, tenantName: true, startDate: true, status: true },
+        where: { status: { in: ["SIGNED", "ACTIVE"] } },
+        select: {
+          id: true,
+          tenantName: true,
+          startDate: true,
+          endDate: true,
+          status: true,
+          netRentChf: true,
+          chargesTotalChf: true,
+        },
+      },
+      // Occupancy join (a co-billed garage may be occupied without its own lease).
+      occupancies: { select: { tenant: { select: { name: true } } } },
+      // The flat this parking spot is assigned to (if any), and — for a flat —
+      // the parking spots linked to it. Summaries + occupancy of the flat so a
+      // parking spot linked to an occupied flat reads OCCUPIED.
+      linkedFlat: {
+        select: {
+          id: true,
+          unitNumber: true,
+          type: true,
+          leases: { where: { status: "ACTIVE", deletedAt: null }, select: { id: true } },
+          occupancies: { select: { id: true } },
+        },
+      },
+      parkingSpots: {
+        where: { isActive: true },
+        select: { id: true, unitNumber: true, parkingKind: true, monthlyRentChf: true, type: true },
+        orderBy: { unitNumber: "asc" },
       },
     },
   });
@@ -268,7 +335,7 @@ export async function createUnit(
   prisma: PrismaClient,
   orgId: string,
   buildingId: string,
-  data: { unitNumber: string; floor?: string | null; type?: UnitType },
+  data: { unitNumber: string; floor?: string | null; type?: UnitType; parkingKind?: ParkingKind | null; linkedFlatId?: string | null },
 ) {
   return prisma.unit.create({
     data: {
@@ -277,6 +344,8 @@ export async function createUnit(
       unitNumber: data.unitNumber,
       floor: data.floor ?? null,
       type: data.type ?? UnitType.RESIDENTIAL,
+      parkingKind: data.parkingKind ?? null,
+      linkedFlatId: data.linkedFlatId ?? null,
     },
   });
 }
@@ -288,6 +357,8 @@ export async function updateUnit(
     unitNumber?: string;
     floor?: string;
     type?: UnitType;
+    parkingKind?: ParkingKind | null;
+    linkedFlatId?: string | null;
     livingAreaSqm?: number;
     rooms?: number;
     hasBalcony?: boolean;
@@ -300,6 +371,12 @@ export async function updateUnit(
     heatingType?: HeatingType;
     monthlyRentChf?: number | null;
     monthlyChargesChf?: number | null;
+    intrinsicPricePerSqmChf?: number | null;
+    vetustePct?: number | null;
+    gardenAreaSqm?: number | null;
+    gardenWeightPct?: number | null;
+    extParkingValueChf?: number | null;
+    garageValueChf?: number | null;
     isListedPublicly?: boolean;
   },
 ) {
@@ -309,6 +386,8 @@ export async function updateUnit(
       unitNumber: data.unitNumber ?? undefined,
       floor: data.floor ?? undefined,
       type: data.type ?? undefined,
+      ...(data.parkingKind !== undefined ? { parkingKind: data.parkingKind } : {}),
+      ...(data.linkedFlatId !== undefined ? { linkedFlatId: data.linkedFlatId } : {}),
       livingAreaSqm: data.livingAreaSqm ?? undefined,
       rooms: data.rooms ?? undefined,
       hasBalcony: data.hasBalcony ?? undefined,
@@ -321,6 +400,12 @@ export async function updateUnit(
       heatingType: data.heatingType ?? undefined,
       ...(data.monthlyRentChf !== undefined ? { monthlyRentChf: data.monthlyRentChf } : {}),
       ...(data.monthlyChargesChf !== undefined ? { monthlyChargesChf: data.monthlyChargesChf } : {}),
+      ...(data.intrinsicPricePerSqmChf !== undefined ? { intrinsicPricePerSqmChf: data.intrinsicPricePerSqmChf } : {}),
+      ...(data.vetustePct !== undefined ? { vetustePct: data.vetustePct } : {}),
+      ...(data.gardenAreaSqm !== undefined ? { gardenAreaSqm: data.gardenAreaSqm } : {}),
+      ...(data.gardenWeightPct !== undefined ? { gardenWeightPct: data.gardenWeightPct } : {}),
+      ...(data.extParkingValueChf !== undefined ? { extParkingValueChf: data.extParkingValueChf } : {}),
+      ...(data.garageValueChf !== undefined ? { garageValueChf: data.garageValueChf } : {}),
       ...(data.isListedPublicly !== undefined ? { isListedPublicly: data.isListedPublicly } : {}),
     },
   });
@@ -336,12 +421,85 @@ export async function deactivateUnit(
   });
 }
 
+/** Re-activate a previously deactivated unit (used by onboarding-merge to reuse it). */
+export async function reactivateUnit(
+  prisma: PrismaClient,
+  unitId: string,
+) {
+  return prisma.unit.update({
+    where: { id: unitId },
+    data: { isActive: true },
+  });
+}
+
 export async function countActiveUnits(
   prisma: PrismaClient,
   buildingId: string,
 ) {
   return prisma.unit.count({
     where: { buildingId, isActive: true },
+  });
+}
+
+/**
+ * Per-unit valuation-worksheet inputs + living area for the active units of a
+ * building. Used by the unit-profitability report to value units and allocate
+ * building overhead pro-rata by area.
+ */
+export async function findUnitsWithValuationForBuilding(
+  prisma: PrismaClient,
+  orgId: string,
+  buildingId: string,
+) {
+  return prisma.unit.findMany({
+    where: { orgId, buildingId, isActive: true },
+    select: {
+      id: true,
+      type: true,
+      livingAreaSqm: true,
+      intrinsicPricePerSqmChf: true,
+      vetustePct: true,
+      gardenAreaSqm: true,
+      gardenWeightPct: true,
+      extParkingValueChf: true,
+      garageValueChf: true,
+    },
+  });
+}
+
+// ─── Market price per zip ──────────────────────────────────────
+
+export async function findMarketPriceByZip(
+  prisma: PrismaClient,
+  orgId: string,
+  postalCode: string,
+) {
+  return prisma.marketPricePerZip.findUnique({
+    where: { orgId_postalCode: { orgId, postalCode } },
+  });
+}
+
+export async function upsertMarketPriceByZip(
+  prisma: PrismaClient,
+  orgId: string,
+  data: { postalCode: string; city?: string | null; pricePerSqmChf: number; source?: string | null; asOf?: Date | null },
+) {
+  return prisma.marketPricePerZip.upsert({
+    where: { orgId_postalCode: { orgId, postalCode: data.postalCode } },
+    create: {
+      orgId,
+      postalCode: data.postalCode,
+      city: data.city ?? null,
+      pricePerSqmChf: data.pricePerSqmChf,
+      source: data.source ?? "manual",
+      asOf: data.asOf ?? null,
+    },
+    update: {
+      city: data.city ?? null,
+      pricePerSqmChf: data.pricePerSqmChf,
+      source: data.source ?? "manual",
+      asOf: data.asOf ?? null,
+    },
   });
 }
 
@@ -542,14 +700,16 @@ export async function findUserByOrgAndEmail(
 }
 
 /**
- * Create an owner user with hashed password.
+ * Create an owner user. `passwordHash` is optional: invited owners have no local
+ * password (they authenticate via Supabase and are bridged to this row by email),
+ * whereas manager-created owners get a bcrypt hash.
  */
 export async function createOwnerUser(
   prisma: PrismaClient,
-  data: { orgId: string; name: string; email: string; passwordHash: string },
+  data: { orgId: string; name: string; email: string; passwordHash?: string | null },
 ) {
   return prisma.user.create({
-    data: { orgId: data.orgId, name: data.name, email: data.email, passwordHash: data.passwordHash, role: "OWNER" },
+    data: { orgId: data.orgId, name: data.name, email: data.email, passwordHash: data.passwordHash ?? null, role: "OWNER" },
   });
 }
 
@@ -744,6 +904,47 @@ export async function findActiveUnitIdsByBuilding(
     select: { id: true },
   });
   return units.map((u) => u.id);
+}
+
+/** Count all units for a building (active + inactive). Used for occupancy rate denominator. */
+export async function countTotalUnitsByBuilding(
+  prisma: PrismaClient,
+  orgId: string,
+  buildingId: string,
+): Promise<number> {
+  return prisma.unit.count({ where: { buildingId, orgId } });
+}
+
+/**
+ * Count DISTINCT active units that had a lease overlapping the given period.
+ * Includes TERMINATED leases whose tenure overlapped the period so that
+ * historical reports reflect true occupancy rather than current-state leases.
+ *
+ * Counts units (not lease rows): a unit with a mid-period tenant turnover has two
+ * overlapping leases but is still one occupied unit, so occupancy can never exceed
+ * the total unit count. (Counting leases here caused >100% occupancy — 2026-07-19.)
+ */
+export async function countLeasedUnitsByBuilding(
+  prisma: PrismaClient,
+  orgId: string,
+  buildingId: string,
+  from: Date,
+  to: Date,
+): Promise<number> {
+  return prisma.unit.count({
+    where: {
+      orgId,
+      buildingId,
+      isActive: true,
+      leases: {
+        some: {
+          status: { in: ["ACTIVE", "SIGNED", "TERMINATED"] },
+          startDate: { lt: to },
+          OR: [{ endDate: null }, { endDate: { gte: from } }],
+        },
+      },
+    },
+  });
 }
 
 /** Find a building config by building ID. */

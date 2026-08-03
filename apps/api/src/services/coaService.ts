@@ -72,6 +72,7 @@ export interface AccountDTO {
   name: string;
   code: string | null;
   accountType: string;
+  costCategory: string | null;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -112,6 +113,7 @@ function mapAccount(a: any): AccountDTO {
     name: a.name,
     code: a.code,
     accountType: a.accountType,
+    costCategory: a.costCategory ?? null,
     isActive: a.isActive,
     createdAt: a.createdAt.toISOString(),
     updatedAt: a.updatedAt.toISOString(),
@@ -231,7 +233,7 @@ export async function updateAccount(
   prisma: PrismaClient,
   id: string,
   orgId: string,
-  data: { name?: string; code?: string; accountType?: string; isActive?: boolean },
+  data: { name?: string; code?: string; accountType?: string; isActive?: boolean; costCategory?: string | null },
 ): Promise<AccountDTO> {
   const existing = await findAccountById(prisma, id);
   if (!existing || existing.orgId !== orgId) {
@@ -291,7 +293,7 @@ export async function createExpenseMapping(
       buildingId: data.buildingId ?? null,
     });
     return mapExpenseMapping(mapping);
-  } catch (e: any) {
+  } catch (e) {
     if (e.code === "P2002") {
       throw new ConflictError(
         "An expense mapping for this expense type and building already exists",
@@ -367,10 +369,13 @@ const SWISS_DEFAULT_ACCOUNTS = [
   { name: "Bank Account",                code: "1020", accountType: "ASSET"     }, // Operating bank account
   { name: "Rent Receivables",            code: "1100", accountType: "ASSET"     }, // Rent receivables outstanding
   { name: "Prepaid Expenses",            code: "1180", accountType: "ASSET"     }, // Prepaid expenses / accruals
+  { name: "Fixed Assets",                code: "1500", accountType: "ASSET"     }, // Capitalized fixed assets (WS-D)
+  { name: "Accumulated Depreciation",    code: "1509", accountType: "ASSET"     }, // Contra-asset: accumulated depreciation (WS-D)
   // ── Liabilities (2xxx) ─────────────────────────────────────────────────────
   { name: "Accounts Payable",            code: "2000", accountType: "LIABILITY" }, // Accounts payable (contractors, suppliers)
   { name: "Mortgage — 1st Rank",         code: "2300", accountType: "LIABILITY" }, // 1st mortgage
   { name: "Mortgage — 2nd Rank",         code: "2350", accountType: "LIABILITY" }, // 2nd mortgage / land charge
+  { name: "Retained Earnings",           code: "2900", accountType: "LIABILITY" }, // Equity: carried-forward profit/loss (Report bénéfices-pertes) — year-end close target
   // ── Revenue (3xxx) ─────────────────────────────────────────────────────────
   { name: "Residential Rental Income",   code: "3200", accountType: "REVENUE"   }, // Residential rental income
   { name: "Commercial Rental Income",    code: "3210", accountType: "REVENUE"   }, // Commercial rental income
@@ -460,7 +465,7 @@ export async function seedSwissTaxonomy(
         buildingId: null,
       });
       mappingsCreated++;
-    } catch (e: any) {
+    } catch (e) {
       if (e.code !== "P2002") throw e; // race-condition safety
     }
   }

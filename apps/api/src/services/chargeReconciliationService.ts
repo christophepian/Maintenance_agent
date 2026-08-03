@@ -19,6 +19,8 @@ import { PrismaClient } from "@prisma/client";
 import * as reconRepo from "../repositories/chargeReconciliationRepository";
 import { issueInvoiceWorkflow } from "../workflows/issueInvoiceWorkflow";
 import type { WorkflowContext } from "../workflows/context";
+import { createCreditNote } from "./creditNoteService";
+import { apportionForLease } from "./ancillaryReconciliationService";
 
 // ─── Create Reconciliation ─────────────────────────────────────
 
@@ -59,6 +61,7 @@ export async function createReconciliation(
           description: true,
           amountChf: true,
           mode: true,
+          categoryId: true,
         },
       },
     },
@@ -119,6 +122,7 @@ export async function createReconciliation(
     description: item.description,
     chargeMode: item.mode as "ACOMPTE" | "FORFAIT",
     acomptePaidCents: acomptePaidMap.get(item.description) ?? 0,
+    categoryId: item.categoryId ?? null,
   }));
 
   if (lineItems.length === 0) {
@@ -131,6 +135,45 @@ export async function createReconciliation(
     fiscalYear,
     lineItems,
   });
+}
+
+// ─── Auto-fill actual costs from the building cost pool (Phase 3b) ──────
+
+/**
+ * Populate a DRAFT reconciliation's actual costs from a building cost pool
+ * period: each ACOMPTE line carrying a categoryId gets its actualCostCents set
+ * to this lease's apportioned share for that category. Lines whose key can't be
+ * auto-computed (e.g. CONSUMPTION) are left for manual entry. Also records the
+ * admin fee and links the period. Returns the updated reconciliation.
+ */
+export async function autoFillActualCostsFromPeriod(
+  prisma: PrismaClient,
+  reconciliationId: string,
+  billingPeriodId: string,
+  orgId: string,
+) {
+  const recon = await reconRepo.findById(prisma, reconciliationId, orgId);
+  if (!recon) throw new Error("Reconciliation not found");
+  if (recon.status !== "DRAFT") {
+    throw new Error(`Cannot auto-fill a ${recon.status} reconciliation — must be DRAFT`);
+  }
+
+  const apportionment = await apportionForLease(orgId, billingPeriodId, recon.leaseId);
+  const shareByCategory = new Map(
+    apportionment.lines
+      .filter((l) => l.actualShareCents != null)
+      .map((l) => [l.categoryId, l.actualShareCents as number]),
+  );
+
+  for (const line of recon.lineItems) {
+    if (line.chargeMode !== "ACOMPTE" || !line.categoryId) continue;
+    const share = shareByCategory.get(line.categoryId);
+    if (share != null) {
+      await reconRepo.updateLineActualCost(prisma, line.id, share);
+    }
+  }
+
+  return reconRepo.linkBillingPeriod(prisma, reconciliationId, billingPeriodId, apportionment.adminFeeCents);
 }
 
 // ─── Update Line ───────────────────────────────────────────────
@@ -244,6 +287,7 @@ export async function settleReconciliation(
 
   // Resolve issuer billing entity
   let issuerBillingEntityId: string | undefined;
+  // (resolution below is shared by both the debit-invoice and refund-credit-note paths)
   if (lease.unitId) {
     const unit = await prisma.unit.findUnique({
       where: { id: lease.unitId },
@@ -266,6 +310,20 @@ export async function settleReconciliation(
       select: { id: true },
     });
     issuerBillingEntityId = orgBillingEntity?.id;
+  }
+
+  // ── Refund path: tenant overpaid → issue a dedicated credit note (avoir) ──
+  if (!isDebit) {
+    const creditNote = await createCreditNote({
+      orgId,
+      leaseId: lease.id,
+      issuerBillingEntityId: issuerBillingEntityId ?? null,
+      recipientName: lease.tenantName,
+      amountCents: absBalance,
+      description,
+      lineItems: invoiceLineItems.map((li) => ({ description: li.description, amountCents: li.lineTotal })),
+    });
+    return reconRepo.settleReconciliationCreditNote(prisma, reconciliationId, creditNote.id);
   }
 
   // Due date = 30 days from now

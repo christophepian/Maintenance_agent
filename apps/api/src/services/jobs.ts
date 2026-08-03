@@ -186,6 +186,11 @@ export async function listJobs(
     status?: JobStatus;
     requestId?: string;
     view?: "summary" | "full";
+    // Optional pagination. Applied only when provided — omitting them preserves
+    // the historical "return all matching rows" behaviour that org-wide list
+    // pages (contractor/owner/manager job lists) still rely on.
+    limit?: number;
+    offset?: number;
   }
 ): Promise<{ data: JobDTO[] | JobSummaryDTO[]; total: number }> {
   const useSummary = filters?.view === "summary";
@@ -202,6 +207,8 @@ export async function listJobs(
       where,
       include: useSummary ? JOB_SUMMARY_INCLUDE : JOB_INCLUDE,
       orderBy: { createdAt: 'desc' },
+      ...(filters?.limit != null && { take: filters.limit }),
+      ...(filters?.offset != null && { skip: filters.offset }),
     }),
     prisma.job.count({ where }),
   ]);

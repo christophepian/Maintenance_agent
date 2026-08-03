@@ -1,0 +1,228 @@
+import {
+  mapCsvToAccountBalances,
+  mapCsvToInvoiceLines,
+  reconcileBalances,
+} from "../services/csvAccountingMapper";
+
+describe("reconcileBalances (approval gate)", () => {
+  const bal = (documentSection: string, balanceCents: number) => ({ documentSection, balanceCents });
+
+  it("PASS when section sums tie out to the stated totals", () => {
+    const balances = [bal("EXPENSE", 500000), bal("EXPENSE", 713400), bal("REVENUE", -1300000)];
+    const r = reconcileBalances(balances, { EXPENSE: 1213400, REVENUE: -1300000 });
+    expect(r.status).toBe("PASS");
+    expect(r.lines.every((l) => l.ok)).toBe(true);
+  });
+
+  it("FAIL when an extracted total is off (the 7'134 → 9 case)", () => {
+    // Gérance mis-read as 9 CHF instead of 7'134 → Charges sum short by 7'125.
+    const balances = [bal("EXPENSE", 500000), bal("EXPENSE", 900)];
+    const r = reconcileBalances(balances, { EXPENSE: 1213400 });
+    expect(r.status).toBe("FAIL");
+    const charges = r.lines.find((l) => l.scope === "Charges")!;
+    expect(charges.ok).toBe(false);
+    expect(charges.diffChf).toBeCloseTo(-7125, 2);
+  });
+
+  it("checks the Actif = Passif identity", () => {
+    const r = reconcileBalances([bal("ACTIF", 1000000), bal("PASSIF", 900000)], {});
+    expect(r.status).toBe("FAIL");
+    expect(r.lines.find((l) => l.scope.startsWith("Bilan"))!.ok).toBe(false);
+  });
+
+  it("UNVERIFIED when the document declared no totals to check against", () => {
+    const r = reconcileBalances([bal("EXPENSE", 500000)], null);
+    expect(r.status).toBe("UNVERIFIED");
+    expect(r.lines).toEqual([]);
+  });
+});
+
+describe("mapCsvToAccountBalances", () => {
+  it("maps rows and derives section + balanceType from the account code", () => {
+    const csv =
+      "accountCode,accountName,balanceChf\n" +
+      "1000,Caisse,1'234.50\n" + // ACTIF positive → DEBIT
+      "2000,Créanciers,5000\n" + // PASSIF positive → CREDIT
+      "3000,Produits,-200\n"; //   REVENUE negative → DEBIT
+    const { items, skipped } = mapCsvToAccountBalances(csv);
+    expect(skipped).toEqual([]);
+    expect(items).toEqual([
+      { rawAccountCode: "1000", rawAccountName: "Caisse", balanceChf: 1234.5, balanceType: "DEBIT", documentSection: "ACTIF" },
+      { rawAccountCode: "2000", rawAccountName: "Créanciers", balanceChf: 5000, balanceType: "CREDIT", documentSection: "PASSIF" },
+      { rawAccountCode: "3000", rawAccountName: "Produits", balanceChf: -200, balanceType: "DEBIT", documentSection: "REVENUE" },
+    ]);
+  });
+
+  it("honours an explicit documentSection column over the derived one", () => {
+    const csv = "accountCode,accountName,balanceChf,documentSection\n9999,Suspense,100,PASSIF";
+    const { items } = mapCsvToAccountBalances(csv);
+    expect(items[0].documentSection).toBe("PASSIF");
+    expect(items[0].balanceType).toBe("CREDIT"); // PASSIF positive → CREDIT
+  });
+
+  it("skips rows missing a code or an amount, with notes", () => {
+    const csv =
+      "accountCode,accountName,balanceChf\n" +
+      ",Orphan,100\n" + //     missing code
+      "4000,Charges,abc\n" + // unparseable amount
+      "4001,Charges OK,50\n";
+    const { items, skipped } = mapCsvToAccountBalances(csv);
+    expect(items.map((i) => i.rawAccountCode)).toEqual(["4001"]);
+    expect(skipped).toHaveLength(2);
+    expect(skipped[0]).toMatch(/missing account code/);
+    expect(skipped[1]).toMatch(/invalid balance/);
+  });
+
+  it("resolves French headers (Compte/Libellé/Solde) case/accent-insensitively", () => {
+    const csv = "Compte;Libellé;Solde\n1000;Caisse;1'234.50\n2000;Créanciers;5000";
+    const { items, skipped } = mapCsvToAccountBalances(csv);
+    expect(skipped).toEqual([]);
+    expect(items).toHaveLength(2);
+    expect(items[0]).toMatchObject({ rawAccountCode: "1000", rawAccountName: "Caisse", balanceChf: 1234.5, documentSection: "ACTIF" });
+    expect(items[1]).toMatchObject({ rawAccountCode: "2000", documentSection: "PASSIF" });
+  });
+
+  it("handles a trial balance with separate Débit / Crédit columns", () => {
+    const csv =
+      "Compte;Désignation;Débit;Crédit\n" +
+      "1000;Caisse;1234.50;\n" + //   asset in debit
+      "2000;Créanciers;;5000.00\n" + // liability in credit
+      "3000;Produits;;9000";
+    const { items, skipped } = mapCsvToAccountBalances(csv);
+    expect(skipped).toEqual([]);
+    expect(items[0]).toMatchObject({ rawAccountCode: "1000", balanceChf: 1234.5, balanceType: "DEBIT", documentSection: "ACTIF" });
+    expect(items[1]).toMatchObject({ rawAccountCode: "2000", balanceChf: 5000, balanceType: "CREDIT", documentSection: "PASSIF" });
+    expect(items[2]).toMatchObject({ rawAccountCode: "3000", balanceType: "CREDIT", documentSection: "REVENUE" });
+  });
+
+  it("reports a clear note when no recognizable columns are present", () => {
+    const { items, skipped } = mapCsvToAccountBalances("foo;bar\n1;2");
+    expect(items).toEqual([]);
+    expect(skipped[0]).toMatch(/No account-code column/);
+  });
+
+  it("handles a hierarchical export with a type column (imports only leaf accounts)", () => {
+    const csv =
+      "section\tgroupe\tsous_groupe\tcompte\tdesignation\tmontant_chf\ttype\n" +
+      "Produit\t300\t\t\tProduit des loyers\t\tgroupe\n" +
+      "Produit\t300\t3000\t\tLoyers pour tiers\t\tsous_groupe\n" +
+      "Produit\t300\t3000\t30000\tLoyer net\t162672\tcompte\n" +
+      "Produit\t300\t3000\t\tTotal Loyers\t162672\ttotal\n" +
+      "Produit\t300\t\t\tTotal Produit des loyers\t162672\ttotal\n" +
+      "Actif\t100\t1000\t10000\tCaisse\t5000\tcompte\n";
+    const { items, skipped } = mapCsvToAccountBalances(csv);
+    expect(skipped).toEqual([]); // groupe/sous_groupe/total rows skipped silently
+    expect(items).toHaveLength(2); // only the two type=compte rows
+    expect(items[0]).toMatchObject({
+      rawAccountCode: "30000",
+      rawAccountName: "Loyer net",
+      balanceChf: 162672,
+      documentSection: "REVENUE",
+      balanceType: "CREDIT",
+    });
+    expect(items[1]).toMatchObject({
+      rawAccountCode: "10000",
+      documentSection: "ACTIF",
+      balanceType: "DEBIT",
+    });
+  });
+
+  it("skips sous_detail/total_section rows and books the result line (real bilan)", () => {
+    const csv =
+      "section\tgroupe\tsous_groupe\tcompte\tdesignation\tmontant_chf\ttype\n" +
+      "Actifs\t100\t1020\t10200\tBanque\t12858.88\tcompte\n" +
+      "Actifs\t\t\t\tTotal Actifs\t-7807.67\ttotal_section\n" +
+      "Passifs\t200\t2000\t20000\tAvances loyer\t11120\tcompte\n" +
+      "Passifs\t200\t2000\t531100.01.0101.16\tFROISSE Marcel\t3200\tsous_detail\n" +
+      "Passifs\t200\t2000\t531100.01.0201.13\tBRICELET Nick\t3660\tsous_detail\n" +
+      "Passifs\t200\t2000\t\tTotal Avances loyer\t11120\ttotal\n" +
+      "Passifs\t290\t2900\t29000\tReport des bénéfices/pertes\t-27455.8\tcompte\n" +
+      "Passifs\t\t\t\tBénéfice\t114790.68\ttotal\n" +
+      "Passifs\t\t\t\tTotal Passifs\t-7807.67\ttotal_section\n";
+    const { items, skipped } = mapCsvToAccountBalances(csv);
+    expect(skipped).toEqual([]);
+
+    // leaf accounts + booked result; NO sous_detail double-count
+    expect(items.map((i) => i.rawAccountCode).sort()).toEqual(["10200", "20000", "29000", "2979"]);
+    expect(items.some((i) => i.rawAccountCode.startsWith("531100"))).toBe(false);
+
+    // the 20000 parent account keeps its full value (not the sub-detail split)
+    expect(items.find((i) => i.rawAccountCode === "20000")).toMatchObject({ balanceChf: 11120, balanceType: "CREDIT" });
+
+    // the year's result is booked into equity so the bilan can close
+    expect(items.find((i) => i.rawAccountCode === "2979")).toMatchObject({
+      rawAccountName: "Bénéfice",
+      balanceChf: 114790.68,
+      documentSection: "PASSIF",
+      balanceType: "CREDIT",
+    });
+  });
+
+  const BALANCED = (totalActifs: string) =>
+    "section\tcompte\tdesignation\tmontant_chf\ttype\n" +
+    "Actifs\t10200\tBanque\t100\tcompte\n" +
+    `Actifs\t\tTotal Actifs\t${totalActifs}\ttotal_section\n` +
+    "Passifs\t20000\tCréancier\t30\tcompte\n" +
+    "Passifs\t29000\tReport\t-50\tcompte\n" +
+    "Passifs\t\tBénéfice\t120\ttotal\n" +
+    "Passifs\t\tTotal Passifs\t100\ttotal_section\n";
+
+  it("reconciles extracted totals against the document's own section totals (balanced)", () => {
+    const { reconciliation } = mapCsvToAccountBalances(BALANCED("100"));
+    const byScope = Object.fromEntries((reconciliation ?? []).map((r) => [r.scope, r]));
+    expect(byScope["Actifs"]).toMatchObject({ computedChf: 100, statedChf: 100, ok: true });
+    expect(byScope["Passifs"]).toMatchObject({ computedChf: 100, statedChf: 100, ok: true });
+    expect(byScope["Bilan (Actif = Passif)"]).toMatchObject({ ok: true, diffChf: 0 });
+  });
+
+  it("flags a section whose extracted sum differs from the document's stated total", () => {
+    // Document claims Total Actifs = 200 but the leaf accounts only sum to 100.
+    const { reconciliation } = mapCsvToAccountBalances(BALANCED("200"));
+    const actifs = (reconciliation ?? []).find((r) => r.scope === "Actifs");
+    expect(actifs).toMatchObject({ computedChf: 100, statedChf: 200, diffChf: -100, ok: false });
+  });
+});
+
+describe("mapCsvToInvoiceLines", () => {
+  it("maps invoice rows with Swiss-formatted amounts in CHF", () => {
+    const csv =
+      "invoiceDate,vendorName,description,subtotalChf,vatChf,totalChf,currency,iban\n" +
+      "2026-03-01,Acme SA,Plumbing,1'000.00,77.00,1'077.00,CHF,CH93...\n";
+    const { items, skipped } = mapCsvToInvoiceLines(csv);
+    expect(skipped).toEqual([]);
+    expect(items[0]).toMatchObject({
+      vendorName: "Acme SA",
+      description: "Plumbing",
+      subtotal: 1000,
+      vatAmount: 77,
+      totalAmount: 1077,
+      currency: "CHF",
+      confidence: 1,
+    });
+  });
+
+  it("skips rows with no amount and blank rows", () => {
+    const csv =
+      "vendorName,totalChf,subtotalChf\n" +
+      "NoAmount Ltd,,\n" + // has vendor but no amount → skipped with note
+      ",,\n" + //            fully blank → silently skipped
+      "Good Ltd,42,\n";
+    const { items, skipped } = mapCsvToInvoiceLines(csv);
+    expect(items).toHaveLength(1);
+    expect(items[0].vendorName).toBe("Good Ltd");
+    expect(items[0].totalAmount).toBe(42);
+    expect(skipped).toHaveLength(1);
+    expect(skipped[0]).toMatch(/missing both totalChf and subtotalChf/);
+  });
+
+  it("returns nulls for omitted optional fields", () => {
+    const csv = "totalChf\n99.90";
+    const { items } = mapCsvToInvoiceLines(csv);
+    expect(items[0]).toMatchObject({
+      totalAmount: 99.9,
+      vendorName: null,
+      iban: null,
+      invoiceNumber: null,
+    });
+  });
+});

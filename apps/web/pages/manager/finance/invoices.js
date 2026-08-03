@@ -39,6 +39,7 @@ function invoiceFieldExtractor(inv, field) {
 
 const INCOMING_STATUS_TABS = [
   { key: "ALL" },
+  { key: "UNPAID", label: "Unpaid" },
   { key: "DRAFT" },
   { key: "ISSUED" },
   { key: "APPROVED" },
@@ -48,6 +49,7 @@ const INCOMING_STATUS_TABS = [
 
 const OUTGOING_STATUS_TABS = [
   { key: "ALL" },
+  { key: "UNPAID", label: "Unpaid" },
   { key: "DRAFT" },
   { key: "ISSUED" },
   { key: "APPROVED" },
@@ -559,6 +561,12 @@ export function InvoicesContent() {
   // Dispute modal state
   const [disputeInvoiceId, setDisputeInvoiceId] = useState(null);
 
+  // Context filter driven by URL params (reporting → invoices drill-down):
+  // filters the list to one vendor/account + period + building, shown as a
+  // dismissible banner. Consumed once from the URL, then stripped.
+  const [ctx, setCtx] = useState(null);
+  const ctxConsumed = useRef(false);
+
   // Upload & capture modals
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showCaptureModal, setShowCaptureModal] = useState(false);
@@ -610,8 +618,20 @@ export function InvoicesContent() {
       } else {
         params.set("direction", direction === "outgoing" ? "OUTGOING" : "INCOMING");
       }
-      if (statusFilter !== "ALL") params.set("status", statusFilter);
+      if (statusFilter === "UNPAID") {
+        params.set("statusIn", "ISSUED,APPROVED");
+      } else if (statusFilter !== "ALL") {
+        params.set("status", statusFilter);
+      }
       if (categoryFilter) params.set("expenseCategory", categoryFilter);
+      if (ctx) {
+        if (ctx.vendorContractorId) params.set("vendorContractorId", ctx.vendorContractorId);
+        if (ctx.issuerName) params.set("issuerName", ctx.issuerName);
+        if (ctx.accountId) params.set("accountId", ctx.accountId);
+        if (ctx.issueDateFrom) params.set("issueDateFrom", ctx.issueDateFrom);
+        if (ctx.issueDateTo) params.set("issueDateTo", ctx.issueDateTo);
+        if (ctx.buildingId) params.set("buildingId", ctx.buildingId);
+      }
       if (searchTerm.trim()) params.set("search", searchTerm.trim());
       params.set("sortField", toServerSortField(sortField));
       params.set("sortDir", sortDir);
@@ -625,7 +645,7 @@ export function InvoicesContent() {
     } finally {
       setLoading(false);
     }
-  }, [direction, statusFilter, categoryFilter, searchTerm, sortField, sortDir, offset]);
+  }, [direction, statusFilter, categoryFilter, searchTerm, sortField, sortDir, offset, ctx]);
 
   // Pending-review tab count — independent of the active page/filters.
   const loadPendingCount = useCallback(async () => {
@@ -651,7 +671,30 @@ export function InvoicesContent() {
   // Any filter / sort / search change returns to the first page.
   useEffect(() => {
     setOffset(0);
-  }, [direction, statusFilter, categoryFilter, searchTerm, sortField, sortDir]);
+  }, [direction, statusFilter, categoryFilter, searchTerm, sortField, sortDir, ctx]);
+
+  // Consume the reporting drill-down context from the URL once, then strip it.
+  useEffect(() => {
+    if (!router.isReady || ctxConsumed.current) return;
+    const q = router.query;
+    if (!q.issueDateFrom && !q.vendorContractorId && !q.issuerName && !q.accountId) return;
+    ctxConsumed.current = true;
+    setCtx({
+      vendorContractorId: q.vendorContractorId || null,
+      issuerName: q.issuerName || null,
+      accountId: q.accountId || null,
+      issueDateFrom: q.issueDateFrom || null,
+      issueDateTo: q.issueDateTo || null,
+      buildingId: q.buildingId || null,
+      ctxVendor: q.ctxVendor || null,
+      ctxPeriod: q.ctxPeriod || null,
+    });
+    if (q.direction === "incoming") setDirection("incoming");
+    // Strip the drill-down params, keeping the tab selection.
+    const rest = { ...q };
+    ["issueDateFrom", "issueDateTo", "vendorContractorId", "issuerName", "accountId", "buildingId", "ctxVendor", "ctxPeriod", "direction"].forEach((k) => delete rest[k]);
+    router.replace({ pathname: router.pathname, query: rest }, undefined, { shallow: true });
+  }, [router.isReady, router.query]);
 
   // Deep-link: auto-open invoice overlay from ?invoiceId= query param.
   // Use a ref so this only fires once per mount — hot-reloads re-mount the
@@ -680,6 +723,8 @@ export function InvoicesContent() {
     statusFilter !== "ALL",
     !!categoryFilter,
   ].filter(Boolean).length;
+
+  const isUnpaidFilter = statusFilter === "UNPAID";
 
   /* ─── Actions ─── */
 
@@ -734,34 +779,44 @@ export function InvoicesContent() {
       });
     }
 
-    // Approve — for ISSUED invoices
-    if (inv.status === "ISSUED") {
-      actions.push({
-        label: "✓ Approve",
-        className: "text-green-700 font-medium",
-        disabled: actionLoading === inv.id,
-        onClick: () => invoiceAction(inv.id, "approve"),
-      });
-    }
+    const isOutgoing = inv.direction === "OUTGOING";
 
-    // Mark Paid — for APPROVED invoices
-    if (inv.status === "APPROVED") {
-      actions.push({
-        label: "✓ Mark Paid",
-        className: "text-green-700 font-medium",
-        disabled: actionLoading === inv.id,
-        onClick: () => invoiceAction(inv.id, "mark-paid"),
-      });
-    }
-
-    // Dispute — for ISSUED or APPROVED
-    if (["ISSUED", "APPROVED"].includes(inv.status)) {
-      actions.push({
-        label: "✗ Dispute",
-        className: "text-red-600 font-medium",
-        disabled: actionLoading === inv.id,
-        onClick: () => setDisputeInvoiceId(inv.id),
-      });
+    if (isOutgoing) {
+      // Outgoing (rent) invoices: no approval or dispute — just mark paid when money arrives
+      if (["ISSUED", "APPROVED"].includes(inv.status)) {
+        actions.push({
+          label: "✓ Mark Paid",
+          className: "text-green-700 font-medium",
+          disabled: actionLoading === inv.id,
+          onClick: () => invoiceAction(inv.id, "mark-paid"),
+        });
+      }
+    } else {
+      // Incoming (cost/contractor) invoices: approve → mark paid, with dispute option
+      if (inv.status === "ISSUED") {
+        actions.push({
+          label: "✓ Approve",
+          className: "text-green-700 font-medium",
+          disabled: actionLoading === inv.id,
+          onClick: () => invoiceAction(inv.id, "approve"),
+        });
+      }
+      if (inv.status === "APPROVED") {
+        actions.push({
+          label: "✓ Mark Paid",
+          className: "text-green-700 font-medium",
+          disabled: actionLoading === inv.id,
+          onClick: () => invoiceAction(inv.id, "mark-paid"),
+        });
+      }
+      if (["ISSUED", "APPROVED"].includes(inv.status)) {
+        actions.push({
+          label: "✗ Dispute",
+          className: "text-red-600 font-medium",
+          disabled: actionLoading === inv.id,
+          onClick: () => setDisputeInvoiceId(inv.id),
+        });
+      }
     }
 
     return actions;
@@ -804,7 +859,7 @@ export function InvoicesContent() {
       defaultVisible: true,
       render: (inv) =>
         inv.buildingName || inv.unitNumber
-          ? <span>{inv.buildingName || "\u2014"}{inv.unitNumber ? <span className="text-foreground-dim"> \u00b7 {inv.unitNumber}</span> : null}</span>
+          ? <span>{inv.buildingName || "\u2014"}{inv.unitNumber ? <span className="text-foreground-dim"> · {inv.unitNumber}</span> : null}</span>
           : "\u2014",
     },
     {
@@ -841,7 +896,7 @@ export function InvoicesContent() {
         const isRecurring = !!(inv.billingScheduleId || inv.contractorBillingScheduleId);
         return isRecurring
           ? <span className="inline-flex items-center rounded-full bg-indigo-50 text-indigo-700 px-2 py-0.5 text-xs font-semibold">{t("manager:financeInvoices.text.recurring")}</span>
-          : <span className="text-foreground-dim text-xs">\u2014</span>;
+          : <span className="text-foreground-dim text-xs">—</span>;
       },
     },
     {
@@ -852,7 +907,9 @@ export function InvoicesContent() {
       render: (inv) =>
         inv.expenseCategory
           ? <span className="text-xs text-muted-text">{inv.expenseCategory.charAt(0) + inv.expenseCategory.slice(1).toLowerCase()}</span>
-          : <span className="text-foreground-dim text-xs">\u2014</span>,
+          : inv.description
+            ? <span className="text-xs text-muted-text block max-w-[220px] truncate" title={inv.description}>{inv.description}</span>
+            : <span className="text-foreground-dim text-xs">—</span>,
     },
     {
       id: "actions",
@@ -871,6 +928,14 @@ export function InvoicesContent() {
         <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 mb-4 flex items-center justify-between">
           <span className="text-sm text-red-700"><strong>{t("manager:financeInvoices.text.error")}</strong> {error}</span>
           <button onClick={() => setError("")} className="text-xs text-red-500 hover:text-red-700 ml-4">{t("manager:financeInvoices.text.dismiss")}</button>
+        </div>
+      )}
+
+      {ctx && (
+        <div className="flex items-center gap-2 rounded-xl border border-info-ring bg-info-light px-3 py-2 mb-3">
+          <span className="text-sm text-info-text">{t("manager:financeInvoices.contextFilter.label")}</span>
+          <span className="text-sm font-semibold text-info-text truncate">{[ctx.ctxVendor, ctx.ctxPeriod].filter(Boolean).join(" · ")}</span>
+          <button onClick={() => setCtx(null)} className="ml-auto shrink-0 text-xs font-medium text-info-text underline hover:opacity-80">{t("manager:financeInvoices.contextFilter.clear")}</button>
         </div>
       )}
 
@@ -981,11 +1046,11 @@ export function InvoicesContent() {
                   className={cn(
                     "rounded-lg px-3 py-1.5 text-sm font-medium border transition-colors",
                     statusFilter === key
-                      ? "bg-brand text-white border-brand"
+                      ? key === "UNPAID" ? "bg-amber-500 text-white border-amber-500" : "bg-brand text-white border-brand"
                       : "bg-surface text-muted-text border-surface-border hover:bg-surface-subtle"
                   )}
                 >
-                  {label}
+                  {label ?? key}
                 </button>
               ))}
             </div>
@@ -1033,7 +1098,7 @@ export function InvoicesContent() {
       ) : (
         <>
           {/* Mobile: clean card list (no Panel wrapper) */}
-          <div className="sm:hidden overflow-hidden rounded-lg border border-table-border divide-y divide-table-divider">
+          <div className="sm:hidden overflow-hidden rounded-lg border border-surface-border divide-y divide-surface-divider">
             {invoices.map((inv) => (
               <div
                 key={inv.id}

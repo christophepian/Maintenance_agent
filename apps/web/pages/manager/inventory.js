@@ -1,11 +1,13 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import PackageOnboardingPanel from "../../components/PackageOnboardingPanel";
 import { useRouter } from "next/router";
 import AppShell from "../../components/AppShell";
 import PageShell from "../../components/layout/PageShell";
 import PageHeader from "../../components/layout/PageHeader";
 import PageContent from "../../components/layout/PageContent";
 import ConfigurableTable from "../../components/ConfigurableTable";
-import { useTableSort, useLocalSort, clientSort } from "../../lib/tableUtils";
+import { useLocalSort, clientSort } from "../../lib/tableUtils";
+import { FilterToggle, FilterPanelBody, FilterSection, FilterSectionClear, SortToggle, SortPanelBody, SortRow } from "../../components/ui/FilterPanel";
 import SortableHeader from "../../components/SortableHeader";
 import AssetCatalogue from "../../components/AssetCatalogue";
 import Link from "next/link";
@@ -46,14 +48,14 @@ function buildBuildingColumns(t) {
     label: t("manager:inventory.col.address"),
     sortable: true,
     defaultVisible: true,
-    render: (b) => <span className="text-muted-text">{b.address || "\u2014"}</span>,
+    render: (b) => <span className="text-muted-text">{b.address || "—"}</span>,
   },
   {
     id: "canton",
     label: t("manager:inventory.col.canton"),
     sortable: true,
     defaultVisible: true,
-    render: (b) => <span className="text-muted-text">{b.canton || "\u2014"}</span>,
+    render: (b) => <span className="text-muted-text">{b.canton || "—"}</span>,
   },
   {
     id: "id",
@@ -66,7 +68,7 @@ function buildBuildingColumns(t) {
     label: t("manager:inventory.col.units"),
     sortable: true,
     defaultVisible: false,
-    render: (b) => <span className="text-muted-text">{b._count?.units ?? b.unitCount ?? "\u2014"}</span>,
+    render: (b) => <span className="text-muted-text">{b._count?.units ?? b.unitCount ?? "—"}</span>,
   },
   {
     id: "health",
@@ -74,8 +76,8 @@ function buildBuildingColumns(t) {
     defaultVisible: true,
     render: (b) => {
       const h = b._financial?.health;
-      if (!h) return <span className="text-foreground-dim">\u2014</span>;
-      const dot = { green: "bg-green-500 ring-green-200", amber: "bg-amber-500 ring-amber-200", red: "bg-red-500 ring-red-200" }[h] ?? "bg-slate-400 ring-slate-200";
+      if (!h) return <span className="text-foreground-dim">—</span>;
+      const dot = { green: "bg-green-500 ring-green-200", amber: "bg-amber-500 ring-amber-200", red: "bg-red-500 ring-red-200" }[h] ?? "bg-foreground-dim ring-slate-200";
       return (
         <span className={cn("inline-block h-2.5 w-2.5 rounded-full ring-2", dot)}>
           <span className="sr-only">{h}</span>
@@ -89,7 +91,7 @@ function buildBuildingColumns(t) {
     defaultVisible: true,
     render: (b) => {
       const n = b._financial?.netIncomeCents;
-      if (n == null) return <span className="text-foreground-dim">\u2014</span>;
+      if (n == null) return <span className="text-foreground-dim">—</span>;
       return <span className={cn("text-sm font-medium tabular-nums", n >= 0 ? "text-green-700" : "text-red-600")}>{formatChfCents(n)}</span>;
     },
   },
@@ -99,7 +101,7 @@ function buildBuildingColumns(t) {
     defaultVisible: true,
     render: (b) => {
       const r = b._financial?.collectionRate;
-      if (r == null) return <span className="text-foreground-dim">\u2014</span>;
+      if (r == null) return <span className="text-foreground-dim">—</span>;
       return <span className={cn("text-sm tabular-nums", r >= 0.95 ? "text-green-700" : r >= 0.8 ? "text-amber-700" : "text-red-600")}>{formatPercent(r)}</span>;
     },
   },
@@ -120,14 +122,14 @@ function buildAssetModelColumns(t) {
     label: t("manager:inventory.col.category"),
     sortable: true,
     defaultVisible: true,
-    render: (m) => <span className="text-muted-text">{m.category || "\u2014"}</span>,
+    render: (m) => <span className="text-muted-text">{m.category || "—"}</span>,
   },
   {
     id: "manufacturer",
     label: t("manager:inventory.col.manufacturer"),
     sortable: true,
     defaultVisible: true,
-    render: (m) => <span className="text-muted-text">{m.manufacturer || "\u2014"}</span>,
+    render: (m) => <span className="text-muted-text">{m.manufacturer || "—"}</span>,
   },
   {
     id: "scope",
@@ -140,13 +142,13 @@ function buildAssetModelColumns(t) {
     id: "usefulLifeMonths",
     label: t("manager:inventory.col.usefulLife"),
     defaultVisible: false,
-    render: (m) => <span className="text-muted-text">{m.usefulLifeMonths ? `${Math.round(m.usefulLifeMonths / 12)}y` : "\u2014"}</span>,
+    render: (m) => <span className="text-muted-text">{m.usefulLifeMonths ? `${Math.round(m.usefulLifeMonths / 12)}y` : "—"}</span>,
   },
   {
     id: "replacementCostChf",
     label: t("manager:inventory.col.replaceCost"),
     defaultVisible: false,
-    render: (m) => <span className="text-muted-text">{typeof m.replacementCostChf === "number" ? `CHF ${m.replacementCostChf.toLocaleString()}` : "\u2014"}</span>,
+    render: (m) => <span className="text-muted-text">{typeof m.replacementCostChf === "number" ? `CHF ${m.replacementCostChf.toLocaleString()}` : "—"}</span>,
   },
 ];
 }
@@ -307,6 +309,9 @@ export default function ManagerInventoryPage() {
   const [buildingCantonFilter, setBuildingCantonFilter] = useState("");
   const [buildingFilterOpen, setBuildingFilterOpen] = useState(false);
   const [buildingFormVisible, setBuildingFormVisible] = useState(false);
+  const [showImportPanel, setShowImportPanel] = useState(false);
+  const [addMenuOpen, setAddMenuOpen] = useState(false);
+  const addMenuRef = useRef(null);
   const [buildingAddress, setBuildingAddress] = useState("");
   const [buildingCityCode, setBuildingCityCode] = useState("");
   const [buildingCity, setBuildingCity] = useState("");
@@ -346,7 +351,32 @@ export default function ManagerInventoryPage() {
     }
   }
 
-  const { sortField, sortDir, handleSort } = useTableSort(router, INVENTORY_SORT_FIELDS, { defaultField: "name", defaultDir: "asc" });
+  useEffect(() => {
+    if (!addMenuOpen) return;
+    const onDown = (e) => { if (addMenuRef.current && !addMenuRef.current.contains(e.target)) setAddMenuOpen(false); };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [addMenuOpen]);
+
+  function openCreate() {
+    setBuildingFormVisible(true);
+    setShowImportPanel(false);
+    setAddMenuOpen(false);
+  }
+  function openImport() {
+    setShowImportPanel(true);
+    setBuildingFormVisible(false);
+    setAddMenuOpen(false);
+  }
+
+  const [sortField, setSortField] = useState("name");
+  const [sortDir, setSortDir] = useState("asc");
+  const [sortOpen, setSortOpen] = useState(false);
+  const handleSort = useCallback((field, dir) => {
+    setSortField(field);
+    setSortDir(dir !== undefined ? dir : (field === sortField ? (sortDir === "asc" ? "desc" : "asc") : "asc"));
+  }, [sortField, sortDir]);
+  const sortActive = sortField !== "name";
   const sortedBuildings = useMemo(() => {
     const sorted = clientSort(buildings, sortField, sortDir, inventoryFieldExtractor);
     let filtered = sorted;
@@ -406,6 +436,12 @@ export default function ManagerInventoryPage() {
           {/* Buildings tab */}
           <div className={activeTab === 0 ? "tab-panel-active" : "tab-panel"}>
             <div className="pt-1 pb-2 flex flex-col gap-4">
+              {showImportPanel && (
+                <PackageOnboardingPanel
+                  onClose={() => setShowImportPanel(false)}
+                  onCreated={(id) => router.push(`/admin-inventory/buildings/${id}?from=/manager/inventory`)}
+                />
+              )}
               {buildingFormVisible && (
                 <form onSubmit={onCreateBuilding} className="rounded-xl border border-brand bg-brand-light/30 p-4 grid gap-4">
                 <div className="grid grid-cols-2 gap-4">
@@ -432,89 +468,24 @@ export default function ManagerInventoryPage() {
                 </div>
               </form>
               )}
-              <div className="flex items-center gap-2">
-                <input
-                  type="search"
-                  placeholder={t("manager:inventory.placeholder.searchBuildings")}
-                  value={buildingSearch}
-                  onChange={(e) => setBuildingSearch(e.target.value)}
-                  className="filter-input flex-1 min-w-0 mb-0"
-                />
-                {/* Filter dropdown */}
-                <div className="relative shrink-0">
+              <div className="flex items-center justify-end">
+                {/* Add / Import dropdown */}
+                <div className="relative" ref={addMenuRef}>
                   <button
                     type="button"
-                    aria-label={t("manager:inventory.ariaLabel.filterBuildings")}
-                    onClick={() => setBuildingFilterOpen((v) => !v)}
-                    className={cn(
-                      "flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
-                      buildingCantonFilter
-                        ? "border-brand bg-brand-light text-brand"
-                        : "border-surface-border bg-surface text-muted-text hover:bg-surface-subtle"
-                    )}
+                    className="flex shrink-0 items-center gap-1.5 rounded-lg border border-brand bg-brand px-3 py-2 text-sm font-medium text-white hover:bg-brand-dark transition-colors"
+                    onClick={() => { if (buildingFormVisible || showImportPanel) { setBuildingFormVisible(false); setShowImportPanel(false); } else { setAddMenuOpen((v) => !v); } }}
+                    aria-expanded={addMenuOpen}
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4" aria-hidden="true">
-                      <path fillRule="evenodd" d="M2.628 1.601C5.028 1.206 7.49 1 10 1s4.973.206 7.372.601a.75.75 0 0 1 .628.74v2.288a2.25 2.25 0 0 1-.659 1.59l-4.682 4.683a2.25 2.25 0 0 0-.659 1.59v3.037c0 .684-.31 1.33-.844 1.757l-1.937 1.55A.75.75 0 0 1 8 18.25v-5.757a2.25 2.25 0 0 0-.659-1.591L2.659 6.22A2.25 2.25 0 0 1 2 4.629V2.34a.75.75 0 0 1 .628-.74Z" clipRule="evenodd" />
-                    </svg>
-                    <span className="hidden sm:inline">{t("manager:inventory.text.filter")}</span>
-                    {buildingCantonFilter && <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-brand text-white text-xs font-bold leading-none">1</span>}
+                    {buildingFormVisible || showImportPanel ? t("manager:inventory.text.cancel") : `+ ${t("manager:inventory.add.button")} ▾`}
                   </button>
-                {buildingFilterOpen && (
-                    <>
-                    <div className="fixed inset-0 z-10" aria-hidden="true" onClick={() => setBuildingFilterOpen(false)} />
-                    <div className="absolute right-0 top-full mt-1.5 z-20 w-52 rounded-xl border border-surface-border bg-surface shadow-lg p-3 space-y-2">
-                      <p className="text-xs font-semibold uppercase tracking-wider text-foreground-dim">{t("manager:inventory.text.canton")}</p>
-                      <select
-                        className="filter-input w-full"
-                        value={buildingCantonFilter}
-                        onChange={(e) => setBuildingCantonFilter(e.target.value)}
-                        aria-label={t("manager:inventory.ariaLabel.filterByCanton")}
-                      >
-                        <option value="">{t("manager:inventory.text.allCantons")}</option>
-                        {[...new Set(buildings.map((b) => b.canton).filter(Boolean))].sort().map((c) => (
-                          <option key={c} value={c}>{c}</option>
-                        ))}
-                      </select>
-                      {buildingCantonFilter && (
-                        <button
-                          type="button"
-                          onClick={() => { setBuildingCantonFilter(""); setBuildingFilterOpen(false); }}
-                          className="w-full text-xs text-muted hover:text-red-600 transition-colors"
-                        >
-                          Clear filter
-                        </button>
-                      )}
+                  {addMenuOpen && !buildingFormVisible && !showImportPanel && (
+                    <div className="absolute right-0 top-full z-30 mt-1.5 w-48 overflow-hidden rounded-lg border border-surface-border bg-surface shadow-lg">
+                      <button type="button" className="block w-full px-3 py-2.5 text-left text-sm text-foreground hover:bg-surface-hover" onClick={openCreate}>{t("manager:inventory.add.createNew")}</button>
+                      <button type="button" className="block w-full border-t border-surface-border px-3 py-2.5 text-left text-sm text-foreground hover:bg-surface-hover" onClick={openImport}>{t("manager:inventory.add.import")}</button>
                     </div>
-                    </>
                   )}
                 </div>
-                {/* Sort button — cycles: name → unitCount → canton */}
-                <button
-                  type="button"
-                  aria-label={t("manager:inventory.ariaLabel.sortBuildings")}
-                  onClick={() => {
-                    const cycle = ["name", "unitCount", "canton"];
-                    const next = cycle[(cycle.indexOf(sortField) + 1) % cycle.length];
-                    handleSort(next);
-                  }}
-                  className="flex shrink-0 items-center gap-1.5 rounded-lg border border-surface-border bg-surface px-3 py-2 text-sm font-medium text-muted-text hover:bg-surface-subtle transition-colors"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4" aria-hidden="true">
-                    <path fillRule="evenodd" d="M2 3.75A.75.75 0 0 1 2.75 3h11.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 3.75ZM2 7.5a.75.75 0 0 1 .75-.75h7.508a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 7.5ZM14 7a.75.75 0 0 1 .75.75v6.59l1.95-2.1a.75.75 0 1 1 1.1 1.02l-3.25 3.5a.75.75 0 0 1-1.1 0l-3.25-3.5a.75.75 0 1 1 1.1-1.02l1.95 2.1V7.75A.75.75 0 0 1 14 7ZM2 11.25a.75.75 0 0 1 .75-.75h4.562a.75.75 0 0 1 0 1.5H2.75a.75.75 0 0 1-.75-.75Z" clipRule="evenodd" />
-                  </svg>
-                  <span className="hidden sm:inline capitalize">{sortField === "unitCount" ? "Units" : sortField === "canton" ? "Canton" : "Name"}</span>
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className={cn("w-3 h-3 transition-transform", sortDir === "desc" && "rotate-180")} aria-hidden="true">
-                    <path fillRule="evenodd" d="M8 2a.75.75 0 0 1 .75.75v8.69l1.22-1.22a.75.75 0 1 1 1.06 1.06l-2.5 2.5a.75.75 0 0 1-1.06 0l-2.5-2.5a.75.75 0 0 1 1.06-1.06l1.22 1.22V2.75A.75.75 0 0 1 8 2Z" clipRule="evenodd" />
-                  </svg>
-                </button>
-                {/* Add building button */}
-                <button
-                  type="button"
-                  className="flex shrink-0 items-center gap-1.5 rounded-lg border border-brand bg-brand px-3 py-2 text-sm font-medium text-white hover:bg-brand-dark transition-colors"
-                  onClick={() => setBuildingFormVisible((v) => !v)}
-                >
-                  {buildingFormVisible ? "Cancel" : "+ Add"}
-                </button>
               </div>
             </div>
             {loading ? (
@@ -529,6 +500,50 @@ export default function ManagerInventoryPage() {
                 columns={buildingColumns}
                 data={sortedBuildings}
                 rowKey={(b) => b.id}
+                toolbarSlot={
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <input
+                      type="search"
+                      placeholder={t("manager:inventory.placeholder.searchBuildings")}
+                      value={buildingSearch}
+                      onChange={(e) => setBuildingSearch(e.target.value)}
+                      className="filter-input flex-1 min-w-0 mb-0"
+                    />
+                    <FilterToggle open={buildingFilterOpen} onToggle={() => setBuildingFilterOpen((v) => !v)} activeCount={buildingCantonFilter ? 1 : 0} />
+                    <SortToggle open={sortOpen} onToggle={() => setSortOpen((v) => !v)} active={sortActive} />
+                  </div>
+                }
+                toolbarPanel={
+                  <>
+                    {buildingFilterOpen && (
+                      <FilterPanelBody>
+                        <FilterSection title={t("manager:inventory.text.canton")} first>
+                          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                            <select
+                              className="filter-input w-full"
+                              value={buildingCantonFilter}
+                              onChange={(e) => setBuildingCantonFilter(e.target.value)}
+                              aria-label={t("manager:inventory.ariaLabel.filterByCanton")}
+                            >
+                              <option value="">{t("manager:inventory.text.allCantons")}</option>
+                              {[...new Set(buildings.map((b) => b.canton).filter(Boolean))].sort().map((c) => (
+                                <option key={c} value={c}>{c}</option>
+                              ))}
+                            </select>
+                          </div>
+                        </FilterSection>
+                        <FilterSectionClear hasFilter={!!buildingCantonFilter} onClear={() => { setBuildingCantonFilter(""); setBuildingFilterOpen(false); }} />
+                      </FilterPanelBody>
+                    )}
+                    {sortOpen && (
+                      <SortPanelBody>
+                        <SortRow active={sortField === "name"} dir={sortField === "name" ? sortDir : "asc"} label="Name" ascLabel="A → Z" descLabel="Z → A" onSelect={(dir) => handleSort("name", dir)} />
+                        <SortRow active={sortField === "unitCount"} dir={sortField === "unitCount" ? sortDir : "desc"} label="Units" descLabel="Most first" ascLabel="Fewest first" onSelect={(dir) => handleSort("unitCount", dir)} />
+                        <SortRow active={sortField === "canton"} dir={sortField === "canton" ? sortDir : "asc"} label="Canton" ascLabel="A → Z" descLabel="Z → A" onSelect={(dir) => handleSort("canton", dir)} />
+                      </SortPanelBody>
+                    )}
+                  </>
+                }
                 sortField={sortField}
                 sortDir={sortDir}
                 onSort={handleSort}
@@ -536,7 +551,7 @@ export default function ManagerInventoryPage() {
                 emptyState={<p className="text-sm text-muted">{t("manager:inventory.text.noBuildingsFound")}</p>}
                 mobileCard={(b) => {
                   const h = b._financial?.health;
-                  const dot = h ? ({ green: "bg-green-500 ring-green-200", amber: "bg-amber-500 ring-amber-200", red: "bg-red-500 ring-red-200" }[h] ?? "bg-slate-400 ring-slate-200") : null;
+                  const dot = h ? ({ green: "bg-green-500 ring-green-200", amber: "bg-amber-500 ring-amber-200", red: "bg-red-500 ring-red-200" }[h] ?? "bg-foreground-dim ring-slate-200") : null;
                   const n = b._financial?.netIncomeCents;
                   const r = b._financial?.collectionRate;
                   return (

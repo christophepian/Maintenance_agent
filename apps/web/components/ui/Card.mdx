@@ -1,0 +1,54 @@
+import { Meta, Title, Canvas } from "@storybook/addon-docs/blocks";
+import * as CardStories from "./Card.stories";
+
+<Meta of={CardStories} />
+
+<Title />
+
+The base surface container — a rounded, bordered panel with a soft shadow. Compose
+it with `Card.Header` and `Card.Body` for a titled panel.
+
+```jsx
+import Card from "@/components/ui/Card";
+
+<Card>
+  <Card.Header title="Building overview" actions={<Button size="sm">Edit</Button>} />
+  <Card.Body>…</Card.Body>
+</Card>
+```
+
+## Anatomy
+
+| Part | Styling | Notes |
+|---|---|---|
+| `Card` | `rounded-2xl border-surface-border bg-surface-raised shadow-sm` | Spreads props → accepts `style`, `onClick`, etc. |
+| `Card.Header` | `border-b border-surface-hover px-4 py-3` | `title` + optional `actions` slot; stacks to a row at `sm` |
+| `Card.Body` | `px-4 py-4` | Default padding, overridable via `className` |
+
+<Canvas of={CardStories.WithHeaderAndActions} />
+
+## Basic
+
+<Canvas of={CardStories.Basic} />
+
+## In a grid
+
+<Canvas of={CardStories.Grid} />
+
+## When to use
+
+- ✅ **Use a Card** to group related content into a surface — building summaries,
+  form sections, KPI clusters.
+- Tables are the exception: **don't wrap a data table in a Card** — tables
+  self-border via `.data-table`. See [DataTable](?path=/docs/ui-datatable--docs).
+- For a metric tile specifically, use [KpiCard](?path=/docs/ui-kpicard--docs).
+
+## Do / Don't
+
+- ✅ **Do** put actions in the header's `actions` slot, not floating in the body.
+- ✅ **Do** rely on the surface tokens — the card themes for dark mode automatically.
+- ⛔ **Don't** hand-roll `rounded-2xl border bg-white shadow` on a `<div>`; use
+  `Card` so surfaces stay consistent.
+
+> There's also a `.card` global class (`@apply … p-5 mb-4`) used in a few places —
+> the `Card` component is the preferred, composable version.
