@@ -36,7 +36,9 @@ const INVESTOR_DOCS = ["/docs/pitchdeck.html"];
 // All other /docs pages require ADMIN
 const isDocsPath = (path) => path.startsWith("/docs/");
 const isInvestorDoc = (path) => INVESTOR_DOCS.some((p) => path === p || path.startsWith(p));
-const isAdminPath = (path) => path.startsWith("/admin");
+// Only the real /admin area (admin/users) is ADMIN-gated — NOT /admin-inventory,
+// which is the shared buildings/units inventory that managers AND owners use.
+const isAdminPath = (path) => path === "/admin" || path.startsWith("/admin/");
 
 export async function middleware(request) {
   const { pathname } = request.nextUrl;
