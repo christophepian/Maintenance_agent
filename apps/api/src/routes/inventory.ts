@@ -241,7 +241,7 @@ export function registerInventoryRoutes(router: Router) {
     }
   }));
 
-  router.post("/buildings", async ({ req, res, orgId }) => {
+  router.post("/buildings", async ({ req, res, orgId, prisma }) => {
     // OWNER allowed too: self-service onboarding lets an owner create their first building.
     if (!requireAnyRole(req, res, ["MANAGER", "OWNER"])) return;
     try {
@@ -260,6 +260,19 @@ export function registerInventoryRoutes(router: Router) {
           created = await createBuilding(orgId, parsed.data);
         } else {
           throw fkErr;
+        }
+      }
+      // When an OWNER creates the building (self-service onboarding), link them as an
+      // owner so it appears on their owner surface (which filters by BuildingOwner).
+      // Uses the same id the owner-scoping filter reads (ownerId || userId). Non-fatal.
+      if (user?.role === "OWNER") {
+        const ownerUserId = user.ownerId || user.userId;
+        if (ownerUserId) {
+          try {
+            await inventoryRepo.addBuildingOwner(prisma, created.id, ownerUserId);
+          } catch (e) {
+            console.error("[POST /buildings] owner auto-link failed (non-fatal):", String(e));
+          }
         }
       }
       sendJson(res, 201, { data: created });
