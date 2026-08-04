@@ -379,7 +379,7 @@ function ProfileStep({ profile, onChange, onNext, onBack }) {
  * staged and ready to commit by the time they finish. This is the "seamless"
  * mechanic: they never sit and wait for OCR/extraction.
  */
-function PropertyStep({ prop, onChange, onImportFiles, importStatus, onNext, onBack }) {
+function PropertyStep({ prop, onChange, onImportFiles, onRemoveFile, importStatus, onNext, onBack }) {
   const { t } = useTranslation("onboarding");
   const set = (k, v) => onChange({ ...prop, [k]: v });
   const canContinue =
@@ -477,7 +477,29 @@ function PropertyStep({ prop, onChange, onImportFiles, importStatus, onNext, onB
                 {t("property.dropHint")}
               </p>
             )}
+            <p className="text-xs text-foreground-dim mt-1">{t("property.multiYearHint")}</p>
           </label>
+          {/* One PDF per year — each is imported into the same building. */}
+          {prop.files.length > 0 && (
+            <ul className="mt-3 space-y-1.5">
+              {prop.files.map((f, i) => (
+                <li key={f.name + i} className="flex items-center gap-2 rounded-lg border border-surface-border bg-surface-subtle px-3 py-2 text-xs">
+                  <svg className="w-3.5 h-3.5 shrink-0 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                  </svg>
+                  <span className="truncate text-foreground">{f.name}</span>
+                  <button
+                    type="button"
+                    onClick={() => onRemoveFile(i)}
+                    aria-label={t("property.removeFile")}
+                    className="ml-auto shrink-0 text-muted hover:text-destructive-text"
+                  >
+                    ✕
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
           {importStatus && (
             <p className="text-xs text-muted mt-2">{importStatus}</p>
           )}
@@ -517,22 +539,37 @@ function RiskStep({ questions, answers, onAnswer, importState, busy, onSubmit, o
         {t("risk.subtitle")}
       </p>
 
-      {/* Background import indicator — full progress while analyzing, compact once done */}
-      {importState && importState.active && (
-        importState.ready ? (
-          <div className="flex items-center gap-2 rounded-lg px-3 py-2 mb-5 text-xs border border-success-ring bg-success-light text-success">
-            {"✓ "}{t("risk.importReady")}
-          </div>
-        ) : importState.error ? (
+      {/* Background import indicator — per-year progress while analyzing, summary once done */}
+      {importState && importState.active && (() => {
+        const years = importState.years || [];
+        const analyzing = years.filter((y) => y.status === "analyzing").length;
+        const ready = years.filter((y) => y.status === "ready").length;
+        const errored = years.filter((y) => y.status === "error").length;
+        if (analyzing > 0) {
+          return (
+            <div className="mb-5">
+              <AnalyzeProgress active />
+              <p className="text-xs text-muted mt-2">
+                {t("risk.importAnalyzing", { done: ready + errored, total: years.length })}
+              </p>
+            </div>
+          );
+        }
+        if (ready > 0) {
+          return (
+            <div className="flex items-center gap-2 rounded-lg px-3 py-2 mb-5 text-xs border border-success-ring bg-success-light text-success">
+              {"✓ "}
+              {t("risk.importReady", { count: ready })}
+              {errored > 0 ? " " + t("risk.importSomeFailed", { count: errored }) : ""}
+            </div>
+          );
+        }
+        return (
           <div className="flex items-center gap-2 rounded-lg px-3 py-2 mb-5 text-xs border border-warning-ring bg-warning-light text-warning-text">
             {"⚠ "}{t("risk.importError")}
           </div>
-        ) : (
-          <div className="mb-5">
-            <AnalyzeProgress active />
-          </div>
-        )
-      )}
+        );
+      })()}
 
       <div className="space-y-6 mb-6">
         {questions.map((q, qi) => (
@@ -904,26 +941,35 @@ export default function OnboardingPage() {
 
   // Holds the in-flight package analysis so the finish step can await it even
   // if it started while the user was answering the questionnaire.
-  const analyzeRef = useRef(null);
+  // One promise per uploaded PDF — each file is a separate year/package, analyzed
+  // independently so multi-year uploads aren't merged into a single analysis.
+  const analyzeRef = useRef([]);
 
   function beginImportAnalysis(files) {
-    setImportState({ active: true, ready: false, error: false, analysis: null });
+    setImportState({
+      active: true,
+      years: files.map((f) => ({ fileName: f.name, status: "analyzing", analysis: null })),
+    });
     const backendBase = process.env.NEXT_PUBLIC_BACKEND_URL;
     const url = backendBase
       ? `${backendBase}/onboarding/package/analyze`
       : `/api/onboarding/package/analyze`;
-    const p = (async () => {
-      const form = new FormData();
-      files.forEach((f) => form.append("file", f));
-      const res = await fetch(url, { method: "POST", headers: authHeaders(), body: form });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json?.error?.message || t("errors.analysisFailed"));
-      return json.data;
-    })();
-    analyzeRef.current = p;
-    p.then((data) => setImportState({ active: true, ready: true, error: false, analysis: data })).catch(
-      () => setImportState({ active: true, ready: false, error: true, analysis: null }),
-    );
+    analyzeRef.current = files.map((file, idx) => {
+      const p = (async () => {
+        const form = new FormData();
+        form.append("file", file);
+        const res = await fetch(url, { method: "POST", headers: authHeaders(), body: form });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json?.error?.message || t("errors.analysisFailed"));
+        return json.data;
+      })();
+      const mark = (patch) =>
+        setImportState((s) =>
+          s ? { ...s, years: s.years.map((y, i) => (i === idx ? { ...y, ...patch } : y)) } : s,
+        );
+      p.then((data) => mark({ status: "ready", analysis: data })).catch(() => mark({ status: "error" }));
+      return p;
+    });
   }
 
   // Property "Continue": kick off the (slow) import analysis in the background so
@@ -933,8 +979,13 @@ export default function OnboardingPage() {
     goNext();
   }
 
-  async function commitAnalyzedPackage(analysis) {
-    const eb = analysis?.extractedBuilding || {};
+  // Create the building ONCE (from the first year's extracted building info), then
+  // commit each year's package into it — one after the other. Snapshot / reference-
+  // only during onboarding (no billing side-effects). A single year failing doesn't
+  // abort the rest.
+  async function commitAnalyzedPackages(analyses) {
+    const first = analyses[0] || {};
+    const eb = first.extractedBuilding || {};
     const name = (eb.name || prop.name || eb.address || prop.address || "My building").trim();
     const address = (eb.address || prop.address || eb.name || name).trim();
     const cRes = await fetch("/api/buildings", {
@@ -951,27 +1002,30 @@ export default function OnboardingPage() {
     if (!cRes.ok) throw new Error(cJson?.error?.message || t("errors.createBuildingFailed"));
     const buildingId = cJson.data.id;
 
-    // Commit the package — snapshot / reference-only during onboarding (safe: no
-    // billing side-effects; they can activate ongoing management later).
-    const form = new FormData();
-    const extracted = analysis?.extractedFiles;
-    if (extracted?.length) {
+    const backendBase = process.env.NEXT_PUBLIC_BACKEND_URL;
+    const commitPath = `/buildings/${buildingId}/onboarding/package/commit`;
+    let committed = 0;
+    for (const analysis of analyses) {
+      const extracted = analysis?.extractedFiles;
+      if (!extracted?.length) continue;
+      const form = new FormData();
       extracted.forEach((ef) =>
         form.append("file", new Blob([ef.text], { type: "text/csv" }), ef.fileName),
       );
-    } else {
-      prop.files.forEach((f) => form.append("file", f));
+      form.append("billingMode", "snapshot");
+      form.append("fiscalYear", String(analysis?.fiscalYear || ""));
+      try {
+        await fetch(backendBase ? `${backendBase}${commitPath}` : `/api${commitPath}`, {
+          method: "POST",
+          headers: authHeaders(),
+          body: form,
+        });
+        committed += 1;
+      } catch {
+        /* one year failing shouldn't abort the others */
+      }
     }
-    form.append("billingMode", "snapshot");
-    form.append("fiscalYear", String(analysis?.fiscalYear || ""));
-    const backendBase = process.env.NEXT_PUBLIC_BACKEND_URL;
-    const commitPath = `/buildings/${buildingId}/onboarding/package/commit`;
-    await fetch(backendBase ? `${backendBase}${commitPath}` : `/api${commitPath}`, {
-      method: "POST",
-      headers: authHeaders(),
-      body: form,
-    });
-    return { buildingId, buildingName: name };
+    return { buildingId, buildingName: name, years: committed };
   }
 
   async function attachBuildingStrategy({ buildingId, ownerProfileId, roleIntent }) {
@@ -1009,11 +1063,12 @@ export default function OnboardingPage() {
 
       if (prop.mode === "import") {
         try {
-          const analysis = analyzeRef.current
-            ? await analyzeRef.current
-            : importState?.analysis || null;
-          if (analysis) {
-            const res = await commitAnalyzedPackage(analysis);
+          const settled = await Promise.allSettled(analyzeRef.current || []);
+          const analyses = settled
+            .filter((r) => r.status === "fulfilled" && r.value)
+            .map((r) => r.value);
+          if (analyses.length) {
+            const res = await commitAnalyzedPackages(analyses);
             buildingName = res.buildingName;
             buildingId = res.buildingId;
             imported = true;
@@ -1177,16 +1232,24 @@ export default function OnboardingPage() {
             <PropertyStep
               prop={prop}
               onChange={setProp}
-              onImportFiles={(files) => setProp((p) => ({ ...p, files }))}
-              importStatus={
-                importState?.active
-                  ? importState.ready
-                    ? t("property.status.complete")
-                    : importState.error
-                      ? t("property.status.retry")
-                      : t("property.status.analyzing")
-                  : null
+              onImportFiles={(files) =>
+                setProp((p) => {
+                  const existing = p.files || [];
+                  const seen = new Set(existing.map((f) => f.name + ":" + f.size));
+                  return { ...p, files: existing.concat(files.filter((f) => !seen.has(f.name + ":" + f.size))) };
+                })
               }
+              onRemoveFile={(idx) =>
+                setProp((p) => ({ ...p, files: (p.files || []).filter((_, i) => i !== idx) }))
+              }
+              importStatus={(() => {
+                const years = importState?.active ? importState.years || [] : [];
+                if (!years.length) return null;
+                if (years.some((y) => y.status === "analyzing")) return t("property.status.analyzing");
+                return years.some((y) => y.status === "ready")
+                  ? t("property.status.complete")
+                  : t("property.status.retry");
+              })()}
               onNext={handlePropertyContinue}
               onBack={goBack}
             />
