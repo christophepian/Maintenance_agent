@@ -1,0 +1,140 @@
+{
+  "shell": {
+    "title": "Get started · Propfolio",
+    "welcome": "Welcome to Propfolio"
+  },
+  "buttons": {
+    "continue": "Continue",
+    "back": "Back",
+    "saving": "Saving…"
+  },
+  "steps": {
+    "role": "Your role",
+    "profile": "Your details",
+    "property": "Your property",
+    "risk": "Your strategy",
+    "connections": "Connections",
+    "preferences": "Preferences",
+    "done": "All set"
+  },
+  "stepRail": {
+    "ariaLabel": "Step {{current}} of {{total}}: {{label}}",
+    "stepOf": " · Step {{current}} of {{total}}"
+  },
+  "errors": {
+    "roleSaveFailed": "Could not save your role. Please try again.",
+    "generic": "Something went wrong. Please try again.",
+    "inviteFailed": "Could not send the invite.",
+    "finishFailed": "Could not finish onboarding. Please try again.",
+    "importIncomplete": "Your strategy was saved, but the package import didn't finish — you can retry it from Properties.",
+    "analysisFailed": "Analysis failed",
+    "createBuildingFailed": "Failed to create building",
+    "saveStrategyFailed": "Failed to save strategy",
+    "saveBuildingFailed": "Failed to save building"
+  },
+  "role": {
+    "heading": "How will you use Propfolio?",
+    "subtitle": "This tailors your home screen and tools. You can adjust it later in settings.",
+    "options": {
+      "OWNER": {
+        "title": "Owner",
+        "desc": "I own property and want oversight — reporting, planning, and hands-off management."
+      },
+      "OWNER_MANAGER": {
+        "title": "Owner + Manager",
+        "desc": "I own and self-manage — I want owner insights plus the full day-to-day management toolkit."
+      },
+      "MANAGER": {
+        "title": "Manager / Régie",
+        "desc": "I manage property on behalf of owners — leases, finance, requests, and contractors."
+      }
+    }
+  },
+  "profile": {
+    "heading": "Tell us who you are",
+    "subtitle": "Basic identity details so we can set up your account and documents correctly. Formal verification (ID / company registry) isn't required yet.",
+    "entityTypeLabel": "I'm onboarding as",
+    "entityIndividual": "An individual",
+    "entityCompany": "A company",
+    "legalName": "Full legal name",
+    "legalNameCompany": "Contact person — full legal name",
+    "legalNamePlaceholder": "e.g. Marie Dubois",
+    "companyName": "Company name",
+    "companyNamePlaceholder": "e.g. Régie Dubois SA",
+    "phone": "Phone",
+    "phonePlaceholder": "+41 79 123 45 67",
+    "address": "Address",
+    "addressPlaceholder": "Street and number",
+    "postalCode": "Postal code",
+    "postalCodePlaceholder": "1003",
+    "city": "City",
+    "cityPlaceholder": "Lausanne",
+    "tos": "I agree to the Terms of Service and confirm the information above is accurate."
+  },
+  "property": {
+    "heading": "Add your first property",
+    "subtitle": "Start with one building — you can add the rest anytime. Import lets us hydrate units, tenants and finances from your régie's year-end package.",
+    "modeCreateTitle": "Create manually",
+    "modeCreateDesc": "Enter the basics now",
+    "modeImportTitle": "Import a package",
+    "modeImportDesc": "Régie PDF or CSVs",
+    "buildingName": "Building name",
+    "buildingNamePlaceholder": "e.g. Rue du Lac 12",
+    "address": "Address",
+    "addressPlaceholder": "e.g. 1003 Lausanne",
+    "approxUnits": "Approx. units",
+    "approxUnitsOptional": "(optional)",
+    "approxUnitsPlaceholder": "12",
+    "filesSelected": "{{count}} file(s) selected",
+    "dropHint": "Drop the year-end package — a régie PDF, or CSVs (balance sheet, income statement, rent roll, general ledger)",
+    "nothingCreated": "Nothing is created yet. We'll analyze it while you answer a few quick questions next.",
+    "status": {
+      "complete": "Analysis complete.",
+      "retry": "Analysis will be retried at the next step.",
+      "analyzing": "Analyzing…"
+    }
+  },
+  "risk": {
+    "heading": "A few questions about your goals",
+    "subtitle": "This builds your investor profile so recommendations fit how you actually think about your property.",
+    "importReady": "Your building is ready to import",
+    "importError": "We couldn't analyze the package — you can retry later from Properties",
+    "submit": "See my strategy & finish",
+    "submitBusy": "Setting up…"
+  },
+  "connections": {
+    "heading": "Bring in your team",
+    "subtitle": "Invite the manager or régie who handles day-to-day operations. They'll get access to your buildings.",
+    "managerEmail": "Manager email",
+    "managerEmailPlaceholder": "manager@regie.ch",
+    "sendInvite": "Send invite",
+    "sending": "Sending…",
+    "inviteSent": "Invite sent to {{email}}",
+    "importedTitle": "Your tenants are imported",
+    "importedBody": "You'll be able to invite them to the tenant app (to see leases, invoices and send requests) from the building's Tenants tab.",
+    "skipForNow": "Skip for now"
+  },
+  "preferences": {
+    "heading": "Make it yours",
+    "subtitle": "Set your defaults — you can fine-tune everything (including per building) later in settings.",
+    "appearance": "Appearance",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "automations": "Automations",
+    "overdueRemindersTitle": "Overdue-rent reminders",
+    "overdueRemindersDesc": "Automatically remind tenants when rent is late.",
+    "ownerReportTitle": "Monthly owner report",
+    "ownerReportDesc": "Email a portfolio summary at the start of each month.",
+    "autoRouteMaintenanceTitle": "Auto-route maintenance",
+    "autoRouteMaintenanceDesc": "Send new maintenance requests to your preferred contractors."
+  },
+  "done": {
+    "heading": "You're all set!",
+    "setUp": "is set up.",
+    "setUpImporting": "is set up and your package is importing.",
+    "investorProfileLabel": "Your investor profile:",
+    "fallback": "We'll take you to your dashboard and show you around.",
+    "finish": "Go to my dashboard",
+    "finishBusy": "Finishing…"
+  }
+}
