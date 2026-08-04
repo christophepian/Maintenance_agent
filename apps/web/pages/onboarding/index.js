@@ -72,42 +72,72 @@ function Spinner() {
 }
 
 /* ── Step rail ────────────────────────────────────────────────── */
-function StepRail({ current }) {
+function stepCircleClass(state) {
   return (
-    <ol className="flex items-center gap-2 mb-8" aria-label="Progress">
-      {STEPS.map((s, i) => {
-        const state = i < current ? "done" : i === current ? "active" : "todo";
-        return (
-          <li key={s.key} className="flex items-center gap-2 flex-1 last:flex-none">
-            <div className="flex items-center gap-2 min-w-0">
-              <span
-                className={
-                  "w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold shrink-0 " +
-                  (state === "done"
-                    ? "bg-brand text-white"
-                    : state === "active"
-                      ? "bg-brand-light text-brand ring-2 ring-brand"
-                      : "bg-surface-subtle text-foreground-dim")
-                }
+    "w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold shrink-0 " +
+    (state === "done"
+      ? "bg-brand text-white"
+      : state === "active"
+        ? "bg-brand-light text-brand ring-2 ring-brand"
+        : "bg-surface-subtle text-foreground-dim")
+  );
+}
+
+// Condense the step list so it never overflows the card: show the first step, a
+// window around the current step, and ALWAYS the final step (so the total count
+// stays visible), collapsing any gaps to an ellipsis.
+function condenseSteps(current, total, maxFull = 5) {
+  if (total <= maxFull) return STEPS.map((_, i) => i);
+  const keep = new Set([0, current - 1, current, current + 1, total - 1]);
+  const visible = [...keep].filter((i) => i >= 0 && i < total).sort((a, b) => a - b);
+  const out = [];
+  let prev = -1;
+  for (const i of visible) {
+    if (prev >= 0 && i - prev > 1) out.push("gap");
+    out.push(i);
+    prev = i;
+  }
+  return out;
+}
+
+function StepRail({ current }) {
+  const total = STEPS.length;
+  const items = condenseSteps(current, total);
+  return (
+    <div className="mb-8">
+      <ol
+        className="flex items-center gap-1.5"
+        aria-label={"Step " + (current + 1) + " of " + total + ": " + STEPS[current].label}
+      >
+        {items.map((it, idx) => {
+          if (it === "gap") {
+            return (
+              <li
+                key={"gap-" + idx}
+                aria-hidden="true"
+                className="px-0.5 text-sm leading-none text-foreground-dim select-none"
               >
-                {state === "done" ? "✓" : i + 1}
-              </span>
-              <span
-                className={
-                  "text-xs font-medium truncate hidden sm:block " +
-                  (state === "todo" ? "text-foreground-dim" : "text-foreground")
-                }
-              >
-                {s.label}
-              </span>
-            </div>
-            {i < STEPS.length - 1 && (
-              <span className="flex-1 h-px bg-surface-divider min-w-[12px]" aria-hidden="true" />
-            )}
-          </li>
-        );
-      })}
-    </ol>
+                …
+              </li>
+            );
+          }
+          const state = it < current ? "done" : it === current ? "active" : "todo";
+          const nextIsStep = items[idx + 1] !== undefined && items[idx + 1] !== "gap";
+          return (
+            <li key={STEPS[it].key} className="flex items-center gap-1.5">
+              <span className={stepCircleClass(state)}>{state === "done" ? "✓" : it + 1}</span>
+              {nextIsStep && (
+                <span className="w-4 sm:w-6 h-px bg-surface-divider shrink-0" aria-hidden="true" />
+              )}
+            </li>
+          );
+        })}
+      </ol>
+      <p className="mt-2.5 text-xs font-medium">
+        <span className="text-foreground">{STEPS[current].label}</span>
+        <span className="text-foreground-dim">{" · Step " + (current + 1) + " of " + total}</span>
+      </p>
+    </div>
   );
 }
 
