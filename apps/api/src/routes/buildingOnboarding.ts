@@ -237,7 +237,8 @@ export function registerBuildingOnboardingRoutes(router: Router) {
 
   // ── New-building package analyze (no building yet — extract its identity) ──
   router.post("/onboarding/package/analyze", async ({ req, res, orgId, prisma }) => {
-    const user = requireAnyRole(req, res, ["MANAGER"]);
+    // OWNER allowed: onboarding is offered to owners too, who upload their own package.
+    const user = requireAnyRole(req, res, ["MANAGER", "OWNER"]);
     if (!user) return;
 
     req.socket?.setTimeout(180_000); // OCR + extraction on a PDF can be slow
@@ -317,7 +318,8 @@ export function registerBuildingOnboardingRoutes(router: Router) {
   });
 
   router.post("/buildings/:id/onboarding/package/commit", async ({ req, res, orgId, prisma, params }) => {
-    const user = requireAnyRole(req, res, ["MANAGER"]);
+    // OWNER allowed: completes the owner onboarding (snapshot commit, no billing side-effects).
+    const user = requireAnyRole(req, res, ["MANAGER", "OWNER"]);
     if (!user) return;
 
     req.socket?.setTimeout(180_000);

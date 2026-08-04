@@ -229,9 +229,10 @@ function RoleStep({ value, onChange, onNext, saving }) {
 function ProfileStep({ profile, onChange, onNext, onBack }) {
   const { t } = useTranslation("onboarding");
   const isCompany = profile.entityType === "company";
+  // Only name + ToS (+ company name for a company) are required — phone and
+  // address are optional so users can start without handing over more than they want.
   const canContinue =
     profile.legalName.trim() &&
-    profile.phone.trim() &&
     profile.acceptedTos &&
     (!isCompany || profile.companyName.trim());
 
