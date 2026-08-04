@@ -92,15 +92,19 @@
       "complete": "Analysis complete.",
       "retry": "Analysis will be retried at the next step.",
       "analyzing": "Analyzing…"
-    }
+    },
+    "multiYearHint": "One PDF per year — add several to import multiple years.",
+    "removeFile": "Remove"
   },
   "risk": {
     "heading": "A few questions about your goals",
     "subtitle": "This builds your investor profile so recommendations fit how you actually think about your property.",
-    "importReady": "Your building is ready to import",
+    "importReady": "{{count}} statement(s) ready to import",
     "importError": "We couldn't analyze the package — you can retry later from Properties",
     "submit": "See my strategy & finish",
-    "submitBusy": "Setting up…"
+    "submitBusy": "Setting up…",
+    "importAnalyzing": "Reading statement {{done}} of {{total}}…",
+    "importSomeFailed": "({{count}} couldn't be read — retry later from the building)"
   },
   "connections": {
     "heading": "Bring in your team",

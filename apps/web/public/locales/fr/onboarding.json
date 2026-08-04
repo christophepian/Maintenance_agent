@@ -92,15 +92,19 @@
       "complete": "Analyse terminée.",
       "retry": "L'analyse sera relancée à l'étape suivante.",
       "analyzing": "Analyse en cours…"
-    }
+    },
+    "multiYearHint": "Un PDF par année — ajoutez-en plusieurs pour importer plusieurs années.",
+    "removeFile": "Retirer"
   },
   "risk": {
     "heading": "Quelques questions sur vos objectifs",
     "subtitle": "Cela établit votre profil d'investisseur afin que les recommandations correspondent à votre vision réelle de votre bien.",
-    "importReady": "Votre immeuble est prêt à être importé",
+    "importReady": "{{count}} relevé(s) prêt(s) à importer",
     "importError": "Nous n'avons pas pu analyser le dossier — vous pourrez réessayer plus tard depuis Biens",
     "submit": "Voir ma stratégie et terminer",
-    "submitBusy": "Configuration en cours…"
+    "submitBusy": "Configuration en cours…",
+    "importAnalyzing": "Lecture du relevé {{done}} sur {{total}}…",
+    "importSomeFailed": "({{count}} illisible(s) — à réessayer depuis l'immeuble)"
   },
   "connections": {
     "heading": "Ajoutez votre équipe",
