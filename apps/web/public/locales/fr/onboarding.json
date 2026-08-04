@@ -1,0 +1,140 @@
+{
+  "shell": {
+    "title": "Commencer · Propfolio",
+    "welcome": "Bienvenue sur Propfolio"
+  },
+  "buttons": {
+    "continue": "Continuer",
+    "back": "Retour",
+    "saving": "Enregistrement…"
+  },
+  "steps": {
+    "role": "Votre rôle",
+    "profile": "Vos coordonnées",
+    "property": "Votre bien",
+    "risk": "Votre stratégie",
+    "connections": "Connexions",
+    "preferences": "Préférences",
+    "done": "Terminé"
+  },
+  "stepRail": {
+    "ariaLabel": "Étape {{current}} sur {{total}} : {{label}}",
+    "stepOf": " · Étape {{current}} sur {{total}}"
+  },
+  "errors": {
+    "roleSaveFailed": "Impossible d'enregistrer votre rôle. Veuillez réessayer.",
+    "generic": "Une erreur est survenue. Veuillez réessayer.",
+    "inviteFailed": "Impossible d'envoyer l'invitation.",
+    "finishFailed": "Impossible de finaliser l'intégration. Veuillez réessayer.",
+    "importIncomplete": "Votre stratégie a été enregistrée, mais l'import du dossier n'a pas abouti — vous pourrez le relancer depuis Biens.",
+    "analysisFailed": "Échec de l'analyse",
+    "createBuildingFailed": "Échec de la création de l'immeuble",
+    "saveStrategyFailed": "Échec de l'enregistrement de la stratégie",
+    "saveBuildingFailed": "Échec de l'enregistrement de l'immeuble"
+  },
+  "role": {
+    "heading": "Comment utiliserez-vous Propfolio ?",
+    "subtitle": "Cela adapte votre écran d'accueil et vos outils. Vous pourrez le modifier plus tard dans les paramètres.",
+    "options": {
+      "OWNER": {
+        "title": "Propriétaire",
+        "desc": "Je possède des biens et souhaite une vue d'ensemble — reporting, planification et gestion déléguée."
+      },
+      "OWNER_MANAGER": {
+        "title": "Propriétaire + Gérant",
+        "desc": "Je possède et gère moi-même — je veux les analyses propriétaire ainsi que tous les outils de gestion au quotidien."
+      },
+      "MANAGER": {
+        "title": "Gérant / Régie",
+        "desc": "Je gère des biens pour le compte de propriétaires — baux, finances, demandes et prestataires."
+      }
+    }
+  },
+  "profile": {
+    "heading": "Présentez-vous",
+    "subtitle": "Quelques informations d'identité pour configurer correctement votre compte et vos documents. Une vérification formelle (pièce d'identité / registre du commerce) n'est pas encore requise.",
+    "entityTypeLabel": "Je m'inscris en tant que",
+    "entityIndividual": "Un particulier",
+    "entityCompany": "Une entreprise",
+    "legalName": "Nom légal complet",
+    "legalNameCompany": "Personne de contact — nom légal complet",
+    "legalNamePlaceholder": "ex. Marie Dubois",
+    "companyName": "Nom de l'entreprise",
+    "companyNamePlaceholder": "ex. Régie Dubois SA",
+    "phone": "Téléphone",
+    "phonePlaceholder": "+41 79 123 45 67",
+    "address": "Adresse",
+    "addressPlaceholder": "Rue et numéro",
+    "postalCode": "Code postal",
+    "postalCodePlaceholder": "1003",
+    "city": "Localité",
+    "cityPlaceholder": "Lausanne",
+    "tos": "J'accepte les Conditions générales et confirme que les informations ci-dessus sont exactes."
+  },
+  "property": {
+    "heading": "Ajoutez votre premier bien",
+    "subtitle": "Commencez par un immeuble — vous pourrez ajouter les autres à tout moment. L'import nous permet d'importer les lots, locataires et finances depuis le dossier de bouclement de votre régie.",
+    "modeCreateTitle": "Créer manuellement",
+    "modeCreateDesc": "Saisir les bases maintenant",
+    "modeImportTitle": "Importer un dossier",
+    "modeImportDesc": "PDF de régie ou CSV",
+    "buildingName": "Nom de l'immeuble",
+    "buildingNamePlaceholder": "ex. Rue du Lac 12",
+    "address": "Adresse",
+    "addressPlaceholder": "ex. 1003 Lausanne",
+    "approxUnits": "Nombre approx. de lots",
+    "approxUnitsOptional": "(optionnel)",
+    "approxUnitsPlaceholder": "12",
+    "filesSelected": "{{count}} fichier(s) sélectionné(s)",
+    "dropHint": "Déposez le dossier de bouclement — un PDF de régie, ou des CSV (bilan, compte de résultat, état locatif, grand livre)",
+    "nothingCreated": "Rien n'est encore créé. Nous l'analyserons pendant que vous répondez à quelques questions rapides.",
+    "status": {
+      "complete": "Analyse terminée.",
+      "retry": "L'analyse sera relancée à l'étape suivante.",
+      "analyzing": "Analyse en cours…"
+    }
+  },
+  "risk": {
+    "heading": "Quelques questions sur vos objectifs",
+    "subtitle": "Cela établit votre profil d'investisseur afin que les recommandations correspondent à votre vision réelle de votre bien.",
+    "importReady": "Votre immeuble est prêt à être importé",
+    "importError": "Nous n'avons pas pu analyser le dossier — vous pourrez réessayer plus tard depuis Biens",
+    "submit": "Voir ma stratégie et terminer",
+    "submitBusy": "Configuration en cours…"
+  },
+  "connections": {
+    "heading": "Ajoutez votre équipe",
+    "subtitle": "Invitez le gérant ou la régie qui s'occupe des opérations au quotidien. Ils auront accès à vos immeubles.",
+    "managerEmail": "E-mail du gérant",
+    "managerEmailPlaceholder": "gerant@regie.ch",
+    "sendInvite": "Envoyer l'invitation",
+    "sending": "Envoi en cours…",
+    "inviteSent": "Invitation envoyée à {{email}}",
+    "importedTitle": "Vos locataires sont importés",
+    "importedBody": "Vous pourrez les inviter à l'application locataire (pour consulter les baux, les factures et envoyer des demandes) depuis l'onglet Locataires de l'immeuble.",
+    "skipForNow": "Passer pour l'instant"
+  },
+  "preferences": {
+    "heading": "Personnalisez",
+    "subtitle": "Définissez vos préférences par défaut — vous pourrez tout affiner (y compris par immeuble) plus tard dans les paramètres.",
+    "appearance": "Apparence",
+    "themeLight": "Clair",
+    "themeDark": "Sombre",
+    "automations": "Automatisations",
+    "overdueRemindersTitle": "Rappels de loyers en retard",
+    "overdueRemindersDesc": "Rappeler automatiquement les locataires lorsqu'un loyer est en retard.",
+    "ownerReportTitle": "Rapport propriétaire mensuel",
+    "ownerReportDesc": "Envoyer par e-mail un résumé du portefeuille au début de chaque mois.",
+    "autoRouteMaintenanceTitle": "Acheminement automatique de la maintenance",
+    "autoRouteMaintenanceDesc": "Transmettre les nouvelles demandes de maintenance à vos prestataires préférés."
+  },
+  "done": {
+    "heading": "Tout est prêt !",
+    "setUp": "est configuré.",
+    "setUpImporting": "est configuré et votre dossier est en cours d'import.",
+    "investorProfileLabel": "Votre profil d'investisseur :",
+    "fallback": "Nous vous emmenons vers votre tableau de bord et vous faisons découvrir les lieux.",
+    "finish": "Aller à mon tableau de bord",
+    "finishBusy": "Finalisation en cours…"
+  }
+}

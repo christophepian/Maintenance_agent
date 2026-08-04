@@ -27,17 +27,19 @@ import { withTranslations } from "../../lib/i18n";
 import { resolveLandingPath } from "../../lib/roleRouting";
 import { useTheme } from "../../hooks/useTheme";
 import AnalyzeProgress from "../../components/AnalyzeProgress";
+import LocaleSwitcher from "../../components/LocaleSwitcher";
 
 const PROGRESS_KEY = "onboarding_progress_v1";
 
+// Labels resolve at render time via t("steps." + key) — see StepRail.
 const STEPS = [
-  { key: "role", label: "Your role" },
-  { key: "profile", label: "Your details" },
-  { key: "property", label: "Your property" },
-  { key: "risk", label: "Your strategy" },
-  { key: "connections", label: "Connections" },
-  { key: "preferences", label: "Preferences" },
-  { key: "done", label: "All set" },
+  { key: "role" },
+  { key: "profile" },
+  { key: "property" },
+  { key: "risk" },
+  { key: "connections" },
+  { key: "preferences" },
+  { key: "done" },
 ];
 
 /* Archetype → per-building roleIntent (mirrors owner/strategy.js). */
@@ -101,13 +103,15 @@ function condenseSteps(current, total, maxFull = 5) {
 }
 
 function StepRail({ current }) {
+  const { t } = useTranslation("onboarding");
   const total = STEPS.length;
   const items = condenseSteps(current, total);
+  const currentLabel = t("steps." + STEPS[current].key);
   return (
     <div className="mb-8">
       <ol
         className="flex items-center gap-1.5"
-        aria-label={"Step " + (current + 1) + " of " + total + ": " + STEPS[current].label}
+        aria-label={t("stepRail.ariaLabel", { current: current + 1, total, label: currentLabel })}
       >
         {items.map((it, idx) => {
           if (it === "gap") {
@@ -134,41 +138,37 @@ function StepRail({ current }) {
         })}
       </ol>
       <p className="mt-2.5 text-xs font-medium">
-        <span className="text-foreground">{STEPS[current].label}</span>
-        <span className="text-foreground-dim">{" · Step " + (current + 1) + " of " + total}</span>
+        <span className="text-foreground">{currentLabel}</span>
+        <span className="text-foreground-dim">{t("stepRail.stepOf", { current: current + 1, total })}</span>
       </p>
     </div>
   );
 }
 
 /* ── Role step ────────────────────────────────────────────────── */
+// Titles/descriptions resolve at render time via t("role.options." + value + ...).
 const ROLE_OPTIONS = [
   {
     value: "OWNER",
-    title: "Owner",
-    desc: "I own property and want oversight — reporting, planning, and hands-off management.",
     icon: "M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6",
   },
   {
     value: "OWNER_MANAGER",
-    title: "Owner + Manager",
-    desc: "I own and self-manage — I want owner insights plus the full day-to-day management toolkit.",
     icon: "M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33",
   },
   {
     value: "MANAGER",
-    title: "Manager / Régie",
-    desc: "I manage property on behalf of owners — leases, finance, requests, and contractors.",
     icon: "M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2M5 21H3m9-14h.01M9 7h1m4 0h1M9 11h1m4 0h1M9 15h1m4 0h1",
   },
 ];
 
 function RoleStep({ value, onChange, onNext, saving }) {
+  const { t } = useTranslation("onboarding");
   return (
     <div>
-      <h2 className="text-lg font-semibold text-foreground mb-1">How will you use Propfolio?</h2>
+      <h2 className="text-lg font-semibold text-foreground mb-1">{t("role.heading")}</h2>
       <p className="text-sm text-muted mb-6">
-        This tailors your home screen and tools. You can adjust it later in settings.
+        {t("role.subtitle")}
       </p>
 
       <div className="space-y-3 mb-6">
@@ -197,8 +197,8 @@ function RoleStep({ value, onChange, onNext, saving }) {
                 </svg>
               </div>
               <div className="min-w-0">
-                <p className="text-sm font-semibold text-foreground">{opt.title}</p>
-                <p className="text-xs text-muted mt-0.5 leading-relaxed">{opt.desc}</p>
+                <p className="text-sm font-semibold text-foreground">{t("role.options." + opt.value + ".title")}</p>
+                <p className="text-xs text-muted mt-0.5 leading-relaxed">{t("role.options." + opt.value + ".desc")}</p>
               </div>
               <span
                 className={
@@ -219,7 +219,7 @@ function RoleStep({ value, onChange, onNext, saving }) {
         className="button-primary w-full flex items-center justify-center gap-2 text-sm"
       >
         {saving && <Spinner />}
-        {saving ? "Saving…" : "Continue"}
+        {saving ? t("buttons.saving") : t("buttons.continue")}
       </button>
     </div>
   );
@@ -227,6 +227,7 @@ function RoleStep({ value, onChange, onNext, saving }) {
 
 /* ── Profile (KYB-lite) step ──────────────────────────────────── */
 function ProfileStep({ profile, onChange, onNext, onBack }) {
+  const { t } = useTranslation("onboarding");
   const isCompany = profile.entityType === "company";
   const canContinue =
     profile.legalName.trim() &&
@@ -238,19 +239,18 @@ function ProfileStep({ profile, onChange, onNext, onBack }) {
 
   return (
     <div>
-      <h2 className="text-lg font-semibold text-foreground mb-1">Tell us who you are</h2>
+      <h2 className="text-lg font-semibold text-foreground mb-1">{t("profile.heading")}</h2>
       <p className="text-sm text-muted mb-6">
-        Basic identity details so we can set up your account and documents correctly. Formal
-        verification (ID / company registry) isn&apos;t required yet.
+        {t("profile.subtitle")}
       </p>
 
       {/* Entity type */}
       <div className="mb-4">
-        <span className="block text-sm font-medium text-muted-dark mb-1.5">I&apos;m onboarding as</span>
+        <span className="block text-sm font-medium text-muted-dark mb-1.5">{t("profile.entityTypeLabel")}</span>
         <div className="flex gap-2">
           {[
-            { v: "individual", l: "An individual" },
-            { v: "company", l: "A company" },
+            { v: "individual", l: t("profile.entityIndividual") },
+            { v: "company", l: t("profile.entityCompany") },
           ].map((o) => (
             <button
               key={o.v}
@@ -271,69 +271,69 @@ function ProfileStep({ profile, onChange, onNext, onBack }) {
 
       <div className="mb-4">
         <label className="block text-sm font-medium text-muted-dark mb-1.5">
-          {isCompany ? "Contact person — full legal name" : "Full legal name"}
+          {isCompany ? t("profile.legalNameCompany") : t("profile.legalName")}
         </label>
         <input
           className="input mb-0"
           value={profile.legalName}
           onChange={(e) => set("legalName", e.target.value)}
-          placeholder="e.g. Marie Dubois"
+          placeholder={t("profile.legalNamePlaceholder")}
         />
       </div>
 
       {isCompany && (
         <div className="mb-4">
-          <label htmlFor="onb-company" className="block text-sm font-medium text-muted-dark mb-1.5">Company name</label>
+          <label htmlFor="onb-company" className="block text-sm font-medium text-muted-dark mb-1.5">{t("profile.companyName")}</label>
           <input
             id="onb-company"
             className="input mb-0"
             value={profile.companyName}
             onChange={(e) => set("companyName", e.target.value)}
-            placeholder="e.g. Régie Dubois SA"
+            placeholder={t("profile.companyNamePlaceholder")}
           />
         </div>
       )}
 
       <div className="mb-4">
-        <label htmlFor="onb-phone" className="block text-sm font-medium text-muted-dark mb-1.5">Phone</label>
+        <label htmlFor="onb-phone" className="block text-sm font-medium text-muted-dark mb-1.5">{t("profile.phone")}</label>
         <input
           id="onb-phone"
           className="input mb-0"
           value={profile.phone}
           onChange={(e) => set("phone", e.target.value)}
-          placeholder="+41 79 123 45 67"
+          placeholder={t("profile.phonePlaceholder")}
         />
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
         <div className="sm:col-span-3">
-          <label htmlFor="onb-address" className="block text-sm font-medium text-muted-dark mb-1.5">Address</label>
+          <label htmlFor="onb-address" className="block text-sm font-medium text-muted-dark mb-1.5">{t("profile.address")}</label>
           <input
             id="onb-address"
             className="input mb-0"
             value={profile.address}
             onChange={(e) => set("address", e.target.value)}
-            placeholder="Street and number"
+            placeholder={t("profile.addressPlaceholder")}
           />
         </div>
         <div>
-          <label htmlFor="onb-postal" className="block text-sm font-medium text-muted-dark mb-1.5">Postal code</label>
+          <label htmlFor="onb-postal" className="block text-sm font-medium text-muted-dark mb-1.5">{t("profile.postalCode")}</label>
           <input
             id="onb-postal"
             className="input mb-0"
             value={profile.postalCode}
             onChange={(e) => set("postalCode", e.target.value)}
-            placeholder="1003"
+            placeholder={t("profile.postalCodePlaceholder")}
           />
         </div>
         <div className="sm:col-span-2">
-          <label htmlFor="onb-city" className="block text-sm font-medium text-muted-dark mb-1.5">City</label>
+          <label htmlFor="onb-city" className="block text-sm font-medium text-muted-dark mb-1.5">{t("profile.city")}</label>
           <input
             id="onb-city"
             className="input mb-0"
             value={profile.city}
             onChange={(e) => set("city", e.target.value)}
-            placeholder="Lausanne"
+            placeholder={t("profile.cityPlaceholder")}
           />
         </div>
       </div>
@@ -346,7 +346,7 @@ function ProfileStep({ profile, onChange, onNext, onBack }) {
           onChange={(e) => set("acceptedTos", e.target.checked)}
         />
         <span className="text-xs text-muted leading-relaxed">
-          I agree to the Terms of Service and confirm the information above is accurate.
+          {t("profile.tos")}
         </span>
       </label>
 
@@ -356,7 +356,7 @@ function ProfileStep({ profile, onChange, onNext, onBack }) {
           onClick={onBack}
           className="button-secondary flex-1 text-sm"
         >
-          Back
+          {t("buttons.back")}
         </button>
         <button
           type="button"
@@ -364,7 +364,7 @@ function ProfileStep({ profile, onChange, onNext, onBack }) {
           disabled={!canContinue}
           className="button-primary flex-[2] text-sm"
         >
-          Continue
+          {t("buttons.continue")}
         </button>
       </div>
     </div>
@@ -379,6 +379,7 @@ function ProfileStep({ profile, onChange, onNext, onBack }) {
  * mechanic: they never sit and wait for OCR/extraction.
  */
 function PropertyStep({ prop, onChange, onImportFiles, importStatus, onNext, onBack }) {
+  const { t } = useTranslation("onboarding");
   const set = (k, v) => onChange({ ...prop, [k]: v });
   const canContinue =
     prop.mode === "create"
@@ -389,17 +390,16 @@ function PropertyStep({ prop, onChange, onImportFiles, importStatus, onNext, onB
 
   return (
     <div>
-      <h2 className="text-lg font-semibold text-foreground mb-1">Add your first property</h2>
+      <h2 className="text-lg font-semibold text-foreground mb-1">{t("property.heading")}</h2>
       <p className="text-sm text-muted mb-6">
-        Start with one building — you can add the rest anytime. Import lets us hydrate units,
-        tenants and finances from your régie&apos;s year-end package.
+        {t("property.subtitle")}
       </p>
 
       {/* Mode choice */}
       <div className="grid grid-cols-2 gap-3 mb-5">
         {[
-          { v: "create", t: "Create manually", d: "Enter the basics now" },
-          { v: "import", t: "Import a package", d: "Régie PDF or CSVs" },
+          { v: "create", t: t("property.modeCreateTitle"), d: t("property.modeCreateDesc") },
+          { v: "import", t: t("property.modeImportTitle"), d: t("property.modeImportDesc") },
         ].map((o) => (
           <button
             key={o.v}
@@ -421,28 +421,28 @@ function PropertyStep({ prop, onChange, onImportFiles, importStatus, onNext, onB
       {prop.mode === "create" && (
         <div className="space-y-4 mb-6">
           <div>
-            <label htmlFor="onb-bname" className="block text-sm font-medium text-muted-dark mb-1.5">Building name</label>
+            <label htmlFor="onb-bname" className="block text-sm font-medium text-muted-dark mb-1.5">{t("property.buildingName")}</label>
             <input
               id="onb-bname"
               className="input mb-0"
               value={prop.name}
               onChange={(e) => set("name", e.target.value)}
-              placeholder="e.g. Rue du Lac 12"
+              placeholder={t("property.buildingNamePlaceholder")}
             />
           </div>
           <div>
-            <label htmlFor="onb-baddress" className="block text-sm font-medium text-muted-dark mb-1.5">Address</label>
+            <label htmlFor="onb-baddress" className="block text-sm font-medium text-muted-dark mb-1.5">{t("property.address")}</label>
             <input
               id="onb-baddress"
               className="input mb-0"
               value={prop.address}
               onChange={(e) => set("address", e.target.value)}
-              placeholder="e.g. 1003 Lausanne"
+              placeholder={t("property.addressPlaceholder")}
             />
           </div>
           <div>
             <label htmlFor="onb-approx" className="block text-sm font-medium text-muted-dark mb-1.5">
-              Approx. units <span className="text-foreground-dim">(optional)</span>
+              {t("property.approxUnits")} <span className="text-foreground-dim">{t("property.approxUnitsOptional")}</span>
             </label>
             <input
               id="onb-approx"
@@ -451,7 +451,7 @@ function PropertyStep({ prop, onChange, onImportFiles, importStatus, onNext, onB
               className="input mb-0 max-w-[140px]"
               value={prop.approxUnits}
               onChange={(e) => set("approxUnits", e.target.value)}
-              placeholder="12"
+              placeholder={t("property.approxUnitsPlaceholder")}
             />
           </div>
         </div>
@@ -470,11 +470,10 @@ function PropertyStep({ prop, onChange, onImportFiles, importStatus, onNext, onB
               onChange={(e) => onImportFiles(Array.from(e.target.files || []))}
             />
             {prop.files.length ? (
-              <p className="text-sm text-brand-dark font-medium">{prop.files.length} file(s) selected</p>
+              <p className="text-sm text-brand-dark font-medium">{t("property.filesSelected", { count: prop.files.length })}</p>
             ) : (
               <p className="text-sm text-muted">
-                Drop the year-end package — a régie PDF, or CSVs (balance sheet, income statement,
-                rent roll, general ledger)
+                {t("property.dropHint")}
               </p>
             )}
           </label>
@@ -482,14 +481,14 @@ function PropertyStep({ prop, onChange, onImportFiles, importStatus, onNext, onB
             <p className="text-xs text-muted mt-2">{importStatus}</p>
           )}
           <p className="text-xs text-foreground-dim mt-2">
-            Nothing is created yet. We&apos;ll analyze it while you answer a few quick questions next.
+            {t("property.nothingCreated")}
           </p>
         </div>
       )}
 
       <div className="flex gap-3">
         <button type="button" onClick={onBack} className="button-secondary flex-1 text-sm">
-          Back
+          {t("buttons.back")}
         </button>
         <button
           type="button"
@@ -497,7 +496,7 @@ function PropertyStep({ prop, onChange, onImportFiles, importStatus, onNext, onB
           disabled={!canContinue}
           className="button-primary flex-[2] text-sm"
         >
-          Continue
+          {t("buttons.continue")}
         </button>
       </div>
     </div>
@@ -507,25 +506,25 @@ function PropertyStep({ prop, onChange, onImportFiles, importStatus, onNext, onB
 /* ── Risk-profile step — the 5 strategy questions (reused from owner wizard),
  * with a live indicator of the background import. ──────────────── */
 function RiskStep({ questions, answers, onAnswer, importState, busy, onSubmit, onBack }) {
+  const { t } = useTranslation("onboarding");
   const answeredAll = questions.length > 0 && questions.every((q) => answers[q.key]);
 
   return (
     <div>
-      <h2 className="text-lg font-semibold text-foreground mb-1">A few questions about your goals</h2>
+      <h2 className="text-lg font-semibold text-foreground mb-1">{t("risk.heading")}</h2>
       <p className="text-sm text-muted mb-4">
-        This builds your investor profile so recommendations fit how you actually think about your
-        property.
+        {t("risk.subtitle")}
       </p>
 
       {/* Background import indicator — full progress while analyzing, compact once done */}
       {importState && importState.active && (
         importState.ready ? (
           <div className="flex items-center gap-2 rounded-lg px-3 py-2 mb-5 text-xs border border-success-ring bg-success-light text-success">
-            ✓ Your building is ready to import
+            {"✓ "}{t("risk.importReady")}
           </div>
         ) : importState.error ? (
           <div className="flex items-center gap-2 rounded-lg px-3 py-2 mb-5 text-xs border border-warning-ring bg-warning-light text-warning-text">
-            ⚠ We couldn&apos;t analyze the package — you can retry later from Properties
+            {"⚠ "}{t("risk.importError")}
           </div>
         ) : (
           <div className="mb-5">
@@ -572,7 +571,7 @@ function RiskStep({ questions, answers, onAnswer, importState, busy, onSubmit, o
 
       <div className="flex gap-3">
         <button type="button" onClick={onBack} className="button-secondary flex-1 text-sm">
-          Back
+          {t("buttons.back")}
         </button>
         <button
           type="button"
@@ -581,7 +580,7 @@ function RiskStep({ questions, answers, onAnswer, importState, busy, onSubmit, o
           className="button-primary flex-[2] text-sm flex items-center justify-center gap-2"
         >
           {busy && <Spinner />}
-          {busy ? "Setting up…" : "See my strategy & finish"}
+          {busy ? t("risk.submitBusy") : t("risk.submit")}
         </button>
       </div>
     </div>
@@ -591,6 +590,7 @@ function RiskStep({ questions, answers, onAnswer, importState, busy, onSubmit, o
 /* ── Connections step — invite the manager (régie) and, for imported
  * buildings, the tenants. Tenant invites are added with the SMS backend. ── */
 function ConnectionsStep({ summary, onNext, onBack }) {
+  const { t } = useTranslation("onboarding");
   const [email, setEmail] = useState("");
   const [inviting, setInviting] = useState(false);
   const [invited, setInvited] = useState(null);
@@ -607,13 +607,13 @@ function ConnectionsStep({ summary, onNext, onBack }) {
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setErr(body.error || "Could not send the invite.");
+        setErr(body.error || t("errors.inviteFailed"));
         return;
       }
       setInvited(email.trim());
       setEmail("");
     } catch {
-      setErr("Something went wrong. Please try again.");
+      setErr(t("errors.generic"));
     } finally {
       setInviting(false);
     }
@@ -621,14 +621,13 @@ function ConnectionsStep({ summary, onNext, onBack }) {
 
   return (
     <div>
-      <h2 className="text-lg font-semibold text-foreground mb-1">Bring in your team</h2>
+      <h2 className="text-lg font-semibold text-foreground mb-1">{t("connections.heading")}</h2>
       <p className="text-sm text-muted mb-6">
-        Invite the manager or régie who handles day-to-day operations. They&apos;ll get access to
-        your buildings.
+        {t("connections.subtitle")}
       </p>
 
       <div className="rounded-xl border border-surface-border p-4 mb-4">
-        <label htmlFor="onb-mgr-email" className="block text-sm font-medium text-muted-dark mb-1.5">Manager email</label>
+        <label htmlFor="onb-mgr-email" className="block text-sm font-medium text-muted-dark mb-1.5">{t("connections.managerEmail")}</label>
         <div className="flex gap-2">
           <input
             id="onb-mgr-email"
@@ -636,7 +635,7 @@ function ConnectionsStep({ summary, onNext, onBack }) {
             className="input mb-0 flex-1"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="manager@regie.ch"
+            placeholder={t("connections.managerEmailPlaceholder")}
           />
           <button
             type="button"
@@ -644,31 +643,30 @@ function ConnectionsStep({ summary, onNext, onBack }) {
             disabled={!email.trim() || inviting}
             className="button-secondary text-sm whitespace-nowrap"
           >
-            {inviting ? "Sending…" : "Send invite"}
+            {inviting ? t("connections.sending") : t("connections.sendInvite")}
           </button>
         </div>
         {invited && (
-          <p className="text-xs text-success mt-2">✓ Invite sent to {invited}</p>
+          <p className="text-xs text-success mt-2">{"✓ "}{t("connections.inviteSent", { email: invited })}</p>
         )}
         {err && <p className="text-xs text-destructive-text mt-2">{err}</p>}
       </div>
 
       {summary?.imported && (
         <div className="rounded-xl border border-surface-border bg-surface-subtle p-4 mb-6 text-sm text-muted">
-          <p className="font-medium text-foreground mb-0.5">Your tenants are imported</p>
+          <p className="font-medium text-foreground mb-0.5">{t("connections.importedTitle")}</p>
           <p className="text-xs">
-            You&apos;ll be able to invite them to the tenant app (to see leases, invoices and send
-            requests) from the building&apos;s Tenants tab.
+            {t("connections.importedBody")}
           </p>
         </div>
       )}
 
       <div className="flex gap-3">
         <button type="button" onClick={onBack} className="button-secondary flex-1 text-sm">
-          Back
+          {t("buttons.back")}
         </button>
         <button type="button" onClick={onNext} className="button-primary flex-[2] text-sm">
-          {invited ? "Continue" : "Skip for now"}
+          {invited ? t("buttons.continue") : t("connections.skipForNow")}
         </button>
       </div>
     </div>
@@ -699,25 +697,26 @@ function Toggle({ checked, onChange }) {
 }
 
 function PreferencesStep({ theme, onTheme, prefs, onPrefs, onNext, onBack }) {
+  const { t } = useTranslation("onboarding");
   const rows = [
-    { key: "overdueReminders", title: "Overdue-rent reminders", desc: "Automatically remind tenants when rent is late." },
-    { key: "ownerReport", title: "Monthly owner report", desc: "Email a portfolio summary at the start of each month." },
-    { key: "autoRouteMaintenance", title: "Auto-route maintenance", desc: "Send new maintenance requests to your preferred contractors." },
+    { key: "overdueReminders", title: t("preferences.overdueRemindersTitle"), desc: t("preferences.overdueRemindersDesc") },
+    { key: "ownerReport", title: t("preferences.ownerReportTitle"), desc: t("preferences.ownerReportDesc") },
+    { key: "autoRouteMaintenance", title: t("preferences.autoRouteMaintenanceTitle"), desc: t("preferences.autoRouteMaintenanceDesc") },
   ];
   return (
     <div>
-      <h2 className="text-lg font-semibold text-foreground mb-1">Make it yours</h2>
+      <h2 className="text-lg font-semibold text-foreground mb-1">{t("preferences.heading")}</h2>
       <p className="text-sm text-muted mb-6">
-        Set your defaults — you can fine-tune everything (including per building) later in settings.
+        {t("preferences.subtitle")}
       </p>
 
       {/* Theme */}
       <div className="mb-6">
-        <p className="text-sm font-medium text-muted-dark mb-2">Appearance</p>
+        <p className="text-sm font-medium text-muted-dark mb-2">{t("preferences.appearance")}</p>
         <div className="flex gap-2">
           {[
-            { v: "light", l: "Light" },
-            { v: "dark", l: "Dark" },
+            { v: "light", l: t("preferences.themeLight") },
+            { v: "dark", l: t("preferences.themeDark") },
           ].map((o) => (
             <button
               key={o.v}
@@ -738,7 +737,7 @@ function PreferencesStep({ theme, onTheme, prefs, onPrefs, onNext, onBack }) {
 
       {/* Automation defaults */}
       <div className="space-y-3 mb-6">
-        <p className="text-sm font-medium text-muted-dark">Automations</p>
+        <p className="text-sm font-medium text-muted-dark">{t("preferences.automations")}</p>
         {rows.map((r) => (
           <div key={r.key} className="flex items-start justify-between gap-4 rounded-xl border border-surface-border px-4 py-3">
             <div className="min-w-0">
@@ -752,10 +751,10 @@ function PreferencesStep({ theme, onTheme, prefs, onPrefs, onNext, onBack }) {
 
       <div className="flex gap-3">
         <button type="button" onClick={onBack} className="button-secondary flex-1 text-sm">
-          Back
+          {t("buttons.back")}
         </button>
         <button type="button" onClick={onNext} className="button-primary flex-[2] text-sm">
-          Continue
+          {t("buttons.continue")}
         </button>
       </div>
     </div>
@@ -764,6 +763,7 @@ function PreferencesStep({ theme, onTheme, prefs, onPrefs, onNext, onBack }) {
 
 /* ── Done step ────────────────────────────────────────────────── */
 function DoneStep({ summary, finishing, onFinish }) {
+  const { t } = useTranslation("onboarding");
   return (
     <div className="text-center py-2">
       <div className="w-14 h-14 bg-success-light rounded-full flex items-center justify-center mx-auto mb-5">
@@ -771,24 +771,24 @@ function DoneStep({ summary, finishing, onFinish }) {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       </div>
-      <h2 className="text-xl font-semibold text-foreground mb-2">You&apos;re all set!</h2>
+      <h2 className="text-xl font-semibold text-foreground mb-2">{t("done.heading")}</h2>
 
       {summary ? (
         <div className="text-sm text-muted mb-6 space-y-1.5">
           {summary.buildingName && (
             <p>
-              <span className="text-foreground font-medium">{summary.buildingName}</span> is set up
-              {summary.imported ? " and your package is importing." : "."}
+              <span className="text-foreground font-medium">{summary.buildingName}</span>{" "}
+              {summary.imported ? t("done.setUpImporting") : t("done.setUp")}
             </p>
           )}
           {summary.archetypeLabel && (
             <p>
-              Your investor profile: <span className="text-foreground font-medium">{summary.archetypeLabel}</span>.
+              {t("done.investorProfileLabel")} <span className="text-foreground font-medium">{summary.archetypeLabel}</span>.
             </p>
           )}
         </div>
       ) : (
-        <p className="text-sm text-muted mb-6">We&apos;ll take you to your dashboard and show you around.</p>
+        <p className="text-sm text-muted mb-6">{t("done.fallback")}</p>
       )}
 
       <button
@@ -798,7 +798,7 @@ function DoneStep({ summary, finishing, onFinish }) {
         className="button-primary w-full flex items-center justify-center gap-2 text-sm"
       >
         {finishing && <Spinner />}
-        {finishing ? "Finishing…" : "Go to my dashboard"}
+        {finishing ? t("done.finishBusy") : t("done.finish")}
       </button>
     </div>
   );
@@ -808,6 +808,7 @@ function DoneStep({ summary, finishing, onFinish }) {
 export default function OnboardingPage() {
   const router = useRouter();
   const { next } = router.query;
+  const { t } = useTranslation("onboarding");
   const { t: tOwner } = useTranslation("owner");
   const { theme, setTheme } = useTheme();
   const rawQuestions = tOwner("strategy.questions", { returnObjects: true });
@@ -915,7 +916,7 @@ export default function OnboardingPage() {
       files.forEach((f) => form.append("file", f));
       const res = await fetch(url, { method: "POST", headers: authHeaders(), body: form });
       const json = await res.json();
-      if (!res.ok) throw new Error(json?.error?.message || "Analysis failed");
+      if (!res.ok) throw new Error(json?.error?.message || t("errors.analysisFailed"));
       return json.data;
     })();
     analyzeRef.current = p;
@@ -946,7 +947,7 @@ export default function OnboardingPage() {
       }),
     });
     const cJson = await cRes.json();
-    if (!cRes.ok) throw new Error(cJson?.error?.message || "Failed to create building");
+    if (!cRes.ok) throw new Error(cJson?.error?.message || t("errors.createBuildingFailed"));
     const buildingId = cJson.data.id;
 
     // Commit the package — snapshot / reference-only during onboarding (safe: no
@@ -995,7 +996,7 @@ export default function OnboardingPage() {
         body: JSON.stringify({ answers }),
       });
       const opJson = await opRes.json();
-      if (!opRes.ok) throw new Error(opJson.error?.message || opJson.error || "Failed to save strategy");
+      if (!opRes.ok) throw new Error(opJson.error?.message || opJson.error || t("errors.saveStrategyFailed"));
       const ownerProfile = opJson.profile;
       const roleIntent = archetypeToRoleIntent(ownerProfile.primaryArchetype);
       const archetypeLabel =
@@ -1023,9 +1024,7 @@ export default function OnboardingPage() {
           }
         } catch {
           // Non-fatal: don't trap the user in onboarding over an import hiccup.
-          setError(
-            "Your strategy was saved, but the package import didn't finish — you can retry it from Properties.",
-          );
+          setError(t("errors.importIncomplete"));
         }
       } else {
         // Create-manual: building-profile endpoint creates the building + strategy.
@@ -1043,7 +1042,7 @@ export default function OnboardingPage() {
           }),
         });
         const bpJson = await bpRes.json();
-        if (!bpRes.ok) throw new Error(bpJson.error?.message || bpJson.error || "Failed to save building");
+        if (!bpRes.ok) throw new Error(bpJson.error?.message || bpJson.error || t("errors.saveBuildingFailed"));
         buildingName = (prop.name || prop.address).trim();
         buildingId = bpJson.profile?.buildingId || bpJson.building?.id || null;
       }
@@ -1068,7 +1067,7 @@ export default function OnboardingPage() {
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        setError(body.error || "Could not save your role. Please try again.");
+        setError(body.error || t("errors.roleSaveFailed"));
         return;
       }
       // app_metadata was written with the service key — refresh the session so
@@ -1081,7 +1080,7 @@ export default function OnboardingPage() {
       }
       goNext();
     } catch {
-      setError("Something went wrong. Please try again.");
+      setError(t("errors.generic"));
     } finally {
       setSavingRole(false);
     }
@@ -1120,7 +1119,7 @@ export default function OnboardingPage() {
       if (data?.session) setAuthToken(data.session.access_token);
       router.push(resolveLandingPath({ appMeta: meta, userMeta, next }));
     } catch {
-      setError("Could not finish onboarding. Please try again.");
+      setError(t("errors.finishFailed"));
       setFinishing(false);
     }
   }
@@ -1138,15 +1137,18 @@ export default function OnboardingPage() {
   return (
     <div className="min-h-screen bg-surface-subtle flex flex-col items-center justify-center p-4">
       <Head>
-        <title>Get started · Propfolio</title>
+        <title>{t("shell.title")}</title>
       </Head>
+      <div className="absolute top-4 right-4">
+        <LocaleSwitcher />
+      </div>
       <div className="w-full max-w-lg">
         <div className="flex flex-col items-center mb-8">
           <div className="w-11 h-11 bg-brand rounded-xl flex items-center justify-center shadow-md mb-4">
             <span className="text-white font-extrabold">P</span>
           </div>
           <h1 className="text-xl font-semibold text-foreground tracking-tight">
-            Welcome to Propfolio
+            {t("shell.welcome")}
           </h1>
         </div>
 
@@ -1178,10 +1180,10 @@ export default function OnboardingPage() {
               importStatus={
                 importState?.active
                   ? importState.ready
-                    ? "Analysis complete."
+                    ? t("property.status.complete")
                     : importState.error
-                      ? "Analysis will be retried at the next step."
-                      : "Analyzing…"
+                      ? t("property.status.retry")
+                      : t("property.status.analyzing")
                   : null
               }
               onNext={handlePropertyContinue}
@@ -1221,4 +1223,4 @@ export default function OnboardingPage() {
   );
 }
 
-export const getStaticProps = withTranslations(["common", "owner"]);
+export const getStaticProps = withTranslations(["common", "owner", "onboarding"]);

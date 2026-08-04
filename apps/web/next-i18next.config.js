@@ -10,7 +10,7 @@ module.exports = {
     localeDetection: false,
   },
   defaultNS: 'common',
-  ns: ['common', 'manager', 'owner', 'contractor', 'tenant'],
+  ns: ['common', 'manager', 'owner', 'contractor', 'tenant', 'onboarding'],
   fallbackLng: 'en',            // missing FR keys silently fall back to EN
   reloadOnPrerender: process.env.NODE_ENV === 'development', // always re-read locale files in dev
 };
