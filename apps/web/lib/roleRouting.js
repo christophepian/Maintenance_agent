@@ -24,19 +24,16 @@ export const ROLE_HOME = {
 // engagement; DOCS_INVESTOR never reaches the app.
 const ONBOARDING_ROLES = ["OWNER", "MANAGER"];
 
-function isSandbox() {
-  return process.env.NEXT_PUBLIC_SANDBOX === "true";
-}
-
 /**
  * Should this user be sent through the onboarding wizard?
  *
  * Fires when onboarding hasn't been completed/skipped AND the user is either a
  * brand-new self-service signup (no appRole yet → must pick one) or an
- * owner/manager. Never fires in sandbox, for DOCS_INVESTOR, or for tenants.
+ * owner/manager. Fires in sandbox too (so beta testers experience it); the
+ * hasCompletedOnboarding/onboardingSkipped flags gate repeat visits. Never fires
+ * for DOCS_INVESTOR or tenants.
  */
 export function needsOnboarding({ appMeta = {}, userMeta = {} } = {}) {
-  if (isSandbox()) return false;
   if (appMeta.accessLevel === "DOCS_INVESTOR") return false;
   if (appMeta.appRole === "TENANT" || appMeta.appRole === "CONTRACTOR") return false;
   if (userMeta.hasCompletedOnboarding || userMeta.onboardingSkipped) return false;
