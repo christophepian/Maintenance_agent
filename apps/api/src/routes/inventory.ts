@@ -2,7 +2,7 @@ import { Router } from "../http/router";
 import { sendError, sendJson } from "../http/json";
 import { readJson } from "../http/body";
 import { first } from "../http/query";
-import { maybeRequireManager, requireRole, getAuthUser } from "../authz";
+import { maybeRequireManager, requireRole, requireAnyRole, getAuthUser } from "../authz";
 import { withAuthRequired } from "../http/routeProtection";
 import * as crypto from "crypto";
 import prismaClient from "../services/prismaClient";
@@ -242,7 +242,8 @@ export function registerInventoryRoutes(router: Router) {
   }));
 
   router.post("/buildings", async ({ req, res, orgId }) => {
-    if (!requireRole(req, res, "MANAGER")) return;
+    // OWNER allowed too: self-service onboarding lets an owner create their first building.
+    if (!requireAnyRole(req, res, ["MANAGER", "OWNER"])) return;
     try {
       const raw = await readJson(req);
       const parsed = CreateBuildingSchema.safeParse(raw);
