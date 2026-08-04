@@ -60,9 +60,16 @@ export function reconcileBalances(
   for (const b of balances) sums.set(b.documentSection, (sums.get(b.documentSection) ?? 0) + b.balanceCents);
 
   const lines: ReconciliationLine[] = [];
+  // Section-total reconciliation is a MAGNITUDE check. The sign convention for a
+  // section total varies by document (e.g. Charges printed as a positive magnitude
+  // vs a negative deduction), so a uniform sign flip of the whole total is a
+  // presentation difference — not a data error. Compare absolute values; genuine
+  // magnitude discrepancies still fail. (The Actif = Passif check below keeps signs.)
   const line = (scope: string, computedCents: number, statedCents: number) => {
-    const diff = computedCents - statedCents;
-    lines.push({ scope, computedChf: round2(computedCents / 100), statedChf: round2(statedCents / 100), diffChf: round2(diff / 100), ok: Math.abs(diff) <= TOL_CENTS });
+    const c = Math.abs(computedCents);
+    const s = Math.abs(statedCents);
+    const diff = c - s;
+    lines.push({ scope, computedChf: round2(c / 100), statedChf: round2(s / 100), diffChf: round2(diff / 100), ok: Math.abs(diff) <= TOL_CENTS });
   };
   for (const [sec, label] of [["ACTIF", "Actifs"], ["PASSIF", "Passifs"], ["REVENUE", "Produits"], ["EXPENSE", "Charges"]] as const) {
     const s = stated[sec];
