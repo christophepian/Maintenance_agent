@@ -1602,6 +1602,15 @@ export default function BuildingDetail() {
   const { id, from, role } = router.query;
   const isOwner = role === "owner";
   const backHref = from || (isOwner ? "/owner/properties" : "/manager/inventory?tab=buildings");
+  // Deep-link into a unit with a `from` back-pointer to THIS building (Units tab),
+  // so the unit page's Back button returns here rather than the generic inventory
+  // list — independent of whether the unit payload includes its building relation.
+  const unitHref = (unitId) => {
+    const params = new URLSearchParams();
+    params.set("from", `/admin-inventory/buildings/${id}?tab=Units${isOwner ? "&role=owner" : ""}`);
+    if (isOwner) params.set("role", "owner");
+    return `/admin-inventory/units/${unitId}?${params.toString()}`;
+  };
   const VALID_TABS = ["Building information", "Units", "Tenants", "Assets", "Documents", "Policies", "Reporting", "Requests", "Correspondence"];
   const initialTab = typeof router.query.tab === "string" && VALID_TABS.includes(router.query.tab)
     ? router.query.tab
@@ -3264,7 +3273,7 @@ export default function BuildingDetail() {
                   <h3 className="font-semibold text-foreground mt-4 mb-3">{t("manager:buildingsId.heading.residentialUnits")}</h3>
                   <div className="space-y-2 mb-4">
                     {filteredResidential.map((u) => (
-                      <Link key={u.id} href={`/admin-inventory/units/${u.id}${isOwner ? "?role=owner" : ""}`} className="block border border-surface-border rounded-lg p-3 hover:bg-surface-subtle transition">
+                      <Link key={u.id} href={unitHref(u.id)} className="block border border-surface-border rounded-lg p-3 hover:bg-surface-subtle transition">
                         <div className="flex justify-between items-center">
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2 flex-wrap">
@@ -3321,7 +3330,7 @@ export default function BuildingDetail() {
                   <h3 className="font-semibold text-foreground mt-4 mb-3">{t("manager:buildingsId.heading.commonAreas")}</h3>
                   <div className="space-y-2 mb-4">
                     {filteredCommon.map((u) => (
-                      <Link key={u.id} href={`/admin-inventory/units/${u.id}${isOwner ? "?role=owner" : ""}`} className="block border border-surface-border rounded-lg p-3 hover:bg-surface-subtle transition">
+                      <Link key={u.id} href={unitHref(u.id)} className="block border border-surface-border rounded-lg p-3 hover:bg-surface-subtle transition">
                         <div className="flex justify-between items-center">
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2 flex-wrap">
@@ -3353,7 +3362,7 @@ export default function BuildingDetail() {
                   <h3 className="font-semibold text-foreground mt-4 mb-3">{t("manager:buildingsId.heading.parking")}</h3>
                   <div className="space-y-2 mb-4">
                     {parkingUnits.filter(matchUnitFilter).map((u) => (
-                      <Link key={u.id} href={`/admin-inventory/units/${u.id}${isOwner ? "?role=owner" : ""}`} className="block border border-surface-border rounded-lg p-3 hover:bg-surface-subtle transition">
+                      <Link key={u.id} href={unitHref(u.id)} className="block border border-surface-border rounded-lg p-3 hover:bg-surface-subtle transition">
                         <div className="flex justify-between items-center">
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2 flex-wrap">
