@@ -302,7 +302,7 @@ const UNIT_TAB_LABEL_KEYS = {
 export default function UnitDetail() {
   const { t } = useTranslation("manager");
   const router = useRouter();
-  const { id, role } = router.query;
+  const { id, role, from } = router.query;
   const isOwner = role === "owner";
 
   const [unit, setUnit] = useState(null);
@@ -903,7 +903,7 @@ export default function UnitDetail() {
     <AppShell role={isOwner ? "OWNER" : "MANAGER"}>
       <PageShell variant="embedded">
         <div className="mb-3">
-          <Link href={unit?.building?.id ? `/admin-inventory/buildings/${unit.building.id}?tab=Units${isOwner ? "&role=owner" : ""}` : (isOwner ? "/owner/properties" : "/admin-inventory")} className="text-sm font-medium text-muted-text hover:text-foreground">
+          <Link href={(typeof from === "string" && from) || (unit?.building?.id ? `/admin-inventory/buildings/${unit.building.id}?tab=Units${isOwner ? "&role=owner" : ""}` : (isOwner ? "/owner/properties" : "/admin-inventory"))} className="text-sm font-medium text-muted-text hover:text-foreground">
             ← Back
           </Link>
         </div>
