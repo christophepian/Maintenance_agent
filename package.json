@@ -5,6 +5,9 @@
     "apps/*",
     "packages/*"
   ],
+  "engines": {
+    "node": "22.x"
+  },
   "overrides": {
     "react": "^19.2.5",
     "react-dom": "^19.2.5"
