@@ -96,6 +96,21 @@ describe("aggregateImportedPnl", () => {
     const { expensesByAccount } = aggregateImportedPnl(balances);
     expect(expensesByAccount[0]).toMatchObject({ accountId: "acc-1", accountName: "Honoraires de gestion", accountCode: "4600" });
   });
+
+  it("falls back to raw code (then name) for an unmapped line so it reconciles across years", () => {
+    // No canonical `account` link → the old code emitted accountId:"" here, which
+    // made the same régie line split into two half-movers year-over-year (mapped
+    // one year, unmapped the next). It must carry a stable non-empty key instead.
+    const withCode = aggregateImportedPnl([
+      { documentSection: "EXPENSE", balanceCents: 1000, rawAccountName: "Honoraires de gestion", rawAccountCode: "4600", account: null },
+    ]);
+    expect(withCode.expensesByAccount[0].accountId).toBe("4600");
+
+    const nameOnly = aggregateImportedPnl([
+      { documentSection: "EXPENSE", balanceCents: 1000, rawAccountName: "Honoraires de gestion", rawAccountCode: null, account: null },
+    ]);
+    expect(nameOnly.expensesByAccount[0].accountId).toBe("Honoraires de gestion");
+  });
 });
 
 describe("isManagementFeeAccount", () => {

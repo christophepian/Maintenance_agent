@@ -289,12 +289,18 @@ const catLabel = (cat, t) => t(`buildingFinancials.category.${cat}`, { defaultVa
 // Biggest expense-account moves between two periods (current vs benchmark),
 // signed (d>0 = cost rose), ≥ CHF 200, top 5 by magnitude. Shared by the
 // prior/last-year comparison and the multi-period card's narrative.
+// Cross-period identity for an expense account. `accountId` is the primary key,
+// but imported statements emit "" for lines that weren't mapped to a canonical
+// account — and a "" id must NOT be treated as a distinct account, or the same
+// régie line splits into two half-movers (mapped one year, unmapped the next).
+// Fall back through code then name so a named line reconciles across years.
+const moverKey = (a) => a.accountId || a.accountCode || a.accountName || "—";
 function computeExpenseMovers(bf, benchBf) {
   if (!bf || !benchBf) return [];
-  const beMap = new Map((benchBf.expensesByAccount ?? []).map((a) => [a.accountId ?? a.accountName, a]));
+  const beMap = new Map((benchBf.expensesByAccount ?? []).map((a) => [moverKey(a), a]));
   const seen = new Set();
-  const rows = (bf.expensesByAccount ?? []).map((a) => { const k = a.accountId ?? a.accountName; seen.add(k); return { name: a.accountName ?? a.accountCode ?? "—", d: a.totalCents - (beMap.get(k)?.totalCents ?? 0) }; });
-  for (const a of (benchBf.expensesByAccount ?? [])) { const k = a.accountId ?? a.accountName; if (!seen.has(k)) rows.push({ name: a.accountName ?? a.accountCode ?? "—", d: -a.totalCents }); }
+  const rows = (bf.expensesByAccount ?? []).map((a) => { const k = moverKey(a); seen.add(k); return { name: a.accountName ?? a.accountCode ?? "—", d: a.totalCents - (beMap.get(k)?.totalCents ?? 0) }; });
+  for (const a of (benchBf.expensesByAccount ?? [])) { const k = moverKey(a); if (!seen.has(k)) rows.push({ name: a.accountName ?? a.accountCode ?? "—", d: -a.totalCents }); }
   return rows.filter((x) => Math.abs(x.d) >= 20000).sort((x, y) => Math.abs(y.d) - Math.abs(x.d)).slice(0, 5);
 }
 

@@ -406,7 +406,12 @@ export function aggregateImportedPnl(balances: ImportedPnlBalanceRow[]): {
       else if (category === "TENANT_RECHARGE") tenantRechargeCents += amt;
       else ownerOpexCents += amt;
       expensesByAccount.push({
-        accountId: ab.account?.id ?? ab.accountId ?? "",
+        // Stable cross-period identity. An unmapped imported line has no canonical
+        // account id; emitting "" there makes the same régie line look like a
+        // different account each year it's mapped vs not, splitting year-over-year
+        // movers into two half-rows. Fall back to the raw code, then the raw name,
+        // so a named line reconciles across imports.
+        accountId: ab.account?.id ?? ab.accountId ?? ab.rawAccountCode ?? ab.rawAccountName ?? "",
         accountName: ab.rawAccountName ?? ab.account?.name,
         accountCode: ab.rawAccountCode ?? ab.account?.code ?? null,
         totalCents: amt,
