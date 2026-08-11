@@ -331,5 +331,22 @@
     "movingIn": "Entrée",
     "movingOut": "Départ",
     "unit": "Lot {{number}}"
+  },
+  "feedback": {
+    "launcher": "Commentaire",
+    "title": "Envoyer un commentaire",
+    "description": "Transmis directement à notre équipe. Dites-nous ce que vous attendiez.",
+    "pickPrompt": "Cliquez sur l'élément de la page que vous souhaitez signaler",
+    "skipPick": "Ignorer",
+    "attached": "Joint :",
+    "placeholder": "Que s'est-il passé ?",
+    "send": "Envoyer",
+    "sending": "Envoi…",
+    "sent": "Merci — envoyé !",
+    "type": {
+      "bug": "Anomalie",
+      "confusing": "Peu clair",
+      "idea": "Suggestion"
+    }
   }
 }

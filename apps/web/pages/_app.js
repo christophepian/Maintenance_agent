@@ -5,7 +5,14 @@ import { SWRConfig } from 'swr';
 import nextI18NextConfig from '../next-i18next.config';
 import ErrorBoundary from '../components/ErrorBoundary';
 import { ToastProvider } from '../components/ui/UndoToast';
+import FeedbackWidget from '../components/FeedbackWidget';
 import { swrFetcher } from '../lib/api';
+
+// Beta testers can't be asked to create Vercel accounts just to use the Vercel
+// toolbar's comments, so the sandbox carries its own feedback button that posts
+// to Slack. Mounted here rather than in AppShell so it's also present on login
+// and the onboarding wizard — where first-run friction actually shows up.
+const SHOW_FEEDBACK_WIDGET = process.env.NEXT_PUBLIC_SANDBOX === 'true';
 
 // App-wide SWR defaults. The big win is the shared client cache: revisiting a
 // page (back button, tab switch, re-navigation) serves the last response from
@@ -84,6 +91,7 @@ function MyApp({ Component, pageProps }) {
       <SWRConfig value={SWR_CONFIG}>
         <ToastProvider>
           <Component {...pageProps} />
+          {SHOW_FEEDBACK_WIDGET && <FeedbackWidget />}
         </ToastProvider>
       </SWRConfig>
     </ErrorBoundary>

@@ -331,5 +331,22 @@
     "movingIn": "Moving in",
     "movingOut": "Moving out",
     "unit": "Unit {{number}}"
+  },
+  "feedback": {
+    "launcher": "Feedback",
+    "title": "Send feedback",
+    "description": "Goes straight to our team. Tell us what you expected to happen.",
+    "pickPrompt": "Click the part of the page you want to report",
+    "skipPick": "Skip",
+    "attached": "Attached:",
+    "placeholder": "What happened?",
+    "send": "Send",
+    "sending": "Sending…",
+    "sent": "Thank you — sent!",
+    "type": {
+      "bug": "Bug",
+      "confusing": "Confusing",
+      "idea": "Idea"
+    }
   }
 }
