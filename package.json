@@ -1,0 +1,9 @@
+{
+  "name": "propfolio-product-overview",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Standalone, password-gated deployment of the Propfolio product overview page.",
+  "dependencies": {
+    "@vercel/edge": "^1.2.2"
+  }
+}

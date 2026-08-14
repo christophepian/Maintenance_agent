@@ -1,0 +1,2102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="description" content="Propfolio reads Swiss management statements into the real economics of each building, works out which decisions would improve the return, and runs the operations that carry them out.">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Propfolio — Product Overview</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=DM+Serif+Display:ital@0;1&display=swap');
+
+  :root {
+    --bg: #f8f9fc;
+    --surface: #ffffff;
+    --surface-2: #f1f3f9;
+    --border: #e2e6f0;
+    --text: #1a1f36;
+    --text-secondary: #6b7280;
+    --text-muted: #9ca3af;
+    --brand: #4f46e5;
+    --brand-light: #ede9fe;
+    --brand-mid: #7c3aed;
+    --green: #059669;
+    --green-light: #d1fae5;
+    --amber: #d97706;
+    --amber-light: #fef3c7;
+    --blue: #2563eb;
+    --blue-light: #dbeafe;
+    --rose: #e11d48;
+    --rose-light: #ffe4e6;
+    --cyan: #0891b2;
+    --cyan-light: #cffafe;
+    --radius: 12px;
+    --radius-sm: 8px;
+    --shadow: 0 1px 3px rgba(0,0,0,.08), 0 4px 16px rgba(0,0,0,.04);
+    --shadow-md: 0 4px 12px rgba(0,0,0,.1), 0 8px 32px rgba(0,0,0,.06);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 15px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ─── LAYOUT ─── */
+  .container { max-width: 1160px; margin: 0 auto; padding: 0 32px; }
+
+  /* ─── NAV ─── */
+  nav {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(255,255,255,.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 0;
+  }
+  .nav-inner { display: flex; align-items: center; justify-content: space-between; }
+  .nav-logo { display: flex; align-items: center; gap: 10px; }
+  .nav-logo-mark {
+    width: 32px; height: 32px; border-radius: 8px;
+    background: linear-gradient(135deg, var(--brand), var(--brand-mid));
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-weight: 700; font-size: 14px; letter-spacing: -0.5px;
+  }
+  .nav-logo-text { font-weight: 700; font-size: 16px; color: var(--text); letter-spacing: -0.3px; }
+  .nav-badge {
+    background: var(--green-light); color: var(--green);
+    font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 20px;
+    letter-spacing: 0.3px;
+  }
+  .nav-links { display: flex; gap: 28px; }
+  .nav-links a {
+    text-decoration: none; color: var(--text-secondary); font-size: 14px; font-weight: 500;
+    transition: color .15s;
+  }
+  .nav-links a:hover { color: var(--brand); }
+
+  /* ─── HERO ─── */
+  .hero {
+    padding: 80px 0 72px;
+    background: linear-gradient(160deg, #ffffff 0%, #f5f3ff 50%, #eff6ff 100%);
+    border-bottom: 1px solid var(--border);
+  }
+  .hero-eyebrow {
+    display: inline-flex; align-items: center; gap: 7px;
+    background: var(--brand-light); color: var(--brand);
+    font-size: 12px; font-weight: 600; letter-spacing: 0.6px; text-transform: uppercase;
+    padding: 5px 12px; border-radius: 20px; margin-bottom: 24px;
+  }
+  .hero-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+  .hero h1 {
+    font-family: 'DM Serif Display', Georgia, serif;
+    font-size: 52px; font-weight: 800;
+    color: var(--text); letter-spacing: -1.5px; line-height: 1.1;
+    max-width: 740px; margin-bottom: 20px;
+  }
+  .hero h1 span { color: var(--brand); }
+  .hero-sub {
+    font-size: 18px; color: var(--text-secondary); max-width: 580px;
+    line-height: 1.65; margin-bottom: 40px;
+  }
+  .hero-ctas { display: flex; gap: 12px; align-items: center; }
+  .btn-primary {
+    background: var(--brand); color: #fff;
+    padding: 12px 24px; border-radius: var(--radius-sm);
+    font-size: 14px; font-weight: 600; text-decoration: none;
+    transition: background .15s, transform .1s;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .btn-primary:hover { background: var(--brand-mid); transform: translateY(-1px); }
+  .btn-ghost {
+    color: var(--text-secondary); font-size: 14px; font-weight: 500;
+    text-decoration: none; display: inline-flex; align-items: center; gap: 5px;
+  }
+  .btn-ghost:hover { color: var(--text); }
+
+  /* ─── OWNER JOURNEY ─── */
+  .oj-thesis {
+    max-width: 720px; margin: 0 0 12px;
+    font-family: 'DM Serif Display', Georgia, serif;
+    font-size: 27px; line-height: 1.3; color: var(--text); text-wrap: balance;
+  }
+  .oj-thesis em { font-style: italic; color: var(--brand); }
+  .oj-steps { display: flex; flex-direction: column; gap: 8px; margin-top: 44px; }
+  .oj-step {
+    display: grid; grid-template-columns: 44px minmax(0, 1fr) minmax(0, 1.15fr);
+    gap: 0 28px; align-items: start;
+  }
+  /* The rail: a marker per step, joined by a line drawn behind it. */
+  .oj-rail { position: relative; display: flex; justify-content: center; align-self: stretch; }
+  .oj-rail::before {
+    content: ""; position: absolute; top: 0; bottom: -8px; width: 2px;
+    background: var(--border);
+  }
+  .oj-step:last-child .oj-rail::before { bottom: auto; height: 30px; }
+  .oj-marker {
+    position: relative; width: 30px; height: 30px; border-radius: 50%;
+    background: var(--brand); color: #fff;
+    font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 0 5px var(--surface);
+  }
+  .oj-copy { padding-bottom: 52px; }
+  .oj-eyebrow {
+    font-size: 11px; font-weight: 700; letter-spacing: 1.1px; text-transform: uppercase;
+    color: var(--brand); margin-bottom: 7px;
+  }
+  .oj-heading {
+    font-size: 19px; font-weight: 700; color: var(--text);
+    line-height: 1.35; margin: 0 0 9px; text-wrap: balance;
+  }
+  .oj-body { font-size: 14px; line-height: 1.7; color: var(--text-secondary); margin: 0 0 14px; }
+  .oj-takeaway {
+    font-size: 13px; line-height: 1.6; color: var(--text);
+    border-left: 2px solid var(--brand-light); padding-left: 12px;
+  }
+  .oj-frame {
+    border: 1px solid var(--border); border-radius: var(--radius);
+    background: var(--surface); box-shadow: var(--shadow); overflow: hidden;
+  }
+  .oj-frame-bar {
+    display: flex; align-items: center; gap: 5px;
+    padding: 8px 11px; background: var(--surface-2); border-bottom: 1px solid var(--border);
+  }
+  /* Dots only — the label is a span too, and must not inherit the 7px box. */
+  .oj-frame-bar > span:not(.oj-frame-label) {
+    width: 7px; height: 7px; border-radius: 50%; background: var(--border); flex-shrink: 0;
+  }
+  .oj-frame-label {
+    margin-left: 6px; font-size: 10px; font-weight: 600; letter-spacing: .3px;
+    color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  /* Wireframes are laid out in HTML, not hand-placed SVG text — the browser
+     measures the strings, so nothing can collide as the column narrows. */
+  .wf { padding: 14px 16px 16px; font-size: 11px; line-height: 1.45; color: var(--text); }
+  .wf-label {
+    font-size: 9px; font-weight: 700; letter-spacing: .9px; text-transform: uppercase;
+    color: var(--text-muted); margin-bottom: 7px;
+  }
+  .wf-title { font-size: 12.5px; font-weight: 700; margin-bottom: 9px; }
+  .wf-sub { font-size: 10px; color: var(--text-secondary); }
+  .wf-num { font-variant-numeric: tabular-nums; }
+  .wf-rail { display: flex; align-items: center; gap: 4px; margin-bottom: 14px; }
+  .wf-dot { width: 15px; height: 15px; border-radius: 50%; background: var(--surface-2); flex-shrink: 0; }
+  .wf-dot.is-on { background: var(--brand); }
+  .wf-tick { width: 13px; height: 2px; background: var(--border); flex-shrink: 0; }
+  .wf-rows { display: flex; flex-direction: column; gap: 7px; }
+  .wf-opt {
+    display: flex; align-items: center; gap: 10px;
+    border: 1px solid var(--border); border-radius: 9px; padding: 9px 11px; background: var(--surface);
+  }
+  .wf-opt.is-sel { border-color: var(--brand); background: var(--brand-light); box-shadow: inset 0 0 0 1px var(--brand); }
+  .wf-opt-icon { width: 22px; height: 22px; border-radius: 6px; background: var(--surface-2); flex-shrink: 0; }
+  .wf-opt.is-sel .wf-opt-icon { background: var(--brand); }
+  .wf-opt-text { min-width: 0; flex: 1; }
+  .wf-opt-title { font-weight: 700; }
+  .wf-radio {
+    width: 13px; height: 13px; border-radius: 50%; border: 1.5px solid var(--border);
+    flex-shrink: 0;
+  }
+  /* Trailing radio (role cards) sits hard right; a leading one (questionnaire) does not. */
+  .wf-radio:last-child { margin-left: auto; }
+  .wf-radio.is-on { border-color: var(--brand); background: var(--brand); box-shadow: inset 0 0 0 2.5px #fff; }
+  .wf-split { display: grid; grid-template-columns: 1fr 168px; gap: 14px; align-items: start; }
+  .wf-card { border: 1px solid var(--border); border-radius: 9px; padding: 11px; background: var(--bg); }
+  .wf-chip {
+    display: inline-block; border-radius: 20px; padding: 3px 10px;
+    font-size: 10px; font-weight: 700; background: var(--green-light); color: var(--green);
+  }
+  .wf-meter { margin-top: 9px; }
+  .wf-meter-label { font-size: 9.5px; color: var(--text-secondary); margin-bottom: 3px; }
+  .wf-bar { height: 5px; border-radius: 3px; background: var(--border); overflow: hidden; }
+  .wf-bar i { display: block; height: 100%; border-radius: 3px; background: var(--brand); }
+  .wf-strip {
+    margin-top: 12px; border-radius: 8px; background: var(--surface-2); padding: 9px 12px;
+  }
+  .wf-drop {
+    border: 1.5px dashed var(--brand); border-radius: 10px; background: var(--bg);
+    padding: 14px 12px; text-align: center;
+  }
+  .wf-files { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: 10px; }
+  .wf-file {
+    border: 1px solid var(--border); border-radius: 6px; background: var(--surface);
+    padding: 4px 9px; font-size: 9.5px;
+  }
+  .wf-check {
+    display: flex; align-items: baseline; gap: 10px;
+    border: 1px solid var(--border); border-radius: 7px; padding: 7px 11px; background: var(--surface);
+  }
+  .wf-check-name { flex: 1; min-width: 0; }
+  .wf-check-val { font-size: 10px; color: var(--text-secondary); }
+  .wf-ok { font-weight: 700; color: var(--green); }
+  .wf-banner {
+    display: flex; align-items: center; gap: 8px; margin-top: 10px;
+    border-radius: 8px; padding: 9px 12px; background: var(--green-light); color: var(--green);
+    font-weight: 700; font-size: 10.5px;
+  }
+  .wf-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; }
+  .wf-kpi { border: 1px solid var(--border); border-radius: 9px; padding: 9px; background: var(--surface); }
+  .wf-kpi-label { font-size: 9px; color: var(--text-secondary); }
+  .wf-kpi-num {
+    font-size: 16px; font-weight: 700; line-height: 1.2; margin-top: 3px;
+    font-variant-numeric: tabular-nums;
+  }
+  .wf-cols { display: grid; grid-template-columns: 1fr 150px; gap: 16px; margin-top: 14px; }
+  .wf-drivers { display: flex; flex-direction: column; gap: 8px; }
+  .wf-driver { display: grid; grid-template-columns: 1fr 34px; gap: 8px; align-items: center; font-size: 10px; }
+  .wf-driver-name { color: var(--text-secondary); margin-bottom: 3px; }
+  .wf-driver-amt { text-align: right; font-variant-numeric: tabular-nums; }
+  .wf-unit {
+    display: flex; justify-content: space-between; gap: 8px;
+    background: var(--bg); border-radius: 6px; padding: 6px 9px; font-size: 10px;
+  }
+  .wf-unit + .wf-unit { margin-top: 5px; }
+  .wf-unit b { font-variant-numeric: tabular-nums; }
+  .wf-matrix { width: 100%; border-collapse: collapse; font-size: 10px; }
+  .wf-matrix th, .wf-matrix td { padding: 6px 4px; text-align: center; font-variant-numeric: tabular-nums; }
+  .wf-matrix th:first-child, .wf-matrix td:first-child { text-align: left; font-variant-numeric: normal; }
+  .wf-matrix thead th { font-size: 10.5px; font-weight: 700; background: var(--surface-2); border-radius: 5px; }
+  .wf-matrix thead th.is-target { background: var(--brand-light); color: var(--brand); }
+  .wf-matrix tbody td { border-top: 1px solid var(--border); color: var(--text-secondary); }
+  .wf-matrix tbody td.is-target { color: var(--text); font-weight: 700; }
+  .wf-matrix tr.is-off td { color: var(--text-muted); }
+  .wf-verdict {
+    display: flex; align-items: center; gap: 12px; margin-top: 11px;
+    background: var(--green-light); border-radius: 9px; padding: 10px 12px;
+  }
+  .wf-verdict-main { flex: 1; min-width: 0; }
+  .wf-verdict-title { font-weight: 700; color: var(--green); font-size: 11px; }
+  .wf-verdict-sub { font-size: 10px; color: #065f46; }
+  .wf-verdict-cta { font-weight: 700; color: var(--green); font-size: 10.5px; white-space: nowrap; }
+  @media (max-width: 480px) {
+    .wf-split, .wf-cols { grid-template-columns: 1fr; }
+    .wf-kpis { grid-template-columns: repeat(2, 1fr); }
+  }
+  .oj-caption {
+    font-size: 11px; color: var(--text-muted); margin-top: 8px; text-align: right;
+  }
+  .oj-close {
+    margin-top: 8px; padding: 26px 32px; border-radius: var(--radius);
+    background: linear-gradient(120deg, #f5f3ff 0%, #eff6ff 100%);
+    border: 1px solid var(--border);
+  }
+  .oj-close p {
+    font-family: 'DM Serif Display', Georgia, serif; font-size: 21px; line-height: 1.4;
+    color: var(--text); margin: 0; max-width: 760px; text-wrap: balance;
+  }
+  @media (max-width: 900px) {
+    .oj-step { grid-template-columns: 32px minmax(0, 1fr); gap: 0 16px; }
+    .oj-frame-wrap { grid-column: 2; }
+    .oj-copy { padding-bottom: 20px; }
+    .oj-step { padding-bottom: 32px; }
+    .oj-thesis { font-size: 22px; }
+  }
+
+
+  /* ─── SECTION ─── */
+  section { padding: 72px 0; }
+  section + section { border-top: 1px solid var(--border); }
+  .section-label {
+    font-size: 12px; font-weight: 600; letter-spacing: 0.8px; text-transform: uppercase;
+    color: var(--brand); margin-bottom: 10px;
+  }
+  .section-title {
+    font-family: 'DM Serif Display', Georgia, serif; font-size: 32px; font-weight: 700;
+    color: var(--text); letter-spacing: -0.8px; line-height: 1.2;
+    margin-bottom: 12px;
+  }
+  .section-sub {
+    font-size: 16px; color: var(--text-secondary); max-width: 560px; line-height: 1.65;
+    margin-bottom: 48px;
+  }
+
+  /* ─── PERSONAS ─── */
+  .personas-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  .persona-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 24px 20px;
+    box-shadow: var(--shadow); transition: transform .15s, box-shadow .15s;
+  }
+  .persona-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+  .persona-icon {
+    width: 44px; height: 44px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; margin-bottom: 14px;
+  }
+  .persona-name { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+  .persona-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.55; margin-bottom: 16px; }
+  .persona-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tag {
+    font-size: 11px; font-weight: 500; padding: 3px 9px; border-radius: 20px;
+    border: 1px solid;
+  }
+
+  .tag-brand { background: var(--brand-light); color: var(--brand); border-color: #c4b5fd; }
+  .tag-green { background: var(--green-light); color: var(--green); border-color: #6ee7b7; }
+  .tag-blue { background: var(--blue-light); color: var(--blue); border-color: #93c5fd; }
+  .tag-amber { background: var(--amber-light); color: var(--amber); border-color: #fcd34d; }
+  .tag-cyan { background: var(--cyan-light); color: var(--cyan); border-color: #67e8f9; }
+  .tag-rose { background: var(--rose-light); color: var(--rose); border-color: #fda4af; }
+
+  /* ─── FEATURE AREAS ─── */
+  .features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .feature-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 24px 22px;
+    box-shadow: var(--shadow); position: relative; overflow: hidden;
+  }
+  .feature-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  }
+  .feature-card.live::before { background: var(--green); }
+  .feature-card-icon { font-size: 24px; margin-bottom: 14px; display: block; }
+  .feature-card-title { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+  .feature-card-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 14px; }
+  .feature-list { list-style: none; }
+  .feature-list li {
+    font-size: 12.5px; color: var(--text-secondary);
+    padding: 4px 0; display: flex; align-items: flex-start; gap: 7px;
+  }
+  .feature-list li::before { content: '✓'; color: var(--green); font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+  .live-pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 10px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
+    background: var(--green-light); color: var(--green);
+    padding: 3px 8px; border-radius: 20px; margin-bottom: 12px;
+  }
+  .live-pill-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--green); }
+
+  /* ─── WORKFLOW JOURNEY ─── */
+  .journey-block {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 32px; box-shadow: var(--shadow);
+    margin-bottom: 16px;
+  }
+  .journey-title { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+  .journey-steps {
+    display: flex; align-items: flex-start; flex-wrap: wrap; gap: 0; row-gap: 12px;
+  }
+  .journey-step {
+    display: flex; align-items: center;
+  }
+  .step-node {
+    background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 9px 14px; white-space: nowrap;
+  }
+  .step-node-label { font-size: 12px; font-weight: 600; color: var(--text); }
+  .step-node-sub { font-size: 10px; color: var(--text-muted); margin-top: 1px; }
+  .step-node.active { background: var(--brand-light); border-color: #c4b5fd; }
+  .step-node.active .step-node-label { color: var(--brand); }
+  .step-arrow { padding: 0 10px; color: var(--text-muted); font-size: 16px; }
+  .journey-badge {
+    font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px;
+  }
+
+  /* ─── SWISS POSITIONING ─── */
+  .swiss-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .swiss-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 24px; box-shadow: var(--shadow);
+  }
+  .swiss-card-flag { font-size: 20px; margin-bottom: 12px; }
+  .swiss-card-title { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+  .swiss-card-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
+  .swiss-items { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; }
+  .swiss-item { font-size: 12.5px; color: var(--text-secondary); display: flex; gap: 8px; align-items: flex-start; }
+  .swiss-item::before { content: '→'; color: var(--brand); font-weight: 700; flex-shrink: 0; }
+
+  /* ─── ROADMAP ─── */
+  .roadmap-timeline { display: flex; flex-direction: column; gap: 4px; }
+  .roadmap-phase {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow);
+  }
+  .roadmap-phase-head {
+    display: flex; align-items: center; gap: 16px; padding: 18px 24px;
+    cursor: pointer; user-select: none;
+  }
+  .roadmap-phase-head:hover { background: var(--surface-2); }
+  .phase-num {
+    font-family: 'DM Serif Display', Georgia, serif; font-size: 12px; font-weight: 700;
+    letter-spacing: 0.5px; padding: 4px 10px; border-radius: 6px; flex-shrink: 0;
+  }
+  .phase-p0 { background: #d1fae5; color: #065f46; }
+  .phase-p1 { background: #dbeafe; color: #1e40af; }
+  .phase-p2 { background: #ede9fe; color: #5b21b6; }
+  .phase-p3 { background: #fef3c7; color: #92400e; }
+  .phase-p4 { background: #fce7f3; color: #9d174d; }
+  .phase-p5 { background: #ecfeff; color: #164e63; }
+  .phase-info { flex: 1; }
+  .phase-name { font-size: 15px; font-weight: 700; color: var(--text); }
+  .phase-window { font-size: 12px; color: var(--text-muted); margin-top: 1px; }
+  .phase-status {
+    font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px; flex-shrink: 0;
+  }
+  .status-active { background: var(--green-light); color: var(--green); }
+  .status-planned { background: var(--surface-2); color: var(--text-muted); border: 1px solid var(--border); }
+  .roadmap-phase-body { padding: 0 24px 20px; border-top: 1px solid var(--border); display: none; }
+  .roadmap-phase-body.open { display: block; padding-top: 20px; }
+  .phase-goal { font-size: 13px; color: var(--text-secondary); font-style: italic; margin-bottom: 16px; padding: 10px 14px; background: var(--surface-2); border-radius: 8px; }
+  .roadmap-features { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+  .roadmap-feature {
+    background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px 14px;
+  }
+  .roadmap-feature-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+  .roadmap-feature-desc { font-size: 12px; color: var(--text-secondary); line-height: 1.5; }
+  .feature-type-tag {
+    display: inline-block; font-size: 10px; font-weight: 600; padding: 2px 7px;
+    border-radius: 4px; margin-bottom: 7px; letter-spacing: 0.3px;
+  }
+  .ftype-build { background: #dbeafe; color: #1e40af; }
+  .ftype-extend { background: #d1fae5; color: #065f46; }
+  .ftype-wire { background: #ede9fe; color: #5b21b6; }
+  .ftype-product { background: #fef3c7; color: #92400e; }
+  .ftype-infra { background: #fee2e2; color: #991b1b; }
+  /* Delivery status — what has actually landed since the phase was drawn up. */
+  .fstatus {
+    display: inline-block; font-size: 10px; font-weight: 600; padding: 2px 7px;
+    border-radius: 4px; margin-bottom: 7px; margin-left: 5px; letter-spacing: 0.3px;
+  }
+  .fstatus-shipped { background: var(--green-light); color: var(--green); }
+  .fstatus-partial { background: #ffedd5; color: #9a3412; }
+  .roadmap-feature.is-shipped { border-left: 3px solid var(--green); }
+  .roadmap-feature.is-partial { border-left: 3px solid #f97316; }
+
+  /* ─── DIFFERENTIATORS ─── */
+  .diff-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .diff-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 24px 22px; box-shadow: var(--shadow);
+  }
+  .diff-num {
+    font-family: 'DM Serif Display', Georgia, serif; font-size: 36px; font-weight: 800;
+    color: var(--brand-light); letter-spacing: -2px; margin-bottom: 4px; line-height: 1;
+  }
+  .diff-title { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+  .diff-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
+
+  /* ─── SCREENSHOTS / EDITORIAL ─── */
+  .editorial-section { background: var(--surface); }
+  .editorial-row {
+    display: grid; grid-template-columns: 58% 1fr;
+    gap: 64px; align-items: center; margin-bottom: 96px;
+  }
+  .editorial-row:last-child { margin-bottom: 0; }
+  .editorial-row-reverse { grid-template-columns: 1fr 52%; }
+  .editorial-row-reverse .editorial-copy { order: -1; }
+
+  /* screen side */
+  .editorial-screen-lg { position: relative; }
+  .editorial-caption {
+    display: flex; align-items: center; gap: 8px; margin-top: 12px;
+    font-size: 12px; color: var(--text-muted);
+  }
+
+  /* copy side */
+  .editorial-copy { display: flex; flex-direction: column; gap: 20px; }
+  .editorial-eyebrow {
+    font-size: 11px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase;
+    color: var(--brand);
+  }
+  .editorial-heading {
+    font-family: 'DM Serif Display', Georgia, serif;
+    font-size: 26px; line-height: 1.25; color: var(--text); letter-spacing: -0.3px;
+  }
+  .editorial-body { font-size: 14px; color: var(--text-secondary); line-height: 1.7; }
+  .editorial-features { display: flex; flex-direction: column; gap: 16px; padding-top: 4px; }
+  .editorial-feature { padding-left: 16px; border-left: 2px solid var(--border); }
+  .editorial-feature-title { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 3px; }
+  .editorial-feature-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
+
+  /* two-phone cluster */
+  .editorial-phones {
+    position: relative; display: flex; justify-content: center;
+    align-items: flex-end; gap: 0; height: 480px;
+  }
+  .editorial-phone { position: absolute; bottom: 0; }
+  .editorial-phone-back {
+    left: 0; width: 180px; transform: rotate(-4deg) translateY(12px);
+    filter: brightness(.92);
+    z-index: 1;
+  }
+  .editorial-phone-front {
+    right: 0; width: 190px; transform: rotate(3deg);
+    z-index: 2;
+  }
+  .editorial-phone .editorial-caption {
+    justify-content: center; margin-top: 8px; transform: none;
+  }
+  .editorial-phone-back .editorial-caption { opacity: .6; }
+
+  /* shared frame styles */
+  .screenshot-persona {
+    font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 20px; letter-spacing: 0.3px;
+  }
+  .screenshot-persona-manager { background: var(--brand-light); color: var(--brand); }
+  .screenshot-persona-owner { background: var(--amber-light); color: var(--amber); }
+  .screenshot-frame {
+    border-radius: var(--radius); overflow: hidden;
+    border: 1px solid var(--border); box-shadow: var(--shadow-md); background: #e5e7eb;
+  }
+  .screenshot-frame-desktop .screenshot-bar {
+    display: flex; gap: 5px; padding: 8px 12px;
+    background: #f3f4f6; border-bottom: 1px solid var(--border);
+  }
+  .screenshot-frame-desktop .screenshot-bar span {
+    width: 10px; height: 10px; border-radius: 50%;
+  }
+  .screenshot-frame-desktop .screenshot-bar span:first-child { background: #fca5a5; }
+  .screenshot-frame-desktop .screenshot-bar span:nth-child(2) { background: #fde68a; }
+  .screenshot-frame-desktop .screenshot-bar span:nth-child(3) { background: #a7f3d0; }
+  .screenshot-frame img { display: block; width: 100%; height: auto; }
+  .screenshot-frame-mobile {
+    border-radius: 22px; overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0,0,0,.18), 0 0 0 7px #1a1f36;
+    background: #fff;
+  }
+  .screenshot-frame-mobile img { display: block; width: 100%; height: auto; }
+
+  /* ─── FOOTER ─── */
+  footer {
+    border-top: 1px solid var(--border); padding: 32px 0;
+    background: var(--surface);
+  }
+  .footer-inner { display: flex; align-items: center; justify-content: space-between; }
+  .footer-left { font-size: 13px; color: var(--text-muted); }
+  .footer-right { font-size: 12px; color: var(--text-muted); }
+
+  /* ─── MISC HELPERS ─── */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .badge-live {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 11px; font-weight: 600; letter-spacing: 0.3px;
+    background: var(--green-light); color: var(--green);
+    padding: 4px 10px; border-radius: 20px;
+  }
+  .badge-live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+  .divider { border: none; border-top: 1px solid var(--border); margin: 0; }
+  .mt-24 { margin-top: 24px; }
+  .mb-4 { margin-bottom: 4px; }
+  .text-small { font-size: 12px; color: var(--text-muted); }
+  .highlight-box {
+    background: linear-gradient(135deg, #f5f3ff, #eff6ff);
+    border: 1px solid #c4b5fd; border-radius: var(--radius);
+    padding: 28px 32px;
+  }
+  /* ─── RESPONSIVE ───────────────────────────────────────────
+     The page is built three-up on a 1160px container; these steps
+     collapse it to two-up, then one-up, and shrink the display type
+     so nothing has to scroll sideways on a phone. */
+  @media (max-width: 1024px) {
+    .personas-grid { grid-template-columns: repeat(2, 1fr); }
+    .features-grid { grid-template-columns: repeat(2, 1fr); }
+    .diff-grid { grid-template-columns: repeat(2, 1fr); }
+    .roadmap-features { grid-template-columns: 1fr 1fr; }
+    .editorial-row, .editorial-row-reverse {
+      grid-template-columns: 1fr; gap: 32px; margin-bottom: 64px;
+    }
+    .editorial-row-reverse .editorial-copy { order: -1; }
+    .hero h1 { font-size: 42px; letter-spacing: -1px; }
+  }
+  @media (max-width: 760px) {
+    .container { padding: 0 20px; }
+    section { padding: 52px 0; }
+    .nav-links { display: none; }
+    .hero { padding: 56px 0 52px; }
+    .hero h1 { font-size: 32px; letter-spacing: -0.6px; }
+    .hero-sub { font-size: 16px; margin-bottom: 28px; }
+    .section-title { font-size: 25px; letter-spacing: -0.4px; }
+    .personas-grid, .features-grid, .diff-grid, .swiss-grid,
+    .roadmap-features { grid-template-columns: 1fr; }
+    .journey-steps { flex-direction: column; align-items: stretch; }
+    .journey-step { width: 100%; }
+    .step-arrow { display: none; }
+    .roadmap-phase-head { padding: 14px 16px; gap: 12px; }
+    .roadmap-phase-body { padding: 0 16px 16px; }
+    .roadmap-phase-body.open { padding-top: 16px; }
+    .footer-inner { flex-direction: column; align-items: flex-start; gap: 10px; }
+    .editorial-caption { flex-wrap: wrap; }
+  }
+  @media (max-width: 420px) {
+    .hero h1 { font-size: 27px; }
+    .oj-close { padding: 20px; }
+    .oj-close p { font-size: 17px; }
+    .phase-status { display: none; }
+  }
+
+  /* ─── LANGUAGE SWITCH ─── */
+  .lang-switch {
+    display: flex; gap: 1px; background: var(--surface-2);
+    border: 1px solid var(--border); border-radius: 8px; padding: 2px;
+    flex-shrink: 0; margin-left: 20px;
+  }
+  .lang-switch button {
+    border: 0; background: none; cursor: pointer; border-radius: 6px;
+    padding: 4px 9px; font-family: inherit; font-size: 12px; font-weight: 600;
+    color: var(--text-secondary); transition: background .12s, color .12s;
+  }
+  .lang-switch button:hover { color: var(--text); }
+  .lang-switch button[aria-pressed="true"] { background: var(--brand); color: #fff; }
+  .lang-switch button:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+</style>
+
+</head>
+<body>
+
+
+<!-- ─── NAV ─── -->
+<nav>
+  <div class="container">
+    <div class="nav-inner">
+      <div class="nav-logo">
+        <div data-i18n="k83125cc8" class="nav-logo-mark">MA</div>
+        <span class="nav-logo-text">Propfolio</span>
+        <span class="nav-badge">Swiss Market</span>
+      </div>
+      <div class="nav-links">
+        <a data-i18n="k123a7f2f" href="#platform">Platform</a>
+        <a data-i18n="k9b785ec6" href="#owner-journey">Owner's path</a>
+        <a data-i18n="k1dd6a17c" href="#journeys">How it works</a>
+        <a data-i18n="k78a37fd8" href="#swiss">Swiss compliance</a>
+        <a data-i18n="k8119e7f3" href="#roadmap">Roadmap</a>
+      </div>
+      <div class="lang-switch" role="group" aria-label="Language">
+        <button type="button" data-lang="en" aria-pressed="true">EN</button>
+        <button type="button" data-lang="fr" aria-pressed="false">FR</button>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- ─── HERO ─── -->
+<div class="hero">
+  <div class="container">
+    <div data-i18n="k3300f4c4" class="hero-eyebrow">
+      <span class="hero-dot"></span>
+      Live Platform · Swiss Residential Property
+    </div>
+    <h1 data-i18n="k2e2c899e">The asset first,<br><span>the operations after</span>.</h1>
+    <p data-i18n="kacb1ac4e" class="hero-sub">
+      Propfolio reads your Swiss management statements into the real economics of each building, works out
+      which decisions would improve the return against the owner's intent, and runs the maintenance, leases,
+      and compliance that carry those decisions out — closing back onto the same ledger.
+    </p>
+    <div class="hero-ctas">
+      <a data-i18n="ka1b75bb2" href="#platform" class="btn-primary">Explore the platform ↓</a>
+      <a data-i18n="kdb45a193" href="#roadmap" class="btn-ghost">View roadmap →</a>
+    </div>
+  </div>
+</div>
+
+<!-- ─── WHO IS IT FOR ─── -->
+<section id="platform">
+  <div class="container">
+    <div data-i18n="k380adc20" class="section-label">Who it's for</div>
+    <div data-i18n="k7175bf76" class="section-title">One platform, four roles</div>
+    <p data-i18n="kad1b013e" class="section-sub">
+      The owner sets the direction and carries the return. Every other party gets the interface that executes it.
+    </p>
+
+    <div class="personas-grid">
+
+      <div class="persona-card">
+        <div class="persona-icon" style="background:#fef3c7;">🏠</div>
+        <div data-i18n="kaf6979ef" class="persona-name">Building Owner</div>
+        <div data-i18n="k072c878e" class="persona-desc">Net yield and value per building, the levers that would move them, and renovate-or-defer calls costed over ten years — all ranked against the intent you declare for each asset.</div>
+        <div data-i18n="k0d6310f0" class="persona-tags">
+          <span class="tag tag-amber">Net yield &amp; value</span>
+          <span class="tag tag-amber">Yield levers</span>
+          <span class="tag tag-amber">Invest / defer calls</span>
+          <span class="tag tag-amber">Equity return &amp; debt cover</span>
+          <span class="tag tag-amber">Strategy profiles</span>
+          <span class="tag tag-amber">Approval workflow</span>
+        </div>
+      </div>
+
+      <div class="persona-card">
+        <div class="persona-icon" style="background:#ede9fe;">🏢</div>
+        <div data-i18n="k4ce7be6e" class="persona-name">Property Manager</div>
+        <div data-i18n="kcb145da7" class="persona-desc">The operational end of the same numbers. Requests, contractors, leases, compliance, and the ledger from a single hub — every entry feeding the owner's analysis.</div>
+        <div data-i18n="kee40f14a" class="persona-tags">
+          <span class="tag tag-brand">Maintenance hub</span>
+          <span class="tag tag-brand">Legal engine</span>
+          <span class="tag tag-brand">Invoicing</span>
+          <span class="tag tag-brand">Leases</span>
+          <span class="tag tag-brand">Asset registry</span>
+          <span class="tag tag-brand">General ledger</span>
+        </div>
+      </div>
+
+      <div class="persona-card">
+        <div class="persona-icon" style="background:#d1fae5;">🏡</div>
+        <div data-i18n="k3ca93c78" class="persona-name">Tenant</div>
+        <div data-i18n="kbc0735f2" class="persona-desc">A clean self-service portal for submitting requests, tracking status, viewing leases, and paying rent — no phone calls required.</div>
+        <div data-i18n="k1574f9ae" class="persona-tags">
+          <span class="tag tag-green">Request intake</span>
+          <span class="tag tag-green">Invoice &amp; QR pay</span>
+          <span class="tag tag-green">Lease access</span>
+          <span class="tag tag-green">Apply online</span>
+        </div>
+      </div>
+
+      <div class="persona-card">
+        <div class="persona-icon" style="background:#dbeafe;">🔧</div>
+        <div data-i18n="k76bb2328" class="persona-name">Contractor</div>
+        <div data-i18n="kf1e20747" class="persona-desc">A focused job list with all the context needed to act. Accept jobs, update progress, and submit invoices — all from the same interface.</div>
+        <div data-i18n="k424da9f3" class="persona-tags">
+          <span class="tag tag-blue">Job queue</span>
+          <span class="tag tag-blue">Status updates</span>
+          <span class="tag tag-blue">Invoice creation</span>
+          <span class="tag tag-blue">Job ratings</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ─── OWNER JOURNEY ─── -->
+<section id="owner-journey" style="background:var(--surface);">
+  <div class="container">
+    <div data-i18n="k57f7785a" class="section-label">The owner's path</div>
+    <div data-i18n="k5a058843" class="section-title">Your building is a financial asset</div>
+    <p data-i18n="k7d888863" class="oj-thesis">
+      You can read the yield on every other position you hold. A building answers the same questions —
+      <em>what did it return, what is it worth, what should I do next</em> — but nobody has been asking them on your behalf.
+    </p>
+    <p data-i18n="k7279a69e" class="section-sub">
+      Five steps, in the order an owner actually takes them: from the envelope the régie sends once a year
+      to a costed decision about the asset. The screens below are schematic — the real ones are further down the page.
+    </p>
+
+    <div class="oj-steps">
+
+      <!-- 1 — Onboarding -->
+      <div class="oj-step">
+        <div class="oj-rail"><div class="oj-marker">1</div></div>
+        <div class="oj-copy">
+          <div data-i18n="k0b81497c" class="oj-eyebrow">Sign up</div>
+          <h3 data-i18n="k00ae43a0" class="oj-heading">Say what you are, not how the system works.</h3>
+          <p data-i18n="k32d9e07b" class="oj-body">
+            You arrive as an owner, an owner who self-manages, or a régie. That single answer decides
+            what you see for the rest of the journey — there is no settings screen to learn first.
+          </p>
+          <p data-i18n="k63f15f60" class="oj-takeaway">Two minutes: who you are, the building, and who runs it day to day.</p>
+        </div>
+        <div class="oj-frame-wrap">
+          <div class="oj-frame">
+            <div data-i18n="k73103828" class="oj-frame-bar"><span></span><span></span><span></span><span class="oj-frame-label">ONBOARDING · STEP 1 OF 7</span></div>
+            <div class="wf">
+              <div class="wf-rail">
+                <span class="wf-dot is-on"></span><span class="wf-tick"></span>
+                <span class="wf-dot"></span><span class="wf-tick"></span>
+                <span class="wf-dot"></span><span class="wf-tick"></span>
+                <span class="wf-dot"></span><span class="wf-tick"></span>
+                <span class="wf-dot"></span>
+              </div>
+              <div data-i18n="k5f5f7f50" class="wf-title">How will you use it?</div>
+              <div class="wf-rows">
+                <div data-i18n="k48fa167f" class="wf-opt is-sel">
+                  <span class="wf-opt-icon"></span>
+                  <span class="wf-opt-text">
+                    <span class="wf-opt-title">Owner</span><br>
+                    <span class="wf-sub">I own property and want oversight.</span>
+                  </span>
+                  <span class="wf-radio is-on"></span>
+                </div>
+                <div data-i18n="k4e5ed133" class="wf-opt">
+                  <span class="wf-opt-icon"></span>
+                  <span class="wf-opt-text">
+                    <span class="wf-opt-title">Owner + Manager</span><br>
+                    <span class="wf-sub">I own and self-manage.</span>
+                  </span>
+                  <span class="wf-radio"></span>
+                </div>
+                <div data-i18n="k5134ee27" class="wf-opt">
+                  <span class="wf-opt-icon"></span>
+                  <span class="wf-opt-text">
+                    <span class="wf-opt-title">Manager / Régie</span><br>
+                    <span class="wf-sub">I manage for owners.</span>
+                  </span>
+                  <span class="wf-radio"></span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div data-i18n="k6acebd70" class="oj-caption">Schematic — role selection</div>
+        </div>
+      </div>
+
+      <!-- 2 — Mandate -->
+      <div class="oj-step">
+        <div class="oj-rail"><div class="oj-marker">2</div></div>
+        <div class="oj-copy">
+          <div data-i18n="kbce5a614" class="oj-eyebrow">Set the mandate</div>
+          <h3 data-i18n="kc6be3b78" class="oj-heading">Declare what you want the asset to do.</h3>
+          <p data-i18n="k4fcd99e9" class="oj-body">
+            Five questions — horizon, appetite for works, income versus value, what you would do with a windfall,
+            when you would sell. They resolve into a profile that every later recommendation is ranked against.
+          </p>
+          <p data-i18n="kd45e4880" class="oj-takeaway">
+            Two owners can hold the same building and want opposite things. Advice that ignores that is just noise
+            — so anything off-mandate is shown, but never recommended.
+          </p>
+        </div>
+        <div class="oj-frame-wrap">
+          <div class="oj-frame">
+            <div data-i18n="k31fa469b" class="oj-frame-bar"><span></span><span></span><span></span><span class="oj-frame-label">OWNER STRATEGY PROFILE</span></div>
+            <div class="wf">
+              <div data-i18n="k867c3cdb" class="wf-title">Income today, or value in ten years?</div>
+              <div class="wf-split">
+                <div class="wf-rows">
+                  <div data-i18n="k1ab0cdde" class="wf-opt"><span class="wf-radio"></span><span class="wf-opt-text">Steady income above all</span></div>
+                  <div data-i18n="kf38614e0" class="wf-opt is-sel"><span class="wf-radio is-on"></span><span class="wf-opt-text"><b>Income, plus works that pay</b></span></div>
+                  <div data-i18n="kc4d4c0a7" class="wf-opt"><span class="wf-radio"></span><span class="wf-opt-text">Build long-term value</span></div>
+                  <div data-i18n="k126f8afe" class="wf-opt"><span class="wf-radio"></span><span class="wf-opt-text">Prepare an exit</span></div>
+                </div>
+                <div class="wf-card">
+                  <div data-i18n="kc1c9cbe6" class="wf-label">Your profile</div>
+                  <span class="wf-chip">Yield maximiser</span>
+                  <div class="wf-meter">
+                    <div data-i18n="keda24363" class="wf-meter-label">Horizon</div>
+                    <div class="wf-bar"><i style="width:66%"></i></div>
+                  </div>
+                  <div class="wf-meter">
+                    <div data-i18n="kf0111006" class="wf-meter-label">Appetite for works</div>
+                    <div class="wf-bar"><i style="width:78%"></i></div>
+                  </div>
+                  <div class="wf-meter">
+                    <div data-i18n="k88a292bb" class="wf-meter-label">Risk tolerance</div>
+                    <div class="wf-bar"><i style="width:38%"></i></div>
+                  </div>
+                </div>
+              </div>
+              <div data-i18n="k32c4c1cc" class="wf-strip">
+                <b>Applies to: Rue du Lac 12</b><br>
+                <span class="wf-sub">Co-owners who disagree resolve to the cautious call.</span>
+              </div>
+            </div>
+          </div>
+          <div data-i18n="k92accdb8" class="oj-caption">Schematic — mandate questions and resulting profile</div>
+        </div>
+      </div>
+
+      <!-- 3 — Statements -->
+      <div class="oj-step">
+        <div class="oj-rail"><div class="oj-marker">3</div></div>
+        <div class="oj-copy">
+          <div data-i18n="k1e68ca6e" class="oj-eyebrow">Hand over the statements</div>
+          <h3 data-i18n="kd93f4ea0" class="oj-heading">The régie's annual package is the only input.</h3>
+          <p data-i18n="k5f89007e" class="oj-body">
+            Drop in the PDF you already receive — one per year, several years at once. It is read, and every
+            total is checked back against the ones printed on the document. Nothing that fails to tie is allowed through.
+          </p>
+          <p data-i18n="kcf056114" class="oj-takeaway">
+            No migration project, no data entry, no new accounting system. Your régie keeps doing exactly what it does.
+          </p>
+        </div>
+        <div class="oj-frame-wrap">
+          <div class="oj-frame">
+            <div data-i18n="k106d877e" class="oj-frame-bar"><span></span><span></span><span></span><span class="oj-frame-label">IMPORT · RECONCILIATION</span></div>
+            <div class="wf">
+              <div class="wf-drop">
+                <b style="color:var(--brand);">Drop the year-end package</b>
+                <div data-i18n="k1ad2ee46" class="wf-sub">Bilan · Résultat · État locatif · Grand livre</div>
+                <div data-i18n="kdcee12c1" class="wf-files">
+                  <span class="wf-file">rapport-2022.pdf</span>
+                  <span class="wf-file">rapport-2023.pdf</span>
+                  <span class="wf-file">rapport-2024.pdf</span>
+                </div>
+              </div>
+              <div data-i18n="k1054cc8f" class="wf-label" style="margin-top:14px;">Checked against the printed totals</div>
+              <div class="wf-rows">
+                <div data-i18n="k245232de" class="wf-check">
+                  <span class="wf-check-name">Bilan — actif vs passif</span>
+                  <span class="wf-check-val wf-num">1 184 320.55</span>
+                  <span class="wf-ok">ties</span>
+                </div>
+                <div data-i18n="k48ed3120" class="wf-check">
+                  <span class="wf-check-name">Résultat — charges vs produits</span>
+                  <span class="wf-check-val wf-num">248 907.10</span>
+                  <span class="wf-ok">ties</span>
+                </div>
+                <div data-i18n="k7c378df6" class="wf-check">
+                  <span class="wf-check-name">Grand livre — per-unit lines</span>
+                  <span class="wf-check-val">4 units, to the cent</span>
+                  <span class="wf-ok">ties</span>
+                </div>
+              </div>
+              <div data-i18n="k2f091c94" class="wf-banner">Green — posts without review</div>
+            </div>
+          </div>
+          <div data-i18n="k4c36ea96" class="oj-caption">Schematic — grading before anything reaches reporting</div>
+        </div>
+      </div>
+
+      <!-- 4 — Analysis -->
+      <div class="oj-step">
+        <div class="oj-rail"><div class="oj-marker">4</div></div>
+        <div class="oj-copy">
+          <div data-i18n="ke9bb9702" class="oj-eyebrow">Read the position</div>
+          <h3 data-i18n="k65dccd47" class="oj-heading">Good accounting, recast as an investor's view.</h3>
+          <p data-i18n="k30a9921b" class="oj-body">
+            The same figures your régie reports, rearranged into the ones you would ask of any holding: net yield,
+            what the asset is worth, what the debt costs, and which flat or garage earns its keep once costs land where they belong.
+          </p>
+          <p data-i18n="k67a33027" class="oj-takeaway">
+            Costs are attributed from the ledger's own per-unit lines, not spread by a rule of thumb — so a
+            unit's number is defensible line by line.
+          </p>
+        </div>
+        <div class="oj-frame-wrap">
+          <div class="oj-frame">
+            <div data-i18n="ka7136515" class="oj-frame-bar"><span></span><span></span><span></span><span class="oj-frame-label">BUILDING · ANALYTICAL OVERVIEW</span></div>
+            <div class="wf">
+              <div class="wf-kpis">
+                <div class="wf-kpi">
+                  <div data-i18n="k9f26fe30" class="wf-kpi-label">Net yield</div>
+                  <div class="wf-kpi-num" style="color:var(--brand);">3.42%</div>
+                </div>
+                <div class="wf-kpi">
+                  <div data-i18n="k8dce170d" class="wf-kpi-label">Value</div>
+                  <div class="wf-kpi-num">4.24m</div>
+                </div>
+                <div class="wf-kpi">
+                  <div data-i18n="k40035780" class="wf-kpi-label">Loan to value</div>
+                  <div class="wf-kpi-num">61%</div>
+                </div>
+                <div class="wf-kpi">
+                  <div data-i18n="k6ecc0441" class="wf-kpi-label">NOI</div>
+                  <div class="wf-kpi-num">143k</div>
+                </div>
+              </div>
+              <div class="wf-cols">
+                <div>
+                  <div data-i18n="ka6147164" class="wf-label">Where the money went</div>
+                  <div class="wf-drivers">
+                    <div class="wf-driver">
+                      <div>
+                        <div data-i18n="k94de303b" class="wf-driver-name">Maintenance</div>
+                        <div class="wf-bar"><i style="width:75%"></i></div>
+                      </div>
+                      <div class="wf-driver-amt">41k</div>
+                    </div>
+                    <div class="wf-driver">
+                      <div>
+                        <div data-i18n="k080d6131" class="wf-driver-name">Management fee</div>
+                        <div class="wf-bar"><i style="width:38%;background:var(--brand-mid);"></i></div>
+                      </div>
+                      <div class="wf-driver-amt">21k</div>
+                    </div>
+                    <div class="wf-driver">
+                      <div>
+                        <div data-i18n="k1f353ef5" class="wf-driver-name">Heating &amp; utilities</div>
+                        <div class="wf-bar"><i style="width:52%;background:var(--cyan);"></i></div>
+                      </div>
+                      <div class="wf-driver-amt">28k</div>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <div data-i18n="k90f6c6df" class="wf-label">Per unit</div>
+                  <div data-i18n="ka6543a77" class="wf-unit"><span>Apt 0101</span><b style="color:var(--green);">4.1%</b></div>
+                  <div data-i18n="k2f92d5da" class="wf-unit"><span>Apt 0201</span><b style="color:var(--green);">3.6%</b></div>
+                  <div data-i18n="kba948268" class="wf-unit"><span>Garage 9001</span><b style="color:var(--rose);">vacant</b></div>
+                </div>
+              </div>
+              <div data-i18n="kae19e237" class="wf-strip">
+                <b>Reading, in one line</b><br>
+                <span class="wf-sub">Costs fell CHF 4 100 on last year; the empty garage holds the building 0.2 points below its own best year.</span>
+              </div>
+            </div>
+          </div>
+          <div data-i18n="k90becf57" class="oj-caption">Schematic — the building read as a position</div>
+        </div>
+      </div>
+
+      <!-- 5 — Decision -->
+      <div class="oj-step">
+        <div class="oj-rail"><div class="oj-marker">5</div></div>
+        <div class="oj-copy">
+          <div data-i18n="k5cc7fafc" class="oj-eyebrow">Decide, then execute</div>
+          <h3 data-i18n="k6a9260cb" class="oj-heading">What would it take to get to 4.2%?</h3>
+          <p data-i18n="ke4d2407f" class="oj-body">
+            Name a yield you want and each lever says what it would have to deliver — rent to market, costs down,
+            the garage let, the fee renegotiated, the renovation done. Levers stop at what the market, the building,
+            and your own best year actually allow, and the last column is the ceiling: the best this asset can do.
+          </p>
+          <p data-i18n="k37ac14d1" class="oj-takeaway">
+            Then the work is costed over ten years — invest, defer, or do nothing, in today's francs — and the
+            chosen plan becomes a capex schedule the manager executes against.
+          </p>
+        </div>
+        <div class="oj-frame-wrap">
+          <div class="oj-frame">
+            <div data-i18n="k2216c752" class="oj-frame-bar"><span></span><span></span><span></span><span class="oj-frame-label">PLANNING · TARGET × LEVER</span></div>
+            <div class="wf">
+              <div data-i18n="k601ba25a" class="wf-label">Today 3.42% → target</div>
+              <table class="wf-matrix">
+                <thead>
+                  <tr>
+                    <th></th>
+                    <th>3.80%</th>
+                    <th class="is-target">4.20%</th>
+                    <th data-i18n="k93330da4">4.48% max</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td data-i18n="k1d742af1">Rent to market</td>
+                    <td data-i18n="k4fa34bf5">+310/mo</td>
+                    <td data-i18n="kaa594d21" class="is-target">+640/mo</td>
+                    <td data-i18n="ke5215a31">at market</td>
+                  </tr>
+                  <tr>
+                    <td data-i18n="kd2d6beec">Operating costs</td>
+                    <td>−6 200</td>
+                    <td class="is-target">−11 400</td>
+                    <td data-i18n="k86ad00cb">best year</td>
+                  </tr>
+                  <tr>
+                    <td data-i18n="k57a161ec">Let the garage</td>
+                    <td>+2 400</td>
+                    <td class="is-target">+2 400</td>
+                    <td data-i18n="kb0ab3468">100% let</td>
+                  </tr>
+                  <tr>
+                    <td data-i18n="k080d6131">Management fee</td>
+                    <td>4.0%</td>
+                    <td class="is-target">3.2%</td>
+                    <td data-i18n="k118514db">self-manage</td>
+                  </tr>
+                  <tr class="is-off">
+                    <td data-i18n="k908cfbea">Renovation uplift</td>
+                    <td>—</td>
+                    <td>—</td>
+                    <td>—</td>
+                  </tr>
+                </tbody>
+              </table>
+              <div data-i18n="k6013550b" class="wf-sub" style="margin-top:8px;">Greyed: no vétusté data yet — a lever is never guessed at.</div>
+              <div data-i18n="k8519b237" class="wf-verdict">
+                <span class="wf-verdict-main">
+                  <span class="wf-verdict-title">Invest — renovate now</span><br>
+                  <span class="wf-verdict-sub">CHF 128 400 better than deferring, over ten years · on mandate</span>
+                </span>
+                <span class="wf-verdict-cta">Plan it →</span>
+              </div>
+            </div>
+          </div>
+          <div data-i18n="k3bdd6425" class="oj-caption">Schematic — reachable targets, and the ceiling</div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="oj-close">
+      <p data-i18n="k5258451c">A share tells you its yield without being asked. Your building holds more of your capital than most of your portfolio — it should answer just as plainly.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ─── JOURNEYS ─── -->
+<section id="journeys" style="background:var(--bg);">
+  <div class="container">
+    <div data-i18n="k1dd6a17c" class="section-label">How it works</div>
+    <div data-i18n="k15c1b349" class="section-title">Connected end-to-end workflows</div>
+    <p data-i18n="kfc073487" class="section-sub">
+      Every process has a defined workflow with automatic status transitions, approvals, and notifications at each step.
+    </p>
+
+    <!-- Asset Analysis Journey -->
+    <div class="journey-block">
+      <div data-i18n="kae2d4ba1" class="journey-title">
+        <span style="background:#fef3c7;border-radius:6px;padding:4px 10px;font-size:12px;color:#b45309;font-weight:700;">ASSET ANALYSIS</span>
+        From annual statement to a decision
+      </div>
+      <div class="journey-steps">
+        <div class="journey-step">
+          <div class="step-node active">
+            <div data-i18n="k928f2e61" class="step-node-label">Statement upload</div>
+            <div data-i18n="kcc352b58" class="step-node-sub">Régie annual package</div>
+          </div>
+          <span class="step-arrow">→</span>
+        </div>
+        <div class="journey-step">
+          <div class="step-node">
+            <div data-i18n="kbe5474ef" class="step-node-label">Extract &amp; reconcile</div>
+            <div data-i18n="k64163f37" class="step-node-sub">Must tie to printed totals</div>
+          </div>
+          <span class="step-arrow">→</span>
+        </div>
+        <div class="journey-step">
+          <div class="step-node">
+            <div data-i18n="k2a7808da" class="step-node-label">Building economics</div>
+            <div data-i18n="k1a2baf9b" class="step-node-sub">Net yield, value, LTV, per unit</div>
+          </div>
+          <span class="step-arrow">→</span>
+        </div>
+        <div class="journey-step">
+          <div class="step-node active">
+            <div data-i18n="k80f09530" class="step-node-label">Yield levers</div>
+            <div data-i18n="k6a403835" class="step-node-sub">Targets × levers, with a ceiling</div>
+          </div>
+          <span class="step-arrow">→</span>
+        </div>
+        <div class="journey-step">
+          <div class="step-node">
+            <div data-i18n="k1530d661" class="step-node-label">Ranked by intent</div>
+            <div data-i18n="k07e0366f" class="step-node-sub">Owner strategy profile</div>
+          </div>
+          <span class="step-arrow">→</span>
+        </div>
+        <div class="journey-step">
+          <div class="step-node">
+            <div data-i18n="k1029341f" class="step-node-label">Plan &amp; execute</div>
+            <div data-i18n="ka65cfe8b" class="step-node-sub">Capex schedule → RFP</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Maintenance Journey -->
+    <div class="journey-block">
+      <div data-i18n="k9a7e4288" class="journey-title">
+        <span style="background:#ede9fe;border-radius:6px;padding:4px 10px;font-size:12px;color:var(--brand);font-weight:700;">MAINTENANCE</span>
+        From request to closed job
+      </div>
+      <div class="journey-steps">
+        <div class="journey-step">
+          <div class="step-node">
+            <div data-i18n="k9c0168b8" class="step-node-label">Tenant submits</div>
+            <div data-i18n="k79363292" class="step-node-sub">Chat intake or form</div>
+          </div>
+          <span class="step-arrow">→</span>
+        </div>
+        <div class="journey-step">
+          <div class="step-node active">
+            <div data-i18n="kded65ddb" class="step-node-label">Auto-triage</div>
+            <div data-i18n="k1e54b1ee" class="step-node-sub">Category + urgency</div>
+          </div>
+          <span class="step-arrow">→</span>
+        </div>
+        <div class="journey-step">
+          <div class="step-node">
+            <div data-i18n="k7ac55ace" class="step-node-label">Legal check</div>
+            <div data-i18n="k3fcfab76" class="step-node-sub">Auto-route if relevant</div>
+          </div>
+          <span class="step-arrow">→</span>
+        </div>
+        <div class="journey-step">
+          <div class="step-node">
+            <div data-i18n="kc341eeb7" class="step-node-label">Owner approval</div>
+            <div data-i18n="k93fdbebe" class="step-node-sub">If required by config</div>
+          </div>
+          <span class="step-arrow">→</span>
+        </div>
+        <div class="journey-step">
+          <div class="step-node">
+            <div data-i18n="kbeb7c5ba" class="step-node-label">Assign contractor</div>
+            <div data-i18n="kf8fe534a" class="step-node-sub">Direct or via RFP</div>
+          </div>
+          <span class="step-arrow">→</span>
+        </div>
+        <div class="journey-step">
+          <div class="step-node">
+            <div data-i18n="kbc6515a0" class="step-node-label">Job completed</div>
+            <div data-i18n="k19d381e3" class="step-node-sub">With rating</div>
+          </div>
+          <span class="step-arrow">→</span>
+        </div>
+        <div class="journey-step">
+          <div class="step-node active">
+            <div data-i18n="k40d60cb4" class="step-node-label">Invoice &amp; close</div>
+            <div data-i18n="kf1ba0eb8" class="step-node-sub">Captured + approved</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Financial Journey -->
+    <div class="journey-block">
+      <div data-i18n="ke491ffd9" class="journey-title">
+        <span style="background:#d1fae5;border-radius:6px;padding:4px 10px;font-size:12px;color:var(--green);font-weight:700;">FINANCIAL</span>
+        From invoice capture to ledger
+      </div>
+      <div class="journey-steps">
+        <div class="journey-step">
+          <div class="step-node active">
+            <div data-i18n="kfd8b544e" class="step-node-label">Invoice capture</div>
+            <div data-i18n="kbb5c31ee" class="step-node-sub">Camera / OCR / upload</div>
+          </div>
+          <span class="step-arrow">→</span>
+        </div>
+        <div class="journey-step">
+          <div class="step-node">
+            <div data-i18n="kb2783ccb" class="step-node-label">OCR extraction</div>
+            <div data-i18n="kfee11286" class="step-node-sub">Azure Doc Intelligence</div>
+          </div>
+          <span class="step-arrow">→</span>
+        </div>
+        <div class="journey-step">
+          <div class="step-node">
+            <div data-i18n="k64ea2c0e" class="step-node-label">Draft &amp; review</div>
+            <div data-i18n="ke4a06ad6" class="step-node-sub">Line items + COA</div>
+          </div>
+          <span class="step-arrow">→</span>
+        </div>
+        <div class="journey-step">
+          <div class="step-node">
+            <div data-i18n="kd1cde0e5" class="step-node-label">Manager approval</div>
+            <div data-i18n="k36b964a1" class="step-node-sub">Or dispute flow</div>
+          </div>
+          <span class="step-arrow">→</span>
+        </div>
+        <div class="journey-step">
+          <div class="step-node active">
+            <div data-i18n="k3566e078" class="step-node-label">Auto-post ledger</div>
+            <div data-i18n="kd81706c8" class="step-node-sub">Debit / credit entry</div>
+          </div>
+          <span class="step-arrow">→</span>
+        </div>
+        <div class="journey-step">
+          <div class="step-node">
+            <div data-i18n="k3fa64ffc" class="step-node-label">Financial snapshot</div>
+            <div data-i18n="k833694a8" class="step-node-sub">Per building, monthly</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lease Journey -->
+    <div class="journey-block">
+      <div data-i18n="kec0e012c" class="journey-title">
+        <span style="background:#dbeafe;border-radius:6px;padding:4px 10px;font-size:12px;color:var(--blue);font-weight:700;">LEASE</span>
+        From rental application to active tenancy
+      </div>
+      <div class="journey-steps">
+        <div class="journey-step">
+          <div class="step-node">
+            <div data-i18n="k189efba1" class="step-node-label">Online application</div>
+            <div data-i18n="k42f2f98f" class="step-node-sub">Multi-unit wizard</div>
+          </div>
+          <span class="step-arrow">→</span>
+        </div>
+        <div class="journey-step">
+          <div class="step-node">
+            <div data-i18n="k8d1fa2d0" class="step-node-label">Owner selection</div>
+            <div data-i18n="kc2eb5c10" class="step-node-sub">Approve / reject</div>
+          </div>
+          <span class="step-arrow">→</span>
+        </div>
+        <div class="journey-step">
+          <div class="step-node active">
+            <div data-i18n="k530950ed" class="step-node-label">Lease creation</div>
+            <div data-i18n="k60baf912" class="step-node-sub">PDF generated</div>
+          </div>
+          <span class="step-arrow">→</span>
+        </div>
+        <div class="journey-step">
+          <div class="step-node">
+            <div data-i18n="k3af4775b" class="step-node-label">Digital signature</div>
+            <div data-i18n="kdfd8f143" class="step-node-sub">SHA-256 verified</div>
+          </div>
+          <span class="step-arrow">→</span>
+        </div>
+        <div class="journey-step">
+          <div class="step-node active">
+            <div data-i18n="kdfa83282" class="step-node-label">Active tenancy</div>
+            <div data-i18n="k0e40ce13" class="step-node-sub">Rent + billing live</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ─── SCREENSHOTS ─── -->
+<section class="editorial-section">
+  <div class="container">
+    <div data-i18n="kf109b8ba" class="section-label">See it live</div>
+    <div data-i18n="k4636918a" class="section-title">The platform in action</div>
+    <p data-i18n="k311466a8" class="section-sub">Real screens from the current build — no mockups.</p>
+
+    <!-- Block 1: Manager desktop left, copy right -->
+    <div class="editorial-row">
+      <div class="editorial-screen editorial-screen-lg">
+        <div class="screenshot-frame screenshot-frame-desktop">
+          <div class="screenshot-bar"><span></span><span></span><span></span></div>
+          <img src="screenshots/manager-desktop.png" alt="Manager dashboard" loading="lazy">
+        </div>
+        <div data-i18n="k4872780d" class="editorial-caption">
+          <span class="screenshot-persona screenshot-persona-manager">Manager</span>
+          Dashboard — desktop
+        </div>
+      </div>
+      <div class="editorial-copy">
+        <div data-i18n="k9ff78d93" class="editorial-eyebrow">Operations at a glance</div>
+        <h3 data-i18n="ka3d37184" class="editorial-heading">Everything that needs attention, surfaced up front.</h3>
+        <p data-i18n="kd0ef7f5d" class="editorial-body">The manager dashboard opens on a live pulse of the portfolio — open requests, jobs in flight, spend this month, and a building-by-building health grid. No hunting through menus.</p>
+        <div class="editorial-features">
+          <div class="editorial-feature">
+            <div data-i18n="k0bc32327" class="editorial-feature-title">Action-first tabs</div>
+            <div data-i18n="k8d412659" class="editorial-feature-desc">Pending review, owner approval needed, disputed invoices, and stale jobs are each one click away from the dashboard.</div>
+          </div>
+          <div class="editorial-feature">
+            <div data-i18n="k0c9ea358" class="editorial-feature-title">Portfolio NOI at the top</div>
+            <div data-i18n="k66d51fa8" class="editorial-feature-desc">Net operating income and collection rate are surfaced as KPIs — not buried in a finance sub-menu.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Block 2: copy left, two phones right -->
+    <div class="editorial-row editorial-row-reverse">
+      <div class="editorial-copy">
+        <div data-i18n="k56703c0a" class="editorial-eyebrow">Built for owners on the go</div>
+        <h3 data-i18n="kac77ff84" class="editorial-heading">Owners get full visibility — without any of the noise.</h3>
+        <p data-i18n="ka7f22765" class="editorial-body">The owner surface is intentionally separate from the manager's. Owners see their portfolio summary, what drove performance this month, and any work requests waiting for their sign-off — all readable on a phone in under a minute.</p>
+        <div class="editorial-features">
+          <div class="editorial-feature">
+            <div data-i18n="k6d7efe44" class="editorial-feature-title">Monthly narrative report</div>
+            <div data-i18n="kee5a3ea0" class="editorial-feature-desc">The portfolio report leads with plain-language commentary — "Operating costs came down by CHF 4k" — before showing the numbers.</div>
+          </div>
+          <div class="editorial-feature">
+            <div data-i18n="kf4845a7d" class="editorial-feature-title">One-tap approvals</div>
+            <div data-i18n="k4dea25cf" class="editorial-feature-desc">Work orders requiring sign-off show the contractor, quote amount, and full request context. Approve or reject in two taps.</div>
+          </div>
+        </div>
+      </div>
+      <div class="editorial-phones">
+        <div class="editorial-phone editorial-phone-back">
+          <div class="screenshot-frame screenshot-frame-mobile">
+            <img src="screenshots/owner-request-detail-mobile.png" alt="Owner request approval" loading="lazy">
+          </div>
+          <div data-i18n="kc6a85c6a" class="editorial-caption">
+            <span class="screenshot-persona screenshot-persona-owner">Owner</span>
+            Request approval
+          </div>
+        </div>
+        <div class="editorial-phone editorial-phone-front">
+          <div class="screenshot-frame screenshot-frame-mobile">
+            <img src="screenshots/owner-reporting-mobile.png" alt="Owner portfolio report" loading="lazy">
+          </div>
+          <div data-i18n="k4b32ac48" class="editorial-caption">
+            <span class="screenshot-persona screenshot-persona-owner">Owner</span>
+            Portfolio report
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ─── LIVE FEATURES ─── -->
+<section>
+  <div class="container">
+    <div data-i18n="k177e62a5" class="section-label">Platform capabilities</div>
+    <div data-i18n="k200ff8bb" class="section-title">What's live today</div>
+    <p data-i18n="ke17fbb64" class="section-sub">
+      A production-grade platform covering the full lifecycle — from an annual statement to a costed decision, and from a tenant's first message to the ledger entry that closes it.
+    </p>
+
+    <div class="features-grid">
+
+      <div class="feature-card live">
+        <div data-i18n="ka7487759" class="live-pill"><span class="live-pill-dot"></span>Live</div>
+        <span class="feature-card-icon">📈</span>
+        <div data-i18n="k9f10a275" class="feature-card-title">Asset Analysis &amp; Yield Levers</div>
+        <div data-i18n="kce70c80b" class="feature-card-desc">Turns imported statements into the return on each building, then works backwards from a target yield to what each lever would have to deliver.</div>
+        <ul class="feature-list">
+          <li data-i18n="kd1635ae0">Net yield, intrinsic value, and LTV per building</li>
+          <li data-i18n="k6b87681b">Per-unit profitability, costs direct-costed from the grand livre</li>
+          <li data-i18n="k538dfbda">Capital works and mortgage interest split out of operating result</li>
+          <li data-i18n="k415307b9">Target × lever matrix with a max-reachable ceiling</li>
+          <li data-i18n="kdf982bf2">Levers bounded by market, occupancy, and your own best year</li>
+          <li data-i18n="k938a3b45">Fails closed — an unbounded lever is greyed out, never guessed</li>
+        </ul>
+      </div>
+
+      <div class="feature-card live">
+        <div data-i18n="ka7487759" class="live-pill"><span class="live-pill-dot"></span>Live</div>
+        <span class="feature-card-icon">🎯</span>
+        <div data-i18n="k6b19883e" class="feature-card-title">Owner Intent &amp; Investment Decisions</div>
+        <div data-i18n="k81495d33" class="feature-card-desc">The owner's declared strategy for an asset ranks every recommendation, and renovation choices are valued over a ten-year horizon.</div>
+        <ul class="feature-list">
+          <li data-i18n="k3ed35a75">Strategy profile per owner and per building</li>
+          <li data-i18n="k20283c94">Off-mandate levers sink below a divider — visible, not recommended</li>
+          <li data-i18n="k899b4fb4">Invest / defer / do-nothing valued in today's francs</li>
+          <li data-i18n="k5b339c6f">Post-renovation rent uplift under Swiss tenancy law</li>
+          <li data-i18n="k432dfe25">Levered returns: equity NPV, IRR, debt cover, LTV</li>
+          <li data-i18n="k624ce22d">Divergent co-owners resolve to the cautious call, not an average</li>
+        </ul>
+      </div>
+
+      <div class="feature-card live">
+        <div data-i18n="ka7487759" class="live-pill"><span class="live-pill-dot"></span>Live</div>
+        <span class="feature-card-icon">📥</span>
+        <div data-i18n="k4191ef89" class="feature-card-title">Statement Ingestion &amp; Extraction Integrity</div>
+        <div data-i18n="ka9a68538" class="feature-card-desc">The régie's own annual package is the input. It is read, reconciled against its printed totals, and graded before a single figure reaches reporting.</div>
+        <ul class="feature-list">
+          <li data-i18n="k8297ec9e">Régie PDF or CSV — bilan, résultat, état locatif, grand livre</li>
+          <li data-i18n="k8337c94a">One package per year; several years imported into one building</li>
+          <li data-i18n="k53d42632">Reconciled to the document's own totals, then graded green / amber / red</li>
+          <li data-i18n="kb070c9f4">Only a green import posts unattended — amber and red wait for review</li>
+          <li data-i18n="k41fedae5">Per-unit expense attribution read from the grand livre's unit prefix</li>
+          <li data-i18n="k90f5d1c8">Régie account names kept verbatim; golden-file tests guard each format</li>
+        </ul>
+      </div>
+
+      <div class="feature-card live">
+        <div data-i18n="ka7487759" class="live-pill"><span class="live-pill-dot"></span>Live</div>
+        <span class="feature-card-icon">🚀</span>
+        <div data-i18n="kbec3eba5" class="feature-card-title">Guided Onboarding</div>
+        <div data-i18n="k8f3f38f3" class="feature-card-desc">First login takes an owner from nothing to an analysed building — the package is read in the background while they declare their mandate.</div>
+        <ul class="feature-list">
+          <li data-i18n="k0214f294">Role, identity (KYB-lite), first building, mandate, invitations, defaults</li>
+          <li data-i18n="k3ce8716d">Import the year-end package or create the building by hand</li>
+          <li data-i18n="kf54fce74">Analysis runs while the strategy questions are answered — no waiting screen</li>
+          <li data-i18n="k2c03168b">Invite the régie or manager who runs the day-to-day</li>
+          <li data-i18n="k16aca6b7">Owner invites scoped to a single building, not the whole portfolio</li>
+          <li data-i18n="kc33f2627">Progress resumes after a refresh; EN / FR throughout</li>
+        </ul>
+      </div>
+
+      <div class="feature-card live">
+        <div data-i18n="ka7487759" class="live-pill"><span class="live-pill-dot"></span>Live</div>
+        <span class="feature-card-icon">🔧</span>
+        <div data-i18n="kf763c75a" class="feature-card-title">Maintenance Management</div>
+        <div data-i18n="kc1b3ff29" class="feature-card-desc">Full request lifecycle with automatic triage, contractor assignment, job tracking, and completion rating.</div>
+        <ul class="feature-list">
+          <li data-i18n="k1f88eb63">Tenant intake via chat or structured form</li>
+          <li data-i18n="k9f38ec1d">Maintenance, complaint, and administrative requests separated at intake</li>
+          <li data-i18n="k4b5859b6">Category + urgency auto-classification</li>
+          <li data-i18n="k2024750d">Direct assign or RFP to multiple contractors</li>
+          <li data-i18n="kc098b7b4">Job status tracking with real-time updates</li>
+          <li data-i18n="kc53a019e">Contractor performance ratings</li>
+          <li data-i18n="k61e40f94">Owner approval gate (configurable per building)</li>
+        </ul>
+      </div>
+
+      <div class="feature-card live">
+        <div data-i18n="ka7487759" class="live-pill"><span class="live-pill-dot"></span>Live</div>
+        <span class="feature-card-icon">⚖️</span>
+        <div data-i18n="k499fde06" class="feature-card-title">Swiss Legal Compliance Engine</div>
+        <div data-i18n="kaf5bada4" class="feature-card-desc">A rules-based engine that interprets Swiss tenancy law in context and routes cases automatically.</div>
+        <ul class="feature-list">
+          <li data-i18n="k20e64c9b">DSL rule evaluation against live SNB/BFS data</li>
+          <li data-i18n="k15630837">CO 259a statutory rules (6 canton-specific rules)</li>
+          <li data-i18n="ka39f50e3">Rent reduction calculator for defect claims</li>
+          <li data-i18n="k307e0ab1">FR→EN bilingual legal term matching</li>
+          <li data-i18n="k6de48e97">Legal auto-routing with confidence scoring</li>
+          <li data-i18n="k9c8424a0">Evaluation log with variable resolution trail</li>
+        </ul>
+      </div>
+
+      <div class="feature-card live">
+        <div data-i18n="ka7487759" class="live-pill"><span class="live-pill-dot"></span>Live</div>
+        <span class="feature-card-icon">📄</span>
+        <div data-i18n="k6484789a" class="feature-card-title">Invoicing &amp; OCR Capture</div>
+        <div data-i18n="kd874c14e" class="feature-card-desc">Capture invoices by photo, scan, or upload. Azure Document Intelligence extracts line items automatically.</div>
+        <ul class="feature-list">
+          <li data-i18n="kb8237a78">QR-bill compliant (SIX spec v2.3 / ISO 20022)</li>
+          <li data-i18n="k524fd822">Mobile camera capture → OCR → draft</li>
+          <li data-i18n="k238efcbe">Azure Document Intelligence (primary OCR)</li>
+          <li data-i18n="k0ffb163e">Line item editing + Chart of Accounts mapping</li>
+          <li data-i18n="k6d608eff">Approval / dispute workflow</li>
+          <li data-i18n="k1917bbd9">Original source file preserved and viewable</li>
+        </ul>
+      </div>
+
+      <div class="feature-card live">
+        <div data-i18n="ka7487759" class="live-pill"><span class="live-pill-dot"></span>Live</div>
+        <span class="feature-card-icon">📋</span>
+        <div data-i18n="k6c1619fe" class="feature-card-title">Lease Management</div>
+        <div data-i18n="k36757a32" class="feature-card-desc">End-to-end lease lifecycle from rental application to active tenancy, including digital signing.</div>
+        <ul class="feature-list">
+          <li data-i18n="k99979107">Online rental application wizard</li>
+          <li data-i18n="kf895c5d2">Multi-unit applicant tracking</li>
+          <li data-i18n="kc714e21b">Lease PDF generation with SHA-256 footer</li>
+          <li data-i18n="ke080ee56">Digital signature integration (SignatureRequest)</li>
+          <li data-i18n="kc20a60fe">Lease termination workflow</li>
+          <li data-i18n="kbd50cf00">Move-in / move-out condition reports (état des lieux) with photo delta</li>
+          <li data-i18n="kf4062f5a">Formal manager→tenant correspondence with an in-app inbox and replies</li>
+          <li data-i18n="kc4038cdd">Vacancy tracking linked to financials</li>
+        </ul>
+      </div>
+
+      <div class="feature-card live">
+        <div data-i18n="ka7487759" class="live-pill"><span class="live-pill-dot"></span>Live</div>
+        <span class="feature-card-icon">📊</span>
+        <div data-i18n="k951dca5b" class="feature-card-title">Financial Engine</div>
+        <div data-i18n="k61350029" class="feature-card-desc">A full financial layer — chart of accounts, general ledger, recurring billing, and per-building snapshots.</div>
+        <ul class="feature-list">
+          <li data-i18n="k38b99984">Chart of Accounts with expense type mapping</li>
+          <li data-i18n="kfd0b98ae">Double-entry General Ledger (auto-posted)</li>
+          <li data-i18n="k51bc6fb8">Recurring billing schedules</li>
+          <li data-i18n="k1bab9d76">Charge reconciliation on a Swiss ancillary-cost taxonomy</li>
+          <li data-i18n="k327aa770">Billable / non-billable gate per cost category, with distribution keys</li>
+          <li data-i18n="k420dd959">Imported opening balances bridged to the operating result</li>
+          <li data-i18n="keb8cb9b5">Rent adjustments (CO 269d compliant)</li>
+          <li data-i18n="k4ebe531c">Per-building financial snapshots</li>
+        </ul>
+      </div>
+
+      <div class="feature-card live">
+        <div data-i18n="ka7487759" class="live-pill"><span class="live-pill-dot"></span>Live</div>
+        <span class="feature-card-icon">🏗️</span>
+        <div data-i18n="kc4f7f2e2" class="feature-card-title">Asset Inventory &amp; Depreciation</div>
+        <div data-i18n="kcf8329e3" class="feature-card-desc">Full asset registry with Swiss depreciation standards and intervention history for every building.</div>
+        <ul class="feature-list">
+          <li data-i18n="kfa7ce498">Asset model catalog with canton-specific data</li>
+          <li data-i18n="ka19e9aaf">HEV 2024 useful-life standards built in, canton-specific where applicable</li>
+          <li data-i18n="k5cf7047a">Intervention history per asset</li>
+          <li data-i18n="ka067fa64">Depreciation calculator (residual value, timeline)</li>
+          <li data-i18n="kbde6ee5e">Asset condition tracking</li>
+          <li data-i18n="k4780b1dd">Parking spots as first-class units, co-billed with the flat they serve</li>
+          <li data-i18n="kfa6fcd17">PAIF &amp; Swiss real estate taxonomy</li>
+        </ul>
+      </div>
+
+      <div class="feature-card live">
+        <div data-i18n="ka7487759" class="live-pill"><span class="live-pill-dot"></span>Live</div>
+        <span class="feature-card-icon">🧠</span>
+        <div data-i18n="ke9531aec" class="feature-card-title">Strategy &amp; Cashflow Engine</div>
+        <div data-i18n="k5ca28fb4" class="feature-card-desc">Building-level strategy profiles with financial scoring, archetypes, and cashflow overlays.</div>
+        <ul class="feature-list">
+          <li data-i18n="k07af78e3">5 building archetypes (stability, growth, yield…)</li>
+          <li data-i18n="k2aa5eb43">6 financial scoring dimensions</li>
+          <li data-i18n="keb276346">Decision scoring with ranked options</li>
+          <li data-i18n="kf9e496a9">Cashflow plan with strategy overlay</li>
+          <li data-i18n="k04ad7181">Forecasting with scenario comparison</li>
+          <li data-i18n="ka6e4f835">56 passing unit tests</li>
+        </ul>
+      </div>
+
+      <div class="feature-card live">
+        <div data-i18n="ka7487759" class="live-pill"><span class="live-pill-dot"></span>Live</div>
+        <span class="feature-card-icon">📱</span>
+        <div data-i18n="k52f79864" class="feature-card-title">Tenant Portal</div>
+        <div data-i18n="k812e71d8" class="feature-card-desc">A clean web interface for tenants to manage their tenancy without calling or emailing the manager.</div>
+        <ul class="feature-list">
+          <li data-i18n="k688334a2">Maintenance request submission</li>
+          <li data-i18n="kfb8e2220">Invoice view with QR payment slip</li>
+          <li data-i18n="ka78c6d72">Lease and contract access</li>
+          <li data-i18n="kebab0ed0">Asset list for their unit</li>
+          <li data-i18n="k3c07a6ac">Listing browse &amp; application wizard</li>
+          <li data-i18n="k38df694f">Assistant answering with the building's canton-scoped legal context and house rules</li>
+          <li data-i18n="k65e99882">Mobile responsive (dual-render layout)</li>
+        </ul>
+      </div>
+
+      <div class="feature-card live">
+        <div data-i18n="ka7487759" class="live-pill"><span class="live-pill-dot"></span>Live</div>
+        <span class="feature-card-icon">👁️</span>
+        <div data-i18n="ke27a3a26" class="feature-card-title">Owner Portal</div>
+        <div data-i18n="k0835dbe5" class="feature-card-desc">The analysis surface for building owners — the numbers, the levers, and the few things that need a decision. No operational noise.</div>
+        <ul class="feature-list">
+          <li data-i18n="k8a27a940">Portfolio report leading with plain-language commentary, then the numbers</li>
+          <li data-i18n="k36159569">Net yield, value, and the levers that would move them, per building</li>
+          <li data-i18n="k5806e2cc">Pending approvals with full context</li>
+          <li data-i18n="k1549625d">Vacancy tracking and invoice review</li>
+          <li data-i18n="k11a398a3">Access scoped to the buildings actually owned — one invite, one building</li>
+          <li data-i18n="k1faa20a8">Role-isolated routing (separate from manager)</li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ─── SWISS COMPLIANCE ─── -->
+<section id="swiss" style="background:var(--surface);">
+  <div class="container">
+    <div data-i18n="k9c64a347" class="section-label">Built for Switzerland</div>
+    <div data-i18n="k959ebb2f" class="section-title">Swiss compliance, out of the box</div>
+    <p data-i18n="kcc12f51e" class="section-sub">
+      Not a generic platform adapted for Switzerland — built from the ground up for Swiss law, formats, and banking standards.
+    </p>
+
+    <div class="swiss-grid">
+
+      <div class="swiss-card">
+        <div class="swiss-card-flag">🏦</div>
+        <div data-i18n="k064b1595" class="swiss-card-title">SIX QR-Bill (ISO 20022)</div>
+        <div data-i18n="k21140701" class="swiss-card-desc">Every invoice can generate a compliant Swiss QR payment slip. Tenants see the QR code directly in their portal.</div>
+        <div class="swiss-items">
+          <div data-i18n="k27cb39b5" class="swiss-item">SIX spec v2.3 validated payload generation</div>
+          <div data-i18n="k0e6ce925" class="swiss-item">IBAN + structured reference (QRR / SCOR)</div>
+          <div data-i18n="ked470085" class="swiss-item">PNG output displayed inline for tenants</div>
+          <div data-i18n="kf9236184" class="swiss-item">F5 golden test guards financial precision</div>
+        </div>
+      </div>
+
+      <div class="swiss-card">
+        <div class="swiss-card-flag">📜</div>
+        <div data-i18n="k9574d1f1" class="swiss-card-title">Swiss Tenancy Law (CO 259a / 269d)</div>
+        <div data-i18n="kd04995b9" class="swiss-card-desc">The legal engine evaluates DSL rules against live reference data from the SNB and BFS.</div>
+        <div class="swiss-items">
+          <div data-i18n="k322644a7" class="swiss-item">CO 259a defect &amp; rent reduction rules</div>
+          <div data-i18n="k682f48c7" class="swiss-item">CO 269d rent adjustment compliance</div>
+          <div data-i18n="k6dbe94d5" class="swiss-item">Canton-scoped variable resolution</div>
+          <div data-i18n="k9d3b1b65" class="swiss-item">Live reference interest rate (SNB) ingestion</div>
+        </div>
+      </div>
+
+      <div class="swiss-card">
+        <div class="swiss-card-flag">🗂️</div>
+        <div data-i18n="ke4d2cea3" class="swiss-card-title">Depreciation Standards (PAIF)</div>
+        <div data-i18n="ke1db128b" class="swiss-card-desc">Swiss useful-life standards (HEV 2024) covering every major property asset category, resolved canton-first and falling back to the national figure.</div>
+        <div class="swiss-items">
+          <div data-i18n="k9ae00619" class="swiss-item">Full Swiss residential asset taxonomy</div>
+          <div data-i18n="k08041eb0" class="swiss-item">Residual value &amp; timeline calculation</div>
+          <div data-i18n="k44b6336d" class="swiss-item">Per-intervention deduction tracking</div>
+          <div data-i18n="kfb107ab1" class="swiss-item">Condition-adjusted depreciation</div>
+        </div>
+      </div>
+
+      <div class="swiss-card">
+        <div class="swiss-card-flag">🌐</div>
+        <div data-i18n="kd47c3f04" class="swiss-card-title">Multilingual (FR / EN live)</div>
+        <div data-i18n="k75fa6752" class="swiss-card-desc">The whole application — manager, owner, tenant, and contractor — is served in French and English today, with the language following the user. German and Italian are next.</div>
+        <div class="swiss-items">
+          <div data-i18n="k99287a31" class="swiss-item">Full FR / EN UI across all four roles (live)</div>
+          <div data-i18n="k42c2cad2" class="swiss-item">FR→EN legal term translation layer (live)</div>
+          <div data-i18n="k09f8d131" class="swiss-item">DE / IT tenant UI (Phase 2)</div>
+          <div data-i18n="k9076846b" class="swiss-item">Canton-specific initial rent notification forms</div>
+          <div data-i18n="ka6cb3f08" class="swiss-item">German &amp; French Betreibungshinweis templates</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ─── DIFFERENTIATORS ─── -->
+<section>
+  <div class="container">
+    <div data-i18n="ka0ddfd4c" class="section-label">Why Propfolio</div>
+    <div data-i18n="k0d117e68" class="section-title">What makes it different</div>
+    <p data-i18n="ke892fc2f" class="section-sub">Property software manages buildings. Propfolio manages the investment, and treats the operations as the means of acting on it.</p>
+
+    <div class="diff-grid">
+      <div class="diff-card">
+        <div class="diff-num">→</div>
+        <div data-i18n="k17992a58" class="diff-title">Owner intent is a first-class input</div>
+        <div data-i18n="k58eb8e19" class="diff-desc">Two owners can hold the same building and want opposite things from it. The declared strategy ranks every lever and verdict, instead of one generic "optimise everything" recommendation for all.</div>
+      </div>
+      <div class="diff-card">
+        <div class="diff-num">→</div>
+        <div data-i18n="kde3ab91d" class="diff-title">Statements in, analysis out</div>
+        <div data-i18n="kab6e9887" class="diff-desc">Onboarding starts from the régie's existing annual package rather than a migration project — good accounting taken as the input, then recast into the investor's view. Extraction is reconciled against the document's own printed totals and graded before anything reaches reporting.</div>
+      </div>
+      <div class="diff-card">
+        <div class="diff-num">→</div>
+        <div data-i18n="k9aab9fcb" class="diff-title">One source of truth</div>
+        <div data-i18n="k13c922c9" class="diff-desc">Maintenance events, lease data, invoices, and legal cases all live in the same system and cross-reference each other. No more spreadsheet bridges between tools.</div>
+      </div>
+      <div class="diff-card">
+        <div class="diff-num">→</div>
+        <div data-i18n="k5da7c269" class="diff-title">Swiss law built in</div>
+        <div data-i18n="k31d8bee6" class="diff-desc">The legal engine isn't a PDF library — it evaluates actual Swiss law rules against live reference rates and building-specific data. Automatically flags and routes legal exposure.</div>
+      </div>
+      <div class="diff-card">
+        <div class="diff-num">→</div>
+        <div data-i18n="k11dd07c2" class="diff-title">All four parties, one platform</div>
+        <div data-i18n="kf781384e" class="diff-desc">Manager, owner, tenant, and contractor each have a role-scoped interface. Communication flows through the platform, not via email chains and WhatsApp groups.</div>
+      </div>
+      <div class="diff-card">
+        <div class="diff-num">→</div>
+        <div data-i18n="kcee794af" class="diff-title">Returns on equity, not just bookkeeping</div>
+        <div data-i18n="kcd7a96b0" class="diff-desc">Mortgages, interest, and amortisation are modelled, so owners see the return on capital actually invested — alongside loan-to-value and debt cover. Not a record of what was paid, but a read on what the asset is doing.</div>
+      </div>
+      <div class="diff-card">
+        <div class="diff-num">→</div>
+        <div data-i18n="k21a71934" class="diff-title">Scales from 1 to many buildings</div>
+        <div data-i18n="k122cccad" class="diff-desc">The same backend powers the professional manager view and a simplified private landlord mode (Phase 2). No separate product, no data migration needed.</div>
+      </div>
+      <div class="diff-card">
+        <div class="diff-num">→</div>
+        <div data-i18n="kf2f3e491" class="diff-title">Built for AI augmentation</div>
+        <div data-i18n="kfd855c7a" class="diff-desc">Triage, classification, and legal analysis already use rule-based AI. The platform is architected to add LLM-based triage and self-service resolution as the next layer.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── ROADMAP ─── -->
+<section id="roadmap" style="background:var(--surface);">
+  <div class="container">
+    <div data-i18n="k46fdeff6" class="section-label">What's next</div>
+    <div data-i18n="kfd90f95b" class="section-title">Product roadmap</div>
+    <p data-i18n="k2ef3ef58" class="section-sub">
+      Six phases taking the platform from production-ready to a full-coverage Swiss property intelligence layer. Click any phase to explore — items already delivered are marked <span class="fstatus fstatus-shipped">Shipped</span> and those underway <span class="fstatus fstatus-partial">Partial</span>.
+    </p>
+
+    <div class="roadmap-timeline">
+
+      <!-- P0 -->
+      <div class="roadmap-phase">
+        <div class="roadmap-phase-head" onclick="togglePhase(this)">
+          <span class="phase-num phase-p0">P0</span>
+          <div class="phase-info">
+            <div data-i18n="k7bc8a94d" class="phase-name">Foundation Hardening</div>
+            <div data-i18n="k8ee4861e" class="phase-window">Now → Month 1</div>
+          </div>
+          <span class="phase-status status-active">In progress</span>
+          <span style="color:var(--text-muted);font-size:14px;margin-left:8px;">▾</span>
+        </div>
+        <div class="roadmap-phase-body open">
+          <div data-i18n="k9547ce6f" class="phase-goal">Clear the critical path blockers before adding any new features. One item — Swiss e-signature — is still outstanding.</div>
+          <div class="roadmap-features">
+            <div class="roadmap-feature is-shipped">
+              <div data-i18n="k663953f7" class="feature-type-tag ftype-wire">Wire</div><span class="fstatus fstatus-shipped">Shipped</span>
+              <div data-i18n="kea71f9ac" class="roadmap-feature-title">Email Delivery (SMTP / SendGrid)</div>
+              <div data-i18n="kf9171d71" class="roadmap-feature-desc">Outbox plus an SMTP transport, with a dev sink when no host is configured. Overdue-invoice detection already runs on it as a scheduled job.</div>
+            </div>
+            <div class="roadmap-feature is-shipped">
+              <div data-i18n="k663953f7" class="feature-type-tag ftype-wire">Wire</div><span class="fstatus fstatus-shipped">Shipped</span>
+              <div data-i18n="kee40a22a" class="roadmap-feature-title">Legal DSL Variable Resolver</div>
+              <div data-i18n="k68402ea8" class="roadmap-feature-desc">LegalVariable, LegalVariableVersion and LegalRule wired to live SNB/BFS data. Canton-scoped reference interest rate ingestion complete.</div>
+            </div>
+            <div class="roadmap-feature">
+              <div data-i18n="k663953f7" class="feature-type-tag ftype-wire">Wire</div>
+              <div data-i18n="k5ba57353" class="roadmap-feature-title">Digital Lease Signing (Skribble)</div>
+              <div data-i18n="kc8538b68" class="roadmap-feature-desc">Lease PDFs are generated and hash-stamped, and the SignatureRequest model exists — but the Skribble API is not yet connected. Table stakes for private landlord positioning.</div>
+            </div>
+            <div class="roadmap-feature is-shipped">
+              <div data-i18n="kfa1e7a89" class="feature-type-tag" style="background:#ecfeff;color:#164e63;">Refactor</div><span class="fstatus fstatus-shipped">Shipped</span>
+              <div data-i18n="kdfbb7ae3" class="roadmap-feature-title">Service Layer Extraction</div>
+              <div data-i18n="k1b7e1e51" class="roadmap-feature-desc">Legal, tenant, and lease logic now sits in services behind repositories, with a guardrail holding the line on direct database access from routes.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- P1 -->
+      <div class="roadmap-phase">
+        <div class="roadmap-phase-head" onclick="togglePhase(this)">
+          <span class="phase-num phase-p1">P1</span>
+          <div class="phase-info">
+            <div data-i18n="k1019d580" class="phase-name">Cashflow Layer</div>
+            <div data-i18n="k84f2565c" class="phase-window">Month 1–3</div>
+          </div>
+          <span class="phase-status status-active">In progress</span>
+          <span style="color:var(--text-muted);font-size:14px;margin-left:8px;">▾</span>
+        </div>
+        <div class="roadmap-phase-body">
+          <div data-i18n="k9d39af7b" class="phase-goal">Build the financial visibility layer for building owners — cash in, cash out, per-building balance — without crossing into accounting. Most of it is now live; bank reconciliation is the remaining gap.</div>
+          <div class="roadmap-features">
+            <div class="roadmap-feature is-shipped">
+              <div data-i18n="kbbd80cf7" class="feature-type-tag ftype-build">Build</div><span class="fstatus fstatus-shipped">Shipped</span>
+              <div data-i18n="k6e6d23bd" class="roadmap-feature-title">QR-Invoice Rent Demand Generation</div>
+              <div data-i18n="k9bc4b646" class="roadmap-feature-desc">Monthly rent invoices are generated from active leases — pro-rata on a mid-month start — each carrying a compliant Swiss QR slip, with the tenant notified.</div>
+            </div>
+            <div class="roadmap-feature">
+              <div data-i18n="kbbd80cf7" class="feature-type-tag ftype-build">Build</div>
+              <div data-i18n="k3f9a3aff" class="roadmap-feature-title">Bank Payment Reconciliation (MT940)</div>
+              <div data-i18n="ka4dc9d12" class="roadmap-feature-desc">Accept MT940/CSV exports from major Swiss banks. Auto-match incoming payments to open rent demands by amount + reference. Not started — payments are still marked by hand.</div>
+            </div>
+            <div class="roadmap-feature is-shipped">
+              <div data-i18n="k281dd836" class="feature-type-tag ftype-extend">Extend</div><span class="fstatus fstatus-shipped">Shipped</span>
+              <div data-i18n="kf5eadb8b" class="roadmap-feature-title">Cashflow Service</div>
+              <div data-i18n="kff78b748" class="roadmap-feature-desc">Per-building snapshots of income, expenses, vacancy loss, and net balance — now also the base layer under the yield analysis and the capex plan.</div>
+            </div>
+            <div class="roadmap-feature is-partial">
+              <div data-i18n="kbbd80cf7" class="feature-type-tag ftype-build">Build</div><span class="fstatus fstatus-partial">Partial</span>
+              <div data-i18n="k917a6c1f" class="roadmap-feature-title">Rent Arrears Workflow</div>
+              <div data-i18n="ka79552e7" class="roadmap-feature-desc">Overdue invoices are detected on a schedule and raise a manager notification plus an email. The escalation ladder — nudge, formal notice, Betreibungshinweis — is still to build.</div>
+            </div>
+            <div class="roadmap-feature is-partial">
+              <div data-i18n="kbbd80cf7" class="feature-type-tag ftype-build">Build</div><span class="fstatus fstatus-partial">Partial</span>
+              <div data-i18n="kcca40642" class="roadmap-feature-title">Nebenkosten Statements</div>
+              <div data-i18n="ke8138243" class="roadmap-feature-desc">The Swiss cost taxonomy, the legal billable gate, and apportionment by surface, unit count, occupants, or fixed share are live. The per-tenant settlement PDF is the remaining piece.</div>
+            </div>
+            <div class="roadmap-feature is-shipped">
+              <div data-i18n="k281dd836" class="feature-type-tag ftype-extend">Extend</div><span class="fstatus fstatus-shipped">Shipped</span>
+              <div data-i18n="k4458f9d7" class="roadmap-feature-title">Owner Cashflow Dashboard</div>
+              <div data-i18n="kba7bf5ab" class="roadmap-feature-desc">Portfolio and per-building reporting on real data: monthly NOI trend, year-on-year comparison, occupancy, and watch items — led by plain-language commentary.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- P2 -->
+      <div class="roadmap-phase">
+        <div class="roadmap-phase-head" onclick="togglePhase(this)">
+          <span class="phase-num phase-p2">P2</span>
+          <div class="phase-info">
+            <div data-i18n="k397af755" class="phase-name">Private Landlord SaaS</div>
+            <div data-i18n="k4b36b2c2" class="phase-window">Month 3–6</div>
+          </div>
+          <span class="phase-status status-active">In progress</span>
+          <span style="color:var(--text-muted);font-size:14px;margin-left:8px;">▾</span>
+        </div>
+        <div class="roadmap-phase-body">
+          <div data-i18n="k80c7dbeb" class="phase-goal">The current product is built for professional managers. This phase creates a simplified entry point for private individuals owning 1–20 properties — same backend, different UX skin and onboarding.</div>
+          <div class="roadmap-features">
+            <div class="roadmap-feature is-partial">
+              <div data-i18n="kdd3b86d1" class="feature-type-tag ftype-product">Product</div><span class="fstatus fstatus-partial">Partial</span>
+              <div data-i18n="ka08511c2" class="roadmap-feature-title">Self-Service Onboarding Wizard</div>
+              <div data-i18n="k89add1ed" class="roadmap-feature-desc">Live: role, identity, first building — created by hand or imported from the year-end package — owner mandate, invitations, defaults, in EN and FR. Still to add: lease upload and the first QR-invoice inside the same run.</div>
+            </div>
+            <div class="roadmap-feature is-partial">
+              <div data-i18n="kbbd80cf7" class="feature-type-tag ftype-build">Build</div><span class="fstatus fstatus-partial">Partial</span>
+              <div data-i18n="kac577182" class="roadmap-feature-title">Simplified Landlord Mode</div>
+              <div data-i18n="kb97d0c9a" class="roadmap-feature-desc">Onboarding already offers an owner-who-self-manages role that grants both capability sets. What remains is the interface itself: one simplified surface instead of two, and a switcher between them.</div>
+            </div>
+            <div class="roadmap-feature is-partial">
+              <div data-i18n="kbbd80cf7" class="feature-type-tag ftype-build">Build</div><span class="fstatus fstatus-partial">Partial</span>
+              <div data-i18n="kc895a85d" class="roadmap-feature-title">Multilingual Tenant Portal (FR/DE/IT)</div>
+              <div data-i18n="k77b2c85b" class="roadmap-feature-desc">French and English are live across every role, with the choice following the user. German and Italian are the remaining languages for tenant-facing pages.</div>
+            </div>
+            <div class="roadmap-feature">
+              <div data-i18n="k281dd836" class="feature-type-tag ftype-extend">Extend</div>
+              <div data-i18n="k55f032df" class="roadmap-feature-title">Canton Rent Notification Forms</div>
+              <div data-i18n="kb51ebd7c" class="roadmap-feature-desc">Generate the correct canton-specific initial rent notification form from lease data, pre-filled and ready to sign. First target: Form-10/11 (Zurich, Bern).</div>
+            </div>
+            <div class="roadmap-feature">
+              <div data-i18n="k281dd836" class="feature-type-tag ftype-extend">Extend</div>
+              <div data-i18n="k93226cba" class="roadmap-feature-title">Tenant PWA (Mobile App)</div>
+              <div data-i18n="kf4ea3ee8" class="roadmap-feature-desc">Wrap the tenant portal as a PWA — installable on iOS/Android, push notifications, offline document access. Replaces phone calls for issue reporting.</div>
+            </div>
+            <div class="roadmap-feature is-partial">
+              <div data-i18n="kbbd80cf7" class="feature-type-tag ftype-build">Build</div><span class="fstatus fstatus-partial">Partial</span>
+              <div data-i18n="kad807b6c" class="roadmap-feature-title">Document Vault</div>
+              <div data-i18n="kabdaaec9" class="roadmap-feature-desc">Each building has a Documents tab holding house rules and canton legal sources, and letters are archived in the correspondence thread. Lease PDFs, addenda and statements still need to join them, with search.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- P3 -->
+      <div class="roadmap-phase">
+        <div class="roadmap-phase-head" onclick="togglePhase(this)">
+          <span class="phase-num phase-p3">P3</span>
+          <div class="phase-info">
+            <div data-i18n="k0934cf73" class="phase-name">AI Triage Upgrade</div>
+            <div data-i18n="k573ceb12" class="phase-window">Month 5–8</div>
+          </div>
+          <span class="phase-status status-planned">Planned</span>
+          <span style="color:var(--text-muted);font-size:14px;margin-left:8px;">▾</span>
+        </div>
+        <div class="roadmap-phase-body">
+          <div data-i18n="k3fb465ed" class="phase-goal">Extend the existing triage service from classify-and-route to resolve-before-dispatch. The infrastructure is there. The intelligence layer is not.</div>
+          <div class="roadmap-features">
+            <div class="roadmap-feature">
+              <div data-i18n="kbbd80cf7" class="feature-type-tag ftype-build">Build</div>
+              <div data-i18n="kc6dc1ab2" class="roadmap-feature-title">Media Attachments on Requests</div>
+              <div data-i18n="k7424ea84" class="roadmap-feature-desc">Tenant attaches photos/video when submitting a request. Forwarded to contractor before dispatch — eliminates "I need to see it first" call-outs.</div>
+            </div>
+            <div class="roadmap-feature">
+              <div data-i18n="kbbd80cf7" class="feature-type-tag ftype-build">Build</div>
+              <div data-i18n="k509fabd9" class="roadmap-feature-title">LLM-Based Triage</div>
+              <div data-i18n="kabc3ff68" class="roadmap-feature-desc">Replace/augment rule-based triage with LLM classification. Input: free-text + photos. Output: category, urgency score, recommended action, confidence.</div>
+            </div>
+            <div class="roadmap-feature">
+              <div data-i18n="k281dd836" class="feature-type-tag ftype-extend">Extend</div>
+              <div data-i18n="k836426cb" class="roadmap-feature-title">Self-Service Resolution Q&amp;A</div>
+              <div data-i18n="k7306eff8" class="roadmap-feature-desc">When tenant submits a request, present structured Q&amp;A to resolve at intake without dispatch. Target: resolve ~20% of requests without contractor involvement.</div>
+            </div>
+            <div class="roadmap-feature">
+              <div data-i18n="kbbd80cf7" class="feature-type-tag ftype-build">Build</div>
+              <div data-i18n="kca6f8aff" class="roadmap-feature-title">Maintenance Analytics</div>
+              <div data-i18n="kbca50123" class="roadmap-feature-desc">Requests by category/building, avg time-to-resolution, self-resolution rate, contractor performance, cost-per-category. Decision-ready reporting for managers.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- P4 -->
+      <div class="roadmap-phase">
+        <div class="roadmap-phase-head" onclick="togglePhase(this)">
+          <span class="phase-num phase-p4">P4</span>
+          <div class="phase-info">
+            <div data-i18n="k8f4c4f5b" class="phase-name">NOI Intelligence</div>
+            <div data-i18n="k7ade8e81" class="phase-window">Month 8–14</div>
+          </div>
+          <span class="phase-status status-active">Started early</span>
+          <span style="color:var(--text-muted);font-size:14px;margin-left:8px;">▾</span>
+        </div>
+        <div class="roadmap-phase-body">
+          <div data-i18n="k0ad113e9" class="phase-goal">Connect cashflow + maintenance analytics + vacancy data into a per-building P&amp;L proxy. Explicitly not accounting — the output is decision intelligence, not a financial statement. The analysis work pulled several of these forward.</div>
+          <div class="roadmap-features">
+            <div class="roadmap-feature is-partial">
+              <div data-i18n="kbbd80cf7" class="feature-type-tag ftype-build">Build</div><span class="fstatus fstatus-partial">Partial</span>
+              <div data-i18n="k7d4bae6b" class="roadmap-feature-title">Maintenance Cost Tagging</div>
+              <div data-i18n="ke8555fae" class="roadmap-feature-desc">Invoices already carry the unit they belong to, and capital works are split out of the operating result. What's missing is the link from a closed request back to its own cost.</div>
+            </div>
+            <div class="roadmap-feature is-partial">
+              <div data-i18n="k281dd836" class="feature-type-tag ftype-extend">Extend</div><span class="fstatus fstatus-partial">Partial</span>
+              <div data-i18n="ke9d39c8e" class="roadmap-feature-title">Vacancy Cost Tracking</div>
+              <div data-i18n="kb7dc23ac" class="roadmap-feature-desc">An empty unit is priced at its own asking rent — a garage as a garage, not as an average flat — and shows up as the occupancy lever. Reason codes and a cash-event timeline are still open.</div>
+            </div>
+            <div class="roadmap-feature is-shipped">
+              <div data-i18n="kdd3b86d1" class="feature-type-tag ftype-product">Product</div><span class="fstatus fstatus-shipped">Shipped</span>
+              <div data-i18n="kc660907e" class="roadmap-feature-title">NOI Dashboard</div>
+              <div data-i18n="k5472c1d1" class="roadmap-feature-desc">Per building: income, expenses by driver, vacancy, and net operating income — carried down to profitability per unit, and forward into net yield and value.</div>
+            </div>
+            <div class="roadmap-feature is-partial">
+              <div data-i18n="kbbd80cf7" class="feature-type-tag ftype-build">Build</div><span class="fstatus fstatus-partial">Partial</span>
+              <div data-i18n="k57316e5f" class="roadmap-feature-title">Predictive Maintenance Signals</div>
+              <div data-i18n="k49be73ea" class="roadmap-feature-desc">Assets are ranked by remaining useful life into renovation opportunities and a forward capex schedule. Budget recommendations and risk alerts are the remaining layer.</div>
+            </div>
+            <div class="roadmap-feature">
+              <div data-i18n="kbbd80cf7" class="feature-type-tag ftype-build">Build</div>
+              <div data-i18n="kb46f8006" class="roadmap-feature-title">Accountant Export</div>
+              <div data-i18n="k7a69a187" class="roadmap-feature-desc">One-click annual summary for accountant: all income, expense invoices, Nebenkosten statements, lease periods, vacancy periods — structured export.</div>
+            </div>
+            <div class="roadmap-feature">
+              <div data-i18n="k541cc9b4" class="feature-type-tag ftype-infra">Infra</div>
+              <div data-i18n="k8af1dbbc" class="roadmap-feature-title">Live Bank Feed (SIX bLink)</div>
+              <div data-i18n="kfa955ad2" class="roadmap-feature-desc">Replace MT940 manual import with live bank feed via SIX bLink. Automatic daily reconciliation. Built after MT940 is proven in production.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- P5 -->
+      <div class="roadmap-phase">
+        <div class="roadmap-phase-head" onclick="togglePhase(this)">
+          <span class="phase-num phase-p5">P5</span>
+          <div class="phase-info">
+            <div data-i18n="kb6a14699" class="phase-name">ESG Layer</div>
+            <div data-i18n="k3b0ea5d7" class="phase-window">Month 14+</div>
+          </div>
+          <span class="phase-status status-planned">Planned</span>
+          <span style="color:var(--text-muted);font-size:14px;margin-left:8px;">▾</span>
+        </div>
+        <div class="roadmap-phase-body">
+          <div data-i18n="k1977d19e" class="phase-goal">Energy tracking, cantonal compliance deadlines, retrofit ROI modeling. New vertical targeting institutional owners.</div>
+          <div class="roadmap-features">
+            <div class="roadmap-feature">
+              <div data-i18n="kbbd80cf7" class="feature-type-tag ftype-build">Build</div>
+              <div data-i18n="k6e1d2383" class="roadmap-feature-title">Energy Consumption Tracking</div>
+              <div data-i18n="k65724f2d" class="roadmap-feature-desc">Per-building energy data ingestion and reporting. Cantonal compliance deadlines surfaced proactively.</div>
+            </div>
+            <div class="roadmap-feature">
+              <div data-i18n="kbbd80cf7" class="feature-type-tag ftype-build">Build</div>
+              <div data-i18n="k3ac6ecd0" class="roadmap-feature-title">Retrofit ROI Modeling</div>
+              <div data-i18n="k9594f2e8" class="roadmap-feature-desc">Connect depreciation standards and energy data to model the financial return on insulation, heating, and window retrofits.</div>
+            </div>
+            <div class="roadmap-feature">
+              <div data-i18n="kdd3b86d1" class="feature-type-tag ftype-product">Product</div>
+              <div data-i18n="k89cf9c40" class="roadmap-feature-title">Institutional Owner Reporting</div>
+              <div data-i18n="k01b7b142" class="roadmap-feature-desc">ESG-grade reporting layer for pension funds and institutional owners managing large Swiss residential portfolios.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ─── CLOSING CTA ─── -->
+<section style="padding: 64px 0;">
+  <div class="container">
+    <div class="highlight-box" style="text-align:center;">
+      <div data-i18n="k90e40d50" class="section-label" style="justify-content:center;display:flex;">Get started</div>
+      <div data-i18n="k606fe745" class="section-title" style="margin-bottom:12px;">Ready to see it in action?</div>
+      <p data-i18n="kc785f703" style="font-size:16px;color:var(--text-secondary);max-width:480px;margin:0 auto 32px;">
+        Schedule a demo to walk through the platform with real Swiss property data.
+      </p>
+      <div style="display:flex;gap:12px;justify-content:center;align-items:center;">
+        <a data-i18n="ke89c5a1f" href="#" class="btn-primary">Request a demo</a>
+        <a data-i18n="k73b4aa6f" href="#platform" class="btn-ghost">Back to top ↑</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── FOOTER ─── -->
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <div data-i18n="k99ee9903" class="footer-left">
+        Propfolio — Swiss Property Investment Platform
+      </div>
+      <div data-i18n="kabdc383d" class="footer-right">
+        <span class="badge-live"><span class="badge-live-dot"></span> Platform live · Updated August 2026</span>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+  function togglePhase(head) {
+    const body = head.nextElementSibling;
+    const arrow = head.querySelector('span:last-child');
+    const isOpen = body.classList.contains('open');
+    body.classList.toggle('open', !isOpen);
+    arrow.textContent = isOpen ? '▾' : '▴';
+  }
+</script>
+
+
+<script>
+/* ─── i18n ─────────────────────────────────────────────
+   English lives in the markup; French is applied over it.
+   A missing key falls back to the English already on the page.
+   Same mechanism and storage key as website/index.html, so a
+   visitor's choice carries between the site and these docs. */
+const I18N = {
+  fr: {"meta.title": "Propfolio — Présentation du produit", "k123a7f2f": "Plateforme", "k9b785ec6": "Le parcours propriétaire", "k1dd6a17c": "Comment ça marche", "k78a37fd8": "Conformité suisse", "k8119e7f3": "Feuille de route", "k3300f4c4": "<span class=\"hero-dot\"></span> Plateforme en service · Immobilier résidentiel suisse", "k2e2c899e": "L'actif d'abord,<br><span>l'exploitation ensuite</span>.", "kacb1ac4e": "Propfolio lit vos décomptes de gérance suisses pour en tirer l'économie réelle de chaque immeuble, détermine quelles décisions amélioreraient le rendement au regard du mandat du propriétaire, et pilote l'entretien, les baux et la conformité qui les exécutent — pour revenir se boucler sur le même grand livre.", "ka1b75bb2": "Explorer la plateforme ↓", "kdb45a193": "Voir la feuille de route →", "k380adc20": "À qui ça s'adresse", "k7175bf76": "Une plateforme, quatre rôles", "kad1b013e": "Le propriétaire donne la direction et porte le rendement. Chaque autre partie reçoit l'interface qui l'exécute.", "kaf6979ef": "Propriétaire", "k072c878e": "Le rendement net et la valeur de chaque immeuble, les leviers qui les feraient bouger, et les arbitrages rénover-ou-différer chiffrés sur dix ans — le tout classé selon le mandat que vous déclarez pour chaque actif.", "k0d6310f0": "<span class=\"tag tag-amber\">Rendement &amp; valeur</span> <span class=\"tag tag-amber\">Leviers de rendement</span> <span class=\"tag tag-amber\">Investir / différer</span> <span class=\"tag tag-amber\">Rendement des fonds propres</span> <span class=\"tag tag-amber\">Profils de stratégie</span> <span class=\"tag tag-amber\">Circuit d'approbation</span>", "k4ce7be6e": "Gérance", "kcb145da7": "Le bout opérationnel des mêmes chiffres. Demandes, artisans, baux, conformité et grand livre depuis un seul poste — chaque écriture alimentant l'analyse du propriétaire.", "kee40f14a": "<span class=\"tag tag-brand\">Poste d'entretien</span> <span class=\"tag tag-brand\">Moteur juridique</span> <span class=\"tag tag-brand\">Facturation</span> <span class=\"tag tag-brand\">Baux</span> <span class=\"tag tag-brand\">Inventaire</span> <span class=\"tag tag-brand\">Grand livre</span>", "k3ca93c78": "Locataire", "kbc0735f2": "Un portail en libre-service pour annoncer un problème, suivre son avancement, consulter son bail et payer son loyer — sans un seul appel.", "k1574f9ae": "<span class=\"tag tag-green\">Annonces</span> <span class=\"tag tag-green\">Factures &amp; QR</span> <span class=\"tag tag-green\">Accès au bail</span> <span class=\"tag tag-green\">Postuler en ligne</span>", "k76bb2328": "Artisan", "kf1e20747": "Une liste de mandats resserrée, avec tout le contexte nécessaire pour agir. Accepter un mandat, mettre à jour l'avancement, déposer sa facture — depuis la même interface.", "k424da9f3": "<span class=\"tag tag-blue\">File de mandats</span> <span class=\"tag tag-blue\">Suivi d'avancement</span> <span class=\"tag tag-blue\">Création de facture</span> <span class=\"tag tag-blue\">Évaluations</span>", "k57f7785a": "Le parcours propriétaire", "k5a058843": "Votre immeuble est un actif financier", "k7d888863": "Vous lisez le rendement de chacune de vos autres positions. Un immeuble répond aux mêmes questions — <em>qu'a-t-il rapporté, que vaut-il, que faire ensuite</em> — mais personne ne les posait pour vous.", "k7279a69e": "Cinq étapes, dans l'ordre où un propriétaire les vit : de l'enveloppe que la régie envoie une fois par an jusqu'à une décision chiffrée sur l'actif. Les écrans ci-dessous sont schématiques — les vrais figurent plus bas.", "k0b81497c": "Inscription", "k00ae43a0": "Dites ce que vous êtes, pas comment l'outil fonctionne.", "k32d9e07b": "Vous arrivez comme propriétaire, comme propriétaire qui gère lui-même, ou comme régie. Cette seule réponse décide de ce que vous voyez pour tout le reste du parcours — aucun écran de réglages à apprendre d'abord.", "k63f15f60": "Deux minutes : qui vous êtes, l'immeuble, et qui s'en occupe au quotidien.", "k73103828": "<span></span><span></span><span></span><span class=\"oj-frame-label\">INSCRIPTION · ÉTAPE 1 SUR 7</span>", "k5f5f7f50": "Comment allez-vous l'utiliser ?", "k48fa167f": "<span class=\"wf-opt-icon\"></span> <span class=\"wf-opt-text\"> <span class=\"wf-opt-title\">Propriétaire</span><br> <span class=\"wf-sub\">Je possède et je veux une vue d'ensemble.</span> </span> <span class=\"wf-radio is-on\"></span>", "k4e5ed133": "<span class=\"wf-opt-icon\"></span> <span class=\"wf-opt-text\"> <span class=\"wf-opt-title\">Propriétaire + gérant</span><br> <span class=\"wf-sub\">Je possède et je gère moi-même.</span> </span> <span class=\"wf-radio\"></span>", "k5134ee27": "<span class=\"wf-opt-icon\"></span> <span class=\"wf-opt-text\"> <span class=\"wf-opt-title\">Gérance / régie</span><br> <span class=\"wf-sub\">Je gère pour des propriétaires.</span> </span> <span class=\"wf-radio\"></span>", "k6acebd70": "Schéma — choix du rôle", "kbce5a614": "Fixer le mandat", "kc6be3b78": "Déclarez ce que vous attendez de l'actif.", "k4fcd99e9": "Cinq questions — horizon, appétit pour les travaux, revenu contre valeur, usage d'une rentrée exceptionnelle, moment de la vente. Elles se résolvent en un profil auquel toute recommandation ultérieure est confrontée.", "kd45e4880": "Deux propriétaires peuvent détenir le même immeuble et vouloir l'inverse l'un de l'autre. Un conseil qui l'ignore n'est que du bruit — ce qui sort du mandat reste visible, mais n'est jamais recommandé.", "k31fa469b": "<span></span><span></span><span></span><span class=\"oj-frame-label\">PROFIL DE STRATÉGIE</span>", "k867c3cdb": "Du revenu aujourd'hui, ou de la valeur dans dix ans ?", "k1ab0cdde": "<span class=\"wf-radio\"></span><span class=\"wf-opt-text\">Le revenu avant tout</span>", "kf38614e0": "<span class=\"wf-radio is-on\"></span><span class=\"wf-opt-text\"><b>Le revenu, et les travaux qui paient</b></span>", "kc4d4c0a7": "<span class=\"wf-radio\"></span><span class=\"wf-opt-text\">Construire de la valeur</span>", "k126f8afe": "<span class=\"wf-radio\"></span><span class=\"wf-opt-text\">Préparer une sortie</span>", "kc1c9cbe6": "Votre profil", "keda24363": "Horizon", "kf0111006": "Appétit pour les travaux", "k88a292bb": "Tolérance au risque", "k32c4c1cc": "<b>S'applique à : Rue du Lac 12</b><br> <span class=\"wf-sub\">En cas de désaccord entre copropriétaires, c'est la position prudente qui l'emporte.</span>", "k92accdb8": "Schéma — questions de mandat et profil obtenu", "k1e68ca6e": "Transmettre les décomptes", "kd93f4ea0": "Le rapport annuel de la régie est la seule donnée d'entrée.", "k5f89007e": "Déposez le PDF que vous recevez déjà — un par exercice, plusieurs exercices d'un coup. Il est lu, et chaque total est recontrôlé contre ceux imprimés sur le document. Rien qui ne boucle pas ne passe.", "kcf056114": "Aucun projet de migration, aucune saisie, aucune nouvelle comptabilité. Votre régie continue exactement ce qu'elle fait.", "k106d877e": "<span></span><span></span><span></span><span class=\"oj-frame-label\">IMPORT · RÉCONCILIATION</span>", "k1054cc8f": "Contrôlé contre les totaux imprimés", "k245232de": "<span class=\"wf-check-name\">Bilan — actif contre passif</span> <span class=\"wf-check-val wf-num\">1 184 320.55</span> <span class=\"wf-ok\">boucle</span>", "k48ed3120": "<span class=\"wf-check-name\">Résultat — charges contre produits</span> <span class=\"wf-check-val wf-num\">248 907.10</span> <span class=\"wf-ok\">boucle</span>", "k7c378df6": "<span class=\"wf-check-name\">Grand livre — écritures par lot</span> <span class=\"wf-check-val\">4 lots, au centime</span> <span class=\"wf-ok\">boucle</span>", "k2f091c94": "Vert — comptabilisé sans revue", "k4c36ea96": "Schéma — la notation, avant que quoi que ce soit n'atteigne le reporting", "ke9bb9702": "Lire la position", "k65dccd47": "De la bonne comptabilité, relue en vue d'investisseur.", "k30a9921b": "Les chiffres mêmes que votre régie publie, réagencés en ceux que vous exigeriez de n'importe quelle position : rendement net, valeur de l'actif, coût de la dette, et quel appartement ou garage gagne sa place une fois les charges affectées là où elles tombent.", "k67a33027": "Les charges sont affectées depuis les écritures par lot du grand livre, non réparties à la louche — le chiffre d'un lot se défend ligne par ligne.", "ka7136515": "<span></span><span></span><span></span><span class=\"oj-frame-label\">IMMEUBLE · VUE ANALYTIQUE</span>", "k9f26fe30": "Rendement net", "k8dce170d": "Valeur", "k40035780": "Taux d'endettement", "ka6147164": "Où l'argent est passé", "k94de303b": "Entretien", "k080d6131": "Honoraires de gérance", "k1f353ef5": "Chauffage &amp; fluides", "k90f6c6df": "Par lot", "ka6543a77": "<span>Appt 0101</span><b style=\"color:var(--green);\">4.1%</b>", "k2f92d5da": "<span>Appt 0201</span><b style=\"color:var(--green);\">3.6%</b>", "kba948268": "<span>Garage 9001</span><b style=\"color:var(--rose);\">vacant</b>", "kae19e237": "<b>La lecture, en une ligne</b><br> <span class=\"wf-sub\">Les charges ont baissé de CHF 4 100 sur un an ; le garage vide maintient l'immeuble 0,2 point sous sa meilleure année.</span>", "k90becf57": "Schéma — l'immeuble lu comme une position", "k5cc7fafc": "Décider, puis exécuter", "k6a9260cb": "Que faudrait-il pour atteindre 4,2 % ?", "ke4d2407f": "Nommez le rendement que vous visez et chaque levier dit ce qu'il devrait apporter — loyers au marché, charges en baisse, garage loué, honoraires renégociés, rénovation faite. Les leviers s'arrêtent à ce que le marché, l'immeuble et votre propre meilleure année permettent réellement, et la dernière colonne est le plafond : le mieux que cet actif puisse faire.", "k37ac14d1": "Les travaux sont ensuite chiffrés sur dix ans — investir, différer ou ne rien faire, en francs d'aujourd'hui — et le plan retenu devient un calendrier d'investissements que la gérance exécute.", "k2216c752": "<span></span><span></span><span></span><span class=\"oj-frame-label\">PLANIFICATION · OBJECTIF × LEVIER</span>", "k601ba25a": "Aujourd'hui 3,42 % → objectif", "k93330da4": "4,48 % max", "k1d742af1": "Loyers au marché", "ke5215a31": "au marché", "kd2d6beec": "Charges d'exploitation", "k86ad00cb": "meilleure année", "k57a161ec": "Louer le garage", "kb0ab3468": "100 % loué", "k118514db": "auto-gestion", "k908cfbea": "Plus-value de rénovation", "k6013550b": "Grisé : pas encore de donnée de vétusté — un levier ne se devine jamais.", "k8519b237": "<span class=\"wf-verdict-main\"> <span class=\"wf-verdict-title\">Investir — rénover maintenant</span><br> <span class=\"wf-verdict-sub\">CHF 128 400 de mieux que différer, sur dix ans · conforme au mandat</span> </span> <span class=\"wf-verdict-cta\">Planifier →</span>", "k3bdd6425": "Schéma — objectifs atteignables, et le plafond", "k5258451c": "Une action vous donne son rendement sans qu'on le lui demande. Votre immeuble immobilise plus de capital que la plupart de votre portefeuille — il devrait répondre aussi clairement.", "k15c1b349": "Des flux connectés de bout en bout", "kfc073487": "Chaque processus suit un flux défini, avec transitions de statut, approbations et notifications automatiques à chaque étape.", "kae2d4ba1": "<span style=\"background:#fef3c7;border-radius:6px;padding:4px 10px;font-size:12px;color:#b45309;font-weight:700;\">ANALYSE DE L'ACTIF</span> Du décompte annuel à la décision", "k928f2e61": "Dépôt du décompte", "kcc352b58": "Rapport annuel de régie", "kbe5474ef": "Extraction &amp; réconciliation", "k64163f37": "Doit boucler aux totaux imprimés", "k2a7808da": "Économie de l'immeuble", "k1a2baf9b": "Rendement, valeur, LTV, par lot", "k80f09530": "Leviers de rendement", "k6a403835": "Objectifs × leviers, avec un plafond", "k1530d661": "Classé par mandat", "k07e0366f": "Profil de stratégie du propriétaire", "k1029341f": "Planifier &amp; exécuter", "ka65cfe8b": "Calendrier de travaux → appel d'offres", "k9a7e4288": "<span style=\"background:#ede9fe;border-radius:6px;padding:4px 10px;font-size:12px;color:var(--brand);font-weight:700;\">ENTRETIEN</span> De l'annonce au mandat clôturé", "k9c0168b8": "Annonce du locataire", "k79363292": "Chat ou formulaire", "kded65ddb": "Tri automatique", "k1e54b1ee": "Catégorie + urgence", "k7ac55ace": "Contrôle juridique", "k3fcfab76": "Routage auto si pertinent", "kc341eeb7": "Accord du propriétaire", "k93fdbebe": "Si la configuration l'exige", "kbeb7c5ba": "Attribution à l'artisan", "kf8fe534a": "Directe ou par appel d'offres", "kbc6515a0": "Mandat terminé", "k19d381e3": "Avec évaluation", "k40d60cb4": "Facturer &amp; clôturer", "kf1ba0eb8": "Saisie + approbation", "ke491ffd9": "<span style=\"background:#d1fae5;border-radius:6px;padding:4px 10px;font-size:12px;color:var(--green);font-weight:700;\">FINANCE</span> De la saisie de facture au grand livre", "kfd8b544e": "Saisie de la facture", "kbb5c31ee": "Photo / OCR / dépôt", "kb2783ccb": "Extraction OCR", "kfee11286": "Azure Doc Intelligence", "k64ea2c0e": "Brouillon &amp; revue", "ke4a06ad6": "Lignes + plan comptable", "k3fa64ffc": "Photographie financière", "k833694a8": "Par immeuble, chaque mois", "kec0e012c": "<span style=\"background:#dbeafe;border-radius:6px;padding:4px 10px;font-size:12px;color:var(--blue);font-weight:700;\">BAIL</span> Du dossier de candidature au bail actif", "k189efba1": "Candidature en ligne", "k42f2f98f": "Assistant multi-lots", "k8d1fa2d0": "Choix du propriétaire", "kc2eb5c10": "Accepter / refuser", "k530950ed": "Création du bail", "k60baf912": "PDF généré", "k3af4775b": "Signature électronique", "kdfd8f143": "Vérifiée par SHA-256", "kdfa83282": "Bail actif", "k0e40ce13": "Loyer + facturation actifs", "kf109b8ba": "En conditions réelles", "k4636918a": "La plateforme en action", "k311466a8": "De vrais écrans de la version actuelle — aucune maquette.", "k4872780d": "<span class=\"screenshot-persona screenshot-persona-manager\">Gérance</span> Tableau de bord — bureau", "k9ff78d93": "L'exploitation d'un coup d'œil", "ka3d37184": "Tout ce qui demande une attention, mis en avant.", "kd0ef7f5d": "Le tableau de bord de la gérance s'ouvre sur le pouls du portefeuille — demandes ouvertes, mandats en cours, dépenses du mois et une grille de santé immeuble par immeuble. Sans fouiller dans les menus.", "k0bc32327": "Des onglets orientés action", "k8d412659": "À revoir, en attente du propriétaire, factures contestées, mandats en souffrance : chacun à un clic du tableau de bord.", "k0c9ea358": "Le NOI du portefeuille en tête", "k66d51fa8": "Le revenu net d'exploitation et le taux d'encaissement sont affichés comme indicateurs — pas enterrés dans un sous-menu financier.", "k56703c0a": "Pensé pour des propriétaires en déplacement", "kac77ff84": "Les propriétaires voient tout — sans aucun bruit.", "ka7f22765": "La surface propriétaire est volontairement séparée de celle de la gérance. Le propriétaire voit la synthèse de son portefeuille, ce qui a fait la performance du mois, et les travaux qui attendent son accord — le tout lisible sur un téléphone en moins d'une minute.", "k6d7efe44": "Rapport mensuel commenté", "kee5a3ea0": "Le rapport de portefeuille commence par un commentaire en langage clair — « les charges ont baissé de CHF 4 000 » — avant de montrer les chiffres.", "kf4845a7d": "Approbations en un geste", "k4dea25cf": "Les travaux soumis à accord affichent l'artisan, le montant du devis et tout le contexte de la demande. Accepter ou refuser en deux gestes.", "kc6a85c6a": "<span class=\"screenshot-persona screenshot-persona-owner\">Propriétaire</span> Accord sur des travaux", "k4b32ac48": "<span class=\"screenshot-persona screenshot-persona-owner\">Propriétaire</span> Rapport de portefeuille", "k177e62a5": "Capacités de la plateforme", "k200ff8bb": "Ce qui est en service aujourd'hui", "ke17fbb64": "Une plateforme de niveau production couvrant tout le cycle — du décompte annuel à la décision chiffrée, et du premier message d'un locataire à l'écriture qui le clôt.", "ka7487759": "<span class=\"live-pill-dot\"></span>En service", "k9f10a275": "Analyse de l'actif &amp; leviers de rendement", "kce70c80b": "Transforme les décomptes importés en rendement de chaque immeuble, puis remonte d'un rendement cible à ce que chaque levier devrait apporter.", "kd1635ae0": "Rendement net, valeur intrinsèque et LTV par immeuble", "k6b87681b": "Rentabilité par lot, charges affectées en direct depuis le grand livre", "k538dfbda": "Travaux à porter à l'actif et intérêts hypothécaires sortis du résultat d'exploitation", "k415307b9": "Matrice objectif × levier, avec un plafond atteignable", "kdf982bf2": "Leviers bornés par le marché, l'occupation et votre propre meilleure année", "k938a3b45": "Échoue par la fermeture — un levier non borné est grisé, jamais deviné", "k6b19883e": "Mandat du propriétaire &amp; décisions d'investissement", "k81495d33": "La stratégie déclarée pour un actif classe chaque recommandation, et les choix de rénovation sont valorisés sur dix ans.", "k3ed35a75": "Profil de stratégie par propriétaire et par immeuble", "k20283c94": "Les leviers hors mandat passent sous un séparateur — visibles, non recommandés", "k899b4fb4": "Investir / différer / ne rien faire, valorisés en francs d'aujourd'hui", "k5b339c6f": "Hausse de loyer après travaux selon le droit du bail suisse", "k432dfe25": "Rendement avec effet de levier : VAN des fonds propres, TRI, couverture de la dette, LTV", "k624ce22d": "Des copropriétaires divergents aboutissent à la position prudente, pas à une moyenne", "k4191ef89": "Import des décomptes &amp; intégrité de l'extraction", "ka9a68538": "Le rapport annuel de la régie est la donnée d'entrée. Il est lu, réconcilié contre ses totaux imprimés et noté avant qu'un seul chiffre n'atteigne le reporting.", "k8297ec9e": "PDF ou CSV de régie — bilan, résultat, état locatif, grand livre", "k8337c94a": "Un rapport par exercice ; plusieurs exercices importés dans le même immeuble", "k53d42632": "Réconcilié aux totaux du document, puis noté vert / orange / rouge", "kb070c9f4": "Seul un import vert se comptabilise sans surveillance — orange et rouge attendent une revue", "k41fedae5": "Charges affectées par lot d'après le préfixe de lot du grand livre", "k90f5d1c8": "Libellés de comptes de la régie conservés tels quels ; des tests de référence protègent chaque format", "kbec3eba5": "Mise en route guidée", "k8f3f38f3": "À la première connexion, le propriétaire passe de rien à un immeuble analysé — le rapport est lu en arrière-plan pendant qu'il déclare son mandat.", "k0214f294": "Rôle, identité (KYB allégé), premier immeuble, mandat, invitations, préférences", "k3ce8716d": "Importer le rapport annuel ou créer l'immeuble à la main", "kf54fce74": "L'analyse tourne pendant que les questions de stratégie sont remplies — aucun écran d'attente", "k2c03168b": "Inviter la régie ou le gérant qui tient le quotidien", "k16aca6b7": "Invitations de propriétaire limitées à un seul immeuble, pas au portefeuille", "kc33f2627": "La progression reprend après un rafraîchissement ; en FR comme en EN", "kf763c75a": "Gestion de l'entretien", "kc1b3ff29": "Cycle complet de la demande, avec tri automatique, attribution à l'artisan, suivi du mandat et évaluation finale.", "k1f88eb63": "Annonce du locataire par chat ou formulaire structuré", "k9f38ec1d": "Entretien, réclamation et démarche administrative séparés dès l'annonce", "k4b5859b6": "Classement automatique par catégorie et urgence", "k2024750d": "Attribution directe ou appel d'offres à plusieurs artisans", "kc098b7b4": "Suivi du statut du mandat en temps réel", "kc53a019e": "Évaluation de la performance des artisans", "k61e40f94": "Seuil d'accord du propriétaire (configurable par immeuble)", "k499fde06": "Moteur de conformité au droit suisse", "kaf5bada4": "Un moteur de règles qui interprète le droit du bail suisse en contexte et oriente les cas automatiquement.", "k20e64c9b": "Évaluation de règles DSL sur des données BNS/OFS à jour", "k15630837": "Règles légales CO 259a (6 règles cantonales)", "ka39f50e3": "Calcul de réduction de loyer pour défaut de la chose louée", "k307e0ab1": "Correspondance bilingue FR→EN des termes juridiques", "k6de48e97": "Routage juridique automatique avec score de confiance", "k9c8424a0": "Journal d'évaluation avec la trace de résolution des variables", "k6484789a": "Facturation &amp; saisie OCR", "kd874c14e": "Saisissez les factures par photo, scan ou dépôt. Azure Document Intelligence en extrait les lignes automatiquement.", "kb8237a78": "Conforme QR-facture (spécification SIX v2.3 / ISO 20022)", "k524fd822": "Photo mobile → OCR → brouillon", "k238efcbe": "Azure Document Intelligence (OCR principal)", "k0ffb163e": "Édition des lignes + rattachement au plan comptable", "k6d608eff": "Circuit d'approbation / de contestation", "k1917bbd9": "Fichier source d'origine conservé et consultable", "k6c1619fe": "Gestion des baux", "k36757a32": "Cycle de vie complet du bail, du dossier de candidature au bail actif, signature électronique comprise.", "k99979107": "Assistant de candidature en ligne", "kf895c5d2": "Suivi des candidats sur plusieurs lots", "kc714e21b": "Génération du bail en PDF avec empreinte SHA-256", "ke080ee56": "Signature électronique intégrée (SignatureRequest)", "kc20a60fe": "Procédure de résiliation", "kbd50cf00": "États des lieux d'entrée et de sortie, avec comparaison des photos", "kf4062f5a": "Courriers formels gérance→locataire, avec boîte de réception et réponses", "kc4038cdd": "Suivi de la vacance relié aux finances", "k951dca5b": "Moteur financier", "k61350029": "Une couche financière complète — plan comptable, grand livre, facturation récurrente et photographies par immeuble.", "k38b99984": "Plan comptable avec typage des charges", "kfd0b98ae": "Grand livre en partie double (comptabilisation automatique)", "k51bc6fb8": "Échéanciers de facturation récurrente", "k1bab9d76": "Décompte de charges sur une taxonomie suisse", "k327aa770": "Filtre récupérable / non récupérable par poste, avec clés de répartition", "k420dd959": "Soldes d'ouverture importés reliés au résultat d'exploitation", "keb8cb9b5": "Adaptations de loyer (conformes CO 269d)", "k4ebe531c": "Photographies financières par immeuble", "kc4f7f2e2": "Inventaire des actifs &amp; vétusté", "kcf8329e3": "Inventaire complet, avec les normes suisses de durée de vie et l'historique des interventions de chaque immeuble.", "kfa7ce498": "Catalogue de modèles d'équipements avec données cantonales", "ka19e9aaf": "Durées de vie HEV 2024 intégrées, cantonales lorsque cela s'applique", "k5cf7047a": "Historique des interventions par équipement", "ka067fa64": "Calculateur de vétusté (valeur résiduelle, échéance)", "kbde6ee5e": "Suivi de l'état des équipements", "k4780b1dd": "Places de parc traitées comme des lots à part entière, facturées avec l'appartement qu'elles servent", "kfa6fcd17": "Taxonomie PAIF &amp; immobilier suisse", "ke9531aec": "Moteur de stratégie &amp; de trésorerie", "k5ca28fb4": "Profils de stratégie par immeuble, avec notation financière, archétypes et projections de trésorerie.", "k07af78e3": "5 archétypes d'immeuble (stabilité, croissance, rendement…)", "k2aa5eb43": "6 dimensions de notation financière", "keb276346": "Notation des décisions avec options classées", "kf9e496a9": "Plan de trésorerie avec surcouche stratégique", "k04ad7181": "Prévisions avec comparaison de scénarios", "ka6e4f835": "56 tests unitaires au vert", "k52f79864": "Portail locataire", "k812e71d8": "Une interface simple pour que le locataire gère sa location sans appeler ni écrire à la gérance.", "k688334a2": "Dépôt d'une demande d'entretien", "kfb8e2220": "Consultation des factures avec bulletin QR", "ka78c6d72": "Accès au bail et aux contrats", "kebab0ed0": "Liste des équipements de son lot", "k3c07a6ac": "Consultation des annonces &amp; candidature", "k38df694f": "Assistant répondant avec le contexte juridique cantonal et le règlement de maison de l'immeuble", "k65e99882": "Adapté au mobile (double rendu)", "ke27a3a26": "Portail propriétaire", "k0835dbe5": "La surface d'analyse du propriétaire — les chiffres, les leviers, et les rares points qui demandent une décision. Aucun bruit opérationnel.", "k8a27a940": "Rapport de portefeuille mené par un commentaire en langage clair, puis les chiffres", "k36159569": "Rendement net, valeur et leviers qui les feraient bouger, par immeuble", "k5806e2cc": "Approbations en attente, avec tout le contexte", "k1549625d": "Suivi de la vacance et revue des factures", "k11a398a3": "Accès limité aux immeubles réellement détenus — une invitation, un immeuble", "k1faa20a8": "Routage isolé par rôle (séparé de la gérance)", "k9c64a347": "Conçu pour la Suisse", "k959ebb2f": "La conformité suisse, d'emblée", "kcc12f51e": "Pas une plateforme générique adaptée à la Suisse — construite dès l'origine pour le droit, les formats et les standards bancaires suisses.", "k064b1595": "QR-facture SIX (ISO 20022)", "k21140701": "Chaque facture peut générer un bulletin de versement QR conforme. Le locataire voit le code QR directement dans son portail.", "k27cb39b5": "Génération de charge utile validée selon la spécification SIX v2.3", "k0e6ce925": "IBAN + référence structurée (QRR / SCOR)", "ked470085": "Sortie PNG affichée directement pour le locataire", "kf9236184": "Un test de référence F5 protège la précision des montants", "k9574d1f1": "Droit du bail suisse (CO 259a / 269d)", "kd04995b9": "Le moteur juridique évalue des règles DSL sur les données de référence à jour de la BNS et de l'OFS.", "k322644a7": "Règles CO 259a sur les défauts &amp; la réduction de loyer", "k682f48c7": "Conformité CO 269d pour l'adaptation des loyers", "k6dbe94d5": "Résolution des variables par canton", "k9d3b1b65": "Reprise du taux hypothécaire de référence (BNS)", "ke4d2cea3": "Normes de vétusté (PAIF)", "ke1db128b": "Les durées de vie suisses (HEV 2024) couvrant chaque grande catégorie d'équipement, résolues d'abord par canton puis à défaut au niveau national.", "k9ae00619": "Taxonomie complète des actifs résidentiels suisses", "k08041eb0": "Calcul de la valeur résiduelle &amp; de l'échéance", "k44b6336d": "Suivi des déductions par intervention", "kfb107ab1": "Vétusté ajustée à l'état constaté", "kd47c3f04": "Multilingue (FR / EN en service)", "k75fa6752": "Toute l'application — gérance, propriétaire, locataire et artisan — est servie aujourd'hui en français et en anglais, la langue suivant l'utilisateur. L'allemand et l'italien viennent ensuite.", "k99287a31": "Interface FR / EN complète pour les quatre rôles (en service)", "k42c2cad2": "Couche de traduction FR→EN des termes juridiques (en service)", "k09f8d131": "Interface locataire DE / IT (phase 2)", "k9076846b": "Formules cantonales de notification du loyer initial", "ka6cb3f08": "Modèles d'avis comminatoire en allemand &amp; en français", "ka0ddfd4c": "Pourquoi Propfolio", "k0d117e68": "Ce qui change", "ke892fc2f": "Les logiciels immobiliers gèrent des immeubles. Propfolio gère le placement, et traite l'exploitation comme le moyen d'agir dessus.", "k17992a58": "Le mandat du propriétaire est une donnée d'entrée à part entière", "k58eb8e19": "Deux propriétaires peuvent détenir le même immeuble et en vouloir des choses opposées. La stratégie déclarée classe chaque levier et chaque verdict, au lieu d'une recommandation générique « tout optimiser » servie à tous.", "kde3ab91d": "Décomptes en entrée, analyse en sortie", "kab6e9887": "La mise en route part du rapport annuel que la régie produit déjà, et non d'un projet de migration — de la bonne comptabilité prise comme entrée, puis relue en vue d'investisseur. L'extraction est réconciliée contre les totaux imprimés du document et notée avant que quoi que ce soit n'atteigne le reporting.", "k9aab9fcb": "Une seule source de vérité", "k13c922c9": "Interventions d'entretien, données de bail, factures et dossiers juridiques vivent dans le même système et se référencent entre eux. Fini les ponts par tableur entre outils.", "k5da7c269": "Le droit suisse intégré", "k31d8bee6": "Le moteur juridique n'est pas une bibliothèque de PDF — il évalue de vraies règles du droit suisse sur des taux de référence à jour et les données propres à l'immeuble. Il signale et oriente automatiquement l'exposition juridique.", "k11dd07c2": "Les quatre parties, une plateforme", "kf781384e": "Gérance, propriétaire, locataire et artisan disposent chacun d'une interface adaptée à leur rôle. La communication passe par la plateforme, pas par des chaînes d'e-mails et des groupes WhatsApp.", "kcee794af": "Le rendement des fonds propres, pas seulement la tenue des comptes", "kcd7a96b0": "Hypothèques, intérêts et amortissements sont modélisés : le propriétaire voit le rendement du capital réellement investi — avec le taux d'endettement et la couverture de la dette. Pas un relevé de ce qui a été payé, mais une lecture de ce que fait l'actif.", "k21a71934": "De 1 immeuble à un portefeuille entier", "k122cccad": "Le même socle technique alimente la vue de la gérance professionnelle et un mode simplifié pour propriétaire privé (phase 2). Pas de produit séparé, pas de migration de données.", "kf2f3e491": "Prêt pour l'IA", "kfd855c7a": "Le tri, la classification et l'analyse juridique utilisent déjà une IA à base de règles. L'architecture est prête à recevoir un tri par LLM et une résolution en libre-service comme couche suivante.", "k46fdeff6": "La suite", "kfd90f95b": "Feuille de route produit", "k2ef3ef58": "Six phases pour mener la plateforme de « prête pour la production » à une couche d'intelligence immobilière suisse complète. Cliquez sur une phase pour l'explorer — ce qui est déjà livré porte la mention <span class=\"fstatus fstatus-shipped\">Livré</span> et ce qui est en cours <span class=\"fstatus fstatus-partial\">Partiel</span>.", "k7bc8a94d": "Consolidation des fondations", "k8ee4861e": "Maintenant → mois 1", "k9547ce6f": "Lever les blocages du chemin critique avant d'ajouter la moindre fonctionnalité. Un point — la signature électronique suisse — reste ouvert.", "k663953f7": "Brancher", "kea71f9ac": "Envoi d'e-mails (SMTP / SendGrid)", "kf9171d71": "Une file d'attente et un transport SMTP, avec un puits local quand aucun hôte n'est configuré. La détection des factures en retard tourne déjà dessus comme tâche planifiée.", "kee40a22a": "Résolveur de variables du DSL juridique", "k68402ea8": "LegalVariable, LegalVariableVersion et LegalRule sont branchés sur les données BNS/OFS à jour. La reprise du taux de référence par canton est terminée.", "k5ba57353": "Signature électronique des baux (Skribble)", "kc8538b68": "Les baux sont générés en PDF et scellés par empreinte, et le modèle SignatureRequest existe — mais l'API Skribble n'est pas encore connectée. Indispensable pour le positionnement propriétaire privé.", "kfa1e7a89": "Refonte", "kdfbb7ae3": "Extraction de la couche service", "k1b7e1e51": "La logique juridique, locataire et bail vit désormais dans des services derrière des dépôts, avec un garde-fou qui tient la ligne sur les accès directs à la base depuis les routes.", "k1019d580": "Couche trésorerie", "k84f2565c": "Mois 1–3", "k9d39af7b": "Construire la visibilité financière du propriétaire — entrées, sorties, solde par immeuble — sans basculer dans la comptabilité. L'essentiel est en service ; le rapprochement bancaire reste à faire.", "kbbd80cf7": "Construire", "k6e6d23bd": "Génération des loyers en QR-facture", "k9bc4b646": "Les factures de loyer mensuelles sont générées depuis les baux actifs — au prorata en cas d'entrée en cours de mois — chacune portant un bulletin QR conforme, le locataire étant notifié.", "k3f9a3aff": "Rapprochement bancaire (MT940)", "ka4dc9d12": "Accepter les exports MT940/CSV des principales banques suisses. Rapprocher automatiquement les paiements entrants des loyers ouverts par montant + référence. Pas commencé — les paiements se pointent encore à la main.", "k281dd836": "Étendre", "kf5eadb8b": "Service de trésorerie", "kff78b748": "Photographies par immeuble des produits, charges, perte sur vacance et solde net — désormais aussi la couche de base sous l'analyse de rendement et le plan de travaux.", "k917a6c1f": "Traitement des loyers impayés", "ka79552e7": "Les factures en retard sont détectées automatiquement et déclenchent une notification à la gérance ainsi qu'un e-mail. L'échelle de relance — rappel, mise en demeure, avis comminatoire — reste à construire.", "kcca40642": "Décomptes de charges", "ke8138243": "La taxonomie suisse des charges, le filtre légal de récupérabilité et la répartition par surface, nombre de lots, occupants ou quote-part fixe sont en service. Le PDF de décompte par locataire reste à faire.", "k4458f9d7": "Tableau de trésorerie du propriétaire", "kba7bf5ab": "Reporting de portefeuille et par immeuble sur données réelles : courbe mensuelle du NOI, comparaison annuelle, occupation et points de vigilance — menés par un commentaire en langage clair.", "k397af755": "SaaS propriétaire privé", "k4b36b2c2": "Mois 3–6", "k80c7dbeb": "Le produit actuel est bâti pour des gérances professionnelles. Cette phase crée une porte d'entrée simplifiée pour les particuliers détenant 1 à 20 objets — même socle technique, autre habillage et autre mise en route.", "kdd3b86d1": "Produit", "ka08511c2": "Mise en route en libre-service", "k89add1ed": "En service : rôle, identité, premier immeuble — créé à la main ou importé depuis le rapport annuel — mandat du propriétaire, invitations, préférences, en FR et en EN. Reste à ajouter : le dépôt du bail et la première QR-facture dans la même session.", "kac577182": "Mode propriétaire-gérant simplifié", "kb97d0c9a": "La mise en route propose déjà un rôle de propriétaire qui gère lui-même, avec les deux jeux de droits. Reste l'interface elle-même : une surface simplifiée au lieu de deux, et un sélecteur entre elles.", "kc895a85d": "Portail locataire multilingue (FR/DE/IT)", "k77b2c85b": "Le français et l'anglais sont en service pour tous les rôles, le choix suivant l'utilisateur. L'allemand et l'italien restent à faire pour les pages locataire.", "k55f032df": "Formules cantonales de notification de loyer", "kb51ebd7c": "Générer la bonne formule cantonale de notification du loyer initial depuis les données du bail, pré-remplie et prête à signer. Première cible : la formule 10/11 (Zurich, Berne).", "k93226cba": "Application mobile locataire (PWA)", "kf4ea3ee8": "Emballer le portail locataire en PWA — installable sur iOS/Android, notifications push, accès hors ligne aux documents. Remplace l'appel téléphonique pour annoncer un problème.", "kad807b6c": "Coffre à documents", "kabdaaec9": "Chaque immeuble dispose d'un onglet Documents contenant le règlement de maison et les sources juridiques cantonales, et les courriers sont archivés dans le fil de correspondance. Les baux en PDF, avenants et décomptes doivent encore les rejoindre, avec une recherche.", "k0934cf73": "Tri assisté par IA", "k573ceb12": "Mois 5–8", "k3fb465ed": "Faire passer le service de tri du « classer et router » au « résoudre avant d'envoyer ». L'infrastructure est là. La couche d'intelligence, pas encore.", "kc6dc1ab2": "Photos et vidéos jointes aux annonces", "k7424ea84": "Le locataire joint photos et vidéos à son annonce. Elles sont transmises à l'artisan avant l'envoi — ce qui supprime les déplacements « il faut d'abord que je voie ».", "k509fabd9": "Tri par LLM", "kabc3ff68": "Remplacer ou compléter le tri à base de règles par une classification LLM. En entrée : texte libre + photos. En sortie : catégorie, score d'urgence, action recommandée, confiance.", "k836426cb": "Questions-réponses en libre-service", "k7306eff8": "Lorsqu'un locataire dépose une annonce, lui présenter des questions-réponses structurées pour résoudre dès l'annonce, sans envoi. Objectif : résoudre ~20 % des demandes sans artisan.", "kca6f8aff": "Analyse de l'entretien", "kbca50123": "Demandes par catégorie et par immeuble, délai moyen de résolution, taux d'auto-résolution, performance des artisans, coût par catégorie. Un reporting prêt pour la décision.", "k8f4c4f5b": "Intelligence du NOI", "k7ade8e81": "Mois 8–14", "k0ad113e9": "Relier trésorerie, analyse de l'entretien et données de vacance en un compte de résultat approché par immeuble. Explicitement pas de la comptabilité — la sortie est une aide à la décision, pas un état financier. Le travail d'analyse en a déjà tiré plusieurs en avance.", "k7d4bae6b": "Rattachement des coûts d'entretien", "ke8555fae": "Les factures portent déjà le lot auquel elles se rapportent, et les travaux à porter à l'actif sont sortis du résultat d'exploitation. Il manque le lien entre un mandat clôturé et son propre coût.", "ke9d39c8e": "Chiffrage du coût de la vacance", "kb7dc23ac": "Un lot vide est valorisé à son propre loyer demandé — un garage comme un garage, pas comme un appartement moyen — et ressort comme levier d'occupation. Les motifs et la chronologie de trésorerie restent ouverts.", "kc660907e": "Tableau de bord du NOI", "k5472c1d1": "Par immeuble : produits, charges par poste, vacance et revenu net d'exploitation — déclinés jusqu'à la rentabilité par lot, et repris ensuite dans le rendement net et la valeur.", "k57316e5f": "Signaux d'entretien prédictifs", "k49be73ea": "Les équipements sont classés par durée de vie restante en opportunités de rénovation et en calendrier de travaux. Les budgets recommandés et les alertes de risque restent la couche à ajouter.", "kb46f8006": "Export pour la fiduciaire", "k7a69a187": "Une synthèse annuelle en un clic pour la fiduciaire : produits, factures de charges, décomptes de charges, périodes de bail, périodes de vacance — en export structuré.", "k541cc9b4": "Infra", "k8af1dbbc": "Flux bancaire direct (SIX bLink)", "kfa955ad2": "Remplacer l'import manuel MT940 par un flux bancaire direct via SIX bLink. Rapprochement quotidien automatique. À construire une fois MT940 éprouvé en production.", "kb6a14699": "Couche ESG", "k3b0ea5d7": "Mois 14+", "k1977d19e": "Suivi énergétique, échéances de conformité cantonales, modélisation du retour sur assainissement. Nouveau segment visant les propriétaires institutionnels.", "k6e1d2383": "Suivi de la consommation d'énergie", "k65724f2d": "Reprise et restitution des données énergétiques par immeuble. Échéances cantonales de conformité annoncées à l'avance.", "k3ac6ecd0": "Retour sur assainissement", "k9594f2e8": "Relier les normes de vétusté et les données énergétiques pour modéliser le rendement financier de l'isolation, du chauffage et des fenêtres.", "k89cf9c40": "Reporting pour propriétaires institutionnels", "k01b7b142": "Une couche de reporting de niveau ESG pour les caisses de pension et les institutionnels détenant de grands portefeuilles résidentiels suisses.", "k90e40d50": "Pour commencer", "k606fe745": "Envie de le voir en conditions réelles ?", "kc785f703": "Réservez une démonstration pour parcourir la plateforme avec de vraies données immobilières suisses.", "ke89c5a1f": "Demander une démo", "k73b4aa6f": "Haut de page ↑", "k99ee9903": "Propfolio — Plateforme suisse d'investissement immobilier", "kabdc383d": "<span class=\"badge-live\"><span class=\"badge-live-dot\"></span> Plateforme en service · Mise à jour août 2026</span>", "k4fa34bf5": "+310/mois", "kaa594d21": "+640/mois", "kd1cde0e5": "Accord de la gérance", "k36b964a1": "Ou contestation", "k3566e078": "Comptabilisation auto", "kd81706c8": "Écriture débit / crédit"}
+};
+(function () {
+  var SUPPORTED = ['en', 'fr'];
+  var STORE = 'propfolio.lang';
+  var nodes = Array.prototype.slice.call(document.querySelectorAll('[data-i18n]'));
+  var metaDesc = document.querySelector('meta[name="description"]');
+
+  /* snapshot the English page before anything is swapped */
+  var EN = {};
+  nodes.forEach(function (n) { EN[n.getAttribute('data-i18n')] = n.innerHTML; });
+  EN['meta.title'] = document.title;
+  EN['meta.desc'] = metaDesc ? metaDesc.getAttribute('content') : '';
+
+  function apply(lang) {
+    var dict = (lang === 'en') ? EN : (I18N[lang] || EN);
+    nodes.forEach(function (n) {
+      var k = n.getAttribute('data-i18n');
+      var v = dict[k];
+      n.innerHTML = (v === undefined || v === null) ? EN[k] : v;
+    });
+    document.title = dict['meta.title'] || EN['meta.title'];
+    if (metaDesc) metaDesc.setAttribute('content', dict['meta.desc'] || EN['meta.desc']);
+    document.documentElement.setAttribute('lang', lang);
+    document.querySelectorAll('.lang-switch button').forEach(function (b) {
+      b.setAttribute('aria-pressed', b.getAttribute('data-lang') === lang ? 'true' : 'false');
+    });
+    try { localStorage.setItem(STORE, lang); } catch (e) {}
+  }
+
+  function pick() {
+    var q = new URLSearchParams(location.search).get('lang');
+    if (q && SUPPORTED.indexOf(q) > -1) return q;
+    try {
+      var saved = localStorage.getItem(STORE);
+      if (saved && SUPPORTED.indexOf(saved) > -1) return saved;
+    } catch (e) {}
+    var nav = (navigator.language || 'en').slice(0, 2).toLowerCase();
+    return SUPPORTED.indexOf(nav) > -1 ? nav : 'en';
+  }
+
+  document.querySelectorAll('.lang-switch button').forEach(function (b) {
+    b.addEventListener('click', function () { apply(b.getAttribute('data-lang')); });
+  });
+
+  apply(pick());
+})();
+</script>
+</body>
+</html>
