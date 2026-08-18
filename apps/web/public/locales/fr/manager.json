@@ -107,7 +107,11 @@
     "contacts": "Contacts",
     "finances": "Finances",
     "settings": "Paramètres",
-    "correspondence": "Correspondance"
+    "correspondence": "Correspondance",
+    "group": {
+      "management": "Gestion",
+      "analysis": "Analyse"
+    }
   },
   "dashboard": {
     "title": "Tableau de bord gérant",

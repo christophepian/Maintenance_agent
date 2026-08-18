@@ -273,8 +273,11 @@ export default function AppShell({ role: roleProp, children }) {
 
       <main
         id="main-content"
-        className="min-w-0 overflow-x-hidden md:overflow-y-auto px-3 py-6 pb-24 md:px-6 md:pb-6"
+        className="min-w-0 overflow-x-hidden md:overflow-y-auto px-3 py-6 pb-24 md:px-10 md:pb-6"
       >
+        {/* Content is capped and centred so line lengths / wide tables stay
+            readable on large monitors; below 1400px this is a no-op. */}
+        <div className="mx-auto w-full max-w-[1400px]">
         {/* Header with locale switcher + notification bell */}
         {(role === "MANAGER" ||
           role === "OWNER" ||
@@ -288,6 +291,7 @@ export default function AppShell({ role: roleProp, children }) {
           </div>
         )}
         {children}
+        </div>
       </main>
 
       {/* Mobile bottom navigation */}

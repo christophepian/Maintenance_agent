@@ -107,7 +107,11 @@
     "contacts": "Contacts",
     "finances": "Finances",
     "settings": "Settings",
-    "correspondence": "Correspondence"
+    "correspondence": "Correspondence",
+    "group": {
+      "management": "Management",
+      "analysis": "Analysis"
+    }
   },
   "dashboard": {
     "title": "Manager Dashboard",
