@@ -530,9 +530,12 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
       {!bf && loading && <div className="space-y-3">{[1,2,3].map((i) => <div key={i} className="h-24 rounded-3xl animate-pulse bg-surface-hover" />)}</div>}
 
       {bf && (() => {
-        // ── Result — a calm header (verdict + Why?), an always-visible KPI strip,
-        //    and a single consolidated flags row (arrears · opening balances). The
-        //    gradient hero and the three separate alert blocks are retired here. ──
+        // ── Result — a calm header (verdict + Why?) and an always-visible KPI
+        //    strip. Arrears and opening balances used to sit in a permanent flags
+        //    band here; they now attach to what they qualify — arrears to the
+        //    collection KPI it restates, opening balances to the import
+        //    provenance under the header badge. The band survives only for
+        //    genuine integrity errors (ledger imbalance). ──
         const topSection = (
           <header className="p-5 sm:p-6 border-b border-surface-border">
             {/* Period pill removed — the period lives in the selector above this card.
@@ -543,6 +546,17 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
                   {t("buildingsId.reporting.importedActuals", { year })}
                 </span>
               </div>
+            )}
+            {/* Opening balances are provenance, not an action — carried in from the
+                imported statement and already inside the balance sheet, outside the
+                period's result. Stated quietly here rather than as an alert pill. */}
+            {(bf.openingReceivablesCents > 0 || bf.openingPayablesCents > 0) && (
+              <p className="mb-2 text-xs text-foreground-dim">
+                {[
+                  bf.openingReceivablesCents > 0 ? t("buildingsId.reporting.openingReceivable", { amount: rFmtChf(bf.openingReceivablesCents) }) : null,
+                  bf.openingPayablesCents > 0 ? t("buildingsId.reporting.openingPayable", { amount: rFmtChf(bf.openingPayablesCents) }) : null,
+                ].filter(Boolean).join(" · ")}
+              </p>
             )}
             <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
               <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-foreground">{headline}</h1>
@@ -569,7 +583,15 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
             d: null },
           { k: t("buildingsId.reporting.kpi.noi"),              v: rFmtChf(noi),                     d: prev ? kpiDeltaChf(noi, prev.netOperatingIncomeCents, 1) : null },
           { k: t("buildingsId.reporting.kpi.occupancy"),        v: occ != null ? rFmtPct(occ) : "—", d: prevOcc != null ? kpiDeltaPp(occ, prevOcc, 1) : null },
-          { k: t("buildingsId.reporting.kpi.onTimeCollection"), v: rFmtPct(coll),                    d: prev ? kpiDeltaPp(coll, prev.collectionRate, 1) : null },
+          // Arrears restate this KPI ("97% collected" ⇔ "CHF X uncollected"), so
+          // they belong in this cell rather than in a separate banner. The warn
+          // line replaces the YoY delta — the money owed outranks the trend.
+          { k: t("buildingsId.reporting.kpi.onTimeCollection"), v: rFmtPct(coll),                    d: prev ? kpiDeltaPp(coll, prev.collectionRate, 1) : null,
+            warn: bf.receivablesCents > 0
+              ? { text: t("buildingsId.reporting.arrears.uncollectedShort", { amount: rFmtChf(bf.receivablesCents) }),
+                  tip: arrears && arrears.totalOverdueCents > 0 ? t("buildingsId.reporting.arrears.overdueShort", { amount: rFmtChf(arrears.totalOverdueCents) }) : null,
+                  href: "/manager/finance/invoices" }
+              : null },
         ];
         const kpiStripEl = (
           <div className="grid grid-cols-2 gap-px border-b border-surface-border bg-surface-border sm:grid-cols-3 lg:grid-cols-5">
@@ -579,28 +601,23 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
                   {x.tip ? <span className="cursor-help underline decoration-dotted decoration-foreground-dim underline-offset-2">{x.k}</span> : x.k}
                 </div>
                 <div className={cn("mt-1 text-lg font-semibold tabular-nums tracking-tight", x.flag ? "text-warning-text" : "text-foreground")}>{x.v}</div>
-                {x.d
-                  ? <div className={cn("mt-0.5 text-[11px] font-medium tabular-nums", x.d.cls)}>{x.d.txt}</div>
-                  : <div className="mt-0.5 text-[11px] text-foreground-dim">—</div>}
+                {x.warn
+                  ? <a href={x.warn.href} title={x.warn.tip || undefined}
+                      className="mt-0.5 block text-[11px] font-semibold text-warning-text no-underline hover:underline">
+                      ⚠ {x.warn.text}
+                    </a>
+                  : x.d
+                    ? <div className={cn("mt-0.5 text-[11px] font-medium tabular-nums", x.d.cls)}>{x.d.txt}</div>
+                    : <div className="mt-0.5 text-[11px] text-foreground-dim">—</div>}
               </div>
             ))}
           </div>
         );
 
-        // Consolidated flags — arrears + opening-balance carry-in, one quiet row.
+        // Flags are reserved for integrity errors the manager must fix — nothing
+        // that merely describes the period. (Arrears → collection KPI cell;
+        // opening balances → header provenance.)
         const flags = [];
-        if (bf.receivablesCents > 0) flags.push({
-          tone: "warn",
-          text: t("buildingsId.reporting.arrears.uncollectedShort", { amount: rFmtChf(bf.receivablesCents) })
-            + (arrears && arrears.totalOverdueCents > 0 ? " · " + t("buildingsId.reporting.arrears.overdueShort", { amount: rFmtChf(arrears.totalOverdueCents) }) : ""),
-        });
-        if (bf.openingReceivablesCents > 0 || bf.openingPayablesCents > 0) flags.push({
-          tone: "info",
-          text: [
-            bf.openingReceivablesCents > 0 ? t("buildingsId.reporting.openingReceivable", { amount: rFmtChf(bf.openingReceivablesCents) }) : null,
-            bf.openingPayablesCents > 0 ? t("buildingsId.reporting.openingPayable", { amount: rFmtChf(bf.openingPayablesCents) }) : null,
-          ].filter(Boolean).join(" · "),
-        });
         // Ledger integrity: a non-zero trial-balance means unbalanced entries were
         // posted (typically an imported opening balance that didn't tie out).
         const ledgerImbalanceCents = report?.ledgerImbalanceCents ?? 0;
@@ -618,9 +635,6 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
                 {f.tone === "danger" ? "⛔" : f.tone === "warn" ? "⚠" : "↪"} {f.text}
               </span>
             ))}
-            {bf.receivablesCents > 0 && (
-              <a href="/manager/finance/invoices" className="ml-auto text-xs font-semibold text-brand no-underline hover:underline">{t("buildingsId.reporting.viewInvoices")} →</a>
-            )}
           </div>
         );
 

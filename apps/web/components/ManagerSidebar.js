@@ -14,7 +14,12 @@ import {
 } from "lucide-react";
 
 /**
- * Manager sidebar — flat 7-item primary navigation.
+ * Manager sidebar — primary navigation, grouped.
+ *
+ * Dashboard and Settings sit ungrouped (entry point / account); the rest split
+ * into what you *run* (Gestion) and what you *read* (Analyse). Group headings
+ * are presentational only — the flat MANAGER_NAV order below still drives
+ * active-route matching, so ordering here and grouping stay independent.
  * Sub-sections live as in-page tab strips on each page.
  */
 const MANAGER_NAV = [
@@ -26,6 +31,14 @@ const MANAGER_NAV = [
   { id: "contacts",        icon: Users,     href: "/manager/people" },
   { id: "correspondence",  icon: Mail,      href: "/manager/correspondence" },
   { id: "settings",        icon: Settings,  href: "/manager/settings" },
+];
+
+// Render order: null heading = ungrouped block (no label rendered).
+const MANAGER_NAV_GROUPS = [
+  { id: null,           items: ["dashboard"] },
+  { id: "management",   items: ["properties", "requests", "leases", "contacts", "correspondence"] },
+  { id: "analysis",     items: ["finances"] },
+  { id: null,           items: ["settings"] },
 ];
 
 export default function ManagerSidebar() {
@@ -44,28 +57,42 @@ export default function ManagerSidebar() {
     return -1;
   }, [pathname]);
 
+  const renderItem = (id) => {
+    const index = MANAGER_NAV.findIndex((n) => n.id === id);
+    const item = MANAGER_NAV[index];
+    if (!item) return null;
+    const Icon = item.icon;
+    const isActive = index === activeIndex;
+    return (
+      <Link
+        key={item.id}
+        href={item.href}
+        className={[
+          "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+          "hover:bg-surface hover:text-foreground",
+          isActive
+            ? "bg-surface text-foreground font-semibold"
+            : "text-muted-text",
+        ].join(" ")}
+      >
+        <Icon size={18} className="shrink-0" />
+        <span>{t(`nav.${item.id}`)}</span>
+      </Link>
+    );
+  };
+
   return (
     <nav aria-label="Manager navigation" className="flex flex-col gap-1 py-2">
-      {MANAGER_NAV.map((item, index) => {
-        const Icon = item.icon;
-        const isActive = index === activeIndex;
-        return (
-          <Link
-            key={item.id}
-            href={item.href}
-            className={[
-              "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-              "hover:bg-surface hover:text-foreground",
-              isActive
-                ? "bg-surface text-foreground font-semibold"
-                : "text-muted-text",
-            ].join(" ")}
-          >
-            <Icon size={18} className="shrink-0" />
-            <span>{t(`nav.${item.id}`)}</span>
-          </Link>
-        );
-      })}
+      {MANAGER_NAV_GROUPS.map((group, gi) => (
+        <div key={group.id ?? `ungrouped-${gi}`} className={gi > 0 ? "mt-4" : undefined}>
+          {group.id && (
+            <div className="px-3 pb-1 text-[11px] font-medium uppercase tracking-wide text-foreground-dim">
+              {t(`nav.group.${group.id}`)}
+            </div>
+          )}
+          <div className="flex flex-col gap-1">{group.items.map(renderItem)}</div>
+        </div>
+      ))}
     </nav>
   );
 }
