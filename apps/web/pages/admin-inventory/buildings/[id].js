@@ -68,8 +68,8 @@ import { useTranslation } from "next-i18next";
 /* ── Building reporting helpers ─────────────────────────── */
 
 const PREVIEW_UNITS = 5;
-const INCOME_PREVIEW = 5; // revex income column: units shown before "Show all"
-const EXPENSE_PREVIEW = 6; // revex expense column: rows shown before "Show all"
+const INCOME_PREVIEW = 5; // Produits tab: units shown before "Show all"
+const EXPENSE_PREVIEW = 6; // Charges tab: account rows shown before "Show all"
 
 // The invoices / entries behind a unit's "Direct costs" figure — lazily fetched
 // when the row is expanded, so a manager can verify the number line by line.
@@ -136,13 +136,26 @@ function UnitCostDetail({ detail, expenses, t, buildingId, from, to }) {
   );
 }
 
-function UnitRow({ unitNumber, floor, tenantName, earned, expenses, charges, net, collectionRate, occupancyRate, expandable, expanded, onToggle, detail, buildingId, from, to }) {
+/**
+ * One unit's line in the Charges tab. Expense-only by design: the Produits tab
+ * owns the income side, so this row never restates it.
+ *
+ * Two cost buckets, because they are attributed by different mechanisms:
+ *  - `direct`      — costs booked straight to the unit. These are the ones with
+ *                    invoice lines behind them, so this is what expands.
+ *  - `apportioned` — the unit's surface-weighted share of recoverable ancillary
+ *                    charges. Real, but derived; there are no per-unit invoices
+ *                    to drill into, hence the row only expands when direct > 0.
+ * Anything attributable to neither is never spread across units — it surfaces as
+ * the "non réparti" row beneath the list.
+ */
+function UnitExpenseRow({ unitNumber, floor, tenantName, direct, apportioned, shareOfTotal, expandable, expanded, onToggle, detail, buildingId, from, to }) {
   const { t } = useTranslation("manager");
-  const netPositive = net >= 0;
+  const total = direct + apportioned;
   const label = floor
     ? t("buildingsId.reporting.unitLabelFloor", { number: unitNumber, floor })
     : t("buildingsId.reporting.unitLabel", { number: unitNumber });
-  const sub   = tenantName || (occupancyRate === 1 ? t("buildingsId.reporting.occupied") : t("buildingsId.reporting.vacant"));
+  const sub = tenantName || t("buildingsId.reporting.vacant");
   const RowTag = expandable ? "button" : "div";
   return (
     <div className="overflow-hidden rounded-2xl border border-surface-border bg-surface-subtle">
@@ -150,42 +163,34 @@ function UnitRow({ unitNumber, floor, tenantName, earned, expenses, charges, net
         {...(expandable ? { type: "button", onClick: onToggle, "aria-expanded": expanded } : {})}
         className={cn("flex w-full items-center justify-between px-4 py-3 text-left", expandable && "transition-colors hover:bg-surface-hover")}>
         <div className="mr-4 flex min-w-0 items-center gap-2">
-          {expandable && <span className={cn("shrink-0 text-foreground-dim transition-transform", expanded && "rotate-90")} aria-hidden>▸</span>}
+          {expandable
+            ? <span className={cn("shrink-0 text-foreground-dim transition-transform", expanded && "rotate-90")} aria-hidden>▸</span>
+            : <span className="shrink-0 w-[1ch]" aria-hidden />}
           <div className="min-w-0">
             <div className="text-sm font-medium text-foreground truncate">{label}</div>
             <div className="text-xs text-foreground-dim truncate">{sub}</div>
           </div>
         </div>
         <div className="flex items-center gap-4 shrink-0 text-right">
-          <div className="hidden sm:block">
-            <div className="text-xs text-foreground-dim">{t("buildingsId.reporting.income")}</div>
-            <div className="text-sm font-medium text-muted-dark">{rFmtChf(earned)}</div>
-          </div>
-          <div className="hidden sm:block">
-            <div className="text-xs text-foreground-dim">{t("buildingsId.reporting.directCosts")}</div>
-            <div className="text-sm font-medium text-muted-dark">{rFmtChf(expenses)}</div>
-          </div>
-          {charges > 0 && (
-            <div className="hidden md:block">
-              <div className="text-xs text-foreground-dim">{t("buildingsId.reporting.charges")}</div>
-              <div className="text-sm font-medium text-muted-dark" title={t("buildingsId.reporting.chargesTooltip")}>{rFmtChf(charges)}</div>
-            </div>
-          )}
           <div>
-            <div className="text-xs text-foreground-dim">{t("buildingsId.reporting.contribution")}</div>
-            <div className={cn("text-sm font-semibold", netPositive ? "text-success-text" : "text-destructive-text")}>{rFmtChf(net)}</div>
+            <div className="text-xs text-foreground-dim">{t("buildingsId.reporting.directCosts")}</div>
+            <div className="text-sm font-medium text-muted-dark tabular-nums">{rFmtChf(direct)}</div>
           </div>
-          <div className="hidden md:block">
-            <div className="text-xs text-foreground-dim">{t("buildingsId.reporting.collection")}</div>
-            <div className="text-sm text-muted-dark">{rFmtPct(collectionRate)}</div>
+          <div className="hidden sm:block">
+            <div className="text-xs text-foreground-dim" title={t("buildingsId.reporting.chargesTooltip")}>{t("buildingsId.reporting.expenses.apportioned")}</div>
+            <div className="text-sm font-medium text-muted-dark tabular-nums">{rFmtChf(apportioned)}</div>
           </div>
-          <div className="hidden lg:block">
-            <div className="text-xs text-foreground-dim">{t("buildingsId.reporting.occupancy")}</div>
-            <div className={cn("text-sm font-medium", occupancyRate < 1 ? "text-amber-600" : "text-muted-dark")}>{rFmtPct(occupancyRate)}</div>
+          <div>
+            <div className="text-xs text-foreground-dim">{t("buildingsId.reporting.expenses.unitTotal")}</div>
+            <div className="text-sm font-semibold text-foreground tabular-nums">{rFmtChf(total)}</div>
+          </div>
+          <div className="hidden md:block w-12">
+            <div className="text-xs text-foreground-dim">{t("buildingsId.reporting.expenses.shareOfTotal")}</div>
+            <div className="text-sm text-muted-dark tabular-nums">{shareOfTotal != null ? rFmtPct(shareOfTotal) : "—"}</div>
           </div>
         </div>
       </RowTag>
-      {expandable && expanded && <UnitCostDetail detail={detail} expenses={expenses} t={t} buildingId={buildingId} from={from} to={to} />}
+      {expandable && expanded && <UnitCostDetail detail={detail} expenses={direct} t={t} buildingId={buildingId} from={from} to={to} />}
     </div>
   );
 }
@@ -393,11 +398,11 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
   const [profit, setProfit]   = useState(null);   // building value + net yield (for the KPI strip)
   const [movesOpen, setMovesOpen] = useState(false); // tenant-movements disclosure
   const [expView, setExpView] = useState("acc"); // Revenue & expenses: cost-center | vendor
-  const [incomeExpanded, setIncomeExpanded] = useState(false); // revex income column: show all units
-  const [expExpanded, setExpExpanded] = useState(false);       // revex expense column: show all rows
+  const [incomeExpanded, setIncomeExpanded] = useState(false); // Produits tab: show all units
+  const [expExpanded, setExpExpanded] = useState(false);       // Charges tab: show all account rows
   const [expandedUnitId, setExpandedUnitId] = useState(null);  // by-unit: which row's cost detail is open
   const [unitLines, setUnitLines] = useState({});              // by-unit: unitId → { loading, error, data }
-  const [breakdownView, setBreakdownView] = useState("ie"); // breakdown sub-view: ie | unit | prof
+  const [breakdownView, setBreakdownView] = useState("rev"); // breakdown tab: rev | exp | prof
   const [metricsOpen, setMetricsOpen] = useState(false);    // "All financial metrics" disclosure
   const [benchmark, setBenchmark] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -520,7 +525,6 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
   const drivers   = buildBuildingDrivers(bf, prev, benchmark, t);
   const watchItems = buildBuildingWatchItems(bf, arrears, unitData, moveIns, moveOuts, benchmark, report?.leaseExpiries ?? [], t);
 
-  const visibleUnits = unitsExpanded ? unitData : unitData.slice(0, PREVIEW_UNITS);
 
   return (
     <div>
@@ -755,32 +759,9 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
         );
 
         // ── Slide 3: By unit ──
-        const byUnitSlide = (
-          <div className="p-5">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h2 className="text-base font-semibold text-foreground">{t("buildingsId.reporting.byUnit")}</h2>
-                <p className="text-xs text-foreground-dim mt-0.5">{t("buildingsId.reporting.byUnitSub", { period: periodLabel })}</p>
-              </div>
-              {unitData.length > PREVIEW_UNITS && (
-                <button onClick={() => setUnitsExpanded((v) => !v)} className="text-xs font-medium text-muted-dark hover:text-foreground transition-colors">
-                  {unitsExpanded ? `${t("buildingsId.reporting.collapse")} ↑` : `${t("buildingsId.reporting.showAll", { count: unitData.length })} ↓`}
-                </button>
-              )}
-            </div>
-            {unitData.length === 0
-              ? <p className="text-sm text-muted italic">{t("buildingsId.reporting.noUnits")}</p>
-              : <>
-                <div className="space-y-2">{visibleUnits.map((u) => <UnitRow key={u.unitId} unitNumber={u.unitNumber} floor={u.floor} tenantName={u.tenantName} earned={u.collectedIncomeCents} expenses={u.expensesCents} charges={u.apportionedChargesCents} net={u.netIncomeCents} collectionRate={u.collectionRate} occupancyRate={u.occupancyRate} expandable={u.expensesCents > 0} expanded={expandedUnitId === u.unitId} onToggle={() => toggleUnitLines(u.unitId)} detail={unitLines[u.unitId]} buildingId={buildingId} from={from} to={to} />)}</div>
-                <p className="mt-3 flex items-start gap-1.5 text-xs text-foreground-dim">
-                  <span aria-hidden>ℹ</span>
-                  <span>{t("buildingsId.reporting.byUnitDirectNote")}</span>
-                </p>
-              </>}
-          </div>
-        );
-
-        // ── Revenue & expenses (P&L): trend histogram + income vs expense attribution ──
+        // ── Shared P&L prep for the Produits and Charges tabs: the account /
+        //    category / vendor lenses, the vendor-coverage check, and the
+        //    unit income ordering. ──
         // Drill from a row into the invoices view, filtered to this period + vendor/account.
         const drillHref = ({ contractorId, issuerName, accountId, ctxVendor }) => {
           const p = new URLSearchParams({ tab: "invoices", direction: "incoming", buildingId, issueDateFrom: from, issueDateTo: to, ctxPeriod: periodLabel });
@@ -807,7 +788,6 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
         const vendItemised = vendors.reduce((s, v) => s + v.totalCents, 0);
         const uncoveredCents = expenses - vendItemised;
         const incomeUnits = [...unitData].sort((a, b) => (b.collectedIncomeCents ?? 0) - (a.collectedIncomeCents ?? 0));
-        const incMax = Math.max(1, ...incomeUnits.map((u) => u.collectedIncomeCents ?? 0));
         const categoryRows = (bf.expensesByCategory ?? []).map((c) => ({ name: catLabel(c.category, t), totalCents: c.totalCents })).sort((a, b) => b.totalCents - a.totalCents);
         // In reclassify mode the cost-centre view shows EVERY account (incl. the
         // capex/financing ones filtered out above) so any can be re-categorised.
@@ -819,41 +799,168 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
           : t("buildingsId.reporting.revex.catOwner");
         const CAT_CHIP = { OWNER_OPEX: "bg-surface-hover text-muted", RECOVERABLE: "bg-warning-light text-warning-text", TENANT_RECHARGE: "bg-success-light text-success-text", CAPEX: "bg-brand-light text-brand-dark", FINANCING: "bg-info-light text-info-text" };
 
-        const revexSlide = (
+
+        // ── Period result — the one place income and expense meet, so it belongs
+        //    to neither tab. It sits ABOVE the strip; the tabs drill into one
+        //    side or the other. ──
+        const summaryBlock = (
+          <div className="space-y-3 border-b border-surface-border bg-surface-subtle p-5">
+            <div className="text-[10px] font-bold uppercase tracking-wider text-foreground-dim">
+              {t("buildingsId.reporting.periodResult")}
+            </div>
+          {/* Income − Operating = NOI (capex + financing are pulled out, below) */}
+          <div className="flex items-stretch overflow-hidden rounded-2xl border border-surface-border text-center">
+            <div className="flex-1 px-3 py-2.5">
+              <div className="text-[10px] font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.histogram.income")}</div>
+              <div className="text-base font-bold tabular-nums text-foreground">{rFmtChf(earned)}</div>
+            </div>
+            <div className="grid w-7 place-items-center bg-surface-hover text-foreground-dim">−</div>
+            <div className="flex-1 px-3 py-2.5">
+              <div className="text-[10px] font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.revex.operating")}</div>
+              <div className="text-base font-bold tabular-nums text-foreground">{rFmtChf(operatingCents)}</div>
+            </div>
+            <div className="grid w-7 place-items-center bg-surface-hover text-foreground-dim">=</div>
+            <div className="flex-1 bg-surface-hover px-3 py-2.5">
+              <div className="text-[10px] font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.histogram.noi")}</div>
+              <div className={cn("text-base font-bold tabular-nums", noi >= 0 ? "text-success-text" : "text-destructive-text")}>{rFmtChf(noi)}</div>
+            </div>
+          </div>
+
+          {/* Below operating NOI: capital works + financing + tenant recharges, and the net result */}
+          {(capexCents > 0 || financingCents > 0 || tenantRechargeCents > 0) && (
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 rounded-xl border border-surface-border bg-surface-subtle px-4 py-2.5 text-sm">
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.revex.belowNoi")}</span>
+              {capexCents > 0 && <span className="text-muted">{t("buildingsId.reporting.kpi.capex")} <b className="tabular-nums text-foreground">{rFmtChf(capexCents)}</b></span>}
+              {financingCents > 0 && <span className="text-muted">{t("buildingsId.reporting.revex.financing")} <b className="tabular-nums text-foreground">{rFmtChf(financingCents)}</b></span>}
+              {tenantRechargeCents > 0 && <span className="text-muted">{t("buildingsId.reporting.revex.catTenantRecharge")} <b className="tabular-nums text-foreground">{rFmtChf(tenantRechargeCents)}</b></span>}
+              <span className="ml-auto text-muted">{t("buildingsId.reporting.revex.netResult")} <b className={cn("tabular-nums", netResultCents >= 0 ? "text-success-text" : "text-destructive-text")}>{rFmtChf(netResultCents)}</b></span>
+            </div>
+          )}
+          {tenantRechargeCents > 0 && (
+            <p className="flex items-start gap-1.5 text-xs text-foreground-dim">
+              <span aria-hidden>ℹ</span>
+              <span>{t("buildingsId.reporting.revex.tenantRechargeNote", { amount: rFmtChf(tenantRechargeCents) })}</span>
+            </p>
+          )}
+          {recoverableCents > 0 && (
+            <p className="flex items-start gap-1.5 text-xs text-foreground-dim">
+              <span aria-hidden>ℹ</span>
+              <span>{t("buildingsId.reporting.revex.recoverableNote", { amount: rFmtChf(recoverableCents) })}</span>
+            </p>
+          )}
+          </div>
+        );
+
+        // ── Produits — building total, then every unit. Income is fully
+        //    unit-attributable, so the table ties back to the building figure;
+        //    any residual booked at building level gets its own explicit row
+        //    rather than being silently dropped. ──
+        const unitIncomeTotal = unitData.reduce((acc, u) => acc + (u.collectedIncomeCents ?? 0), 0);
+        const incomeUnattributed = earned - unitIncomeTotal;
+        const shownIncomeUnits = incomeExpanded ? incomeUnits : incomeUnits.slice(0, INCOME_PREVIEW);
+        const shownIncomeTotal = shownIncomeUnits.reduce((acc, u) => acc + (u.collectedIncomeCents ?? 0), 0);
+        const revenueSlide = (
           <div className="p-5 space-y-4">
             <div>
-              <h2 className="text-base font-semibold text-foreground mb-1">{t("buildingsId.reporting.revex.title")}</h2>
-              <p className="text-xs text-foreground-dim">{t("buildingsId.reporting.revex.sub")}</p>
+              <h2 className="text-base font-semibold text-foreground mb-1">{t("buildingsId.reporting.revenue.title")}</h2>
+              <p className="text-xs text-foreground-dim">{t("buildingsId.reporting.revenue.sub")}</p>
             </div>
 
-            {/* Income − Operating = NOI (capex + financing are pulled out, below) */}
-            <div className="flex items-stretch overflow-hidden rounded-2xl border border-surface-border text-center">
-              <div className="flex-1 px-3 py-2.5">
-                <div className="text-[10px] font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.histogram.income")}</div>
-                <div className="text-base font-bold tabular-nums text-foreground">{rFmtChf(earned)}</div>
-              </div>
-              <div className="grid w-7 place-items-center bg-surface-hover text-foreground-dim">−</div>
-              <div className="flex-1 px-3 py-2.5">
-                <div className="text-[10px] font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.revex.operating")}</div>
-                <div className="text-base font-bold tabular-nums text-foreground">{rFmtChf(operatingCents)}</div>
-              </div>
-              <div className="grid w-7 place-items-center bg-surface-hover text-foreground-dim">=</div>
-              <div className="flex-1 bg-surface-hover px-3 py-2.5">
-                <div className="text-[10px] font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.histogram.noi")}</div>
-                <div className={cn("text-base font-bold tabular-nums", noi >= 0 ? "text-success-text" : "text-destructive-text")}>{rFmtChf(noi)}</div>
-              </div>
+            <div className="flex items-baseline justify-between gap-3 rounded-2xl border border-surface-border px-4 py-3">
+              <span className="text-[11px] font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.revenue.buildingTotal")}</span>
+              <span className="text-lg font-bold tabular-nums text-foreground">{rFmtChf(earned)}</span>
             </div>
 
-            {/* Below operating NOI: capital works + financing + tenant recharges, and the net result */}
-            {(capexCents > 0 || financingCents > 0 || tenantRechargeCents > 0) && (
-              <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 rounded-xl border border-surface-border bg-surface-subtle px-4 py-2.5 text-sm">
-                <span className="text-[10px] font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.revex.belowNoi")}</span>
-                {capexCents > 0 && <span className="text-muted">{t("buildingsId.reporting.kpi.capex")} <b className="tabular-nums text-foreground">{rFmtChf(capexCents)}</b></span>}
-                {financingCents > 0 && <span className="text-muted">{t("buildingsId.reporting.revex.financing")} <b className="tabular-nums text-foreground">{rFmtChf(financingCents)}</b></span>}
-                {tenantRechargeCents > 0 && <span className="text-muted">{t("buildingsId.reporting.revex.catTenantRecharge")} <b className="tabular-nums text-foreground">{rFmtChf(tenantRechargeCents)}</b></span>}
-                <span className="ml-auto text-muted">{t("buildingsId.reporting.revex.netResult")} <b className={cn("tabular-nums", netResultCents >= 0 ? "text-success-text" : "text-destructive-text")}>{rFmtChf(netResultCents)}</b></span>
+            <div>
+              <div className="mb-2 flex items-center justify-between gap-2 px-1">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.revenue.byUnit")}</p>
+                {incomeUnits.length > INCOME_PREVIEW && (
+                  <button onClick={() => setIncomeExpanded((v) => !v)} className="text-xs font-medium text-muted-dark transition-colors hover:text-foreground">
+                    {incomeExpanded ? `${t("buildingsId.reporting.collapse")} ↑` : `${t("buildingsId.reporting.showAll", { count: incomeUnits.length })} ↓`}
+                  </button>
+                )}
               </div>
-            )}
+              {incomeUnits.length === 0
+                ? <p className="px-1 text-sm italic text-muted">{t("buildingsId.reporting.noUnits")}</p>
+                : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="text-[10px] uppercase tracking-wide text-foreground-dim">
+                          <th className="py-1.5 pr-2 text-left font-semibold">{t("buildingsId.reporting.revenue.unit")}</th>
+                          <th className="py-1.5 px-2 text-left font-semibold">{t("buildingsId.reporting.revenue.tenant")}</th>
+                          <th className="py-1.5 px-2 text-right font-semibold">{t("buildingsId.reporting.occupancy")}</th>
+                          <th className="py-1.5 pl-2 text-right font-semibold">{t("buildingsId.reporting.income")}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {shownIncomeUnits.map((u) => {
+                          const vacant = !u.collectedIncomeCents;
+                          return (
+                            <tr key={u.unitId} className="border-t border-surface-divider">
+                              <td className="py-1.5 pr-2 text-foreground">{u.unitNumber}</td>
+                              <td className="py-1.5 px-2 truncate text-foreground-dim">{u.tenantName || "—"}</td>
+                              <td className={cn("py-1.5 px-2 text-right tabular-nums", u.occupancyRate < 1 ? "text-warning-text" : "text-muted-dark")}>{rFmtPct(u.occupancyRate)}</td>
+                              <td className={cn("py-1.5 pl-2 text-right font-medium tabular-nums", vacant ? "text-destructive-text" : "text-foreground")}>
+                                {vacant ? t("buildingsId.reporting.revex.vacant") : rFmtChf(u.collectedIncomeCents)}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                      <tfoot className="text-xs">
+                        {!incomeExpanded && incomeUnits.length > INCOME_PREVIEW && (
+                          <>
+                            <tr className="border-t border-surface-divider bg-surface-subtle">
+                              <td colSpan={3} className="py-1.5 pr-2 font-semibold text-muted-dark">{t("buildingsId.reporting.revenue.subtotalShown", { count: shownIncomeUnits.length })}</td>
+                              <td className="py-1.5 pl-2 text-right font-semibold tabular-nums text-foreground">{rFmtChf(shownIncomeTotal)}</td>
+                            </tr>
+                            <tr className="bg-surface-subtle">
+                              <td colSpan={3} className="py-1.5 pr-2 font-semibold text-muted-dark">{t("buildingsId.reporting.revenue.otherUnits", { count: incomeUnits.length - shownIncomeUnits.length })}</td>
+                              <td className="py-1.5 pl-2 text-right font-semibold tabular-nums text-foreground">{rFmtChf(unitIncomeTotal - shownIncomeTotal)}</td>
+                            </tr>
+                          </>
+                        )}
+                        {Math.abs(incomeUnattributed) > 100 && (
+                          <tr className="border-t border-surface-divider bg-surface-subtle">
+                            <td colSpan={3} className="py-1.5 pr-2 font-semibold text-muted-dark">{t("buildingsId.reporting.revenue.unattributed")}</td>
+                            <td className="py-1.5 pl-2 text-right font-semibold tabular-nums text-foreground">{rFmtChf(incomeUnattributed)}</td>
+                          </tr>
+                        )}
+                        <tr className="border-t-2 border-surface-border">
+                          <td colSpan={3} className="py-1.5 pr-2 text-right font-bold text-foreground">{t("buildingsId.reporting.revenue.buildingTotal")}</td>
+                          <td className="py-1.5 pl-2 text-right font-bold tabular-nums text-foreground">{rFmtChf(earned)}</td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                )}
+            </div>
+          </div>
+        );
+
+        // ── Charges — the building lens (cost centre / category / vendor) first,
+        //    then the same money seen per unit. Three buckets, because they are
+        //    attributed by different mechanisms: direct (invoice-backed, and the
+        //    only expandable one), apportioned recoverable (surface-weighted),
+        //    and a remainder that belongs to no unit. The remainder is shown, not
+        //    spread — without it the per-unit column silently understates the
+        //    building's real spend. ──
+        const unitDirectTotal = unitData.reduce((acc, u) => acc + (u.expensesCents ?? 0), 0);
+        const unitApportionedTotal = unitData.reduce((acc, u) => acc + (u.apportionedChargesCents ?? 0), 0);
+        const unallocatedCents = Math.max(0, operatingCents - unitDirectTotal - unitApportionedTotal);
+        const expenseUnits = [...unitData]
+          .map((u) => ({ ...u, unitExpenseTotal: (u.expensesCents ?? 0) + (u.apportionedChargesCents ?? 0) }))
+          .filter((u) => u.unitExpenseTotal > 0)
+          .sort((a, b) => b.unitExpenseTotal - a.unitExpenseTotal);
+        const visibleExpenseUnits = unitsExpanded ? expenseUnits : expenseUnits.slice(0, PREVIEW_UNITS);
+        const expenseSlide = (
+          <div className="p-5 space-y-4">
+            <div>
+              <h2 className="text-base font-semibold text-foreground mb-1">{t("buildingsId.reporting.expenses.title")}</h2>
+              <p className="text-xs text-foreground-dim">{t("buildingsId.reporting.expenses.sub")}</p>
+            </div>
+
             {tenantRechargeCents > 0 && (
               <p className="flex items-start gap-1.5 text-xs text-foreground-dim">
                 <span aria-hidden>ℹ</span>
@@ -867,104 +974,133 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
               </p>
             )}
 
-            {/* Income sources (units) | Expense sinks (vendors / cost centers) */}
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-              <div>
-                <div className="mb-2 flex items-center justify-between gap-2 px-1">
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.revex.income")}</p>
-                  {incomeUnits.length > INCOME_PREVIEW && (
-                    <button onClick={() => setIncomeExpanded((v) => !v)} className="text-xs font-medium text-muted-dark hover:text-foreground transition-colors">
-                      {incomeExpanded ? `${t("buildingsId.reporting.collapse")} ↑` : `${t("buildingsId.reporting.showAll", { count: incomeUnits.length })} ↓`}
-                    </button>
-                  )}
-                </div>
-                {incomeUnits.length === 0
-                  ? <p className="text-sm text-muted italic px-1">{t("buildingsId.reporting.noUnits")}</p>
-                  : <div className="space-y-1">
-                      {(incomeExpanded ? incomeUnits : incomeUnits.slice(0, INCOME_PREVIEW)).map((u) => {
-                        const vacant = !u.collectedIncomeCents;
-                        return (
-                          <div key={u.unitId} className="min-w-0 px-2 py-1">
-                            <div className="flex items-baseline justify-between gap-2">
-                              <span className="truncate text-sm text-foreground">{u.unitNumber}{u.tenantName ? <span className="text-foreground-dim"> · {u.tenantName}</span> : null}</span>
-                              <span className={cn("shrink-0 text-sm font-medium tabular-nums", vacant ? "text-destructive-text" : "text-foreground")}>{vacant ? t("buildingsId.reporting.revex.vacant") : rFmtChf(u.collectedIncomeCents)}</span>
-                            </div>
-                            {!vacant && <div className="mt-1 h-1 overflow-hidden rounded-full bg-surface-hover"><div className="h-full rounded-full bg-brand" style={{ width: `${Math.max(4, Math.round((u.collectedIncomeCents / incMax) * 100))}%` /* no-token: dynamic income-bar width */ }} /></div>}
-                          </div>
-                        );
-                      })}
-                    </div>}
-              </div>
-              <div>
-                <div className="mb-2 flex items-center justify-between gap-2 px-1">
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.histogram.expenses")}</p>
-                  <div className="flex items-center gap-2">
-                    {bf.source === "imported" && expView === "acc" && (
-                      <button onClick={() => setReclassMode((v) => !v)} aria-pressed={reclassMode}
-                        className={cn("rounded-md border px-2 py-0.5 text-xs font-medium transition-colors", reclassMode ? "border-brand bg-brand-light text-brand-dark" : "border-surface-border text-muted hover:border-brand hover:text-brand")}>
-                        {reclassMode ? `✓ ${t("buildingsId.reporting.revex.reclassifyDone")}` : t("buildingsId.reporting.revex.reclassify")}
-                      </button>
-                    )}
-                    <div className="inline-flex rounded-lg border border-surface-border bg-surface-hover p-0.5 gap-0.5">
-                      {[["acc", t("buildingsId.reporting.revex.byCostCenter")], ["cat", t("buildingsId.reporting.revex.byCategory")], ["vend", t("buildingsId.reporting.revex.byVendor")]].map(([k, l]) => (
-                        <button key={k} onClick={() => setExpView(k)} aria-pressed={expView === k}
-                          className={cn("rounded-md px-2 py-0.5 text-xs font-medium transition-colors", expView === k ? "bg-surface text-foreground shadow-sm" : "text-muted hover:text-muted-dark")}>{l}</button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-                {expRows.length === 0
-                  ? <p className="text-sm text-muted italic px-1">{t("buildingsId.reporting.revex.noExpenses")}</p>
-                  : <div className="space-y-1">
-                      {expRows.slice(0, reclassMode && expView === "acc" ? 40 : (expExpanded ? expRows.length : EXPENSE_PREVIEW)).map((r, i) => {
-                        const isVend = expView === "vend";
-                        const isCat = expView === "cat";
-                        const isAcc = !isVend && !isCat;
-                        const name = isVend ? r.vendorName : isCat ? r.name : (r.accountName ?? t("buildingsId.reporting.expenseBreakdown.unclassified"));
-                        const drillable = isVend ? true : isCat ? false : !!r.accountId; // category isn't an invoice filter; "Other" remainder isn't either
-                        // Reclassify mode: a category picker instead of a drill link.
-                        if (isAcc && reclassMode && r.accountId) {
-                          return (
-                            <div key={r.accountId} className="flex items-center gap-2 px-2 py-1">
-                              <span className="min-w-0 flex-1 truncate text-sm text-foreground">{r.accountCode ? <span className="text-foreground-dim tabular-nums">{r.accountCode} </span> : null}{name}</span>
-                              <select value={r.category ?? "OWNER_OPEX"} onChange={(e) => reclassifyAccount(r.accountId, e.target.value)}
-                                className="rounded-md border border-surface-border bg-surface px-1.5 py-0.5 text-xs text-foreground">
-                                {["OWNER_OPEX", "RECOVERABLE", "TENANT_RECHARGE", "CAPEX", "FINANCING"].map((c) => <option key={c} value={c}>{catShort(c)}</option>)}
-                              </select>
-                              <span className="w-20 shrink-0 text-right text-sm font-medium tabular-nums text-foreground">{rFmtChf(r.totalCents)}</span>
-                            </div>
-                          );
-                        }
-                        const catTag = isAcc && r.category ? <span className={cn("shrink-0 rounded px-1.5 py-0.5 text-[9.5px] font-semibold uppercase tracking-wide", CAT_CHIP[r.category] ?? CAT_CHIP.OWNER_OPEX)}>{catShort(r.category)}</span> : null;
-                        const inner = (
-                          <>
-                            <span className="min-w-0 flex-1 truncate text-sm text-foreground">{isAcc && r.accountCode ? <span className="text-foreground-dim tabular-nums">{r.accountCode} </span> : null}{name}{isVend && r.invoiceCount ? <span className="text-xs text-foreground-dim"> · {r.invoiceCount}×</span> : null}</span>
-                            {catTag}
-                            <span className="flex shrink-0 items-center gap-1.5 text-sm font-medium tabular-nums text-foreground">{rFmtChf(r.totalCents)}{drillable && <span className="text-foreground-dim opacity-0 group-hover:opacity-100 transition-opacity">→</span>}</span>
-                          </>
-                        );
-                        return drillable ? (
-                          <a key={(isVend ? r.contractorId : r.accountId) || `${name}-${i}`}
-                            href={drillHref(isVend ? { contractorId: r.contractorId, issuerName: r.vendorName, ctxVendor: r.vendorName } : { accountId: r.accountId, ctxVendor: r.accountCode ? `${r.accountCode} · ${r.accountName ?? ""}`.trim() : name })}
-                            className="flex items-center justify-between gap-2 rounded-lg px-2 py-1 hover:bg-surface-hover no-underline group">{inner}</a>
-                        ) : (
-                          <div key={`${name}-${i}`} className="flex items-center justify-between gap-2 px-2 py-1">{inner}</div>
-                        );
-                      })}
-                    </div>}
-                {!(reclassMode && expView === "acc") && expRows.length > EXPENSE_PREVIEW && (
-                  <button onClick={() => setExpExpanded((v) => !v)} className="mt-1.5 px-2 text-xs font-medium text-muted-dark hover:text-foreground transition-colors">
-                    {expExpanded ? `${t("buildingsId.reporting.collapse")} ↑` : `${t("buildingsId.reporting.showAll", { count: expRows.length })} ↓`}
+          <div>
+            <div className="mb-2 flex items-center justify-between gap-2 px-1">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.histogram.expenses")}</p>
+              <div className="flex items-center gap-2">
+                {bf.source === "imported" && expView === "acc" && (
+                  <button onClick={() => setReclassMode((v) => !v)} aria-pressed={reclassMode}
+                    className={cn("rounded-md border px-2 py-0.5 text-xs font-medium transition-colors", reclassMode ? "border-brand bg-brand-light text-brand-dark" : "border-surface-border text-muted hover:border-brand hover:text-brand")}>
+                    {reclassMode ? `✓ ${t("buildingsId.reporting.revex.reclassifyDone")}` : t("buildingsId.reporting.revex.reclassify")}
                   </button>
                 )}
-                {/* Vendor lens is invoice-based — flag when it covers only part of the ledger total. */}
-                {expView === "vend" && uncoveredCents > 5000 && (
-                  <p className="mt-2 flex items-start gap-1.5 px-1 text-[11.5px] text-warning-text">
-                    <span aria-hidden>⚠</span>
-                    <span>{t("buildingsId.reporting.revex.itemisedNote", { itemised: rFmtChf(vendItemised), total: rFmtChf(expenses) })}</span>
-                  </p>
+                <div className="inline-flex rounded-lg border border-surface-border bg-surface-hover p-0.5 gap-0.5">
+                  {[["acc", t("buildingsId.reporting.revex.byCostCenter")], ["cat", t("buildingsId.reporting.revex.byCategory")], ["vend", t("buildingsId.reporting.revex.byVendor")]].map(([k, l]) => (
+                    <button key={k} onClick={() => setExpView(k)} aria-pressed={expView === k}
+                      className={cn("rounded-md px-2 py-0.5 text-xs font-medium transition-colors", expView === k ? "bg-surface text-foreground shadow-sm" : "text-muted hover:text-muted-dark")}>{l}</button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            {expRows.length === 0
+              ? <p className="text-sm text-muted italic px-1">{t("buildingsId.reporting.revex.noExpenses")}</p>
+              : <div className="space-y-1">
+                  {expRows.slice(0, reclassMode && expView === "acc" ? 40 : (expExpanded ? expRows.length : EXPENSE_PREVIEW)).map((r, i) => {
+                    const isVend = expView === "vend";
+                    const isCat = expView === "cat";
+                    const isAcc = !isVend && !isCat;
+                    const name = isVend ? r.vendorName : isCat ? r.name : (r.accountName ?? t("buildingsId.reporting.expenseBreakdown.unclassified"));
+                    const drillable = isVend ? true : isCat ? false : !!r.accountId; // category isn't an invoice filter; "Other" remainder isn't either
+                    // Reclassify mode: a category picker instead of a drill link.
+                    if (isAcc && reclassMode && r.accountId) {
+                      return (
+                        <div key={r.accountId} className="flex items-center gap-2 px-2 py-1">
+                          <span className="min-w-0 flex-1 truncate text-sm text-foreground">{r.accountCode ? <span className="text-foreground-dim tabular-nums">{r.accountCode} </span> : null}{name}</span>
+                          <select value={r.category ?? "OWNER_OPEX"} onChange={(e) => reclassifyAccount(r.accountId, e.target.value)}
+                            className="rounded-md border border-surface-border bg-surface px-1.5 py-0.5 text-xs text-foreground">
+                            {["OWNER_OPEX", "RECOVERABLE", "TENANT_RECHARGE", "CAPEX", "FINANCING"].map((c) => <option key={c} value={c}>{catShort(c)}</option>)}
+                          </select>
+                          <span className="w-20 shrink-0 text-right text-sm font-medium tabular-nums text-foreground">{rFmtChf(r.totalCents)}</span>
+                        </div>
+                      );
+                    }
+                    const catTag = isAcc && r.category ? <span className={cn("shrink-0 rounded px-1.5 py-0.5 text-[9.5px] font-semibold uppercase tracking-wide", CAT_CHIP[r.category] ?? CAT_CHIP.OWNER_OPEX)}>{catShort(r.category)}</span> : null;
+                    const inner = (
+                      <>
+                        <span className="min-w-0 flex-1 truncate text-sm text-foreground">{isAcc && r.accountCode ? <span className="text-foreground-dim tabular-nums">{r.accountCode} </span> : null}{name}{isVend && r.invoiceCount ? <span className="text-xs text-foreground-dim"> · {r.invoiceCount}×</span> : null}</span>
+                        {catTag}
+                        <span className="flex shrink-0 items-center gap-1.5 text-sm font-medium tabular-nums text-foreground">{rFmtChf(r.totalCents)}{drillable && <span className="text-foreground-dim opacity-0 group-hover:opacity-100 transition-opacity">→</span>}</span>
+                      </>
+                    );
+                    return drillable ? (
+                      <a key={(isVend ? r.contractorId : r.accountId) || `${name}-${i}`}
+                        href={drillHref(isVend ? { contractorId: r.contractorId, issuerName: r.vendorName, ctxVendor: r.vendorName } : { accountId: r.accountId, ctxVendor: r.accountCode ? `${r.accountCode} · ${r.accountName ?? ""}`.trim() : name })}
+                        className="flex items-center justify-between gap-2 rounded-lg px-2 py-1 hover:bg-surface-hover no-underline group">{inner}</a>
+                    ) : (
+                      <div key={`${name}-${i}`} className="flex items-center justify-between gap-2 px-2 py-1">{inner}</div>
+                    );
+                  })}
+                </div>}
+            {!(reclassMode && expView === "acc") && expRows.length > EXPENSE_PREVIEW && (
+              <button onClick={() => setExpExpanded((v) => !v)} className="mt-1.5 px-2 text-xs font-medium text-muted-dark hover:text-foreground transition-colors">
+                {expExpanded ? `${t("buildingsId.reporting.collapse")} ↑` : `${t("buildingsId.reporting.showAll", { count: expRows.length })} ↓`}
+              </button>
+            )}
+            {/* Vendor lens is invoice-based — flag when it covers only part of the ledger total. */}
+            {expView === "vend" && uncoveredCents > 5000 && (
+              <p className="mt-2 flex items-start gap-1.5 px-1 text-[11.5px] text-warning-text">
+                <span aria-hidden>⚠</span>
+                <span>{t("buildingsId.reporting.revex.itemisedNote", { itemised: rFmtChf(vendItemised), total: rFmtChf(expenses) })}</span>
+              </p>
+            )}
+          </div>
+
+            {/* Same money, per unit. Only the direct column has invoice lines
+                behind it, so only it expands. */}
+            <div>
+              <div className="mb-2 flex items-center justify-between gap-2 px-1">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.expenses.byUnit")}</p>
+                {expenseUnits.length > PREVIEW_UNITS && (
+                  <button onClick={() => setUnitsExpanded((v) => !v)} className="text-xs font-medium text-muted-dark transition-colors hover:text-foreground">
+                    {unitsExpanded ? `${t("buildingsId.reporting.collapse")} ↑` : `${t("buildingsId.reporting.showAll", { count: expenseUnits.length })} ↓`}
+                  </button>
                 )}
               </div>
+              <div className="space-y-2">
+                {visibleExpenseUnits.map((u) => (
+                  <UnitExpenseRow
+                    key={u.unitId}
+                    unitNumber={u.unitNumber}
+                    floor={u.floor}
+                    tenantName={u.tenantName}
+                    direct={u.expensesCents ?? 0}
+                    apportioned={u.apportionedChargesCents ?? 0}
+                    shareOfTotal={operatingCents > 0 ? u.unitExpenseTotal / operatingCents : null}
+                    expandable={(u.expensesCents ?? 0) > 0}
+                    expanded={expandedUnitId === u.unitId}
+                    onToggle={() => toggleUnitLines(u.unitId)}
+                    detail={unitLines[u.unitId]}
+                    buildingId={buildingId}
+                    from={from}
+                    to={to}
+                  />
+                ))}
+
+                {/* The remainder — never spread across units. */}
+                {unallocatedCents > 0 && (
+                  <div className="rounded-2xl border border-warning-ring bg-warning-light px-4 py-3">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="min-w-0">
+                        <div className="text-sm font-semibold text-warning-text">{t("buildingsId.reporting.expenses.unallocated")}</div>
+                        <div className="text-xs text-warning-text/80">{t("buildingsId.reporting.expenses.unallocatedExamples")}</div>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <div className="text-sm font-bold tabular-nums text-warning-text">{rFmtChf(unallocatedCents)}</div>
+                        <div className="text-xs tabular-nums text-warning-text/80">{operatingCents > 0 ? rFmtPct(unallocatedCents / operatingCents) : "—"}</div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between gap-4 rounded-2xl border-2 border-surface-border px-4 py-3">
+                  <span className="text-sm font-bold text-foreground">{t("buildingsId.reporting.expenses.totalOperating")}</span>
+                  <span className="text-sm font-bold tabular-nums text-foreground">{rFmtChf(operatingCents)}</span>
+                </div>
+              </div>
+              <p className="mt-2 flex items-start gap-1.5 text-xs text-foreground-dim">
+                <span aria-hidden>ℹ</span>
+                <span>{t("buildingsId.reporting.expenses.byUnitNote")}</span>
+              </p>
             </div>
           </div>
         );
@@ -973,23 +1109,26 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
           <UnitProfitabilityPanel buildingId={buildingId} from={from} to={to} />
         );
 
-        // The three "numbers sliced" views behind one sub-switch. (Comparison used
-        // to be a sibling tab here; it's now the page-level Compare mode.)
-        const breakdownPanel = breakdownView === "unit" ? byUnitSlide
+        // One measure per tab: Produits and Charges each read building-first,
+        // then per unit. (Comparison used to be a sibling tab here; it's now the
+        // page-level Compare mode.)
+        const breakdownPanel = breakdownView === "exp" ? expenseSlide
           : breakdownView === "prof" ? unitProfitSlide
-          : revexSlide;
+          : revenueSlide;
         return (
           <>
             {/* ── Result: calm header + (Why? → drivers/watch) + KPI strip + flags ── */}
             {topSection}
             {whyOpen && <div className="border-b border-surface-border">{driversSlide}</div>}
-            {noPnlData ? noPnlBlock : (<>{kpiStripEl}{metricsCollapsible}{flagsRow}</>)}
+            {noPnlData ? noPnlBlock : (<>{kpiStripEl}{metricsCollapsible}{flagsRow}{summaryBlock}</>)}
 
-            {/* ── Detail: Income & expenses · By unit · Profitability — a full-width,
-                   edge-to-edge segmented band (highlight fill only); its top/bottom
-                   borders separate the KPI area above from the pane below. ── */}
+            {/* ── Detail: Produits · Charges · Rentabilité — one measure per tab,
+                   each reading building-first then per unit. Full-width,
+                   edge-to-edge segmented band (highlight fill only); its
+                   top/bottom borders separate the summary above from the pane
+                   below. ── */}
             <div className="flex border-t border-b border-surface-border">
-              {[["ie", t("buildingsId.reporting.revex.title")], ["unit", t("buildingsId.reporting.byUnit")], ["prof", t("buildingsId.reporting.unitProfitTab")]].map(([k, l]) => (
+              {[["rev", t("buildingsId.reporting.revenue.tab")], ["exp", t("buildingsId.reporting.expenses.tab")], ["prof", t("buildingsId.reporting.unitProfitTab")]].map(([k, l]) => (
                 <button key={k} onClick={() => setBreakdownView(k)} aria-pressed={breakdownView === k}
                   className={cn("flex-1 px-2 py-3 text-center text-[13px] leading-tight transition-colors",
                     breakdownView === k ? "bg-brand-light font-bold text-brand-dark" : "bg-surface-subtle font-semibold text-muted hover:bg-surface-hover hover:text-foreground")}>{l}</button>
