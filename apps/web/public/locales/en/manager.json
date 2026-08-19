@@ -2660,7 +2660,12 @@
       "typeAdministrative": "Administrative",
       "resetFilters": "Reset filters",
       "noRequestsMatchThisFilter": "No requests match this filter.",
-      "selectContractor": "Select contractor…"
+      "selectContractor": "Select contractor…",
+      "evaluatingLegalObligations": "Evaluating legal obligations…",
+      "couldNotLoadRecommendation": "Could not load recommendation: {{error}}",
+      "loadingPhotos": "Loading…",
+      "previewAlt": "Preview",
+      "oneOrMoreUploadsFailed": "One or more uploads failed"
     },
     "prop": {
       "reviewIncomingMaintenanceRequestsClickARowToSeeFullDetails": "Review incoming maintenance requests. Click a row to see full details.",
@@ -2705,6 +2710,101 @@
       "unassign": "Unassign",
       "viewRfp": "View RFP",
       "ok": "OK"
+    },
+    "statusBadge": {
+      "pendingReview": "Pending Review",
+      "rfpOpen": "RFP Open",
+      "awaitingOwnerApproval": "Awaiting Owner Approval",
+      "approved": "Approved",
+      "workUnderway": "Work underway",
+      "workDone": "Work done",
+      "assigned": "Assigned",
+      "completed": "Completed",
+      "rejected": "Rejected"
+    },
+    "obligation": {
+      "obligated": {
+        "heading": "Landlord is legally obligated to repair",
+        "description": "Swiss law requires the landlord to fix this. Approve the repair and assign a contractor."
+      },
+      "discretionary": {
+        "heading": "Repair is at the landlord’s discretion",
+        "description": "This isn’t strictly required by law, but is common practice. Consider the tenant relationship and cost."
+      },
+      "notObligated": {
+        "heading": "Landlord is not obligated",
+        "description": "Based on Swiss law and the asset’s condition, this repair falls on the tenant. You may still choose to cover it."
+      },
+      "unknown": {
+        "heading": "Needs your judgement",
+        "description": "The legal engine couldn’t determine obligation automatically. Review the details below and decide."
+      }
+    },
+    "nextStep": {
+      "unitRequired": {
+        "label": "Unit Required",
+        "description": "This request has no unit assigned. Assign a unit before legal evaluation can proceed."
+      },
+      "pendingReview": {
+        "label": "Pending Review",
+        "description": "Approve to create an RFP and begin the contractor selection process, or reject the request."
+      },
+      "legallyRequiredRfpOpen": {
+        "label": "Legally required — RFP open",
+        "description": "Swiss law requires this repair. An RFP has been created automatically."
+      },
+      "rfpOpen": {
+        "label": "RFP open",
+        "description": "The owner approved this request. Contractors are being invited to quote."
+      },
+      "legalObligationOwnerReview": {
+        "label": "Legal obligation — owner review",
+        "description": "Swiss law requires this repair. The owner should approve to proceed."
+      },
+      "awaitingOwnerApproval": {
+        "label": "Awaiting owner approval",
+        "description": "The selected quote exceeds the building’s auto-approval threshold. The owner must approve before work can begin."
+      },
+      "readyToAssign": {
+        "label": "Ready to assign",
+        "description": "Approved and ready. Assign a contractor to begin work."
+      },
+      "workInProgress": {
+        "label": "Work in progress",
+        "description": "The contractor is actively working on this repair."
+      },
+      "workCompleteInvoicePending": {
+        "label": "Work complete — invoice pending",
+        "description": "The contractor has marked the job done. Awaiting invoice review."
+      },
+      "workAssigned": {
+        "label": "Work assigned",
+        "description": "A contractor is assigned and will begin work shortly."
+      },
+      "rejected": {
+        "label": "Rejected",
+        "description": "This request was rejected. The tenant may choose to self-pay."
+      },
+      "completed": {
+        "label": "Completed",
+        "description": "This repair has been completed."
+      }
+    },
+    "depreciation": {
+      "ageLine": "Age: {{age}} yrs of {{lifespan}}-yr lifespan",
+      "fullyDepreciated": "Fully depreciated",
+      "remainingLife": "{{pct}}% remaining life",
+      "source": "Source: {{source}}"
+    },
+    "action": {
+      "rfpCreated": "RFP created",
+      "managerNotified": "Manager notified",
+      "routedToOwner": "Routed to owner — awaiting decision",
+      "ownerDecisionReceived": "Owner decision received",
+      "CREATE_RFP": "Create an RFP",
+      "NOTIFY_MANAGER": "Notify the manager",
+      "ROUTE_TO_OWNER": "Route to the owner",
+      "NOTIFY_TENANT": "Notify the tenant"
     }
   },
   "requestsId": {
@@ -2717,7 +2817,8 @@
       "resolution": "Resolution"
     },
     "ariaLabel": {
-      "selectAssetToLink": "Select asset to link"
+      "selectAssetToLink": "Select asset to link",
+      "changeRequestType": "Change request type"
     },
     "text": {
       "loadingAssetAnalysis": "Loading asset analysis…",
@@ -2766,7 +2867,9 @@
       "unit": "Unit",
       "warningLetterDescription": "Generate a pre-populated warning letter based on the complaint and applicable house rules. You can edit the text before downloading.",
       "resolutionNotePlaceholder": "Add a resolution note…",
-      "markedResolved": "This complaint has been marked as resolved."
+      "markedResolved": "This complaint has been marked as resolved.",
+      "loadingRequest": "Loading request…",
+      "selectAsset": "Select asset…"
     },
     "prop": {
       "created": "Created",

@@ -489,7 +489,7 @@ export default function OwnerRequestDetailPage() {
   const tenant             = r?.tenant;
   const asset              = r?.asset;
   const rfpId              = r?.rfpId || legalState.data?.rfpId || null;
-  const nextStep           = r ? getNextStep(r, legalState.data) : null;
+  const nextStep           = r ? getNextStep(r, legalState.data, t) : null;
   const isTenantFunded     = r?.payingParty === "TENANT";
   const needsOwnerApproval = r?.status === "PENDING_OWNER_APPROVAL";
   const { reason: approvalReason, contractorName, amountChf } = needsOwnerApproval
@@ -786,4 +786,6 @@ export default function OwnerRequestDetailPage() {
   );
 }
 
-export const getServerSideProps = withServerTranslations(["common","owner"]);
+// `manager` is loaded because the shared request panels (LegalRecommendationPanel,
+// RequestPhotosPanel, getNextStep) key their strings off the manager namespace.
+export const getServerSideProps = withServerTranslations(["common","owner","manager"]);

@@ -824,7 +824,7 @@ export default function RequestDetailPage() {
         }
       : null;
   const rfpId     = legalState.data?.rfpId || r?.rfps?.[0]?.id || null;
-  const nextStep  = r ? getNextStep(r, legalState.data) : null;
+  const nextStep  = r ? getNextStep(r, legalState.data, t) : null;
   const ctaList   = r ? getAvailableCTAs(r, assigningOpen ? id : null) : [];
   const isTenantFunded = r?.payingParty === "TENANT";
   const isMaintenance = !r?.requestType || r.requestType === "MAINTENANCE";
@@ -855,7 +855,7 @@ export default function RequestDetailPage() {
                   <button
                     type="button"
                     onClick={() => setReclassifyOpen((v) => !v)}
-                    title="Change request type"
+                    title={t("manager:requestsId.ariaLabel.changeRequestType")}
                     className={[
                       "inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-semibold uppercase tracking-wide transition",
                       isComplaint
@@ -916,7 +916,7 @@ export default function RequestDetailPage() {
           )}
 
           {loading ? (
-            <Panel><p className="loading-text">Loading request&hellip;</p></Panel>
+            <Panel><p className="loading-text">{t("manager:requestsId.text.loadingRequest")}</p></Panel>
           ) : !r ? (
             <div className="empty-state"><p className="empty-state-text">{t("manager:requestsId.text.requestNotFound")}</p></div>
           ) : (
@@ -1255,7 +1255,7 @@ export default function RequestDetailPage() {
                                 className="flex-1 rounded-lg border border-muted-ring px-3 py-2 text-sm"
                                 aria-label={t("manager:requestsId.ariaLabel.selectAssetToLink")}
                               >
-                                <option value="">Select asset&hellip;</option>
+                                <option value="">{t("manager:requestsId.text.selectAsset")}</option>
                                 {scored.map((a) => (
                                   <option key={a.id} value={a.id}>
                                     {a.name || a.topic || a.id.slice(0, 8)}
