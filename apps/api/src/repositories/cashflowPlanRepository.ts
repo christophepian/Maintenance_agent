@@ -215,13 +215,18 @@ export async function removeCashflowOverride(
  * Resolve the buildingId for a given asset (via its unit relation).
  * Used when creating an RFP from a portfolio-level cashflow plan where
  * `plan.buildingId` is null and we need to derive building from the asset.
+ *
+ * Scoped by orgId (defense-in-depth): the asset must belong to the caller's org,
+ * so a stray/attacker-influenced assetId can never resolve a building in another
+ * tenant and seed a cross-tenant RFP.
  */
 export async function findBuildingIdForAsset(
   prisma: PrismaClient,
   assetId: string,
+  orgId: string,
 ): Promise<string | null> {
-  const asset = await prisma.asset.findUnique({
-    where: { id: assetId },
+  const asset = await prisma.asset.findFirst({
+    where: { id: assetId, orgId },
     select: { unit: { select: { buildingId: true } } },
   });
   return asset?.unit?.buildingId ?? null;

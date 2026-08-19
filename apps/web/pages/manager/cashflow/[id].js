@@ -20,6 +20,7 @@ import NPVScenariosPanel from "../../../components/NPVScenariosPanel";
 import AssumptionsPanel from "../../../components/cashflow/AssumptionsPanel";
 import RfpCandidatesPanel from "../../../components/cashflow/RfpCandidatesPanel";
 import CapexEventTable from "../../../components/cashflow/CapexEventTable";
+import { isPlanStale } from "../../../lib/planStale";
 
 // ─── Strategy alignment helpers ──────────────────────────────────────────────
 
@@ -35,8 +36,6 @@ const STATUS_BADGE = {
   SUBMITTED: "bg-info-light text-info-text",
   APPROVED: "bg-success-light text-success-text",
 };
-
-const STALE_THRESHOLD_MS = 7 * 24 * 60 * 60 * 1000;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -111,7 +110,8 @@ function CashflowChart({ buckets, hasOpeningBalance }) {
 
   return (
     <div className="relative">
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-[260px]">
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-[260px]" role="img" aria-label={t("manager:cashflowId.chart.ariaLabel", { defaultValue: "Monthly projected cashflow — net flow per month and cumulative balance" })}>
+        <title>{t("manager:cashflowId.chart.ariaLabel", { defaultValue: "Monthly projected cashflow — net flow per month and cumulative balance" })}</title>
         {/* Y-axis gridlines */}
         {[0.25, 0.5, 0.75, 1].map((frac) => (
           <g key={frac}>
@@ -323,21 +323,29 @@ function IncomeGrowthRateEditor({ planId, currentRate, onUpdated }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const inputRef = useRef(null);
+  // Enter → save() sets editing=false, which blurs the input and fires onBlur →
+  // save() again (double PUT). Escape → editing=false likewise fires onBlur.
+  // doneRef makes save() idempotent for the session: the first commit (or a
+  // cancel) claims it, so the follow-on onBlur is a no-op (CR-015).
+  const doneRef = useRef(false);
 
   function startEdit() {
     setValue(String(currentRate ?? 0));
     setEditing(true);
     setError("");
+    doneRef.current = false;
     // Focus on next tick after render
     setTimeout(() => inputRef.current?.select(), 0);
   }
 
   async function save() {
+    if (doneRef.current) return; // already committed/cancelled this session
     const rate = parseFloat(value);
     if (isNaN(rate) || rate < 0 || rate > 20) {
       setError("Enter a rate between 0 and 20.");
       return;
     }
+    doneRef.current = true;
     setSaving(true);
     setError("");
     try {
@@ -351,15 +359,22 @@ function IncomeGrowthRateEditor({ planId, currentRate, onUpdated }) {
       setEditing(false);
       onUpdated();
     } catch (e) {
+      doneRef.current = false; // allow a retry after a failed save
       setError(String(e?.message || e));
     } finally {
       setSaving(false);
     }
   }
 
+  function cancel() {
+    doneRef.current = true; // suppress the onBlur that the unmount will trigger
+    setEditing(false);
+    setError("");
+  }
+
   function handleKeyDown(e) {
     if (e.key === "Enter") save();
-    if (e.key === "Escape") { setEditing(false); setError(""); }
+    if (e.key === "Escape") cancel();
   }
 
   if (!editing) {
@@ -498,6 +513,14 @@ export default function CashflowPlanDetailPage() {
 
   useEffect(() => { loadPlan(); }, [loadPlan]);
 
+  // Reload the plan AND remount the plan-mode NPV panel (via its key) so the
+  // verdict reflects edited assumptions/overrides — the panel only fetches on
+  // mount, so without the key bump the NPV would go stale (CR-014).
+  const refreshPlanAndNpv = useCallback(() => {
+    loadPlan();
+    setNpvRefreshKey((k) => k + 1);
+  }, [loadPlan]);
+
   async function handleAction(endpoint) {
     setActionLoading(true);
     setActionError("");
@@ -550,7 +573,7 @@ export default function CashflowPlanDetailPage() {
   const isReadOnly = plan.status !== "DRAFT";
 
   const stats = statCards(buckets, hasOpeningBalance);
-  const isStale = plan.lastComputedAt && (Date.now() - new Date(plan.lastComputedAt).getTime()) > STALE_THRESHOLD_MS;
+  const isStale = isPlanStale(plan);
 
   return (
     <AppShell role="MANAGER">
@@ -687,13 +710,13 @@ export default function CashflowPlanDetailPage() {
               timingRecommendations={timingRecommendations}
               planId={plan.id}
               isDraft={isDraft}
-              onRefresh={loadPlan}
+              onRefresh={refreshPlanAndNpv}
               alignmentMap={plan.strategyOverlay?.items?.reduce((m, it) => { m[it.assetId] = it; return m; }, {}) || {}}
             />
           </Panel>
 
           {/* NPV Assumptions — read-only here; edited in the planning workspace (step 1) */}
-          <AssumptionsPanel plan={plan} isDraft={false} onUpdated={loadPlan} />
+          <AssumptionsPanel plan={plan} isDraft={false} onUpdated={refreshPlanAndNpv} />
 
           {/* NPV Verdict */}
           <NPVScenariosPanel

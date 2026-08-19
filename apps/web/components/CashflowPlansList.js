@@ -17,17 +17,7 @@ import { authHeaders, ownerAuthHeaders } from "../lib/api";
 import { formatDate } from "../lib/format";
 import { planVariant } from "../lib/statusVariants";
 import { cn } from "../lib/utils";
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const STALE_THRESHOLD_MS = 7 * 24 * 60 * 60 * 1000;
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function isPlanStale(plan) {
-  if (!plan.lastComputedAt) return false;
-  return Date.now() - new Date(plan.lastComputedAt).getTime() > STALE_THRESHOLD_MS;
-}
+import { isPlanStale } from "../lib/planStale";
 
 // ─── Sorting ──────────────────────────────────────────────────────────────────
 
@@ -64,6 +54,13 @@ function CreatePlanModal({ buildings, onClose, onCreate }) {
     setForm((f) => ({ ...f, [key]: val }));
   }
 
+  // Dialog a11y (CR-016): Escape closes the modal.
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
   async function handleSubmit(e) {
     e.preventDefault();
     if (!form.name.trim()) { setError(t("cashflowPlan.nameRequired")); return; }
@@ -96,8 +93,17 @@ function CreatePlanModal({ buildings, onClose, onCreate }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-start justify-center pt-20 px-4">
-      <div className="bg-surface rounded-xl shadow-xl p-6 w-full max-w-lg">
+    <div
+      className="fixed inset-0 bg-black/40 z-50 flex items-start justify-center pt-20 px-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-surface rounded-xl shadow-xl p-6 w-full max-w-lg"
+        role="dialog"
+        aria-modal="true"
+        aria-label={t("cashflowPlan.newPlan", { defaultValue: "New cashflow plan" })}
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-base font-semibold text-foreground">New cashflow plan</h2>
           <button onClick={onClose} className="text-foreground-dim hover:text-muted-text text-lg leading-none" aria-label="Close">×</button>
@@ -296,9 +302,9 @@ const CashflowPlansList = forwardRef(function CashflowPlansList({ ownerMode = fa
           {p.lastVerdictScenario && (
             <span className={cn(
               "rounded-full px-2 py-0.5 text-xs font-semibold",
-              p.lastVerdictScenario === "invest"  && "bg-green-100 text-green-700",
-              p.lastVerdictScenario === "defer"   && "bg-amber-100 text-amber-700",
-              p.lastVerdictScenario === "neglect" && "bg-slate-100 text-slate-600",
+              p.lastVerdictScenario === "invest"  && "bg-success-light text-success-text",
+              p.lastVerdictScenario === "defer"   && "bg-warning-light text-warning-text",
+              p.lastVerdictScenario === "neglect" && "bg-muted-light text-muted-text",
             )}>
               {p.lastVerdictScenario.charAt(0).toUpperCase() + p.lastVerdictScenario.slice(1)}
             </span>
@@ -339,7 +345,7 @@ const CashflowPlansList = forwardRef(function CashflowPlansList({ ownerMode = fa
       render: (p) => {
         const stale = isPlanStale(p);
         return p.lastComputedAt ? (
-          <span className={stale ? "text-amber-600 font-medium" : "text-muted-text"}>
+          <span className={stale ? "text-warning-text font-medium" : "text-muted-text"}>
             {formatDate(p.lastComputedAt)}
             {stale && " (stale)"}
           </span>
@@ -380,7 +386,7 @@ const CashflowPlansList = forwardRef(function CashflowPlansList({ ownerMode = fa
           type="button"
           disabled={approving === p.id}
           onClick={(e) => { e.stopPropagation(); handleApprove(p.id); }}
-          className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-green-700 disabled:opacity-50 transition"
+          className="rounded-lg bg-success px-3 py-1.5 text-xs font-semibold text-white hover:bg-success-dark disabled:opacity-50 transition"
         >
           {approving === p.id ? "Approving…" : "Approve"}
         </button>
@@ -396,13 +402,13 @@ const CashflowPlansList = forwardRef(function CashflowPlansList({ ownerMode = fa
 
       {/* Pending approval banner — owner mode only */}
       {ownerMode && submittedPlans.length > 0 && (
-        <div className="mb-4 flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+        <div className="mb-4 flex items-center gap-3 rounded-lg border border-warning-ring bg-warning-light px-4 py-3">
           <span className="text-lg">📋</span>
           <div className="flex-1">
-            <p className="text-sm font-semibold text-amber-700">
+            <p className="text-sm font-semibold text-warning-text">
               {submittedPlans.length} plan{submittedPlans.length !== 1 ? "s" : ""} awaiting your approval
             </p>
-            <p className="text-xs text-amber-600">Review and approve submitted cashflow plans</p>
+            <p className="text-xs text-warning-text">Review and approve submitted cashflow plans</p>
           </div>
         </div>
       )}
@@ -454,9 +460,9 @@ const CashflowPlansList = forwardRef(function CashflowPlansList({ ownerMode = fa
                       {p.lastVerdictScenario && (
                         <span className={cn(
                           "rounded-full px-2 py-0.5 text-xs font-semibold",
-                          p.lastVerdictScenario === "invest"  && "bg-green-100 text-green-700",
-                          p.lastVerdictScenario === "defer"   && "bg-amber-100 text-amber-700",
-                          p.lastVerdictScenario === "neglect" && "bg-slate-100 text-slate-600",
+                          p.lastVerdictScenario === "invest"  && "bg-success-light text-success-text",
+                          p.lastVerdictScenario === "defer"   && "bg-warning-light text-warning-text",
+                          p.lastVerdictScenario === "neglect" && "bg-muted-light text-muted-text",
                         )}>
                           {p.lastVerdictScenario.charAt(0).toUpperCase() + p.lastVerdictScenario.slice(1)}
                         </span>
@@ -470,7 +476,7 @@ const CashflowPlansList = forwardRef(function CashflowPlansList({ ownerMode = fa
                     {p.incomeGrowthRatePct != null && ` · ${p.incomeGrowthRatePct}% growth`}
                   </p>
                   {p.lastComputedAt && (
-                    <p className={cn("text-xs mt-0.5", stale ? "text-amber-600 font-medium" : "text-foreground-dim")}>
+                    <p className={cn("text-xs mt-0.5", stale ? "text-warning-text font-medium" : "text-foreground-dim")}>
                       Computed {formatDate(p.lastComputedAt)}{stale ? " (stale)" : ""}
                     </p>
                   )}
