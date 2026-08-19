@@ -35,7 +35,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       # ── Guardrail enforcement (G8, F-UI4, F-UI4a, G9, G3) ──
       - name: "Guardrails: automated enforcement"
