@@ -355,25 +355,30 @@ function requestFieldExtractor(r, field) {
 // Badge sub-components (Tailwind)
 // ---------------------------------------------------------------------------
 
-function getStatusLabel(r) {
+// `t` is threaded in rather than read from a hook so this stays a pure function
+// usable outside React; keys are `manager:`-qualified because the owner request
+// page renders the same badge from its own namespace.
+function getStatusLabel(r, t) {
   const s = r.status;
   const js = r.job?.status;
-  if (s === "PENDING_REVIEW")         return { label: "Pending Review",          variant: "warning"  };
-  if (s === "RFP_PENDING")            return { label: "RFP Open",                variant: "info"     };
-  if (s === "PENDING_OWNER_APPROVAL") return { label: "Awaiting Owner Approval", variant: "warning"  };
-  if (s === "APPROVED")               return { label: "Approved",                variant: "info"     };
+  const k = (key) => t(`manager:requests.statusBadge.${key}`);
+  if (s === "PENDING_REVIEW")         return { label: k("pendingReview"),         variant: "warning"  };
+  if (s === "RFP_PENDING")            return { label: k("rfpOpen"),               variant: "info"     };
+  if (s === "PENDING_OWNER_APPROVAL") return { label: k("awaitingOwnerApproval"), variant: "warning"  };
+  if (s === "APPROVED")               return { label: k("approved"),              variant: "info"     };
   if (s === "ASSIGNED") {
-    if (js === "IN_PROGRESS")         return { label: "Work underway",           variant: "success"  };
-    if (js === "COMPLETED" || js === "INVOICED") return { label: "Work done",    variant: "success"  };
-    return                                       { label: "Assigned",            variant: "info"     };
+    if (js === "IN_PROGRESS")         return { label: k("workUnderway"),          variant: "success"  };
+    if (js === "COMPLETED" || js === "INVOICED") return { label: k("workDone"),   variant: "success"  };
+    return                                       { label: k("assigned"),          variant: "info"     };
   }
-  if (s === "COMPLETED")              return { label: "Completed",               variant: "success"  };
-  if (s === "REJECTED")               return { label: "Rejected",                variant: "danger"   };
+  if (s === "COMPLETED")              return { label: k("completed"),             variant: "success"  };
+  if (s === "REJECTED")               return { label: k("rejected"),              variant: "danger"   };
   return { label: (s || "").replace(/_/g, " "), variant: "default" };
 }
 
 function StatusBadge({ request }) {
-  const { label, variant } = getStatusLabel(request);
+  const { t } = useTranslation("manager");
+  const { label, variant } = getStatusLabel(request, t);
   return (
     <Badge variant={variant} size="sm">
       {label}
@@ -385,27 +390,13 @@ function StatusBadge({ request }) {
 // Obligation explanation — plain language for managers
 // ---------------------------------------------------------------------------
 
+// Only the styling lives here; heading/description are i18n keys resolved at
+// render time (`requests.obligation.<key>.heading|description`).
 const OBLIGATION_META = {
-  OBLIGATED: {
-    cls: "bg-green-50 text-green-700 border-green-200",
-    heading: "Landlord is legally obligated to repair",
-    description: "Swiss law requires the landlord to fix this. Approve the repair and assign a contractor.",
-  },
-  DISCRETIONARY: {
-    cls: "bg-amber-50 text-amber-700 border-amber-200",
-    heading: "Repair is at the landlord’s discretion",
-    description: "This isn’t strictly required by law, but is common practice. Consider the tenant relationship and cost.",
-  },
-  NOT_OBLIGATED: {
-    cls: "bg-red-50 text-red-700 border-red-200",
-    heading: "Landlord is not obligated",
-    description: "Based on Swiss law and the asset’s condition, this repair falls on the tenant. You may still choose to cover it.",
-  },
-  UNKNOWN: {
-    cls: "bg-surface-hover text-muted-dark border-surface-border",
-    heading: "Needs your judgement",
-    description: "The legal engine couldn’t determine obligation automatically. Review the details below and decide.",
-  },
+  OBLIGATED:     { cls: "bg-green-50 text-green-700 border-green-200",            key: "obligated" },
+  DISCRETIONARY: { cls: "bg-amber-50 text-amber-700 border-amber-200",            key: "discretionary" },
+  NOT_OBLIGATED: { cls: "bg-red-50 text-red-700 border-red-200",                  key: "notObligated" },
+  UNKNOWN:       { cls: "bg-surface-hover text-muted-dark border-surface-border", key: "unknown" },
 };
 
 // ---------------------------------------------------------------------------
@@ -451,97 +442,47 @@ function getAvailableCTAs(r, assigningId) {
  *
  * @param {object} r - request summary from API
  * @param {object|null} legalDecision - lazy-fetched legal decision (may be null/undefined)
+ * @param {Function} t - i18n translator (pass a `t` that can resolve the `manager` namespace)
  * @returns {{ label: string, description: string, variant: string } | null}
  */
-function getNextStep(r, legalDecision) {
+function getNextStep(r, legalDecision, t) {
   const obl = legalDecision?.legalObligation;
+  // Both label and description come from one key pair so a translator sees the
+  // banner as a unit. `manager:`-qualified — the owner page calls this too.
+  const step = (key, variant) => ({
+    label: t(`manager:requests.nextStep.${key}.label`),
+    description: t(`manager:requests.nextStep.${key}.description`),
+    variant,
+  });
 
   switch (r.status) {
     case 'PENDING_REVIEW':
-      if (!r.unitId && !r.unit) {
-        return {
-          label: 'Unit Required',
-          description: 'This request has no unit assigned. Assign a unit before legal evaluation can proceed.',
-          variant: 'warn',
-        };
-      }
-      return {
-        label: 'Pending Review',
-        description: 'Approve to create an RFP and begin the contractor selection process, or reject the request.',
-        variant: 'info',
-      };
+      if (!r.unitId && !r.unit) return step('unitRequired', 'warn');
+      return step('pendingReview', 'info');
 
     case 'RFP_PENDING':
-      if (obl === 'OBLIGATED') {
-        return {
-          label: 'Legally required — RFP open',
-          description: 'Swiss law requires this repair. An RFP has been created automatically.',
-          variant: 'info',
-        };
-      }
-      return {
-        label: 'RFP open',
-        description: 'The owner approved this request. Contractors are being invited to quote.',
-        variant: 'info',
-      };
+      if (obl === 'OBLIGATED') return step('legallyRequiredRfpOpen', 'info');
+      return step('rfpOpen', 'info');
 
     case 'PENDING_OWNER_APPROVAL':
-      if (obl === 'OBLIGATED') {
-        return {
-          label: 'Legal obligation — owner review',
-          description: 'Swiss law requires this repair. The owner should approve to proceed.',
-          variant: 'warn',
-        };
-      }
-      return {
-        label: 'Awaiting owner approval',
-        description: 'The selected quote exceeds the building’s auto-approval threshold. The owner must approve before work can begin.',
-        variant: 'warn',
-      };
+      if (obl === 'OBLIGATED') return step('legalObligationOwnerReview', 'warn');
+      return step('awaitingOwnerApproval', 'warn');
 
     case 'APPROVED':
-      return {
-        label: 'Ready to assign',
-        description: 'Approved and ready. Assign a contractor to begin work.',
-        variant: 'success',
-      };
+      return step('readyToAssign', 'success');
 
     case 'ASSIGNED': {
       const jobStatus = r.job?.status;
-      if (jobStatus === 'IN_PROGRESS') {
-        return {
-          label: 'Work in progress',
-          description: 'The contractor is actively working on this repair.',
-          variant: 'info',
-        };
-      }
-      if (jobStatus === 'COMPLETED' || jobStatus === 'INVOICED') {
-        return {
-          label: 'Work complete — invoice pending',
-          description: 'The contractor has marked the job done. Awaiting invoice review.',
-          variant: 'success',
-        };
-      }
-      return {
-        label: 'Work assigned',
-        description: 'A contractor is assigned and will begin work shortly.',
-        variant: 'info',
-      };
+      if (jobStatus === 'IN_PROGRESS') return step('workInProgress', 'info');
+      if (jobStatus === 'COMPLETED' || jobStatus === 'INVOICED') return step('workCompleteInvoicePending', 'success');
+      return step('workAssigned', 'info');
     }
 
     case 'REJECTED':
-      return {
-        label: 'Rejected',
-        description: 'This request was rejected. The tenant may choose to self-pay.',
-        variant: 'error',
-      };
+      return step('rejected', 'error');
 
     case 'COMPLETED':
-      return {
-        label: 'Completed',
-        description: 'This repair has been completed.',
-        variant: 'success',
-      };
+      return step('completed', 'success');
 
     default:
       return null;
@@ -568,6 +509,7 @@ function Chevron({ expanded, className = "" }) {
 // ---------------------------------------------------------------------------
 
 function DepreciationBar({ signal }) {
+  const { t } = useTranslation("manager");
   if (!signal) return null;
   const pct = signal.remainingLifePct;
   const ageYears = Math.round(signal.ageMonths / 12 * 10) / 10;
@@ -578,16 +520,18 @@ function DepreciationBar({ signal }) {
   return (
     <div className="mt-2">
       <div className="flex items-center justify-between text-xs text-muted mb-1">
-        <span>Age: {ageYears} yrs of {lifespanYears}-yr lifespan</span>
+        <span>{t("manager:requests.depreciation.ageLine", { age: ageYears, lifespan: lifespanYears })}</span>
         <span className={cn("font-semibold", signal.fullyDepreciated ? "text-red-600" : "text-muted-dark")}>
-          {signal.fullyDepreciated ? "Fully depreciated" : `${pct}% remaining life`}
+          {signal.fullyDepreciated
+            ? t("manager:requests.depreciation.fullyDepreciated")
+            : t("manager:requests.depreciation.remainingLife", { pct })}
         </span>
       </div>
       <div className="h-2 w-full rounded-full bg-surface-hover">
         <div className={cn("h-2 rounded-full", barColor, "transition-all duration-500")} style={{ width: `${usedPct}%` }} />
       </div>
       {signal.notes && (
-        <p className="mt-1 text-xs text-foreground-dim">Source: {signal.notes}</p>
+        <p className="mt-1 text-xs text-foreground-dim">{t("manager:requests.depreciation.source", { source: signal.notes })}</p>
       )}
     </div>
   );
@@ -603,7 +547,7 @@ function LegalRecommendationPanel({ decision, loading: isLoading, error: loadErr
     return (
       <div className="flex items-center gap-3 border-t border-surface-divider bg-surface-subtle px-6 py-4">
         <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
-        <span className="text-sm text-muted">Evaluating legal obligations&hellip;</span>
+        <span className="text-sm text-muted">{t("manager:requests.text.evaluatingLegalObligations")}</span>
       </div>
     );
   }
@@ -611,7 +555,7 @@ function LegalRecommendationPanel({ decision, loading: isLoading, error: loadErr
   if (loadError) {
     return (
       <div className="border-t border-red-100 bg-red-50 px-6 py-3">
-        <p className="text-sm text-red-600">{"⚠"} Could not load recommendation: {loadError}</p>
+        <p className="text-sm text-red-600">{"⚠"} {t("manager:requests.text.couldNotLoadRecommendation", { error: loadError })}</p>
       </div>
     );
   }
@@ -634,8 +578,8 @@ function LegalRecommendationPanel({ decision, loading: isLoading, error: loadErr
       <div className={cn("rounded-lg border p-4", ob.cls)}>
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h4 className="text-sm font-bold">{ob.heading}</h4>
-            <p className="mt-1 text-[0.8125rem] leading-snug opacity-90">{ob.description}</p>
+            <h4 className="text-sm font-bold">{t(`manager:requests.obligation.${ob.key}.heading`)}</h4>
+            <p className="mt-1 text-[0.8125rem] leading-snug opacity-90">{t(`manager:requests.obligation.${ob.key}.description`)}</p>
           </div>
           <span className="shrink-0 rounded-full bg-white/60 px-2.5 py-0.5 text-xs font-semibold"> {/* no-token: semi-transparent white on colored card */}
             {decision.confidence}% confidence
@@ -774,19 +718,23 @@ function LegalRecommendationPanel({ decision, loading: isLoading, error: loadErr
         const contextActions = decision.recommendedActions.map((action) => {
           // Mark actions as completed if the request has already progressed past them
           if (action === 'CREATE_RFP' && isPastReview) {
-            return { label: '✓ RFP created', done: true };
+            return { label: `✓ ${t("manager:requests.action.rfpCreated")}`, done: true };
           }
           if (action === 'NOTIFY_MANAGER' && isPastReview) {
-            return { label: '✓ Manager notified', done: true };
+            return { label: `✓ ${t("manager:requests.action.managerNotified")}`, done: true };
           }
           if (action === 'ROUTE_TO_OWNER' && requestStatus === 'PENDING_OWNER_APPROVAL') {
-            return { label: '✓ Routed to owner — awaiting decision', done: false };
+            return { label: `✓ ${t("manager:requests.action.routedToOwner")}`, done: false };
           }
           if (action === 'ROUTE_TO_OWNER' && isPastOwnerApproval) {
-            return { label: '✓ Owner decision received', done: true };
+            return { label: `✓ ${t("manager:requests.action.ownerDecisionReceived")}`, done: true };
           }
-          // Default: show the raw action as a pending recommendation
-          return { label: action.replace(/_/g, ' '), done: false };
+          // Default: a still-pending recommendation. Known actions get a proper
+          // label; anything the engine adds later falls back to the raw enum.
+          return {
+            label: t(`manager:requests.action.${action}`, { defaultValue: action.replace(/_/g, ' ') }),
+            done: false,
+          };
         });
 
         return (
@@ -1045,7 +993,7 @@ function RequestPhotosPanel({ requestId }) {
       .then((newItems) => {
         setAttachments((prev) => [...prev, ...newItems.filter(Boolean)]);
       })
-      .catch(() => alert("One or more uploads failed"))
+      .catch(() => alert(t("manager:requests.text.oneOrMoreUploadsFailed")))
       .finally(() => { e.target.value = ""; });
   }
 
@@ -1064,7 +1012,7 @@ function RequestPhotosPanel({ requestId }) {
     return (
       <div className="px-6 py-4">
         <SectionLabel>{t("manager:requests.text.photosAttachments")}</SectionLabel>
-        <p className="mt-2 text-xs text-foreground-dim">Loading&hellip;</p>
+        <p className="mt-2 text-xs text-foreground-dim">{t("manager:requests.text.loadingPhotos")}</p>
       </div>
     );
   }
@@ -1137,7 +1085,7 @@ function RequestPhotosPanel({ requestId }) {
       {previewUrl && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80" onClick={() => setPreviewUrl(null)}>
           <div className="relative max-h-[90vh] max-w-[90vw]" onClick={(e) => e.stopPropagation()}>
-            <img src={previewUrl} alt="Preview" className="max-h-[85vh] max-w-[85vw] rounded-lg object-contain" />
+            <img src={previewUrl} alt={t("manager:requests.text.previewAlt")} className="max-h-[85vh] max-w-[85vw] rounded-lg object-contain" />
             <button onClick={() => setPreviewUrl(null)} className="absolute -top-3 -right-3 flex h-8 w-8 items-center justify-center rounded-full bg-surface text-muted-dark shadow-lg hover:bg-surface-hover">
               &times;
             </button>

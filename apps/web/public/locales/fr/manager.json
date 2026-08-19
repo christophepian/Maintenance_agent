@@ -2660,7 +2660,12 @@
       "typeAdministrative": "Administratif",
       "resetFilters": "Réinitialiser les filtres",
       "noRequestsMatchThisFilter": "Aucune demande ne correspond à ce filtre.",
-      "selectContractor": "Sélectionner un prestataire…"
+      "selectContractor": "Sélectionner un prestataire…",
+      "evaluatingLegalObligations": "Analyse des obligations légales…",
+      "couldNotLoadRecommendation": "Impossible de charger la recommandation : {{error}}",
+      "loadingPhotos": "Chargement…",
+      "previewAlt": "Aperçu",
+      "oneOrMoreUploadsFailed": "Le téléversement d’un ou plusieurs fichiers a échoué"
     },
     "prop": {
       "reviewIncomingMaintenanceRequestsClickARowToSeeFullDetails": "Révision incoming maintenance requests. Click a row to see full details.",
@@ -2705,6 +2710,101 @@
       "unassign": "Désattribuer",
       "viewRfp": "Voir AAO",
       "ok": "OK"
+    },
+    "statusBadge": {
+      "pendingReview": "En attente d’examen",
+      "rfpOpen": "Appel d’offres ouvert",
+      "awaitingOwnerApproval": "En attente de l’accord du propriétaire",
+      "approved": "Approuvé",
+      "workUnderway": "Travaux en cours",
+      "workDone": "Travaux terminés",
+      "assigned": "Attribué",
+      "completed": "Terminé",
+      "rejected": "Refusé"
+    },
+    "obligation": {
+      "obligated": {
+        "heading": "Le bailleur est légalement tenu de réparer",
+        "description": "Le droit suisse impose cette réparation au bailleur. Validez la réparation et attribuez le mandat à un prestataire."
+      },
+      "discretionary": {
+        "heading": "La réparation relève de l’appréciation du bailleur",
+        "description": "La loi ne l’impose pas strictement, mais l’usage le veut. Tenez compte de la relation avec le locataire et du coût."
+      },
+      "notObligated": {
+        "heading": "Le bailleur n’est pas tenu d’intervenir",
+        "description": "Au vu du droit suisse et de l’état de l’équipement, cette réparation incombe au locataire. Vous pouvez néanmoins choisir de la prendre en charge."
+      },
+      "unknown": {
+        "heading": "À votre appréciation",
+        "description": "Le moteur juridique n’a pas pu déterminer l’obligation automatiquement. Examinez les éléments ci-dessous et décidez."
+      }
+    },
+    "nextStep": {
+      "unitRequired": {
+        "label": "Lot requis",
+        "description": "Aucun lot n’est rattaché à cette demande. Rattachez un lot avant de lancer l’analyse juridique."
+      },
+      "pendingReview": {
+        "label": "En attente d’examen",
+        "description": "Approuvez pour créer un appel d’offres et lancer la sélection des prestataires, ou refusez la demande."
+      },
+      "legallyRequiredRfpOpen": {
+        "label": "Obligation légale — appel d’offres ouvert",
+        "description": "Le droit suisse impose cette réparation. Un appel d’offres a été créé automatiquement."
+      },
+      "rfpOpen": {
+        "label": "Appel d’offres ouvert",
+        "description": "Le propriétaire a approuvé cette demande. Les prestataires sont invités à soumettre une offre."
+      },
+      "legalObligationOwnerReview": {
+        "label": "Obligation légale — accord du propriétaire",
+        "description": "Le droit suisse impose cette réparation. Le propriétaire doit donner son accord pour poursuivre."
+      },
+      "awaitingOwnerApproval": {
+        "label": "En attente de l’accord du propriétaire",
+        "description": "L’offre retenue dépasse le seuil d’approbation automatique de l’immeuble. Le propriétaire doit donner son accord avant le début des travaux."
+      },
+      "readyToAssign": {
+        "label": "Prêt à être attribué",
+        "description": "Demande approuvée. Attribuez le mandat à un prestataire pour lancer les travaux."
+      },
+      "workInProgress": {
+        "label": "Travaux en cours",
+        "description": "Le prestataire intervient actuellement sur cette réparation."
+      },
+      "workCompleteInvoicePending": {
+        "label": "Travaux terminés — facture en attente",
+        "description": "Le prestataire a signalé la fin des travaux. La facture reste à examiner."
+      },
+      "workAssigned": {
+        "label": "Mandat attribué",
+        "description": "Un prestataire est mandaté et interviendra prochainement."
+      },
+      "rejected": {
+        "label": "Refusé",
+        "description": "Cette demande a été refusée. Le locataire peut choisir de la prendre à sa charge."
+      },
+      "completed": {
+        "label": "Terminé",
+        "description": "Cette réparation a été effectuée."
+      }
+    },
+    "depreciation": {
+      "ageLine": "Âge : {{age}} ans sur une durée de vie de {{lifespan}} ans",
+      "fullyDepreciated": "Entièrement amorti",
+      "remainingLife": "{{pct}} % de durée de vie restante",
+      "source": "Source : {{source}}"
+    },
+    "action": {
+      "rfpCreated": "Appel d’offres créé",
+      "managerNotified": "Gérance informée",
+      "routedToOwner": "Transmis au propriétaire — décision en attente",
+      "ownerDecisionReceived": "Décision du propriétaire reçue",
+      "CREATE_RFP": "Créer un appel d’offres",
+      "NOTIFY_MANAGER": "Informer la gérance",
+      "ROUTE_TO_OWNER": "Transmettre au propriétaire",
+      "NOTIFY_TENANT": "Informer le locataire"
     }
   },
   "requestsId": {
@@ -2717,7 +2817,8 @@
       "resolution": "Résolution"
     },
     "ariaLabel": {
-      "selectAssetToLink": "Sélectionner un actif à associer"
+      "selectAssetToLink": "Sélectionner un actif à associer",
+      "changeRequestType": "Changer le type de demande"
     },
     "text": {
       "loadingAssetAnalysis": "Chargement de l’analyse équipement…",
@@ -2766,7 +2867,9 @@
       "unit": "Unité",
       "warningLetterDescription": "Générez une lettre d'avertissement pré-remplie basée sur la réclamation et le règlement intérieur applicable. Vous pouvez modifier le texte avant de le télécharger.",
       "resolutionNotePlaceholder": "Ajouter une note de résolution…",
-      "markedResolved": "Cette réclamation a été marquée comme résolue."
+      "markedResolved": "Cette réclamation a été marquée comme résolue.",
+      "loadingRequest": "Chargement de la demande…",
+      "selectAsset": "Sélectionner un équipement…"
     },
     "prop": {
       "created": "Créé",
