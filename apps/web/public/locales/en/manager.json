@@ -768,7 +768,19 @@
       "collapse": "Collapse",
       "noUnits": "No units found.",
       "income": "Income",
-      "expenses": "Expenses",
+      "expenses": {
+        "tab": "Expenses",
+        "title": "Expenses",
+        "sub": "What the building spent over the period, and where it went.",
+        "byUnit": "Per unit",
+        "apportioned": "Apportioned",
+        "unitTotal": "Unit total",
+        "shareOfTotal": "Share",
+        "unallocated": "Not allocated — building level",
+        "unallocatedExamples": "Management, insurance, taxes, caretaking, shared and exterior maintenance",
+        "totalOperating": "Total operating expenses",
+        "byUnitNote": "Direct costs are booked to a unit and expand into their invoice lines. Apportioned charges are the unit's surface-weighted share of recoverable ancillary costs — no per-unit invoices sit behind them. Everything else stays at building level: it is shown here, never spread across units."
+      },
       "charges": "Charges",
       "net": "Net",
       "collection": "Collection",
@@ -1070,7 +1082,7 @@
       "byUnitOverheadNote": "Each unit's expenses include its share of building overhead (insurance, management, taxes, shared maintenance) apportioned by area — so per-unit net reconciles to the building's operating NOI.",
       "directCosts": "Direct costs",
       "contribution": "Contribution",
-      "byUnitDirectNote": "Direct costing: only costs booked to a specific unit are shown here, so \"Contribution\" is that unit's share of the building result. Shared building-level costs (insurance, management, taxes, exterior/shared maintenance) are not spread across units — see Profitability for the full breakdown.",
+      "byUnitDirectNote": "Direct costs only: what you see per unit is what was booked to that unit. Shared building-level costs (insurance, management, taxes, exterior/common maintenance) are not spread across units — they appear as the “not allocated” line at the bottom of this list.",
       "unitCosts": {
         "loading": "Loading cost detail…",
         "error": "Couldn't load the cost detail for this unit.",
@@ -1092,7 +1104,20 @@
       },
       "fullDetail": "Full income & cost detail",
       "moreMetrics": "More metrics",
-      "movesSummary": "{{in}} in · {{out}} out"
+      "movesSummary": "{{in}} in · {{out}} out",
+      "periodResult": "Period result",
+      "revenue": {
+        "tab": "Revenue",
+        "title": "Revenue",
+        "sub": "What the building took in over the period, and which unit it came from.",
+        "buildingTotal": "Total revenue · building",
+        "byUnit": "Per unit",
+        "unit": "Unit",
+        "tenant": "Tenant",
+        "subtotalShown": "Subtotal · {{count}} units shown",
+        "otherUnits": "Other units ({{count}})",
+        "unattributed": "Booked at building level"
+      }
     },
     "strategyEditor": {
       "intro": "Set how this building should be managed — the cashflow recommendation engine uses it to tailor advice for this property.",

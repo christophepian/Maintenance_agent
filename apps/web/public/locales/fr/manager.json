@@ -768,7 +768,19 @@
       "collapse": "Réduire",
       "noUnits": "Aucun lot trouvé.",
       "income": "Revenus",
-      "expenses": "Charges",
+      "expenses": {
+        "tab": "Charges",
+        "title": "Charges",
+        "sub": "Ce que l'immeuble a dépensé sur la période, et où cela part.",
+        "byUnit": "Par lot",
+        "apportioned": "Réparti",
+        "unitTotal": "Total du lot",
+        "shareOfTotal": "Part",
+        "unallocated": "Non réparti — niveau immeuble",
+        "unallocatedExamples": "Gérance, assurances, impôts, conciergerie, entretien commun et extérieur",
+        "totalOperating": "Total des charges d'exploitation",
+        "byUnitNote": "Les coûts directs sont imputés à un lot et se déplient en lignes de facture. Les charges réparties correspondent à la part du lot dans les charges récupérables, au prorata de la surface — aucune facture individuelle ne les sous-tend. Tout le reste demeure au niveau de l'immeuble : il est affiché ici, jamais ventilé sur les lots."
+      },
       "charges": "Charges récup.",
       "net": "Net",
       "collection": "Recouvrement",
@@ -1070,7 +1082,7 @@
       "byUnitOverheadNote": "Les charges de chaque objet incluent sa part des frais généraux de l'immeuble (assurances, gérance, impôts, entretien commun) répartie selon la surface — le net par objet correspond ainsi au RNE de l'immeuble.",
       "directCosts": "Coûts directs",
       "contribution": "Contribution",
-      "byUnitDirectNote": "Coûts directs : seuls les coûts imputés à un lot précis sont affichés ici, donc la « Contribution » correspond à la part de ce lot dans le résultat de l'immeuble. Les coûts partagés au niveau de l'immeuble (assurance, gérance, impôts, entretien extérieur/commun) ne sont pas répartis sur les lots — voir Rentabilité pour la décomposition complète.",
+      "byUnitDirectNote": "Coûts directs uniquement : seuls les coûts imputés à un lot précis apparaissent par lot. Les charges partagées au niveau de l'immeuble (assurance, gérance, impôts, entretien extérieur/commun) ne sont pas ventilées sur les lots — elles figurent sur la ligne « non réparti » en bas de cette liste.",
       "unitCosts": {
         "loading": "Chargement du détail des coûts…",
         "error": "Impossible de charger le détail des coûts pour ce lot.",
@@ -1092,7 +1104,20 @@
       },
       "fullDetail": "Détail complet des revenus et charges",
       "moreMetrics": "Plus d’indicateurs",
-      "movesSummary": "{{in}} entrées · {{out}} sorties"
+      "movesSummary": "{{in}} entrées · {{out}} sorties",
+      "periodResult": "Résultat de la période",
+      "revenue": {
+        "tab": "Produits",
+        "title": "Produits",
+        "sub": "Ce que l'immeuble a encaissé sur la période, et de quel lot cela provient.",
+        "buildingTotal": "Total des produits · immeuble",
+        "byUnit": "Par lot",
+        "unit": "Lot",
+        "tenant": "Locataire",
+        "subtotalShown": "Sous-total · {{count}} lots affichés",
+        "otherUnits": "Autres lots ({{count}})",
+        "unattributed": "Comptabilisé au niveau de l'immeuble"
+      }
     },
     "strategyEditor": {
       "intro": "Définissez la gestion de ce bâtiment — le moteur de recommandation de trésorerie l'utilise pour adapter ses conseils à ce bien.",
