@@ -213,11 +213,11 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
                     <div className="sm:hidden mb-3">
                       <KpiInlineGrid
                         items={[
-                          { label: "Earned Income",  value: formatChfCents(p.totalCollectedIncomeCents), tone: "good" },
-                          { label: "Total Expenses", value: formatChfCents(p.totalExpensesCents) },
-                          { label: "Net Result",     value: formatChfCents(p.totalNetIncomeCents), tone: p.totalNetIncomeCents >= 0 ? "good" : "warn" },
-                          { label: "Receivables",    value: formatChfCents(p.totalReceivablesCents), tone: p.totalReceivablesCents > 0 ? "warn" : undefined },
-                          { label: "Payables",       value: formatChfCents(p.totalPayablesCents), tone: p.totalPayablesCents > 0 ? "warn" : undefined },
+                          { label: t("manager:financeIndex.prop.earnedIncome"),  value: formatChfCents(p.totalCollectedIncomeCents), tone: "good" },
+                          { label: t("manager:financeIndex.prop.totalExpenses"), value: formatChfCents(p.totalExpensesCents) },
+                          { label: t("manager:financeIndex.prop.netResult"),     value: formatChfCents(p.totalNetIncomeCents), tone: p.totalNetIncomeCents >= 0 ? "good" : "warn" },
+                          { label: t("manager:financeIndex.prop.receivables"),    value: formatChfCents(p.totalReceivablesCents), tone: p.totalReceivablesCents > 0 ? "warn" : undefined },
+                          { label: t("manager:financeIndex.prop.payables"),       value: formatChfCents(p.totalPayablesCents), tone: p.totalPayablesCents > 0 ? "warn" : undefined },
                         ]}
                       />
                     </div>
@@ -225,9 +225,9 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
                     <div className="hidden sm:grid grid-cols-2 md:grid-cols-5 gap-3">
                       <SummaryCard label={t("manager:financeIndex.prop.earnedIncome")}  value={formatChfCents(p.totalCollectedIncomeCents)} accent="green" />
                       <SummaryCard label={t("manager:financeIndex.prop.totalExpenses")} value={formatChfCents(p.totalExpensesCents)} />
-                      <SummaryCard label={t("manager:financeIndex.prop.netResult")}     value={formatChfCents(p.totalNetIncomeCents)} accent={netAccent} sub="Income − Expenses" />
-                      <SummaryCard label={t("manager:financeIndex.prop.receivables")}    value={formatChfCents(p.totalReceivablesCents)} accent={p.totalReceivablesCents > 0 ? "amber" : ""} sub="Unpaid rent invoices" />
-                      <SummaryCard label={t("manager:financeIndex.prop.payables")}       value={formatChfCents(p.totalPayablesCents)} accent={p.totalPayablesCents > 0 ? "amber" : ""} sub="Unpaid supplier invoices" />
+                      <SummaryCard label={t("manager:financeIndex.prop.netResult")}     value={formatChfCents(p.totalNetIncomeCents)} accent={netAccent} sub={t("financeIndex.sub.incomeMinusExpenses")} />
+                      <SummaryCard label={t("manager:financeIndex.prop.receivables")}    value={formatChfCents(p.totalReceivablesCents)} accent={p.totalReceivablesCents > 0 ? "amber" : ""} sub={t("financeIndex.sub.unpaidRentInvoices")} />
+                      <SummaryCard label={t("manager:financeIndex.prop.payables")}       value={formatChfCents(p.totalPayablesCents)} accent={p.totalPayablesCents > 0 ? "amber" : ""} sub={t("financeIndex.sub.unpaidSupplierInvoices")} />
                     </div>
                   </Section>
 
@@ -332,7 +332,7 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
                               >
                                 <path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
                               </svg>
-                              {buildingsExpanded ? "Show less" : `Show all ${p.buildings.length} buildings`}
+                              {buildingsExpanded ? t("financeIndex.showLess") : t("financeIndex.showAllBuildings", { count: p.buildings.length })}
                             </div>
                           )}
                         </>
@@ -388,7 +388,7 @@ const tabKeys = FINANCE_TABS.map((t) => t.key);
                 return (
                   <>
                     <div className="flex items-center gap-2">
-                      <label htmlFor="acct-building" className="text-sm text-muted-text">Building</label>
+                      <label htmlFor="acct-building" className="text-sm text-muted-text">{t("financeIndex.accounting.building")}</label>
                       <select
                         id="acct-building"
                         value={effId}

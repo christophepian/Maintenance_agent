@@ -263,7 +263,36 @@
     "namePlaceholder": "e.g. 2026–2030 CapEx plan",
     "budgetPlaceholder": "e.g. 50000",
     "portfolio": "Portfolio",
-    "building": "Building"
+    "building": "Building",
+    "close": "Close",
+    "loading": "Loading plans…",
+    "field": {
+      "building": "Building (leave empty for portfolio)",
+      "incomeGrowth": "Income growth rate (% / year)",
+      "horizon": "Horizon (months)",
+      "openingBalance": "Opening balance (CHF, optional)",
+      "openingBalancePlaceholder": "e.g. 50000",
+      "openingBalanceHint": "Leave empty to show net flows only. Can be added later."
+    },
+    "col": {
+      "name": "Name",
+      "status": "Status",
+      "scope": "Scope",
+      "horizon": "Horizon",
+      "growth": "Growth",
+      "lastComputed": "Last computed",
+      "created": "Created",
+      "openingBalance": "Opening balance"
+    },
+    "awaitingApproval_one": "{{count}} plan awaiting your approval",
+    "awaitingApproval_other": "{{count}} plans awaiting your approval",
+    "awaitingApprovalSub": "Review and approve submitted cashflow plans",
+    "searchPlaceholder": "Search plans…",
+    "searchAria": "Search cashflow plans",
+    "empty": "No cashflow plans yet. Use “New plan” to get started.",
+    "approve": "Approve",
+    "approving": "Approving…",
+    "newPlan": "New cashflow plan"
   },
   "categoryMappings": {
     "topic": {
@@ -1572,6 +1601,18 @@
     "costPool": {
       "blurb": "Record actual building costs per period and apportion them to tenants by distribution key (surface, units, occupants). Feeds the charge reconciliation.",
       "open": "Open Cost Pool"
+    },
+    "showLess": "Show less",
+    "showAllBuildings": "Show all {{count}} buildings",
+    "sub": {
+      "incomeMinusExpenses": "Income − Expenses",
+      "unpaidRentInvoices": "Unpaid rent invoices",
+      "unpaidSupplierInvoices": "Unpaid supplier invoices"
+    },
+    "accounting": {
+      "building": "Building",
+      "financialPosition": "Financial position",
+      "analytical": "Analytical view"
     }
   },
   "capexSchedule": {
@@ -3896,7 +3937,11 @@
       "plans": "Plans",
       "recordedPlans": "Recorded Plans"
     },
-    "selectBuilding": "Select a building…"
+    "selectBuilding": "Select a building…",
+    "financing": {
+      "title": "Financing & valuation",
+      "sub": "Building-level — used to compute the levered NPV (DSCR / LTV / equity IRR), shown on the cash plan after you plan the work."
+    }
   },
   "renovationAccordion": {
     "rec": {
@@ -3934,6 +3979,70 @@
     "holdingBest": "Holding is best — nothing to schedule. Pick Act Now or At Turnover to plan work anyway.",
     "scheduledOk": "✓ Scheduled in cashflow plan",
     "scheduledPartial": "⚠ Scheduled {{done}} of {{total}} — {{failed}} failed; re-run to retry",
-    "planError": "Error: {{message}}"
+    "planError": "Error: {{message}}",
+    "toPlan": "To plan",
+    "holding": "Holding",
+    "breakEvenIn": "Break-even in",
+    "closeSimulator": "Close simulator",
+    "rail": {
+      "scenario": "Scenario",
+      "action": "Action",
+      "horizon": "Horizon",
+      "years": "{{n}} yr",
+      "assumptions": "Assumptions",
+      "oblfPassthrough": "OBLF passthrough",
+      "discountRate": "Discount rate",
+      "capRate": "Cap rate",
+      "vacancy": "Vacancy",
+      "daysSuffix": "days",
+      "assetCosts_one": "Asset cost (CHF)",
+      "assetCosts_other": "Asset costs (CHF)"
+    },
+    "stat": {
+      "totalInvestment": "Total investment",
+      "rentUplift": "Rent uplift",
+      "doNothingRisk": "Do Nothing risk"
+    },
+    "hint": {
+      "renovateImmediately": "Renovate immediately",
+      "inAbout": "In ~{{in}}",
+      "whenLeaseEnds": "When current lease ends",
+      "maintainAsIs": "Maintain as-is, risk-adjusted"
+    },
+    "summary": {
+      "betterThanNothing": "{{amount}} better than doing nothing.",
+      "noOutperform": "Does not outperform doing nothing in this horizon.",
+      "avoidsDisrupting": "Avoids disrupting the current tenant. {{amount}} better than doing nothing.",
+      "lessThanBest": "{{amount}} less than the best renovation scenario.",
+      "includesRisk": "Includes {{amount}}/yr expected failure + tenant risk.",
+      "bestInHorizon": "Returns best in this horizon — revisit if repair costs rise."
+    },
+    "verdictText": {
+      "nothing": "Based on these assumptions, doing nothing preserves returns best over this horizon. Consider revisiting if costs or rent levels change.",
+      "whenNow": "Acting now",
+      "whenTurnover": "Waiting for turnover (~{{in}})",
+      "breaksEven": "breaks even in {{in}}",
+      "neverBreaksEven": "does not break even within this horizon",
+      "best": "{{when}} yields the best return — {{amount}} more than doing nothing. The investment {{breakeven}}."
+    },
+    "terminalValue": "Includes terminal value {{amount}} (rent uplift capitalised at {{rate}}% cap rate).",
+    "table": {
+      "title": "Asset breakdown",
+      "asset": "Asset",
+      "unit": "Unit",
+      "cost": "Cost (CHF)",
+      "rentUplift": "Rent uplift",
+      "failureRisk": "Failure risk/yr",
+      "rentRisk": "Rent risk/yr",
+      "totalRisk": "Total risk/yr",
+      "total": "Total",
+      "totalRiskFoot": "{{amount}}/yr total risk"
+    },
+    "methodology": "<b>Failure risk</b> = base rate (by asset type) × depreciation multiplier × replacement cost. <b>Rent risk</b> = CO Art. 259d probability-weighted reduction (POOR: 20 %/yr, DAMAGED: 40 %/yr). <b>OBLF Art. 14</b> allows passing {{pct}}% of renovation cost to rent over the asset's useful life.",
+    "banner": {
+      "title": "Renovation scheduled in cashflow plan",
+      "embedded": "These assets are now timed in your cashflow plan — review the NPV verdict, assumptions and approval below.",
+      "standalone": "These assets are now timed in your cashflow plan. The Invest scenario reflects this capex automatically."
+    }
   }
 }

@@ -156,11 +156,8 @@ export default function PlanningWorkspace({ buildings: allBuildings = [] }) {
           {simBuildingId && (
             <div>
               <div className="mb-2">
-                <h4 className="text-sm font-semibold text-foreground m-0">Financing &amp; Valuation</h4>
-                <p className="text-xs text-foreground-dim mt-0.5">
-                  Building-level — used to compute the levered NPV (DSCR / LTV / equity IRR),
-                  shown on the cash plan after you plan the work.
-                </p>
+                <h4 className="text-sm font-semibold text-foreground m-0">{t("planning.financing.title")}</h4>
+                <p className="text-xs text-foreground-dim mt-0.5">{t("planning.financing.sub")}</p>
               </div>
               <FinancingPanel buildingId={simBuildingId} onChanged={() => {}} />
             </div>

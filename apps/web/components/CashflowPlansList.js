@@ -105,8 +105,8 @@ function CreatePlanModal({ buildings, onClose, onCreate }) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-base font-semibold text-foreground">New cashflow plan</h2>
-          <button onClick={onClose} className="text-foreground-dim hover:text-muted-text text-lg leading-none" aria-label="Close">×</button>
+          <h2 className="text-base font-semibold text-foreground">{t("cashflowPlan.newPlan")}</h2>
+          <button onClick={onClose} className="text-foreground-dim hover:text-muted-text text-lg leading-none" aria-label={t("cashflowPlan.close")}>×</button>
         </div>
 
         {error && <div className="error-banner mb-3" role="alert">{error}</div>}
@@ -123,7 +123,7 @@ function CreatePlanModal({ buildings, onClose, onCreate }) {
           </div>
 
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-muted-text">Building (leave empty for portfolio)</label>
+            <label className="text-xs font-medium text-muted-text">{t("cashflowPlan.field.building")}</label>
             <select
               className="edit-input"
               value={form.buildingId}
@@ -138,7 +138,7 @@ function CreatePlanModal({ buildings, onClose, onCreate }) {
 
           <div className="flex gap-3">
             <div className="flex flex-col gap-1 flex-1">
-              <label className="text-xs font-medium text-muted-text">Income growth rate (% / year)</label>
+              <label className="text-xs font-medium text-muted-text">{t("cashflowPlan.field.incomeGrowth")}</label>
               <input
                 type="number"
                 step="0.1"
@@ -150,7 +150,7 @@ function CreatePlanModal({ buildings, onClose, onCreate }) {
               />
             </div>
             <div className="flex flex-col gap-1 flex-1">
-              <label className="text-xs font-medium text-muted-text">Horizon (months)</label>
+              <label className="text-xs font-medium text-muted-text">{t("cashflowPlan.field.horizon")}</label>
               <input
                 type="number"
                 min="12"
@@ -164,17 +164,17 @@ function CreatePlanModal({ buildings, onClose, onCreate }) {
           </div>
 
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-muted-text">Opening balance (CHF, optional)</label>
+            <label className="text-xs font-medium text-muted-text">{t("cashflowPlan.field.openingBalance")}</label>
             <input
               type="number"
               min="0"
               step="100"
               className="edit-input"
-              placeholder="e.g. 50000"
+              placeholder={t("cashflowPlan.field.openingBalancePlaceholder")}
               value={form.openingBalanceChf}
               onChange={(e) => set("openingBalanceChf", e.target.value)}
             />
-            <span className="text-xs text-foreground-dim">Leave empty to show net flows only. Can be added later.</span>
+            <span className="text-xs text-foreground-dim">{t("cashflowPlan.field.openingBalanceHint")}</span>
           </div>
 
           <div className="flex justify-end gap-2 pt-2">
@@ -286,14 +286,14 @@ const CashflowPlansList = forwardRef(function CashflowPlansList({ ownerMode = fa
   const planColumns = useMemo(() => [
     {
       id: "name",
-      label: "Name",
+      label: t("cashflowPlan.col.name"),
       sortable: true,
       alwaysVisible: true,
       render: (p) => <span className="font-medium text-foreground">{p.name}</span>,
     },
     {
       id: "status",
-      label: "Status",
+      label: t("cashflowPlan.col.status"),
       sortable: true,
       defaultVisible: true,
       render: (p) => (
@@ -314,7 +314,7 @@ const CashflowPlansList = forwardRef(function CashflowPlansList({ ownerMode = fa
     },
     {
       id: "scope",
-      label: "Scope",
+      label: t("cashflowPlan.col.scope"),
       sortable: true,
       defaultVisible: true,
       render: (p) => (
@@ -325,21 +325,21 @@ const CashflowPlansList = forwardRef(function CashflowPlansList({ ownerMode = fa
     },
     {
       id: "horizon",
-      label: "Horizon",
+      label: t("cashflowPlan.col.horizon"),
       sortable: true,
       defaultVisible: true,
       render: (p) => <span className="text-muted-text">{p.horizonMonths} mo</span>,
     },
     {
       id: "growth",
-      label: "Growth",
+      label: t("cashflowPlan.col.growth"),
       sortable: true,
       defaultVisible: true,
       render: (p) => <span className="text-muted-text">{p.incomeGrowthRatePct ?? 0}%</span>,
     },
     {
       id: "computed",
-      label: "Last computed",
+      label: t("cashflowPlan.col.lastComputed"),
       sortable: true,
       defaultVisible: true,
       render: (p) => {
@@ -356,14 +356,14 @@ const CashflowPlansList = forwardRef(function CashflowPlansList({ ownerMode = fa
     },
     {
       id: "created",
-      label: "Created",
+      label: t("cashflowPlan.col.created"),
       sortable: true,
       defaultVisible: true,
       render: (p) => <span className="text-muted text-xs">{formatDate(p.createdAt)}</span>,
     },
     {
       id: "openingBalance",
-      label: "Opening Balance",
+      label: t("cashflowPlan.col.openingBalance"),
       sortable: false,
       defaultVisible: false,
       render: (p) => (
@@ -388,13 +388,13 @@ const CashflowPlansList = forwardRef(function CashflowPlansList({ ownerMode = fa
           onClick={(e) => { e.stopPropagation(); handleApprove(p.id); }}
           className="rounded-lg bg-success px-3 py-1.5 text-xs font-semibold text-white hover:bg-success-dark disabled:opacity-50 transition"
         >
-          {approving === p.id ? "Approving…" : "Approve"}
+          {approving === p.id ? t("cashflowPlan.approving") : t("cashflowPlan.approve")}
         </button>
       ) : null,
     }] : []),
-  ], [buildingMap, ownerMode, approving]);
+  ], [buildingMap, ownerMode, approving, t]);
 
-  if (loading) return <p className="loading-text">Loading plans…</p>;
+  if (loading) return <p className="loading-text">{t("cashflowPlan.loading")}</p>;
 
   return (
     <>
@@ -406,9 +406,9 @@ const CashflowPlansList = forwardRef(function CashflowPlansList({ ownerMode = fa
           <span className="text-lg">📋</span>
           <div className="flex-1">
             <p className="text-sm font-semibold text-warning-text">
-              {submittedPlans.length} plan{submittedPlans.length !== 1 ? "s" : ""} awaiting your approval
+              {t("cashflowPlan.awaitingApproval", { count: submittedPlans.length })}
             </p>
-            <p className="text-xs text-warning-text">Review and approve submitted cashflow plans</p>
+            <p className="text-xs text-warning-text">{t("cashflowPlan.awaitingApprovalSub")}</p>
           </div>
         </div>
       )}
@@ -417,11 +417,11 @@ const CashflowPlansList = forwardRef(function CashflowPlansList({ ownerMode = fa
       <div className="flex items-center gap-2 mb-3">
         <input
           type="search"
-          placeholder="Search plans…"
+          placeholder={t("cashflowPlan.searchPlaceholder")}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="filter-input flex-1 min-w-0 mb-0"
-          aria-label="Search cashflow plans"
+          aria-label={t("cashflowPlan.searchAria")}
         />
         {!ownerMode && (
           <button
@@ -436,7 +436,7 @@ const CashflowPlansList = forwardRef(function CashflowPlansList({ ownerMode = fa
 
       {plans.length === 0 ? (
         <div className="empty-state">
-          <p className="empty-state-text">No cashflow plans yet. Use "New plan" to get started.</p>
+          <p className="empty-state-text">{t("cashflowPlan.empty")}</p>
         </div>
       ) : (
         <>
