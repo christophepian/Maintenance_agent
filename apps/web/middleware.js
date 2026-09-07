@@ -68,6 +68,14 @@ export async function middleware(request) {
     return NextResponse.next();
   }
 
+  // ── Onboarding demo mode ──────────────────────────────────────────────────
+  // /onboarding?demo=1 is a self-contained, session-less walkthrough of the
+  // first-login wizard (nothing is persisted — every write is stubbed client
+  // side). Let it through so testers can review the flow without an account.
+  if (pathname.startsWith("/onboarding") && request.nextUrl.searchParams.get("demo") === "1") {
+    return NextResponse.next();
+  }
+
   // Create a response we can attach refreshed cookies to
   const response = NextResponse.next({ request });
 

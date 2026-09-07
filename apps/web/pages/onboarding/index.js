@@ -54,6 +54,16 @@ function archetypeToRoleIntent(archetype) {
   }
 }
 
+/* Demo mode only: the questionnaire's first answer maps 1:1 onto the archetype
+ * list, which is enough to make the walkthrough feel real without the backend. */
+function demoArchetype(answers) {
+  return (
+    ["exit_optimizer", "yield_maximizer", "value_builder", "capital_preserver", "opportunistic_repositioner"][
+      (answers.mainGoal || 1) - 1
+    ] || "capital_preserver"
+  );
+}
+
 /* Map an existing appRole + capabilities back to a primaryRole for preselect. */
 function inferPrimaryRole(appMeta) {
   if (appMeta.appRole === "MANAGER") return "MANAGER";
@@ -627,7 +637,7 @@ function RiskStep({ questions, answers, onAnswer, importState, busy, onSubmit, o
 
 /* ── Connections step — invite the manager (régie) and, for imported
  * buildings, the tenants. Tenant invites are added with the SMS backend. ── */
-function ConnectionsStep({ summary, onNext, onBack }) {
+function ConnectionsStep({ summary, demo, onNext, onBack }) {
   const { t } = useTranslation("onboarding");
   const [email, setEmail] = useState("");
   const [inviting, setInviting] = useState(false);
@@ -638,6 +648,12 @@ function ConnectionsStep({ summary, onNext, onBack }) {
     setErr(null);
     setInviting(true);
     try {
+      if (demo) {
+        await new Promise((r) => setTimeout(r, 600));
+        setInvited(email.trim());
+        setEmail("");
+        return;
+      }
       const res = await fetch("/api/onboarding/invite-manager", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -853,6 +869,10 @@ export default function OnboardingPage() {
   const questions = Array.isArray(rawQuestions) ? rawQuestions : [];
 
   const [ready, setReady] = useState(false);
+  // Demo mode (?demo=1): no session, no persistence — every write is stubbed so
+  // the whole wizard can be walked through from a plain link. See middleware.js.
+  const [demo, setDemo] = useState(false);
+  const [demoFinished, setDemoFinished] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
   const [appMeta, setAppMeta] = useState({});
   const [primaryRole, setPrimaryRole] = useState(null);
@@ -885,6 +905,18 @@ export default function OnboardingPage() {
   useEffect(() => {
     if (bootRef.current) return;
     bootRef.current = true;
+    if (new URLSearchParams(window.location.search).get("demo") === "1") {
+      setDemo(true);
+      // Always start a demo from a clean slate — a half-finished real run must
+      // not bleed into it (and vice versa: demo progress is never persisted).
+      try {
+        localStorage.removeItem(PROGRESS_KEY);
+      } catch {
+        /* ignore */
+      }
+      setReady(true);
+      return;
+    }
     const supabase = createClient();
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) {
@@ -923,7 +955,7 @@ export default function OnboardingPage() {
 
   // Persist progress (files are intentionally excluded — not serializable)
   useEffect(() => {
-    if (!ready) return;
+    if (!ready || demo) return;
     try {
       localStorage.setItem(
         PROGRESS_KEY,
@@ -934,7 +966,7 @@ export default function OnboardingPage() {
     } catch {
       /* storage may be unavailable — non-fatal */
     }
-  }, [ready, stepIndex, profile, prop, answers, prefs]);
+  }, [ready, demo, stepIndex, profile, prop, answers, prefs]);
 
   const goNext = useCallback(() => setStepIndex((i) => Math.min(i + 1, STEPS.length - 1)), []);
   const goBack = useCallback(() => setStepIndex((i) => Math.max(i - 1, 0)), []);
@@ -950,6 +982,35 @@ export default function OnboardingPage() {
       active: true,
       years: files.map((f) => ({ fileName: f.name, status: "analyzing", analysis: null })),
     });
+    const mark = (idx, patch) =>
+      setImportState((s) =>
+        s ? { ...s, years: s.years.map((y, i) => (i === idx ? { ...y, ...patch } : y)) } : s,
+      );
+    if (demo) {
+      // Stand in for the ~40s vision extraction so the concurrent-analysis UX
+      // (analyze in the background while the questionnaire is answered) is real.
+      analyzeRef.current = files.map((file, idx) => {
+        const p = new Promise((resolve) =>
+          setTimeout(
+            () =>
+              resolve({
+                fiscalYear: 2024 - idx,
+                extractedBuilding: {
+                  name: file.name.replace(/\.[^.]+$/, "") || "Résidence du Rhône",
+                  address: "12 rue du Rhône",
+                  city: "Genève",
+                  postalCode: "1204",
+                },
+                extractedFiles: [],
+              }),
+            6000 + idx * 1500,
+          ),
+        );
+        p.then((data) => mark(idx, { status: "ready", analysis: data }));
+        return p;
+      });
+      return;
+    }
     const backendBase = process.env.NEXT_PUBLIC_BACKEND_URL;
     const url = backendBase
       ? `${backendBase}/onboarding/package/analyze`
@@ -963,11 +1024,9 @@ export default function OnboardingPage() {
         if (!res.ok) throw new Error(json?.error?.message || t("errors.analysisFailed"));
         return json.data;
       })();
-      const mark = (patch) =>
-        setImportState((s) =>
-          s ? { ...s, years: s.years.map((y, i) => (i === idx ? { ...y, ...patch } : y)) } : s,
-        );
-      p.then((data) => mark({ status: "ready", analysis: data })).catch(() => mark({ status: "error" }));
+      p.then((data) => mark(idx, { status: "ready", analysis: data })).catch(() =>
+        mark(idx, { status: "error" }),
+      );
       return p;
     });
   }
@@ -1044,6 +1103,28 @@ export default function OnboardingPage() {
     setError(null);
     setBusy(true);
     try {
+      if (demo) {
+        await new Promise((r) => setTimeout(r, 900));
+        const archetype = demoArchetype(answers);
+        let buildingName = (prop.name || prop.address || "").trim();
+        let imported = false;
+        if (prop.mode === "import") {
+          const settled = await Promise.allSettled(analyzeRef.current || []);
+          const first = settled.find((r) => r.status === "fulfilled")?.value;
+          if (first) {
+            buildingName = first.extractedBuilding?.name || buildingName;
+            imported = true;
+          }
+        }
+        setSummary({
+          buildingName: buildingName || "Résidence du Rhône",
+          buildingId: null,
+          archetypeLabel: tOwner(`strategy.archetype.${archetype}`) || archetype,
+          imported,
+        });
+        goNext();
+        return;
+      }
       // 1. Owner strategy profile from the questionnaire answers.
       const opRes = await fetch("/api/strategy/owner-profile", {
         method: "POST",
@@ -1116,6 +1197,14 @@ export default function OnboardingPage() {
     setError(null);
     setSavingRole(true);
     try {
+      if (demo) {
+        setAppMeta({
+          appRole: primaryRole === "OWNER_MANAGER" ? "OWNER" : primaryRole,
+          capabilities: primaryRole === "OWNER_MANAGER" ? ["OWNER", "MANAGER"] : [primaryRole],
+        });
+        goNext();
+        return;
+      }
       const res = await fetch("/api/onboarding/role", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1146,6 +1235,12 @@ export default function OnboardingPage() {
     setError(null);
     setFinishing(true);
     try {
+      if (demo) {
+        await new Promise((r) => setTimeout(r, 700));
+        setDemoFinished(true);
+        setFinishing(false);
+        return;
+      }
       const supabase = createClient();
       await supabase.auth.updateUser({
         data: {
@@ -1208,7 +1303,40 @@ export default function OnboardingPage() {
           </h1>
         </div>
 
+        {demo && (
+          <div className="mb-4 rounded-xl border border-warning-ring bg-warning-light px-4 py-3 text-xs text-warning-text">
+            <p className="font-semibold mb-0.5">Demo walkthrough — nothing is saved</p>
+            <p>
+              You&apos;re seeing the real first-login wizard with every write stubbed out: no
+              account, no building, no invitation is created. Uploaded PDFs are not sent
+              anywhere — the analysis step is simulated.
+            </p>
+          </div>
+        )}
+
         <div className="bg-surface rounded-2xl border border-surface-border shadow-sm px-6 sm:px-8 py-7">
+          {demoFinished ? (
+            <div className="text-center py-4">
+              <div className="w-14 h-14 bg-success-light rounded-full flex items-center justify-center mx-auto mb-5">
+                <svg className="w-7 h-7 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <h2 className="text-xl font-semibold text-foreground mb-2">That&apos;s the whole flow</h2>
+              <p className="text-sm text-muted mb-6">
+                A real user would land on their home dashboard here, with the building,
+                investor profile and preferences already in place.
+              </p>
+              <button
+                type="button"
+                onClick={() => window.location.reload()}
+                className="button-primary w-full text-sm"
+              >
+                Run it again
+              </button>
+            </div>
+          ) : (
+          <>
           <StepRail current={stepIndex} />
 
           {error && (
@@ -1266,7 +1394,8 @@ export default function OnboardingPage() {
             />
           )}
           {stepKey === "connections" && (
-            <ConnectionsStep summary={summary} onNext={goNext} onBack={goBack} />
+            <ConnectionsStep
+              demo={demo} summary={summary} onNext={goNext} onBack={goBack} />
           )}
           {stepKey === "preferences" && (
             <PreferencesStep
@@ -1280,6 +1409,8 @@ export default function OnboardingPage() {
           )}
           {stepKey === "done" && (
             <DoneStep summary={summary} finishing={finishing} onFinish={finish} />
+          )}
+          </>
           )}
         </div>
       </div>
