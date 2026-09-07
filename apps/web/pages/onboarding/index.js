@@ -1296,23 +1296,12 @@ export default function OnboardingPage() {
       <div className="w-full max-w-lg">
         <div className="flex flex-col items-center mb-8">
           <div className="w-11 h-11 bg-brand rounded-xl flex items-center justify-center shadow-md mb-4">
-            <span className="text-white font-extrabold">P</span>
+            <span className="text-white font-extrabold">S</span>
           </div>
           <h1 className="text-xl font-semibold text-foreground tracking-tight">
             {t("shell.welcome")}
           </h1>
         </div>
-
-        {demo && (
-          <div className="mb-4 rounded-xl border border-warning-ring bg-warning-light px-4 py-3 text-xs text-warning-text">
-            <p className="font-semibold mb-0.5">Demo walkthrough — nothing is saved</p>
-            <p>
-              You&apos;re seeing the real first-login wizard with every write stubbed out: no
-              account, no building, no invitation is created. Uploaded PDFs are not sent
-              anywhere — the analysis step is simulated.
-            </p>
-          </div>
-        )}
 
         <div className="bg-surface rounded-2xl border border-surface-border shadow-sm px-6 sm:px-8 py-7">
           {demoFinished ? (

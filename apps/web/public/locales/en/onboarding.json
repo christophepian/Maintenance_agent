@@ -1,7 +1,7 @@
 {
   "shell": {
-    "title": "Get started · Propfolio",
-    "welcome": "Welcome to Propfolio"
+    "title": "Get started · StoneIQ",
+    "welcome": "Welcome to StoneIQ"
   },
   "buttons": {
     "continue": "Continue",
@@ -33,7 +33,7 @@
     "saveBuildingFailed": "Failed to save building"
   },
   "role": {
-    "heading": "How will you use Propfolio?",
+    "heading": "How will you use StoneIQ?",
     "subtitle": "This tailors your home screen and tools. You can adjust it later in settings.",
     "options": {
       "OWNER": {

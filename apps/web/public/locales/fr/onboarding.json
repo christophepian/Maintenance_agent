@@ -1,7 +1,7 @@
 {
   "shell": {
-    "title": "Commencer · Propfolio",
-    "welcome": "Bienvenue sur Propfolio"
+    "title": "Commencer · StoneIQ",
+    "welcome": "Bienvenue sur StoneIQ"
   },
   "buttons": {
     "continue": "Continuer",
@@ -33,7 +33,7 @@
     "saveBuildingFailed": "Échec de l'enregistrement de l'immeuble"
   },
   "role": {
-    "heading": "Comment utiliserez-vous Propfolio ?",
+    "heading": "Comment utiliserez-vous StoneIQ ?",
     "subtitle": "Cela adapte votre écran d'accueil et vos outils. Vous pourrez le modifier plus tard dans les paramètres.",
     "options": {
       "OWNER": {
