@@ -23,9 +23,9 @@
  */
 
 import fixtures from "./fixtures.js";
-import { DEMO_BUILDING_ID } from "./constants.js";
+import { DEMO_BUILDING_ID, DEMO_ID_PREFIX } from "./constants.js";
 
-export { DEMO_BUILDING_ID };
+export { DEMO_BUILDING_ID, DEMO_ID_PREFIX };
 
 /**
  * Resolve a backend path to a fixture, or null to fall through to the proxy.
@@ -37,12 +37,17 @@ export function demoFixtureFor(method, path) {
 
   const clean = (path || "").split("?")[0].replace(/\/+$/, "") || "/";
 
-  // The demo building id must appear as a whole path segment. Nothing else is
-  // served — in particular no un-scoped route like /financials/portfolio-summary,
-  // which would otherwise shadow that endpoint for real, logged-in users. The
-  // demo simply goes without the portfolio benchmark (the page already treats it
-  // as optional).
-  if (!clean.split("/").includes(DEMO_BUILDING_ID)) return null;
+  // A demo id must appear as a WHOLE path segment. Every id the fixtures expose
+  // is rewritten to the `demo-` prefix at generation time (demo-building,
+  // demo-plan, demo-unit-0001…), so this one rule covers the building, its
+  // units and its cashflow plan — and a real UUID can never match it.
+  //
+  // Nothing else is served. In particular no un-scoped route such as
+  // /financials/portfolio-summary, which would otherwise shadow that endpoint
+  // for real, logged-in users; the demo goes without the portfolio benchmark,
+  // which the page already treats as optional.
+  const segments = clean.split("/");
+  if (!segments.some((seg) => seg === DEMO_BUILDING_ID || seg.startsWith(DEMO_ID_PREFIX))) return null;
 
   const hit = fixtures.routes[clean];
   if (hit) return hit;

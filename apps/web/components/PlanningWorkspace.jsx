@@ -33,18 +33,38 @@ export default function PlanningWorkspace({ buildings: allBuildings = [] }) {
   const simRef = useRef(null);
   const firedKeyRef = useRef(null); // one-shot guard for the ?simulate=accretive deep-link
 
+  // A deep-linked building that isn't in the list handed down to us — the list
+  // is the caller's, and may be filtered, paginated, or (in the public demo)
+  // unavailable. Fetched on demand so the deep-link still resolves.
+  const [deepLinked, setDeepLinked] = useState(null);
+
   // Auto-select: a ?buildingId deep-link (from Reporting → "Plan improvements →")
   // wins; otherwise the only building.
   useEffect(() => {
-    if (!allBuildings.length) return;
     const wanted = router.query?.buildingId;
-    if (wanted && allBuildings.some((b) => b.id === wanted)) { setSelectedBuildingIds([wanted]); return; }
+    if (wanted) {
+      setSelectedBuildingIds([wanted]);
+      if (!allBuildings.some((b) => b.id === wanted)) {
+        fetch(`/api/buildings/${wanted}`, { headers: authHeaders() })
+          .then((r) => (r.ok ? r.json() : null))
+          .then((j) => { if (j?.data) setDeepLinked(j.data); })
+          .catch(() => { /* selector just stays empty */ });
+      }
+      return;
+    }
     if (allBuildings.length === 1) setSelectedBuildingIds([allBuildings[0].id]);
   }, [allBuildings, router.query?.buildingId]);
 
+  const knownBuildings = useMemo(
+    () => (deepLinked && !allBuildings.some((b) => b.id === deepLinked.id)
+      ? [...allBuildings, deepLinked]
+      : allBuildings),
+    [allBuildings, deepLinked],
+  );
+
   const selectedBuildings = useMemo(
-    () => allBuildings.filter((b) => selectedBuildingIds.includes(b.id)),
-    [allBuildings, selectedBuildingIds],
+    () => knownBuildings.filter((b) => selectedBuildingIds.includes(b.id)),
+    [knownBuildings, selectedBuildingIds],
   );
 
   // Single-building: the goal-seek and simulation are per-building, so selection is
@@ -111,7 +131,7 @@ export default function PlanningWorkspace({ buildings: allBuildings = [] }) {
   return (
     <div className="space-y-4">
       {/* Building selector — single-building (goal-seek + simulation are per-building). */}
-      {allBuildings.length > 0 && (
+      {knownBuildings.length > 0 && (
         <div className="flex flex-wrap items-center gap-2">
           <label htmlFor="planning-building" className="text-[11px] font-semibold uppercase tracking-wide text-foreground-dim">{t("planning.building", { defaultValue: "Building" })}</label>
           <select
@@ -120,8 +140,8 @@ export default function PlanningWorkspace({ buildings: allBuildings = [] }) {
             onChange={(e) => selectBuilding(e.target.value)}
             className="rounded-lg border border-surface-border bg-surface px-3 py-1.5 text-sm text-foreground"
           >
-            {allBuildings.length !== 1 && <option value="">{t("planning.selectBuilding", { defaultValue: "Select a building…" })}</option>}
-            {allBuildings.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+            {knownBuildings.length !== 1 && <option value="">{t("planning.selectBuilding", { defaultValue: "Select a building…" })}</option>}
+            {knownBuildings.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
           </select>
         </div>
       )}

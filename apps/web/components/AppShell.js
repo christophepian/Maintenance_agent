@@ -31,7 +31,7 @@ import ContractorSidebar from "./ContractorSidebar";
 import TenantSidebar from "./TenantSidebar";
 import BottomNav from "./mobile/BottomNav";
 import HubBar from "./HubBar";
-import { DEMO_BUILDING_ID } from "../lib/demo/constants";
+import { DEMO_ID_PREFIX } from "../lib/demo/constants";
 import OnboardingTour from "./OnboardingTour";
 import { createClient } from "../lib/supabase/client";
 import { setAuthToken } from "../lib/api";
@@ -188,7 +188,10 @@ export default function AppShell({ role: roleProp, children }) {
 
   // The internal docs hub bar has no place in the public demo — it links to the
   // pitch deck, blueprint and roadmap.
-  const isPublicDemo = router.asPath?.includes(`/buildings/${DEMO_BUILDING_ID}`);
+  // Any page of the public demo journey — the building, the planning workspace
+  // it hands off to (which carries the demo building in its query), and the
+  // cashflow plan the simulator ends on.
+  const isPublicDemo = router.asPath?.includes(DEMO_ID_PREFIX);
   const showHubBar =
     process.env.NEXT_PUBLIC_SANDBOX !== "true" && !isPublicDemo && (isAdmin || role === "MANAGER");
 

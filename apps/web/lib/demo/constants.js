@@ -11,6 +11,15 @@ import meta from "./meta.js";
  *  it safe. */
 export const DEMO_BUILDING_ID = "demo-building";
 
+/** Every id the fixtures expose is rewritten to this prefix at generation time
+ *  (demo-building, demo-plan, demo-unit-0001…), which is what makes the whole
+ *  demo — not just one page — resolvable without a backend. Real ids are UUIDs
+ *  and can never collide with it. */
+export const DEMO_ID_PREFIX = "demo-";
+
+/** The seeded cashflow plan the simulator hands off to. */
+export const DEMO_PLAN_ID = "demo-plan";
+
 /** First day of the fiscal year the snapshot covers. The demo deep-links the
  *  building page to this window so the period label matches the data shown —
  *  otherwise the page opens on the current month and labels the snapshot with

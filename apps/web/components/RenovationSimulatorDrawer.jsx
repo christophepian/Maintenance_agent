@@ -14,6 +14,7 @@
  */
 
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import { DEMO_BUILDING_ID, DEMO_PLAN_ID } from "../lib/demo/constants";
 import { useTranslation, Trans } from "next-i18next";
 import { createPortal } from "react-dom";
 import { X, Check, ArrowRight } from "lucide-react";
@@ -535,6 +536,15 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId, 
       const d = new Date();
       if (selectedPath !== "now" && minLeaseRemaining != null) d.setMonth(d.getMonth() + minLeaseRemaining);
       const overriddenYear = d.getFullYear();
+
+      // Public demo: there is no backend to create a plan in, so hand off to the
+      // pre-built one instead of POSTing into a 401. The plan it lands on covers
+      // the same end-of-life items the accordion ranks to the top.
+      if (buildingId === DEMO_BUILDING_ID) {
+        setPlanId(DEMO_PLAN_ID);
+        setPlanMsg(t("renovationSimulator.scheduledOk", { defaultValue: "✓ Scheduled in cashflow plan" }));
+        return;
+      }
 
       // Fetch existing plans for this building
       const plansRes = await fetch(`/api/cashflow-plans?buildingId=${buildingId}`, {

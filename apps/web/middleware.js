@@ -21,6 +21,7 @@ import { NextResponse } from "next/server";
 // Kept in sync with lib/demo/serve.js — inlined rather than imported so the
 // edge bundle doesn't pull the fixture JSON in.
 const DEMO_BUILDING_ID = "demo-building";
+const DEMO_ID_PREFIX = "demo-";
 
 // Paths that never require auth
 const PUBLIC_PATHS = [
@@ -84,7 +85,23 @@ export async function middleware(request) {
   if (pathname.startsWith("/onboarding") && request.nextUrl.searchParams.get("demo") === "1") {
     return NextResponse.next();
   }
+  // The demo journey spans three pages: the building, the planning workspace it
+  // hands off to, and the cashflow plan the simulator ends on. All are safe
+  // unauthenticated because the ONLY ids reachable are the demo ones, and the
+  // API routes answer those from a static snapshot rather than the backend
+  // (see lib/demo/serve.js) — no real building, unit or plan is reachable.
   if (pathname === `/admin-inventory/buildings/${DEMO_BUILDING_ID}`) {
+    return NextResponse.next();
+  }
+  if (pathname.startsWith(`/manager/cashflow/${DEMO_ID_PREFIX}`)) {
+    return NextResponse.next();
+  }
+  // The planning workspace isn't addressed by id, so it carries the demo
+  // building in its query instead.
+  if (
+    pathname === "/manager/finance" &&
+    request.nextUrl.searchParams.get("buildingId") === DEMO_BUILDING_ID
+  ) {
     return NextResponse.next();
   }
 

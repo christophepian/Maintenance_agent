@@ -21,6 +21,7 @@ import * as inventoryRepo from "../repositories/inventoryRepository";
 import * as importedStatementRepo from "../repositories/importedStatementRepository";
 import { commitPackage } from "./packageOnboardingService";
 import { buildDemoPackage, demoPackageSummary, DEMO_BUILDING_NAME, DEMO_BUILDING_ADDRESS } from "./demoPackage";
+import { enrichDemoBuilding, type DemoEnrichmentResult } from "./demoEnrichment";
 
 export interface DemoSeedResult {
   buildingId: string;
@@ -28,6 +29,7 @@ export interface DemoSeedResult {
   created: boolean;
   years: { fiscalYear: number; committed: boolean; detail: string }[];
   summary: ReturnType<typeof demoPackageSummary>;
+  enrichment: DemoEnrichmentResult;
 }
 
 /** The two fiscal years the demo shows: the last complete year and the one before. */
@@ -104,11 +106,18 @@ export async function seedDemoBuilding(
     }
   }
 
+  // Everything a régie package can't carry: valuation, mortgage, the per-unit
+  // intrinsic-value worksheet, an aged asset inventory, inspection history and a
+  // cashflow plan. Runs after the package so it can attach to the units and
+  // leases the rent roll created.
+  const enrichment = await enrichDemoBuilding(prisma, orgId, building.id);
+
   return {
     buildingId: building.id,
     buildingName: DEMO_BUILDING_NAME,
     created,
     years,
     summary: demoPackageSummary(lastYear),
+    enrichment,
   };
 }

@@ -36,6 +36,8 @@ import {
   getPortfolioSummary,
 } from "../src/services/financials";
 import { getBuildingKpis, listUnits } from "../src/services/inventory";
+import { getBuildingRenovationOpportunities } from "../src/services/assetInventory";
+import { getYieldGoalSeek } from "../src/services/financials";
 import { mapUnitToListDTO } from "../src/dto/unitList";
 
 /** The id the demo building is addressed by. Not a UUID on purpose: it can never
@@ -50,6 +52,49 @@ const OUT = path.resolve(__dirname, "../../web/lib/demo/fixtures.js");
 // lib/demo/constants.js) and must not pull the whole snapshot into the bundle.
 const META_OUT = path.resolve(__dirname, "../../web/lib/demo/meta.js");
 const SCRATCH_ORG = "demo-fixture-org";
+
+
+const API_BASE = process.env.DEMO_FIXTURE_API || "http://127.0.0.1:3001";
+
+/**
+ * Capture a route over real HTTP from the locally-running API.
+ *
+ * Used for routes whose logic lives in the handler rather than a single service
+ * function (the NPV scenarios route builds its result inline). Re-implementing
+ * those in this script would drift from the real behaviour; calling them does
+ * not. Requires `npm run dev` in apps/api with DEV_IDENTITY_ENABLED=true.
+ */
+async function captureHttp(routePath: string): Promise<unknown | null> {
+  try {
+    const res = await fetch(`${API_BASE}${routePath}`, {
+      headers: { "x-dev-role": "MANAGER", "x-dev-org-id": SCRATCH_ORG },
+    });
+    if (!res.ok) {
+      console.error(`  ! ${routePath} → HTTP ${res.status}`);
+      return null;
+    }
+    return await res.json();
+  } catch (e: any) {
+    console.error(`  ! ${routePath} → ${String(e?.message || e)} (is apps/api running?)`);
+    return null;
+  }
+}
+
+/**
+ * Rewrite every scratch-database UUID to a stable demo id.
+ *
+ * This is what lets the demo work as a whole rather than one page: the building
+ * page builds links from ids inside the payloads (a unit row links to
+ * /units/<id>, the plans list to /cashflow-plans/<id>). Left as scratch UUIDs
+ * those links would miss the fixture scoping and fall through to the backend.
+ * Rewritten, every id the demo can reach is prefixed `demo-`, which is exactly
+ * what lib/demo/serve.js keys on — and no real UUID can ever collide with it.
+ */
+function rewriteIds(json: string, map: Map<string, string>): string {
+  let out = json;
+  for (const [real, demo] of map) out = out.split(real).join(demo);
+  return out;
+}
 
 const prisma = new PrismaClient();
 
@@ -130,10 +175,38 @@ async function main() {
   const units = await listUnits(SCRATCH_ORG, buildingId, false);
   const unitDtos = units.map(mapUnitToListDTO);
 
+  // The prospective half of the journey: what the building could yield, and the
+  // renovation opportunities the simulator works from.
+  const [renovationOpportunities, yieldGoalSeek] = await Promise.all([
+    getBuildingRenovationOpportunities(prisma, SCRATCH_ORG, buildingId).catch((e) => {
+      console.error("  ! renovation-opportunities:", String(e?.message || e));
+      return null;
+    }),
+    getYieldGoalSeek(SCRATCH_ORG, buildingId, from, to, { targetYieldPct: 3, mgmtFeePct: 5 }).catch((e) => {
+      console.error("  ! yield-goalseek:", String(e?.message || e));
+      return null;
+    }),
+  ]);
+
   const detail: any = mapBuildingToDetailDTO(buildingRow as any);
   // Re-address everything to the demo id so the fixture is self-consistent with
   // the URL the demo opens.
   detail.id = DEMO_BUILDING_ID;
+
+  // Routes whose logic lives in the handler — captured over HTTP for fidelity.
+  const plans: any = await captureHttp(`/cashflow-plans?buildingId=${buildingId}`);
+  const planId: string | null = plans?.data?.[0]?.id ?? null;
+  const planDetail = planId ? await captureHttp(`/cashflow-plans/${planId}`) : null;
+  const planNpv = planId ? await captureHttp(`/cashflow-plans/${planId}/npv-scenarios`) : null;
+
+  // Per-unit routes the Reporting tab and Units tab drill into.
+  const perUnit: Record<string, unknown> = {};
+  for (const u of unitDtos as any[]) {
+    const reports = await captureHttp(`/units/${u.id}/condition-reports`);
+    if (reports) perUnit[`/units/${u.id}/condition-reports`] = reports;
+    const lines = await captureHttp(`/units/${u.id}/expense-lines?from=${from}&to=${to}`);
+    if (lines) perUnit[`/units/${u.id}/expense-lines`] = lines;
+  }
 
   const fixtures = {
     meta: {
@@ -155,9 +228,25 @@ async function main() {
       [`/buildings/${DEMO_BUILDING_ID}/vendor-spend`]: wrap(vendorSpend),
       [`/buildings/${DEMO_BUILDING_ID}/unit-profitability`]: wrap(unitProfitability),
       [`/buildings/${DEMO_BUILDING_ID}/timeseries`]: wrap(timeseries),
-      "/financials/portfolio-summary": wrap(portfolio),
+      [`/buildings/${DEMO_BUILDING_ID}/renovation-opportunities`]: wrap(renovationOpportunities),
+      [`/buildings/${DEMO_BUILDING_ID}/yield-goalseek`]: wrap(yieldGoalSeek),
+      [`/buildings/${DEMO_BUILDING_ID}/renovation-opportunities`]: wrap(renovationOpportunities),
+      [`/buildings/${DEMO_BUILDING_ID}/yield-goalseek`]: wrap(yieldGoalSeek),
+      ...(plans ? { "/cashflow-plans": plans } : {}),
+      ...(planId && planDetail ? { [`/cashflow-plans/${planId}`]: planDetail } : {}),
+      ...(planId && planNpv ? { [`/cashflow-plans/${planId}/npv-scenarios`]: planNpv } : {}),
+      ...perUnit,
     },
   };
+
+  // Scratch UUIDs → stable demo ids, so every link the UI builds stays inside
+  // the demo's fixture scope.
+  const idMap = new Map<string, string>();
+  idMap.set(buildingId, DEMO_BUILDING_ID);
+  if (planId) idMap.set(planId, "demo-plan");
+  for (const u of unitDtos as any[]) idMap.set(u.id, `demo-unit-${u.unitNumber}`);
+
+  const rewritten = JSON.parse(rewriteIds(JSON.stringify(fixtures), idMap));
 
   const banner = (what: string) =>
     `/* GENERATED — do not edit by hand.\n * ${what}\n * Regenerate: npx tsx apps/api/scripts/generate-demo-fixtures.ts [package-dir]\n */\n`;
@@ -165,12 +254,12 @@ async function main() {
   fs.writeFileSync(
     OUT,
     banner("Frozen output of the real ingestion + reporting pipeline.") +
-      "export default " + JSON.stringify(fixtures, null, 2) + ";\n",
+      "export default " + JSON.stringify(rewritten, null, 2) + ";\n",
   );
   fs.writeFileSync(
     META_OUT,
     banner("Small companion to fixtures.js — safe to import client-side.") +
-      "export default " + JSON.stringify(fixtures.meta, null, 2) + ";\n",
+      "export default " + JSON.stringify(rewritten.meta, null, 2) + ";\n",
   );
 
   const f: any = periodReport.financials;
@@ -182,6 +271,11 @@ async function main() {
   console.log(`  monthly points    ${periodReport.monthlyData?.length ?? 0}`);
   console.log(`  units             ${unitDtos.length}`);
   console.log(`  vendors           ${(vendorSpend as any)?.length ?? "n/a"}`);
+  console.log(`  reno opportunities ${renovationOpportunities ? `${(renovationOpportunities as any[]).length} item(s)` : "MISSING"}`);
+  console.log(`  yield goal-seek    ${yieldGoalSeek ? "captured" : "MISSING"}`);
+  console.log(`  cashflow plan      ${planId ? "captured (+npv " + (planNpv ? "yes" : "no") + ")" : "MISSING"}`);
+  console.log(`  per-unit routes    ${Object.keys(perUnit).length}`);
+  console.log(`  routes total       ${Object.keys(rewritten.routes).length}`);
   console.log(`  size              ${(fs.statSync(OUT).size / 1024).toFixed(0)} kB`);
 }
 
