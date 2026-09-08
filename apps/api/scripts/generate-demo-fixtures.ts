@@ -52,6 +52,7 @@ const OUT = path.resolve(__dirname, "../../web/lib/demo/fixtures.js");
 // lib/demo/constants.js) and must not pull the whole snapshot into the bundle.
 const META_OUT = path.resolve(__dirname, "../../web/lib/demo/meta.js");
 const SCRATCH_ORG = "demo-fixture-org";
+let DEMO_OWNER_USER_ID = "demo-owner";
 
 
 const API_BASE = process.env.DEMO_FIXTURE_API || "http://127.0.0.1:3001";
@@ -67,7 +68,11 @@ const API_BASE = process.env.DEMO_FIXTURE_API || "http://127.0.0.1:3001";
 async function captureHttp(routePath: string): Promise<unknown | null> {
   try {
     const res = await fetch(`${API_BASE}${routePath}`, {
-      headers: { "x-dev-role": "MANAGER", "x-dev-org-id": SCRATCH_ORG },
+      headers: {
+        "x-dev-role": "MANAGER",
+        "x-dev-org-id": SCRATCH_ORG,
+        "x-dev-user-id": DEMO_OWNER_USER_ID,
+      },
     });
     if (!res.ok) {
       console.error(`  ! ${routePath} → HTTP ${res.status}`);
@@ -79,6 +84,54 @@ async function captureHttp(routePath: string): Promise<unknown | null> {
     return null;
   }
 }
+
+async function postHttp(routePath: string, body: unknown): Promise<any | null> {
+  try {
+    const res = await fetch(`${API_BASE}${routePath}`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-dev-role": "OWNER",
+        "x-dev-org-id": SCRATCH_ORG,
+        "x-dev-user-id": DEMO_OWNER_USER_ID,
+      },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      console.error(`  ! POST ${routePath} → HTTP ${res.status} ${(await res.text()).slice(0, 160)}`);
+      return null;
+    }
+    return await res.json();
+  } catch (e: any) {
+    console.error(`  ! POST ${routePath} → ${String(e?.message || e)}`);
+    return null;
+  }
+}
+
+/**
+ * The investor profiles the onboarding questionnaire can actually produce, and
+ * the answers that produce them.
+ *
+ * Keyed by the questionnaire's first answer (mainGoal), because that is what the
+ * demo wizard keys on too — the two must agree, or the profile revealed at the
+ * end of onboarding would contradict the rationale on the plan page.
+ *
+ * Note options 3 and 5 both resolve to value_builder. That is the engine's own
+ * behaviour with neutral answers to the other four questions, not a shortcut:
+ * opportunistic_repositioner only ever comes out as a SECONDARY archetype here,
+ * and the demo must not claim a profile the product wouldn't produce.
+ *
+ * Two surfaces read the resulting mandate — the NPV verdict's recommendation and
+ * the goal-seek's off-strategy lever flags — so each is captured once per
+ * profile, and the visitor's answers carry through to the plan page.
+ */
+const PROFILE_VARIANTS: { mainGoal: number; archetype: string; roleIntent: string }[] = [
+  { mainGoal: 1, archetype: "exit_optimizer",    roleIntent: "sell" },
+  { mainGoal: 2, archetype: "yield_maximizer",   roleIntent: "income" },
+  { mainGoal: 3, archetype: "value_builder",     roleIntent: "long_term_quality" },
+  { mainGoal: 4, archetype: "capital_preserver", roleIntent: "stable_hold" },
+  { mainGoal: 5, archetype: "value_builder",     roleIntent: "long_term_quality" },
+];
 
 /**
  * Rewrite every scratch-database UUID to a stable demo id.
@@ -116,6 +169,16 @@ async function main() {
     update: {},
   });
 
+  // A real User row: the strategy profiles below FK to it, and the demo building
+  // is linked to it as owner.
+  const owner = await prisma.user.upsert({
+    where: { user_org_email_unique: { orgId: SCRATCH_ORG, email: "demo-owner@stoneiq.local" } },
+    create: { orgId: SCRATCH_ORG, role: "OWNER", name: "Demo Owner", email: "demo-owner@stoneiq.local" },
+    update: {},
+    select: { id: true },
+  });
+  DEMO_OWNER_USER_ID = owner.id;
+
   let buildingId: string;
   let fiscalYear: number;
 
@@ -144,7 +207,7 @@ async function main() {
     if (result.warnings.length) console.log("Warnings:", result.warnings.join("; "));
   } else {
     console.log("Using the built-in synthetic package");
-    const seeded = await seedDemoBuilding(prisma, SCRATCH_ORG, {});
+    const seeded = await seedDemoBuilding(prisma, SCRATCH_ORG, { ownerUserId: owner.id });
     buildingId = seeded.buildingId;
     fiscalYear = demoFiscalYears()[1];
     for (const y of seeded.years) console.log(`  ${y.fiscalYear}: ${y.detail}`);
@@ -208,6 +271,61 @@ async function main() {
     if (lines) perUnit[`/units/${u.id}/expense-lines`] = lines;
   }
 
+  /* ── Per-intent variants ────────────────────────────────────────────────
+   * The onboarding questionnaire produces one of five investor intents, and two
+   * surfaces read it: the NPV verdict's recommendation, and the goal-seek's
+   * off-strategy lever flags. Capturing one payload each means the visitor's
+   * answers actually carry through to the plan page, instead of every visitor
+   * seeing the same generic verdict.
+   *
+   * Done over HTTP against the real strategy endpoints so the profiles are built
+   * the way the product builds them (the archetype scores and dimension blobs
+   * are computed, not hand-written).
+   */
+  const variants: Record<string, Record<string, unknown>> = {};
+  for (const v of PROFILE_VARIANTS) {
+    if (variants[String(v.mainGoal)]) continue;
+    // One owner profile per variant, built from answers that genuinely produce
+    // its archetype — the scores and dimension blobs are computed by the real
+    // engine, not hand-written.
+    const op = await postHttp("/strategy/owner-profile", {
+      answers: {
+        mainGoal: v.mainGoal,
+        holdPeriod: 3,
+        renovationAppetite: 3,
+        cashSensitivity: 3,
+        disruptionTolerance: 3,
+      },
+    });
+    const ownerProfileId = op?.profile?.id ?? null;
+    const producedArchetype = op?.profile?.primaryArchetype ?? null;
+    if (!ownerProfileId) {
+      console.error(`  ! variant ${v.mainGoal}: owner profile not created`);
+      continue;
+    }
+    if (producedArchetype !== v.archetype) {
+      // Loud, because a silent mismatch means the reveal step and the plan page
+      // would name different profiles for the same answers.
+      console.error(
+        `  ! variant ${v.mainGoal}: engine produced "${producedArchetype}", table says "${v.archetype}" — update PROFILE_VARIANTS`,
+      );
+    }
+    const bp = await postHttp("/strategy/building-profile", {
+      buildingId,
+      ownerProfileId,
+      roleIntent: v.roleIntent,
+    });
+    if (!bp) continue;
+    const [gs, npv] = await Promise.all([
+      captureHttp(`/buildings/${buildingId}/yield-goalseek?from=${from}&to=${to}&target=3&mgmtFeePct=5`),
+      planId ? captureHttp(`/cashflow-plans/${planId}/npv-scenarios`) : Promise.resolve(null),
+    ]);
+    const entry: Record<string, unknown> = {};
+    if (gs) entry[`/buildings/${buildingId}/yield-goalseek`] = gs;
+    if (npv && planId) entry[`/cashflow-plans/${planId}/npv-scenarios`] = npv;
+    variants[String(v.mainGoal)] = entry;
+  }
+
   const fixtures = {
     meta: {
       generatedAt: new Date().toISOString(),
@@ -237,6 +355,7 @@ async function main() {
       ...(planId && planNpv ? { [`/cashflow-plans/${planId}/npv-scenarios`]: planNpv } : {}),
       ...perUnit,
     },
+    variants,
   };
 
   // Scratch UUIDs → stable demo ids, so every link the UI builds stays inside
@@ -276,6 +395,7 @@ async function main() {
   console.log(`  cashflow plan      ${planId ? "captured (+npv " + (planNpv ? "yes" : "no") + ")" : "MISSING"}`);
   console.log(`  per-unit routes    ${Object.keys(perUnit).length}`);
   console.log(`  routes total       ${Object.keys(rewritten.routes).length}`);
+  console.log(`  intent variants    ${Object.keys(rewritten.variants ?? {}).join(", ") || "NONE"}`);
   console.log(`  size              ${(fs.statSync(OUT).size / 1024).toFixed(0)} kB`);
 }
 

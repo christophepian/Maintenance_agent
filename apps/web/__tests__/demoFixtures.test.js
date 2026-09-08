@@ -41,6 +41,39 @@ describe('demo fixtures — what is served', () => {
   });
 });
 
+describe('demo fixtures — the visitor\'s investor profile', () => {
+  const NPV = `/cashflow-plans/${DEMO_PLAN_ID}/npv-scenarios`;
+
+  it('serves a different verdict per questionnaire answer', () => {
+    const rationale = (key) =>
+      demoFixtureFor('GET', NPV, key)?.data?.strategyContext?.rationale;
+    // Answer 1 is exit-oriented, answer 2 is yield-oriented — the product gives
+    // them genuinely different advice, and the demo must not flatten that.
+    assert.notEqual(rationale('1'), rationale('2'));
+    assert.match(rationale('1'), /exit/i);
+    assert.match(rationale('2'), /yield/i);
+  });
+
+  it('falls back to the default snapshot for an unknown or missing key', () => {
+    const fallback = demoFixtureFor('GET', NPV);
+    for (const bogus of ['9', 'abc', '', null, undefined]) {
+      assert.deepEqual(demoFixtureFor('GET', NPV, bogus), fallback);
+    }
+  });
+
+  it('applies the profile only where the mandate is actually read', () => {
+    // The reporting figures are the same building whatever the owner intends;
+    // only the forward-looking surfaces vary.
+    const path = `/buildings/${DEMO_BUILDING_ID}/period-report`;
+    assert.deepEqual(demoFixtureFor('GET', path, '1'), demoFixtureFor('GET', path, '4'));
+  });
+
+  it('still refuses non-demo paths regardless of the key', () => {
+    assert.equal(demoFixtureFor('GET', '/cashflow-plans/4d17aa6b-0000-0000-0000-000000000000', '1'), null);
+    assert.equal(demoFixtureFor('GET', '/financials/portfolio-summary', '1'), null);
+  });
+});
+
 describe('demo fixtures — what is refused', () => {
   it('never answers for a real building id', () => {
     for (const p of [

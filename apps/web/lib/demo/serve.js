@@ -15,6 +15,8 @@
  *   - It is keyed on ONE building id (`demo-building`) that is not a UUID and so
  *     can never be a real building's id. Any other path falls straight through
  *     to the normal proxy.
+ *   - The variant key is just an index into pre-captured payloads; an unknown or
+ *     malformed one simply falls back to the default snapshot.
  *   - It only ever RETURNS static JSON. It never calls the backend, never reads
  *     a database, and never sees a token — so it cannot leak anything or be used
  *     to reach real data without auth.
@@ -32,7 +34,7 @@ export { DEMO_BUILDING_ID, DEMO_ID_PREFIX };
  * Query strings are ignored: the demo presents a single reporting period, so
  * every window resolves to the same snapshot.
  */
-export function demoFixtureFor(method, path) {
+export function demoFixtureFor(method, path, variantKey = null) {
   if (method !== "GET") return null;
 
   const clean = (path || "").split("?")[0].replace(/\/+$/, "") || "/";
@@ -48,6 +50,14 @@ export function demoFixtureFor(method, path) {
   // which the page already treats as optional.
   const segments = clean.split("/");
   if (!segments.some((seg) => seg === DEMO_BUILDING_ID || seg.startsWith(DEMO_ID_PREFIX))) return null;
+
+  // A variant keyed on the visitor's questionnaire answer, where one exists.
+  // Two surfaces read the owner's mandate — the NPV verdict and the goal-seek's
+  // off-strategy lever flags — so the profile chosen during onboarding actually
+  // changes what the plan page recommends, rather than every visitor seeing the
+  // same generic verdict.
+  const variant = variantKey != null ? fixtures.variants?.[String(variantKey)]?.[clean] : null;
+  if (variant) return variant;
 
   const hit = fixtures.routes[clean];
   if (hit) return hit;

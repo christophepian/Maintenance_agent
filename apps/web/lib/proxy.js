@@ -33,7 +33,10 @@ export async function proxyToBackend(req, res, path, options = {}) {
   // so the handful of read endpoints it needs are answered from a static
   // snapshot. Scoped to the demo building id only — every other path falls
   // straight through. See lib/demo/serve.js.
-  const demo = demoFixtureFor(method, path);
+  // The visitor's onboarding answer, set as a cookie by the demo wizard, selects
+  // the strategy-dependent variant of a fixture. Absent → the default snapshot.
+  const demoVariant = /(?:^|;\s*)demo_profile=([0-9])(?:;|$)/.exec(req.headers.cookie || "")?.[1] ?? null;
+  const demo = demoFixtureFor(method, path, demoVariant);
   if (demo) {
     res.setHeader("Cache-Control", "public, max-age=300");
     return res.status(200).json(demo);

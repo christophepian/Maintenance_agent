@@ -56,11 +56,18 @@ function archetypeToRoleIntent(archetype) {
   }
 }
 
-/* Demo mode only: the questionnaire's first answer maps 1:1 onto the archetype
- * list, which is enough to make the walkthrough feel real without the backend. */
+/* Demo mode only: the archetype the real engine produces for each first answer,
+ * with neutral answers to the rest.
+ *
+ * These are not guesses — they're what POST /strategy/owner-profile actually
+ * returns, verified when the demo fixtures are generated (the generator warns
+ * loudly if the engine ever disagrees). Note options 3 and 5 both give
+ * value_builder: opportunistic_repositioner only ever comes out as a SECONDARY
+ * archetype here, and the demo must not name a profile the product wouldn't
+ * produce — the plan page's rationale would then contradict this screen. */
 function demoArchetype(answers) {
   return (
-    ["exit_optimizer", "yield_maximizer", "value_builder", "capital_preserver", "opportunistic_repositioner"][
+    ["exit_optimizer", "yield_maximizer", "value_builder", "capital_preserver", "value_builder"][
       (answers.mainGoal || 1) - 1
     ] || "capital_preserver"
   );
@@ -1203,6 +1210,15 @@ export default function OnboardingPage() {
             buildingName = first.extractedBuilding?.name || buildingName;
             imported = true;
           }
+        }
+        // Carry the choice to the demo's API layer, which serves the
+        // strategy-dependent fixtures (NPV verdict, off-strategy lever flags)
+        // for this profile. A plain first-party cookie: the proxy runs
+        // server-side, so it can't read anything else the client knows.
+        try {
+          document.cookie = `demo_profile=${answers.mainGoal || 1}; path=/; max-age=86400; samesite=lax`;
+        } catch {
+          /* the demo still works, just with the default profile */
         }
         setSummary({
           buildingName: buildingName || "Résidence du Rhône",
