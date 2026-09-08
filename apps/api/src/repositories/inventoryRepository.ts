@@ -612,6 +612,18 @@ export async function findBuildingOwnersWithTaxRate(
 }
 
 /**
+ * Find a building by its exact name within an org. Used by the demo seeder to
+ * reuse its building across runs rather than creating a duplicate each time.
+ */
+export async function findBuildingByNameAndOrg(
+  prisma: PrismaClient,
+  orgId: string,
+  name: string,
+) {
+  return prisma.building.findFirst({ where: { orgId, name }, select: { id: true } });
+}
+
+/**
  * Add an owner to a building.  Silently returns existing row if the
  * pair already exists (idempotent).
  */
