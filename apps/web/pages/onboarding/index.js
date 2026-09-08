@@ -1332,7 +1332,36 @@ export default function OnboardingPage() {
     setFinishing(true);
     try {
       if (demo) {
-        await new Promise((r) => setTimeout(r, 700));
+        // Hand the visitor a real (read-only) session and land them on the demo
+        // building's Reporting tab — the point of the whole walkthrough. When
+        // the demo account isn't configured (any environment that isn't the
+        // sandbox), fall back to the "that's the whole flow" card rather than
+        // dead-ending on a login screen.
+        try {
+          const res = await fetch("/api/demo/session", { method: "POST" });
+          if (res.ok) {
+            const { accessToken, refreshToken, buildingId } = await res.json();
+            const supabase = createClient();
+            await supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken,
+            });
+            setAuthToken(accessToken);
+            try {
+              localStorage.removeItem(PROGRESS_KEY);
+            } catch {
+              /* ignore */
+            }
+            router.push(
+              buildingId
+                ? `/admin-inventory/buildings/${buildingId}?tab=Reporting`
+                : "/manager",
+            );
+            return;
+          }
+        } catch {
+          /* fall through to the local ending */
+        }
         setDemoFinished(true);
         setFinishing(false);
         return;
@@ -1420,8 +1449,9 @@ export default function OnboardingPage() {
               </div>
               <h2 className="text-xl font-semibold text-foreground mb-2">That&apos;s the whole flow</h2>
               <p className="text-sm text-muted mb-6">
-                A real user would land on their home dashboard here, with the building,
-                investor profile and preferences already in place.
+                A real user lands on their building&apos;s Reporting tab here, with the
+                imported statements already processed into KPIs, plus the investor
+                profile and preferences they just set.
               </p>
               <button
                 type="button"

@@ -467,7 +467,17 @@ const server = http.createServer(async (req: AuthedRequest, res) => {
        One choke point, before any route runs: every mutating method is refused
        regardless of which endpoint it targets, so no individual route can
        forget to check. GET/HEAD/OPTIONS pass through untouched. */
-    if (req.user?.demoReadOnly && !["GET", "HEAD", "OPTIONS"].includes(req.method ?? "")) {
+    // The one exception is the demo's own provisioning call: seeding the demo
+    // building needs the demo user's token (it links the building to them as
+    // owner), and that route is idempotent, sandbox-only, and touches nothing
+    // but the fixed demo building. Named explicitly so the exemption can't
+    // widen by accident.
+    const isDemoProvisioning = req.method === "POST" && path === "/sandbox/demo-seed";
+    if (
+      req.user?.demoReadOnly &&
+      !isDemoProvisioning &&
+      !["GET", "HEAD", "OPTIONS"].includes(req.method ?? "")
+    ) {
       sendError(
         res, 403, "DEMO_READ_ONLY",
         "This is a read-only demo account — changes can't be saved.",

@@ -9,9 +9,11 @@ import { mapJwtPayload } from "../services/auth";
 const MUTATING = ["POST", "PUT", "PATCH", "DELETE"];
 const READING = ["GET", "HEAD", "OPTIONS"];
 
-// Mirrors the guard in server.ts.
-const blocked = (demoReadOnly: boolean | undefined, method: string) =>
-  Boolean(demoReadOnly) && !READING.includes(method);
+// Mirrors the guard in server.ts, including its single exemption.
+const blocked = (demoReadOnly: boolean | undefined, method: string, path = "/buildings") => {
+  const isDemoProvisioning = method === "POST" && path === "/sandbox/demo-seed";
+  return Boolean(demoReadOnly) && !isDemoProvisioning && !READING.includes(method);
+};
 
 describe("demoReadOnly claim mapping", () => {
   const map = (appMetadata: Record<string, unknown>) =>
@@ -44,6 +46,16 @@ describe("demoReadOnly enforcement predicate", () => {
 
   it("allows reads for a demo token", () => {
     for (const m of READING) expect(blocked(true, m)).toBe(false);
+  });
+
+  it("allows only POST /sandbox/demo-seed through, and nothing adjacent", () => {
+    expect(blocked(true, "POST", "/sandbox/demo-seed")).toBe(false);
+    // The exemption must not widen to other methods, other sandbox routes, or
+    // paths that merely start with it.
+    expect(blocked(true, "DELETE", "/sandbox/demo-seed")).toBe(true);
+    expect(blocked(true, "POST", "/sandbox/seed")).toBe(true);
+    expect(blocked(true, "POST", "/sandbox/setup")).toBe(true);
+    expect(blocked(true, "POST", "/sandbox/demo-seed/extra")).toBe(true);
   });
 
   it("never blocks a normal account", () => {
