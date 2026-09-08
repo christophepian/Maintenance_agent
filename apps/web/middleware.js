@@ -18,6 +18,10 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse } from "next/server";
 
+// Kept in sync with lib/demo/serve.js — inlined rather than imported so the
+// edge bundle doesn't pull the fixture JSON in.
+const DEMO_BUILDING_ID = "demo-building";
+
 // Paths that never require auth
 const PUBLIC_PATHS = [
   "/login",
@@ -68,11 +72,19 @@ export async function middleware(request) {
     return NextResponse.next();
   }
 
-  // ── Onboarding demo mode ──────────────────────────────────────────────────
+  // ── Public demo ───────────────────────────────────────────────────────────
   // /onboarding?demo=1 is a self-contained, session-less walkthrough of the
   // first-login wizard (nothing is persisted — every write is stubbed client
-  // side). Let it through so testers can review the flow without an account.
+  // side), and it ends on the demo building's page. Both are let through so the
+  // whole story can be shown without an account.
+  //
+  // The building page is safe unauthenticated because the ONLY id allowed here
+  // is the demo one, and the API routes answer it from a static snapshot rather
+  // than the backend (see lib/demo/serve.js) — no real building is reachable.
   if (pathname.startsWith("/onboarding") && request.nextUrl.searchParams.get("demo") === "1") {
+    return NextResponse.next();
+  }
+  if (pathname === `/admin-inventory/buildings/${DEMO_BUILDING_ID}`) {
     return NextResponse.next();
   }
 

@@ -1381,13 +1381,25 @@ function BuildingCompareView({ buildingId, periods }) {
 // client-side; a single background fetch only learns how far back real data
 // goes so the navigator doesn't offer years of empty buckets.
 function BuildingReportingView({ buildingId, etatLocatifNet }) {
+  const router = useRouter();
   const { t, i18n } = useTranslation("manager");
   const locale = i18n?.language;
   const qp = locale && locale.startsWith("fr") ? "T" : "Q";
 
   const [mode, setMode]   = useState("single"); // "single" | "compare"
-  const [gran, setGran]   = useState("month");
-  const [anchor, setAnchor] = useState(() => reportingIsoDay(reportingPeriodStart("month", new Date())));
+  // Period is deep-linkable via ?gran=&anchor= so a link can open on a specific
+  // window (the public demo opens on its fixture's fiscal year). Absent or
+  // malformed params keep the previous behaviour: the current month.
+  const qGran = typeof router.query.gran === "string" && ["month", "quarter", "year"].includes(router.query.gran)
+    ? router.query.gran
+    : null;
+  const qAnchor = typeof router.query.anchor === "string" && /^\d{4}-\d{2}-\d{2}$/.test(router.query.anchor)
+    ? router.query.anchor
+    : null;
+  const [gran, setGran]   = useState(qGran || "month");
+  const [anchor, setAnchor] = useState(
+    () => qAnchor || reportingIsoDay(reportingPeriodStart(qGran || "month", new Date())),
+  );
   const [ytd, setYtd]   = useState(false);
   const [customRange, setCustomRange] = useState(null); // { from, to } | null — arbitrary date range
   const [extras, setExtras] = useState([]); // compare mode: comparison periods added to the anchor (≤ COMPARE_MAX-1)

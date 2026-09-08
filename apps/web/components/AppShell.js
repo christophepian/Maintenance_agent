@@ -31,6 +31,7 @@ import ContractorSidebar from "./ContractorSidebar";
 import TenantSidebar from "./TenantSidebar";
 import BottomNav from "./mobile/BottomNav";
 import HubBar from "./HubBar";
+import { DEMO_BUILDING_ID } from "../lib/demo/constants";
 import OnboardingTour from "./OnboardingTour";
 import { createClient } from "../lib/supabase/client";
 import { setAuthToken } from "../lib/api";
@@ -185,7 +186,11 @@ export default function AppShell({ role: roleProp, children }) {
     router.push("/login", undefined, { locale: router.locale });
   }
 
-  const showHubBar = process.env.NEXT_PUBLIC_SANDBOX !== "true" && (isAdmin || role === "MANAGER");
+  // The internal docs hub bar has no place in the public demo — it links to the
+  // pitch deck, blueprint and roadmap.
+  const isPublicDemo = router.asPath?.includes(`/buildings/${DEMO_BUILDING_ID}`);
+  const showHubBar =
+    process.env.NEXT_PUBLIC_SANDBOX !== "true" && !isPublicDemo && (isAdmin || role === "MANAGER");
 
   // Role switcher: dev/staging flag, admins (all roles), or self-managing users
   // who hold more than one capability (e.g. Owner+Manager) — limited to theirs.
@@ -216,7 +221,7 @@ export default function AppShell({ role: roleProp, children }) {
           {process.env.NEXT_PUBLIC_SANDBOX === "true" ? (
             <span className="font-bold">Sandbox</span>
           ) : (
-            <span className="brand-wordmark">prop<span className="brand-wordmark-bold">folio</span></span>
+            <span className="brand-wordmark">Stone<span className="brand-wordmark-bold">IQ</span></span>
           )}
         </div>
 

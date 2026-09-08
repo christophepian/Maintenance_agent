@@ -26,6 +26,7 @@ import { setAuthToken, authHeaders } from "../../lib/api";
 import { withTranslations } from "../../lib/i18n";
 import { resolveLandingPath } from "../../lib/roleRouting";
 import { useTheme } from "../../hooks/useTheme";
+import { DEMO_BUILDING_ID, DEMO_PERIOD_ANCHOR } from "../../lib/demo/constants";
 import AnalyzeProgress from "../../components/AnalyzeProgress";
 import LocaleSwitcher from "../../components/LocaleSwitcher";
 
@@ -1332,38 +1333,18 @@ export default function OnboardingPage() {
     setFinishing(true);
     try {
       if (demo) {
-        // Hand the visitor a real (read-only) session and land them on the demo
-        // building's Reporting tab — the point of the whole walkthrough. When
-        // the demo account isn't configured (any environment that isn't the
-        // sandbox), fall back to the "that's the whole flow" card rather than
-        // dead-ending on a login screen.
+        // Land on the demo building's Reporting tab — the real page, answered
+        // from a static snapshot of the ingestion pipeline's own output, so no
+        // session and no backend are needed. See lib/demo/serve.js.
         try {
-          const res = await fetch("/api/demo/session", { method: "POST" });
-          if (res.ok) {
-            const { accessToken, refreshToken, buildingId } = await res.json();
-            const supabase = createClient();
-            await supabase.auth.setSession({
-              access_token: accessToken,
-              refresh_token: refreshToken,
-            });
-            setAuthToken(accessToken);
-            try {
-              localStorage.removeItem(PROGRESS_KEY);
-            } catch {
-              /* ignore */
-            }
-            router.push(
-              buildingId
-                ? `/admin-inventory/buildings/${buildingId}?tab=Reporting`
-                : "/manager",
-            );
-            return;
-          }
+          localStorage.removeItem(PROGRESS_KEY);
         } catch {
-          /* fall through to the local ending */
+          /* ignore */
         }
-        setDemoFinished(true);
-        setFinishing(false);
+        router.push(
+          `/admin-inventory/buildings/${DEMO_BUILDING_ID}` +
+            `?tab=Reporting&gran=year&anchor=${DEMO_PERIOD_ANCHOR}`,
+        );
         return;
       }
       const supabase = createClient();

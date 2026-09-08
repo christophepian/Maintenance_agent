@@ -10,6 +10,8 @@
  * Avoids re-parsing URLs when req.query is already available.
  */
 
+import { demoFixtureFor } from "./demo/serve";
+
 const API_BASE_URL = process.env.API_BASE_URL || "http://127.0.0.1:3001";
 
 /**
@@ -26,6 +28,16 @@ export async function proxyToBackend(req, res, path, options = {}) {
     headers: additionalHeaders = {},
     binary = false, // Set true for PDF/PNG responses
   } = options;
+
+  // Public demo: the walkthrough ends on the real building page with no session,
+  // so the handful of read endpoints it needs are answered from a static
+  // snapshot. Scoped to the demo building id only — every other path falls
+  // straight through. See lib/demo/serve.js.
+  const demo = demoFixtureFor(method, path);
+  if (demo) {
+    res.setHeader("Cache-Control", "public, max-age=300");
+    return res.status(200).json(demo);
+  }
 
   // H3: Forward all headers, including Authorization
   const forwardHeaders = {
