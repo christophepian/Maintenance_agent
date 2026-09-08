@@ -461,6 +461,20 @@ const server = http.createServer(async (req: AuthedRequest, res) => {
       }
     }
 
+    /* ── Public-demo read-only guard ──────────────────────────────────────────
+       The demo account backing the public onboarding walkthrough is shared by
+       anyone with the link, so its token is allowed to READ and nothing else.
+       One choke point, before any route runs: every mutating method is refused
+       regardless of which endpoint it targets, so no individual route can
+       forget to check. GET/HEAD/OPTIONS pass through untouched. */
+    if (req.user?.demoReadOnly && !["GET", "HEAD", "OPTIONS"].includes(req.method ?? "")) {
+      sendError(
+        res, 403, "DEMO_READ_ONLY",
+        "This is a read-only demo account — changes can't be saved.",
+      );
+      return;
+    }
+
     const orgId = getOrgIdForRequest(req);
 
     /* ── Public auth routes — must be reachable before org/auth resolution ── */

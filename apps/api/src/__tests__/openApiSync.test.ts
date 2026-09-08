@@ -140,6 +140,7 @@ describe("OpenAPI spec ↔ Router sync", () => {
     // Sandbox/demo provisioning — runtime-gated by SANDBOX_MODE, not public API
     "POST /sandbox/setup",
     "POST /sandbox/seed",
+    "POST /sandbox/demo-seed",
   ]);
 
   const PUBLIC_UNSPECCED_ROUTES = new Set<string>([
