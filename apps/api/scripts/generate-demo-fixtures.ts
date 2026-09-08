@@ -154,20 +154,18 @@ const prisma = new PrismaClient();
 async function main() {
   const packageDir = process.argv[2];
 
-  await prisma.org.upsert({
-    where: { id: SCRATCH_ORG },
-    create: { id: SCRATCH_ORG, name: "Demo Fixture Build" },
-    update: {},
-  });
-
-  // Start from a clean slate every run so a re-generation can never inherit
-  // half of a previous package's data.
-  await prisma.$executeRawUnsafe(`DELETE FROM "Org" WHERE id = $1`, SCRATCH_ORG).catch(() => {});
-  await prisma.org.upsert({
-    where: { id: SCRATCH_ORG },
-    create: { id: SCRATCH_ORG, name: "Demo Fixture Build" },
-    update: {},
-  });
+  // Start from a clean slate every run, so a regeneration can never inherit half
+  // of a previous package's data — and, more insidiously, so seeders that no-op
+  // when their data already exists actually re-run.
+  //
+  // Users go first: Org has no cascade from User, so deleting the Org alone
+  // fails on that foreign key. This used to be a raw DELETE with its error
+  // swallowed by a .catch(), which meant the wipe silently did nothing and every
+  // regeneration quietly reused stale rows — changes to the seeders simply
+  // didn't take. Errors are deliberately NOT caught here.
+  await prisma.user.deleteMany({ where: { orgId: SCRATCH_ORG } });
+  await prisma.org.deleteMany({ where: { id: SCRATCH_ORG } });
+  await prisma.org.create({ data: { id: SCRATCH_ORG, name: "Demo Fixture Build" } });
 
   // A real User row: the strategy profiles below FK to it, and the demo building
   // is linked to it as owner.

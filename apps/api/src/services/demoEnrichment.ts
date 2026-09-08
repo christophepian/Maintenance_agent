@@ -192,7 +192,7 @@ export async function enrichDemoBuilding(
    * "Remise en état après départ" already sitting in that unit's ledger, and a
    * clean MOVE_IN on the most recent tenancy. The point is that the inspection
    * history and the accounts tell the same story. */
-  const reports = await seedConditionReports(prisma, orgId, buildingId, units);
+  const reports = await seedConditionReports(prisma, orgId, buildingId, units, assets);
 
   /* ── 6. A cashflow plan the simulator can hand off to ─────────────────── */
   const cashflowPlanId = await seedCashflowPlan(prisma, orgId, buildingId, assets, urgentAssetIds);
@@ -290,7 +290,13 @@ async function seedConditionReports(
   orgId: string,
   buildingId: string,
   units: { id: string; unitNumber: string; type: string }[],
+  assets: { id: string; topic: string; unitId: string | null }[],
 ): Promise<number> {
+  const assetIdByTopic = new Map<string, string>();
+  for (const a of assets) {
+    if (a.unitId) assetIdByTopic.set(`${a.unitId}:${a.topic}`, a.id);
+  }
+
   const existing = await demoRepo.countConditionReportsForBuilding(prisma, orgId, buildingId);
   if (existing > 0) return existing;
 
@@ -301,25 +307,32 @@ async function seedConditionReports(
 
   let created = 0;
 
+  // Items are keyed by asset TOPIC, not free text. That matters: the analysis
+  // builds its condition map from report items that carry an assetId
+  // (getRepairReplaceAnalysis filters `assetId: { not: null }`), so an item
+  // without one is invisible to the renovation ranking — no condition tag on the
+  // opportunity, and a POOR/DAMAGED rating never promotes an asset the way it
+  // should.
   for (const [unit, type, items] of [
     [
       vacant,
       "MOVE_OUT" as const,
       [
-        { roomLabel: "Cuisine", itemLabel: "Kitchen cabinets", condition: "DAMAGED" as const, notes: "Water damage under the sink; door fronts swollen. Replacement agreed with the outgoing tenant." },
-        { roomLabel: "Séjour", itemLabel: "Wall paint", condition: "POOR" as const, notes: "Repainting required throughout — beyond normal wear for a 7-year tenancy." },
-        { roomLabel: "Séjour", itemLabel: "Parquet flooring", condition: "FAIR" as const, notes: "Scratched near the balcony door; sanding sufficient." },
-        { roomLabel: "Salle de bain", itemLabel: "Bathroom fittings", condition: "GOOD" as const, notes: null },
+        { topic: "KITCHEN_CABINET_CHIPBOARD", roomLabel: "Cuisine", itemLabel: "Kitchen cabinets", condition: "DAMAGED" as const, notes: "Water damage under the sink; door fronts swollen. Replacement agreed with the outgoing tenant." },
+        { topic: "PAINT_WALLS_DISPERSION", roomLabel: "Séjour", itemLabel: "Wall paint", condition: "POOR" as const, notes: "Repainting required throughout — beyond normal wear for a 7-year tenancy." },
+        { topic: "PARQUET_MOSAIC", roomLabel: "Séjour", itemLabel: "Parquet flooring", condition: "FAIR" as const, notes: "Scratched near the balcony door; sanding sufficient." },
+        { topic: "SANITARY_CERAMIC", roomLabel: "Salle de bain", itemLabel: "Sanitary ceramics", condition: "GOOD" as const, notes: null },
+        { topic: "WINDOW_INSULATED_PLASTIC_WOOD", roomLabel: "Séjour", itemLabel: "Windows", condition: "FAIR" as const, notes: "Seals hardening; handles serviceable." },
       ],
     ],
     [
       occupied,
       "MOVE_IN" as const,
       [
-        { roomLabel: "Cuisine", itemLabel: "Kitchen cabinets", condition: "GOOD" as const, notes: null },
-        { roomLabel: "Séjour", itemLabel: "Wall paint", condition: "GOOD" as const, notes: "Freshly repainted before handover." },
-        { roomLabel: "Séjour", itemLabel: "Parquet flooring", condition: "GOOD" as const, notes: null },
-        { roomLabel: "Salle de bain", itemLabel: "Bathroom fittings", condition: "GOOD" as const, notes: null },
+        { topic: "KITCHEN_CABINET_CHIPBOARD", roomLabel: "Cuisine", itemLabel: "Kitchen cabinets", condition: "GOOD" as const, notes: null },
+        { topic: "PAINT_WALLS_DISPERSION", roomLabel: "Séjour", itemLabel: "Wall paint", condition: "GOOD" as const, notes: "Freshly repainted before handover." },
+        { topic: "PARQUET_MOSAIC", roomLabel: "Séjour", itemLabel: "Parquet flooring", condition: "GOOD" as const, notes: null },
+        { topic: "SANITARY_CERAMIC", roomLabel: "Salle de bain", itemLabel: "Sanitary ceramics", condition: "GOOD" as const, notes: null },
       ],
     ],
   ] as const) {
@@ -376,7 +389,17 @@ async function seedConditionReports(
           type === "MOVE_OUT"
             ? "Kitchen replacement and full repaint charged against the deposit; balance returned."
             : "Handover clean, no reserves.",
-        items: { create: items.map((i) => ({ ...i })) },
+        items: {
+          create: items.map((i) => ({
+            roomLabel: i.roomLabel,
+            itemLabel: i.itemLabel,
+            condition: i.condition,
+            notes: i.notes,
+            // Null when the unit has no asset for that topic — the item still
+            // records the inspection, it just can't tag an asset.
+            assetId: assetIdByTopic.get(`${unit.id}:${i.topic}`) ?? null,
+          })),
+        },
     });
     created += 1;
   }

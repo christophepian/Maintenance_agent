@@ -3,7 +3,7 @@
  * Regenerate: npx tsx apps/api/scripts/generate-demo-fixtures.ts [package-dir]
  */
 export default {
-  "generatedAt": "2026-09-08T12:58:51.744Z",
+  "generatedAt": "2026-09-08T13:12:21.373Z",
   "source": "synthetic",
   "fiscalYear": 2025,
   "from": "2025-01-01",
