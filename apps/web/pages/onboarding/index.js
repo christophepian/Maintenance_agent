@@ -20,7 +20,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/router";
 import Head from "next/head";
-import { useTranslation } from "next-i18next";
+import { useTranslation, Trans } from "next-i18next";
 import { createClient } from "../../lib/supabase/client";
 import { setAuthToken, authHeaders } from "../../lib/api";
 import { withTranslations } from "../../lib/i18n";
@@ -37,6 +37,7 @@ const STEPS = [
   { key: "profile" },
   { key: "property" },
   { key: "risk" },
+  { key: "strategy" },
   { key: "connections" },
   { key: "preferences" },
   { key: "done" },
@@ -635,6 +636,92 @@ function RiskStep({ questions, answers, onAnswer, importState, busy, onSubmit, o
   );
 }
 
+/* ── Strategy reveal — the payoff for answering the questionnaire.
+ *
+ * The questionnaire is the one place in onboarding that asks for real thought,
+ * so the archetype it produces is shown here, immediately, rather than as a
+ * single line on the final screen. All the copy already exists in the `owner`
+ * namespace (it backs /owner/strategy) — this reuses it verbatim so the two
+ * surfaces can't drift. ── */
+function StrategyRevealStep({ summary, onNext, onBack }) {
+  const { t } = useTranslation("onboarding");
+  const { t: tOwner } = useTranslation("owner");
+  const archetype = summary?.archetype;
+  const rawBullets = archetype
+    ? tOwner(`strategy.bullets.${archetype}`, { returnObjects: true })
+    : [];
+  const bullets = Array.isArray(rawBullets) ? rawBullets : [];
+  const intentLabel = summary?.roleIntent
+    ? tOwner(`strategy.roleIntent.${summary.roleIntent}`)
+    : null;
+
+  return (
+    <div>
+      <p className="text-xs font-medium uppercase tracking-wide text-foreground-dim">
+        {t("strategyReveal.eyebrow")}
+      </p>
+      <h2 className="mt-1 text-2xl font-bold text-foreground">
+        {summary?.archetypeLabel || t("strategyReveal.heading")}
+      </h2>
+
+      {archetype && (
+        <p className="mt-3 text-sm text-muted-dark leading-relaxed">
+          {tOwner(`strategy.explanation.${archetype}`)}
+        </p>
+      )}
+
+      {bullets.length > 0 && (
+        <div className="mt-6">
+          <h3 className="text-sm font-semibold text-foreground mb-2">
+            {t("strategyReveal.whatThisMeans")}
+          </h3>
+          <ul className="space-y-2">
+            {bullets.map((bullet, i) => (
+              <li key={i} className="flex items-start gap-2 text-sm text-muted-dark">
+                <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-brand shrink-0" />
+                {bullet}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {archetype && (
+        <p className="mt-4 text-sm text-muted italic">
+          {tOwner(`strategy.deprioritize.${archetype}`)}
+        </p>
+      )}
+
+      {summary?.buildingName && intentLabel && (
+        <div className="mt-6 rounded-xl border border-surface-border bg-surface-subtle px-4 py-3.5">
+          <p className="text-sm font-medium text-foreground mb-1">
+            {t("strategyReveal.appliedTo", { building: summary.buildingName })}
+          </p>
+          <p className="text-xs text-muted leading-relaxed">
+            <Trans
+              i18nKey="strategyReveal.appliedToIntent"
+              t={t}
+              values={{ intent: intentLabel }}
+              components={{ strong: <span className="font-semibold text-foreground" /> }}
+            />
+          </p>
+        </div>
+      )}
+
+      <p className="mt-4 text-xs text-foreground-dim">{t("strategyReveal.changeLater")}</p>
+
+      <div className="flex gap-3 mt-6">
+        <button type="button" onClick={onBack} className="button-secondary flex-1 text-sm">
+          {t("buttons.back")}
+        </button>
+        <button type="button" onClick={onNext} className="button-primary flex-[2] text-sm">
+          {t("strategyReveal.continue")}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /* ── Connections step — invite the manager (régie) and, for imported
  * buildings, the tenants. Tenant invites are added with the SMS backend. ── */
 function ConnectionsStep({ summary, demo, onNext, onBack }) {
@@ -1119,6 +1206,8 @@ export default function OnboardingPage() {
         setSummary({
           buildingName: buildingName || "Résidence du Rhône",
           buildingId: null,
+          archetype,
+          roleIntent: archetypeToRoleIntent(archetype),
           archetypeLabel: tOwner(`strategy.archetype.${archetype}`) || archetype,
           imported,
         });
@@ -1184,7 +1273,14 @@ export default function OnboardingPage() {
         buildingId = bpJson.profile?.buildingId || bpJson.building?.id || null;
       }
 
-      setSummary({ buildingName, buildingId, archetypeLabel, imported });
+      setSummary({
+        buildingName,
+        buildingId,
+        archetype: ownerProfile.primaryArchetype,
+        roleIntent,
+        archetypeLabel,
+        imported,
+      });
       goNext();
     } catch (e) {
       setError(String(e?.message || e));
@@ -1268,7 +1364,18 @@ export default function OnboardingPage() {
       const meta = data?.session?.user?.app_metadata ?? appMeta;
       const userMeta = data?.session?.user?.user_metadata ?? { hasCompletedOnboarding: true };
       if (data?.session) setAuthToken(data.session.access_token);
-      router.push(resolveLandingPath({ appMeta: meta, userMeta, next }));
+      // Land on the building we just set up — on its Reporting tab, where the
+      // imported statements surface as actual KPIs. That's the payoff for the
+      // whole wizard, and it's far more use than an empty role home. An explicit
+      // ?next= still wins, and we fall back to the role home when no building
+      // was created (e.g. the import failed).
+      if (!next && summary?.buildingId) {
+        router.push(
+          `/admin-inventory/buildings/${summary.buildingId}?tab=Reporting`,
+        );
+      } else {
+        router.push(resolveLandingPath({ appMeta: meta, userMeta, next }));
+      }
     } catch {
       setError(t("errors.finishFailed"));
       setFinishing(false);
@@ -1381,6 +1488,9 @@ export default function OnboardingPage() {
               onSubmit={submitRiskAndFinish}
               onBack={goBack}
             />
+          )}
+          {stepKey === "strategy" && (
+            <StrategyRevealStep summary={summary} onNext={goNext} onBack={goBack} />
           )}
           {stepKey === "connections" && (
             <ConnectionsStep

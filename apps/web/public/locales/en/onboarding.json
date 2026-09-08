@@ -12,7 +12,8 @@
     "role": "Your role",
     "profile": "Your details",
     "property": "Your property",
-    "risk": "Your strategy",
+    "risk": "Your goals",
+    "strategy": "Your strategy",
     "connections": "Connections",
     "preferences": "Preferences",
     "done": "All set"
@@ -101,8 +102,8 @@
     "subtitle": "This builds your investor profile so recommendations fit how you actually think about your property.",
     "importReady": "{{count}} statement(s) ready to import",
     "importError": "We couldn't analyze the package — you can retry later from Properties",
-    "submit": "See my strategy & finish",
-    "submitBusy": "Setting up…",
+    "submit": "See my strategy",
+    "submitBusy": "Building your profile…",
     "importAnalyzing": "Reading statement {{done}} of {{total}}…",
     "importSomeFailed": "({{count}} couldn't be read — retry later from the building)"
   },
@@ -138,7 +139,16 @@
     "setUpImporting": "is set up and your package is importing.",
     "investorProfileLabel": "Your investor profile:",
     "fallback": "We'll take you to your dashboard and show you around.",
-    "finish": "Go to my dashboard",
+    "finish": "Go to my building",
     "finishBusy": "Finishing…"
+  },
+  "strategyReveal": {
+    "eyebrow": "Your investor profile",
+    "heading": "Here's how we'll think about your property",
+    "whatThisMeans": "What this means in practice",
+    "appliedTo": "Applied to {{building}}",
+    "appliedToIntent": "We've set this building's intent to <strong>{{intent}}</strong>. Every recommendation, renovation payback and cashflow plan we show you will be weighed against it.",
+    "changeLater": "You can change this at any time from the building's page — nothing here is locked in.",
+    "continue": "Continue"
   }
 }

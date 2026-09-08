@@ -12,7 +12,8 @@
     "role": "Votre rôle",
     "profile": "Vos coordonnées",
     "property": "Votre bien",
-    "risk": "Votre stratégie",
+    "risk": "Vos objectifs",
+    "strategy": "Votre stratégie",
     "connections": "Connexions",
     "preferences": "Préférences",
     "done": "Terminé"
@@ -101,8 +102,8 @@
     "subtitle": "Cela établit votre profil d'investisseur afin que les recommandations correspondent à votre vision réelle de votre bien.",
     "importReady": "{{count}} relevé(s) prêt(s) à importer",
     "importError": "Nous n'avons pas pu analyser le dossier — vous pourrez réessayer plus tard depuis Biens",
-    "submit": "Voir ma stratégie et terminer",
-    "submitBusy": "Configuration en cours…",
+    "submit": "Voir ma stratégie",
+    "submitBusy": "Création de votre profil…",
     "importAnalyzing": "Lecture du relevé {{done}} sur {{total}}…",
     "importSomeFailed": "({{count}} illisible(s) — à réessayer depuis l'immeuble)"
   },
@@ -138,7 +139,16 @@
     "setUpImporting": "est configuré et votre dossier est en cours d'import.",
     "investorProfileLabel": "Votre profil d'investisseur :",
     "fallback": "Nous vous emmenons vers votre tableau de bord et vous faisons découvrir les lieux.",
-    "finish": "Aller à mon tableau de bord",
+    "finish": "Aller à mon bien",
     "finishBusy": "Finalisation en cours…"
+  },
+  "strategyReveal": {
+    "eyebrow": "Votre profil d'investisseur",
+    "heading": "Voici comment nous aborderons votre bien",
+    "whatThisMeans": "Ce que cela signifie concrètement",
+    "appliedTo": "Appliqué à {{building}}",
+    "appliedToIntent": "Nous avons défini l'intention de ce bien sur <strong>{{intent}}</strong>. Chaque recommandation, rentabilité de rénovation et plan de trésorerie sera évalué à cette aune.",
+    "changeLater": "Vous pouvez modifier ce choix à tout moment depuis la page du bien — rien n'est figé.",
+    "continue": "Continuer"
   }
 }
