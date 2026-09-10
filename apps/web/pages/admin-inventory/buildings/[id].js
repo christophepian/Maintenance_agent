@@ -808,7 +808,14 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
 
         // ── Period result — the one place income and expense meet, so it belongs
         //    to neither tab. It sits ABOVE the strip; the tabs drill into one
-        //    side or the other. ──
+        //    side or the other.
+        //
+        //    This block is the SINGLE statement of the period's figures. The tabs
+        //    below drill in; they must not restate what's here. They had drifted
+        //    into doing exactly that — the revenue tab repeated Produits as its
+        //    own building total, and both ℹ notes were rendered a second time in
+        //    the charges tab — so the same three numbers appeared twice on one
+        //    screen (RNE three times, counting the KPI card above). ──
         const summaryBlock = (
           <div className="space-y-3 border-b border-surface-border bg-surface-subtle p-5">
             <div className="text-[10px] font-bold uppercase tracking-wider text-foreground-dim">
@@ -870,11 +877,6 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
             <div>
               <h2 className="text-base font-semibold text-foreground mb-1">{t("buildingsId.reporting.revenue.title")}</h2>
               <p className="text-xs text-foreground-dim">{t("buildingsId.reporting.revenue.sub")}</p>
-            </div>
-
-            <div className="flex items-baseline justify-between gap-3 rounded-2xl border border-surface-border px-4 py-3">
-              <span className="text-[11px] font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.revenue.buildingTotal")}</span>
-              <span className="text-lg font-bold tabular-nums text-foreground">{rFmtChf(earned)}</span>
             </div>
 
             <div>
@@ -966,19 +968,6 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
               <h2 className="text-base font-semibold text-foreground mb-1">{t("buildingsId.reporting.expenses.title")}</h2>
               <p className="text-xs text-foreground-dim">{t("buildingsId.reporting.expenses.sub")}</p>
             </div>
-
-            {tenantRechargeCents > 0 && (
-              <p className="flex items-start gap-1.5 text-xs text-foreground-dim">
-                <span aria-hidden>ℹ</span>
-                <span>{t("buildingsId.reporting.revex.tenantRechargeNote", { amount: rFmtChf(tenantRechargeCents) })}</span>
-              </p>
-            )}
-            {recoverableCents > 0 && (
-              <p className="flex items-start gap-1.5 text-xs text-foreground-dim">
-                <span aria-hidden>ℹ</span>
-                <span>{t("buildingsId.reporting.revex.recoverableNote", { amount: rFmtChf(recoverableCents) })}</span>
-              </p>
-            )}
 
           <div>
             <div className="mb-2 flex items-center justify-between gap-2 px-1">

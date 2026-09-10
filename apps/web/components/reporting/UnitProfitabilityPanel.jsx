@@ -151,7 +151,11 @@ export default function UnitProfitabilityPanel({ buildingId, from, to }) {
         <div className="mt-4 border-t border-surface-divider pt-3">
           <button type="button" onClick={() => setBridgeOpen((v) => !v)} aria-expanded={bridgeOpen}
             className="inline-flex items-center gap-1.5 text-sm text-foreground">
-            <span className="font-semibold">{t("buildingsId.reporting.unitProfit.buildingNoi")} {formatChfCents(data.buildingOperatingNoiCents)}</span>
+            {/* The amount itself is stated once, in the period-result strip above
+                (and again as a KPI card); repeating it here made three copies on
+                one screen. The bridge keeps the figure where it earns its place —
+                inside the expansion, as the result of the subtraction shown. */}
+            <span className="font-semibold">{t("buildingsId.reporting.unitProfit.buildingNoi")}</span>
             <span className="font-normal text-muted">— {t("buildingsId.reporting.unitProfit.howBuilt", { defaultValue: "how it's built" })}</span>
             <span className="text-[9px] text-foreground-dim">{bridgeOpen ? "▾" : "▸"}</span>
           </button>
