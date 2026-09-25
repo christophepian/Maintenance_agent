@@ -61,6 +61,11 @@ a { text-decoration: none; }
    LAYOUT
 ───────────────────────────────────────────── */
 .container { max-width: 1180px; margin: 0 auto; padding: 0 28px; }
+/* .hero is a flex container, so its .container child would otherwise
+   shrink-wrap to its content's width instead of filling out to
+   max-width — force it to behave like the block-level .container
+   everywhere else on the page. */
+.hero .container { width: 100%; }
 section { padding: 96px 0; }
 
 /* ─────────────────────────────────────────────
@@ -137,7 +142,7 @@ nav.scrolled {
   position: absolute; inset: 0; z-index: 0;
 }
 .hero-photo img {
-  width: 100%; height: 100%; object-fit: cover; object-position: 65% center; transform: scaleX(-1);
+  width: 100%; height: 100%; object-fit: cover; object-position: 65% center;
   display: block;
 }
 .hero-photo-overlay {
@@ -163,7 +168,7 @@ nav.scrolled {
 
 .hero-inner {
   position: relative; z-index: 1;
-  display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: center;
+  max-width: 620px;
 }
 
 .hero-eyebrow {
@@ -197,14 +202,8 @@ nav.scrolled {
 }
 
 .hero-ctas {
-  display: flex; gap: 12px; align-items: center; margin-bottom: 16px; flex-wrap: wrap;
+  display: flex; gap: 12px; align-items: center; margin-bottom: 52px; flex-wrap: wrap;
 }
-.hero-livedemo {
-  display: inline-block; font-size: 13px; color: var(--text-dim);
-  text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--border-2);
-  margin-bottom: 52px; transition: color .15s;
-}
-.hero-livedemo:hover { color: var(--indigo-light); }
 .btn-primary {
   display: inline-flex; align-items: center; gap: 8px;
   background: linear-gradient(135deg, var(--indigo), var(--violet));
@@ -937,9 +936,6 @@ footer {
 }
 
 @media (max-width: 1024px) {
-  .hero-inner { grid-template-columns: 1fr; gap: 48px; }
-  .hero-visual { order: -1; max-width: 600px; margin: 0 auto; }
-  .browser-frame { transform: none; }
   .roles-grid { grid-template-columns: 1fr 1fr; }
   .features-grid { grid-template-columns: 1fr 1fr; }
   .editorial-row, .editorial-row.reverse { grid-template-columns: 1fr; gap: 40px; }
@@ -950,6 +946,7 @@ footer {
 @media (max-width: 768px) {
   section { padding: 64px 0; }
   .container { padding: 0 18px; }
+  .hero-inner { max-width: 100%; margin-left: 0; }
   .hero h1 { font-size: 31px; letter-spacing: -1.2px; }
   .hero-stats { flex-wrap: wrap; }
   .problem-grid { grid-template-columns: 1fr; }
@@ -1136,11 +1133,10 @@ footer {
             <span data-i18n="hero.demo">Book a demo</span>
           </button>
         </div>
-        <a href="/onboarding?demo=1" class="hero-livedemo" data-i18n="hero.livedemo">Or explore the live product on a real building — no signup →</a>
       </div>
 
       <!-- Visual: dashboard screenshot -->
-      <div class="hero-visual fade-up">
+      <div class="hero-visual fade-up" hidden>
         <div class="browser-frame">
           <div class="browser-bar">
             <span class="browser-dot"></span>
