@@ -56,10 +56,17 @@ export async function proxyToBackend(req, res, path, options = {}) {
   // When X-Dev-Role is set (dev impersonation), strip any browser-side
   // Authorization token so the backend's dev-identity path is used instead
   // of a potentially mismatched JWT (e.g. manager token on contractor route).
-  // In production X-Dev-Role is never set, so real JWTs flow through normally.
-  if (additionalHeaders["X-Dev-Role"]) {
+  // Routes pass this header unconditionally, so gate the actual stripping on
+  // the same flag the backend uses to honor X-Dev-Role (authz.ts). Without
+  // this gate, deployed environments (where DEV_IDENTITY_ENABLED is unset)
+  // would have the real JWT deleted here but the backend would ignore the
+  // dev header too, leaving the request with no credentials at all (401).
+  if (additionalHeaders["X-Dev-Role"] && process.env.DEV_IDENTITY_ENABLED === "true") {
     delete forwardHeaders.authorization;
     delete forwardHeaders.Authorization;
+  } else {
+    delete forwardHeaders["x-dev-role"];
+    delete forwardHeaders["X-Dev-Role"];
   }
 
   // H3: Preserve query params unchanged (no re-parsing)
