@@ -10,6 +10,8 @@
  * Avoids re-parsing URLs when req.query is already available.
  */
 
+import { demoFixtureFor } from "./demo/serve";
+
 const API_BASE_URL = process.env.API_BASE_URL || "http://127.0.0.1:3001";
 
 /**
@@ -27,6 +29,19 @@ export async function proxyToBackend(req, res, path, options = {}) {
     binary = false, // Set true for PDF/PNG responses
   } = options;
 
+  // Public demo: the walkthrough ends on the real building page with no session,
+  // so the handful of read endpoints it needs are answered from a static
+  // snapshot. Scoped to the demo building id only — every other path falls
+  // straight through. See lib/demo/serve.js.
+  // The visitor's onboarding answer, set as a cookie by the demo wizard, selects
+  // the strategy-dependent variant of a fixture. Absent → the default snapshot.
+  const demoVariant = /(?:^|;\s*)demo_profile=([0-9])(?:;|$)/.exec(req.headers.cookie || "")?.[1] ?? null;
+  const demo = demoFixtureFor(method, path, demoVariant);
+  if (demo) {
+    res.setHeader("Cache-Control", "public, max-age=300");
+    return res.status(200).json(demo);
+  }
+
   // H3: Forward all headers, including Authorization
   const forwardHeaders = {
     ...req.headers,
@@ -41,10 +56,17 @@ export async function proxyToBackend(req, res, path, options = {}) {
   // When X-Dev-Role is set (dev impersonation), strip any browser-side
   // Authorization token so the backend's dev-identity path is used instead
   // of a potentially mismatched JWT (e.g. manager token on contractor route).
-  // In production X-Dev-Role is never set, so real JWTs flow through normally.
-  if (additionalHeaders["X-Dev-Role"]) {
+  // Routes pass this header unconditionally, so gate the actual stripping on
+  // the same flag the backend uses to honor X-Dev-Role (authz.ts). Without
+  // this gate, deployed environments (where DEV_IDENTITY_ENABLED is unset)
+  // would have the real JWT deleted here but the backend would ignore the
+  // dev header too, leaving the request with no credentials at all (401).
+  if (additionalHeaders["X-Dev-Role"] && process.env.DEV_IDENTITY_ENABLED === "true") {
     delete forwardHeaders.authorization;
     delete forwardHeaders.Authorization;
+  } else {
+    delete forwardHeaders["x-dev-role"];
+    delete forwardHeaders["X-Dev-Role"];
   }
 
   // H3: Preserve query params unchanged (no re-parsing)

@@ -17,17 +17,7 @@ import { authHeaders, ownerAuthHeaders } from "../lib/api";
 import { formatDate } from "../lib/format";
 import { planVariant } from "../lib/statusVariants";
 import { cn } from "../lib/utils";
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const STALE_THRESHOLD_MS = 7 * 24 * 60 * 60 * 1000;
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function isPlanStale(plan) {
-  if (!plan.lastComputedAt) return false;
-  return Date.now() - new Date(plan.lastComputedAt).getTime() > STALE_THRESHOLD_MS;
-}
+import { isPlanStale } from "../lib/planStale";
 
 // ─── Sorting ──────────────────────────────────────────────────────────────────
 
@@ -64,6 +54,13 @@ function CreatePlanModal({ buildings, onClose, onCreate }) {
     setForm((f) => ({ ...f, [key]: val }));
   }
 
+  // Dialog a11y (CR-016): Escape closes the modal.
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
   async function handleSubmit(e) {
     e.preventDefault();
     if (!form.name.trim()) { setError(t("cashflowPlan.nameRequired")); return; }
@@ -96,11 +93,20 @@ function CreatePlanModal({ buildings, onClose, onCreate }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-start justify-center pt-20 px-4">
-      <div className="bg-surface rounded-xl shadow-xl p-6 w-full max-w-lg">
+    <div
+      className="fixed inset-0 bg-black/40 z-50 flex items-start justify-center pt-20 px-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-surface rounded-xl shadow-xl p-6 w-full max-w-lg"
+        role="dialog"
+        aria-modal="true"
+        aria-label={t("cashflowPlan.newPlan", { defaultValue: "New cashflow plan" })}
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-base font-semibold text-foreground">New cashflow plan</h2>
-          <button onClick={onClose} className="text-foreground-dim hover:text-muted-text text-lg leading-none" aria-label="Close">×</button>
+          <h2 className="text-base font-semibold text-foreground">{t("cashflowPlan.newPlan")}</h2>
+          <button onClick={onClose} className="text-foreground-dim hover:text-muted-text text-lg leading-none" aria-label={t("cashflowPlan.close")}>×</button>
         </div>
 
         {error && <div className="error-banner mb-3" role="alert">{error}</div>}
@@ -117,7 +123,7 @@ function CreatePlanModal({ buildings, onClose, onCreate }) {
           </div>
 
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-muted-text">Building (leave empty for portfolio)</label>
+            <label className="text-xs font-medium text-muted-text">{t("cashflowPlan.field.building")}</label>
             <select
               className="edit-input"
               value={form.buildingId}
@@ -132,7 +138,7 @@ function CreatePlanModal({ buildings, onClose, onCreate }) {
 
           <div className="flex gap-3">
             <div className="flex flex-col gap-1 flex-1">
-              <label className="text-xs font-medium text-muted-text">Income growth rate (% / year)</label>
+              <label className="text-xs font-medium text-muted-text">{t("cashflowPlan.field.incomeGrowth")}</label>
               <input
                 type="number"
                 step="0.1"
@@ -144,7 +150,7 @@ function CreatePlanModal({ buildings, onClose, onCreate }) {
               />
             </div>
             <div className="flex flex-col gap-1 flex-1">
-              <label className="text-xs font-medium text-muted-text">Horizon (months)</label>
+              <label className="text-xs font-medium text-muted-text">{t("cashflowPlan.field.horizon")}</label>
               <input
                 type="number"
                 min="12"
@@ -158,17 +164,17 @@ function CreatePlanModal({ buildings, onClose, onCreate }) {
           </div>
 
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-muted-text">Opening balance (CHF, optional)</label>
+            <label className="text-xs font-medium text-muted-text">{t("cashflowPlan.field.openingBalance")}</label>
             <input
               type="number"
               min="0"
               step="100"
               className="edit-input"
-              placeholder="e.g. 50000"
+              placeholder={t("cashflowPlan.field.openingBalancePlaceholder")}
               value={form.openingBalanceChf}
               onChange={(e) => set("openingBalanceChf", e.target.value)}
             />
-            <span className="text-xs text-foreground-dim">Leave empty to show net flows only. Can be added later.</span>
+            <span className="text-xs text-foreground-dim">{t("cashflowPlan.field.openingBalanceHint")}</span>
           </div>
 
           <div className="flex justify-end gap-2 pt-2">
@@ -280,14 +286,14 @@ const CashflowPlansList = forwardRef(function CashflowPlansList({ ownerMode = fa
   const planColumns = useMemo(() => [
     {
       id: "name",
-      label: "Name",
+      label: t("cashflowPlan.col.name"),
       sortable: true,
       alwaysVisible: true,
       render: (p) => <span className="font-medium text-foreground">{p.name}</span>,
     },
     {
       id: "status",
-      label: "Status",
+      label: t("cashflowPlan.col.status"),
       sortable: true,
       defaultVisible: true,
       render: (p) => (
@@ -296,9 +302,9 @@ const CashflowPlansList = forwardRef(function CashflowPlansList({ ownerMode = fa
           {p.lastVerdictScenario && (
             <span className={cn(
               "rounded-full px-2 py-0.5 text-xs font-semibold",
-              p.lastVerdictScenario === "invest"  && "bg-green-100 text-green-700",
-              p.lastVerdictScenario === "defer"   && "bg-amber-100 text-amber-700",
-              p.lastVerdictScenario === "neglect" && "bg-slate-100 text-slate-600",
+              p.lastVerdictScenario === "invest"  && "bg-success-light text-success-text",
+              p.lastVerdictScenario === "defer"   && "bg-warning-light text-warning-text",
+              p.lastVerdictScenario === "neglect" && "bg-muted-light text-muted-text",
             )}>
               {p.lastVerdictScenario.charAt(0).toUpperCase() + p.lastVerdictScenario.slice(1)}
             </span>
@@ -308,7 +314,7 @@ const CashflowPlansList = forwardRef(function CashflowPlansList({ ownerMode = fa
     },
     {
       id: "scope",
-      label: "Scope",
+      label: t("cashflowPlan.col.scope"),
       sortable: true,
       defaultVisible: true,
       render: (p) => (
@@ -319,27 +325,27 @@ const CashflowPlansList = forwardRef(function CashflowPlansList({ ownerMode = fa
     },
     {
       id: "horizon",
-      label: "Horizon",
+      label: t("cashflowPlan.col.horizon"),
       sortable: true,
       defaultVisible: true,
       render: (p) => <span className="text-muted-text">{p.horizonMonths} mo</span>,
     },
     {
       id: "growth",
-      label: "Growth",
+      label: t("cashflowPlan.col.growth"),
       sortable: true,
       defaultVisible: true,
       render: (p) => <span className="text-muted-text">{p.incomeGrowthRatePct ?? 0}%</span>,
     },
     {
       id: "computed",
-      label: "Last computed",
+      label: t("cashflowPlan.col.lastComputed"),
       sortable: true,
       defaultVisible: true,
       render: (p) => {
         const stale = isPlanStale(p);
         return p.lastComputedAt ? (
-          <span className={stale ? "text-amber-600 font-medium" : "text-muted-text"}>
+          <span className={stale ? "text-warning-text font-medium" : "text-muted-text"}>
             {formatDate(p.lastComputedAt)}
             {stale && " (stale)"}
           </span>
@@ -350,14 +356,14 @@ const CashflowPlansList = forwardRef(function CashflowPlansList({ ownerMode = fa
     },
     {
       id: "created",
-      label: "Created",
+      label: t("cashflowPlan.col.created"),
       sortable: true,
       defaultVisible: true,
       render: (p) => <span className="text-muted text-xs">{formatDate(p.createdAt)}</span>,
     },
     {
       id: "openingBalance",
-      label: "Opening Balance",
+      label: t("cashflowPlan.col.openingBalance"),
       sortable: false,
       defaultVisible: false,
       render: (p) => (
@@ -380,15 +386,15 @@ const CashflowPlansList = forwardRef(function CashflowPlansList({ ownerMode = fa
           type="button"
           disabled={approving === p.id}
           onClick={(e) => { e.stopPropagation(); handleApprove(p.id); }}
-          className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-green-700 disabled:opacity-50 transition"
+          className="rounded-lg bg-success px-3 py-1.5 text-xs font-semibold text-white hover:bg-success-dark disabled:opacity-50 transition"
         >
-          {approving === p.id ? "Approving…" : "Approve"}
+          {approving === p.id ? t("cashflowPlan.approving") : t("cashflowPlan.approve")}
         </button>
       ) : null,
     }] : []),
-  ], [buildingMap, ownerMode, approving]);
+  ], [buildingMap, ownerMode, approving, t]);
 
-  if (loading) return <p className="loading-text">Loading plans…</p>;
+  if (loading) return <p className="loading-text">{t("cashflowPlan.loading")}</p>;
 
   return (
     <>
@@ -396,13 +402,13 @@ const CashflowPlansList = forwardRef(function CashflowPlansList({ ownerMode = fa
 
       {/* Pending approval banner — owner mode only */}
       {ownerMode && submittedPlans.length > 0 && (
-        <div className="mb-4 flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+        <div className="mb-4 flex items-center gap-3 rounded-lg border border-warning-ring bg-warning-light px-4 py-3">
           <span className="text-lg">📋</span>
           <div className="flex-1">
-            <p className="text-sm font-semibold text-amber-700">
-              {submittedPlans.length} plan{submittedPlans.length !== 1 ? "s" : ""} awaiting your approval
+            <p className="text-sm font-semibold text-warning-text">
+              {t("cashflowPlan.awaitingApproval", { count: submittedPlans.length })}
             </p>
-            <p className="text-xs text-amber-600">Review and approve submitted cashflow plans</p>
+            <p className="text-xs text-warning-text">{t("cashflowPlan.awaitingApprovalSub")}</p>
           </div>
         </div>
       )}
@@ -411,11 +417,11 @@ const CashflowPlansList = forwardRef(function CashflowPlansList({ ownerMode = fa
       <div className="flex items-center gap-2 mb-3">
         <input
           type="search"
-          placeholder="Search plans…"
+          placeholder={t("cashflowPlan.searchPlaceholder")}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="filter-input flex-1 min-w-0 mb-0"
-          aria-label="Search cashflow plans"
+          aria-label={t("cashflowPlan.searchAria")}
         />
         {!ownerMode && (
           <button
@@ -430,7 +436,7 @@ const CashflowPlansList = forwardRef(function CashflowPlansList({ ownerMode = fa
 
       {plans.length === 0 ? (
         <div className="empty-state">
-          <p className="empty-state-text">No cashflow plans yet. Use "New plan" to get started.</p>
+          <p className="empty-state-text">{t("cashflowPlan.empty")}</p>
         </div>
       ) : (
         <>
@@ -454,9 +460,9 @@ const CashflowPlansList = forwardRef(function CashflowPlansList({ ownerMode = fa
                       {p.lastVerdictScenario && (
                         <span className={cn(
                           "rounded-full px-2 py-0.5 text-xs font-semibold",
-                          p.lastVerdictScenario === "invest"  && "bg-green-100 text-green-700",
-                          p.lastVerdictScenario === "defer"   && "bg-amber-100 text-amber-700",
-                          p.lastVerdictScenario === "neglect" && "bg-slate-100 text-slate-600",
+                          p.lastVerdictScenario === "invest"  && "bg-success-light text-success-text",
+                          p.lastVerdictScenario === "defer"   && "bg-warning-light text-warning-text",
+                          p.lastVerdictScenario === "neglect" && "bg-muted-light text-muted-text",
                         )}>
                           {p.lastVerdictScenario.charAt(0).toUpperCase() + p.lastVerdictScenario.slice(1)}
                         </span>
@@ -470,7 +476,7 @@ const CashflowPlansList = forwardRef(function CashflowPlansList({ ownerMode = fa
                     {p.incomeGrowthRatePct != null && ` · ${p.incomeGrowthRatePct}% growth`}
                   </p>
                   {p.lastComputedAt && (
-                    <p className={cn("text-xs mt-0.5", stale ? "text-amber-600 font-medium" : "text-foreground-dim")}>
+                    <p className={cn("text-xs mt-0.5", stale ? "text-warning-text font-medium" : "text-foreground-dim")}>
                       Computed {formatDate(p.lastComputedAt)}{stale ? " (stale)" : ""}
                     </p>
                   )}

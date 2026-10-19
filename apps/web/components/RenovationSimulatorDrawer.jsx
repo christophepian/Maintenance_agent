@@ -14,6 +14,8 @@
  */
 
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import { DEMO_BUILDING_ID, DEMO_PLAN_ID } from "../lib/demo/constants";
+import { useTranslation, Trans } from "next-i18next";
 import { createPortal } from "react-dom";
 import { X, Check, ArrowRight } from "lucide-react";
 import { cn } from "../lib/utils";
@@ -188,6 +190,7 @@ function readChartPalette() {
 }
 
 function NpvChart({ nowYearly, turYearly, notYearly }) {
+  const { t } = useTranslation("manager");
   const canvasRef = useRef(null);
   const chartRef  = useRef(null);
   const { theme } = useTheme();
@@ -203,7 +206,7 @@ function NpvChart({ nowYearly, turYearly, notYearly }) {
 
       const datasets = [];
       datasets.push({
-        label: "Act Now",
+        label: t("renovationSimulator.verdict.now"),
         data: nowYearly.map((d) => d.value),
         borderColor: c.actNow,
         backgroundColor: "transparent",
@@ -214,7 +217,7 @@ function NpvChart({ nowYearly, turYearly, notYearly }) {
         pointHoverRadius: 5,
       });
       datasets.push({
-        label: "At Turnover",
+        label: t("renovationSimulator.verdict.turnover"),
         data: turYearly.map((d) => d.value),
         borderColor: c.turnover,
         backgroundColor: "transparent",
@@ -226,7 +229,7 @@ function NpvChart({ nowYearly, turYearly, notYearly }) {
         pointHoverRadius: 5,
       });
       datasets.push({
-        label: "Do Nothing",
+        label: t("renovationSimulator.verdict.nothing"),
         data: notYearly.map((d) => d.value),
         borderColor: c.doNothing,
         backgroundColor: "transparent",
@@ -264,14 +267,17 @@ function NpvChart({ nowYearly, turYearly, notYearly }) {
       alive = false;
       if (chartRef.current) { chartRef.current.destroy(); chartRef.current = null; }
     };
-  }, [nowYearly, turYearly, notYearly, theme]);
+  }, [nowYearly, turYearly, notYearly, theme, t]);
 
   return <canvas ref={canvasRef} />;
 }
 
 // ── Scenario card ─────────────────────────────────────────────────────────────
 
-function ScenarioCard({ label, hint, npv, summary, isBest, breakeven, selectable, selected, onSelect, dimmed, selectedLabel = "To plan" }) {
+function ScenarioCard({ label, hint, npv, summary, isBest, breakeven, selectable, selected, onSelect, dimmed, selectedLabel }) {
+  const { t } = useTranslation("manager");
+  // Default lives here rather than in the signature: it needs `t`.
+  const planLabel = selectedLabel ?? t("renovationSimulator.toPlan");
   const Comp = selectable ? "button" : "div";
   return (
     <Comp
@@ -295,7 +301,7 @@ function ScenarioCard({ label, hint, npv, summary, isBest, breakeven, selectable
       )}
       {selected && (
         <span className="absolute -top-2.5 right-3 inline-flex items-center gap-1 rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold text-white uppercase tracking-wide">
-          <Check className="h-3 w-3" /> {selectedLabel}
+          <Check className="h-3 w-3" /> {planLabel}
         </span>
       )}
       <div>
@@ -306,7 +312,7 @@ function ScenarioCard({ label, hint, npv, summary, isBest, breakeven, selectable
         {fmtChf(npv)}
       </p>
       {breakeven != null && (
-        <p className="text-xs text-foreground-dim">Break-even in <strong className="text-foreground">{fmtMo(breakeven)}</strong></p>
+        <p className="text-xs text-foreground-dim">{t("renovationSimulator.breakEvenIn")} <strong className="text-foreground">{fmtMo(breakeven)}</strong></p>
       )}
       {summary && (
         <p className="text-xs border-t border-surface-divider pt-2 leading-relaxed text-muted-text">{summary}</p>
@@ -388,8 +394,28 @@ function SummaryStat({ label, value, tone, hint }) {
 // ── Main component ─────────────────────────────────────────────────────────────
 
 export default function RenovationSimulatorDrawer({ items, onClose, buildingId, embedded = false, onPlanned }) {
+  const { t } = useTranslation("manager");
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
+
+  // Tracks whether the full-screen tool is still mounted, so the multi-step
+  // "Plan this work" flow never calls setState after the user closes it (CR-007).
+  const aliveRef = useRef(true);
+  useEffect(() => {
+    aliveRef.current = true;
+    return () => { aliveRef.current = false; };
+  }, []);
+
+  // Dialog a11y (CR-016): Escape closes the full-screen overlay and the close
+  // button takes initial focus so keyboard users aren't stranded behind it.
+  const closeBtnRef = useRef(null);
+  useEffect(() => {
+    if (embedded || !onClose) return;
+    const onKey = (e) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", onKey);
+    const focusTimer = setTimeout(() => closeBtnRef.current?.focus(), 0);
+    return () => { document.removeEventListener("keydown", onKey); clearTimeout(focusTimer); };
+  }, [embedded, onClose]);
 
   // ── Controls ────────────────────────────────────────────────────────────────
   const [action,        setAction]        = useState("replace");
@@ -480,17 +506,25 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId, 
   const isSchedulable = selectedPath === "now" || selectedPath === "turnover";
   const isSuboptimal  = selectedPath !== bestKey; // selected a worse-than-best scenario
   const holdIsBest    = bestKey === "nothing";
-  const selectedLabel = selectedPath === "now" ? "Act Now" : selectedPath === "turnover" ? "At Turnover" : "Do Nothing";
+  const selectedLabel = selectedPath === "now"
+    ? t("renovationSimulator.verdict.now", { defaultValue: "Act Now" })
+    : selectedPath === "turnover"
+      ? t("renovationSimulator.verdict.turnover", { defaultValue: "At Turnover" })
+      : t("renovationSimulator.verdict.nothing", { defaultValue: "Do Nothing" });
 
   // Recommendation text
   const verdict = useMemo(() => {
-    if (bestKey === "nothing") {
-      return "Based on these assumptions, doing nothing preserves returns best over this horizon. Consider revisiting if costs or rent levels change.";
-    }
-    const when = bestKey === "now" ? "Acting now" : `Waiting for turnover (~${fmtMo(minLeaseRemaining)})`;
-    const be   = bestBreakeven ? `breaks even in ${fmtMo(bestBreakeven)}` : "does not break even within this horizon";
-    return `${when} yields the best return — ${fmtChf(delta)} more than doing nothing. The investment ${be}.`;
-  }, [bestKey, delta, bestBreakeven, minLeaseRemaining]);
+    if (bestKey === "nothing") return t("renovationSimulator.verdictText.nothing");
+    // Built by interpolation, not concatenation, so the French can reorder the
+    // clauses — "acting now"/"waiting" and the break-even clause are sub-keys.
+    const when = bestKey === "now"
+      ? t("renovationSimulator.verdictText.whenNow")
+      : t("renovationSimulator.verdictText.whenTurnover", { in: fmtMo(minLeaseRemaining) });
+    const be = bestBreakeven
+      ? t("renovationSimulator.verdictText.breaksEven", { in: fmtMo(bestBreakeven) })
+      : t("renovationSimulator.verdictText.neverBreaksEven");
+    return t("renovationSimulator.verdictText.best", { when, amount: fmtChf(delta), breakeven: be });
+  }, [bestKey, delta, bestBreakeven, minLeaseRemaining, t]);
 
   // Schedule assets in an existing (or new) DRAFT cashflow plan for the building.
   const handleAddToPlan = useCallback(async () => {
@@ -502,6 +536,15 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId, 
       const d = new Date();
       if (selectedPath !== "now" && minLeaseRemaining != null) d.setMonth(d.getMonth() + minLeaseRemaining);
       const overriddenYear = d.getFullYear();
+
+      // Public demo: there is no backend to create a plan in, so hand off to the
+      // pre-built one instead of POSTing into a 401. The plan it lands on covers
+      // the same end-of-life items the accordion ranks to the top.
+      if (buildingId === DEMO_BUILDING_ID) {
+        setPlanId(DEMO_PLAN_ID);
+        setPlanMsg(t("renovationSimulator.scheduledOk", { defaultValue: "✓ Scheduled in cashflow plan" }));
+        return;
+      }
 
       // Fetch existing plans for this building
       const plansRes = await fetch(`/api/cashflow-plans?buildingId=${buildingId}`, {
@@ -532,14 +575,17 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId, 
         planId = createData.data.id;
       }
 
-      // Add an override for each asset: shift its projected replacement to the planned year
+      // Add an override for each asset: shift its projected replacement to the planned year.
+      // There is no batch/transactional endpoint, so attempt every override and report
+      // partial success honestly rather than surfacing a generic error that hides the
+      // fact that some overrides did land (CR-007).
       const currentYear = new Date().getFullYear();
-      await Promise.all(assetRows.map((row) => {
+      const settled = await Promise.allSettled(assetRows.map(async (row) => {
         const remainingYears = row.remainingLifeMonths != null
           ? Math.ceil(row.remainingLifeMonths / 12)
           : 0;
         const originalYear = Math.max(currentYear, currentYear + remainingYears);
-        return fetch(`/api/cashflow-plans/${planId}/overrides`, {
+        const res = await fetch(`/api/cashflow-plans/${planId}/overrides`, {
           method: "POST",
           headers: { "Content-Type": "application/json", ...authHeaders() },
           body: JSON.stringify({
@@ -554,17 +600,29 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId, 
             oblfPassthroughPct: passthroughPct, // audit / reproduction
           }),
         });
+        if (!res.ok) throw new Error(`override for ${row.assetId} failed (${res.status})`);
       }));
 
+      const failed = settled.filter((s) => s.status === "rejected").length;
+      if (!aliveRef.current) return;
       setPlanId(planId);
-      setPlanMsg(`✓ Scheduled in cashflow plan`);
+      if (failed === 0) {
+        setPlanMsg(t("renovationSimulator.scheduledOk", { defaultValue: "✓ Scheduled in cashflow plan" }));
+      } else {
+        setPlanMsg(t("renovationSimulator.scheduledPartial", {
+          done: assetRows.length - failed,
+          total: assetRows.length,
+          failed,
+          defaultValue: `⚠ Scheduled ${assetRows.length - failed} of ${assetRows.length} — ${failed} failed; re-run to retry`,
+        }));
+      }
       onPlanned?.(planId);
     } catch (e) {
-      setPlanMsg(`Error: ${e.message}`);
+      if (aliveRef.current) setPlanMsg(t("renovationSimulator.planError", { message: e.message, defaultValue: `Error: ${e.message}` }));
     } finally {
-      setPlanAdding(false);
+      if (aliveRef.current) setPlanAdding(false);
     }
-  }, [buildingId, assetRows, selectedPath, minLeaseRemaining, discountRate, capRate, vacancyDays, passthroughPct, onPlanned]);
+  }, [buildingId, assetRows, selectedPath, minLeaseRemaining, discountRate, capRate, vacancyDays, passthroughPct, onPlanned, t]);
 
   const title = safeItems.length === 1
     ? safeItems[0].assetName
@@ -573,7 +631,11 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId, 
   if (!mounted || safeItems.length === 0) return null;
 
   const body = (
-    <div className={cn("flex flex-col bg-surface", embedded ? "" : "fixed inset-0 z-50")} style={{ isolation: "isolate" }}>
+    <div
+      className={cn("flex flex-col bg-surface", embedded ? "" : "fixed inset-0 z-50")}
+      style={{ isolation: "isolate" }}
+      {...(!embedded ? { role: "dialog", "aria-modal": true, "aria-label": title } : {})}
+    >
 
       {/* ── Sticky title bar ── */}
       <div className="shrink-0 flex items-center justify-between gap-4 px-5 py-3 border-b border-surface-border bg-surface-subtle">
@@ -584,7 +646,7 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId, 
           </p>
         </div>
         {onClose && (
-          <button onClick={onClose} className="rounded-lg p-1.5 text-foreground-dim hover:bg-surface-hover transition-colors shrink-0">
+          <button ref={closeBtnRef} onClick={onClose} aria-label={t("renovationSimulator.closeSimulator")} className="rounded-lg p-1.5 text-foreground-dim hover:bg-surface-hover transition-colors shrink-0">
             <X className="h-4 w-4" />
           </button>
         )}
@@ -599,29 +661,29 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId, 
           embedded ? "" : "overflow-y-auto",
         )}>
 
-          <RailSection title="Scenario">
-            <RailToggle label="Action"
-              options={[["replace", "Replace"], ["repair", "Repair"]]}
+          <RailSection title={t("renovationSimulator.rail.scenario")}>
+            <RailToggle label={t("renovationSimulator.rail.action")}
+              options={[["replace", t("renovationAccordion.rec.REPLACE")], ["repair", t("renovationAccordion.rec.REPAIR")]]}
               value={action} onChange={(v) => { setAction(v); setCostOverrides({}); }}
             />
-            <RailToggle label="Horizon"
-              options={[["5", "5 yr"], ["10", "10 yr"], ["15", "15 yr"]]}
+            <RailToggle label={t("renovationSimulator.rail.horizon")}
+              options={[["5", t("renovationSimulator.rail.years", { n: 5 })], ["10", t("renovationSimulator.rail.years", { n: 10 })], ["15", t("renovationSimulator.rail.years", { n: 15 })]]}
               value={String(horizon)} onChange={(v) => setHorizon(Number(v))}
             />
           </RailSection>
 
           <div className="border-t border-surface-divider" />
 
-          <RailSection title="Assumptions">
-            <RailNum label="OBLF passthrough" value={passthroughPct} onChange={setPassthrough} suffix="%" min={10} step={5} hint={HINTS.oblf} />
-            <RailNum label="Discount rate"    value={discountRate}   onChange={setDiscount}    suffix="%" min={1}  step={0.5} hint={HINTS.discount} />
-            <RailNum label="Cap rate"         value={capRate}        onChange={setCapRate}     suffix="%" min={2}  step={0.5} hint={HINTS.capRate} />
-            <RailNum label="Vacancy"          value={vacancyDays}    onChange={setVacancy}     suffix="days" min={0} step={1} hint={HINTS.vacancy} />
+          <RailSection title={t("renovationSimulator.rail.assumptions")}>
+            <RailNum label={t("renovationSimulator.rail.oblfPassthrough")} value={passthroughPct} onChange={setPassthrough} suffix="%" min={10} step={5} hint={HINTS.oblf} />
+            <RailNum label={t("renovationSimulator.rail.discountRate")} value={discountRate}   onChange={setDiscount}    suffix="%" min={1}  step={0.5} hint={HINTS.discount} />
+            <RailNum label={t("renovationSimulator.rail.capRate")} value={capRate}        onChange={setCapRate}     suffix="%" min={2}  step={0.5} hint={HINTS.capRate} />
+            <RailNum label={t("renovationSimulator.rail.vacancy")} value={vacancyDays}    onChange={setVacancy}     suffix={t("renovationSimulator.rail.daysSuffix")} min={0} step={1} hint={HINTS.vacancy} />
           </RailSection>
 
           <div className="border-t border-surface-divider" />
 
-          <RailSection title={`Asset cost${assetRows.length !== 1 ? "s" : ""} (CHF)`}>
+          <RailSection title={t("renovationSimulator.rail.assetCosts", { count: assetRows.length })}>
             {assetRows.map((row) => (
               <div key={row.assetId} className="flex items-center justify-between gap-2">
                 <span className="text-xs text-foreground truncate" title={row.assetName}>{row.assetName}</span>
@@ -642,9 +704,9 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId, 
 
           {/* Computed summary strip */}
           <div className="grid grid-cols-3 gap-3 rounded-xl border border-surface-border bg-surface px-4 py-3 shadow-sm">
-            <SummaryStat label="Total investment" value={fmtChf(totalCostChf)} />
-            <SummaryStat label="Rent uplift" value={`+CHF ${totalMonthlyUplift.toFixed(0)}/mo`} tone="green" hint={HINTS.rentUplift} />
-            <SummaryStat label="Do Nothing risk" value={`${fmtChf(monthlyDoNothingDeduct * 12)}/yr`} tone="red" hint={HINTS.doNothingRisk} />
+            <SummaryStat label={t("renovationSimulator.stat.totalInvestment")} value={fmtChf(totalCostChf)} />
+            <SummaryStat label={t("renovationSimulator.stat.rentUplift")} value={`+CHF ${totalMonthlyUplift.toFixed(0)}/mo`} tone="green" hint={HINTS.rentUplift} />
+            <SummaryStat label={t("renovationSimulator.stat.doNothingRisk")} value={`${fmtChf(monthlyDoNothingDeduct * 12)}/yr`} tone="red" hint={HINTS.doNothingRisk} />
           </div>
 
           {/* Chart */}
@@ -685,8 +747,8 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId, 
           <div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <ScenarioCard
-                label="Act Now"
-                hint="Renovate immediately"
+                label={t("renovationSimulator.verdict.now")}
+                hint={t("renovationSimulator.hint.renovateImmediately")}
                 npv={npvNow}
                 isBest={bestKey === "now"}
                 breakeven={result.breakevenNow}
@@ -696,13 +758,13 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId, 
                 onSelect={() => setPlanPath("now")}
                 summary={
                   npvNow > npvNot
-                    ? `${fmtChf(npvNow - npvNot)} better than doing nothing.`
-                    : "Does not outperform doing nothing in this horizon."
+                    ? t("renovationSimulator.summary.betterThanNothing", { amount: fmtChf(npvNow - npvNot) })
+                    : t("renovationSimulator.summary.noOutperform")
                 }
               />
               <ScenarioCard
-                label="At Turnover"
-                hint={minLeaseRemaining != null ? `In ~${fmtMo(minLeaseRemaining)}` : "When current lease ends"}
+                label={t("renovationSimulator.verdict.turnover")}
+                hint={minLeaseRemaining != null ? t("renovationSimulator.hint.inAbout", { in: fmtMo(minLeaseRemaining) }) : t("renovationSimulator.hint.whenLeaseEnds")}
                 npv={npvTur}
                 isBest={bestKey === "turnover"}
                 breakeven={result.breakevenTur}
@@ -712,24 +774,25 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId, 
                 onSelect={() => setPlanPath("turnover")}
                 summary={
                   npvTur > npvNot
-                    ? `Avoids disrupting current tenant. ${fmtChf(npvTur - npvNot)} better than doing nothing.`
-                    : "Does not outperform doing nothing in this horizon."
+                    ? t("renovationSimulator.summary.avoidsDisrupting", { amount: fmtChf(npvTur - npvNot) })
+                    : t("renovationSimulator.summary.noOutperform")
                 }
               />
               <ScenarioCard
-                label="Do Nothing"
-                hint="Maintain as-is, risk-adjusted"
+                label={t("renovationSimulator.verdict.nothing")}
+                hint={t("renovationSimulator.hint.maintainAsIs")}
                 npv={npvNot}
                 isBest={bestKey === "nothing"}
                 breakeven={null}
                 selectable
                 selected={selectedPath === "nothing"}
-                selectedLabel="Holding"
+                selectedLabel={t("renovationSimulator.holding")}
                 onSelect={() => setPlanPath("nothing")}
                 summary={
                   delta > 0
-                    ? `${fmtChf(delta)} less than the best renovation scenario.${monthlyDoNothingDeduct > 0 ? ` Includes ${fmtChf(monthlyDoNothingDeduct * 12)}/yr expected failure + tenant risk.` : ""}`
-                    : "Returns best in this horizon — revisit if repair costs rise."
+                    ? t("renovationSimulator.summary.lessThanBest", { amount: fmtChf(delta) })
+                      + (monthlyDoNothingDeduct > 0 ? " " + t("renovationSimulator.summary.includesRisk", { amount: fmtChf(monthlyDoNothingDeduct * 12) }) : "")
+                    : t("renovationSimulator.summary.bestInHorizon")
                 }
               />
             </div>
@@ -746,14 +809,21 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId, 
           {/* Recommendation strip */}
           <div className={cn("rounded-xl border px-4 py-3", delta > 0 && bestKey !== "nothing" ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50")}>
             <p className={cn("text-xs font-semibold uppercase tracking-wide mb-1", delta > 0 && bestKey !== "nothing" ? "text-emerald-700" : "text-amber-700")}>
-              {delta > 0 && bestKey !== "nothing" ? `Recommendation: ${bestKey === "now" ? "Act Now" : "Wait for Turnover"}` : "Recommendation: Hold"}
+              {delta > 0 && bestKey !== "nothing"
+                ? t("renovationSimulator.recommendation", {
+                    verdict: bestKey === "now"
+                      ? t("renovationSimulator.verdict.now", { defaultValue: "Act Now" })
+                      : t("renovationSimulator.verdict.waitTurnover", { defaultValue: "Wait for Turnover" }),
+                    defaultValue: `Recommendation: ${bestKey === "now" ? "Act Now" : "Wait for Turnover"}`,
+                  })
+                : t("renovationSimulator.recommendationHold", { defaultValue: "Recommendation: Hold" })}
             </p>
             <p className={cn("text-sm leading-relaxed", delta > 0 && bestKey !== "nothing" ? "text-emerald-900" : "text-amber-900")}>
               {verdict}
             </p>
             {result.terminalChf > 0 && (
               <p className={cn("text-xs mt-1.5", delta > 0 ? "text-emerald-700" : "text-amber-700")}>
-                Includes terminal value {fmtChf(result.terminalChf)} (rent uplift capitalised at {capRate}% cap rate).
+                {t("renovationSimulator.terminalValue", { amount: fmtChf(result.terminalChf), rate: capRate })}
               </p>
             )}
           </div>
@@ -761,19 +831,19 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId, 
           {/* Asset breakdown */}
           <div className="rounded-2xl border border-surface-border bg-surface shadow-sm overflow-hidden">
             <div className="px-4 py-3 border-b border-surface-divider">
-              <p className="text-xs font-medium text-foreground-dim uppercase tracking-wide">Asset breakdown</p>
+              <p className="text-xs font-medium text-foreground-dim uppercase tracking-wide">{t("renovationSimulator.table.title")}</p>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-surface-divider bg-surface-subtle">
-                    <th className="text-left px-4 py-2.5 text-xs font-medium text-foreground-dim">Asset</th>
-                    <th className="text-left px-4 py-2.5 text-xs font-medium text-foreground-dim">Unit</th>
-                    <th className="text-right px-4 py-2.5 text-xs font-medium text-foreground-dim">Cost (CHF)</th>
-                    <th className="text-right px-4 py-2.5 text-xs font-medium text-foreground-dim">Rent uplift</th>
-                    <th className="text-right px-4 py-2.5 text-xs font-medium text-foreground-dim">Failure risk/yr</th>
-                    <th className="text-right px-4 py-2.5 text-xs font-medium text-foreground-dim">Rent risk/yr</th>
-                    <th className="text-right px-4 py-2.5 text-xs font-medium text-foreground-dim">Total risk/yr</th>
+                    <th className="text-left px-4 py-2.5 text-xs font-medium text-foreground-dim">{t("renovationSimulator.table.asset")}</th>
+                    <th className="text-left px-4 py-2.5 text-xs font-medium text-foreground-dim">{t("renovationSimulator.table.unit")}</th>
+                    <th className="text-right px-4 py-2.5 text-xs font-medium text-foreground-dim">{t("renovationSimulator.table.cost")}</th>
+                    <th className="text-right px-4 py-2.5 text-xs font-medium text-foreground-dim">{t("renovationSimulator.table.rentUplift")}</th>
+                    <th className="text-right px-4 py-2.5 text-xs font-medium text-foreground-dim">{t("renovationSimulator.table.failureRisk")}</th>
+                    <th className="text-right px-4 py-2.5 text-xs font-medium text-foreground-dim">{t("renovationSimulator.table.rentRisk")}</th>
+                    <th className="text-right px-4 py-2.5 text-xs font-medium text-foreground-dim">{t("renovationSimulator.table.totalRisk")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -817,11 +887,11 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId, 
                 </tbody>
                 <tfoot>
                   <tr className="bg-surface-subtle border-t-2 border-surface-border">
-                    <td colSpan={2} className="px-4 py-2.5 text-xs font-semibold text-foreground">Total</td>
+                    <td colSpan={2} className="px-4 py-2.5 text-xs font-semibold text-foreground">{t("renovationSimulator.table.total")}</td>
                     <td className="px-4 py-2.5 text-right text-xs font-semibold text-foreground tabular-nums">{fmtChf(totalCostChf)}</td>
                     <td className="px-4 py-2.5 text-right text-xs font-semibold text-green-700 tabular-nums">+CHF {totalMonthlyUplift.toFixed(0)}/mo</td>
                     <td className="px-4 py-2.5 text-right text-xs font-semibold text-red-600 tabular-nums" colSpan={3}>
-                      {fmtChf(monthlyDoNothingDeduct * 12)}/yr total risk
+                      {t("renovationSimulator.table.totalRiskFoot", { amount: fmtChf(monthlyDoNothingDeduct * 12) })}
                     </td>
                   </tr>
                 </tfoot>
@@ -829,9 +899,7 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId, 
             </div>
             <div className="px-4 py-3 border-t border-surface-divider bg-surface-subtle">
               <p className="text-xs text-foreground-dim leading-relaxed">
-                <strong>Failure risk</strong> = base rate (by asset type) × depreciation multiplier × replacement cost.
-                {" "}<strong>Rent risk</strong> = CO Art. 259d probability-weighted reduction (POOR: 20 %/yr, DAMAGED: 40 %/yr).
-                {" "}<strong>OBLF Art. 14</strong> allows passing {passthroughPct}% of renovation cost to rent over the asset's useful life.
+                <Trans i18nKey="renovationSimulator.methodology" t={t} values={{ pct: passthroughPct }} components={{ b: <strong /> }} />
               </p>
             </div>
           </div>
@@ -841,11 +909,11 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId, 
             <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 flex items-start gap-3">
               <Check className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-green-800">Renovation scheduled in cashflow plan</p>
+                <p className="text-sm font-semibold text-green-800">{t("renovationSimulator.banner.title")}</p>
                 <p className="text-xs text-green-700 mt-0.5">
                   {embedded
-                    ? "These assets are now timed in your cashflow plan — review the NPV verdict, assumptions and approval below."
-                    : "These assets are now timed in your cashflow plan. The Invest scenario reflects this capex automatically."}
+                    ? t("renovationSimulator.banner.embedded")
+                    : t("renovationSimulator.banner.standalone")}
                 </p>
                 {!embedded && (
                   <a
@@ -871,11 +939,17 @@ export default function RenovationSimulatorDrawer({ items, onClose, buildingId, 
                   className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors bg-slate-800 text-white hover:bg-slate-700 disabled:opacity-50"
                 >
                   <ArrowRight className="h-4 w-4" />
-                  {planAdding ? "Scheduling…" : `Plan this work — ${selectedLabel} (${assetRows.length} asset${assetRows.length !== 1 ? "s" : ""})`}
+                  {planAdding
+                    ? t("renovationSimulator.scheduling", { defaultValue: "Scheduling…" })
+                    : t("renovationSimulator.planThisWork", {
+                        label: selectedLabel,
+                        count: assetRows.length,
+                        defaultValue: `Plan this work — ${selectedLabel} (${assetRows.length} asset${assetRows.length !== 1 ? "s" : ""})`,
+                      })}
                 </button>
               ) : (
                 <p className="text-sm text-foreground-dim">
-                  Holding is best — nothing to schedule. Pick <strong className="text-foreground">Act Now</strong> or <strong className="text-foreground">At Turnover</strong> to plan work anyway.
+                  {t("renovationSimulator.holdingBest", { defaultValue: "Holding is best — nothing to schedule. Pick Act Now or At Turnover to plan work anyway." })}
                 </p>
               )
             )}

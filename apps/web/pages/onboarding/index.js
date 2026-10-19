@@ -20,12 +20,13 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/router";
 import Head from "next/head";
-import { useTranslation } from "next-i18next";
+import { useTranslation, Trans } from "next-i18next";
 import { createClient } from "../../lib/supabase/client";
 import { setAuthToken, authHeaders } from "../../lib/api";
 import { withTranslations } from "../../lib/i18n";
 import { resolveLandingPath } from "../../lib/roleRouting";
 import { useTheme } from "../../hooks/useTheme";
+import { DEMO_BUILDING_ID, DEMO_PERIOD_ANCHOR } from "../../lib/demo/constants";
 import AnalyzeProgress from "../../components/AnalyzeProgress";
 import LocaleSwitcher from "../../components/LocaleSwitcher";
 
@@ -37,6 +38,7 @@ const STEPS = [
   { key: "profile" },
   { key: "property" },
   { key: "risk" },
+  { key: "strategy" },
   { key: "connections" },
   { key: "preferences" },
   { key: "done" },
@@ -52,6 +54,23 @@ function archetypeToRoleIntent(archetype) {
     case "opportunistic_repositioner": return "reposition";
     default: return "stable_hold";
   }
+}
+
+/* Demo mode only: the archetype the real engine produces for each first answer,
+ * with neutral answers to the rest.
+ *
+ * These are not guesses — they're what POST /strategy/owner-profile actually
+ * returns, verified when the demo fixtures are generated (the generator warns
+ * loudly if the engine ever disagrees). Note options 3 and 5 both give
+ * value_builder: opportunistic_repositioner only ever comes out as a SECONDARY
+ * archetype here, and the demo must not name a profile the product wouldn't
+ * produce — the plan page's rationale would then contradict this screen. */
+function demoArchetype(answers) {
+  return (
+    ["exit_optimizer", "yield_maximizer", "value_builder", "capital_preserver", "value_builder"][
+      (answers.mainGoal || 1) - 1
+    ] || "capital_preserver"
+  );
 }
 
 /* Map an existing appRole + capabilities back to a primaryRole for preselect. */
@@ -625,9 +644,95 @@ function RiskStep({ questions, answers, onAnswer, importState, busy, onSubmit, o
   );
 }
 
+/* ── Strategy reveal — the payoff for answering the questionnaire.
+ *
+ * The questionnaire is the one place in onboarding that asks for real thought,
+ * so the archetype it produces is shown here, immediately, rather than as a
+ * single line on the final screen. All the copy already exists in the `owner`
+ * namespace (it backs /owner/strategy) — this reuses it verbatim so the two
+ * surfaces can't drift. ── */
+function StrategyRevealStep({ summary, onNext, onBack }) {
+  const { t } = useTranslation("onboarding");
+  const { t: tOwner } = useTranslation("owner");
+  const archetype = summary?.archetype;
+  const rawBullets = archetype
+    ? tOwner(`strategy.bullets.${archetype}`, { returnObjects: true })
+    : [];
+  const bullets = Array.isArray(rawBullets) ? rawBullets : [];
+  const intentLabel = summary?.roleIntent
+    ? tOwner(`strategy.roleIntent.${summary.roleIntent}`)
+    : null;
+
+  return (
+    <div>
+      <p className="text-xs font-medium uppercase tracking-wide text-foreground-dim">
+        {t("strategyReveal.eyebrow")}
+      </p>
+      <h2 className="mt-1 text-2xl font-bold text-foreground">
+        {summary?.archetypeLabel || t("strategyReveal.heading")}
+      </h2>
+
+      {archetype && (
+        <p className="mt-3 text-sm text-muted-dark leading-relaxed">
+          {tOwner(`strategy.explanation.${archetype}`)}
+        </p>
+      )}
+
+      {bullets.length > 0 && (
+        <div className="mt-6">
+          <h3 className="text-sm font-semibold text-foreground mb-2">
+            {t("strategyReveal.whatThisMeans")}
+          </h3>
+          <ul className="space-y-2">
+            {bullets.map((bullet, i) => (
+              <li key={i} className="flex items-start gap-2 text-sm text-muted-dark">
+                <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-brand shrink-0" />
+                {bullet}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {archetype && (
+        <p className="mt-4 text-sm text-muted italic">
+          {tOwner(`strategy.deprioritize.${archetype}`)}
+        </p>
+      )}
+
+      {summary?.buildingName && intentLabel && (
+        <div className="mt-6 rounded-xl border border-surface-border bg-surface-subtle px-4 py-3.5">
+          <p className="text-sm font-medium text-foreground mb-1">
+            {t("strategyReveal.appliedTo", { building: summary.buildingName })}
+          </p>
+          <p className="text-xs text-muted leading-relaxed">
+            <Trans
+              i18nKey="strategyReveal.appliedToIntent"
+              t={t}
+              values={{ intent: intentLabel }}
+              components={{ strong: <span className="font-semibold text-foreground" /> }}
+            />
+          </p>
+        </div>
+      )}
+
+      <p className="mt-4 text-xs text-foreground-dim">{t("strategyReveal.changeLater")}</p>
+
+      <div className="flex gap-3 mt-6">
+        <button type="button" onClick={onBack} className="button-secondary flex-1 text-sm">
+          {t("buttons.back")}
+        </button>
+        <button type="button" onClick={onNext} className="button-primary flex-[2] text-sm">
+          {t("strategyReveal.continue")}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /* ── Connections step — invite the manager (régie) and, for imported
  * buildings, the tenants. Tenant invites are added with the SMS backend. ── */
-function ConnectionsStep({ summary, onNext, onBack }) {
+function ConnectionsStep({ summary, demo, onNext, onBack }) {
   const { t } = useTranslation("onboarding");
   const [email, setEmail] = useState("");
   const [inviting, setInviting] = useState(false);
@@ -638,6 +743,12 @@ function ConnectionsStep({ summary, onNext, onBack }) {
     setErr(null);
     setInviting(true);
     try {
+      if (demo) {
+        await new Promise((r) => setTimeout(r, 600));
+        setInvited(email.trim());
+        setEmail("");
+        return;
+      }
       const res = await fetch("/api/onboarding/invite-manager", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -853,6 +964,10 @@ export default function OnboardingPage() {
   const questions = Array.isArray(rawQuestions) ? rawQuestions : [];
 
   const [ready, setReady] = useState(false);
+  // Demo mode (?demo=1): no session, no persistence — every write is stubbed so
+  // the whole wizard can be walked through from a plain link. See middleware.js.
+  const [demo, setDemo] = useState(false);
+  const [demoFinished, setDemoFinished] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
   const [appMeta, setAppMeta] = useState({});
   const [primaryRole, setPrimaryRole] = useState(null);
@@ -885,6 +1000,18 @@ export default function OnboardingPage() {
   useEffect(() => {
     if (bootRef.current) return;
     bootRef.current = true;
+    if (new URLSearchParams(window.location.search).get("demo") === "1") {
+      setDemo(true);
+      // Always start a demo from a clean slate — a half-finished real run must
+      // not bleed into it (and vice versa: demo progress is never persisted).
+      try {
+        localStorage.removeItem(PROGRESS_KEY);
+      } catch {
+        /* ignore */
+      }
+      setReady(true);
+      return;
+    }
     const supabase = createClient();
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) {
@@ -923,7 +1050,7 @@ export default function OnboardingPage() {
 
   // Persist progress (files are intentionally excluded — not serializable)
   useEffect(() => {
-    if (!ready) return;
+    if (!ready || demo) return;
     try {
       localStorage.setItem(
         PROGRESS_KEY,
@@ -934,7 +1061,7 @@ export default function OnboardingPage() {
     } catch {
       /* storage may be unavailable — non-fatal */
     }
-  }, [ready, stepIndex, profile, prop, answers, prefs]);
+  }, [ready, demo, stepIndex, profile, prop, answers, prefs]);
 
   const goNext = useCallback(() => setStepIndex((i) => Math.min(i + 1, STEPS.length - 1)), []);
   const goBack = useCallback(() => setStepIndex((i) => Math.max(i - 1, 0)), []);
@@ -950,6 +1077,35 @@ export default function OnboardingPage() {
       active: true,
       years: files.map((f) => ({ fileName: f.name, status: "analyzing", analysis: null })),
     });
+    const mark = (idx, patch) =>
+      setImportState((s) =>
+        s ? { ...s, years: s.years.map((y, i) => (i === idx ? { ...y, ...patch } : y)) } : s,
+      );
+    if (demo) {
+      // Stand in for the ~40s vision extraction so the concurrent-analysis UX
+      // (analyze in the background while the questionnaire is answered) is real.
+      analyzeRef.current = files.map((file, idx) => {
+        const p = new Promise((resolve) =>
+          setTimeout(
+            () =>
+              resolve({
+                fiscalYear: 2024 - idx,
+                extractedBuilding: {
+                  name: file.name.replace(/\.[^.]+$/, "") || "Résidence du Rhône",
+                  address: "12 rue du Rhône",
+                  city: "Genève",
+                  postalCode: "1204",
+                },
+                extractedFiles: [],
+              }),
+            6000 + idx * 1500,
+          ),
+        );
+        p.then((data) => mark(idx, { status: "ready", analysis: data }));
+        return p;
+      });
+      return;
+    }
     const backendBase = process.env.NEXT_PUBLIC_BACKEND_URL;
     const url = backendBase
       ? `${backendBase}/onboarding/package/analyze`
@@ -963,11 +1119,9 @@ export default function OnboardingPage() {
         if (!res.ok) throw new Error(json?.error?.message || t("errors.analysisFailed"));
         return json.data;
       })();
-      const mark = (patch) =>
-        setImportState((s) =>
-          s ? { ...s, years: s.years.map((y, i) => (i === idx ? { ...y, ...patch } : y)) } : s,
-        );
-      p.then((data) => mark({ status: "ready", analysis: data })).catch(() => mark({ status: "error" }));
+      p.then((data) => mark(idx, { status: "ready", analysis: data })).catch(() =>
+        mark(idx, { status: "error" }),
+      );
       return p;
     });
   }
@@ -1044,6 +1198,39 @@ export default function OnboardingPage() {
     setError(null);
     setBusy(true);
     try {
+      if (demo) {
+        await new Promise((r) => setTimeout(r, 900));
+        const archetype = demoArchetype(answers);
+        let buildingName = (prop.name || prop.address || "").trim();
+        let imported = false;
+        if (prop.mode === "import") {
+          const settled = await Promise.allSettled(analyzeRef.current || []);
+          const first = settled.find((r) => r.status === "fulfilled")?.value;
+          if (first) {
+            buildingName = first.extractedBuilding?.name || buildingName;
+            imported = true;
+          }
+        }
+        // Carry the choice to the demo's API layer, which serves the
+        // strategy-dependent fixtures (NPV verdict, off-strategy lever flags)
+        // for this profile. A plain first-party cookie: the proxy runs
+        // server-side, so it can't read anything else the client knows.
+        try {
+          document.cookie = `demo_profile=${answers.mainGoal || 1}; path=/; max-age=86400; samesite=lax`;
+        } catch {
+          /* the demo still works, just with the default profile */
+        }
+        setSummary({
+          buildingName: buildingName || "Résidence du Rhône",
+          buildingId: null,
+          archetype,
+          roleIntent: archetypeToRoleIntent(archetype),
+          archetypeLabel: tOwner(`strategy.archetype.${archetype}`) || archetype,
+          imported,
+        });
+        goNext();
+        return;
+      }
       // 1. Owner strategy profile from the questionnaire answers.
       const opRes = await fetch("/api/strategy/owner-profile", {
         method: "POST",
@@ -1103,7 +1290,14 @@ export default function OnboardingPage() {
         buildingId = bpJson.profile?.buildingId || bpJson.building?.id || null;
       }
 
-      setSummary({ buildingName, buildingId, archetypeLabel, imported });
+      setSummary({
+        buildingName,
+        buildingId,
+        archetype: ownerProfile.primaryArchetype,
+        roleIntent,
+        archetypeLabel,
+        imported,
+      });
       goNext();
     } catch (e) {
       setError(String(e?.message || e));
@@ -1116,6 +1310,14 @@ export default function OnboardingPage() {
     setError(null);
     setSavingRole(true);
     try {
+      if (demo) {
+        setAppMeta({
+          appRole: primaryRole === "OWNER_MANAGER" ? "OWNER" : primaryRole,
+          capabilities: primaryRole === "OWNER_MANAGER" ? ["OWNER", "MANAGER"] : [primaryRole],
+        });
+        goNext();
+        return;
+      }
       const res = await fetch("/api/onboarding/role", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1146,6 +1348,21 @@ export default function OnboardingPage() {
     setError(null);
     setFinishing(true);
     try {
+      if (demo) {
+        // Land on the demo building's Reporting tab — the real page, answered
+        // from a static snapshot of the ingestion pipeline's own output, so no
+        // session and no backend are needed. See lib/demo/serve.js.
+        try {
+          localStorage.removeItem(PROGRESS_KEY);
+        } catch {
+          /* ignore */
+        }
+        router.push(
+          `/admin-inventory/buildings/${DEMO_BUILDING_ID}` +
+            `?tab=Reporting&gran=year&anchor=${DEMO_PERIOD_ANCHOR}`,
+        );
+        return;
+      }
       const supabase = createClient();
       await supabase.auth.updateUser({
         data: {
@@ -1173,7 +1390,18 @@ export default function OnboardingPage() {
       const meta = data?.session?.user?.app_metadata ?? appMeta;
       const userMeta = data?.session?.user?.user_metadata ?? { hasCompletedOnboarding: true };
       if (data?.session) setAuthToken(data.session.access_token);
-      router.push(resolveLandingPath({ appMeta: meta, userMeta, next }));
+      // Land on the building we just set up — on its Reporting tab, where the
+      // imported statements surface as actual KPIs. That's the payoff for the
+      // whole wizard, and it's far more use than an empty role home. An explicit
+      // ?next= still wins, and we fall back to the role home when no building
+      // was created (e.g. the import failed).
+      if (!next && summary?.buildingId) {
+        router.push(
+          `/admin-inventory/buildings/${summary.buildingId}?tab=Reporting`,
+        );
+      } else {
+        router.push(resolveLandingPath({ appMeta: meta, userMeta, next }));
+      }
     } catch {
       setError(t("errors.finishFailed"));
       setFinishing(false);
@@ -1201,7 +1429,7 @@ export default function OnboardingPage() {
       <div className="w-full max-w-lg">
         <div className="flex flex-col items-center mb-8">
           <div className="w-11 h-11 bg-brand rounded-xl flex items-center justify-center shadow-md mb-4">
-            <span className="text-white font-extrabold">P</span>
+            <span className="text-white font-extrabold">S</span>
           </div>
           <h1 className="text-xl font-semibold text-foreground tracking-tight">
             {t("shell.welcome")}
@@ -1209,6 +1437,29 @@ export default function OnboardingPage() {
         </div>
 
         <div className="bg-surface rounded-2xl border border-surface-border shadow-sm px-6 sm:px-8 py-7">
+          {demoFinished ? (
+            <div className="text-center py-4">
+              <div className="w-14 h-14 bg-success-light rounded-full flex items-center justify-center mx-auto mb-5">
+                <svg className="w-7 h-7 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <h2 className="text-xl font-semibold text-foreground mb-2">That&apos;s the whole flow</h2>
+              <p className="text-sm text-muted mb-6">
+                A real user lands on their building&apos;s Reporting tab here, with the
+                imported statements already processed into KPIs, plus the investor
+                profile and preferences they just set.
+              </p>
+              <button
+                type="button"
+                onClick={() => window.location.reload()}
+                className="button-primary w-full text-sm"
+              >
+                Run it again
+              </button>
+            </div>
+          ) : (
+          <>
           <StepRail current={stepIndex} />
 
           {error && (
@@ -1265,8 +1516,12 @@ export default function OnboardingPage() {
               onBack={goBack}
             />
           )}
+          {stepKey === "strategy" && (
+            <StrategyRevealStep summary={summary} onNext={goNext} onBack={goBack} />
+          )}
           {stepKey === "connections" && (
-            <ConnectionsStep summary={summary} onNext={goNext} onBack={goBack} />
+            <ConnectionsStep
+              demo={demo} summary={summary} onNext={goNext} onBack={goBack} />
           )}
           {stepKey === "preferences" && (
             <PreferencesStep
@@ -1280,6 +1535,8 @@ export default function OnboardingPage() {
           )}
           {stepKey === "done" && (
             <DoneStep summary={summary} finishing={finishing} onFinish={finish} />
+          )}
+          </>
           )}
         </div>
       </div>

@@ -9,12 +9,18 @@
  * POST /sandbox/seed
  *   Populates realistic demo data (buildings, units, tenants, requests, jobs) in
  *   the caller's org. Idempotent: no-ops if seed data already exists.
+ *
+ * POST /sandbox/demo-seed
+ *   Populates the building behind the PUBLIC onboarding demo: a synthetic régie
+ *   package run through the real onboarding pipeline, so the Reporting tab shows
+ *   genuinely processed figures. Idempotent — called on every demo sign-in.
  */
 
 import { Router } from "../http/router";
 import { sendError, sendJson } from "../http/json";
 import { requireAuth } from "../authz";
 import { RequestStatus, RequestUrgency, JobStatus } from "@prisma/client";
+import { seedDemoBuilding } from "../services/demoSeedService";
 
 const isSandbox = process.env.SANDBOX_MODE === "true";
 
@@ -97,6 +103,24 @@ export function registerSandboxRoutes(router: Router) {
     } catch (e: any) {
       console.error("[sandbox/setup]", e);
       sendError(res, 500, "DB_ERROR", "Sandbox setup failed", String(e));
+    }
+  });
+
+  /* ── POST /sandbox/demo-seed ─────────────────────────────────────────────── */
+  router.post("/sandbox/demo-seed", async ({ req, res, prisma, orgId }) => {
+    if (!sandboxOnly(res)) return;
+    const user = requireAuth(req, res);
+    if (!user) return;
+
+    try {
+      const result = await seedDemoBuilding(prisma, orgId, {
+        ownerUserId: user.userId,
+        actorUserId: user.userId,
+      });
+      sendJson(res, 200, { data: result });
+    } catch (e: any) {
+      console.error("[sandbox/demo-seed]", e);
+      sendError(res, 500, "DB_ERROR", "Demo seed failed", String(e));
     }
   });
 

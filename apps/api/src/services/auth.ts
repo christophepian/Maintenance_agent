@@ -25,6 +25,9 @@ export interface TokenPayload {
   tenantId?: string;      // Tenant.id — set in app_metadata for TENANT role users
   ownerId?: string;       // User.id of an OWNER — set in app_metadata for admin owner-preview
   contractorId?: string;  // Contractor.id — set in app_metadata for sandbox contractor demo-grant
+  /** Public-demo session: the API rejects every mutating request from this
+   *  token. Set in app_metadata for the sandbox demo account only. */
+  demoReadOnly?: boolean;
 }
 
 // ── Supabase JWKS (production) ───────────────────────────────────────────────
@@ -47,7 +50,9 @@ function getJwks() {
 }
 
 /** Map a verified JWT payload to our internal TokenPayload shape. */
-function mapJwtPayload(payload: Record<string, unknown>): TokenPayload {
+/** Exported for tests — the claim mapping is security-relevant (it decides
+ *  whether a token is treated as the read-only demo account). */
+export function mapJwtPayload(payload: Record<string, unknown>): TokenPayload {
   const meta = (payload["app_metadata"] as Record<string, string> | undefined) ?? {};
   return {
     userId: meta["prismaUserId"] || ((payload["sub"] as string) ?? ""),
@@ -59,6 +64,11 @@ function mapJwtPayload(payload: Record<string, unknown>): TokenPayload {
     tenantId: meta["tenantId"] || undefined,
     ownerId: meta["ownerId"] || undefined,
     contractorId: meta["contractorId"] || undefined,
+    // Coerce explicitly: app_metadata values arrive as JSON, so this may be a
+    // real boolean or the string "true". Anything else is NOT read-only —
+    // fail-open here would be a silently unguarded demo account, so the check
+    // is a strict allowlist of truthy forms.
+    demoReadOnly: (meta["demoReadOnly"] as unknown) === true || meta["demoReadOnly"] === "true",
   };
 }
 

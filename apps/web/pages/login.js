@@ -1,9 +1,9 @@
 /**
- * Login page — split-screen redesign (Stripe-benchmarked, Propfolio brand).
+ * Login page — split-screen redesign (Stripe-benchmarked, StoneIQ brand).
  *
  * Layout:
  *   Left  — immersive dark hero panel reusing the marketing hero photo
- *           (/website/assets/hero-bg.png) with Propfolio branding + tagline.
+ *           (/website/assets/hero-bg.png) with StoneIQ branding + tagline.
  *           Hidden below lg; on mobile a compact brand header shows instead.
  *   Right — fixed light card with the auth form (Stripe-minimal).
  *
@@ -82,7 +82,7 @@ function MethodTab({ active, onClick, children }) {
   );
 }
 
-/* Propfolio gradient logo mark — matches the marketing hero */
+/* StoneIQ gradient logo mark — matches the marketing hero */
 function BrandMark({ size = "md" }) {
   const dim = size === "lg" ? "w-10 h-10 text-base" : "w-9 h-9 text-sm";
   return (
@@ -93,7 +93,7 @@ function BrandMark({ size = "md" }) {
       )}
       aria-hidden="true"
     >
-      P
+      S
     </div>
   );
 }
