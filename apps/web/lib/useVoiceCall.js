@@ -31,8 +31,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 function dbg(...args) {
   try {
     if (typeof window !== "undefined" && window.localStorage?.getItem("voiceCallDebug")) {
-      // eslint-disable-next-line no-console
-      console.log("[voiceCall]", ...args);
+      // console.warn (not .log) so no eslint suppression is needed — the
+      // frontend no-console rule allows warn/error.
+      console.warn("[voiceCall]", ...args);
     }
   } catch { /* ignore */ }
 }

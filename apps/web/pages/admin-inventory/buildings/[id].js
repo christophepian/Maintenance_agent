@@ -294,12 +294,18 @@ const catLabel = (cat, t) => t(`buildingFinancials.category.${cat}`, { defaultVa
 // Biggest expense-account moves between two periods (current vs benchmark),
 // signed (d>0 = cost rose), ≥ CHF 200, top 5 by magnitude. Shared by the
 // prior/last-year comparison and the multi-period card's narrative.
+// Cross-period identity for an expense account. `accountId` is the primary key,
+// but imported statements emit "" for lines that weren't mapped to a canonical
+// account — and a "" id must NOT be treated as a distinct account, or the same
+// régie line splits into two half-movers (mapped one year, unmapped the next).
+// Fall back through code then name so a named line reconciles across years.
+const moverKey = (a) => a.accountId || a.accountCode || a.accountName || "—";
 function computeExpenseMovers(bf, benchBf) {
   if (!bf || !benchBf) return [];
-  const beMap = new Map((benchBf.expensesByAccount ?? []).map((a) => [a.accountId ?? a.accountName, a]));
+  const beMap = new Map((benchBf.expensesByAccount ?? []).map((a) => [moverKey(a), a]));
   const seen = new Set();
-  const rows = (bf.expensesByAccount ?? []).map((a) => { const k = a.accountId ?? a.accountName; seen.add(k); return { name: a.accountName ?? a.accountCode ?? "—", d: a.totalCents - (beMap.get(k)?.totalCents ?? 0) }; });
-  for (const a of (benchBf.expensesByAccount ?? [])) { const k = a.accountId ?? a.accountName; if (!seen.has(k)) rows.push({ name: a.accountName ?? a.accountCode ?? "—", d: -a.totalCents }); }
+  const rows = (bf.expensesByAccount ?? []).map((a) => { const k = moverKey(a); seen.add(k); return { name: a.accountName ?? a.accountCode ?? "—", d: a.totalCents - (beMap.get(k)?.totalCents ?? 0) }; });
+  for (const a of (benchBf.expensesByAccount ?? [])) { const k = moverKey(a); if (!seen.has(k)) rows.push({ name: a.accountName ?? a.accountCode ?? "—", d: -a.totalCents }); }
   return rows.filter((x) => Math.abs(x.d) >= 20000).sort((x, y) => Math.abs(y.d) - Math.abs(x.d)).slice(0, 5);
 }
 
@@ -800,30 +806,68 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
         const CAT_CHIP = { OWNER_OPEX: "bg-surface-hover text-muted", RECOVERABLE: "bg-warning-light text-warning-text", TENANT_RECHARGE: "bg-success-light text-success-text", CAPEX: "bg-brand-light text-brand-dark", FINANCING: "bg-info-light text-info-text" };
 
 
+        // The three terms of the period result, which double as the selector for
+        // the breakdown panel below. Order is the equation's order.
+        const resultSegments = [
+          { key: "rev",  operator: null, label: t("buildingsId.reporting.histogram.income"),  value: earned,         tone: "text-foreground" },
+          { key: "exp",  operator: "−",  label: t("buildingsId.reporting.revex.operating"),   value: operatingCents, tone: "text-foreground" },
+          { key: "prof", operator: "=",  label: t("buildingsId.reporting.histogram.noi"),     value: noi,            tone: noi >= 0 ? "text-success-text" : "text-destructive-text" },
+        ];
+
         // ── Period result — the one place income and expense meet, so it belongs
         //    to neither tab. It sits ABOVE the strip; the tabs drill into one
-        //    side or the other. ──
+        //    side or the other.
+        //
+        //    This block is the SINGLE statement of the period's figures. The tabs
+        //    below drill in; they must not restate what's here. They had drifted
+        //    into doing exactly that — the revenue tab repeated Produits as its
+        //    own building total, and both ℹ notes were rendered a second time in
+        //    the charges tab — so the same three numbers appeared twice on one
+        //    screen (RNE three times, counting the KPI card above). ──
         const summaryBlock = (
           <div className="space-y-3 border-b border-surface-border bg-surface-subtle p-5">
             <div className="text-[10px] font-bold uppercase tracking-wider text-foreground-dim">
               {t("buildingsId.reporting.periodResult")}
             </div>
-          {/* Income − Operating = NOI (capex + financing are pulled out, below) */}
+          {/* Income − Operating = NOI, and simultaneously the selector for the
+              breakdown below: Produits opens the per-unit revenue, Exploitation
+              the expense breakdown, RNE the profitability panel.
+              These used to be a read-only strip with a second row of tabs
+              underneath naming the same three things — the same figures stated
+              twice, one row apart. Merging them keeps the equation (which tabs
+              alone can't express) and drops the mirrored row.
+              Labels stay the accounting terms so "Produits − Exploitation = RNE"
+              remains literally true; using the panel names would have read
+              "Produits − Charges = Rentabilité", which is not.
+              (capex + financing are pulled out, below) */}
           <div className="flex items-stretch overflow-hidden rounded-2xl border border-surface-border text-center">
-            <div className="flex-1 px-3 py-2.5">
-              <div className="text-[10px] font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.histogram.income")}</div>
-              <div className="text-base font-bold tabular-nums text-foreground">{rFmtChf(earned)}</div>
-            </div>
-            <div className="grid w-7 place-items-center bg-surface-hover text-foreground-dim">−</div>
-            <div className="flex-1 px-3 py-2.5">
-              <div className="text-[10px] font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.revex.operating")}</div>
-              <div className="text-base font-bold tabular-nums text-foreground">{rFmtChf(operatingCents)}</div>
-            </div>
-            <div className="grid w-7 place-items-center bg-surface-hover text-foreground-dim">=</div>
-            <div className="flex-1 bg-surface-hover px-3 py-2.5">
-              <div className="text-[10px] font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.histogram.noi")}</div>
-              <div className={cn("text-base font-bold tabular-nums", noi >= 0 ? "text-success-text" : "text-destructive-text")}>{rFmtChf(noi)}</div>
-            </div>
+            {resultSegments.flatMap((seg, i) => {
+              const active = breakdownView === seg.key;
+              return [
+                ...(i > 0 ? [(
+                  <div key={`sep-${seg.key}`} aria-hidden="true"
+                    className="grid w-7 shrink-0 place-items-center bg-surface-hover text-foreground-dim">
+                    {seg.operator}
+                  </div>
+                )] : []),
+                (
+                  <button
+                    key={seg.key}
+                    type="button"
+                    onClick={() => setBreakdownView(seg.key)}
+                    aria-pressed={active}
+                    className={cn(
+                      "flex-1 px-3 py-2.5 text-center transition-colors",
+                      active ? "bg-brand-light" : "hover:bg-surface-hover",
+                    )}
+                  >
+                    <div className={cn("text-[10px] font-semibold uppercase tracking-wide",
+                      active ? "text-brand-dark" : "text-foreground-dim")}>{seg.label}</div>
+                    <div className={cn("text-base font-bold tabular-nums", seg.tone)}>{rFmtChf(seg.value)}</div>
+                  </button>
+                ),
+              ];
+            })}
           </div>
 
           {/* Below operating NOI: capital works + financing + tenant recharges, and the net result */}
@@ -864,11 +908,6 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
             <div>
               <h2 className="text-base font-semibold text-foreground mb-1">{t("buildingsId.reporting.revenue.title")}</h2>
               <p className="text-xs text-foreground-dim">{t("buildingsId.reporting.revenue.sub")}</p>
-            </div>
-
-            <div className="flex items-baseline justify-between gap-3 rounded-2xl border border-surface-border px-4 py-3">
-              <span className="text-[11px] font-semibold uppercase tracking-wide text-foreground-dim">{t("buildingsId.reporting.revenue.buildingTotal")}</span>
-              <span className="text-lg font-bold tabular-nums text-foreground">{rFmtChf(earned)}</span>
             </div>
 
             <div>
@@ -960,19 +999,6 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
               <h2 className="text-base font-semibold text-foreground mb-1">{t("buildingsId.reporting.expenses.title")}</h2>
               <p className="text-xs text-foreground-dim">{t("buildingsId.reporting.expenses.sub")}</p>
             </div>
-
-            {tenantRechargeCents > 0 && (
-              <p className="flex items-start gap-1.5 text-xs text-foreground-dim">
-                <span aria-hidden>ℹ</span>
-                <span>{t("buildingsId.reporting.revex.tenantRechargeNote", { amount: rFmtChf(tenantRechargeCents) })}</span>
-              </p>
-            )}
-            {recoverableCents > 0 && (
-              <p className="flex items-start gap-1.5 text-xs text-foreground-dim">
-                <span aria-hidden>ℹ</span>
-                <span>{t("buildingsId.reporting.revex.recoverableNote", { amount: rFmtChf(recoverableCents) })}</span>
-              </p>
-            )}
 
           <div>
             <div className="mb-2 flex items-center justify-between gap-2 px-1">
@@ -1122,18 +1148,21 @@ function BuildingPeriodAnalysis({ buildingId, etatLocatifNet, from, to, periodLa
             {whyOpen && <div className="border-b border-surface-border">{driversSlide}</div>}
             {noPnlData ? noPnlBlock : (<>{kpiStripEl}{metricsCollapsible}{flagsRow}{summaryBlock}</>)}
 
-            {/* ── Detail: Produits · Charges · Rentabilité — one measure per tab,
-                   each reading building-first then per unit. Full-width,
-                   edge-to-edge segmented band (highlight fill only); its
-                   top/bottom borders separate the summary above from the pane
-                   below. ── */}
-            <div className="flex border-t border-b border-surface-border">
-              {[["rev", t("buildingsId.reporting.revenue.tab")], ["exp", t("buildingsId.reporting.expenses.tab")], ["prof", t("buildingsId.reporting.unitProfitTab")]].map(([k, l]) => (
-                <button key={k} onClick={() => setBreakdownView(k)} aria-pressed={breakdownView === k}
-                  className={cn("flex-1 px-2 py-3 text-center text-[13px] leading-tight transition-colors",
-                    breakdownView === k ? "bg-brand-light font-bold text-brand-dark" : "bg-surface-subtle font-semibold text-muted hover:bg-surface-hover hover:text-foreground")}>{l}</button>
-              ))}
-            </div>
+            {/* ── Detail selector ──
+                   Normally there is none: the period-result strip above IS the
+                   selector, so the breakdown is reached by clicking the term you
+                   want to drill into. This plain band is the fallback for a
+                   building with no P&L at all, where the strip isn't rendered —
+                   without it the panels below would be unreachable. ── */}
+            {noPnlData && (
+              <div className="flex border-t border-b border-surface-border">
+                {[["rev", t("buildingsId.reporting.revenue.tab")], ["exp", t("buildingsId.reporting.expenses.tab")], ["prof", t("buildingsId.reporting.unitProfitTab")]].map(([k, l]) => (
+                  <button key={k} onClick={() => setBreakdownView(k)} aria-pressed={breakdownView === k}
+                    className={cn("flex-1 px-2 py-3 text-center text-[13px] leading-tight transition-colors",
+                      breakdownView === k ? "bg-brand-light font-bold text-brand-dark" : "bg-surface-subtle font-semibold text-muted hover:bg-surface-hover hover:text-foreground")}>{l}</button>
+                ))}
+              </div>
+            )}
             <div className={cn(loading && "opacity-60 transition-opacity")}>{breakdownPanel}</div>
 
             {/* ── How it can perform better — the prospective companion to the figures
@@ -1375,13 +1404,25 @@ function BuildingCompareView({ buildingId, periods }) {
 // client-side; a single background fetch only learns how far back real data
 // goes so the navigator doesn't offer years of empty buckets.
 function BuildingReportingView({ buildingId, etatLocatifNet }) {
+  const router = useRouter();
   const { t, i18n } = useTranslation("manager");
   const locale = i18n?.language;
   const qp = locale && locale.startsWith("fr") ? "T" : "Q";
 
   const [mode, setMode]   = useState("single"); // "single" | "compare"
-  const [gran, setGran]   = useState("month");
-  const [anchor, setAnchor] = useState(() => reportingIsoDay(reportingPeriodStart("month", new Date())));
+  // Period is deep-linkable via ?gran=&anchor= so a link can open on a specific
+  // window (the public demo opens on its fixture's fiscal year). Absent or
+  // malformed params keep the previous behaviour: the current month.
+  const qGran = typeof router.query.gran === "string" && ["month", "quarter", "year"].includes(router.query.gran)
+    ? router.query.gran
+    : null;
+  const qAnchor = typeof router.query.anchor === "string" && /^\d{4}-\d{2}-\d{2}$/.test(router.query.anchor)
+    ? router.query.anchor
+    : null;
+  const [gran, setGran]   = useState(qGran || "month");
+  const [anchor, setAnchor] = useState(
+    () => qAnchor || reportingIsoDay(reportingPeriodStart(qGran || "month", new Date())),
+  );
   const [ytd, setYtd]   = useState(false);
   const [customRange, setCustomRange] = useState(null); // { from, to } | null — arbitrary date range
   const [extras, setExtras] = useState([]); // compare mode: comparison periods added to the anchor (≤ COMPARE_MAX-1)

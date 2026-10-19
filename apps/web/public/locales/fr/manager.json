@@ -263,7 +263,36 @@
     "namePlaceholder": "ex. Plan CapEx 2026–2030",
     "budgetPlaceholder": "ex. 50000",
     "portfolio": "Portefeuille",
-    "building": "Immeuble"
+    "building": "Immeuble",
+    "close": "Fermer",
+    "loading": "Chargement des plans…",
+    "field": {
+      "building": "Immeuble (laisser vide pour le portefeuille)",
+      "incomeGrowth": "Croissance des produits (% / an)",
+      "horizon": "Horizon (mois)",
+      "openingBalance": "Solde d'ouverture (CHF, facultatif)",
+      "openingBalancePlaceholder": "ex. 50000",
+      "openingBalanceHint": "Laisser vide pour n'afficher que les flux nets. Peut être ajouté plus tard."
+    },
+    "col": {
+      "name": "Nom",
+      "status": "Statut",
+      "scope": "Périmètre",
+      "horizon": "Horizon",
+      "growth": "Croissance",
+      "lastComputed": "Dernier calcul",
+      "created": "Créé le",
+      "openingBalance": "Solde d'ouverture"
+    },
+    "awaitingApproval_one": "{{count}} plan en attente de votre approbation",
+    "awaitingApproval_other": "{{count}} plans en attente de votre approbation",
+    "awaitingApprovalSub": "Examinez et approuvez les plans de trésorerie soumis",
+    "searchPlaceholder": "Rechercher un plan…",
+    "searchAria": "Rechercher des plans de trésorerie",
+    "empty": "Aucun plan de trésorerie pour l'instant. Utilisez « Nouveau plan » pour commencer.",
+    "approve": "Approuver",
+    "approving": "Approbation…",
+    "newPlan": "Nouveau plan de trésorerie"
   },
   "categoryMappings": {
     "topic": {
@@ -1572,6 +1601,18 @@
     "costPool": {
       "blurb": "Enregistrez les coûts réels de l'immeuble par période et répartissez-les entre les locataires selon la clé de répartition (surface, lots, occupants). Alimente le décompte de charges.",
       "open": "Ouvrir le pool de charges"
+    },
+    "showLess": "Afficher moins",
+    "showAllBuildings": "Afficher les {{count}} immeubles",
+    "sub": {
+      "incomeMinusExpenses": "Produits − charges",
+      "unpaidRentInvoices": "Loyers impayés",
+      "unpaidSupplierInvoices": "Factures fournisseurs impayées"
+    },
+    "accounting": {
+      "building": "Immeuble",
+      "financialPosition": "Situation financière",
+      "analytical": "Vue analytique"
     }
   },
   "capexSchedule": {
@@ -3895,6 +3936,112 @@
       "plans": "Plans",
       "recordedPlans": "Plans enregistrés"
     },
-    "selectBuilding": "Sélectionnez un immeuble…"
+    "selectBuilding": "Sélectionnez un immeuble…",
+    "financing": {
+      "title": "Financement & valorisation",
+      "sub": "Au niveau de l'immeuble — sert à calculer la VAN avec effet de levier (DSCR / LTV / TRI des fonds propres), affichée sur le plan de trésorerie une fois les travaux planifiés."
+    }
+  },
+  "renovationAccordion": {
+    "rec": {
+      "REPLACE": "Remplacer",
+      "PLAN_REPLACEMENT": "Planifier",
+      "MONITOR": "Surveiller",
+      "REPAIR": "Réparer"
+    },
+    "simulate": "Simuler →",
+    "simulateN": "Simuler {{count}} →",
+    "unit": "Lot {{number}}",
+    "assetCount_one": "{{count}} équipement",
+    "assetCount_other": "{{count}} équipements",
+    "atRiskCount_one": "{{count}} équipement à risque",
+    "atRiskCount_other": "{{count}} équipements à risque",
+    "nextDue": "prochaine échéance {{year}}",
+    "loading": "Chargement…",
+    "error": "Erreur",
+    "expandToLoad": "Déplier pour charger",
+    "noAtRisk": "Aucun équipement à risque pour cet immeuble.",
+    "selectBuildings": "Sélectionnez un ou plusieurs immeubles ci-dessus pour voir les opportunités de rénovation."
+  },
+  "renovationSimulator": {
+    "verdict": {
+      "now": "Intervenir maintenant",
+      "turnover": "Au changement de locataire",
+      "nothing": "Ne rien faire",
+      "waitTurnover": "Attendre le changement de locataire"
+    },
+    "recommendation": "Recommandation : {{verdict}}",
+    "recommendationHold": "Recommandation : attendre",
+    "scheduling": "Planification…",
+    "planThisWork_one": "Planifier ces travaux — {{label}} ({{count}} équipement)",
+    "planThisWork_other": "Planifier ces travaux — {{label}} ({{count}} équipements)",
+    "holdingBest": "Attendre reste la meilleure option — rien à planifier. Choisissez « Intervenir maintenant » ou « Au changement de locataire » pour planifier malgré tout.",
+    "scheduledOk": "✓ Planifié dans le plan de trésorerie",
+    "scheduledPartial": "⚠ {{done}} planifiés sur {{total}} — {{failed}} en échec ; relancez pour réessayer",
+    "planError": "Erreur : {{message}}",
+    "toPlan": "À planifier",
+    "holding": "Attendre",
+    "breakEvenIn": "Rentabilisé en",
+    "closeSimulator": "Fermer le simulateur",
+    "rail": {
+      "scenario": "Scénario",
+      "action": "Action",
+      "horizon": "Horizon",
+      "years": "{{n}} ans",
+      "assumptions": "Hypothèses",
+      "oblfPassthrough": "Report OBLF",
+      "discountRate": "Taux d'actualisation",
+      "capRate": "Taux de capitalisation",
+      "vacancy": "Vacance",
+      "daysSuffix": "jours",
+      "assetCosts_one": "Coût de l'équipement (CHF)",
+      "assetCosts_other": "Coûts des équipements (CHF)"
+    },
+    "stat": {
+      "totalInvestment": "Investissement total",
+      "rentUplift": "Hausse de loyer",
+      "doNothingRisk": "Risque si rien n'est fait"
+    },
+    "hint": {
+      "renovateImmediately": "Rénover immédiatement",
+      "inAbout": "Dans ~{{in}}",
+      "whenLeaseEnds": "À la fin du bail en cours",
+      "maintainAsIs": "Maintenir en l'état, ajusté du risque"
+    },
+    "summary": {
+      "betterThanNothing": "{{amount}} de mieux que ne rien faire.",
+      "noOutperform": "Ne fait pas mieux que ne rien faire sur cet horizon.",
+      "avoidsDisrupting": "Évite de déranger le locataire en place. {{amount}} de mieux que ne rien faire.",
+      "lessThanBest": "{{amount}} de moins que le meilleur scénario de rénovation.",
+      "includesRisk": "Comprend {{amount}}/an de risque de panne et de risque locatif attendus.",
+      "bestInHorizon": "Meilleur rendement sur cet horizon — à réexaminer si les coûts de réparation augmentent."
+    },
+    "verdictText": {
+      "nothing": "Sur la base de ces hypothèses, ne rien faire préserve le mieux le rendement sur cet horizon. À réexaminer si les coûts ou les niveaux de loyer évoluent.",
+      "whenNow": "Intervenir maintenant",
+      "whenTurnover": "Attendre le changement de locataire (~{{in}})",
+      "breaksEven": "est rentabilisé en {{in}}",
+      "neverBreaksEven": "n'est pas rentabilisé sur cet horizon",
+      "best": "{{when}} offre le meilleur rendement — {{amount}} de plus que ne rien faire. L'investissement {{breakeven}}."
+    },
+    "terminalValue": "Comprend une valeur terminale de {{amount}} (hausse de loyer capitalisée à un taux de {{rate}} %).",
+    "table": {
+      "title": "Détail par équipement",
+      "asset": "Équipement",
+      "unit": "Lot",
+      "cost": "Coût (CHF)",
+      "rentUplift": "Hausse de loyer",
+      "failureRisk": "Risque de panne/an",
+      "rentRisk": "Risque locatif/an",
+      "totalRisk": "Risque total/an",
+      "total": "Total",
+      "totalRiskFoot": "{{amount}}/an de risque total"
+    },
+    "methodology": "<b>Risque de panne</b> = taux de base (par type d'équipement) × coefficient de vétusté × coût de remplacement. <b>Risque locatif</b> = réduction pondérée par la probabilité au sens de l'art. 259d CO (MAUVAIS : 20 %/an, ENDOMMAGÉ : 40 %/an). <b>L'art. 14 OBLF</b> permet de reporter {{pct}} % du coût des travaux sur le loyer, sur la durée de vie utile de l'équipement.",
+    "banner": {
+      "title": "Rénovation planifiée dans le plan de trésorerie",
+      "embedded": "Ces équipements sont désormais échelonnés dans votre plan de trésorerie — examinez ci-dessous le verdict VAN, les hypothèses et l'approbation.",
+      "standalone": "Ces équipements sont désormais échelonnés dans votre plan de trésorerie. Le scénario « Investir » intègre automatiquement ces dépenses."
+    }
   }
 }

@@ -40,6 +40,10 @@ export default [
       'backups/**',
       'website/**',
       'apps/web/public/**',
+      // Local Storybook build output (gitignored, absent in CI). Flat config
+      // does not read .gitignore, so without this a local `quality:report`
+      // reports +30 errors / +2500 warnings that CI never sees.
+      '**/storybook-static/**',
       'apps/api/prisma/migrations/**',
       '**/*.min.js',
     ],

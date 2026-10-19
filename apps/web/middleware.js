@@ -18,6 +18,11 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse } from "next/server";
 
+// Kept in sync with lib/demo/serve.js — inlined rather than imported so the
+// edge bundle doesn't pull the fixture JSON in.
+const DEMO_BUILDING_ID = "demo-building";
+const DEMO_ID_PREFIX = "demo-";
+
 // Paths that never require auth
 const PUBLIC_PATHS = [
   "/login",
@@ -65,6 +70,38 @@ export async function middleware(request) {
 
   // Allow public paths through unconditionally
   if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
+    return NextResponse.next();
+  }
+
+  // ── Public demo ───────────────────────────────────────────────────────────
+  // /onboarding?demo=1 is a self-contained, session-less walkthrough of the
+  // first-login wizard (nothing is persisted — every write is stubbed client
+  // side), and it ends on the demo building's page. Both are let through so the
+  // whole story can be shown without an account.
+  //
+  // The building page is safe unauthenticated because the ONLY id allowed here
+  // is the demo one, and the API routes answer it from a static snapshot rather
+  // than the backend (see lib/demo/serve.js) — no real building is reachable.
+  if (pathname.startsWith("/onboarding") && request.nextUrl.searchParams.get("demo") === "1") {
+    return NextResponse.next();
+  }
+  // The demo journey spans three pages: the building, the planning workspace it
+  // hands off to, and the cashflow plan the simulator ends on. All are safe
+  // unauthenticated because the ONLY ids reachable are the demo ones, and the
+  // API routes answer those from a static snapshot rather than the backend
+  // (see lib/demo/serve.js) — no real building, unit or plan is reachable.
+  if (pathname === `/admin-inventory/buildings/${DEMO_BUILDING_ID}`) {
+    return NextResponse.next();
+  }
+  if (pathname.startsWith(`/manager/cashflow/${DEMO_ID_PREFIX}`)) {
+    return NextResponse.next();
+  }
+  // The planning workspace isn't addressed by id, so it carries the demo
+  // building in its query instead.
+  if (
+    pathname === "/manager/finance" &&
+    request.nextUrl.searchParams.get("buildingId") === DEMO_BUILDING_ID
+  ) {
     return NextResponse.next();
   }
 

@@ -1,0 +1,70 @@
+/**
+ * Demo fixture serving.
+ *
+ * The public onboarding demo ends on the REAL building page — same components,
+ * same layout, no parallel surface to drift — but with no session and no
+ * backend behind it. This intercepts the handful of read endpoints that page
+ * calls and answers them from a static snapshot instead.
+ *
+ * The snapshot is not fabricated: `apps/api/scripts/generate-demo-fixtures.ts`
+ * runs a régie package through the real ingestion pipeline and records what the
+ * reporting services actually returned. This freezes that output.
+ *
+ * Why this is safe to have in every environment:
+ *
+ *   - It is keyed on ONE building id (`demo-building`) that is not a UUID and so
+ *     can never be a real building's id. Any other path falls straight through
+ *     to the normal proxy.
+ *   - The variant key is just an index into pre-captured payloads; an unknown or
+ *     malformed one simply falls back to the default snapshot.
+ *   - It only ever RETURNS static JSON. It never calls the backend, never reads
+ *     a database, and never sees a token — so it cannot leak anything or be used
+ *     to reach real data without auth.
+ *   - It answers GET only. A mutating request against the demo building is not
+ *     served a fixture; it falls through and fails as it normally would.
+ */
+
+import fixtures from "./fixtures.js";
+import { DEMO_BUILDING_ID, DEMO_ID_PREFIX } from "./constants.js";
+
+export { DEMO_BUILDING_ID, DEMO_ID_PREFIX };
+
+/**
+ * Resolve a backend path to a fixture, or null to fall through to the proxy.
+ * Query strings are ignored: the demo presents a single reporting period, so
+ * every window resolves to the same snapshot.
+ */
+export function demoFixtureFor(method, path, variantKey = null) {
+  if (method !== "GET") return null;
+
+  const clean = (path || "").split("?")[0].replace(/\/+$/, "") || "/";
+
+  // A demo id must appear as a WHOLE path segment. Every id the fixtures expose
+  // is rewritten to the `demo-` prefix at generation time (demo-building,
+  // demo-plan, demo-unit-0001…), so this one rule covers the building, its
+  // units and its cashflow plan — and a real UUID can never match it.
+  //
+  // Nothing else is served. In particular no un-scoped route such as
+  // /financials/portfolio-summary, which would otherwise shadow that endpoint
+  // for real, logged-in users; the demo goes without the portfolio benchmark,
+  // which the page already treats as optional.
+  const segments = clean.split("/");
+  if (!segments.some((seg) => seg === DEMO_BUILDING_ID || seg.startsWith(DEMO_ID_PREFIX))) return null;
+
+  // A variant keyed on the visitor's questionnaire answer, where one exists.
+  // Two surfaces read the owner's mandate — the NPV verdict and the goal-seek's
+  // off-strategy lever flags — so the profile chosen during onboarding actually
+  // changes what the plan page recommends, rather than every visitor seeing the
+  // same generic verdict.
+  const variant = variantKey != null ? fixtures.variants?.[String(variantKey)]?.[clean] : null;
+  if (variant) return variant;
+
+  const hit = fixtures.routes[clean];
+  if (hit) return hit;
+
+  // A demo-scoped route we didn't snapshot (a tab the demo doesn't cover).
+  // Answer with an empty payload rather than falling through to a backend call
+  // that would 401 without a session and surface as an error banner.
+  return { data: [] };
+}
+
